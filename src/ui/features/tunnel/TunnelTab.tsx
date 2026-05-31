@@ -296,24 +296,31 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
     setTunnelActions((prev) => ({ ...prev, [name]: true }));
     try {
       if (action === "connect") {
-        const allHosts = await getSSHHosts();
-        const endpointSsh = allHosts.find(
-          (h) =>
-            h.name === tunnel.endpointHost ||
-            `${h.username}@${h.ip}` === tunnel.endpointHost,
-        );
+        const isDirect =
+          !tunnel.endpointHost ||
+          tunnel.endpointHost === "127.0.0.1" ||
+          tunnel.endpointHost === "localhost";
+        let endpointSsh: SSHHost | undefined;
+        if (!isDirect) {
+          const allHosts = await getSSHHosts();
+          endpointSsh = allHosts.find(
+            (h) =>
+              h.name === tunnel.endpointHost ||
+              `${h.username}@${h.ip}` === tunnel.endpointHost,
+          );
+        }
         await connectTunnel({
           name,
           scope: tunnel.scope ?? "s2s",
           mode:
             tunnel.mode ??
             (tunnel.tunnelType as "local" | "remote" | "dynamic") ??
-            "remote",
+            "local",
           tunnelType:
             tunnel.tunnelType ??
             (tunnel.mode === "local" || tunnel.mode === "remote"
               ? tunnel.mode
-              : "remote"),
+              : "local"),
           bindHost: tunnel.bindHost,
           targetHost: tunnel.targetHost,
           sourceHostId: sshHost.id,
@@ -332,9 +339,15 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
             sshHost.authType === "key" ? sshHost.keyType : undefined,
           sourceCredentialId: sshHost.credentialId,
           endpointHost: tunnel.endpointHost ?? "",
-          endpointIP: endpointSsh?.ip ?? tunnel.endpointHost ?? "",
-          endpointSSHPort: endpointSsh?.port ?? 22,
-          endpointUsername: endpointSsh?.username ?? "",
+          endpointIP: isDirect
+            ? sshHost.ip
+            : (endpointSsh?.ip ?? tunnel.endpointHost ?? ""),
+          endpointSSHPort: isDirect
+            ? sshHost.port
+            : (endpointSsh?.port ?? 22),
+          endpointUsername: isDirect
+            ? sshHost.username
+            : (endpointSsh?.username ?? ""),
           endpointPassword:
             endpointSsh?.authType === "password"
               ? endpointSsh.password

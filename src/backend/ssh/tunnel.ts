@@ -1,5 +1,6 @@
 import express, { type Response } from "express";
 import { createServer } from "http";
+import { createServer as createTcpServer, Socket as TcpSocket, type Server as TcpServer } from "net";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ClientChannel } from "ssh2";
@@ -94,6 +95,7 @@ type ActiveTunnelRuntime = {
   bindClient?: Client;
   bindHost?: string;
   bindPort?: number;
+  tcpServer?: TcpServer;
   close: () => void;
 };
 
@@ -523,6 +525,148 @@ function resolveS2SLocalTargetHost(tunnelConfig: TunnelConfig): string {
   }
 
   return targetHost;
+}
+
+function isSingleHostTunnel(tunnelConfig: TunnelConfig): boolean {
+  if (!tunnelConfig.endpointHost && !tunnelConfig.endpointIP) return true;
+  if (
+    tunnelConfig.endpointHost === "127.0.0.1" ||
+    tunnelConfig.endpointHost === "localhost"
+  ) {
+    return true;
+  }
+  if (
+    tunnelConfig.endpointIP &&
+    tunnelConfig.endpointIP === tunnelConfig.sourceIP &&
+    tunnelConfig.endpointSSHPort === tunnelConfig.sourceSSHPort
+  ) {
+    return true;
+  }
+  return false;
+}
+
+async function establishDirectTunnel(
+  sourceClient: Client,
+  tunnelConfig: TunnelConfig,
+): Promise<void> {
+  const tunnelName = tunnelConfig.name;
+  const mode = getTunnelMode(tunnelConfig);
+  const bindHost = getTunnelBindHost(tunnelConfig);
+  const sourcePort = tunnelConfig.sourcePort;
+  const targetHost = tunnelConfig.targetHost || "127.0.0.1";
+  const targetPort = tunnelConfig.endpointPort;
+
+  if (mode === "remote") {
+    const remoteBindPort = await bindForwardIn(
+      sourceClient,
+      targetHost,
+      sourcePort,
+    );
+    const sockets = new Set<TcpSocket>();
+    sourceClient.on("tcp connection", (info, accept, reject) => {
+      if (info.destPort !== remoteBindPort) {
+        reject();
+        return;
+      }
+      const inbound = accept();
+      const local = new TcpSocket();
+      sockets.add(local);
+      local.connect(targetPort, bindHost, () => {
+        pipeTunnelStreams(inbound, Promise.resolve(local), tunnelName);
+      });
+      local.on("error", () => {
+        inbound.destroy();
+        sockets.delete(local);
+      });
+      local.on("close", () => sockets.delete(local));
+    });
+
+    const close = () => {
+      unbindForwardIn(sourceClient, targetHost, remoteBindPort);
+      for (const s of sockets) s.destroy();
+      sockets.clear();
+      try {
+        sourceClient.end();
+      } catch {
+        // expected
+      }
+    };
+
+    activeTunnelRuntimes.set(tunnelName, {
+      sourceClient,
+      bindHost: targetHost,
+      bindPort: remoteBindPort,
+      close,
+    });
+    activeTunnels.set(tunnelName, sourceClient);
+    return;
+  }
+
+  // Local and dynamic modes: listen locally, forward through SSH
+  const sockets = new Set<TcpSocket>();
+  const tcpServer = createTcpServer((socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+    socket.on("error", () => {
+      sockets.delete(socket);
+      socket.destroy();
+    });
+
+    if (mode === "dynamic") {
+      handleSocks5Connect(
+        socket,
+        (host, port) => forwardOut(sourceClient, host, port),
+        tunnelName,
+      );
+      return;
+    }
+
+    forwardOut(sourceClient, targetHost, targetPort, tunnelName)
+      .then((outbound) => pipeTunnelStreams(socket, Promise.resolve(outbound), tunnelName))
+      .catch(() => socket.destroy());
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    tcpServer.once("error", reject);
+    tcpServer.listen({ host: bindHost, port: sourcePort }, () => {
+      tcpServer.removeListener("error", reject);
+      resolve();
+    });
+  });
+
+  tunnelLogger.info("Direct tunnel listener started", {
+    operation: "direct_tunnel_listen",
+    tunnelName,
+    mode,
+    bindHost,
+    sourcePort,
+    targetHost,
+    targetPort,
+  });
+
+  const close = () => {
+    for (const s of sockets) s.destroy();
+    sockets.clear();
+    tcpServer.close();
+    try {
+      sourceClient.end();
+    } catch {
+      // expected
+    }
+  };
+
+  sourceClient.on("close", () => {
+    close();
+  });
+
+  activeTunnelRuntimes.set(tunnelName, {
+    sourceClient,
+    tcpServer,
+    bindHost,
+    bindPort: sourcePort,
+    close,
+  });
+  activeTunnels.set(tunnelName, sourceClient);
 }
 
 async function establishManagedS2STunnel(
@@ -1015,11 +1159,15 @@ async function connectSSHTunnel(
         );
       }
 
-      await establishManagedS2STunnel(
-        conn,
-        tunnelConfig,
-        resolvedEndpointCredentials,
-      );
+      if (isSingleHostTunnel(tunnelConfig)) {
+        await establishDirectTunnel(conn, tunnelConfig);
+      } else {
+        await establishManagedS2STunnel(
+          conn,
+          tunnelConfig,
+          resolvedEndpointCredentials,
+        );
+      }
 
       tunnelConnecting.delete(tunnelName);
       tunnelLogger.success("Managed tunnel creation complete", {
@@ -1743,7 +1891,10 @@ app.post(
           }
         }
 
-        if (!tunnelConfig.endpointIP || !tunnelConfig.endpointUsername) {
+        if (
+          !isSingleHostTunnel(tunnelConfig) &&
+          (!tunnelConfig.endpointIP || !tunnelConfig.endpointUsername)
+        ) {
           try {
             const systemCrypto = SystemCrypto.getInstance();
             const internalAuthToken = await systemCrypto.getInternalAuthToken();
