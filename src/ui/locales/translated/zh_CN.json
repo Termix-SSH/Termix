@@ -358,6 +358,7 @@
     "tunnelModeLocalDesc": "将本地端口转发到远程服务器上的端口(或其主机可访问)。",
     "tunnelModeRemoteDesc": "将远程服务器上的端口转回您机器上的本地端口。",
     "tunnelModeDynamicDesc": "在本地端口上创建一个 SOCKS5 代理, 用于动态端口转发.",
+    "sameHost": "本机（直接隧道）",
     "endpointHost": "端点主机",
     "endpointPort": "端点端口",
     "bindHost": "绑定主机",

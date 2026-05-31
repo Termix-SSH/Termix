@@ -1090,10 +1090,7 @@ export function HostEditor({
                               }}
                             >
                               <option value="">
-                                {t("hosts.selectAServer")}
-                              </option>
-                              <option value="127.0.0.1">
-                                127.0.0.1 (localhost)
+                                {t("hosts.sameHost")}
                               </option>
                               {hosts
                                 .filter((h) => h.enableSsh)

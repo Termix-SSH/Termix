@@ -358,6 +358,7 @@
     "tunnelModeLocalDesc": "Forward a local port to a port on the remote server (or a host reachable from it).",
     "tunnelModeRemoteDesc": "Forward a port on the remote server back to a local port on your machine.",
     "tunnelModeDynamicDesc": "Create a SOCKS5 proxy on a local port for dynamic port forwarding.",
+    "sameHost": "This host (direct tunnel)",
     "endpointHost": "Endpoint Host",
     "endpointPort": "Endpoint Port",
     "bindHost": "Bind Host",
