@@ -968,7 +968,8 @@ export async function getUserIdFromRequest(req: {
     }
 
     const decoded = await authManager.verifyJWTToken(token);
-    return decoded?.userId || null;
+    if (!decoded?.userId || decoded.pendingTOTP) return null;
+    return decoded.userId;
   } catch {
     return null;
   }
