@@ -563,11 +563,12 @@ async function initializeCompleteDatabase(): Promise<void> {
       .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
       .get();
     if (!row) {
+      const defaultGuacUrl = `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
       sqlite
         .prepare(
-          "INSERT INTO settings (key, value) VALUES ('guac_url', 'guacd:4822')",
+          "INSERT INTO settings (key, value) VALUES ('guac_url', ?)",
         )
-        .run();
+        .run(defaultGuacUrl);
     }
   } catch (e) {
     databaseLogger.warn("Could not initialize guac_url setting", {

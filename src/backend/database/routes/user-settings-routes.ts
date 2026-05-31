@@ -10,6 +10,10 @@ import {
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 
+function getDefaultGuacUrl(): string {
+  return `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
+}
+
 export function registerUserSettingsRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
@@ -47,7 +51,7 @@ export function registerUserSettingsRoutes(
         .get() as { value: string } | undefined;
       res.json({
         enabled: enabledRow ? enabledRow.value !== "false" : true,
-        url: urlRow ? urlRow.value : "guacd:4822",
+        url: urlRow ? urlRow.value : getDefaultGuacUrl(),
       });
     } catch (err) {
       authLogger.error("Failed to get guacamole settings", err);
@@ -120,7 +124,7 @@ export function registerUserSettingsRoutes(
         .get() as { value: string } | undefined;
       res.json({
         enabled: enabledRow ? enabledRow.value !== "false" : true,
-        url: urlRow ? urlRow.value : "guacd:4822",
+        url: urlRow ? urlRow.value : getDefaultGuacUrl(),
       });
     } catch (err) {
       authLogger.error("Failed to update guacamole settings", err);

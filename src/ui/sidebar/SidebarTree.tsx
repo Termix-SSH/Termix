@@ -223,6 +223,9 @@ export function HostItem({
     const v = localStorage.getItem("showHostTags");
     return v !== null ? v === "true" : true;
   });
+  const isTouchOnly =
+    typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
+  const shouldUseClickTray = trayOnClick || isTouchOnly;
 
   useEffect(() => {
     const handler = () =>
@@ -265,7 +268,7 @@ export function HostItem({
           return;
         }
         // On touch devices open the action tray instead of immediately launching a tab
-        if (window.matchMedia("(hover: none)").matches) {
+        if (isTouchOnly) {
           e.stopPropagation();
           onTrayOpenChange?.(!isTrayOpen);
           return;
@@ -361,7 +364,7 @@ export function HostItem({
 
         {/* Address — only visible on hover (or click when trayOnClick) or while menu is open */}
         <span
-          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 ${!trayOnClick ? "group-hover:opacity-100 group-hover:h-auto" : ""} ${isMenuOpen || (trayOnClick && isTrayOpen) ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
+          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 ${!shouldUseClickTray ? "group-hover:opacity-100 group-hover:h-auto" : ""} ${isMenuOpen || (shouldUseClickTray && isTrayOpen) ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
         >
           {host.username}@{host.ip}
         </span>
@@ -387,7 +390,7 @@ export function HostItem({
 
         {/* Action tray — slides open on CSS hover, on click (when trayOnClick), or while menu is open */}
         <div
-          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!trayOnClick ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (trayOnClick && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!shouldUseClickTray ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (shouldUseClickTray && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
         >
           {host.online &&
             ((host.cpu != null && host.cpu > 0) ||

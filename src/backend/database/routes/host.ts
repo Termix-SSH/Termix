@@ -1901,7 +1901,10 @@ async function resolveHostCredentials(
               keyType: sharedCred.keyType,
             };
 
-            if (!host.overrideCredentialUsername) {
+            if (
+              !host.overrideCredentialUsername &&
+              isNonEmptyString(sharedCred.username)
+            ) {
               resolvedHost.username = sharedCred.username;
             }
 
@@ -1947,7 +1950,10 @@ async function resolveHostCredentials(
           keyType: credential.keyType,
         };
 
-        if (!host.overrideCredentialUsername) {
+        if (
+          !host.overrideCredentialUsername &&
+          isNonEmptyString(credential.username)
+        ) {
           resolvedHost.username = credential.username;
         }
 
