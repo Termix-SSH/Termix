@@ -2118,7 +2118,7 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const fileNames = paths
     .map((p) => {
       const name = p.split("/").pop();
-      return `'${escapeShell(name || "")}'`;
+      return `'./${escapeShell(name || "")}'`;
     })
     .join(" ");
 
@@ -2135,17 +2135,17 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const escapedArchive = escapeShell(archivePath);
 
   if (compressionFormat === "zip") {
-    compressCommand = `cd '${escapedDir}' && zip -r '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && zip -r '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar.gz" || compressionFormat === "tgz") {
-    compressCommand = `cd '${escapedDir}' && tar -czf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -czf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar.bz2" || compressionFormat === "tbz2") {
-    compressCommand = `cd '${escapedDir}' && tar -cjf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cjf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar.xz") {
-    compressCommand = `cd '${escapedDir}' && tar -cJf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cJf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar") {
-    compressCommand = `cd '${escapedDir}' && tar -cf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "7z") {
-    compressCommand = `cd '${escapedDir}' && 7z a '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && 7z a '${escapedArchive}' -- ${fileNames}`;
   } else {
     return res.status(400).json({ error: "Unsupported compression format" });
   }
