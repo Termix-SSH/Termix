@@ -353,16 +353,83 @@ function isInsecureModeEnabled() {
   );
 }
 
-function getTlsVerificationOptions() {
+function getServerConfigPath() {
+  return path.join(app.getPath("userData"), "server-config.json");
+}
+
+function getServerConfigSync() {
+  try {
+    const configPath = getServerConfigPath();
+    if (!fs.existsSync(configPath)) return null;
+    return JSON.parse(fs.readFileSync(configPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function getOrigin(url) {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+function isPrivateNetworkHost(hostname) {
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1"
+  ) {
+    return true;
+  }
+
+  const ipv4Match = hostname.match(
+    /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/,
+  );
+  if (ipv4Match) {
+    const [, a, b] = ipv4Match.map(Number);
+    return (
+      a === 10 ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 169 && b === 254)
+    );
+  }
+
+  if (hostname.startsWith("fc") || hostname.startsWith("fd")) {
+    return true;
+  }
+
+  return false;
+}
+
+function isInvalidCertificateAllowedForUrl(url) {
+  if (isInsecureModeEnabled()) return true;
+
+  try {
+    const { hostname } = new URL(url);
+    if (isPrivateNetworkHost(hostname)) return true;
+  } catch {
+    // fall through
+  }
+
+  const config = getServerConfigSync();
+  if (!config?.allowInvalidCertificate || !config?.serverUrl) return false;
+
+  return getOrigin(url) === getOrigin(config.serverUrl);
+}
+
+function getTlsVerificationOptions(url) {
   return {
-    rejectUnauthorized: !isInsecureModeEnabled(),
+    rejectUnauthorized: !isInvalidCertificateAllowedForUrl(url),
   };
 }
 
 function getWebSocketOptions(url, options = {}) {
   return {
     ...options,
-    ...(String(url).startsWith("wss:") ? getTlsVerificationOptions() : {}),
+    ...(String(url).startsWith("wss:") ? getTlsVerificationOptions(url) : {}),
   };
 }
 
@@ -376,7 +443,7 @@ function httpFetch(url, options = {}) {
       method: options.method || "GET",
       headers: options.headers || {},
       timeout: options.timeout || 10000,
-      ...(isHttps ? getTlsVerificationOptions() : {}),
+      ...(isHttps ? getTlsVerificationOptions(url) : {}),
     };
 
     const req = client.request(url, requestOptions, (res) => {
@@ -434,6 +501,25 @@ const electronCacheBuildPath = path.join(
   "client-cache-build.json",
 );
 const termixSessionPartition = "persist:termix";
+
+app.on(
+  "certificate-error",
+  (event, _webContents, url, error, certificate, callback) => {
+    if (isInvalidCertificateAllowedForUrl(url)) {
+      event.preventDefault();
+      logToFile("Allowed invalid certificate for configured server", {
+        url,
+        error,
+        issuer: certificate?.issuerName,
+        subject: certificate?.subjectName,
+      });
+      callback(true);
+      return;
+    }
+
+    callback(false);
+  },
+);
 
 function getElectronBuildTimestamp() {
   try {
@@ -1153,14 +1239,7 @@ ipcMain.handle(
 
 ipcMain.handle("get-server-config", () => {
   try {
-    const userDataPath = app.getPath("userData");
-    const configPath = path.join(userDataPath, "server-config.json");
-
-    if (fs.existsSync(configPath)) {
-      const configData = fs.readFileSync(configPath, "utf8");
-      return JSON.parse(configData);
-    }
-    return null;
+    return getServerConfigSync();
   } catch (error) {
     console.error("Error reading server config:", error);
     return null;
@@ -1170,7 +1249,7 @@ ipcMain.handle("get-server-config", () => {
 ipcMain.handle("save-server-config", (event, config) => {
   try {
     const userDataPath = app.getPath("userData");
-    const configPath = path.join(userDataPath, "server-config.json");
+    const configPath = getServerConfigPath();
 
     if (!fs.existsSync(userDataPath)) {
       fs.mkdirSync(userDataPath, { recursive: true });
@@ -1318,16 +1397,6 @@ const c2sTunnelRuntimes = new Map();
 const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
 const C2S_WS_LOW_WATERMARK = 256 * 1024;
 const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
-
-function getServerConfigSync() {
-  try {
-    const configPath = path.join(app.getPath("userData"), "server-config.json");
-    if (!fs.existsSync(configPath)) return null;
-    return JSON.parse(fs.readFileSync(configPath, "utf8"));
-  } catch {
-    return null;
-  }
-}
 
 function getC2SRelayUrl() {
   const config = getServerConfigSync();

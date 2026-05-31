@@ -1,5 +1,6 @@
 interface ServerConfig {
   serverUrl?: string;
+  allowInvalidCertificate?: boolean;
   [key: string]: unknown;
 }
 

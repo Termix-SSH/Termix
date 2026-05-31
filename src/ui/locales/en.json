@@ -38,6 +38,8 @@
     "helpText": "Enter the URL where your Termix server is running (e.g., http://localhost:30001 or https://your-server.com)",
     "changeServer": "Change Server",
     "mustIncludeProtocol": "Server URL must start with http:// or https://",
+    "allowInvalidCertificate": "Allow invalid certificate",
+    "allowInvalidCertificateDesc": "Use only for trusted self-hosted servers with self-signed or IP-address certificates.",
     "useEmbedded": "Use Local Server",
     "embeddedDesc": "Run Termix with the built-in local server (no remote server needed)",
     "embeddedConnecting": "Connecting to local server...",
