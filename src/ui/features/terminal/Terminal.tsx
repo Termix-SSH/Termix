@@ -2303,20 +2303,29 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.preventDefault();
           e.stopPropagation();
 
-          const autocompleteEnabled =
-            localStorage.getItem("commandAutocomplete") === "true";
-
-          if (!autocompleteEnabled) {
+          const sendTabToShell = () => {
             if (webSocketRef.current?.readyState === 1) {
               webSocketRef.current.send(
                 JSON.stringify({ type: "input", data: "\t" }),
               );
             }
+          };
+
+          const autocompleteEnabled =
+            localStorage.getItem("commandAutocomplete") === "true";
+
+          if (!autocompleteEnabled) {
+            sendTabToShell();
             return false;
           }
 
           const currentCmd = getCurrentCommandRef.current().trim();
-          if (currentCmd.length > 0 && webSocketRef.current?.readyState === 1) {
+          if (currentCmd.length === 0) {
+            sendTabToShell();
+            return false;
+          }
+
+          if (webSocketRef.current?.readyState === 1) {
             const matches = autocompleteHistory.current
               .filter(
                 (cmd) =>
@@ -2376,6 +2385,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
 
               setShowAutocomplete(true);
+            } else {
+              sendTabToShell();
             }
           }
           return false;
