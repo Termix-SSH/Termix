@@ -826,8 +826,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const {
       id,
       ip: rawIp,
-      port,
-      username,
+      port: clientPort,
+      username: clientUsername,
       password,
       key,
       keyPassword,
@@ -835,7 +835,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
       credentialId,
     } = hostConfig;
-    const ip = rawIp?.replace(/^\[|\]$/g, "").trim() || rawIp;
+    const clientIp = rawIp?.replace(/^\[|\]$/g, "").trim() || rawIp;
+    let ip = clientIp;
+    let port = clientPort;
+    let username = clientUsername;
     sshLogger.info("Resolving SSH host configuration", {
       operation: "terminal_host_resolve",
       sessionId,
@@ -1012,6 +1015,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (id && userId && !password && !key) {
       try {
         if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
           resolvedCredentials = {
             username: resolvedHostData.username || username,
             password: resolvedHostData.password,
@@ -1039,6 +1045,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else if (credentialId && id && userId) {
       try {
         if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
           resolvedCredentials = {
             username: resolvedHostData.username || username,
             password: resolvedHostData.password,

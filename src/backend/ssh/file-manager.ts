@@ -361,11 +361,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   };
   let hostKeepaliveInterval: number | undefined;
   let hostKeepaliveCountMax: number | undefined;
+  let resolvedIp = ip;
+  let resolvedPort = port;
+  let resolvedUsername = username;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
       if (resolvedHost) {
+        resolvedIp = resolvedHost.ip;
+        resolvedPort = resolvedHost.port;
+        resolvedUsername = resolvedHost.username;
         resolvedCredentials = {
           password: resolvedHost.password,
           sshKey: resolvedHost.key,
@@ -396,6 +402,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
       if (resolvedHost) {
+        resolvedIp = resolvedHost.ip;
+        resolvedPort = resolvedHost.port;
+        resolvedUsername = resolvedHost.username;
         resolvedCredentials = {
           password: resolvedHost.password,
           sshKey: resolvedHost.key,
@@ -424,9 +433,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   }
 
   const config: Record<string, unknown> = {
-    host: ip?.replace(/^\[|\]$/g, "") || ip,
-    port,
-    username,
+    host: resolvedIp?.replace(/^\[|\]$/g, "") || resolvedIp,
+    port: resolvedPort,
+    username: resolvedUsername,
     tryKeyboard: true,
     keepaliveInterval:
       typeof hostKeepaliveInterval === "number"
@@ -439,8 +448,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     tcpKeepAliveInitialDelay: 30000,
     hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
       hostId,
-      ip,
-      port,
+      resolvedIp,
+      resolvedPort,
       null,
       userId,
       false,
