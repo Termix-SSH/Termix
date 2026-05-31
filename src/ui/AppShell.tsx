@@ -31,8 +31,11 @@ import type {
   Host,
   SplitMode,
   HostFolder,
+  ThemeId,
+  FontSizeId,
 } from "@/types/ui-types";
-import { PANE_COUNTS } from "@/lib/theme";
+import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
+import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
   getUserInfo,
@@ -142,7 +145,8 @@ export function AppShell({
   username: string;
   onLogout: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { setTheme } = useTheme();
   const [tabs, setTabs] = useState<Tab[]>([
     {
       id: "dashboard",
@@ -364,7 +368,19 @@ export function AppShell({
 
   useEffect(() => {
     getUserPreferences()
-      .then((prefs) => setUserPrefs(prefs))
+      .then((prefs) => {
+        setUserPrefs(prefs);
+        if (prefs.theme) setTheme(prefs.theme as ThemeId);
+        if (prefs.fontSize) applyFontSize(prefs.fontSize as FontSizeId);
+        if (prefs.accentColor) {
+          localStorage.setItem("termix-accent", prefs.accentColor);
+          applyAccentColor(prefs.accentColor);
+        }
+        if (prefs.language && prefs.language !== i18n.language) {
+          localStorage.setItem("i18nextLng", prefs.language);
+          void i18n.changeLanguage(prefs.language);
+        }
+      })
       .catch(() => {})
       .finally(() => setUserPrefsLoaded(true));
   }, []);

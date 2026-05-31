@@ -79,6 +79,10 @@ export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
 
 export interface UserPreferences {
   reopenTabsOnLogin: boolean;
+  theme?: string | null;
+  fontSize?: string | null;
+  accentColor?: string | null;
+  language?: string | null;
 }
 
 export async function getUserPreferences(): Promise<UserPreferences> {

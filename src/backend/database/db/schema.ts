@@ -658,6 +658,10 @@ export const userPreferences = sqliteTable("user_preferences", {
   reopenTabsOnLogin: integer("reopen_tabs_on_login", { mode: "boolean" })
     .notNull()
     .default(false),
+  theme: text("theme"),
+  fontSize: text("font_size"),
+  accentColor: text("accent_color"),
+  language: text("language"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
