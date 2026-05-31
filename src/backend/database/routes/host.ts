@@ -1374,29 +1374,7 @@ router.get(
       );
 
       if (data.length === 0) {
-        const ownerData = await db
-          .select({ userId: hosts.userId })
-          .from(hosts)
-          .where(eq(hosts.id, hostId));
-        if (ownerData.length === 0) {
-          return res.status(404).json({ error: "Host not found" });
-        }
-        const ownerId = ownerData[0].userId as string;
-        const ownerDecrypted = await SimpleDBOps.select(
-          db.select().from(hosts).where(eq(hosts.id, hostId)),
-          "ssh_data",
-          ownerId,
-        );
-        if (ownerDecrypted.length === 0) {
-          return res.status(404).json({ error: "Host not found" });
-        }
-        const host = ownerDecrypted[0];
-        const resolved = (await resolveHostCredentials(host, ownerId)) || host;
-        const value = resolved[field];
-        if (!value) {
-          return res.status(404).json({ error: "No password set" });
-        }
-        return res.json({ value });
+        return res.status(404).json({ error: "Host not found" });
       }
 
       const host = data[0];
