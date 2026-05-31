@@ -687,7 +687,7 @@ export function Auth({ onLogin }: AuthProps) {
             callbackPort,
           );
           if (result.success && result.token) {
-            localStorage.setItem("jwt_token", result.token);
+            localStorage.setItem("jwt", result.token);
             window.location.reload();
             return;
           }

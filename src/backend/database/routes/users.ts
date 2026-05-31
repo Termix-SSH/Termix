@@ -563,7 +563,7 @@ router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
  */
 router.get("/oidc/authorize", async (req, res) => {
   try {
-    const { rememberMe, desktopCallbackPort } = req.query;
+    const { rememberMe, desktopCallbackPort, appCallbackUrl } = req.query;
     const origin = getRequestOriginWithForceHTTPS(req);
     const backendCallbackUri = `${origin}/users/oidc/callback`;
 
@@ -588,6 +588,17 @@ router.get("/oidc/authorize", async (req, res) => {
     let frontendOrigin;
     if (desktopCallbackPort) {
       frontendOrigin = `http://127.0.0.1:${desktopCallbackPort}/oidc-callback`;
+    } else if (typeof appCallbackUrl === "string" && appCallbackUrl) {
+      let callbackUrl: URL;
+      try {
+        callbackUrl = new URL(appCallbackUrl);
+      } catch {
+        return res.status(400).json({ error: "Invalid app callback URL" });
+      }
+      if (callbackUrl.protocol !== "termix-mobile:") {
+        return res.status(400).json({ error: "Unsupported app callback URL" });
+      }
+      frontendOrigin = callbackUrl.toString();
     } else if (referer) {
       const refererUrl = new URL(referer);
       frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
@@ -1129,7 +1140,9 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
-    const isDesktopCallback = frontendOrigin.startsWith("http://127.0.0.1:");
+    const isTokenCallback =
+      frontendOrigin.startsWith("http://127.0.0.1:") ||
+      frontendOrigin.startsWith("termix-mobile:");
 
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
@@ -1140,7 +1153,7 @@ router.get("/oidc/callback", async (req, res) => {
 
     res.clearCookie("jwt", authManager.getClearCookieOptions(req));
 
-    if (isDesktopCallback) {
+    if (isTokenCallback) {
       redirectUrl.searchParams.set("token", token);
       return res.redirect(redirectUrl.toString());
     }
