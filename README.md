@@ -162,6 +162,7 @@ Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/tr
 <summary><b>More features</b></summary>
 <br />
 
+- **Host-to-host transfer** - Copy or move files between two SSH hosts via the Termix server with progress, cancel, retry, and resume. See [readme/HOST-TO-HOST-TRANSFER.md](readme/HOST-TO-HOST-TRANSFER.md).
 - **Dashboard** - View server information at a glance on your dashboard
 - **API Keys** - Create user-scoped API keys with expiration dates to be used for automation/CI
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data

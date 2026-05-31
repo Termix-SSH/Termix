@@ -46,6 +46,7 @@ import {
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
+import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
@@ -1247,6 +1248,7 @@ export function AppShell({
           }
         }}
       />
+      <TransferMonitor />
     </>
   );
 }

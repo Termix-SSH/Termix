@@ -1637,6 +1637,203 @@ export async function connectSSH(
   }
 }
 
+export type HostConnectionState =
+  | "ready"
+  | "connecting"
+  | "disconnected"
+  | "auth_required"
+  | "error";
+
+export async function ensureSSHSessionForHost(
+  host: SSHHost,
+): Promise<{ state: HostConnectionState; error?: string }> {
+  const sessionId = host.id.toString();
+
+  try {
+    const status = await getSSHStatus(sessionId);
+    if (status?.connected) {
+      return { state: "ready" };
+    }
+  } catch {
+    /* session not active */
+  }
+
+  try {
+    const result = await connectSSH(sessionId, {
+      hostId: host.id,
+      ip: host.ip,
+      port: host.port,
+      username: host.username,
+      password: host.password,
+      sshKey: host.key,
+      keyPassword: host.keyPassword,
+      authType: host.authType,
+      credentialId: host.credentialId,
+      userId: host.userId,
+      forceKeyboardInteractive: host.forceKeyboardInteractive,
+      jumpHosts: host.jumpHosts,
+      useSocks5: host.useSocks5,
+      socks5Host: host.socks5Host,
+      socks5Port: host.socks5Port,
+      socks5Username: host.socks5Username,
+      socks5Password: host.socks5Password,
+      socks5ProxyChain: host.socks5ProxyChain,
+    });
+
+    if (result?.requires_totp || result?.requires_warpgate) {
+      return { state: "auth_required" };
+    }
+    if (result?.status === "auth_required") {
+      return { state: "auth_required" };
+    }
+    return { state: "ready" };
+  } catch (error) {
+    return {
+      state: "error",
+      error: error instanceof Error ? error.message : "Connection failed",
+    };
+  }
+}
+
+export function formatDurationMs(ms?: number): string {
+  if (ms === undefined) return "—";
+  if (ms < 1000) return `${ms}ms`;
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
+}
+
+export function computeTransferMbPerSec(
+  bytes: number,
+  ms: number,
+): number | undefined {
+  if (ms <= 0 || bytes <= 0) return undefined;
+  return (bytes / ms) * 1000 / (1024 * 1024);
+}
+
+export function formatTransferMbPerSec(
+  mbPerSec?: number,
+  bytes?: number,
+  ms?: number,
+): string {
+  const rate =
+    mbPerSec ??
+    (bytes !== undefined && ms !== undefined
+      ? computeTransferMbPerSec(bytes, ms)
+      : undefined);
+  if (rate === undefined) return "—";
+  return `${rate.toFixed(1)} MB/s`;
+}
+
+export function getTransferProgressPercent(
+  status: TransferProgressResponse,
+): number | undefined {
+  if (status.phase !== "transferring") return undefined;
+
+  if (
+    status.totalBytes &&
+    status.totalBytes > 0 &&
+    status.bytesTransferred !== undefined
+  ) {
+    return Math.min(100, (status.bytesTransferred / status.totalBytes) * 100);
+  }
+
+  if (
+    status.method === "item_sftp" &&
+    status.totalItems &&
+    status.totalItems > 0 &&
+    status.itemsCompleted !== undefined
+  ) {
+    return (status.itemsCompleted / status.totalItems) * 100;
+  }
+
+  return undefined;
+}
+
+export interface TransferProgressTracker {
+  update(status: TransferProgressResponse): {
+    rate?: number;
+    stalled?: boolean;
+  };
+}
+
+export function createTransferProgressTracker(): TransferProgressTracker {
+  let lastBytes = 0;
+  let lastTime = Date.now();
+  let lastPhase = "";
+  let smoothedRate: number | undefined;
+  let lastProgressAt = 0;
+  const SAMPLE_MS = 200;
+  const HOLD_MS = 3000;
+  const STALL_MS = 5000;
+  const EMA_ALPHA = 0.4;
+
+  return {
+    update(status: TransferProgressResponse): { rate?: number; stalled?: boolean } {
+      const now = Date.now();
+
+      if (status.phase === "transferring" && lastPhase !== "transferring") {
+        lastBytes = status.bytesTransferred ?? 0;
+        lastTime = now;
+        smoothedRate = undefined;
+        lastProgressAt = 0;
+      } else if (status.phase !== "transferring") {
+        smoothedRate = undefined;
+        lastProgressAt = 0;
+      }
+      lastPhase = status.phase;
+
+      const bytes = status.bytesTransferred ?? 0;
+      if (status.phase !== "transferring" || bytes <= 0) {
+        lastBytes = bytes;
+        lastTime = now;
+        return {};
+      }
+
+      const dt = now - lastTime;
+      const db = bytes - lastBytes;
+
+      // Bytes can move in bursts (e.g. dest-size probes ~1.5s). Do not advance
+      // lastTime without a byte change — that shrinks dt and inflates MB/s.
+      if (bytes < lastBytes) {
+        lastBytes = bytes;
+        lastTime = now;
+        smoothedRate = undefined;
+      } else if (dt >= SAMPLE_MS && db > 0) {
+        const instant = computeTransferMbPerSec(db, dt);
+        smoothedRate =
+          smoothedRate === undefined
+            ? instant
+            : smoothedRate * (1 - EMA_ALPHA) + instant * EMA_ALPHA;
+        lastProgressAt = now;
+        lastBytes = bytes;
+        lastTime = now;
+      }
+
+      const stalled =
+        status.phase !== "reconnecting" &&
+        lastProgressAt > 0 &&
+        now - lastProgressAt >= STALL_MS &&
+        status.status === "running";
+
+      if (stalled) {
+        return { stalled: true };
+      }
+
+      if (
+        smoothedRate !== undefined &&
+        (db > 0 || now - lastProgressAt < HOLD_MS)
+      ) {
+        return { rate: smoothedRate };
+      }
+
+      return {};
+    },
+  };
+}
+
 export async function disconnectSSH(
   sessionId: string,
 ): Promise<Record<string, unknown>> {
@@ -1793,6 +1990,50 @@ export async function listSSHFiles(
   } catch (error) {
     handleApiError(error, "list SSH files");
     return { files: [], path };
+  }
+}
+
+export type BrowseDirectoryStatus = "ok" | "not_found" | "error";
+
+export async function browseSSHDirectory(
+  sessionId: string,
+  path: string,
+): Promise<
+  | { status: "ok"; files: Array<{ name: string; type: string }>; path: string }
+  | { status: "not_found"; path: string }
+  | { status: "error"; path: string; message: string }
+> {
+  try {
+    const response = await fileManagerApi.get("/ssh/listFiles", {
+      params: { sessionId, path },
+    });
+    const data = response.data || { files: [], path };
+    const listing = Array.isArray(data) ? data : data.files || [];
+    const resolvedPath = Array.isArray(data) ? path : data.path || path;
+    return {
+      status: "ok",
+      files: listing as Array<{ name: string; type: string }>,
+      path: resolvedPath,
+    };
+  } catch (error: unknown) {
+    const axiosErr = error as {
+      response?: { status?: number; data?: { error?: string } };
+      message?: string;
+    };
+    const msg =
+      axiosErr.response?.data?.error ||
+      axiosErr.message ||
+      "Failed to list directory";
+    const lower = msg.toLowerCase();
+    if (
+      axiosErr.response?.status === 404 ||
+      lower.includes("not found") ||
+      lower.includes("no such file") ||
+      lower.includes("enoent")
+    ) {
+      return { status: "not_found", path };
+    }
+    return { status: "error", path, message: msg };
   }
 }
 
@@ -2241,6 +2482,241 @@ export async function compressSSHFiles(
   }
 }
 
+export type TransferHopId =
+  | "source_read"
+  | "dest_sftp_write"
+  | "dest_local_write";
+
+export interface TransferHopMetrics {
+  id: TransferHopId;
+  bytes: number;
+  /** Wall-clock span from first I/O on this hop to last I/O complete. */
+  spanMs: number;
+  mbPerSec: number;
+}
+
+export interface TransferTimings {
+  prepareDestMs?: number;
+  compressMs?: number;
+  transferMs?: number;
+  extractMs?: number;
+  sourceDeleteMs?: number;
+  totalMs?: number;
+  transferBytes?: number;
+  endToEndMbPerSec?: number;
+  hops?: TransferHopMetrics[];
+}
+
+export type TransferMethodPreference = "auto" | "tar" | "item_sftp";
+
+export interface TransferScanSummary {
+  fileCount: number;
+  totalBytes: number;
+  largestFileBytes: number;
+  incompressibleRatio: number;
+}
+
+export interface TransferMethodPreview {
+  methodPreference: TransferMethodPreference;
+  resolvedMethod: "tar" | "item_sftp";
+  reasonKey: string;
+  sourcePlatform: "unix" | "windows";
+  destPlatform: "unix" | "windows";
+  sourceHasTar: boolean;
+  destHasTar: boolean;
+  summary: TransferScanSummary;
+}
+
+export async function getTransferMethodPreview(
+  sourceSessionId: string,
+  sourcePaths: string[],
+  destSessionId: string,
+  destPath: string,
+  methodPreference?: TransferMethodPreference,
+): Promise<TransferMethodPreview> {
+  try {
+    const response = await fileManagerApi.post("/ssh/transferMethodPreview", {
+      sourceSessionId,
+      sourcePaths,
+      destSessionId,
+      destPath,
+      methodPreference: methodPreference ?? "auto",
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "preview transfer method");
+    throw error;
+  }
+}
+
+export interface TransferProgressResponse {
+  transferId: string;
+  status: "running" | "success" | "partial" | "error" | "cancelled";
+  phase: "compressing" | "transferring" | "extracting" | "reconnecting";
+  bytesTransferred?: number;
+  totalBytes?: number;
+  itemsCompleted?: number;
+  totalItems?: number;
+  failedPaths?: string[];
+  message?: string;
+  method?: "stream" | "tar" | "item_sftp";
+  sourcePaths?: string[];
+  destPath?: string;
+  sourceSessionId?: string;
+  destSessionId?: string;
+  startedAt?: number;
+  timings?: TransferTimings;
+  sourceDeleted?: boolean;
+  moveRequested?: boolean;
+  partialDestRemaining?: boolean;
+  cleanupCompleted?: boolean;
+  retryable?: boolean;
+  parallelSegmentCount?: number;
+}
+
+export async function transferToHost(
+  sourceSessionId: string,
+  sourcePaths: string[],
+  destSessionId: string,
+  destPath: string,
+  move?: boolean,
+  methodPreference?: TransferMethodPreference,
+  parallelSegmentCount = 2,
+): Promise<{ transferId: string }> {
+  try {
+    fileLogger.info("Starting host transfer", {
+      operation: "host_transfer",
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+      destPath,
+      move,
+      methodPreference,
+      parallelSegmentCount,
+    });
+
+    const response = await fileManagerApi.post("/ssh/transferToHost", {
+      sourceSessionId,
+      sourcePaths,
+      destSessionId,
+      destPath,
+      move,
+      methodPreference: methodPreference ?? "auto",
+      parallelSegmentCount,
+    });
+
+    return response.data;
+  } catch (error) {
+    fileLogger.error("Failed to start host transfer", error, {
+      operation: "host_transfer",
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+    });
+    handleApiError(error, "transfer to host");
+    throw error;
+  }
+}
+
+export async function getTransferStatus(
+  transferId: string,
+): Promise<TransferProgressResponse> {
+  try {
+    const response = await fileManagerApi.get(
+      `/ssh/transferStatus/${transferId}`,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "get transfer status");
+    throw error;
+  }
+}
+
+export async function listActiveTransfers(): Promise<{
+  transfers: TransferProgressResponse[];
+}> {
+  try {
+    const response = await fileManagerApi.get("/ssh/activeTransfers");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "list active transfers");
+    throw error;
+  }
+}
+
+export async function cancelTransferToHost(
+  transferId: string,
+): Promise<void> {
+  try {
+    await fileManagerApi.post(`/ssh/transferCancel/${transferId}`);
+  } catch (error) {
+    fileLogger.warn("Transfer cancel request failed (non-fatal)", {
+      operation: "host_transfer",
+      transferId,
+      error,
+    });
+  }
+}
+
+export async function cleanupCancelledTransfer(
+  transferId: string,
+): Promise<{ removedPaths: string[]; failedPaths: string[] }> {
+  try {
+    const response = await fileManagerApi.post(
+      `/ssh/transferCleanup/${transferId}`,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "clean up cancelled transfer");
+    throw error;
+  }
+}
+
+export async function retryTransferToHost(
+  transferId: string,
+): Promise<{ ok: boolean; transferId: string }> {
+  try {
+    const response = await fileManagerApi.post(
+      `/ssh/transferRetry/${transferId}`,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "retry transfer");
+    throw error;
+  }
+}
+
+export async function pollTransferUntilComplete(
+  transferId: string,
+  onProgress?: (status: TransferProgressResponse) => void,
+  intervalMs = 500,
+): Promise<TransferProgressResponse> {
+  return new Promise((resolve, reject) => {
+    const poll = async () => {
+      try {
+        const status = await getTransferStatus(transferId);
+        onProgress?.(status);
+
+        if (
+          status.status === "success" ||
+          status.status === "partial" ||
+          status.status === "error" ||
+          status.status === "cancelled"
+        ) {
+          resolve(status);
+          return;
+        }
+
+        setTimeout(poll, intervalMs);
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    void poll();
+  });
+}
+
 // ============================================================================
 // FILE MANAGER DATA
 // ============================================================================
@@ -2335,6 +2811,50 @@ export async function removePinnedFile(
     return response.data;
   } catch (error) {
     handleApiError(error, "remove pinned file");
+    throw error;
+  }
+}
+
+export interface TransferDestination {
+  id: number;
+  userId: string;
+  sourceHostId: number;
+  destHostId: number;
+  destPath: string;
+  destPathLabel?: string;
+  lastUsed?: string;
+}
+
+export async function getTransferRecent(
+  sourceHostId: number,
+): Promise<TransferDestination[]> {
+  try {
+    const response = await authApi.get("/host/transfer/recent", {
+      params: { sourceHostId },
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "get transfer recent destinations");
+    throw error;
+  }
+}
+
+export async function addTransferRecent(
+  sourceHostId: number,
+  destHostId: number,
+  destPath: string,
+  destPathLabel?: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.post("/host/transfer/recent", {
+      sourceHostId,
+      destHostId,
+      destPath,
+      destPathLabel,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "add transfer recent destination");
     throw error;
   }
 }

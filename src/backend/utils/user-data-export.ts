@@ -6,6 +6,7 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  transferRecent,
   dismissedAlerts,
 } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
@@ -24,6 +25,7 @@ interface UserExportData {
       recent: unknown[];
       pinned: unknown[];
       shortcuts: unknown[];
+      transferRecent: unknown[];
     };
     dismissedAlerts: unknown[];
   };
@@ -102,7 +104,8 @@ class UserDataExport {
             : credentials;
       }
 
-      const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
+      const [recentFiles, pinnedFiles, shortcuts, transferRecentData] =
+        await Promise.all([
         getDb()
           .select()
           .from(fileManagerRecent)
@@ -115,6 +118,10 @@ class UserDataExport {
           .select()
           .from(fileManagerShortcuts)
           .where(eq(fileManagerShortcuts.userId, userId)),
+        getDb()
+          .select()
+          .from(transferRecent)
+          .where(eq(transferRecent.userId, userId)),
       ]);
 
       const alerts = await getDb()
@@ -134,6 +141,7 @@ class UserDataExport {
             recent: recentFiles,
             pinned: pinnedFiles,
             shortcuts: shortcuts,
+            transferRecent: transferRecentData,
           },
           dismissedAlerts: alerts,
         },
@@ -144,6 +152,7 @@ class UserDataExport {
             recentFiles.length +
             pinnedFiles.length +
             shortcuts.length +
+            transferRecentData.length +
             alerts.length,
           encrypted: format === "encrypted",
           exportType: scope,

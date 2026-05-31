@@ -13,6 +13,7 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  transferRecent,
   dismissedAlerts,
   settings,
   sshCredentialUsage,
@@ -267,6 +268,10 @@ async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db
       .delete(fileManagerShortcuts)
       .where(eq(fileManagerShortcuts.userId, userId));
+
+    await db
+      .delete(transferRecent)
+      .where(eq(transferRecent.userId, userId));
 
     await db.delete(recentActivity).where(eq(recentActivity.userId, userId));
     await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
@@ -2620,6 +2625,9 @@ router.post("/complete-reset", async (req, res) => {
         await db
           .delete(fileManagerShortcuts)
           .where(eq(fileManagerShortcuts.userId, userId));
+        await db
+          .delete(transferRecent)
+          .where(eq(transferRecent.userId, userId));
         await db
           .delete(recentActivity)
           .where(eq(recentActivity.userId, userId));

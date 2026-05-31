@@ -268,6 +268,19 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS transfer_recent (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        source_host_id INTEGER NOT NULL,
+        dest_host_id INTEGER NOT NULL,
+        dest_path TEXT NOT NULL,
+        dest_path_label TEXT NOT NULL,
+        last_used TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (source_host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (dest_host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS dismissed_alerts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,

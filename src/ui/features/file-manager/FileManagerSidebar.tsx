@@ -67,6 +67,11 @@ interface FileManagerSidebarProps {
   currentPath: string;
   onPathChange: (path: string) => void;
   onFileOpen?: (file: SidebarItem) => void;
+  /** Full file-manager context menu (same as main grid). */
+  onItemContextMenu?: (
+    event: React.MouseEvent,
+    item: SidebarItem,
+  ) => void;
   sshSessionId?: string;
   refreshTrigger?: number;
   diskInfo?: { usedHuman: string; totalHuman: string; percent: number };
@@ -79,6 +84,7 @@ export function FileManagerSidebar({
   currentPath,
   onPathChange,
   onFileOpen,
+  onItemContextMenu,
   sshSessionId,
   refreshTrigger,
   diskInfo,
@@ -415,10 +421,39 @@ export function FileManagerSidebar({
 
   // ─── Context menu ─────────────────────────────────────────────────────────────
 
-  const handleContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
+  const findTreeItemById = useCallback(
+    (items: SidebarItem[], id: string): SidebarItem | null => {
+      for (const item of items) {
+        if (item.id === id) return item;
+        if (item.children) {
+          const found = findTreeItemById(item.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    [],
+  );
+
+  const handleItemContextMenu = (e: React.MouseEvent, item: SidebarItem) => {
     e.preventDefault();
     e.stopPropagation();
+    if (onItemContextMenu) {
+      onItemContextMenu(e, item);
+      return;
+    }
     setContextMenu({ x: e.clientX, y: e.clientY, isVisible: true, item });
+  };
+
+  const handleTreeContextMenu = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const row = target.closest<HTMLElement>("[data-id]");
+    if (!row) return;
+    const id = row.getAttribute("data-id");
+    if (!id) return;
+    const item = findTreeItemById(directoryTree, id);
+    if (!item || item.type !== "folder") return;
+    handleItemContextMenu(e, item);
   };
 
   const closeContextMenu = () => {
@@ -426,7 +461,7 @@ export function FileManagerSidebar({
   };
 
   useEffect(() => {
-    if (!contextMenu.isVisible) return;
+    if (!contextMenu.isVisible || onItemContextMenu) return;
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
@@ -448,7 +483,7 @@ export function FileManagerSidebar({
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [contextMenu.isVisible]);
+  }, [contextMenu.isVisible, onItemContextMenu]);
 
   // ─── Derive selected tree node + ancestors from currentPath ──────────────────
 
@@ -515,7 +550,7 @@ export function FileManagerSidebar({
             : "text-muted-foreground hover:text-foreground hover:bg-muted border-transparent",
         )}
         onClick={() => handleQuickAccessClick(item)}
-        onContextMenu={(e) => handleContextMenu(e, item)}
+        onContextMenu={(e) => handleItemContextMenu(e, item)}
         title={item.path}
       >
         <div className="shrink-0">{icon}</div>
@@ -612,16 +647,18 @@ export function FileManagerSidebar({
               </span>
             </div>
             <div className="px-1">
-              <FolderTree.Root
-                id="sidebar-directory-tree"
-                defaultExpanded={["root"]}
-                selectedId={selectedTreeId}
-                expandedIds={ancestorIds}
-                onSelect={(id) => handleDirectorySelect(id)}
-                className="bg-transparent border-0 rounded-none shadow-none"
-              >
-                {directoryTree.map((item) => renderFolderTreeItem(item))}
-              </FolderTree.Root>
+              <div onContextMenu={handleTreeContextMenu}>
+                <FolderTree.Root
+                  id="sidebar-directory-tree"
+                  defaultExpanded={["root"]}
+                  selectedId={selectedTreeId}
+                  expandedIds={ancestorIds}
+                  onSelect={(id) => handleDirectorySelect(id)}
+                  className="bg-transparent border-0 rounded-none shadow-none"
+                >
+                  {directoryTree.map((item) => renderFolderTreeItem(item))}
+                </FolderTree.Root>
+              </div>
             </div>
           </div>
 
@@ -679,8 +716,8 @@ export function FileManagerSidebar({
         )}
       </div>
 
-      {/* ── Context menu ─────────────────────────────────────────────── */}
-      {contextMenu.isVisible && contextMenu.item && (
+      {/* ── Context menu (fallback when parent does not supply onItemContextMenu) */}
+      {!onItemContextMenu && contextMenu.isVisible && contextMenu.item && (
         <>
           <div className="fixed inset-0 z-40" />
 
