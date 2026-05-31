@@ -38,6 +38,8 @@
     "helpText": "输入您的 Termix 服务器运行所对应的 URL（例如，http://localhost:30001 或 https://your-server.com）",
     "changeServer": "变更服务器",
     "mustIncludeProtocol": "服务器 URL 必须以 http:// 或 https:// 开头。",
+    "allowInvalidCertificate": "允许无效证书",
+    "allowInvalidCertificateDesc": "仅用于可信的自托管服务器，例如自签名证书或 IP 地址证书。",
     "useEmbedded": "使用本地服务器",
     "embeddedDesc": "使用内置的本地服务器运行 Termixed (不需要远程服务器)",
     "embeddedConnecting": "正在连接本地服务器...",

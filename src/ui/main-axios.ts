@@ -562,6 +562,7 @@ let embeddedMode = false;
 export interface ServerConfig {
   serverUrl: string;
   lastUpdated: string;
+  allowInvalidCertificate?: boolean;
 }
 
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
