@@ -252,6 +252,29 @@ networks:
     driver: bridge
 ```
 
+Cloudflare Tunnel example:
+
+```yaml
+tunnel: <tunnel-id>
+credentials-file: /etc/cloudflared/<tunnel-id>.json
+
+ingress:
+  - hostname: termix.example.com
+    service: http://termix:8080
+    originRequest:
+      httpHostHeader: termix.example.com
+      noTLSVerify: false
+      disableChunkedEncoding: false
+  - service: http_status:404
+```
+
+Point the tunnel at Termix over plain HTTP (`http://termix:8080`) and let
+Cloudflare terminate public HTTPS. If you point Cloudflare Tunnel at Termix's
+self-signed HTTPS origin, Full Strict mode will reject the origin certificate
+unless that certificate matches the public hostname and chains to a trusted CA.
+Keep WebSocket support enabled in Cloudflare because SSH terminals and remote
+desktop sessions use upgrade connections.
+
 <br />
 
 ## Screenshots
