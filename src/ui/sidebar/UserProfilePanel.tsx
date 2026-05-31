@@ -13,6 +13,7 @@ import {
   disableTOTP,
   getVersionInfo,
   getUserRoles,
+  saveUserPreferences,
 } from "@/main-axios";
 import type { UserRole } from "@/main-axios";
 import type React from "react";
@@ -553,22 +554,39 @@ export function UserProfilePanel({
       .catch(() => {});
   }, [t]);
 
+  function saveAppearancePreference(prefs: {
+    theme?: ThemeId;
+    fontSize?: FontSizeId;
+    accentColor?: string;
+    language?: string;
+  }) {
+    void saveUserPreferences(prefs).catch(() => {});
+  }
+
+  function handleThemeChange(id: ThemeId) {
+    setTheme(id);
+    saveAppearancePreference({ theme: id });
+  }
+
   function handleAccentChange(value: string) {
     setAccentColor(value);
     setCustomColorInput(value);
     localStorage.setItem("termix-accent", value);
     applyAccentColor(value);
+    saveAppearancePreference({ accentColor: value });
   }
 
   function handleFontSizeChange(id: FontSizeId) {
     setFontSize(id);
     applyFontSize(id);
+    saveAppearancePreference({ fontSize: id });
   }
 
   function handleLanguageChange(code: string) {
     setLanguage(code);
     localStorage.setItem("i18nextLng", code);
     i18n.changeLanguage(code);
+    saveAppearancePreference({ language: code });
   }
 
   function toggle(id: UserProfileSection) {
@@ -818,7 +836,7 @@ export function UserProfilePanel({
             <div className="relative">
               <select
                 value={theme}
-                onChange={(e) => setTheme(e.target.value as ThemeId)}
+                onChange={(e) => handleThemeChange(e.target.value as ThemeId)}
                 className="w-full px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring appearance-none pr-7"
               >
                 {THEMES.map((th) => (
@@ -834,7 +852,7 @@ export function UserProfilePanel({
                 <button
                   key={th.id}
                   title={themeLabel[th.id]}
-                  onClick={() => setTheme(th.id)}
+                  onClick={() => handleThemeChange(th.id)}
                   className={`h-4 flex-1 border transition-all ${theme === th.id ? "border-accent-brand ring-1 ring-accent-brand" : "border-border/50"}`}
                   style={{ background: th.preview }}
                 />
