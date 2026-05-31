@@ -1,6 +1,10 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
-import { assignRoleToUser, removeRoleFromUser } from "@/main-axios";
+import {
+  assignRoleToUser,
+  linkOIDCToPasswordAccount,
+  removeRoleFromUser,
+} from "@/main-axios";
 import type { Role, UserRole } from "@/main-axios";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -15,6 +19,20 @@ import { AlertCircle, Eye, EyeOff, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminToggle } from "./AdminSettingsShared";
 import type { AdminUser } from "./AdminManagementSections";
+
+type ApiErrorLike = {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+  message?: string;
+};
+
+function apiErrorMessage(error: unknown, fallback: string) {
+  const err = error as ApiErrorLike;
+  return err.response?.data?.error || err.message || fallback;
+}
 
 type CreateUserDialogProps = {
   open: boolean;
@@ -377,14 +395,42 @@ type LinkAccountDialogProps = {
   open: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
   linkAccountTarget: { id: string; username: string } | null;
+  setUsers: Dispatch<SetStateAction<AdminUser[]>>;
 };
 
 export function AdminLinkAccountDialog({
   open,
   onOpenChange,
   linkAccountTarget,
+  setUsers,
 }: LinkAccountDialogProps) {
   const { t } = useTranslation();
+  const [targetUsername, setTargetUsername] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) setTargetUsername("");
+  }, [open, linkAccountTarget]);
+
+  const handleSubmit = async () => {
+    const trimmedUsername = targetUsername.trim();
+    if (!linkAccountTarget || !trimmedUsername) return;
+
+    setSubmitting(true);
+    try {
+      await linkOIDCToPasswordAccount(linkAccountTarget.id, trimmedUsername);
+      toast.success(
+        t("admin.linkAccountSuccess", { username: trimmedUsername }),
+      );
+      setUsers((prev) => prev.filter((u) => u.id !== linkAccountTarget.id));
+      setTargetUsername("");
+      onOpenChange(false);
+    } catch (error: unknown) {
+      toast.error(apiErrorMessage(error, t("admin.linkAccountFailed")));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -416,18 +462,34 @@ export function AdminLinkAccountDialog({
               {t("admin.linkAccountTargetUsername")}{" "}
               <span className="text-accent-brand">*</span>
             </label>
-            <Input placeholder={t("admin.linkAccountTargetPlaceholder")} />
+            <Input
+              value={targetUsername}
+              onChange={(e) => setTargetUsername(e.target.value)}
+              placeholder={t("admin.linkAccountTargetPlaceholder")}
+              autoFocus
+              disabled={submitting}
+            />
           </div>
         </div>
         <div className="flex justify-end gap-2 mt-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
             {t("common.cancel")}
           </Button>
           <Button
             variant="outline"
             className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={
+              submitting || !linkAccountTarget || !targetUsername.trim()
+            }
+            onClick={handleSubmit}
           >
-            {t("admin.linkAccounts")}
+            {submitting
+              ? t("admin.linkAccountInProgress")
+              : t("admin.linkAccounts")}
           </Button>
         </div>
       </DialogContent>

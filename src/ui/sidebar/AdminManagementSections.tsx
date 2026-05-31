@@ -160,7 +160,7 @@ export function AdminUsersSection({
                 >
                   <Pencil className="size-3" />
                 </Button>
-                {user.isOidc && !user.passwordHash && (
+                {user.isOidc && (
                   <Button
                     variant="ghost"
                     size="icon"
