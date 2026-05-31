@@ -148,12 +148,14 @@ export async function resolveHostById(
             return host as unknown as SSHHost;
           }
         } catch (e) {
-          sshLogger.warn("Failed to get shared credential, falling back", {
+          sshLogger.warn("Failed to get shared credential", {
             operation: "host_resolver_shared_credential",
             hostId,
             error: e instanceof Error ? e.message : "Unknown",
           });
         }
+
+        return null;
       }
 
       const credentials = await SimpleDBOps.select(
