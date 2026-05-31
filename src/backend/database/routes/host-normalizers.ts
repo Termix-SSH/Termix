@@ -177,6 +177,13 @@ const SENSITIVE_FIELDS = [
   "keyPassword",
   "autostartKey",
   "autostartKeyPassword",
+  "password",
+  "sudoPassword",
+  "socks5Password",
+  "rdpPassword",
+  "vncPassword",
+  "telnetPassword",
+  "autostartPassword",
 ];
 
 export function stripSensitiveFields(
@@ -185,6 +192,8 @@ export function stripSensitiveFields(
   const result = { ...host };
   result.hasKey = !!host.key;
   result.hasKeyPassword = !!host.keyPassword;
+  result.hasPassword = !!host.password;
+  result.hasSudoPassword = !!host.sudoPassword;
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }
