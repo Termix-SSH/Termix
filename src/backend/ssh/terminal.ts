@@ -938,6 +938,66 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }, 120000);
 
+    let resolvedHostData:
+      | (Record<string, unknown> & {
+          username?: string;
+          password?: string;
+          key?: string;
+          keyPassword?: string;
+          keyType?: string;
+          authType?: string;
+          jumpHosts?: Array<{ hostId: number }>;
+          useSocks5?: boolean;
+          socks5Host?: string;
+          socks5Port?: number;
+          socks5Username?: string;
+          socks5Password?: string;
+          socks5ProxyChain?: unknown;
+          terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
+        })
+      | null = null;
+
+    if (id && userId) {
+      try {
+        const { resolveHostById } = await import("./host-resolver.js");
+        resolvedHostData = (await resolveHostById(id, userId)) as typeof resolvedHostData;
+
+        if (resolvedHostData) {
+          if (
+            (!hostConfig.jumpHosts || hostConfig.jumpHosts.length === 0) &&
+            resolvedHostData.jumpHosts &&
+            resolvedHostData.jumpHosts.length > 0
+          ) {
+            hostConfig.jumpHosts = resolvedHostData.jumpHosts;
+            sendLog(
+              "jump",
+              "info",
+              `Loaded ${resolvedHostData.jumpHosts.length} jump host(s) from server-side host data`,
+            );
+          }
+
+          if (!hostConfig.useSocks5 && resolvedHostData.useSocks5) {
+            hostConfig.useSocks5 = resolvedHostData.useSocks5;
+            hostConfig.socks5Host = resolvedHostData.socks5Host;
+            hostConfig.socks5Port = resolvedHostData.socks5Port;
+            hostConfig.socks5Username = resolvedHostData.socks5Username;
+            hostConfig.socks5Password = resolvedHostData.socks5Password;
+            hostConfig.socks5ProxyChain = resolvedHostData.socks5ProxyChain;
+          }
+
+          if (!hostConfig.terminalConfig && resolvedHostData.terminalConfig) {
+            hostConfig.terminalConfig = resolvedHostData.terminalConfig;
+          }
+        }
+      } catch (error) {
+        sshLogger.warn(`Failed to resolve server-side host data for ${id}`, {
+          operation: "ssh_host_data",
+          hostId: id,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
     // Resolve credentials server-side when frontend doesn't provide them
     let resolvedCredentials = {
       username,
@@ -951,18 +1011,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const authMethodNotAvailable = false;
     if (id && userId && !password && !key) {
       try {
-        const { resolveHostById } = await import("./host-resolver.js");
-        const resolvedHost = await resolveHostById(id, userId);
-        if (resolvedHost) {
+        if (resolvedHostData) {
           resolvedCredentials = {
-            username: resolvedHost.username || username,
-            password: resolvedHost.password,
-            key: resolvedHost.key,
-            keyPassword: keyPassword || resolvedHost.keyPassword,
-            keyType: resolvedHost.keyType,
-            authType: resolvedHost.authType,
-            certPublicKey: (resolvedHost as unknown as Record<string, unknown>)
-              .certPublicKey as string | undefined,
+            username: resolvedHostData.username || username,
+            password: resolvedHostData.password,
+            key: resolvedHostData.key,
+            keyPassword: keyPassword || resolvedHostData.keyPassword,
+            keyType: resolvedHostData.keyType,
+            authType: resolvedHostData.authType,
+            certPublicKey: resolvedHostData.certPublicKey as
+              | string
+              | undefined,
           };
           sendLog(
             "auth",
@@ -979,19 +1038,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     } else if (credentialId && id && userId) {
       try {
-        const { resolveHostById } = await import("./host-resolver.js");
-        const resolvedHost = await resolveHostById(id, userId);
-        if (resolvedHost) {
+        if (resolvedHostData) {
           resolvedCredentials = {
-            username: resolvedHost.username || username,
-            password: resolvedHost.password,
-            key: resolvedHost.key,
+            username: resolvedHostData.username || username,
+            password: resolvedHostData.password,
+            key: resolvedHostData.key,
             // Preserve user-supplied keyPassword (e.g. from passphrase dialog) over the empty DB value
-            keyPassword: keyPassword || resolvedHost.keyPassword,
-            keyType: resolvedHost.keyType,
-            authType: resolvedHost.authType,
-            certPublicKey: (resolvedHost as unknown as Record<string, unknown>)
-              .certPublicKey as string | undefined,
+            keyPassword: keyPassword || resolvedHostData.keyPassword,
+            keyType: resolvedHostData.keyType,
+            authType: resolvedHostData.authType,
+            certPublicKey: resolvedHostData.certPublicKey as
+              | string
+              | undefined,
           };
         }
       } catch (error) {
