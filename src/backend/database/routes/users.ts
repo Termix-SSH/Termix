@@ -130,33 +130,22 @@ router.post("/create", async (req, res) => {
       return res.status(409).json({ error: "Username already exists" });
     }
 
-    let isFirstUser = false;
-    const countResult = db.$client
-      .prepare("SELECT COUNT(*) as count FROM users")
-      .get();
-    isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
-
     const saltRounds = parseInt(process.env.SALT || "10", 10);
     const password_hash = await bcrypt.hash(password, saltRounds);
     const id = nanoid();
-    await db.insert(users).values({
-      id,
-      username,
-      passwordHash: password_hash,
-      isAdmin: isFirstUser,
-      isOidc: false,
-      clientId: "",
-      clientSecret: "",
-      issuerUrl: "",
-      authorizationUrl: "",
-      tokenUrl: "",
-      identifierPath: "",
-      namePath: "",
-      scopes: "openid email profile",
-      totpSecret: null,
-      totpEnabled: false,
-      totpBackupCodes: null,
-    });
+
+    const isFirstUser = db.$client.transaction(() => {
+      const countResult = db.$client
+        .prepare("SELECT COUNT(*) as count FROM users")
+        .get() as { count?: number };
+      const first = (countResult?.count || 0) === 0;
+      db.$client
+        .prepare(
+          "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(id, username, password_hash, first ? 1 : 0, 0, "", "", "", "", "", "", "", "openid email profile", null, 0, null);
+      return first;
+    })();
 
     try {
       const defaultRoleName = isFirstUser ? "admin" : "user";
@@ -902,10 +891,10 @@ router.get("/oidc/callback", async (req, res) => {
 
     let isFirstUser = false;
     if (!user || user.length === 0) {
-      const countResult = db.$client
+      const preCheckCount = db.$client
         .prepare("SELECT COUNT(*) as count FROM users")
         .get();
-      isFirstUser = ((countResult as { count?: number })?.count || 0) === 0;
+      isFirstUser = ((preCheckCount as { count?: number })?.count || 0) === 0;
 
       if (!isFirstUser && config.allowed_users) {
         const email = userInfo.email as string | undefined;
@@ -973,22 +962,18 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       const id = nanoid();
-      await db.insert(users).values({
-        id,
-        username: name,
-        passwordHash: "",
-        isAdmin: isFirstUser,
-        isOidc: true,
-        oidcIdentifier: identifier,
-        clientId: String(config.client_id),
-        clientSecret: String(config.client_secret),
-        issuerUrl: String(config.issuer_url),
-        authorizationUrl: String(config.authorization_url),
-        tokenUrl: String(config.token_url),
-        identifierPath: String(config.identifier_path),
-        namePath: String(config.name_path),
-        scopes: String(config.scopes),
-      });
+      isFirstUser = db.$client.transaction(() => {
+        const countResult = db.$client
+          .prepare("SELECT COUNT(*) as count FROM users")
+          .get() as { count?: number };
+        const first = (countResult?.count || 0) === 0;
+        db.$client
+          .prepare(
+            "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          )
+          .run(id, name, "", first ? 1 : 0, 1, identifier, String(config.client_id), String(config.client_secret), String(config.issuer_url), String(config.authorization_url), String(config.token_url), String(config.identifier_path), String(config.name_path), String(config.scopes));
+        return first;
+      })();
 
       try {
         const defaultRoleName = isFirstUser ? "admin" : "user";
