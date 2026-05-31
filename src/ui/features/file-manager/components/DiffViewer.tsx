@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from "react";
 import { DiffEditor } from "@monaco-editor/react";
 import { Button } from "@/components/button.tsx";

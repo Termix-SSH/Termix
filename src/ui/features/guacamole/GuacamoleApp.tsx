@@ -124,7 +124,7 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
         if (result) setToken(result.token);
       })
       .catch((err) => setError(err?.message || t("guacamole.failedToConnect")));
-  }, [hostId, retryCount]);
+  }, [hostId, protocol, retryCount, t]);
 
   const handleReconnect = useCallback(() => {
     setConnectionError(null);

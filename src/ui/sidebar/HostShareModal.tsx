@@ -19,6 +19,7 @@ import {
   revokeHostAccess,
   getUserList,
   getRoles,
+  type AccessRecord,
 } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
 
@@ -35,7 +36,7 @@ export function HostShareModal({
   const [shareType, setShareType] = useState<"user" | "role">("user");
   const [shareGranteeId, setShareGranteeId] = useState("");
   const [shareExpiryHours, setShareExpiryHours] = useState("");
-  const [accessList, setAccessList] = useState<any[]>([]);
+  const [accessList, setAccessList] = useState<AccessRecord[]>([]);
   const [shareUsers, setShareUsers] = useState<
     { id: string; username: string }[]
   >([]);
@@ -55,15 +56,15 @@ export function HostShareModal({
       getRoles().catch(() => ({ roles: [] })),
     ])
       .then(([accessRes, usersRes, rolesRes]) => {
-        setAccessList((accessRes as any)?.accessList ?? []);
+        setAccessList(accessRes.accessList ?? []);
         setShareUsers(
-          ((usersRes as any)?.users ?? []).map((u: any) => ({
+          (usersRes.users ?? []).map((u) => ({
             id: String(u.id ?? u.userId),
             username: u.username,
           })),
         );
         setShareRoles(
-          ((rolesRes as any)?.roles ?? []).map((r: any) => ({
+          (rolesRes.roles ?? []).map((r) => ({
             id: String(r.id),
             name: r.name,
           })),
@@ -84,7 +85,7 @@ export function HostShareModal({
   async function refreshAccessList() {
     if (!host) return;
     const res = await getHostAccess(Number(host.id));
-    setAccessList((res as any)?.accessList ?? []);
+    setAccessList(res.accessList ?? []);
   }
 
   if (!open) return null;
@@ -233,7 +234,7 @@ export function HostShareModal({
                     {t("hosts.guac.noAccessEntries")}
                   </div>
                 )}
-                {accessList.map((r: any, i: number) => {
+                {accessList.map((r, i) => {
                   const expired =
                     r.expiresAt && new Date(r.expiresAt) < new Date();
                   return (

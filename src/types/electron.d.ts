@@ -128,6 +128,7 @@ declare global {
   interface Window {
     electronAPI: ElectronAPI;
     IS_ELECTRON: boolean;
+    configuredServerUrl?: string | null;
     electronClipboard?: {
       writeText(text: string): Promise<boolean>;
       readText(): Promise<string>;

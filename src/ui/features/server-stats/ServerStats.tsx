@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React from "react";
 import { Separator } from "@/components/separator.tsx";
 import { Button } from "@/components/button.tsx";

@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/exhaustive-deps */
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";
@@ -509,7 +511,6 @@ export function AppShell({
     }
 
     loadSavedTabs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hostsLoaded, userPrefsLoaded]);
 
   // Debounced tab-order sync: when tab order changes, patch each persistent tab's tabOrder in DB.
@@ -844,7 +845,7 @@ export function AppShell({
     const id = requestAnimationFrame(() => {
       tabs.forEach((tab) => {
         if (!tab.terminalRef) return;
-        const ref = tab.terminalRef.current as any;
+        const ref = tab.terminalRef.current;
         ref?.fit?.();
         ref?.notifyResize?.();
       });

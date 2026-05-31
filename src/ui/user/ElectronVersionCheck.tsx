@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/button.tsx";
 import { VersionAlert } from "@/components/version-alert.tsx";
 import { useTranslation } from "react-i18next";
@@ -29,21 +29,7 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
       ? t("versionCheck.betaVersion")
       : t("versionCheck.updateRequired");
 
-  useEffect(() => {
-    const updateCheckDisabled =
-      localStorage.getItem("disableUpdateCheck") === "true";
-    if (updateCheckDisabled) {
-      onContinue();
-      return;
-    }
-    if (isElectron()) {
-      checkForUpdates();
-    } else {
-      onContinue();
-    }
-  }, []);
-
-  const checkForUpdates = async () => {
+  const checkForUpdates = useCallback(async () => {
     setVersionChecking(true);
     try {
       const updateInfo = await checkElectronUpdate();
@@ -77,7 +63,21 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
     } finally {
       setVersionChecking(false);
     }
-  };
+  }, [onContinue]);
+
+  useEffect(() => {
+    const updateCheckDisabled =
+      localStorage.getItem("disableUpdateCheck") === "true";
+    if (updateCheckDisabled) {
+      onContinue();
+      return;
+    }
+    if (isElectron()) {
+      checkForUpdates();
+    } else {
+      onContinue();
+    }
+  }, [checkForUpdates, onContinue]);
 
   const handleDownloadUpdate = () => {
     if (versionInfo?.latest_release?.html_url) {

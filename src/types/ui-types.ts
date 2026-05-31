@@ -191,6 +191,8 @@ export type Tab = {
   terminalRef?: import("react").RefObject<{
     sendInput?: (data: string) => void;
     reconnect?: () => void;
+    fit?: () => void;
+    notifyResize?: () => void;
   } | null>;
 };
 

@@ -114,46 +114,9 @@ export function FileManagerSidebar({
 
   // ─── Effects ──────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    loadQuickAccessData();
-  }, [currentHost, refreshTrigger]);
-
-  useEffect(() => {
-    if (sshSessionId) {
-      loadedFoldersRef.current = new Set(["/"]);
-      loadDirectoryTree();
-    }
-  }, [sshSessionId]);
-
-  // When currentPath changes externally (grid navigation), ensure the parent
-  // directory is loaded in the tree so the selection highlight can appear.
-  useEffect(() => {
-    if (!sshSessionId || currentPath === "/") return;
-
-    const parentPath =
-      currentPath.substring(0, currentPath.lastIndexOf("/")) || "/";
-
-    const findByPath = (items: SidebarItem[]): SidebarItem | null => {
-      for (const item of items) {
-        if (item.path === parentPath) return item;
-        if (item.children) {
-          const found = findByPath(item.children);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const parent = findByPath(directoryTree);
-    if (parent && !loadedFoldersRef.current.has(parent.path)) {
-      loadedFoldersRef.current.add(parent.path);
-      loadSubdirectory(parent.id, parent.path);
-    }
-  }, [currentPath, sshSessionId]);
-
   // ─── API: Quick access ────────────────────────────────────────────────────────
 
-  const loadQuickAccessData = async () => {
+  const loadQuickAccessData = useCallback(async () => {
     if (!currentHost?.id) return;
 
     try {
@@ -196,61 +159,64 @@ export function FileManagerSidebar({
       setPinnedItems([]);
       setShortcuts([]);
     }
-  };
+  }, [currentHost?.id]);
 
   // ─── API: Directory tree ──────────────────────────────────────────────────────
 
-  const loadDirectoryTree = async (attempt = 0) => {
-    if (!sshSessionId) return;
+  const loadDirectoryTree = useCallback(
+    async (attempt = 0) => {
+      if (!sshSessionId) return;
 
-    try {
-      const response = await listSSHFiles(sshSessionId, "/");
-      const rootFiles = (response.files || []) as DirectoryItemData[];
-      const rootFolders = rootFiles.filter(
-        (item: DirectoryItemData) => item.type === "directory",
-      );
+      try {
+        const response = await listSSHFiles(sshSessionId, "/");
+        const rootFiles = (response.files || []) as DirectoryItemData[];
+        const rootFolders = rootFiles.filter(
+          (item: DirectoryItemData) => item.type === "directory",
+        );
 
-      const rootTreeItems = rootFolders.map((folder: DirectoryItemData) => ({
-        id: `folder-${folder.name}`,
-        name: folder.name,
-        path: folder.path,
-        type: "folder" as const,
-        isExpanded: false,
-        children: [],
-      }));
-
-      setDirectoryTree([
-        {
-          id: "root",
-          name: "/",
-          path: "/",
-          type: "folder" as const,
-          isExpanded: true,
-          children: rootTreeItems,
-        },
-      ]);
-    } catch (error: unknown) {
-      const status =
-        (error as { status?: number })?.status ||
-        (error as { response?: { status?: number } })?.response?.status;
-      if (status === 409 && attempt < 3) {
-        // Another request was already listing "/" — retry after a short delay
-        setTimeout(() => loadDirectoryTree(attempt + 1), 600);
-        return;
-      }
-      console.error("Failed to load directory tree:", error);
-      setDirectoryTree([
-        {
-          id: "root",
-          name: "/",
-          path: "/",
+        const rootTreeItems = rootFolders.map((folder: DirectoryItemData) => ({
+          id: `folder-${folder.name}`,
+          name: folder.name,
+          path: folder.path,
           type: "folder" as const,
           isExpanded: false,
           children: [],
-        },
-      ]);
-    }
-  };
+        }));
+
+        setDirectoryTree([
+          {
+            id: "root",
+            name: "/",
+            path: "/",
+            type: "folder" as const,
+            isExpanded: true,
+            children: rootTreeItems,
+          },
+        ]);
+      } catch (error: unknown) {
+        const status =
+          (error as { status?: number })?.status ||
+          (error as { response?: { status?: number } })?.response?.status;
+        if (status === 409 && attempt < 3) {
+          // Another request was already listing "/" — retry after a short delay
+          setTimeout(() => loadDirectoryTree(attempt + 1), 600);
+          return;
+        }
+        console.error("Failed to load directory tree:", error);
+        setDirectoryTree([
+          {
+            id: "root",
+            name: "/",
+            path: "/",
+            type: "folder" as const,
+            isExpanded: false,
+            children: [],
+          },
+        ]);
+      }
+    },
+    [sshSessionId],
+  );
 
   /**
    * Lazily fetches subdirectory contents and patches them into the tree state.
@@ -303,6 +269,43 @@ export function FileManagerSidebar({
     },
     [sshSessionId],
   );
+
+  useEffect(() => {
+    loadQuickAccessData();
+  }, [loadQuickAccessData, refreshTrigger]);
+
+  useEffect(() => {
+    if (sshSessionId) {
+      loadedFoldersRef.current = new Set(["/"]);
+      loadDirectoryTree();
+    }
+  }, [loadDirectoryTree, sshSessionId]);
+
+  // When currentPath changes externally (grid navigation), ensure the parent
+  // directory is loaded in the tree so the selection highlight can appear.
+  useEffect(() => {
+    if (!sshSessionId || currentPath === "/") return;
+
+    const parentPath =
+      currentPath.substring(0, currentPath.lastIndexOf("/")) || "/";
+
+    const findByPath = (items: SidebarItem[]): SidebarItem | null => {
+      for (const item of items) {
+        if (item.path === parentPath) return item;
+        if (item.children) {
+          const found = findByPath(item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const parent = findByPath(directoryTree);
+    if (parent && !loadedFoldersRef.current.has(parent.path)) {
+      loadedFoldersRef.current.add(parent.path);
+      loadSubdirectory(parent.id, parent.path);
+    }
+  }, [currentPath, directoryTree, loadSubdirectory, sshSessionId]);
 
   // ─── Quick-access mutation handlers ──────────────────────────────────────────
 

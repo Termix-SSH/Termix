@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Auth } from "@/auth/LoginPage.tsx";
 import { AlertManager } from "@/dashboard/panels/alerts/AlertManager.tsx";

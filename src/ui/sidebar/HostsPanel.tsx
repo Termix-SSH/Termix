@@ -360,14 +360,17 @@ export function HostsPanel({
                   toast.error("Cannot import more than 100 hosts at once");
                   return;
                 }
-                const normalized = hostsArray.map((h: any) => ({
-                  ...h,
-                  port: h.port ?? h.sshPort ?? 22,
-                  enableSsh: h.enableSsh ?? h.connectionType === "ssh",
-                  enableRdp: h.enableRdp ?? h.connectionType === "rdp",
-                  enableVnc: h.enableVnc ?? h.connectionType === "vnc",
-                  enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
-                }));
+                const normalized = hostsArray.map(
+                  (h: Record<string, unknown>) => ({
+                    ...h,
+                    port: h.port ?? h.sshPort ?? 22,
+                    enableSsh: h.enableSsh ?? h.connectionType === "ssh",
+                    enableRdp: h.enableRdp ?? h.connectionType === "rdp",
+                    enableVnc: h.enableVnc ?? h.connectionType === "vnc",
+                    enableTelnet:
+                      h.enableTelnet ?? h.connectionType === "telnet",
+                  }),
+                );
                 const result = await bulkImportSSHHosts(
                   normalized,
                   importOverwriteRef.current,
@@ -383,8 +386,10 @@ export function HostsPanel({
                   .filter(Boolean)
                   .join(", ");
                 toast.success(`Import complete: ${msg}`);
-              } catch (err: any) {
-                toast.error(err?.message ?? "Failed to import hosts");
+              } catch (err: unknown) {
+                toast.error(
+                  err instanceof Error ? err.message : "Failed to import hosts",
+                );
               }
             }}
           />

@@ -437,6 +437,9 @@ export const GuacamoleDisplay = forwardRef<
     onError,
     refreshKeyboardHandlers,
     rescaleDisplay,
+    connectionConfig.protocol,
+    connectionConfig.type,
+    t,
   ]);
 
   const hasInitiatedRef = useRef(false);

@@ -7,7 +7,7 @@ import tseslint from "typescript-eslint";
 import { globalIgnores } from "eslint/config";
 
 export default tseslint.config([
-  globalIgnores(["dist", "release", "Mobile"]),
+  globalIgnores(["dist", "release", "Mobile", "src/mcp-server/node_modules"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [

@@ -46,7 +46,7 @@ export function ContainerStats({
     } finally {
       setIsLoading(false);
     }
-  }, [sessionId, containerId, containerState]);
+  }, [sessionId, containerId, containerState, t]);
 
   React.useEffect(() => {
     fetchStats();

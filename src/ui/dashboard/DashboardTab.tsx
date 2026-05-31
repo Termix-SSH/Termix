@@ -1118,7 +1118,7 @@ export function DashboardTab({
       .then(setActivity)
       .catch(() => {});
     getCredentials()
-      .then((res: any) =>
+      .then((res) =>
         setCredentialCount(
           Array.isArray(res?.credentials) ? res.credentials.length : 0,
         ),
@@ -1127,7 +1127,7 @@ export function DashboardTab({
     getTunnelStatuses()
       .then((statuses) => {
         const active = Object.values(statuses ?? {}).filter(
-          (s: any) => s?.status === "CONNECTED",
+          (s) => s?.status === "CONNECTED",
         ).length;
         setActiveTunnelCount(active);
       })
