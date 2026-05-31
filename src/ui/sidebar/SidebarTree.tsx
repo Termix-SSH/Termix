@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useState, useEffect } from "react";
+import { useState, useEffect, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -11,6 +11,7 @@ import {
   Cpu,
   FolderOpen,
   FolderSearch,
+  Key,
   Link,
   Loader2,
   MemoryStick,
@@ -42,6 +43,7 @@ import {
   bulkUpdateSSHHosts,
   createSSHHost,
   deleteSSHHost,
+  getHostPassword,
   wakeOnLan,
 } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
@@ -161,6 +163,38 @@ function collectAllFolders(children: (Host | HostFolder)[]): string[] {
   return Array.from(names).sort();
 }
 
+async function writeClipboardText(value: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+}
+
+function canCopyHostPassword(host: Host): boolean {
+  return (
+    host.authType === "password" ||
+    host.authType === "credential" ||
+    !!host.hasPassword ||
+    !!host.password
+  );
+}
+
+function canCopyHostSudoPassword(host: Host): boolean {
+  return (
+    !!host.hasSudoPassword ||
+    !!host.sudoPassword ||
+    !!host.terminalConfig?.sudoPassword
+  );
+}
+
 function folderHostCount(folder: HostFolder): {
   total: number;
   online: number;
@@ -226,6 +260,27 @@ export function HostItem({
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const shouldUseClickTray = trayOnClick || isTouchOnly;
+  const showPasswordCopy = canCopyHostPassword(host);
+  const showSudoPasswordCopy = canCopyHostSudoPassword(host);
+
+  async function handleCopyPassword(
+    e: MouseEvent,
+    field: "password" | "sudoPassword",
+  ) {
+    e.stopPropagation();
+    const password = await getHostPassword(Number(host.id), field);
+    if (!password) {
+      toast.error(t("nav.failedToCopyPassword"));
+      return;
+    }
+
+    try {
+      await writeClipboardText(password);
+      toast.success(t("nav.passwordCopied"));
+    } catch {
+      toast.error(t("nav.failedToCopyPassword"));
+    }
+  }
 
   useEffect(() => {
     const handler = () =>
@@ -507,6 +562,24 @@ export function HostItem({
 
             {/* Separator + management buttons row — always fixed position */}
             <div className="flex items-center gap-1 pt-0.5 border-t border-border/40 mt-0.5">
+              {showPasswordCopy && (
+                <button
+                  title={t("nav.copyPassword")}
+                  onClick={(e) => handleCopyPassword(e, "password")}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Key className="size-3.5" />
+                </button>
+              )}
+              {showSudoPasswordCopy && (
+                <button
+                  title={t("nav.copySudoPassword")}
+                  onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Key className="size-3.5" />
+                </button>
+              )}
               {onEditHost && (
                 <button
                   title="Edit Host"
@@ -554,6 +627,22 @@ export function HostItem({
                     <Copy className="size-3.5 mr-2" />
                     {t("hosts.copyAddress")}
                   </DropdownMenuItem>
+                  {showPasswordCopy && (
+                    <DropdownMenuItem
+                      onClick={(e) => handleCopyPassword(e, "password")}
+                    >
+                      <Key className="size-3.5 mr-2" />
+                      {t("nav.copyPassword")}
+                    </DropdownMenuItem>
+                  )}
+                  {showSudoPasswordCopy && (
+                    <DropdownMenuItem
+                      onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                    >
+                      <Key className="size-3.5 mr-2" />
+                      {t("nav.copySudoPassword")}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <Link className="size-3.5 mr-2" />
