@@ -51,7 +51,7 @@
     "guacamole-lite": "^1.2.0",
     "https-proxy-agent": "^7.0.6",
     "jose": "^6.2.2",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.2.0",
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "motion": "^12.38.0",
