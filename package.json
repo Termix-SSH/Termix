@@ -123,7 +123,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.1",
     "cytoscape": "^3.33.2",
     "electron": "^42.2.0",
     "electron-builder": "^26.8.1",
