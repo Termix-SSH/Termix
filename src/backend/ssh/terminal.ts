@@ -943,6 +943,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     let resolvedHostData:
       | (Record<string, unknown> & {
+          ip?: string;
+          port?: number;
           username?: string;
           password?: string;
           key?: string;
@@ -963,7 +965,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (id && userId) {
       try {
         const { resolveHostById } = await import("./host-resolver.js");
-        resolvedHostData = (await resolveHostById(id, userId)) as typeof resolvedHostData;
+        resolvedHostData = (await resolveHostById(
+          id,
+          userId,
+        )) as unknown as typeof resolvedHostData;
 
         if (resolvedHostData) {
           if (
@@ -1025,9 +1030,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyPassword: keyPassword || resolvedHostData.keyPassword,
             keyType: resolvedHostData.keyType,
             authType: resolvedHostData.authType,
-            certPublicKey: resolvedHostData.certPublicKey as
-              | string
-              | undefined,
+            certPublicKey: resolvedHostData.certPublicKey as string | undefined,
           };
           sendLog(
             "auth",
@@ -1056,9 +1059,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             keyPassword: keyPassword || resolvedHostData.keyPassword,
             keyType: resolvedHostData.keyType,
             authType: resolvedHostData.authType,
-            certPublicKey: resolvedHostData.certPublicKey as
-              | string
-              | undefined,
+            certPublicKey: resolvedHostData.certPublicKey as string | undefined,
           };
         }
       } catch (error) {
