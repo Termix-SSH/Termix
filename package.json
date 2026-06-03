@@ -37,8 +37,8 @@
     "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never"
   },
   "dependencies": {
-    "@tanstack/react-virtual": "^3.13.26",
-    "axios": "^1.15.2",
+    "@tanstack/react-virtual": "^3.14.2",
+    "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
     "body-parser": "^2.2.2",
@@ -51,7 +51,7 @@
     "guacamole-lite": "^1.2.0",
     "https-proxy-agent": "^7.0.6",
     "jose": "^6.2.2",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.2.0",
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "motion": "^12.38.0",
