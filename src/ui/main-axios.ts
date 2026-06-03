@@ -1151,6 +1151,7 @@ export {
   updateGuacamoleSettings,
 } from "@/api/settings-api";
 
+// ============================================================================
 // AUTHENTICATION
 // ============================================================================
 
@@ -1218,6 +1219,7 @@ export async function loginUser(
       is_oidc: response.data.is_oidc,
       totp_enabled: response.data.totp_enabled,
       data_unlocked: response.data.data_unlocked,
+      token: response.data.token,
     };
   } catch (error) {
     throw handleApiError(error, "login user");
