@@ -32,6 +32,7 @@ import {
   saveServerConfig,
   isElectron,
   getEmbeddedServerStatus,
+  getCurrentToken,
 } from "@/main-axios";
 import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm";
@@ -115,9 +116,15 @@ interface AuthProps {
 
 interface ExtendedWindow extends Window {
   IS_ELECTRON_WEBVIEW?: boolean;
+  ReactNativeWebView?: { postMessage: (msg: string) => void };
 }
 
+const isInMobileWebView = () =>
+  /Termix-Mobile\/(Android|iOS)/.test(navigator.userAgent) ||
+  !!(window as ExtendedWindow).ReactNativeWebView;
+
 const isInElectronWebView = () => {
+  if (isInMobileWebView()) return false;
   if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) return true;
   try {
     if (window.self !== window.top) return true;
@@ -342,6 +349,32 @@ export function Auth({ onLogin }: AuthProps) {
       return;
     }
     if (success) {
+      if (isInMobileWebView()) {
+        // The OIDC callback authenticated via an HttpOnly cookie on this origin,
+        // so the token isn't in localStorage. Prefer a token passed in the URL
+        // (termix-mobile:-origin callbacks include one), otherwise read it back
+        // from the cookie via /users/me/token before handing it to the app.
+        const postToken = (token: string) => {
+          (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+            JSON.stringify({ type: "AUTH_SUCCESS", token }),
+          );
+          setWebviewAuthSuccess(true);
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
+        };
+        const urlToken = urlParams.get("token");
+        if (urlToken) {
+          postToken(urlToken);
+        } else {
+          getCurrentToken()
+            .then((token) => postToken(token ?? ""))
+            .catch(() => postToken(""));
+        }
+        return;
+      }
       if (isInElectronWebView()) {
         window.parent.postMessage(
           {
@@ -445,6 +478,15 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       if (!res?.success) throw new Error(t("errors.loginFailed"));
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the login response body.
+        const token = res?.token ?? "";
+        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: "AUTH_SUCCESS", token }),
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
       if (isInElectronWebView()) {
         window.parent.postMessage(
           {
@@ -537,6 +579,15 @@ export function Auth({ onLogin }: AuthProps) {
     try {
       const res = await verifyTOTPLogin(totpTempToken, totpCode, rememberMe);
       if (!res?.success) throw new Error(t("errors.loginFailed"));
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the login response body.
+        const token = res?.token ?? "";
+        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: "AUTH_SUCCESS", token }),
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
       if (isInElectronWebView()) {
         window.parent.postMessage(
           {

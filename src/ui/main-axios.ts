@@ -103,6 +103,7 @@ export interface AuthResponse {
   requires_totp?: boolean;
   temp_token?: string;
   rememberMe?: boolean;
+  token?: string;
 }
 
 export interface UserInfo {

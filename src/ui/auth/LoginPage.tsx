@@ -29,6 +29,7 @@ import {
   saveServerConfig,
   isElectron,
   getEmbeddedServerStatus,
+  getCurrentToken,
 } from "@/main-axios";
 import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm.tsx";
@@ -39,7 +40,12 @@ import {
 
 interface ExtendedWindow extends Window {
   IS_ELECTRON_WEBVIEW?: boolean;
+  ReactNativeWebView?: { postMessage: (msg: string) => void };
 }
+
+const isInMobileWebView = () =>
+  /Termix-Mobile\/(Android|iOS)/.test(navigator.userAgent) ||
+  !!(window as ExtendedWindow).ReactNativeWebView;
 
 interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
@@ -82,6 +88,7 @@ export function Auth({
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
   const isInElectronWebView = useCallback(() => {
+    if (isInMobileWebView()) return false;
     if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) {
       return true;
     }
@@ -136,6 +143,15 @@ export function Auth({
   const [totpLoading, setTotpLoading] = useState(false);
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
   const totpInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Hand the JWT to the native app embedding this page in a React Native WebView.
+  // The mobile onMessage handler only reads { type, token }.
+  const postMobileAuthSuccess = useCallback((token: string) => {
+    (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+      JSON.stringify({ type: "AUTH_SUCCESS", token }),
+    );
+    setWebviewAuthSuccess(true);
+  }, []);
 
   const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
     null,
@@ -327,6 +343,12 @@ export function Auth({
 
       if (!res || !res.success) {
         throw new Error(t("errors.loginFailed"));
+      }
+
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the login response body.
+        postMobileAuthSuccess(res.token || "");
+        return;
       }
 
       if (isInElectronWebView()) {
@@ -533,6 +555,13 @@ export function Auth({
         throw new Error(t("errors.loginFailed"));
       }
 
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the verify response body.
+        postMobileAuthSuccess(res.token || "");
+        setTotpLoading(false);
+        return;
+      }
+
       if (isInElectronWebView()) {
         try {
           window.parent.postMessage(
@@ -686,6 +715,30 @@ export function Auth({
 
     if (success) {
       setOidcLoading(true);
+
+      if (isInMobileWebView()) {
+        // The OIDC callback authenticated via an HttpOnly cookie on this origin,
+        // so prefer a token in the URL (termix-mobile:-origin callbacks include
+        // one), otherwise read it back from the cookie via /users/me/token.
+        const finish = (token: string) => {
+          postMobileAuthSuccess(token);
+          setOidcLoading(false);
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
+        };
+        const urlToken = urlParams.get("token");
+        if (urlToken) {
+          finish(urlToken);
+        } else {
+          getCurrentToken()
+            .then((token) => finish(token ?? ""))
+            .catch(() => finish(""));
+        }
+        return;
+      }
 
       if (isInElectronWebView()) {
         try {
@@ -1094,18 +1147,19 @@ export function Auth({
                 </AlertDescription>
               </Alert>
             )}
-            {isInElectronWebView() && webviewAuthSuccess && (
-              <div className="flex flex-col items-center justify-center h-64 gap-4">
-                <div className="text-center">
-                  <h2 className="text-xl font-bold mb-2">
-                    {t("messages.loginSuccess")}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {t("auth.redirectingToApp")}
-                  </p>
+            {(isInElectronWebView() || isInMobileWebView()) &&
+              webviewAuthSuccess && (
+                <div className="flex flex-col items-center justify-center h-64 gap-4">
+                  <div className="text-center">
+                    <h2 className="text-xl font-bold mb-2">
+                      {t("messages.loginSuccess")}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {t("auth.redirectingToApp")}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             {!webviewAuthSuccess && totpRequired && (
               <form
                 className="flex flex-col gap-5"
