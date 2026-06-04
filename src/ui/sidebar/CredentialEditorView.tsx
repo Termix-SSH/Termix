@@ -89,6 +89,7 @@ export function CredentialEditorView({
           ? t("hosts.credentialUpdated")
           : t("hosts.credentialCreated"),
       );
+      window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
       onSave(saved);
     } catch {
       toast.error(t("hosts.failedToSaveCredential"));

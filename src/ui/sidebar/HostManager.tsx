@@ -107,16 +107,26 @@ export function HostManager({
       .catch(() => {});
   };
 
-  useEffect(() => {
-    reloadHosts();
+  const reloadCredentials = () => {
     getCredentials()
       .then((res) => setCredentials(mapCredentials(res)))
       .catch(() => {})
       .finally(() => setCredentialsLoading(false));
+  };
+
+  useEffect(() => {
+    reloadHosts();
+    reloadCredentials();
 
     window.addEventListener("termix:hosts-changed", reloadHosts);
-    return () =>
+    window.addEventListener("termix:credentials-changed", reloadCredentials);
+    return () => {
       window.removeEventListener("termix:hosts-changed", reloadHosts);
+      window.removeEventListener(
+        "termix:credentials-changed",
+        reloadCredentials,
+      );
+    };
   }, []);
 
   useEffect(() => {
