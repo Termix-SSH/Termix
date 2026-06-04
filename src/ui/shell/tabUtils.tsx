@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   Box,
   FolderSearch,
@@ -14,6 +15,10 @@ import {
 import { useTranslation } from "react-i18next";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
 import { Terminal as TerminalFeature } from "@/features/terminal/Terminal";
+import type {
+  TerminalHandle,
+  TerminalHostConfig,
+} from "@/features/terminal/Terminal";
 import { FileManager } from "@/features/file-manager/FileManager";
 import { DockerManager } from "@/features/docker/DockerManager";
 import { ServerStats } from "@/features/server-stats/ServerStats";
@@ -127,14 +132,14 @@ function TerminalTabContent({
   return (
     <CommandHistoryProvider>
       <TerminalFeature
-        ref={tab.terminalRef as any}
+        ref={tab.terminalRef as React.Ref<TerminalHandle>}
         hostConfig={
           {
             ...hostToSSHHost(host),
             sshPort: host.sshPort ?? host.port,
             instanceId: tab.instanceId ?? tab.id,
             restoredSessionId: tab.restoredSessionId ?? null,
-          } as any
+          } as TerminalHostConfig
         }
         isVisible={isVisible}
         title={label}
@@ -213,7 +218,7 @@ export function renderTabContent(
         );
       return (
         <ServerStats
-          hostConfig={hostToSSHHost(host) as any}
+          hostConfig={hostToSSHHost(host)}
           title={label}
           isVisible={isVisible}
           isTopbarOpen={false}

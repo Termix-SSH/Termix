@@ -5,7 +5,7 @@ import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials, hosts } from "../database/db/schema.js";
+import { hosts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { fileLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -17,104 +17,33 @@ import {
 } from "../utils/socks5-helper.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
-
-function createConnectionLog(
-  type: "info" | "success" | "warning" | "error",
-  stage: ConnectionStage,
-  message: string,
-  details?: Record<string, unknown>,
-): Omit<LogEntry, "id" | "timestamp"> {
-  return {
-    type,
-    stage,
-    message,
-    details,
-  };
-}
-
-function isExecutableFile(permissions: string, fileName: string): boolean {
-  const hasExecutePermission =
-    permissions[3] === "x" || permissions[6] === "x" || permissions[9] === "x";
-
-  const scriptExtensions = [
-    ".sh",
-    ".py",
-    ".pl",
-    ".rb",
-    ".js",
-    ".php",
-    ".bash",
-    ".zsh",
-    ".fish",
-  ];
-  const hasScriptExtension = scriptExtensions.some((ext) =>
-    fileName.toLowerCase().endsWith(ext),
-  );
-
-  const executableExtensions = [".bin", ".exe", ".out"];
-  const hasExecutableExtension = executableExtensions.some((ext) =>
-    fileName.toLowerCase().endsWith(ext),
-  );
-
-  const hasNoExtension = !fileName.includes(".") && hasExecutePermission;
-
-  return (
-    hasExecutePermission &&
-    (hasScriptExtension || hasExecutableExtension || hasNoExtension)
-  );
-}
-
-function modeToPermissions(mode: number): string {
-  const S_IFDIR = 0o040000;
-  const S_IFLNK = 0o120000;
-  const S_IFMT = 0o170000;
-
-  const type = mode & S_IFMT;
-  const prefix = type === S_IFDIR ? "d" : type === S_IFLNK ? "l" : "-";
-
-  const perms = [
-    mode & 0o400 ? "r" : "-",
-    mode & 0o200 ? "w" : "-",
-    mode & 0o100 ? "x" : "-",
-    mode & 0o040 ? "r" : "-",
-    mode & 0o020 ? "w" : "-",
-    mode & 0o010 ? "x" : "-",
-    mode & 0o004 ? "r" : "-",
-    mode & 0o002 ? "w" : "-",
-    mode & 0o001 ? "x" : "-",
-  ].join("");
-
-  return prefix + perms;
-}
-
-function formatMtime(mtime: number): string {
-  const date = new Date(mtime * 1000);
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  const month = months[date.getMonth()];
-  const day = date.getDate().toString().padStart(2, " ");
-  const now = new Date();
-  const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-
-  if (date > sixMonthsAgo) {
-    const hours = date.getHours().toString().padStart(2, "0");
-    const minutes = date.getMinutes().toString().padStart(2, "0");
-    return `${month} ${day} ${hours}:${minutes}`;
-  }
-  return `${month} ${day}  ${date.getFullYear()}`;
-}
+import { resolveHostById } from "./host-resolver.js";
+import type { SSHHost } from "../../types/index.js";
+import {
+  startHostTransfer,
+  getTransferStatus,
+  listActiveTransfers,
+  probeHungStreamTransfers,
+  requestTransferCancel,
+  cleanupCancelledTransfer,
+  retryHostTransfer,
+  previewArchiveTransferMethod,
+  type HostTransferDeps,
+} from "./host-transfer.js";
+import { registerFileContentRoutes } from "./file-manager-content-routes.js";
+import { createConnectionLog } from "./file-manager-log.js";
+import { createJumpHostChain } from "./jump-host-chain.js";
+import {
+  ChannelOpenSerializer,
+  execChannel,
+  getSessionSftp,
+  type PendingTOTPSession,
+  type SSHSession,
+} from "./file-manager-session.js";
+import { registerFileListingRoutes } from "./file-manager-list-routes.js";
+import { registerFileOperationRoutes } from "./file-manager-operation-routes.js";
+import { registerFileDownloadRoutes } from "./file-manager-download-routes.js";
+import { registerFileActionRoutes } from "./file-manager-action-routes.js";
 
 const app = express();
 
@@ -131,518 +60,10 @@ app.use((_req, res, next) => {
 const authManager = AuthManager.getInstance();
 app.use(authManager.createAuthMiddleware());
 
-interface JumpHostConfig {
-  id: number;
-  ip: string;
-  port: number;
-  username: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  keyType?: string;
-  authType?: string;
-  credentialId?: number;
-  [key: string]: unknown;
-}
-
-async function resolveJumpHost(
-  hostId: number,
-  userId: string,
-): Promise<JumpHostConfig | null> {
-  try {
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
-      "ssh_data",
-      userId,
-    );
-
-    if (hostResults.length === 0) {
-      return null;
-    }
-
-    const host = hostResults[0];
-    const ownerId = (host.userId || userId) as string;
-
-    if (host.credentialId) {
-      if (userId !== ownerId) {
-        try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            hostId,
-            userId,
-          );
-          if (sharedCred) {
-            return {
-              ...host,
-              password: sharedCred.password,
-              key: sharedCred.key,
-              keyPassword: sharedCred.keyPassword,
-              keyType: sharedCred.keyType,
-              authType: sharedCred.key
-                ? "key"
-                : sharedCred.password
-                  ? "password"
-                  : "none",
-            } as JumpHostConfig;
-          }
-        } catch {
-          // fall through to owner credential lookup
-        }
-      }
-
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, ownerId),
-            ),
-          ),
-        "ssh_credentials",
-        ownerId,
-      );
-
-      if (credentials.length > 0) {
-        const credential = credentials[0];
-        return {
-          ...host,
-          password: credential.password as string | undefined,
-          key: (credential.key || credential.privateKey) as string | undefined,
-          keyPassword: credential.keyPassword as string | undefined,
-          keyType: credential.keyType as string | undefined,
-          authType: credential.authType as string | undefined,
-        } as JumpHostConfig;
-      }
-    }
-
-    return host as JumpHostConfig;
-  } catch (error) {
-    fileLogger.error("Failed to resolve jump host", error, {
-      operation: "resolve_jump_host",
-      hostId,
-      userId,
-    });
-    return null;
-  }
-}
-
-async function createJumpHostChain(
-  jumpHosts: Array<{ hostId: number }>,
-  userId: string,
-  socks5Config?: SOCKS5Config | null,
-): Promise<SSHClient | null> {
-  if (!jumpHosts || jumpHosts.length === 0) {
-    return null;
-  }
-
-  let currentClient: SSHClient | null = null;
-  const clients: SSHClient[] = [];
-
-  try {
-    const jumpHostConfigs: Array<Awaited<ReturnType<typeof resolveJumpHost>>> =
-      [];
-    for (let i = 0; i < jumpHosts.length; i++) {
-      const config = await resolveJumpHost(jumpHosts[i].hostId, userId);
-      jumpHostConfigs.push(config);
-    }
-
-    const totalHops = jumpHostConfigs.length;
-
-    for (let i = 0; i < jumpHostConfigs.length; i++) {
-      if (!jumpHostConfigs[i]) {
-        fileLogger.error(`Jump host ${i + 1} not found`, undefined, {
-          operation: "jump_host_chain",
-          hostId: jumpHosts[i].hostId,
-          hopIndex: i,
-          totalHops,
-        });
-        clients.forEach((c) => c.end());
-        return null;
-      }
-    }
-
-    let proxySocket: import("net").Socket | null = null;
-    if (socks5Config?.useSocks5) {
-      const firstHop = jumpHostConfigs[0]!;
-      proxySocket = await createSocks5Connection(
-        firstHop.ip,
-        firstHop.port || 22,
-        socks5Config,
-      );
-    }
-
-    for (let i = 0; i < jumpHostConfigs.length; i++) {
-      const jumpHostConfig = jumpHostConfigs[i]!;
-
-      const jumpClient = new SSHClient();
-      clients.push(jumpClient);
-
-      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
-        jumpHostConfig.id,
-        jumpHostConfig.ip,
-        jumpHostConfig.port || 22,
-        null,
-        userId,
-        true,
-      );
-
-      const connected = await new Promise<boolean>((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve(false);
-        }, 30000);
-
-        jumpClient.on("ready", () => {
-          clearTimeout(timeout);
-          resolve(true);
-        });
-
-        jumpClient.on("error", (err) => {
-          clearTimeout(timeout);
-          fileLogger.error(
-            `Jump host ${i + 1}/${totalHops} connection failed`,
-            err,
-            {
-              operation: "jump_host_connect",
-              hostId: jumpHostConfig.id,
-              ip: jumpHostConfig.ip,
-              hopIndex: i,
-              totalHops,
-              previousHop:
-                i > 0
-                  ? jumpHostConfigs[i - 1]?.ip
-                  : proxySocket
-                    ? "proxy"
-                    : "direct",
-              usedProxySocket: i === 0 && !!proxySocket,
-            },
-          );
-          resolve(false);
-        });
-
-        const connectConfig: Record<string, unknown> = {
-          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
-          port: jumpHostConfig.port || 22,
-          username: jumpHostConfig.username,
-          tryKeyboard: jumpHostConfig.authType !== "none",
-          readyTimeout: 60000,
-          hostVerifier: jumpHostVerifier,
-          algorithms: {
-            kex: [
-              "curve25519-sha256",
-              "curve25519-sha256@libssh.org",
-              "ecdh-sha2-nistp521",
-              "ecdh-sha2-nistp384",
-              "ecdh-sha2-nistp256",
-              "diffie-hellman-group-exchange-sha256",
-              "diffie-hellman-group18-sha512",
-              "diffie-hellman-group17-sha512",
-              "diffie-hellman-group16-sha512",
-              "diffie-hellman-group15-sha512",
-              "diffie-hellman-group14-sha256",
-              "diffie-hellman-group14-sha1",
-              "diffie-hellman-group-exchange-sha1",
-              "diffie-hellman-group1-sha1",
-            ],
-            serverHostKey: [
-              "ssh-ed25519",
-              "ecdsa-sha2-nistp521",
-              "ecdsa-sha2-nistp384",
-              "ecdsa-sha2-nistp256",
-              "rsa-sha2-512",
-              "rsa-sha2-256",
-              "ssh-rsa",
-              "ssh-dss",
-            ],
-            cipher: SSH_ALGORITHMS.cipher,
-            hmac: [
-              "hmac-sha2-512-etm@openssh.com",
-              "hmac-sha2-256-etm@openssh.com",
-              "hmac-sha2-512",
-              "hmac-sha2-256",
-              "hmac-sha1",
-              "hmac-md5",
-            ],
-            compress: ["none", "zlib@openssh.com", "zlib"],
-          },
-        };
-
-        if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
-          connectConfig.password = jumpHostConfig.password;
-        } else if (jumpHostConfig.authType === "key" && jumpHostConfig.key) {
-          const cleanKey = jumpHostConfig.key
-            .trim()
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n");
-          connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
-          if (jumpHostConfig.keyPassword) {
-            connectConfig.passphrase = jumpHostConfig.keyPassword;
-          }
-        }
-
-        jumpClient.on(
-          "keyboard-interactive",
-          (
-            _name: string,
-            _instructions: string,
-            _lang: string,
-            prompts: Array<{ prompt: string; echo: boolean }>,
-            finish: (responses: string[]) => void,
-          ) => {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && jumpHostConfig.password) {
-                return jumpHostConfig.password as string;
-              }
-              return "";
-            });
-            finish(responses);
-          },
-        );
-
-        if (currentClient) {
-          currentClient.forwardOut(
-            "127.0.0.1",
-            0,
-            jumpHostConfig.ip,
-            jumpHostConfig.port || 22,
-            (err, stream) => {
-              if (err) {
-                clearTimeout(timeout);
-                resolve(false);
-                return;
-              }
-              connectConfig.sock = stream;
-              jumpClient.connect(connectConfig);
-            },
-          );
-        } else if (proxySocket) {
-          connectConfig.sock = proxySocket;
-          jumpClient.connect(connectConfig);
-        } else {
-          jumpClient.connect(connectConfig);
-        }
-      });
-
-      if (!connected) {
-        clients.forEach((c) => c.end());
-        return null;
-      }
-
-      currentClient = jumpClient;
-    }
-
-    return currentClient;
-  } catch (error) {
-    fileLogger.error("Failed to create jump host chain", error, {
-      operation: "jump_host_chain",
-    });
-    clients.forEach((c) => c.end());
-    return null;
-  }
-}
-
-// Serializes SSH channel open requests so only one channel negotiation is
-// in-flight at a time per session. Once the channel is established the slot
-// is released immediately so the next open can proceed; the channels
-// themselves remain open concurrently (one exec per command is short-lived,
-// the SFTP channel is long-lived but only opened once).
-class ChannelOpenSerializer {
-  private tail: Promise<void> = Promise.resolve();
-
-  // Enqueue an action that opens a channel. The action runs after the previous
-  // one completes (success or failure). Returns a promise that resolves with
-  // the action's result.
-  run<T>(action: () => Promise<T>): Promise<T> {
-    const next = this.tail.then(
-      () => action(),
-      () => action(), // run even if the previous open failed
-    );
-    // Advance tail past this slot (swallow result so the chain keeps going)
-    this.tail = next.then(
-      () => {},
-      () => {},
-    );
-    return next;
-  }
-}
-
-interface SSHSession {
-  client: SSHClient;
-  isConnected: boolean;
-  lastActive: number;
-  timeout?: NodeJS.Timeout;
-  activeOperations: number;
-  sudoPassword?: string;
-  sftp?: import("ssh2").SFTPWrapper;
-  sftpPending?: Promise<import("ssh2").SFTPWrapper>;
-  channelOpener: ChannelOpenSerializer;
-  poolKey?: string;
-  userId?: string;
-}
-
-interface PendingTOTPSession {
-  client: SSHClient;
-  finish: (responses: string[]) => void;
-  config: import("ssh2").ConnectConfig;
-  createdAt: number;
-  sessionId: string;
-  hostId?: number;
-  ip?: string;
-  port?: number;
-  username?: string;
-  userId?: string;
-  prompts?: Array<{ prompt: string; echo: boolean }>;
-  totpPromptIndex?: number;
-  resolvedPassword?: string;
-  totpAttempts: number;
-  isWarpgate?: boolean;
-}
-
 const sshSessions: Record<string, SSHSession> = {};
 const pendingTOTPSessions: Record<string, PendingTOTPSession> = {};
 // Keyed by "sessionId:path" to prevent concurrent requests for the same path
 const activeListRequests: Record<string, boolean> = {};
-
-function execWithSudo(
-  session: SSHSession,
-  command: string,
-  sudoPassword: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  return execWithSudoBuffer(session, command, sudoPassword).then((result) => ({
-    stdout: result.stdout.toString("utf8"),
-    stderr: result.stderr,
-    code: result.code,
-  }));
-}
-
-function execWithSudoBuffer(
-  session: SSHSession,
-  command: string,
-  sudoPassword: string,
-): Promise<{ stdout: Buffer; stderr: string; code: number }> {
-  return new Promise((resolve) => {
-    const escapedPassword = sudoPassword.replace(/'/g, "'\"'\"'");
-    const sudoCommand = `echo '${escapedPassword}' | sudo -S ${command} 2>&1`;
-
-    execChannel(session, sudoCommand, (err, stream) => {
-      if (err) {
-        resolve({ stdout: Buffer.alloc(0), stderr: err.message, code: 1 });
-        return;
-      }
-
-      const stdoutChunks: Buffer[] = [];
-      let stderr = "";
-
-      stream.on("data", (chunk: Buffer) => {
-        stdoutChunks.push(chunk);
-      });
-
-      stream.stderr.on("data", (chunk: Buffer) => {
-        stderr += chunk.toString();
-      });
-
-      stream.on("close", (code: number) => {
-        let stdout = Buffer.concat(stdoutChunks);
-        const sudoPromptMatch = stdout
-          .toString("utf8", 0, Math.min(stdout.length, 256))
-          .match(/^\[sudo\] password for .+?:\s*/);
-        if (sudoPromptMatch) {
-          stdout = stdout.subarray(Buffer.byteLength(sudoPromptMatch[0]));
-        }
-        resolve({ stdout, stderr, code: code || 0 });
-      });
-
-      stream.on("error", (streamErr: Error) => {
-        resolve({
-          stdout: Buffer.concat(stdoutChunks),
-          stderr: streamErr.message,
-          code: 1,
-        });
-      });
-    });
-  });
-}
-
-function getSessionSftp(
-  session: SSHSession,
-): Promise<import("ssh2").SFTPWrapper> {
-  if (session.sftp) {
-    return Promise.resolve(session.sftp);
-  }
-
-  // Serialization: if a channel open is already in flight, join it
-  if (session.sftpPending) {
-    return session.sftpPending;
-  }
-
-  const openOnce = (): Promise<import("ssh2").SFTPWrapper> =>
-    session.channelOpener.run(
-      () =>
-        new Promise<import("ssh2").SFTPWrapper>((resolve, reject) => {
-          session.client.sftp((err, sftp) => {
-            if (err) return reject(err);
-            session.sftp = sftp;
-            sftp.on("error", () => {
-              session.sftp = undefined;
-            });
-            sftp.on("close", () => {
-              session.sftp = undefined;
-            });
-            resolve(sftp);
-          });
-        }),
-    );
-
-  session.sftpPending = openOnce()
-    .catch((err: Error) => {
-      const isChannelFailure =
-        err.message.toLowerCase().includes("channel open failure") ||
-        err.message.toLowerCase().includes("open failed");
-      if (isChannelFailure) {
-        // Single retry after 500ms for transient server-side rate limiting
-        return new Promise<import("ssh2").SFTPWrapper>((resolve, reject) =>
-          setTimeout(() => openOnce().then(resolve, reject), 500),
-        );
-      }
-      return Promise.reject(err);
-    })
-    .finally(() => {
-      session.sftpPending = undefined;
-    });
-
-  return session.sftpPending;
-}
-
-// Wraps client.exec through the channel serializer so only one SSH channel
-// negotiation is in-flight at a time. The serializer slot is released as soon
-// as the channel is established (not when it closes), so channels run
-// concurrently once open — we only serialize the *open handshake*.
-function execChannel(
-  session: SSHSession,
-  command: string,
-  callback: (
-    err: Error | undefined,
-    stream: import("ssh2").ClientChannel,
-  ) => void,
-): void {
-  session.channelOpener
-    .run(
-      () =>
-        new Promise<import("ssh2").ClientChannel>((resolve, reject) => {
-          session.client.exec(command, (err, stream) => {
-            if (err) return reject(err);
-            resolve(stream);
-          });
-        }),
-    )
-    .then(
-      (stream) => callback(undefined, stream),
-      (err: Error) => callback(err, undefined as never),
-    );
-}
 
 function cleanupSession(sessionId: string) {
   const session = sshSessions[sessionId];
@@ -696,46 +117,371 @@ function verifySessionOwnership(session: SSHSession, userId: string): boolean {
   return !session.userId || session.userId === userId;
 }
 
-function getMimeType(fileName: string): string {
-  const ext = fileName.split(".").pop()?.toLowerCase();
-  const mimeTypes: Record<string, string> = {
-    txt: "text/plain",
-    json: "application/json",
-    js: "text/javascript",
-    html: "text/html",
-    css: "text/css",
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    pdf: "application/pdf",
-    zip: "application/zip",
-    tar: "application/x-tar",
-    gz: "application/gzip",
-  };
-  return mimeTypes[ext || ""] || "application/octet-stream";
+function resolveBrowseHostId(
+  browseSessionId: string,
+  browseSession: SSHSession,
+): number | undefined {
+  if (browseSession.hostId) return browseSession.hostId;
+  const parsed = Number.parseInt(browseSessionId, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function detectBinary(buffer: Buffer): boolean {
-  if (buffer.length === 0) return false;
+async function buildDedicatedTransferConnectConfig(
+  host: SSHHost,
+  userId: string,
+  client: SSHClient,
+): Promise<Record<string, unknown>> {
+  const { ip, port, username } = host;
+  const config: Record<string, unknown> = {
+    host: ip?.replace(/^\[|\]$/g, "") || ip,
+    port,
+    username,
+    tryKeyboard: true,
+    keepaliveInterval: 30000,
+    keepaliveCountMax: 120,
+    readyTimeout: 60000,
+    tcpKeepAlive: true,
+    tcpKeepAliveInitialDelay: 5000,
+    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+      host.id,
+      ip,
+      port,
+      null,
+      userId,
+      false,
+    ),
+    env: {
+      TERM: "xterm-256color",
+      LANG: "en_US.UTF-8",
+      LC_ALL: "en_US.UTF-8",
+    },
+    algorithms: {
+      kex: [
+        "curve25519-sha256",
+        "curve25519-sha256@libssh.org",
+        "ecdh-sha2-nistp521",
+        "ecdh-sha2-nistp384",
+        "ecdh-sha2-nistp256",
+        "diffie-hellman-group-exchange-sha256",
+        "diffie-hellman-group14-sha256",
+        "diffie-hellman-group14-sha1",
+        "diffie-hellman-group-exchange-sha1",
+        "diffie-hellman-group1-sha1",
+      ],
+      serverHostKey: [
+        "ssh-ed25519",
+        "ecdsa-sha2-nistp521",
+        "ecdsa-sha2-nistp384",
+        "ecdsa-sha2-nistp256",
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "ssh-rsa",
+        "ssh-dss",
+      ],
+      cipher: SSH_ALGORITHMS.cipher,
+      hmac: [
+        "hmac-sha2-512-etm@openssh.com",
+        "hmac-sha2-256-etm@openssh.com",
+        "hmac-sha2-512",
+        "hmac-sha2-256",
+        "hmac-sha1",
+        "hmac-md5",
+      ],
+      compress: ["none", "zlib@openssh.com", "zlib"],
+    },
+  };
 
-  const sampleSize = Math.min(buffer.length, 8192);
-  let nullBytes = 0;
+  const authType = host.authType;
 
-  for (let i = 0; i < sampleSize; i++) {
-    const byte = buffer[i];
+  if (authType === "key" && host.key?.trim()) {
+    const cleanKey = host.key
+      .trim()
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+    config.privateKey = Buffer.from(cleanKey, "utf8");
+    if (host.keyPassword) config.passphrase = host.keyPassword;
+  } else if (authType === "password") {
+    if (!host.password) {
+      throw new Error("Password required for transfer connection");
+    }
+    config.password = host.password;
+  } else if (authType === "opkssh") {
+    const { getOPKSSHToken } = await import("./opkssh-auth.js");
+    const token = await getOPKSSHToken(userId, host.id);
+    if (!token) {
+      throw new Error(
+        "OPKSSH authentication required. Open a Terminal connection to this host first.",
+      );
+    }
+    const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+    await setupOPKSSHCertAuth(
+      config as import("ssh2").ConnectConfig,
+      client,
+      token,
+      username,
+    );
+  } else if (authType !== "none") {
+    throw new Error(`Unsupported auth type for transfer: ${authType}`);
+  }
 
-    if (byte === 0) {
-      nullBytes++;
+  return config;
+}
+
+function attachDedicatedKeyboardInteractive(
+  client: SSHClient,
+  host: SSHHost,
+): void {
+  client.on(
+    "keyboard-interactive",
+    (
+      _name: string,
+      _instructions: string,
+      _instructionsLang: string,
+      prompts: Array<{ prompt: string; echo: boolean }>,
+      finish: (responses: string[]) => void,
+    ) => {
+      const responses = prompts.map((p) => {
+        if (/password/i.test(p.prompt) && host.password) {
+          return host.password;
+        }
+        return "";
+      });
+      finish(responses);
+    },
+  );
+}
+
+async function startDedicatedTransferConnect(
+  client: SSHClient,
+  config: Record<string, unknown>,
+  host: SSHHost,
+  userId: string,
+): Promise<void> {
+  const proxyConfig: SOCKS5Config | null =
+    host.useSocks5 &&
+    (host.socks5Host ||
+      (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+      ? {
+          useSocks5: host.useSocks5,
+          socks5Host: host.socks5Host,
+          socks5Port: host.socks5Port,
+          socks5Username: host.socks5Username,
+          socks5Password: host.socks5Password,
+          socks5ProxyChain: host.socks5ProxyChain,
+        }
+      : null;
+
+  const jumpHosts = host.jumpHosts;
+  const hasJumpHosts = jumpHosts && jumpHosts.length > 0;
+
+  if (hasJumpHosts) {
+    const jumpClient = await createJumpHostChain(
+      jumpHosts,
+      userId,
+      proxyConfig,
+    );
+    if (!jumpClient) {
+      throw new Error("Failed to connect through jump hosts for transfer");
     }
 
-    if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) {
-      if (++nullBytes > 1) return true;
+    await new Promise<void>((resolve, reject) => {
+      jumpClient.forwardOut(
+        "127.0.0.1",
+        0,
+        host.ip,
+        host.port,
+        (err, stream) => {
+          if (err) {
+            jumpClient.end();
+            reject(
+              new Error(
+                `Failed to forward through jump host for transfer: ${err.message}`,
+              ),
+            );
+            return;
+          }
+          config.sock = stream;
+          client.connect(config);
+          resolve();
+        },
+      );
+    });
+    return;
+  }
+
+  if (proxyConfig) {
+    const proxySocket = await createSocks5Connection(
+      host.ip,
+      host.port,
+      proxyConfig,
+    );
+    if (proxySocket) {
+      config.sock = proxySocket;
     }
   }
 
-  return nullBytes / sampleSize > 0.01;
+  client.connect(config);
 }
+
+async function openDedicatedTransferSession(
+  browseSessionId: string,
+  dedicatedSessionId: string,
+  userId: string,
+  transferId: string,
+  options?: { allowBrowseDisconnected?: boolean },
+): Promise<SSHSession> {
+  const browseSession = sshSessions[browseSessionId];
+  if (!options?.allowBrowseDisconnected && !browseSession?.isConnected) {
+    throw new Error("Browse SSH session not connected");
+  }
+  if (browseSession && !verifySessionOwnership(browseSession, userId)) {
+    throw new Error("Session access denied");
+  }
+
+  const hostId = browseSession
+    ? resolveBrowseHostId(browseSessionId, browseSession)
+    : (() => {
+        const parsed = Number.parseInt(browseSessionId, 10);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      })();
+  if (!hostId) {
+    throw new Error("Cannot open transfer connection: unknown host");
+  }
+
+  const host = await resolveHostById(hostId, userId);
+  if (!host) {
+    throw new Error("Host not found for transfer connection");
+  }
+
+  if (sshSessions[dedicatedSessionId]?.isConnected) {
+    closeDedicatedTransferSession(dedicatedSessionId);
+  }
+
+  const client = new SSHClient();
+  attachDedicatedKeyboardInteractive(client, host);
+  const config = await buildDedicatedTransferConnectConfig(
+    host,
+    userId,
+    client,
+  );
+
+  fileLogger.info("Opening dedicated transfer SSH session", {
+    operation: "transfer_ssh_connect",
+    transferId,
+    browseSessionId,
+    dedicatedSessionId,
+    hostId,
+    ip: host.ip,
+    port: host.port,
+    username: host.username,
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    const connectTimeout = setTimeout(() => {
+      client.end();
+      reject(new Error("Transfer SSH connection timed out"));
+    }, 60000);
+
+    const fail = (err: Error) => {
+      clearTimeout(connectTimeout);
+      reject(err);
+    };
+
+    client.once("ready", () => {
+      clearTimeout(connectTimeout);
+      resolve();
+    });
+    client.once("error", fail);
+
+    void startDedicatedTransferConnect(client, config, host, userId).catch(
+      fail,
+    );
+  });
+
+  const session: SSHSession = {
+    client,
+    isConnected: true,
+    lastActive: Date.now(),
+    activeOperations: 0,
+    channelOpener: new ChannelOpenSerializer(),
+    userId,
+    ip: host.ip,
+    port: host.port,
+    hostId: host.id,
+    username: host.username,
+    transferDedicated: true,
+    transferId,
+    browseSessionId,
+  };
+
+  client.on("close", () => {
+    fileLogger.info("Dedicated transfer SSH connection closed", {
+      operation: "transfer_ssh_disconnected",
+      transferId,
+      dedicatedSessionId,
+      browseSessionId,
+      hostId,
+    });
+    const existing = sshSessions[dedicatedSessionId];
+    if (existing) {
+      existing.isConnected = false;
+      closeDedicatedTransferSession(dedicatedSessionId);
+    }
+  });
+
+  sshSessions[dedicatedSessionId] = session;
+  return session;
+}
+
+function closeDedicatedTransferSession(sessionId: string): void {
+  const session = sshSessions[sessionId];
+  if (!session?.transferDedicated) return;
+
+  fileLogger.info("Closing dedicated transfer SSH session", {
+    operation: "transfer_ssh_close",
+    sessionId,
+    transferId: session.transferId,
+    browseSessionId: session.browseSessionId,
+  });
+
+  try {
+    if (session.sftp) {
+      session.sftp.end();
+      session.sftp = undefined;
+    }
+  } catch {
+    // expected
+  }
+  session.sftpPending = undefined;
+
+  try {
+    session.client.end();
+  } catch {
+    // expected
+  }
+
+  clearTimeout(session.timeout);
+  delete sshSessions[sessionId];
+}
+
+app.use("/ssh/file_manager/ssh", (req, res, next) => {
+  if (
+    req.path === "/connect" ||
+    req.path === "/connect-totp" ||
+    req.path === "/connect-warpgate"
+  ) {
+    return next();
+  }
+  const sessionId = (req.query.sessionId as string) || req.body?.sessionId;
+  if (!sessionId) return next();
+  const session = sshSessions[sessionId];
+  if (!session) return next();
+  const userId = (req as AuthenticatedRequest).userId;
+  if (!verifySessionOwnership(session, userId)) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+  next();
+});
 
 /**
  * @openapi
@@ -976,11 +722,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   };
   let hostKeepaliveInterval: number | undefined;
   let hostKeepaliveCountMax: number | undefined;
+  let resolvedIp = ip;
+  let resolvedPort = port;
+  let resolvedUsername = username;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
       if (resolvedHost) {
+        resolvedIp = resolvedHost.ip;
+        resolvedPort = resolvedHost.port;
+        resolvedUsername = resolvedHost.username;
         resolvedCredentials = {
           password: resolvedHost.password,
           sshKey: resolvedHost.key,
@@ -1011,6 +763,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       const { resolveHostById } = await import("./host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
       if (resolvedHost) {
+        resolvedIp = resolvedHost.ip;
+        resolvedPort = resolvedHost.port;
+        resolvedUsername = resolvedHost.username;
         resolvedCredentials = {
           password: resolvedHost.password,
           sshKey: resolvedHost.key,
@@ -1039,9 +794,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   }
 
   const config: Record<string, unknown> = {
-    host: ip?.replace(/^\[|\]$/g, "") || ip,
-    port,
-    username,
+    host: resolvedIp?.replace(/^\[|\]$/g, "") || resolvedIp,
+    port: resolvedPort,
+    username: resolvedUsername,
     tryKeyboard: true,
     keepaliveInterval:
       typeof hostKeepaliveInterval === "number"
@@ -1054,8 +809,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     tcpKeepAliveInitialDelay: 30000,
     hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
       hostId,
-      ip,
-      port,
+      resolvedIp,
+      resolvedPort,
       null,
       userId,
       false,
@@ -1317,6 +1072,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       activeOperations: 0,
       channelOpener: new ChannelOpenSerializer(),
       userId,
+      ip,
+      port,
+      hostId,
+      username,
       sudoPassword: resolvedCredentials.sudoPassword,
     };
     scheduleSessionCleanup(sessionId);
@@ -1963,6 +1722,10 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         activeOperations: 0,
         channelOpener: new ChannelOpenSerializer(),
         userId,
+        ip: session.ip,
+        port: session.port,
+        hostId: session.hostId,
+        username: session.username,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2166,6 +1929,10 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
         activeOperations: 0,
         channelOpener: new ChannelOpenSerializer(),
         userId,
+        ip: session.ip,
+        port: session.port,
+        hostId: session.hostId,
+        username: session.username,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2408,3236 +2175,32 @@ app.post("/ssh/file_manager/ssh/keepalive", async (req, res) => {
   });
 });
 
-/**
- * @openapi
- * /ssh/file_manager/ssh/listFiles:
- *   get:
- *     summary: List files in a directory
- *     description: Lists the files and directories in a given path on the remote host.
- *     tags:
- *       - File Manager
- *     parameters:
- *       - in: query
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: path
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: A list of files and directories.
- *       400:
- *         description: Session ID is required or SSH connection not established.
- *       500:
- *         description: Failed to list files.
- */
-app.get("/ssh/file_manager/ssh/listFiles", (req, res) => {
-  const sessionId = req.query.sessionId as string;
-  const sshConn = sshSessions[sessionId];
-  const sshPath = decodeURIComponent((req.query.path as string) || "/");
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  // Drop concurrent requests for the same session+path — each would open
-  // a new SSH channel and can exceed the server's per-connection channel limit.
-  const listKey = `${sessionId}:${sshPath}`;
-  if (activeListRequests[listKey]) {
-    return res.status(409).json({ error: "List request already in progress" });
-  }
-  activeListRequests[listKey] = true;
-  res.on("finish", () => {
-    delete activeListRequests[listKey];
-  });
-
-  sshConn.lastActive = Date.now();
-  sshConn.activeOperations++;
-  const trySFTP = () => {
-    try {
-      fileLogger.info("Opening SFTP channel", {
-        operation: "file_sftp_open",
-        sessionId,
-        userId,
-        path: sshPath,
-      });
-      getSessionSftp(sshConn)
-        .then((sftp) => {
-          sftp.readdir(sshPath, (readdirErr, list) => {
-            if (readdirErr) {
-              fileLogger.warn(
-                `SFTP readdir failed, trying fallback: ${readdirErr.message}`,
-              );
-              tryFallbackMethod();
-              return;
-            }
-
-            const symlinks: Array<{ index: number; path: string }> = [];
-            const files: Array<{
-              name: string;
-              type: string;
-              size: number | undefined;
-              modified: string;
-              permissions: string;
-              owner: string;
-              group: string;
-              linkTarget: string | undefined;
-              path: string;
-              executable: boolean;
-            }> = [];
-
-            for (const entry of list) {
-              if (entry.filename === "." || entry.filename === "..") continue;
-
-              const attrs = entry.attrs;
-              const permissions = modeToPermissions(attrs.mode);
-              const isDirectory = attrs.isDirectory();
-              const isLink = attrs.isSymbolicLink();
-
-              const fileEntry = {
-                name: entry.filename,
-                type: isDirectory ? "directory" : isLink ? "link" : "file",
-                size: isDirectory ? undefined : attrs.size,
-                modified: formatMtime(attrs.mtime),
-                permissions,
-                owner: String(attrs.uid),
-                group: String(attrs.gid),
-                linkTarget: undefined as string | undefined,
-                path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${entry.filename}`,
-                executable:
-                  !isDirectory && !isLink
-                    ? isExecutableFile(permissions, entry.filename)
-                    : false,
-              };
-
-              if (isLink) {
-                symlinks.push({ index: files.length, path: fileEntry.path });
-              }
-
-              files.push(fileEntry);
-            }
-
-            if (symlinks.length === 0) {
-              sshConn.activeOperations--;
-              return res.json({ files, path: sshPath });
-            }
-
-            let resolved = 0;
-            let responded = false;
-
-            const sendResponse = () => {
-              if (responded) return;
-              responded = true;
-              sshConn.activeOperations--;
-              res.json({ files, path: sshPath });
-            };
-
-            const readlinkTimeout = setTimeout(sendResponse, 5000);
-
-            for (const link of symlinks) {
-              sftp.readlink(link.path, (linkErr, target) => {
-                resolved++;
-                if (!linkErr && target) {
-                  files[link.index].linkTarget = target;
-                }
-                if (resolved === symlinks.length) {
-                  clearTimeout(readlinkTimeout);
-                  sendResponse();
-                }
-              });
-            }
-          });
-        })
-        .catch((err: Error) => {
-          fileLogger.warn(
-            `SFTP failed for listFiles, trying fallback: ${err.message}`,
-          );
-          const isChannelFailure =
-            err.message.toLowerCase().includes("channel open failure") ||
-            err.message.toLowerCase().includes("open failed");
-          if (isChannelFailure) {
-            sshConn.isConnected = false;
-            sshConn.sftp = undefined;
-          }
-          tryFallbackMethod();
-        });
-    } catch (sftpErr: unknown) {
-      const errMsg =
-        sftpErr instanceof Error ? sftpErr.message : "Unknown error";
-      fileLogger.warn(`SFTP connection error, trying fallback: ${errMsg}`);
-      tryFallbackMethod();
-    }
-  };
-
-  const tryFallbackMethod = () => {
-    if (!sshConn?.isConnected) {
-      sshConn.activeOperations--;
-      return res
-        .status(503)
-        .json({ error: "SSH session disconnected", disconnected: true });
-    }
-    try {
-      const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-      execChannel(
-        sshConn,
-        `command ls -la --color=never '${escapedPath}'`,
-        (err, stream) => {
-          if (err) {
-            sshConn.activeOperations--;
-            fileLogger.error("SSH listFiles error:", err);
-            return res.status(500).json({ error: err.message });
-          }
-
-          let data = "";
-          let errorData = "";
-
-          stream.on("data", (chunk: Buffer) => {
-            data += chunk.toString();
-          });
-
-          stream.stderr.on("data", (chunk: Buffer) => {
-            errorData += chunk.toString();
-          });
-
-          stream.on("close", (code) => {
-            if (code !== 0) {
-              const isPermissionDenied =
-                errorData.toLowerCase().includes("permission denied") ||
-                errorData.toLowerCase().includes("access denied");
-
-              if (isPermissionDenied) {
-                if (sshConn.sudoPassword) {
-                  fileLogger.info(
-                    `Permission denied for listFiles, retrying with sudo: ${sshPath}`,
-                  );
-                  tryWithSudo();
-                  return;
-                }
-
-                sshConn.activeOperations--;
-                fileLogger.warn(
-                  `Permission denied for listFiles, sudo required: ${sshPath}`,
-                );
-                return res.status(403).json({
-                  error: `Permission denied: Cannot access ${sshPath}`,
-                  needsSudo: true,
-                  path: sshPath,
-                });
-              }
-
-              sshConn.activeOperations--;
-              fileLogger.error(
-                `SSH listFiles command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-              );
-              return res
-                .status(500)
-                .json({ error: `Command failed: ${errorData}` });
-            }
-            sshConn.activeOperations--;
-
-            const lines = data.split("\n").filter((line) => line.trim());
-            const files = [];
-
-            for (let i = 1; i < lines.length; i++) {
-              const line = lines[i];
-              const parts = line.split(/\s+/);
-              if (parts.length >= 9) {
-                const permissions = parts[0];
-                const owner = parts[2];
-                const group = parts[3];
-                const size = parseInt(parts[4], 10);
-
-                let dateStr = "";
-                const nameStartIndex = 8;
-
-                if (parts[5] && parts[6] && parts[7]) {
-                  dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
-                }
-
-                const name = parts.slice(nameStartIndex).join(" ");
-                const isDirectory = permissions.startsWith("d");
-                const isLink = permissions.startsWith("l");
-
-                if (name === "." || name === "..") continue;
-
-                let actualName = name;
-                let linkTarget = undefined;
-                if (isLink && name.includes(" -> ")) {
-                  const linkParts = name.split(" -> ");
-                  actualName = linkParts[0];
-                  linkTarget = linkParts[1];
-                }
-
-                files.push({
-                  name: actualName,
-                  type: isDirectory ? "directory" : isLink ? "link" : "file",
-                  size: isDirectory ? undefined : size,
-                  modified: dateStr,
-                  permissions,
-                  owner,
-                  group,
-                  linkTarget,
-                  path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
-                  executable:
-                    !isDirectory && !isLink
-                      ? isExecutableFile(permissions, actualName)
-                      : false,
-                });
-              }
-            }
-
-            res.json({ files, path: sshPath });
-          });
-        },
-      );
-    } catch (execErr: unknown) {
-      sshConn.activeOperations--;
-      const errMsg =
-        execErr instanceof Error ? execErr.message : "Unknown error";
-      fileLogger.error(`Fallback listFiles exec failed: ${errMsg}`);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: errMsg });
-      }
-    }
-  };
-
-  const tryWithSudo = () => {
-    try {
-      const escapedPath = sshPath.replace(/'/g, "'\"'\"'");
-      const escapedPassword = sshConn.sudoPassword!.replace(/'/g, "'\"'\"'");
-      const sudoCommand = `echo '${escapedPassword}' | sudo -S /bin/ls -la --color=never '${escapedPath}' 2>&1`;
-
-      execChannel(sshConn, sudoCommand, (err, stream) => {
-        if (err) {
-          sshConn.activeOperations--;
-          fileLogger.error("SSH sudo listFiles error:", err);
-          return res.status(500).json({ error: err.message });
-        }
-
-        let data = "";
-        let errorData = "";
-
-        stream.on("data", (chunk: Buffer) => {
-          data += chunk.toString();
-        });
-
-        stream.stderr.on("data", (chunk: Buffer) => {
-          errorData += chunk.toString();
-        });
-
-        stream.on("close", (code) => {
-          sshConn.activeOperations--;
-
-          data = data.replace(/\[sudo\] password for .+?:\s*/g, "");
-
-          if (
-            data.toLowerCase().includes("sorry, try again") ||
-            data.toLowerCase().includes("incorrect password") ||
-            errorData.toLowerCase().includes("sorry, try again")
-          ) {
-            sshConn.sudoPassword = undefined;
-            return res.status(403).json({
-              error: "Sudo authentication failed. Please try again.",
-              needsSudo: true,
-              sudoFailed: true,
-              path: sshPath,
-            });
-          }
-
-          if (code !== 0 && !data.trim()) {
-            fileLogger.error(
-              `SSH sudo listFiles failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-            );
-            return res
-              .status(500)
-              .json({ error: `Sudo command failed: ${errorData || data}` });
-          }
-
-          const lines = data.split("\n").filter((line) => line.trim());
-          const files: Array<{
-            name: string;
-            type: string;
-            size: number | undefined;
-            modified: string;
-            permissions: string;
-            owner: string;
-            group: string;
-            linkTarget: string | undefined;
-            path: string;
-            executable: boolean;
-          }> = [];
-
-          for (let i = 1; i < lines.length; i++) {
-            const line = lines[i];
-            const parts = line.split(/\s+/);
-            if (parts.length >= 9) {
-              const permissions = parts[0];
-              const owner = parts[2];
-              const group = parts[3];
-              const size = parseInt(parts[4], 10);
-
-              let dateStr = "";
-              const nameStartIndex = 8;
-
-              if (parts[5] && parts[6] && parts[7]) {
-                dateStr = `${parts[5]} ${parts[6]} ${parts[7]}`;
-              }
-
-              const name = parts.slice(nameStartIndex).join(" ");
-              const isDirectory = permissions.startsWith("d");
-              const isLink = permissions.startsWith("l");
-
-              if (name === "." || name === "..") continue;
-
-              let actualName = name;
-              let linkTarget = undefined;
-              if (isLink && name.includes(" -> ")) {
-                const linkParts = name.split(" -> ");
-                actualName = linkParts[0];
-                linkTarget = linkParts[1];
-              }
-
-              files.push({
-                name: actualName,
-                type: isDirectory ? "directory" : isLink ? "link" : "file",
-                size: isDirectory ? undefined : size,
-                modified: dateStr,
-                permissions,
-                owner,
-                group,
-                linkTarget,
-                path: `${sshPath.endsWith("/") ? sshPath : sshPath + "/"}${actualName}`,
-                executable:
-                  !isDirectory && !isLink
-                    ? isExecutableFile(permissions, actualName)
-                    : false,
-              });
-            }
-          }
-
-          res.json({ files, path: sshPath });
-        });
-      });
-    } catch (execErr: unknown) {
-      sshConn.activeOperations--;
-      const errMsg =
-        execErr instanceof Error ? execErr.message : "Unknown error";
-      fileLogger.error(`Sudo listFiles exec failed: ${errMsg}`);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: errMsg });
-      }
-    }
-  };
-
-  trySFTP();
+registerFileListingRoutes(app, {
+  sshSessions,
+  activeListRequests,
+  verifySessionOwnership,
 });
 
-/**
- * @openapi
- * /ssh/file_manager/ssh/identifySymlink:
- *   get:
- *     summary: Identify symbolic link
- *     description: Identifies the target of a symbolic link.
- *     tags:
- *       - File Manager
- *     parameters:
- *       - in: query
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: path
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Symbolic link information.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       500:
- *         description: Failed to identify symbolic link.
- */
-app.get("/ssh/file_manager/ssh/identifySymlink", (req, res) => {
-  const sessionId = req.query.sessionId as string;
-  const sshConn = sshSessions[sessionId];
-  const linkPath = decodeURIComponent(req.query.path as string);
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!linkPath) {
-    return res.status(400).json({ error: "Link path is required" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  const escapedPath = linkPath.replace(/'/g, "'\"'\"'");
-  const command = `stat -L -c "%F" '${escapedPath}' && readlink -f '${escapedPath}'`;
-
-  execChannel(sshConn, command, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH identifySymlink error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-
-    let data = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      data += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-    });
-
-    stream.on("close", (code) => {
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH identifySymlink command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        return res.status(500).json({ error: `Command failed: ${errorData}` });
-      }
-
-      const [fileType, target] = data.trim().split("\n");
-
-      res.json({
-        path: linkPath,
-        target: target,
-        type: fileType.toLowerCase().includes("directory")
-          ? "directory"
-          : "file",
-      });
-    });
-
-    stream.on("error", (streamErr) => {
-      fileLogger.error("SSH identifySymlink stream error:", streamErr);
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-      }
-    });
-  });
+registerFileContentRoutes(app, {
+  sshSessions,
+  verifySessionOwnership,
 });
 
-/**
- * @openapi
- * /ssh/file_manager/ssh/resolvePath:
- *   get:
- *     summary: Resolve a path with environment variables
- *     description: Expands environment variables and ~ in a path via the SSH session.
- *     tags:
- *       - File Manager
- *     parameters:
- *       - in: query
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: path
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: The resolved absolute path.
- *       400:
- *         description: Missing required parameters.
- *       500:
- *         description: Failed to resolve path.
- */
-app.get("/ssh/file_manager/ssh/resolvePath", (req, res) => {
-  const sessionId = req.query.sessionId as string;
-  const sshConn = sshSessions[sessionId];
-  const rawPath = decodeURIComponent(req.query.path as string);
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!rawPath) {
-    return res.status(400).json({ error: "Path is required" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  let command: string;
-  if (rawPath.startsWith("~")) {
-    const rest = rawPath.substring(1).replace(/'/g, "'\"'\"'");
-    command = `echo ~'${rest}'`;
-  } else {
-    const escapedPath = rawPath.replace(/'/g, "'\"'\"'");
-    command = `echo '${escapedPath}'`;
-  }
-
-  execChannel(sshConn, command, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH resolvePath error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-
-    let data = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      data += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-    });
-
-    stream.on("close", (code) => {
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH resolvePath command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        return res.json({ resolvedPath: rawPath });
-      }
-
-      const resolved = data.trim();
-      res.json({ resolvedPath: resolved || rawPath });
-    });
-
-    stream.on("error", (streamErr) => {
-      fileLogger.error("SSH resolvePath stream error:", streamErr);
-      if (!res.headersSent) {
-        res.json({ resolvedPath: rawPath });
-      }
-    });
-  });
+registerFileOperationRoutes(app, {
+  sshSessions,
+  verifySessionOwnership,
 });
 
-/**
- * @openapi
- * /ssh/file_manager/ssh/readFile:
- *   get:
- *     summary: Read a file
- *     description: Reads the content of a file from the remote host.
- *     tags:
- *       - File Manager
- *     parameters:
- *       - in: query
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *       - in: query
- *         name: path
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: The content of the file.
- *       400:
- *         description: Missing required parameters or file too large.
- *       404:
- *         description: File not found.
- *       500:
- *         description: Failed to read file.
- */
-app.get("/ssh/file_manager/ssh/readFile", (req, res) => {
-  const sessionId = req.query.sessionId as string;
-  const sshConn = sshSessions[sessionId];
-  const filePath = decodeURIComponent(req.query.path as string);
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!filePath) {
-    return res.status(400).json({ error: "File path is required" });
-  }
-
-  fileLogger.info("Reading file", {
-    operation: "file_read",
-    sessionId,
-    userId,
-    path: filePath,
-  });
-  sshConn.lastActive = Date.now();
-
-  const MAX_READ_SIZE = 500 * 1024 * 1024;
-  const escapedPath = filePath.replace(/'/g, "'\"'\"'");
-
-  execChannel(
-    sshConn,
-    `stat -c%s '${escapedPath}' 2>/dev/null || wc -c < '${escapedPath}'`,
-    (sizeErr, sizeStream) => {
-      if (sizeErr) {
-        fileLogger.error("SSH file size check error:", sizeErr);
-        return res.status(500).json({ error: sizeErr.message });
-      }
-
-      let sizeData = "";
-      let sizeErrorData = "";
-
-      sizeStream.on("data", (chunk: Buffer) => {
-        sizeData += chunk.toString();
-      });
-
-      sizeStream.stderr.on("data", (chunk: Buffer) => {
-        sizeErrorData += chunk.toString();
-      });
-
-      sizeStream.on("close", (sizeCode) => {
-        if (sizeCode !== 0) {
-          const errorLower = sizeErrorData.toLowerCase();
-          const isFileNotFound =
-            errorLower.includes("no such file or directory") ||
-            errorLower.includes("cannot access") ||
-            errorLower.includes("not found") ||
-            errorLower.includes("resource not found");
-
-          fileLogger.error(`File size check failed: ${sizeErrorData}`);
-          return res.status(isFileNotFound ? 404 : 500).json({
-            error: `Cannot check file size: ${sizeErrorData}`,
-            fileNotFound: isFileNotFound,
-          });
-        }
-
-        const fileSize = parseInt(sizeData.trim(), 10);
-
-        if (isNaN(fileSize)) {
-          fileLogger.error("Invalid file size response:", sizeData);
-          return res.status(500).json({ error: "Cannot determine file size" });
-        }
-
-        if (fileSize > MAX_READ_SIZE) {
-          fileLogger.warn("File too large for reading", {
-            operation: "file_read",
-            sessionId,
-            filePath,
-            fileSize,
-            maxSize: MAX_READ_SIZE,
-          });
-          return res.status(400).json({
-            error: `File too large to open in editor. Maximum size is ${MAX_READ_SIZE / 1024 / 1024}MB, file is ${(fileSize / 1024 / 1024).toFixed(2)}MB. Use download instead.`,
-            fileSize,
-            maxSize: MAX_READ_SIZE,
-            tooLarge: true,
-          });
-        }
-
-        execChannel(sshConn, `cat '${escapedPath}'`, (err, stream) => {
-          if (err) {
-            fileLogger.error("SSH readFile error:", err);
-            return res.status(500).json({ error: err.message });
-          }
-
-          let binaryData = Buffer.alloc(0);
-          let errorData = "";
-
-          stream.on("data", (chunk: Buffer) => {
-            binaryData = Buffer.concat([binaryData, chunk]);
-          });
-
-          stream.stderr.on("data", (chunk: Buffer) => {
-            errorData += chunk.toString();
-          });
-
-          stream.on("close", (code) => {
-            if (code !== 0) {
-              const isPermissionDenied = errorData
-                .toLowerCase()
-                .includes("permission denied");
-
-              if (isPermissionDenied && sshConn.sudoPassword) {
-                execWithSudoBuffer(
-                  sshConn,
-                  `cat '${escapedPath}'`,
-                  sshConn.sudoPassword,
-                )
-                  .then((result) => {
-                    if (result.code !== 0) {
-                      return res.status(403).json({
-                        error: `Permission denied: ${result.stderr || result.stdout.toString("utf8")}`,
-                        needsSudo: true,
-                      });
-                    }
-
-                    const sudoData = result.stdout;
-                    const isBinary = detectBinary(sudoData);
-                    res.json({
-                      content: isBinary
-                        ? sudoData.toString("base64")
-                        : sudoData.toString("utf8"),
-                      isBinary,
-                      size: sudoData.length,
-                    });
-                  })
-                  .catch(() => {
-                    res
-                      .status(403)
-                      .json({ error: "Permission denied", needsSudo: true });
-                  });
-                return;
-              }
-
-              fileLogger.error(
-                `SSH readFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-              );
-
-              const isFileNotFound =
-                errorData.includes("No such file or directory") ||
-                errorData.includes("cannot access") ||
-                errorData.includes("not found");
-
-              return res.status(isFileNotFound ? 404 : 500).json({
-                error: `Command failed: ${errorData}`,
-                fileNotFound: isFileNotFound,
-              });
-            }
-
-            const isBinary = detectBinary(binaryData);
-            fileLogger.success("File read successfully", {
-              operation: "file_read_success",
-              sessionId,
-              userId,
-              path: filePath,
-              bytes: binaryData.length,
-            });
-
-            if (isBinary) {
-              const base64Content = binaryData.toString("base64");
-              res.json({
-                content: base64Content,
-                path: filePath,
-                encoding: "base64",
-              });
-            } else {
-              const textContent = binaryData.toString("utf8");
-              res.json({
-                content: textContent,
-                path: filePath,
-                encoding: "utf8",
-              });
-            }
-          });
-        });
-      });
-    },
-  );
+registerFileDownloadRoutes(app, {
+  sshSessions,
+  scheduleSessionCleanup,
+  verifySessionOwnership,
 });
 
-/**
- * @openapi
- * /ssh/file_manager/ssh/writeFile:
- *   post:
- *     summary: Write to a file
- *     description: Writes content to a file on the remote host and preserves the existing permissions when the file already exists.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               path:
- *                 type: string
- *               content:
- *                 type: string
- *     responses:
- *       200:
- *         description: File written successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       500:
- *         description: Failed to write file.
- */
-app.post("/ssh/file_manager/ssh/writeFile", async (req, res) => {
-  const { sessionId, path: filePath, content } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!filePath) {
-    return res.status(400).json({ error: "File path is required" });
-  }
-
-  if (content === undefined) {
-    return res.status(400).json({ error: "File content is required" });
-  }
-
-  const contentLength =
-    typeof content === "string" ? content.length : Buffer.byteLength(content);
-  fileLogger.info("Writing file", {
-    operation: "file_write",
-    sessionId,
-    userId,
-    path: filePath,
-    bytes: contentLength,
-  });
-  sshConn.lastActive = Date.now();
-
-  let preservedMode: number | undefined;
-
-  const restoreOriginalMode = (
-    sftp: import("ssh2").SFTPWrapper | null,
-    onComplete: () => void,
-  ) => {
-    if (preservedMode === undefined) {
-      onComplete();
-      return;
-    }
-
-    const permissions = preservedMode.toString(8);
-
-    if (sftp) {
-      sftp.chmod(filePath, preservedMode, (chmodErr) => {
-        if (chmodErr) {
-          fileLogger.warn("Failed to restore file permissions after save", {
-            operation: "file_write_restore_permissions",
-            sessionId,
-            userId,
-            path: filePath,
-            permissions,
-            error: chmodErr.message,
-          });
-        } else {
-          fileLogger.info("Restored file permissions after save", {
-            operation: "file_write_restore_permissions",
-            sessionId,
-            userId,
-            path: filePath,
-            permissions,
-          });
-        }
-
-        onComplete();
-      });
-      return;
-    }
-
-    const escapedPath = filePath.replace(/'/g, "'\"'\"'");
-    const chmodCommand = `chmod ${permissions} '${escapedPath}' && echo "SUCCESS"`;
-
-    execChannel(sshConn, chmodCommand, (err, stream) => {
-      if (err) {
-        fileLogger.warn("Failed to restore file permissions after save", {
-          operation: "file_write_restore_permissions",
-          sessionId,
-          userId,
-          path: filePath,
-          permissions,
-          error: err.message,
-        });
-        onComplete();
-        return;
-      }
-
-      let outputData = "";
-      let errorData = "";
-
-      stream.on("data", (chunk: Buffer) => {
-        outputData += chunk.toString();
-      });
-
-      stream.stderr.on("data", (chunk: Buffer) => {
-        errorData += chunk.toString();
-      });
-
-      stream.on("close", (code) => {
-        if (outputData.includes("SUCCESS")) {
-          fileLogger.info("Restored file permissions after save", {
-            operation: "file_write_restore_permissions",
-            sessionId,
-            userId,
-            path: filePath,
-            permissions,
-          });
-        } else {
-          fileLogger.warn("Failed to restore file permissions after save", {
-            operation: "file_write_restore_permissions",
-            sessionId,
-            userId,
-            path: filePath,
-            permissions,
-            exitCode: code,
-            error:
-              errorData || "Permission restore command did not report success",
-          });
-        }
-
-        onComplete();
-      });
-
-      stream.on("error", (streamErr) => {
-        fileLogger.warn("Failed to restore file permissions after save", {
-          operation: "file_write_restore_permissions",
-          sessionId,
-          userId,
-          path: filePath,
-          permissions,
-          error: streamErr.message,
-        });
-        onComplete();
-      });
-    });
-  };
-
-  const trySFTP = () => {
-    try {
-      fileLogger.info("Opening SFTP channel", {
-        operation: "file_sftp_open",
-        sessionId,
-        userId,
-        path: filePath,
-      });
-      getSessionSftp(sshConn)
-        .then((sftp) => {
-          let fileBuffer;
-          try {
-            if (typeof content === "string") {
-              try {
-                const testBuffer = Buffer.from(content, "base64");
-                if (testBuffer.toString("base64") === content) {
-                  fileBuffer = testBuffer;
-                } else {
-                  fileBuffer = Buffer.from(content, "utf8");
-                }
-              } catch {
-                fileBuffer = Buffer.from(content, "utf8");
-              }
-            } else if (Buffer.isBuffer(content)) {
-              fileBuffer = content;
-            } else {
-              fileBuffer = Buffer.from(content);
-            }
-          } catch (bufferErr) {
-            fileLogger.error("Buffer conversion error:", bufferErr);
-            if (!res.headersSent) {
-              return res
-                .status(500)
-                .json({ error: "Invalid file content format" });
-            }
-            return;
-          }
-
-          sftp.stat(filePath, (statErr, stats) => {
-            try {
-              if (statErr) {
-                fileLogger.warn(
-                  "Failed to read existing file permissions before save",
-                  {
-                    operation: "file_write_stat",
-                    sessionId,
-                    userId,
-                    path: filePath,
-                    error: statErr.message,
-                  },
-                );
-              } else if (stats.isFile()) {
-                preservedMode = stats.mode & 0o7777;
-              }
-
-              const writeStream = sftp.createWriteStream(filePath);
-
-              let hasError = false;
-              let hasFinished = false;
-              let isFinalizing = false;
-
-              const finalizeSuccess = () => {
-                if (hasError || hasFinished) return;
-                hasFinished = true;
-                isFinalizing = false;
-                fileLogger.success("File written successfully", {
-                  operation: "file_write_success",
-                  sessionId,
-                  userId,
-                  path: filePath,
-                  bytes: fileBuffer.length,
-                });
-                if (!res.headersSent) {
-                  res.json({
-                    message: "File written successfully",
-                    path: filePath,
-                    toast: {
-                      type: "success",
-                      message: `File written: ${filePath}`,
-                    },
-                  });
-                }
-              };
-
-              writeStream.on("error", (streamErr) => {
-                if (hasError || hasFinished || isFinalizing) return;
-                hasError = true;
-                isFinalizing = false;
-                fileLogger.warn(
-                  `SFTP write failed, trying fallback method: ${streamErr.message}`,
-                );
-                tryFallbackMethod();
-              });
-
-              const finishWrite = () => {
-                if (hasError || hasFinished || isFinalizing) return;
-                isFinalizing = true;
-                restoreOriginalMode(sftp, finalizeSuccess);
-              };
-
-              writeStream.on("finish", () => {
-                finishWrite();
-              });
-
-              writeStream.on("close", () => {
-                finishWrite();
-              });
-
-              try {
-                writeStream.write(fileBuffer);
-                writeStream.end();
-              } catch (writeErr) {
-                if (hasError || hasFinished) return;
-                hasError = true;
-                isFinalizing = false;
-                fileLogger.warn(
-                  `SFTP write operation failed, trying fallback method: ${(writeErr as Error).message}`,
-                );
-                tryFallbackMethod();
-              }
-            } catch (callbackErr) {
-              fileLogger.warn(
-                `SFTP stat callback error, trying fallback method: ${(callbackErr as Error).message}`,
-              );
-              tryFallbackMethod();
-            }
-          });
-        })
-        .catch((err: Error) => {
-          fileLogger.warn(
-            `SFTP failed, trying fallback method: ${err.message}`,
-          );
-          tryFallbackMethod();
-        });
-    } catch (sftpErr) {
-      fileLogger.warn(
-        `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
-      );
-      tryFallbackMethod();
-    }
-  };
-
-  const tryFallbackMethod = () => {
-    if (!sshConn?.isConnected) {
-      if (!res.headersSent) {
-        return res.status(500).json({ error: "SSH session disconnected" });
-      }
-      return;
-    }
-    try {
-      let contentBuffer: Buffer;
-      if (typeof content === "string") {
-        try {
-          contentBuffer = Buffer.from(content, "base64");
-          if (contentBuffer.toString("base64") !== content) {
-            contentBuffer = Buffer.from(content, "utf8");
-          }
-        } catch {
-          contentBuffer = Buffer.from(content, "utf8");
-        }
-      } else if (Buffer.isBuffer(content)) {
-        contentBuffer = content;
-      } else {
-        contentBuffer = Buffer.from(content);
-      }
-      const base64Content = contentBuffer.toString("base64");
-      const escapedPath = filePath.replace(/'/g, "'\"'\"'");
-
-      const writeCommand = `echo '${base64Content}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
-
-      execChannel(sshConn, writeCommand, (err, stream) => {
-        if (err) {
-          fileLogger.error("Fallback write command failed:", err);
-          if (!res.headersSent) {
-            return res.status(500).json({
-              error: `Write failed: ${err.message}`,
-              toast: {
-                type: "error",
-                message: `Write failed: ${err.message}`,
-              },
-            });
-          }
-          return;
-        }
-
-        let outputData = "";
-        let errorData = "";
-
-        stream.on("data", (chunk: Buffer) => {
-          outputData += chunk.toString();
-        });
-
-        stream.stderr.on("data", (chunk: Buffer) => {
-          errorData += chunk.toString();
-        });
-
-        stream.stderr.on("error", (stderrErr) => {
-          fileLogger.error("Fallback write stderr error:", stderrErr);
-        });
-
-        stream.on("close", (code) => {
-          if (outputData.includes("SUCCESS")) {
-            restoreOriginalMode(null, () => {
-              if (!res.headersSent) {
-                res.json({
-                  message: "File written successfully",
-                  path: filePath,
-                  toast: {
-                    type: "success",
-                    message: `File written: ${filePath}`,
-                  },
-                });
-              }
-            });
-          } else {
-            const isPermDenied = errorData
-              .toLowerCase()
-              .includes("permission denied");
-            if (isPermDenied && sshConn.sudoPassword) {
-              execWithSudo(
-                sshConn,
-                `bash -c "echo '${base64Content}' | base64 -d > '${escapedPath}' && echo SUCCESS"`,
-                sshConn.sudoPassword,
-              )
-                .then(({ stdout, code: sudoCode }) => {
-                  if (sudoCode === 0 && stdout.includes("SUCCESS")) {
-                    restoreOriginalMode(null, () => {
-                      if (!res.headersSent) {
-                        res.json({
-                          message: "File written successfully",
-                          path: filePath,
-                        });
-                      }
-                    });
-                  } else if (!res.headersSent) {
-                    res
-                      .status(403)
-                      .json({ error: "Permission denied", needsSudo: true });
-                  }
-                })
-                .catch(() => {
-                  if (!res.headersSent) {
-                    res
-                      .status(403)
-                      .json({ error: "Permission denied", needsSudo: true });
-                  }
-                });
-              return;
-            }
-            fileLogger.error(
-              `Fallback write failed with code ${code}: ${errorData}`,
-            );
-            if (!res.headersSent) {
-              res.status(500).json({
-                error: `Write failed: ${errorData}`,
-                needsSudo: isPermDenied,
-                toast: { type: "error", message: `Write failed: ${errorData}` },
-              });
-            }
-          }
-        });
-
-        stream.on("error", (streamErr) => {
-          fileLogger.error("Fallback write stream error:", streamErr);
-          if (!res.headersSent) {
-            res
-              .status(500)
-              .json({ error: `Write stream error: ${streamErr.message}` });
-          }
-        });
-      });
-    } catch (fallbackErr) {
-      fileLogger.error("Fallback method failed:", fallbackErr);
-      if (!res.headersSent) {
-        res.status(500).json({
-          error: `All write methods failed: ${(fallbackErr as Error).message}`,
-        });
-      }
-    }
-  };
-
-  trySFTP();
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/uploadFile:
- *   post:
- *     summary: Upload a file
- *     description: Uploads a file to the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               path:
- *                 type: string
- *               content:
- *                 type: string
- *               fileName:
- *                 type: string
- *     responses:
- *       200:
- *         description: File uploaded successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       500:
- *         description: Failed to upload file.
- */
-app.post("/ssh/file_manager/ssh/uploadFile", async (req, res) => {
-  const { sessionId, path: filePath, content, fileName } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!filePath || !fileName || content === undefined) {
-    return res
-      .status(400)
-      .json({ error: "File path, name, and content are required" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  const contentSize =
-    typeof content === "string"
-      ? Buffer.byteLength(content, "utf8")
-      : content.length;
-
-  const fullPath = filePath.endsWith("/")
-    ? filePath + fileName
-    : filePath + "/" + fileName;
-  const uploadStartTime = Date.now();
-  fileLogger.info("File upload started", {
-    operation: "file_upload_start",
-    sessionId,
-    userId,
-    path: fullPath,
-    bytes: contentSize,
-  });
-
-  const trySFTP = () => {
-    try {
-      fileLogger.info("Opening SFTP channel", {
-        operation: "file_sftp_open",
-        sessionId,
-        userId,
-        path: fullPath,
-      });
-      getSessionSftp(sshConn)
-        .then((sftp) => {
-          let fileBuffer;
-          try {
-            if (typeof content === "string") {
-              fileBuffer = Buffer.from(content, "base64");
-            } else if (Buffer.isBuffer(content)) {
-              fileBuffer = content;
-            } else {
-              fileBuffer = Buffer.from(content);
-            }
-          } catch (bufferErr) {
-            fileLogger.error("Buffer conversion error:", bufferErr);
-            if (!res.headersSent) {
-              return res
-                .status(500)
-                .json({ error: "Invalid file content format" });
-            }
-            return;
-          }
-
-          const writeStream = sftp.createWriteStream(fullPath);
-
-          let hasError = false;
-          let hasFinished = false;
-
-          writeStream.on("error", (streamErr) => {
-            if (hasError || hasFinished) return;
-            hasError = true;
-            fileLogger.warn(
-              `SFTP write failed, trying fallback method: ${streamErr.message}`,
-              {
-                operation: "file_upload",
-                sessionId,
-                fileName,
-                fileSize: contentSize,
-                error: streamErr.message,
-              },
-            );
-            tryFallbackMethod();
-          });
-
-          writeStream.on("finish", () => {
-            if (hasError || hasFinished) return;
-            hasFinished = true;
-            fileLogger.success("File upload completed", {
-              operation: "file_upload_complete",
-              sessionId,
-              userId,
-              path: fullPath,
-              bytes: fileBuffer.length,
-              duration: Date.now() - uploadStartTime,
-            });
-            if (!res.headersSent) {
-              res.json({
-                message: "File uploaded successfully",
-                path: fullPath,
-                toast: {
-                  type: "success",
-                  message: `File uploaded: ${fullPath}`,
-                },
-              });
-            }
-          });
-
-          writeStream.on("close", () => {
-            if (hasError || hasFinished) return;
-            hasFinished = true;
-            fileLogger.success("File upload completed", {
-              operation: "file_upload_complete",
-              sessionId,
-              userId,
-              path: fullPath,
-              bytes: fileBuffer.length,
-              duration: Date.now() - uploadStartTime,
-            });
-            if (!res.headersSent) {
-              res.json({
-                message: "File uploaded successfully",
-                path: fullPath,
-                toast: {
-                  type: "success",
-                  message: `File uploaded: ${fullPath}`,
-                },
-              });
-            }
-          });
-
-          try {
-            writeStream.write(fileBuffer);
-            writeStream.end();
-          } catch (writeErr) {
-            if (hasError || hasFinished) return;
-            hasError = true;
-            fileLogger.warn(
-              `SFTP write operation failed, trying fallback method: ${(writeErr as Error).message}`,
-            );
-            tryFallbackMethod();
-          }
-        })
-        .catch((err: Error) => {
-          fileLogger.warn(
-            `SFTP failed, trying fallback method: ${err.message}`,
-          );
-          tryFallbackMethod();
-        });
-    } catch (sftpErr) {
-      fileLogger.warn(
-        `SFTP connection error, trying fallback method: ${(sftpErr as Error).message}`,
-      );
-      tryFallbackMethod();
-    }
-  };
-
-  const tryFallbackMethod = () => {
-    if (!sshConn?.isConnected) {
-      if (!res.headersSent) {
-        return res.status(500).json({ error: "SSH session disconnected" });
-      }
-      return;
-    }
-    try {
-      let contentBuffer: Buffer;
-      if (typeof content === "string") {
-        try {
-          contentBuffer = Buffer.from(content, "base64");
-          if (contentBuffer.toString("base64") !== content) {
-            contentBuffer = Buffer.from(content, "utf8");
-          }
-        } catch {
-          contentBuffer = Buffer.from(content, "utf8");
-        }
-      } else if (Buffer.isBuffer(content)) {
-        contentBuffer = content;
-      } else {
-        contentBuffer = Buffer.from(content);
-      }
-      const base64Content = contentBuffer.toString("base64");
-      const chunkSize = 1000000;
-      const chunks = [];
-
-      for (let i = 0; i < base64Content.length; i += chunkSize) {
-        chunks.push(base64Content.slice(i, i + chunkSize));
-      }
-
-      if (!sshConn?.isConnected) {
-        fileLogger.error("SSH connection lost before fallback upload", {
-          operation: "file_upload_fallback",
-          sessionId,
-          path: fullPath,
-        });
-        if (!res.headersSent) {
-          return res
-            .status(500)
-            .json({ error: "SSH connection lost during upload" });
-        }
-        return;
-      }
-
-      if (chunks.length === 1) {
-        const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
-
-        const writeCommand = `echo '${chunks[0]}' | base64 -d > '${escapedPath}' && echo "SUCCESS"`;
-
-        execChannel(sshConn, writeCommand, (err, stream) => {
-          if (err) {
-            fileLogger.error("Fallback upload command failed:", err);
-            if (!res.headersSent) {
-              return res
-                .status(500)
-                .json({ error: `Upload failed: ${err.message}` });
-            }
-            return;
-          }
-
-          let outputData = "";
-          let errorData = "";
-
-          stream.on("data", (chunk: Buffer) => {
-            outputData += chunk.toString();
-          });
-
-          stream.stderr.on("data", (chunk: Buffer) => {
-            errorData += chunk.toString();
-          });
-
-          stream.stderr.on("error", (stderrErr) => {
-            fileLogger.error("Fallback upload stderr error:", stderrErr);
-          });
-
-          stream.on("close", (code) => {
-            if (outputData.includes("SUCCESS")) {
-              if (!res.headersSent) {
-                res.json({
-                  message: "File uploaded successfully",
-                  path: fullPath,
-                  toast: {
-                    type: "success",
-                    message: `File uploaded: ${fullPath}`,
-                  },
-                });
-              }
-            } else {
-              fileLogger.error(
-                `Fallback upload failed with code ${code}: ${errorData}`,
-              );
-              if (!res.headersSent) {
-                res.status(500).json({
-                  error: `Upload failed: ${errorData}`,
-                  toast: {
-                    type: "error",
-                    message: `Upload failed: ${errorData}`,
-                  },
-                });
-              }
-            }
-          });
-
-          stream.on("error", (streamErr) => {
-            fileLogger.error("Fallback upload stream error:", streamErr);
-            if (!res.headersSent) {
-              res
-                .status(500)
-                .json({ error: `Upload stream error: ${streamErr.message}` });
-            }
-          });
-        });
-      } else {
-        const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
-
-        let writeCommand = `> '${escapedPath}'`;
-
-        chunks.forEach((chunk) => {
-          writeCommand += ` && echo '${chunk}' | base64 -d >> '${escapedPath}'`;
-        });
-
-        writeCommand += ` && echo "SUCCESS"`;
-
-        execChannel(sshConn, writeCommand, (err, stream) => {
-          if (err) {
-            fileLogger.error("Chunked fallback upload failed:", err);
-            if (!res.headersSent) {
-              return res
-                .status(500)
-                .json({ error: `Chunked upload failed: ${err.message}` });
-            }
-            return;
-          }
-
-          let outputData = "";
-          let errorData = "";
-
-          stream.on("data", (chunk: Buffer) => {
-            outputData += chunk.toString();
-          });
-
-          stream.stderr.on("data", (chunk: Buffer) => {
-            errorData += chunk.toString();
-          });
-
-          stream.stderr.on("error", (stderrErr) => {
-            fileLogger.error(
-              "Chunked fallback upload stderr error:",
-              stderrErr,
-            );
-          });
-
-          stream.on("close", (code) => {
-            if (outputData.includes("SUCCESS")) {
-              if (!res.headersSent) {
-                res.json({
-                  message: "File uploaded successfully",
-                  path: fullPath,
-                  toast: {
-                    type: "success",
-                    message: `File uploaded: ${fullPath}`,
-                  },
-                });
-              }
-            } else {
-              fileLogger.error(
-                `Chunked fallback upload failed with code ${code}: ${errorData}`,
-              );
-              if (!res.headersSent) {
-                res.status(500).json({
-                  error: `Chunked upload failed: ${errorData}`,
-                  toast: {
-                    type: "error",
-                    message: `Chunked upload failed: ${errorData}`,
-                  },
-                });
-              }
-            }
-          });
-
-          stream.on("error", (streamErr) => {
-            fileLogger.error(
-              "Chunked fallback upload stream error:",
-              streamErr,
-            );
-            if (!res.headersSent) {
-              res.status(500).json({
-                error: `Chunked upload stream error: ${streamErr.message}`,
-              });
-            }
-          });
-        });
-      }
-    } catch (fallbackErr) {
-      fileLogger.error("Fallback method failed:", fallbackErr);
-      if (!res.headersSent) {
-        res
-          .status(500)
-          .json({ error: `All upload methods failed: ${fallbackErr.message}` });
-      }
-    }
-  };
-
-  trySFTP();
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/createFile:
- *   post:
- *     summary: Create a file
- *     description: Creates an empty file on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               path:
- *                 type: string
- *               fileName:
- *                 type: string
- *     responses:
- *       200:
- *         description: File created successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       403:
- *         description: Permission denied.
- *       500:
- *         description: Failed to create file.
- */
-app.post("/ssh/file_manager/ssh/createFile", async (req, res) => {
-  const { sessionId, path: filePath, fileName } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!filePath || !fileName) {
-    return res.status(400).json({ error: "File path and name are required" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  const fullPath = filePath.endsWith("/")
-    ? filePath + fileName
-    : filePath + "/" + fileName;
-  const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
-
-  const createCommand = `touch '${escapedPath}' && echo "SUCCESS" && exit 0`;
-
-  execChannel(sshConn, createCommand, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH createFile error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
-      return;
-    }
-
-    let outputData = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      outputData += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-
-      if (chunk.toString().includes("Permission denied")) {
-        fileLogger.error(`Permission denied creating file: ${fullPath}`);
-        if (!res.headersSent) {
-          return res.status(403).json({
-            error: `Permission denied: Cannot create file ${fullPath}. Check directory permissions.`,
-          });
-        }
-        return;
-      }
-    });
-
-    stream.on("close", (code) => {
-      if (outputData.includes("SUCCESS")) {
-        if (!res.headersSent) {
-          res.json({
-            message: "File created successfully",
-            path: fullPath,
-            toast: { type: "success", message: `File created: ${fullPath}` },
-          });
-        }
-        return;
-      }
-
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH createFile command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        if (!res.headersSent) {
-          return res.status(500).json({
-            error: `Command failed: ${errorData}`,
-            toast: {
-              type: "error",
-              message: `File creation failed: ${errorData}`,
-            },
-          });
-        }
-        return;
-      }
-
-      if (!res.headersSent) {
-        res.json({
-          message: "File created successfully",
-          path: fullPath,
-          toast: { type: "success", message: `File created: ${fullPath}` },
-        });
-      }
-    });
-
-    stream.on("error", (streamErr) => {
-      fileLogger.error("SSH createFile stream error:", streamErr);
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-      }
-    });
-  });
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/createFolder:
- *   post:
- *     summary: Create a folder
- *     description: Creates a new folder on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               path:
- *                 type: string
- *               folderName:
- *                 type: string
- *     responses:
- *       200:
- *         description: Folder created successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       403:
- *         description: Permission denied.
- *       500:
- *         description: Failed to create folder.
- */
-app.post("/ssh/file_manager/ssh/createFolder", async (req, res) => {
-  const { sessionId, path: folderPath, folderName } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!folderPath || !folderName) {
-    return res.status(400).json({ error: "Folder path and name are required" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  const fullPath = folderPath.endsWith("/")
-    ? folderPath + folderName
-    : folderPath + "/" + folderName;
-  fileLogger.info("Creating directory", {
-    operation: "file_mkdir",
-    sessionId,
-    userId,
-    path: fullPath,
-  });
-  const escapedPath = fullPath.replace(/'/g, "'\"'\"'");
-
-  const createCommand = `mkdir -p '${escapedPath}' && echo "SUCCESS" && exit 0`;
-
-  execChannel(sshConn, createCommand, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH createFolder error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
-      return;
-    }
-
-    let outputData = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      outputData += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-
-      if (chunk.toString().includes("Permission denied")) {
-        fileLogger.error(`Permission denied creating folder: ${fullPath}`);
-        if (!res.headersSent) {
-          return res.status(403).json({
-            error: `Permission denied: Cannot create folder ${fullPath}. Check directory permissions.`,
-          });
-        }
-        return;
-      }
-    });
-
-    stream.on("close", (code) => {
-      if (outputData.includes("SUCCESS")) {
-        fileLogger.success("Directory created successfully", {
-          operation: "file_mkdir_success",
-          sessionId,
-          userId,
-          path: fullPath,
-        });
-        if (!res.headersSent) {
-          res.json({
-            message: "Folder created successfully",
-            path: fullPath,
-            toast: { type: "success", message: `Folder created: ${fullPath}` },
-          });
-        }
-        return;
-      }
-
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH createFolder command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        if (!res.headersSent) {
-          return res.status(500).json({
-            error: `Command failed: ${errorData}`,
-            toast: {
-              type: "error",
-              message: `Folder creation failed: ${errorData}`,
-            },
-          });
-        }
-        return;
-      }
-
-      fileLogger.success("Directory created successfully", {
-        operation: "file_mkdir_success",
-        sessionId,
-        userId,
-        path: fullPath,
-      });
-      if (!res.headersSent) {
-        res.json({
-          message: "Folder created successfully",
-          path: fullPath,
-          toast: { type: "success", message: `Folder created: ${fullPath}` },
-        });
-      }
-    });
-
-    stream.on("error", (streamErr) => {
-      fileLogger.error("SSH createFolder stream error:", streamErr);
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-      }
-    });
-  });
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/deleteItem:
- *   delete:
- *     summary: Delete a file or directory
- *     description: Deletes a file or directory on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               path:
- *                 type: string
- *               isDirectory:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Item deleted successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       403:
- *         description: Permission denied.
- *       500:
- *         description: Failed to delete item.
- */
-app.delete("/ssh/file_manager/ssh/deleteItem", async (req, res) => {
-  const { sessionId, path: itemPath, isDirectory } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!itemPath) {
-    return res.status(400).json({ error: "Item path is required" });
-  }
-
-  fileLogger.info("Deleting item", {
-    operation: "file_delete",
-    sessionId,
-    userId,
-    path: itemPath,
-    type: isDirectory ? "directory" : "file",
-  });
-  sshConn.lastActive = Date.now();
-  const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
-
-  const deleteCommand = isDirectory
-    ? `rm -rf '${escapedPath}'`
-    : `rm -f '${escapedPath}'`;
-
-  const executeDelete = (useSudo: boolean): Promise<void> => {
-    return new Promise((resolve) => {
-      if (useSudo && sshConn.sudoPassword) {
-        execWithSudo(sshConn, deleteCommand, sshConn.sudoPassword).then(
-          (result) => {
-            if (
-              result.code === 0 ||
-              (!result.stderr.includes("Permission denied") &&
-                !result.stdout.includes("Permission denied"))
-            ) {
-              res.json({
-                message: "Item deleted successfully",
-                path: itemPath,
-                toast: {
-                  type: "success",
-                  message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
-                },
-              });
-            } else {
-              res.status(500).json({
-                error: `Delete failed: ${result.stderr || result.stdout}`,
-              });
-            }
-            resolve();
-          },
-        );
-        return;
-      }
-
-      execChannel(
-        sshConn,
-        `${deleteCommand} && echo "SUCCESS"`,
-        (err, stream) => {
-          if (err) {
-            fileLogger.error("SSH deleteItem error:", err);
-            res.status(500).json({ error: err.message });
-            resolve();
-            return;
-          }
-
-          let outputData = "";
-          let errorData = "";
-          let permissionDenied = false;
-
-          stream.on("data", (chunk: Buffer) => {
-            outputData += chunk.toString();
-          });
-
-          stream.stderr.on("data", (chunk: Buffer) => {
-            errorData += chunk.toString();
-            if (chunk.toString().includes("Permission denied")) {
-              permissionDenied = true;
-            }
-          });
-
-          stream.on("close", (code) => {
-            if (permissionDenied) {
-              if (sshConn.sudoPassword) {
-                executeDelete(true).then(resolve);
-                return;
-              }
-              fileLogger.error(`Permission denied deleting: ${itemPath}`);
-              res.status(403).json({
-                error: `Permission denied: Cannot delete ${itemPath}.`,
-                needsSudo: true,
-              });
-              resolve();
-              return;
-            }
-
-            if (outputData.includes("SUCCESS") || code === 0) {
-              fileLogger.success("Item deleted successfully", {
-                operation: "file_delete_success",
-                sessionId,
-                userId,
-                path: itemPath,
-              });
-              res.json({
-                message: "Item deleted successfully",
-                path: itemPath,
-                toast: {
-                  type: "success",
-                  message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
-                },
-              });
-            } else {
-              res.status(500).json({
-                error: `Command failed: ${errorData}`,
-              });
-            }
-            resolve();
-          });
-
-          stream.on("error", (streamErr) => {
-            fileLogger.error("SSH deleteItem stream error:", streamErr);
-            res
-              .status(500)
-              .json({ error: `Stream error: ${streamErr.message}` });
-            resolve();
-          });
-        },
-      );
-    });
-  };
-
-  await executeDelete(false);
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/renameItem:
- *   put:
- *     summary: Rename a file or directory
- *     description: Renames a file or directory on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               oldPath:
- *                 type: string
- *               newName:
- *                 type: string
- *     responses:
- *       200:
- *         description: Item renamed successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       403:
- *         description: Permission denied.
- *       500:
- *         description: Failed to rename item.
- */
-app.put("/ssh/file_manager/ssh/renameItem", async (req, res) => {
-  const { sessionId, oldPath, newName } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!oldPath || !newName) {
-    return res
-      .status(400)
-      .json({ error: "Old path and new name are required" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  const oldDir = oldPath.substring(0, oldPath.lastIndexOf("/") + 1);
-  const newPath = oldDir + newName;
-  fileLogger.info("Renaming item", {
-    operation: "file_rename",
-    sessionId,
-    userId,
-    from: oldPath,
-    to: newPath,
-  });
-  const escapedOldPath = oldPath.replace(/'/g, "'\"'\"'");
-  const escapedNewPath = newPath.replace(/'/g, "'\"'\"'");
-
-  const renameCommand = `mv '${escapedOldPath}' '${escapedNewPath}' && echo "SUCCESS" && exit 0`;
-
-  execChannel(sshConn, renameCommand, (err, stream) => {
-    if (err) {
-      fileLogger.error("SSH renameItem error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
-      return;
-    }
-
-    let outputData = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      outputData += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-
-      if (chunk.toString().includes("Permission denied")) {
-        fileLogger.error(`Permission denied renaming: ${oldPath}`);
-        if (!res.headersSent) {
-          return res.status(403).json({
-            error: `Permission denied: Cannot rename ${oldPath}. Check file permissions.`,
-          });
-        }
-        return;
-      }
-    });
-
-    stream.on("close", (code) => {
-      if (outputData.includes("SUCCESS")) {
-        fileLogger.success("Item renamed successfully", {
-          operation: "file_rename_success",
-          sessionId,
-          userId,
-          from: oldPath,
-          to: newPath,
-        });
-        if (!res.headersSent) {
-          res.json({
-            message: "Item renamed successfully",
-            oldPath,
-            newPath,
-            toast: {
-              type: "success",
-              message: `Item renamed: ${oldPath} -> ${newPath}`,
-            },
-          });
-        }
-        return;
-      }
-
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH renameItem command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        if (!res.headersSent) {
-          return res.status(500).json({
-            error: `Command failed: ${errorData}`,
-            toast: { type: "error", message: `Rename failed: ${errorData}` },
-          });
-        }
-        return;
-      }
-
-      fileLogger.success("Item renamed successfully", {
-        operation: "file_rename_success",
-        sessionId,
-        userId,
-        from: oldPath,
-        to: newPath,
-      });
-      if (!res.headersSent) {
-        res.json({
-          message: "Item renamed successfully",
-          oldPath,
-          newPath,
-          toast: {
-            type: "success",
-            message: `Item renamed: ${oldPath} -> ${newPath}`,
-          },
-        });
-      }
-    });
-
-    stream.on("error", (streamErr) => {
-      fileLogger.error("SSH renameItem stream error:", streamErr);
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-      }
-    });
-  });
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/moveItem:
- *   put:
- *     summary: Move a file or directory
- *     description: Moves a file or directory on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               oldPath:
- *                 type: string
- *               newPath:
- *                 type: string
- *     responses:
- *       200:
- *         description: Item moved successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       403:
- *         description: Permission denied.
- *       408:
- *         description: Move operation timed out.
- *       500:
- *         description: Failed to move item.
- */
-app.put("/ssh/file_manager/ssh/moveItem", async (req, res) => {
-  const { sessionId, oldPath, newPath } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId) {
-    return res.status(400).json({ error: "Session ID is required" });
-  }
-
-  if (!sshConn?.isConnected) {
-    return res.status(400).json({ error: "SSH connection not established" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!oldPath || !newPath) {
-    return res
-      .status(400)
-      .json({ error: "Old path and new path are required" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  const escapedOldPath = oldPath.replace(/'/g, "'\"'\"'");
-  const escapedNewPath = newPath.replace(/'/g, "'\"'\"'");
-
-  const moveCommand = `mv '${escapedOldPath}' '${escapedNewPath}' && echo "SUCCESS" && exit 0`;
-
-  const commandTimeout = setTimeout(() => {
-    if (!res.headersSent) {
-      res.status(408).json({
-        error: "Move operation timed out. SSH connection may be unstable.",
-        toast: {
-          type: "error",
-          message: "Move operation timed out. SSH connection may be unstable.",
-        },
-      });
-    }
-  }, 60000);
-
-  execChannel(sshConn, moveCommand, (err, stream) => {
-    if (err) {
-      clearTimeout(commandTimeout);
-      fileLogger.error("SSH moveItem error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
-      return;
-    }
-
-    let outputData = "";
-    let errorData = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      outputData += chunk.toString();
-    });
-
-    stream.stderr.on("data", (chunk: Buffer) => {
-      errorData += chunk.toString();
-
-      if (chunk.toString().includes("Permission denied")) {
-        fileLogger.error(`Permission denied moving: ${oldPath}`);
-        if (!res.headersSent) {
-          return res.status(403).json({
-            error: `Permission denied: Cannot move ${oldPath}. Check file permissions.`,
-            toast: {
-              type: "error",
-              message: `Permission denied: Cannot move ${oldPath}. Check file permissions.`,
-            },
-          });
-        }
-        return;
-      }
-    });
-
-    stream.on("close", (code) => {
-      clearTimeout(commandTimeout);
-      if (outputData.includes("SUCCESS")) {
-        if (!res.headersSent) {
-          res.json({
-            message: "Item moved successfully",
-            oldPath,
-            newPath,
-            toast: {
-              type: "success",
-              message: `Item moved: ${oldPath} -> ${newPath}`,
-            },
-          });
-        }
-        return;
-      }
-
-      if (code !== 0) {
-        fileLogger.error(
-          `SSH moveItem command failed with code ${code}: ${errorData.replace(/\n/g, " ").trim()}`,
-        );
-        if (!res.headersSent) {
-          return res.status(500).json({
-            error: `Command failed: ${errorData}`,
-            toast: { type: "error", message: `Move failed: ${errorData}` },
-          });
-        }
-        return;
-      }
-
-      if (!res.headersSent) {
-        res.json({
-          message: "Item moved successfully",
-          oldPath,
-          newPath,
-          toast: {
-            type: "success",
-            message: `Item moved: ${oldPath} -> ${newPath}`,
-          },
-        });
-      }
-    });
-
-    stream.on("error", (streamErr) => {
-      clearTimeout(commandTimeout);
-      fileLogger.error("SSH moveItem stream error:", streamErr);
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-      }
-    });
-  });
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/downloadFile:
- *   post:
- *     summary: Download a file
- *     description: Downloads a file from the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               path:
- *                 type: string
- *               hostId:
- *                 type: integer
- *               userId:
- *                 type: string
- *     responses:
- *       200:
- *         description: The file content.
- *       400:
- *         description: Missing required parameters or file too large.
- *       500:
- *         description: Failed to download file.
- */
-app.post("/ssh/file_manager/ssh/downloadFile", async (req, res) => {
-  const { sessionId, path: filePath, hostId } = req.body;
-  const userId = (req as AuthenticatedRequest).userId;
-  const downloadStartTime = Date.now();
-
-  if (!sessionId || !filePath) {
-    fileLogger.warn("Missing download parameters", {
-      operation: "file_download",
-      sessionId,
-      hasFilePath: !!filePath,
-    });
-    return res.status(400).json({ error: "Missing download parameters" });
-  }
-
-  fileLogger.info("File download started", {
-    operation: "file_download_start",
-    sessionId,
-    userId,
-    path: filePath,
-  });
-
-  const sshConn = sshSessions[sessionId];
-  if (!sshConn || !sshConn.isConnected) {
-    fileLogger.warn("SSH session not found or not connected for download", {
-      operation: "file_download",
-      sessionId,
-      isConnected: sshConn?.isConnected,
-    });
-    return res
-      .status(400)
-      .json({ error: "SSH session not found or not connected" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  sshConn.lastActive = Date.now();
-  scheduleSessionCleanup(sessionId);
-  fileLogger.info("Opening SFTP channel", {
-    operation: "file_sftp_open",
-    sessionId,
-    userId,
-    path: filePath,
-  });
-
-  getSessionSftp(sshConn)
-    .then((sftp) => {
-      sftp.stat(filePath, (statErr, stats) => {
-        if (statErr) {
-          fileLogger.error("File stat failed for download:", statErr);
-          return res
-            .status(500)
-            .json({ error: `Cannot access file: ${statErr.message}` });
-        }
-
-        if (!stats.isFile()) {
-          fileLogger.warn("Attempted to download non-file", {
-            operation: "file_download",
-            sessionId,
-            filePath,
-            isFile: stats.isFile(),
-            isDirectory: stats.isDirectory(),
-          });
-          return res
-            .status(400)
-            .json({ error: "Cannot download directories or special files" });
-        }
-
-        const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024;
-        if (stats.size > MAX_FILE_SIZE) {
-          fileLogger.warn("File too large for download", {
-            operation: "file_download",
-            sessionId,
-            filePath,
-            fileSize: stats.size,
-            maxSize: MAX_FILE_SIZE,
-          });
-          return res.status(400).json({
-            error: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB, file is ${(stats.size / 1024 / 1024).toFixed(2)}MB`,
-          });
-        }
-
-        sftp.readFile(filePath, (readErr, data) => {
-          if (readErr) {
-            fileLogger.error("File read failed for download:", readErr);
-            return res
-              .status(500)
-              .json({ error: `Failed to read file: ${readErr.message}` });
-          }
-
-          const base64Content = data.toString("base64");
-          const fileName = filePath.split("/").pop() || "download";
-          fileLogger.success("File download completed", {
-            operation: "file_download_complete",
-            sessionId,
-            userId,
-            hostId,
-            path: filePath,
-            bytes: stats.size,
-            duration: Date.now() - downloadStartTime,
-          });
-
-          res.json({
-            content: base64Content,
-            fileName: fileName,
-            size: stats.size,
-            mimeType: getMimeType(fileName),
-            path: filePath,
-          });
-        });
-      });
-    })
-    .catch((err) => {
-      fileLogger.error("SFTP connection failed for download:", err);
-      return res.status(500).json({ error: "SFTP connection failed" });
-    });
-});
-
-app.post("/ssh/file_manager/ssh/downloadFileStream", async (req, res) => {
-  const { sessionId, path: filePath } = req.body;
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId || !filePath) {
-    return res.status(400).json({ error: "Missing download parameters" });
-  }
-
-  const sshConn = sshSessions[sessionId];
-  if (!sshConn?.isConnected) {
-    return res
-      .status(400)
-      .json({ error: "SSH session not found or not connected" });
-  }
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  sshConn.lastActive = Date.now();
-
-  try {
-    const sftp = await getSessionSftp(sshConn);
-    const stats = await new Promise<{ size: number; isFile: () => boolean }>(
-      (resolve, reject) => {
-        sftp.stat(filePath, (err, s) => (err ? reject(err) : resolve(s)));
-      },
-    );
-
-    if (!stats.isFile()) {
-      return res.status(400).json({ error: "Cannot download directories" });
-    }
-
-    const fileName = filePath.split("/").pop() || "download";
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(fileName)}"`,
-    );
-    res.setHeader("Content-Length", String(stats.size));
-
-    const readStream = sftp.createReadStream(filePath);
-    readStream.on("error", (err) => {
-      if (!res.headersSent) {
-        res.status(500).json({ error: `Download failed: ${err.message}` });
-      } else {
-        res.destroy();
-      }
-    });
-    readStream.pipe(res);
-  } catch (err) {
-    if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ error: `Download failed: ${(err as Error).message}` });
-    }
-  }
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/copyItem:
- *   post:
- *     summary: Copy a file or directory
- *     description: Copies a file or directory on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               sourcePath:
- *                 type: string
- *               targetDir:
- *                 type: string
- *               hostId:
- *                 type: integer
- *               userId:
- *                 type: string
- *     responses:
- *       200:
- *         description: Item copied successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not established.
- *       500:
- *         description: Failed to copy item.
- */
-app.post("/ssh/file_manager/ssh/copyItem", async (req, res) => {
-  const { sessionId, sourcePath, targetDir, hostId } = req.body;
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sessionId || !sourcePath || !targetDir) {
-    return res.status(400).json({ error: "Missing required parameters" });
-  }
-
-  const sshConn = sshSessions[sessionId];
-  if (!sshConn || !sshConn.isConnected) {
-    return res
-      .status(400)
-      .json({ error: "SSH session not found or not connected" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  sshConn.lastActive = Date.now();
-  scheduleSessionCleanup(sessionId);
-
-  const sourceName = sourcePath.split("/").pop() || "copied_item";
-
-  const timestamp = Date.now().toString().slice(-8);
-  const uniqueName = `${sourceName}_copy_${timestamp}`;
-  const targetPath = `${targetDir}/${uniqueName}`;
-
-  const escapedSource = sourcePath.replace(/'/g, "'\"'\"'");
-  const escapedTarget = targetPath.replace(/'/g, "'\"'\"'");
-
-  const copyCommand = `cp '${escapedSource}' '${escapedTarget}' && echo "COPY_SUCCESS"`;
-
-  const commandTimeout = setTimeout(() => {
-    fileLogger.error("Copy command timed out after 60 seconds", {
-      sourcePath,
-      targetPath,
-      command: copyCommand,
-    });
-    if (!res.headersSent) {
-      res.status(500).json({
-        error: "Copy operation timed out",
-        toast: {
-          type: "error",
-          message: "Copy operation timed out. SSH connection may be unstable.",
-        },
-      });
-    }
-  }, 60000);
-
-  execChannel(sshConn, copyCommand, (err, stream) => {
-    if (err) {
-      clearTimeout(commandTimeout);
-      fileLogger.error("SSH copyItem error:", err);
-      if (!res.headersSent) {
-        return res.status(500).json({ error: err.message });
-      }
-      return;
-    }
-
-    let errorData = "";
-    let stdoutData = "";
-
-    stream.on("data", (data: Buffer) => {
-      const output = data.toString();
-      stdoutData += output;
-      stream.stderr.on("data", (data: Buffer) => {
-        const output = data.toString();
-        errorData += output;
-      });
-
-      stream.on("close", (code) => {
-        clearTimeout(commandTimeout);
-
-        if (code !== 0) {
-          const fullErrorInfo =
-            errorData || stdoutData || "No error message available";
-          fileLogger.error(`SSH copyItem command failed with code ${code}`, {
-            operation: "file_copy_failed",
-            sessionId,
-            sourcePath,
-            targetPath,
-            command: copyCommand,
-            exitCode: code,
-            errorData,
-            stdoutData,
-            fullErrorInfo,
-          });
-          if (!res.headersSent) {
-            return res.status(500).json({
-              error: `Copy failed: ${fullErrorInfo}`,
-              toast: {
-                type: "error",
-                message: `Copy failed: ${fullErrorInfo}`,
-              },
-              debug: {
-                sourcePath,
-                targetPath,
-                exitCode: code,
-                command: copyCommand,
-              },
-            });
-          }
-          return;
-        }
-
-        const copySuccessful =
-          stdoutData.includes("COPY_SUCCESS") || code === 0;
-
-        if (copySuccessful) {
-          fileLogger.success("Item copied successfully", {
-            operation: "file_copy",
-            sessionId,
-            sourcePath,
-            targetPath,
-            uniqueName,
-            hostId,
-            userId,
-          });
-
-          if (!res.headersSent) {
-            res.json({
-              message: "Item copied successfully",
-              sourcePath,
-              targetPath,
-              uniqueName,
-              toast: {
-                type: "success",
-                message: `Successfully copied to: ${uniqueName}`,
-              },
-            });
-          }
-        } else {
-          fileLogger.warn("Copy completed but without success confirmation", {
-            operation: "file_copy_uncertain",
-            sessionId,
-            sourcePath,
-            targetPath,
-            code,
-            stdoutData: stdoutData.substring(0, 200),
-          });
-
-          if (!res.headersSent) {
-            res.json({
-              message: "Copy may have completed",
-              sourcePath,
-              targetPath,
-              uniqueName,
-              toast: {
-                type: "warning",
-                message: `Copy completed but verification uncertain for: ${uniqueName}`,
-              },
-            });
-          }
-        }
-      });
-
-      stream.on("error", (streamErr) => {
-        clearTimeout(commandTimeout);
-        fileLogger.error("SSH copyItem stream error:", streamErr);
-        if (!res.headersSent) {
-          res.status(500).json({ error: `Stream error: ${streamErr.message}` });
-        }
-      });
-    });
-  });
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/executeFile:
- *   post:
- *     summary: Execute a file
- *     description: Executes a file on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               filePath:
- *                 type: string
- *     responses:
- *       200:
- *         description: File execution result.
- *       400:
- *         description: Missing required parameters or SSH connection not available.
- *       500:
- *         description: Failed to execute file.
- */
-app.post("/ssh/file_manager/ssh/executeFile", async (req, res) => {
-  const { sessionId, filePath } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sshConn || !sshConn.isConnected) {
-    fileLogger.error(
-      "SSH connection not found or not connected for executeFile",
-      {
-        operation: "execute_file",
-        sessionId,
-        hasConnection: !!sshConn,
-        isConnected: sshConn?.isConnected,
-      },
-    );
-    return res.status(400).json({ error: "SSH connection not available" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!filePath) {
-    return res.status(400).json({ error: "File path is required" });
-  }
-
-  const escapedPath = filePath.replace(/'/g, "'\"'\"'");
-
-  const checkCommand = `test -x '${escapedPath}' && echo "EXECUTABLE" || echo "NOT_EXECUTABLE"`;
-
-  execChannel(sshConn, checkCommand, (checkErr, checkStream) => {
-    if (checkErr) {
-      fileLogger.error("SSH executeFile check error:", checkErr);
-      return res
-        .status(500)
-        .json({ error: "Failed to check file executability" });
-    }
-
-    let checkResult = "";
-    checkStream.on("data", (data) => {
-      checkResult += data.toString();
-    });
-
-    checkStream.on("close", () => {
-      if (!checkResult.includes("EXECUTABLE")) {
-        return res.status(400).json({ error: "File is not executable" });
-      }
-
-      const executeCommand = `cd "$(dirname '${escapedPath}')" && '${escapedPath}' 2>&1; echo "EXIT_CODE:$?"`;
-
-      execChannel(sshConn, executeCommand, (err, stream) => {
-        if (err) {
-          fileLogger.error("SSH executeFile error:", err);
-          return res.status(500).json({ error: "Failed to execute file" });
-        }
-
-        let output = "";
-        let errorOutput = "";
-
-        stream.on("data", (data) => {
-          output += data.toString();
-        });
-
-        stream.stderr.on("data", (data) => {
-          errorOutput += data.toString();
-        });
-
-        stream.on("close", (code) => {
-          const exitCodeMatch = output.match(/EXIT_CODE:(\d+)$/);
-          const actualExitCode = exitCodeMatch
-            ? parseInt(exitCodeMatch[1])
-            : code;
-          const cleanOutput = output.replace(/EXIT_CODE:\d+$/, "").trim();
-
-          fileLogger.info("File execution completed", {
-            operation: "execute_file",
-            sessionId,
-            filePath,
-            exitCode: actualExitCode,
-            outputLength: cleanOutput.length,
-            errorLength: errorOutput.length,
-          });
-
-          res.json({
-            success: true,
-            exitCode: actualExitCode,
-            output: cleanOutput,
-            error: errorOutput,
-            timestamp: new Date().toISOString(),
-          });
-        });
-
-        stream.on("error", (streamErr) => {
-          fileLogger.error("SSH executeFile stream error:", streamErr);
-          if (!res.headersSent) {
-            res.status(500).json({ error: "Execution stream error" });
-          }
-        });
-      });
-    });
-  });
-});
-
-/**
- * @openapi
- * /ssh/file_manager/ssh/changePermissions:
- *   post:
- *     summary: Change file permissions
- *     description: Changes the permissions of a file on the remote host.
- *     tags:
- *       - File Manager
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               sessionId:
- *                 type: string
- *               path:
- *                 type: string
- *               permissions:
- *                 type: string
- *     responses:
- *       200:
- *         description: Permissions changed successfully.
- *       400:
- *         description: Missing required parameters or SSH connection not available.
- *       408:
- *         description: Permission change timed out.
- *       500:
- *         description: Failed to change permissions.
- */
-app.post("/ssh/file_manager/ssh/changePermissions", async (req, res) => {
-  const { sessionId, path, permissions } = req.body;
-  const sshConn = sshSessions[sessionId];
-  const userId = (req as AuthenticatedRequest).userId;
-
-  if (!sshConn || !sshConn.isConnected) {
-    fileLogger.error(
-      "SSH connection not found or not connected for changePermissions",
-      {
-        operation: "change_permissions",
-        sessionId,
-        hasConnection: !!sshConn,
-        isConnected: sshConn?.isConnected,
-      },
-    );
-    return res.status(400).json({ error: "SSH connection not available" });
-  }
-
-  if (!verifySessionOwnership(sshConn, userId)) {
-    return res.status(403).json({ error: "Session access denied" });
-  }
-
-  if (!path) {
-    return res.status(400).json({ error: "File path is required" });
-  }
-
-  if (!permissions || !/^\d{3,4}$/.test(permissions)) {
-    return res.status(400).json({
-      error: "Valid permissions required (e.g., 755, 644)",
-    });
-  }
-
-  sshConn.lastActive = Date.now();
-  scheduleSessionCleanup(sessionId);
-
-  const octalPerms = permissions.slice(-3);
-  const escapedPath = path.replace(/'/g, "'\"'\"'");
-  const command = `chmod ${octalPerms} '${escapedPath}' && echo "SUCCESS"`;
-
-  fileLogger.info("Changing file permissions", {
-    operation: "change_permissions",
-    sessionId,
-    path,
-    permissions: octalPerms,
-  });
-
-  const commandTimeout = setTimeout(() => {
-    if (!res.headersSent) {
-      fileLogger.error("changePermissions command timeout", {
-        operation: "change_permissions",
-        sessionId,
-        path,
-        permissions: octalPerms,
-      });
-      res.status(408).json({
-        error: "Permission change timed out. SSH connection may be unstable.",
-      });
-    }
-  }, 10000);
-
-  execChannel(sshConn, command, (err, stream) => {
-    if (err) {
-      clearTimeout(commandTimeout);
-      fileLogger.error("SSH changePermissions exec error:", err, {
-        operation: "change_permissions",
-        sessionId,
-        path,
-        permissions: octalPerms,
-      });
-      if (!res.headersSent) {
-        return res.status(500).json({ error: "Failed to change permissions" });
-      }
-      return;
-    }
-
-    let outputData = "";
-    let errorOutput = "";
-
-    stream.on("data", (chunk: Buffer) => {
-      outputData += chunk.toString();
-    });
-
-    stream.stderr.on("data", (data: Buffer) => {
-      errorOutput += data.toString();
-    });
-
-    stream.on("close", (code) => {
-      clearTimeout(commandTimeout);
-
-      if (outputData.includes("SUCCESS")) {
-        fileLogger.success("File permissions changed successfully", {
-          operation: "change_permissions",
-          sessionId,
-          path,
-          permissions: octalPerms,
-        });
-
-        if (!res.headersSent) {
-          res.json({
-            success: true,
-            message: "Permissions changed successfully",
-          });
-        }
-        return;
-      }
-
-      if (code !== 0) {
-        fileLogger.error("chmod command failed", {
-          operation: "change_permissions",
-          sessionId,
-          path,
-          permissions: octalPerms,
-          exitCode: code,
-          error: errorOutput,
-        });
-        if (!res.headersSent) {
-          return res.status(500).json({
-            error: errorOutput || "Failed to change permissions",
-          });
-        }
-        return;
-      }
-
-      fileLogger.success("File permissions changed successfully", {
-        operation: "change_permissions",
-        sessionId,
-        path,
-        permissions: octalPerms,
-      });
-
-      if (!res.headersSent) {
-        res.json({
-          success: true,
-          message: "Permissions changed successfully",
-        });
-      }
-    });
-
-    stream.on("error", (streamErr) => {
-      clearTimeout(commandTimeout);
-      fileLogger.error("SSH changePermissions stream error:", streamErr, {
-        operation: "change_permissions",
-        sessionId,
-        path,
-        permissions: octalPerms,
-      });
-      if (!res.headersSent) {
-        res
-          .status(500)
-          .json({ error: "Stream error while changing permissions" });
-      }
-    });
-  });
+registerFileActionRoutes(app, {
+  sshSessions,
+  scheduleSessionCleanup,
+  verifySessionOwnership,
 });
 
 /**
@@ -5937,7 +2500,7 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const fileNames = paths
     .map((p) => {
       const name = p.split("/").pop();
-      return `'${escapeShell(name || "")}'`;
+      return `'./${escapeShell(name || "")}'`;
     })
     .join(" ");
 
@@ -5954,17 +2517,17 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
   const escapedArchive = escapeShell(archivePath);
 
   if (compressionFormat === "zip") {
-    compressCommand = `cd '${escapedDir}' && zip -r '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && zip -r '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar.gz" || compressionFormat === "tgz") {
-    compressCommand = `cd '${escapedDir}' && tar -czf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -czf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar.bz2" || compressionFormat === "tbz2") {
-    compressCommand = `cd '${escapedDir}' && tar -cjf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cjf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar.xz") {
-    compressCommand = `cd '${escapedDir}' && tar -cJf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cJf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "tar") {
-    compressCommand = `cd '${escapedDir}' && tar -cf '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && tar -cf '${escapedArchive}' -- ${fileNames}`;
   } else if (compressionFormat === "7z") {
-    compressCommand = `cd '${escapedDir}' && 7z a '${escapedArchive}' ${fileNames}`;
+    compressCommand = `cd '${escapedDir}' && 7z a '${escapedArchive}' -- ${fileNames}`;
   } else {
     return res.status(400).json({ error: "Unsupported compression format" });
   }
@@ -6079,6 +2642,222 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
       }
     });
   });
+});
+
+const hostTransferDeps: HostTransferDeps = {
+  sshSessions,
+  getSessionSftp,
+  execChannel,
+  verifySessionOwnership,
+  openDedicatedTransferSession,
+  closeDedicatedTransferSession,
+};
+
+app.post("/ssh/file_manager/ssh/transferMethodPreview", async (req, res) => {
+  const {
+    sourceSessionId,
+    destSessionId,
+    sourcePaths,
+    destPath,
+    methodPreference,
+  } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (
+    !sourceSessionId ||
+    !destSessionId ||
+    !destPath ||
+    !sourcePaths ||
+    !Array.isArray(sourcePaths) ||
+    sourcePaths.length === 0
+  ) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const preview = await previewArchiveTransferMethod(hostTransferDeps, {
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+      destPath,
+      methodPreference:
+        methodPreference === "tar" || methodPreference === "item_sftp"
+          ? methodPreference
+          : "auto",
+      userId,
+    });
+    res.json(preview);
+  } catch (err) {
+    fileLogger.error("Failed to preview transfer method", err, {
+      operation: "host_transfer",
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+    });
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Failed to preview method",
+    });
+  }
+});
+
+app.post("/ssh/file_manager/ssh/transferToHost", async (req, res) => {
+  const {
+    sourceSessionId,
+    sourcePaths,
+    destSessionId,
+    destPath,
+    move,
+    methodPreference,
+    parallelSegmentCount: parallelSegmentCountRaw,
+  } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (
+    !sourceSessionId ||
+    !destSessionId ||
+    !destPath ||
+    !sourcePaths ||
+    !Array.isArray(sourcePaths) ||
+    sourcePaths.length === 0
+  ) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const sourceSession = sshSessions[sourceSessionId];
+  const destSession = sshSessions[destSessionId];
+
+  if (!sourceSession?.isConnected || !destSession?.isConnected) {
+    return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  if (
+    !verifySessionOwnership(sourceSession, userId) ||
+    !verifySessionOwnership(destSession, userId)
+  ) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  sourceSession.lastActive = Date.now();
+  destSession.lastActive = Date.now();
+  scheduleSessionCleanup(sourceSessionId);
+  scheduleSessionCleanup(destSessionId);
+
+  try {
+    const rawParallel = Number(parallelSegmentCountRaw);
+    const parallelSegmentCount = Number.isFinite(rawParallel)
+      ? Math.max(1, Math.min(8, Math.floor(rawParallel)))
+      : 2;
+
+    const { transferId } = startHostTransfer(hostTransferDeps, {
+      sourceSessionId,
+      sourcePaths,
+      destSessionId,
+      destPath,
+      move: !!move,
+      userId,
+      methodPreference:
+        methodPreference === "tar" || methodPreference === "item_sftp"
+          ? methodPreference
+          : "auto",
+      parallelSegmentCount,
+    });
+
+    res.json({ transferId });
+  } catch (err) {
+    fileLogger.error("Failed to start host transfer", err, {
+      operation: "host_transfer",
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+    });
+    res.status(500).json({ error: "Failed to start transfer" });
+  }
+});
+
+app.get("/ssh/file_manager/ssh/activeTransfers", async (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  await probeHungStreamTransfers(hostTransferDeps);
+  res.json({ transfers: listActiveTransfers(userId) });
+});
+
+app.get(
+  "/ssh/file_manager/ssh/transferStatus/:transferId",
+  async (req, res) => {
+    const userId = (req as unknown as AuthenticatedRequest).userId;
+    const transferId = req.params.transferId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    await probeHungStreamTransfers(hostTransferDeps);
+    const status = getTransferStatus(transferId, userId);
+    if (!status) {
+      return res.status(404).json({ error: "Transfer not found" });
+    }
+
+    res.json(status);
+  },
+);
+
+app.post("/ssh/file_manager/ssh/transferCancel/:transferId", (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const transferId = req.params.transferId;
+
+  const cancelled = requestTransferCancel(transferId, userId);
+  if (!cancelled) {
+    return res.status(404).json({ error: "Transfer not found or not running" });
+  }
+
+  res.json({ ok: true });
+});
+
+app.post(
+  "/ssh/file_manager/ssh/transferCleanup/:transferId",
+  async (req, res) => {
+    const userId = (req as unknown as AuthenticatedRequest).userId;
+    const transferId = req.params.transferId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const result = await cleanupCancelledTransfer(
+        hostTransferDeps,
+        transferId,
+        userId,
+      );
+      res.json(result);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to clean up transfer";
+      const status = message === "Transfer not found" ? 404 : 400;
+      res.status(status).json({ error: message });
+    }
+  },
+);
+
+app.post("/ssh/file_manager/ssh/transferRetry/:transferId", (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const transferId = req.params.transferId;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const retried = retryHostTransfer(hostTransferDeps, transferId, userId);
+  if (!retried) {
+    return res
+      .status(404)
+      .json({ error: "Transfer not found or not retryable" });
+  }
+
+  res.json({ ok: true, transferId });
 });
 
 process.on("SIGINT", () => {

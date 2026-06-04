@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useRef } from "react";
 import { DraggableWindow } from "./DraggableWindow.tsx";
 import { FileViewer } from "./FileViewer.tsx";
@@ -126,7 +127,10 @@ export function FileWindow({
 
         if (response.encoding === "base64") {
           try {
-            const decoded = atob(fileContent);
+            const bytes = Uint8Array.from(atob(fileContent), (c) =>
+              c.charCodeAt(0),
+            );
+            const decoded = new TextDecoder("utf-8").decode(bytes);
             if (isDisplayableText(decoded)) {
               fileContent = decoded;
             }

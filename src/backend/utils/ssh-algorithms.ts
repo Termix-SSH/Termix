@@ -1,6 +1,8 @@
 import crypto from "crypto";
+import { createRequire } from "module";
 import type { ConnectConfig, CipherAlgorithm } from "ssh2";
 
+const nativeRequire = createRequire(import.meta.url);
 const availableCiphers = new Set(crypto.getCiphers());
 
 // Maps SSH cipher names to their OpenSSL equivalents
@@ -20,7 +22,7 @@ const SSH_CIPHER_SSL_NAME: Partial<Record<CipherAlgorithm, string>> = {
 // Check if ssh2's native crypto binding is available (needed for chacha20-poly1305)
 let ssh2BindingAvailable = false;
 try {
-  require("ssh2/lib/protocol/crypto/build/Release/sshcrypto.node");
+  nativeRequire("ssh2/lib/protocol/crypto/build/Release/sshcrypto.node");
   ssh2BindingAvailable = true;
 } catch {
   try {

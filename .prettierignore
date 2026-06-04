@@ -5,6 +5,7 @@ dist-ssr
 release
 
 node_modules
+src/mcp-server/node_modules
 package-lock.json
 pnpm-lock.yaml
 yarn.lock

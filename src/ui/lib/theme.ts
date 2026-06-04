@@ -1,9 +1,8 @@
 import type {
-  AccentColorId,
   DashboardCardConfig,
   FontSizeId,
   SplitMode,
-} from "./types";
+} from "@/types/ui-types";
 
 export const DASHBOARD_CARDS: DashboardCardConfig[] = [
   {
@@ -59,12 +58,6 @@ export const ACCENT_PRESET_COLORS = [
   { label: "Lime", value: "#84cc16" },
 ];
 
-export const ACCENT_COLORS = ACCENT_PRESET_COLORS.map((c) => ({
-  id: c.label.toLowerCase() as AccentColorId,
-  label: c.label,
-  value: c.value,
-}));
-
 export function applyAccentColor(colorValue: string) {
   document.documentElement.style.setProperty("--accent-brand", colorValue);
 }
@@ -113,14 +106,4 @@ export const PANE_COUNTS: Record<SplitMode, number> = {
   "4-way": 4,
   "5-way": 5,
   "6-way": 6,
-};
-
-export const PANE_LAYOUTS: Record<SplitMode, string> = {
-  none: "",
-  "2-way": "grid-cols-2 grid-rows-1",
-  "3-way": "grid-cols-2 grid-rows-2",
-  "3-way-horizontal": "grid-cols-2 grid-rows-2",
-  "4-way": "grid-cols-2 grid-rows-2",
-  "5-way": "grid-cols-3 grid-rows-2",
-  "6-way": "grid-cols-3 grid-rows-2",
 };

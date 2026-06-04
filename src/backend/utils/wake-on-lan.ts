@@ -6,7 +6,7 @@ function parseMac(mac: string): Buffer {
   return Buffer.from(mac.replace(/[:-]/g, ""), "hex");
 }
 
-function buildMagicPacket(mac: string): Buffer {
+export function buildMagicPacket(mac: string): Buffer {
   const macBytes = parseMac(mac);
   const packet = Buffer.alloc(102);
   packet.fill(0xff, 0, 6);

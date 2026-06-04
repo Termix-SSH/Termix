@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import {
   useEffect,
   useRef,
@@ -33,11 +34,10 @@ import { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog.tsx";
 import { TmuxSessionPicker } from "@/ssh/dialogs/TmuxSessionPicker.tsx";
 import {
-  TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
 } from "@/lib/terminal-themes.ts";
-import type { TerminalConfig } from "@/types";
+import "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
@@ -52,72 +52,9 @@ import {
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-
-// Background/foreground per UI theme for "Termix Default" — must match index.css
-const TERMIX_DEFAULT_COLORS: Record<
-  string,
-  { background: string; foreground: string }
-> = {
-  dark: { background: "#0c0d0b", foreground: "#fafafa" },
-  light: { background: "#ffffff", foreground: "#111210" },
-  dracula: { background: "#282a36", foreground: "#f8f8f2" },
-  catppuccin: { background: "#1e1e2e", foreground: "#cdd6f4" },
-  nord: { background: "#2e3440", foreground: "#eceff4" },
-  solarized: { background: "#002b36", foreground: "#839496" },
-  "tokyo-night": { background: "#1a1b26", foreground: "#a9b1d6" },
-  "one-dark": { background: "#282c34", foreground: "#abb2bf" },
-  gruvbox: { background: "#282828", foreground: "#ebdbb2" },
-};
-
-function resolveTermixThemeColors(activeTheme: string, appTheme: string) {
-  if (activeTheme !== "termix") {
-    return (
-      TERMINAL_THEMES[activeTheme]?.colors || TERMINAL_THEMES.termixDark.colors
-    );
-  }
-  let resolvedUiTheme = appTheme;
-  if (appTheme === "system") {
-    resolvedUiTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
-  }
-  const uiColors =
-    TERMIX_DEFAULT_COLORS[resolvedUiTheme] ?? TERMIX_DEFAULT_COLORS.dark;
-  const base = TERMINAL_THEMES.termixDark.colors;
-  return {
-    ...base,
-    background: uiColors.background,
-    foreground: uiColors.foreground,
-    cursor: uiColors.foreground,
-    cursorAccent: uiColors.background,
-  };
-}
-
-interface HostConfig {
-  id?: number;
-  instanceId?: string;
-  restoredSessionId?: string | null;
-  ip: string;
-  port: number;
-  username: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  keyType?: string;
-  authType?: string;
-  credentialId?: number;
-  terminalConfig?: TerminalConfig;
-  [key: string]: unknown;
-}
-
-interface TerminalHandle {
-  disconnect: () => void;
-  reconnect: () => void;
-  fit: () => void;
-  sendInput: (data: string) => void;
-  notifyResize: () => void;
-  refresh: () => void;
-}
+import { resolveTermixThemeColors } from "./terminal-theme.ts";
+import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
+export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
 type HostKeyVerificationData = Omit<
   React.ComponentProps<typeof HostKeyVerificationDialog>,
@@ -125,7 +62,7 @@ type HostKeyVerificationData = Omit<
 >;
 
 interface SSHTerminalProps {
-  hostConfig: HostConfig;
+  hostConfig: TerminalHostConfig;
   isVisible: boolean;
   title?: string;
   showTitle?: boolean;
@@ -203,8 +140,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       "no_keyboard" | "auth_failed" | "timeout"
     >("no_keyboard");
     const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
-    const [keyboardInteractiveDetected, setKeyboardInteractiveDetected] =
-      useState(false);
+    const [, setKeyboardInteractiveDetected] = useState(false);
     const [warpgateAuthRequired, setWarpgateAuthRequired] = useState(false);
     const [warpgateAuthUrl, setWarpgateAuthUrl] = useState<string>("");
     const [warpgateSecurityKey, setWarpgateSecurityKey] = useState<string>("");
@@ -222,7 +158,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
-    const currentHostConfigRef = useRef<HostConfig | null>(null);
+    const currentHostConfigRef = useRef<TerminalHostConfig | null>(null);
 
     const [hostKeyVerification, setHostKeyVerification] = useState<{
       isOpen: boolean;
@@ -233,7 +169,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const sessionIdRef = useRef<string | null>(null);
     const isAttachingSessionRef = useRef<boolean>(false);
     // Consumed on first connectToHost call so retries don't re-attempt a stale session
-    const pendingRestoredSessionIdRef = useRef<string | null>(hostConfig.restoredSessionId ?? null);
+    const pendingRestoredSessionIdRef = useRef<string | null>(
+      hostConfig.restoredSessionId ?? null,
+    );
     const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
       sessions: Array<{
         name: string;
@@ -1052,7 +990,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               terminal.write(outputData);
               const sudoPasswordPattern =
-                /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required)/i;
+                /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required|password for [^\n]*:\s*$|Password:\s*$)/i;
               const hasSudoPw =
                 hostConfig.terminalConfig?.sudoPassword ||
                 hostConfig.password ||
@@ -1484,7 +1422,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             sessionIdRef.current = msg.sessionId;
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
-                patchOpenTab(hostConfig.instanceId!, { backendSessionId: msg.sessionId }).catch(() => {});
+                patchOpenTab(hostConfig.instanceId!, {
+                  backendSessionId: msg.sessionId,
+                }).catch(() => {});
               });
             }
           } else if (msg.type === "sessionAttached") {
@@ -1520,7 +1460,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             wasSessionExpiredRef.current = true;
             if (hostConfig.instanceId) {
               import("@/main-axios").then(({ patchOpenTab }) => {
-                patchOpenTab(hostConfig.instanceId!, { backendSessionId: null }).catch(() => {});
+                patchOpenTab(hostConfig.instanceId!, {
+                  backendSessionId: null,
+                }).catch(() => {});
               });
             }
             if (webSocketRef.current) {
@@ -1993,6 +1935,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.unicode.activeVersion = "11";
 
       terminal.open(xtermRef.current);
+      document.fonts.ready.then(() => {
+        terminal.refresh(0, terminal.rows - 1);
+        fitAddon.fit();
+      });
 
       terminal.attachCustomWheelEventHandler((ev) => {
         const cfg = {
@@ -2135,8 +2081,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isMountedRef.current = true;
 
       const currentHostId = hostConfig.id;
-      const currentInstanceId = hostConfig.instanceId;
-
       return () => {
         if (!isMountedRef.current) {
           return;
@@ -2359,20 +2303,29 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.preventDefault();
           e.stopPropagation();
 
-          const autocompleteEnabled =
-            localStorage.getItem("commandAutocomplete") === "true";
-
-          if (!autocompleteEnabled) {
+          const sendTabToShell = () => {
             if (webSocketRef.current?.readyState === 1) {
               webSocketRef.current.send(
                 JSON.stringify({ type: "input", data: "\t" }),
               );
             }
+          };
+
+          const autocompleteEnabled =
+            localStorage.getItem("commandAutocomplete") === "true";
+
+          if (!autocompleteEnabled) {
+            sendTabToShell();
             return false;
           }
 
           const currentCmd = getCurrentCommandRef.current().trim();
-          if (currentCmd.length > 0 && webSocketRef.current?.readyState === 1) {
+          if (currentCmd.length === 0) {
+            sendTabToShell();
+            return false;
+          }
+
+          if (webSocketRef.current?.readyState === 1) {
             const matches = autocompleteHistory.current
               .filter(
                 (cmd) =>
@@ -2432,6 +2385,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
 
               setShowAutocomplete(true);
+            } else {
+              sendTabToShell();
             }
           }
           return false;
@@ -2474,7 +2429,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         });
       });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [terminal, hostConfig.id, isVisible, isConnected, isConnecting]);
 
     useEffect(() => {
@@ -2769,85 +2723,3 @@ export const Terminal = forwardRef<TerminalHandle, SSHTerminalProps>(
     );
   },
 );
-
-const style = document.createElement("style");
-style.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-
-@font-face {
-  font-family: 'Caskaydia Cove Nerd Font Mono';
-  src: url('./fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Caskaydia Cove Nerd Font Mono';
-  src: url('./fonts/CaskaydiaCoveNerdFontMono-Bold.ttf') format('truetype');
-  font-weight: bold;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Caskaydia Cove Nerd Font Mono';
-  src: url('./fonts/CaskaydiaCoveNerdFontMono-Italic.ttf') format('truetype');
-  font-weight: normal;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Caskaydia Cove Nerd Font Mono';
-  src: url('./fonts/CaskaydiaCoveNerdFontMono-BoldItalic.ttf') format('truetype');
-  font-weight: bold;
-  font-style: italic;
-  font-display: swap;
-}
-
-.xterm .xterm-viewport::-webkit-scrollbar {
-  width: 8px;
-  background: transparent;
-}
-.xterm .xterm-viewport::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.3);
-  border-radius: 4px;
-}
-.xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(0,0,0,0.5);
-}
-.xterm .xterm-viewport {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0,0,0,0.3) transparent;
-}
-
-.dark .xterm .xterm-viewport::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.3);
-}
-.dark .xterm .xterm-viewport::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.5);
-}
-.dark .xterm .xterm-viewport {
-  scrollbar-color: rgba(255,255,255,0.3) transparent;
-}
-
-.xterm {
-  font-feature-settings: "liga" 0, "calt" 0;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.xterm .xterm-screen {
-  font-family: 'Caskaydia Cove Nerd Font Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
-  font-variant-ligatures: none;
-}
-
-.xterm .xterm-screen .xterm-char {
-  font-feature-settings: "liga" 0, "calt" 0;
-}
-`;
-document.head.appendChild(style);

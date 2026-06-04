@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useState } from "react";
 import { AlertCard } from "./AlertCard.tsx";
 import { Button } from "@/components/button.tsx";

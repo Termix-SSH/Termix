@@ -809,6 +809,16 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
 
+        CREATE TABLE transfer_recent (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          source_host_id INTEGER NOT NULL,
+          dest_host_id INTEGER NOT NULL,
+          dest_path TEXT NOT NULL,
+          dest_path_label TEXT NOT NULL,
+          last_used TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE dismissed_alerts (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL,
@@ -1063,6 +1073,12 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         VALUES (?, ?)
       `);
       for (const setting of settingsData) {
+        if (
+          setting.key.startsWith("reset_code_") ||
+          setting.key.startsWith("temp_reset_token_")
+        ) {
+          continue;
+        }
         insertSetting.run(setting.key, setting.value);
       }
     } finally {

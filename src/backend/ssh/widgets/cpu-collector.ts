@@ -1,7 +1,7 @@
 import type { Client } from "ssh2";
 import { execCommand, toFixedNum } from "./common-utils.js";
 
-function parseCpuLine(
+export function parseCpuLine(
   cpuLine: string,
 ): { total: number; idle: number } | undefined {
   const parts = cpuLine.trim().split(/\s+/);

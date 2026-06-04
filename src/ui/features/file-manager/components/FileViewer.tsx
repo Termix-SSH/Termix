@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils.ts";
 import { useTranslation } from "react-i18next";
@@ -38,6 +39,7 @@ import {
   SiDocker,
 } from "react-icons/si";
 import { Button } from "@/components/button.tsx";
+import { Kbd, KbdKey } from "@/components/kbd.tsx";
 import type { CodeEditorHandle } from "./CodeEditor.tsx";
 
 const CodeEditor = lazy(() =>

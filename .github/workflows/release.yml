@@ -1,0 +1,150 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prep:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      release_tag: ${{ steps.info.outputs.release_tag }}
+      mobile_version: ${{ steps.info.outputs.mobile_version }}
+    steps:
+      - name: Guard branch
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Releases must be run from main (got ${{ github.ref }})."
+          exit 1
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Resolve versions
+        id: info
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release_tag=release-$VERSION-tag" >> "$GITHUB_OUTPUT"
+
+          MOBILE_RAW=$(gh release view -R Termix-SSH/Mobile --json tagName -q .tagName)
+          MOBILE_VERSION=$(echo "$MOBILE_RAW" | sed -E 's/^release-//; s/-tag$//')
+          if [ -z "$MOBILE_VERSION" ]; then
+            echo "Failed to resolve the latest Termix-SSH/Mobile release version."
+            exit 1
+          fi
+          echo "mobile_version=$MOBILE_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate release notes
+        run: |
+          node scripts/generate-release-body.cjs \
+            --version "${{ steps.info.outputs.version }}" \
+            --mobile-version "${{ steps.info.outputs.mobile_version }}" \
+            --notes RELEASE_NOTES.md > /dev/null
+
+  docker:
+    needs: [prep]
+    uses: ./.github/workflows/docker.yml
+    with:
+      version: ${{ needs.prep.outputs.version }}
+      build_type: Production
+    secrets: inherit
+
+  create-release:
+    needs: [prep, docker]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Generate release body
+        run: |
+          node scripts/generate-release-body.cjs \
+            --version "${{ needs.prep.outputs.version }}" \
+            --mobile-version "${{ needs.prep.outputs.mobile_version }}" \
+            --notes RELEASE_NOTES.md > RELEASE_BODY.md
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.prep.outputs.release_tag }}"
+          TITLE="release-${{ needs.prep.outputs.version }}"
+          if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md
+          else
+            gh release create "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md --target "${{ github.sha }}"
+          fi
+
+  electron-release:
+    needs: [prep, create-release]
+    uses: ./.github/workflows/electron.yml
+    with:
+      build_type: all
+      artifact_destination: release
+      release_tag: ${{ needs.prep.outputs.release_tag }}
+    secrets: inherit
+
+  electron-submit:
+    needs: [electron-release]
+    uses: ./.github/workflows/electron.yml
+    with:
+      build_type: all
+      artifact_destination: submit
+    secrets: inherit
+
+  cask-commit-back:
+    needs: [prep, electron-release]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+          token: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Bump and commit Homebrew cask
+        env:
+          VERSION: ${{ needs.prep.outputs.version }}
+          DMG_SHA256: ${{ needs.electron-release.outputs.macos_universal_dmg_sha256 }}
+        run: |
+          if [ -z "$DMG_SHA256" ]; then
+            echo "No universal DMG checksum available (macOS build unsigned or skipped); leaving cask unchanged."
+            exit 0
+          fi
+
+          sed -i "s|version \".*\"|version \"$VERSION\"|g" Casks/termix.rb
+          sed -i "s|sha256 \".*\"|sha256 \"$DMG_SHA256\"|g" Casks/termix.rb
+
+          if git diff --quiet Casks/termix.rb; then
+            echo "Cask already up to date."
+            exit 0
+          fi
+
+          git config user.name "LukeGus"
+          git config user.email "bugattiguy527@gmail.com"
+          git add Casks/termix.rb
+          git commit -m "chore: bump Homebrew cask to $VERSION"
+          git push origin HEAD:main

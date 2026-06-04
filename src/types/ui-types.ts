@@ -14,6 +14,9 @@ export type Host = {
   credentialId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
+  hasPassword?: boolean;
+  sudoPassword?: string;
+  hasSudoPassword?: boolean;
   hasKey?: boolean;
   hasKeyPassword?: boolean;
   key?: string;
@@ -121,7 +124,7 @@ export type Host = {
   telnetUser?: string;
   telnetPassword?: string;
 
-  guacamoleConfig?: Record<string, any>;
+  guacamoleConfig?: Record<string, unknown>;
   forceKeyboardInteractive?: boolean;
 };
 
@@ -191,6 +194,8 @@ export type Tab = {
   terminalRef?: import("react").RefObject<{
     sendInput?: (data: string) => void;
     reconnect?: () => void;
+    fit?: () => void;
+    notifyResize?: () => void;
   } | null>;
 };
 

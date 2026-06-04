@@ -19,16 +19,32 @@ const AppShell = lazy(() =>
 );
 
 // Full-screen apps opened via query params (e.g. from external links or Electron)
-const TerminalApp = lazy(() => import("@/features/terminal/TerminalApp"));
-const FileManagerApp = lazy(
-  () => import("@/features/file-manager/FileManagerApp"),
+const TerminalApp = lazy(() =>
+  import("@/features/terminal/TerminalApp").then((m) => ({
+    default: m.default,
+  })),
 );
-const TunnelApp = lazy(() => import("@/features/tunnel/TunnelApp"));
-const ServerStatsApp = lazy(
-  () => import("@/features/server-stats/ServerStatsApp"),
+const FileManagerApp = lazy(() =>
+  import("@/features/file-manager/FileManagerApp").then((m) => ({
+    default: m.default,
+  })),
 );
-const DockerApp = lazy(() => import("@/features/docker/DockerApp"));
-const GuacamoleApp = lazy(() => import("@/features/guacamole/GuacamoleApp"));
+const TunnelApp = lazy(() =>
+  import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
+);
+const ServerStatsApp = lazy(() =>
+  import("@/features/server-stats/ServerStatsApp").then((m) => ({
+    default: m.default,
+  })),
+);
+const DockerApp = lazy(() =>
+  import("@/features/docker/DockerApp").then((m) => ({ default: m.default })),
+);
+const GuacamoleApp = lazy(() =>
+  import("@/features/guacamole/GuacamoleApp").then((m) => ({
+    default: m.default,
+  })),
+);
 
 const ElectronVersionCheck = lazy(() =>
   import("@/user/ElectronVersionCheck").then((module) => ({
@@ -42,47 +58,6 @@ type Phase =
   | "fading-in"
   | "idle-app"
   | "fading-out";
-
-function useWindowWidth() {
-  const [width, setWidth] = useState(window.innerWidth);
-  const lastSwitchTime = useRef(0);
-  const isCurrentlyMobile = useRef(window.innerWidth < 768);
-  const hasSwitchedOnce = useRef(false);
-
-  useEffect(() => {
-    let timeoutId: number;
-    const handleResize = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        const newWidth = window.innerWidth;
-        const newIsMobile = newWidth < 768;
-        const now = Date.now();
-        if (hasSwitchedOnce.current && now - lastSwitchTime.current < 10000) {
-          setWidth(newWidth);
-          return;
-        }
-        if (
-          newIsMobile !== isCurrentlyMobile.current &&
-          now - lastSwitchTime.current > 5000
-        ) {
-          lastSwitchTime.current = now;
-          isCurrentlyMobile.current = newIsMobile;
-          hasSwitchedOnce.current = true;
-          setWidth(newWidth);
-        } else {
-          setWidth(newWidth);
-        }
-      }, 2000);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
-
-  return width;
-}
 
 function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -238,18 +213,10 @@ function App() {
 }
 
 function RootApp() {
-  const width = useWindowWidth();
-  const isMobile = width < 768;
   const [showVersionCheck, setShowVersionCheck] = useState(true);
 
   useServiceWorker();
 
-  const userAgent =
-    navigator.userAgent ||
-    navigator.vendor ||
-    (window as Window & { opera?: string }).opera ||
-    "";
-  const isTermixMobile = /Termix-Mobile/.test(userAgent);
   const searchParams = new URLSearchParams(window.location.search);
   const isFullscreen = searchParams.has("view");
 

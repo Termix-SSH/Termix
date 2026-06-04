@@ -122,48 +122,6 @@ const DEFAULT_SLOTS: CardSlot[] = [
   { id: "recent_activity", panel: "side", order: 0, height: null },
 ];
 
-// ─── useColumnResize ──────────────────────────────────────────────────────────
-
-function useColumnResize(
-  containerRef: React.RefObject<HTMLDivElement | null>,
-  mainWidthPct: number,
-  setMainWidthPct: (v: number) => void,
-) {
-  const dragging = useRef(false);
-  const startX = useRef(0);
-  const startPct = useRef(0);
-
-  const onMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      dragging.current = true;
-      startX.current = e.clientX;
-      startPct.current = mainWidthPct;
-
-      const onMove = (ev: MouseEvent) => {
-        if (!dragging.current || !containerRef.current) return;
-        const totalW = containerRef.current.getBoundingClientRect().width;
-        const delta = ev.clientX - startX.current;
-        const newPct = Math.min(
-          85,
-          Math.max(30, startPct.current + (delta / totalW) * 100),
-        );
-        setMainWidthPct(newPct);
-      };
-      const onUp = () => {
-        dragging.current = false;
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-      };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
-    },
-    [containerRef, mainWidthPct, setMainWidthPct],
-  );
-
-  return onMouseDown;
-}
-
 // ─── Card components ──────────────────────────────────────────────────────────
 
 function StatsBarCard({
@@ -1160,7 +1118,7 @@ export function DashboardTab({
       .then(setActivity)
       .catch(() => {});
     getCredentials()
-      .then((res: any) =>
+      .then((res) =>
         setCredentialCount(
           Array.isArray(res?.credentials) ? res.credentials.length : 0,
         ),
@@ -1169,7 +1127,7 @@ export function DashboardTab({
     getTunnelStatuses()
       .then((statuses) => {
         const active = Object.values(statuses ?? {}).filter(
-          (s: any) => s?.status === "CONNECTED",
+          (s) => s?.status === "CONNECTED",
         ).length;
         setActiveTunnelCount(active);
       })

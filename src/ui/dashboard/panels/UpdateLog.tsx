@@ -75,7 +75,7 @@ export function UpdateLog({ loggedIn }: UpdateLogProps) {
         })
         .finally(() => setLoading(false));
     }
-  }, [loggedIn, isOpen]);
+  }, [loggedIn, isOpen, t]);
 
   if (!loggedIn) {
     return null;

@@ -268,6 +268,19 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS transfer_recent (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        source_host_id INTEGER NOT NULL,
+        dest_host_id INTEGER NOT NULL,
+        dest_path TEXT NOT NULL,
+        dest_path_label TEXT NOT NULL,
+        last_used TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (source_host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (dest_host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS dismissed_alerts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -467,6 +480,10 @@ async function initializeCompleteDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS user_preferences (
         user_id TEXT PRIMARY KEY,
         reopen_tabs_on_login INTEGER NOT NULL DEFAULT 0,
+        theme TEXT,
+        font_size TEXT,
+        accent_color TEXT,
+        language TEXT,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
@@ -563,11 +580,12 @@ async function initializeCompleteDatabase(): Promise<void> {
       .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
       .get();
     if (!row) {
+      const defaultGuacUrl = `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
       sqlite
         .prepare(
-          "INSERT INTO settings (key, value) VALUES ('guac_url', 'guacd:4822')",
+          "INSERT INTO settings (key, value) VALUES ('guac_url', ?)",
         )
-        .run();
+        .run(defaultGuacUrl);
     }
   } catch (e) {
     databaseLogger.warn("Could not initialize guac_url setting", {
@@ -605,6 +623,11 @@ const addColumnIfNotExists = (
 };
 
 const migrateSchema = () => {
+  addColumnIfNotExists("user_preferences", "theme", "TEXT");
+  addColumnIfNotExists("user_preferences", "font_size", "TEXT");
+  addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
+  addColumnIfNotExists("user_preferences", "language", "TEXT");
+
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
   addColumnIfNotExists("users", "is_oidc", "INTEGER NOT NULL DEFAULT 0");

@@ -1,8 +1,38 @@
 import { SocksClient } from "socks";
 import type { SocksClientOptions } from "socks";
 import net from "net";
+import dns from "dns/promises";
 import { sshLogger } from "./logger.js";
 import type { ProxyNode } from "../../types/index.js";
+
+function isBlockedAddress(ip: string): boolean {
+  if (ip === "0.0.0.0" || ip === "::1" || ip === "::") return true;
+
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4) return false;
+
+  if (parts[0] === 127) return true;
+  if (parts[0] === 10) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  if (parts[0] === 169 && parts[1] === 254) return true;
+
+  return false;
+}
+
+async function validateHost(host: string): Promise<void> {
+  if (net.isIP(host)) {
+    if (isBlockedAddress(host)) {
+      throw new Error("Proxy target address is not allowed");
+    }
+    return;
+  }
+
+  const { address } = await dns.lookup(host);
+  if (isBlockedAddress(address)) {
+    throw new Error("Proxy target address is not allowed");
+  }
+}
 
 export interface SOCKS5Config {
   useSocks5?: boolean;
@@ -289,6 +319,17 @@ export async function testProxyConnectivity(options: {
   testTarget?: { host: string; port: number };
 }): Promise<{ success: boolean; latencyMs: number }> {
   const target = options.testTarget ?? { host: "google.com", port: 443 };
+
+  await validateHost(target.host);
+  if (options.singleProxy) {
+    await validateHost(options.singleProxy.host);
+  }
+  if (options.proxyChain) {
+    for (const node of options.proxyChain) {
+      await validateHost(node.host);
+    }
+  }
+
   const start = Date.now();
 
   let socket: net.Socket | null = null;

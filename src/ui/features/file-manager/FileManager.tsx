@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, {
   useState,
   useEffect,
@@ -20,43 +21,11 @@ import { DiffWindow } from "./components/DiffWindow.tsx";
 import { useDragToDesktop } from "@/features/file-manager/hooks/useDragToDesktop";
 import { useDragToSystemDesktop } from "@/features/file-manager/hooks/useDragToSystemDesktop";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
-import { Button } from "@/components/button.tsx";
-import { Input } from "@/components/input.tsx";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
-import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
-import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
-import { PermissionsDialog } from "./components/PermissionsDialog.tsx";
-import { CompressDialog } from "./components/CompressDialog.tsx";
-import { SudoPasswordDialog } from "./SudoPasswordDialog.tsx";
-import {
-  Upload,
-  FolderPlus,
-  FilePlus,
-  RefreshCw,
-  Search,
-  Grid3X3,
-  List,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUp,
-  Plus,
-  Folder,
-  Trash2,
-  Copy,
-  Layout,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/dropdown-menu.tsx";
+import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
+import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
+import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
 import type { SSHHost, FileItem } from "@/types/index";
 import {
@@ -64,7 +33,6 @@ import {
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
-import type { LogEntry } from "@/types/connection-log.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import {
   listSSHFiles,
@@ -94,56 +62,28 @@ import {
   compressSSHFiles,
   setSudoPassword,
   getServerMetricsById,
+  transferToHost,
+  addTransferRecent,
+  type TransferMethodPreference,
 } from "@/main-axios.ts";
+import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
+import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
 import type { SidebarItem } from "./FileManagerSidebar.tsx";
-
-interface FileManagerProps {
-  initialHost?: SSHHost | null;
-  onClose?: () => void;
-}
-
-type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;
-
-type SSHConnectionError = Error & {
-  connectionLogs?: ConnectionLogPayload[];
-  requires_totp?: boolean;
-  requires_warpgate?: boolean;
-  sessionId?: string;
-  prompt?: string;
-  url?: string;
-  securityKey?: string;
-  status?: string;
-  reason?: "no_keyboard" | "auth_failed" | "timeout";
-};
-
-interface CreateIntent {
-  id: string;
-  type: "file" | "directory";
-  defaultName: string;
-  currentName: string;
-}
-
-function formatFileSize(bytes?: number): string {
-  if (bytes === undefined || bytes === null) return "-";
-  if (bytes === 0) return "0 B";
-
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  const formattedSize =
-    size < 10 && unitIndex > 0 ? size.toFixed(1) : Math.round(size).toString();
-  return `${formattedSize} ${units[unitIndex]}`;
-}
+import type {
+  CreateIntent,
+  FileManagerProps,
+  PendingSudoOperation,
+  SSHConnectionError,
+} from "./file-manager-types.ts";
+import { formatFileSize } from "./file-manager-utils.ts";
 
 function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
+  const formatTransferMetrics = useMemo(
+    () => createFormatTransferMetrics(t),
+    [t],
+  );
   const { confirmWithToast } = useConfirmation();
   const {
     addLog,
@@ -244,13 +184,13 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [compressDialogFiles, setCompressDialogFiles] = useState<FileItem[]>(
     [],
   );
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferFiles, setTransferFiles] = useState<FileItem[]>([]);
+  const [transferMove, setTransferMove] = useState(false);
 
   const [sudoDialogOpen, setSudoDialogOpen] = useState(false);
-  const [pendingSudoOperation, setPendingSudoOperation] = useState<
-    | { type: "delete"; files: FileItem[] }
-    | { type: "navigate"; path: string }
-    | null
-  >(null);
+  const [pendingSudoOperation, setPendingSudoOperation] =
+    useState<PendingSudoOperation | null>(null);
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
 
@@ -775,6 +715,19 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     currentLoadingPathRef.current = "";
     loadDirectory(currentPath);
   }, [currentPath, lastRefreshTime, loadDirectory]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ hostId: number; path: string }>)
+        .detail;
+      if (!detail || !currentHost?.id) return;
+      if (detail.hostId === currentHost.id) {
+        handleRefreshDirectory();
+      }
+    };
+    window.addEventListener("file-manager:refresh", handler);
+    return () => window.removeEventListener("file-manager:refresh", handler);
+  }, [currentHost?.id, handleRefreshDirectory]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1358,6 +1311,19 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     });
   }
 
+  function handleSidebarItemContextMenu(
+    event: React.MouseEvent,
+    item: SidebarItem,
+  ) {
+    const file: FileItem = {
+      name: item.name,
+      path: item.path,
+      type:
+        item.type === "recent" || item.type === "pinned" ? "file" : "directory",
+    };
+    handleContextMenu(event, file);
+  }
+
   function handleCopyFiles(files: FileItem[]) {
     setClipboard({ files, operation: "copy" });
     toast.success(
@@ -1620,6 +1586,76 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
+    }
+  }
+
+  function handleOpenTransferDialog(files: FileItem[], move: boolean) {
+    setTransferFiles(files);
+    setTransferMove(move);
+    setTransferDialogOpen(true);
+  }
+
+  async function handleTransferConfirm(
+    destSessionId: string,
+    destHostId: number,
+    destPath: string,
+    destPathLabel: string,
+    methodPreference: TransferMethodPreference,
+    parallelSegmentCount: number,
+  ) {
+    if (!sshSessionId || !currentHost?.id || transferFiles.length === 0) return;
+
+    const sourcePaths = transferFiles.map((f) => f.path);
+
+    try {
+      await ensureSSHConnection();
+
+      const { transferId } = await transferToHost(
+        sshSessionId,
+        sourcePaths,
+        destSessionId,
+        destPath,
+        transferMove,
+        methodPreference,
+        parallelSegmentCount,
+      );
+
+      const monitorHandle = beginTransferProgressMonitoring(transferId, t, {
+        formatTransferMetrics,
+      });
+      if (!monitorHandle) return;
+
+      const finalStatus = await monitorHandle.waitForCompletion;
+
+      if (
+        finalStatus.status !== "success" &&
+        finalStatus.status !== "partial"
+      ) {
+        return;
+      }
+
+      void addTransferRecent(
+        currentHost.id,
+        destHostId,
+        destPathLabel,
+        destPathLabel,
+      );
+
+      window.dispatchEvent(
+        new CustomEvent("file-manager:refresh", {
+          detail: { hostId: destHostId, path: destPathLabel },
+        }),
+      );
+
+      if (transferMove) {
+        handleRefreshDirectory();
+        clearSelection();
+      }
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("transfer.transferError")}: ${err.message || t("fileManager.unknownError")}`,
+      );
     }
   }
 
@@ -2556,281 +2592,34 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
           visibility: isConnectionLogExpanded ? "hidden" : "visible",
         }}
       >
-        <div className="flex flex-col shrink-0 mx-3 mt-3 border border-border bg-card">
-          <div className="flex flex-row items-center justify-between px-3 py-2 gap-2">
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setMobileSidebarOpen((o) => !o)}
-                className="md:hidden size-8 rounded-none"
-                title={t("fileManager.toggleSidebar")}
-              >
-                <Layout className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goBack}
-                disabled={navIndex <= 0}
-                className="size-8 rounded-none"
-              >
-                <ChevronLeft className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goForward}
-                disabled={navIndex >= navHistory.length - 1}
-                className="size-8 rounded-none"
-              >
-                <ChevronRight className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={goUp}
-                disabled={currentPath === "/"}
-                className="size-8 rounded-none"
-              >
-                <ArrowUp className="size-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleRefreshDirectory}
-                className="size-8 rounded-none"
-              >
-                <RefreshCw
-                  className={`size-4 ${isLoading && !!sshSessionId ? "animate-spin [animation-duration:0.5s]" : ""}`}
-                />
-              </Button>
-            </div>
-
-            <div className="hidden md:flex flex-1 items-center px-3 h-8 bg-muted/50 border border-border rounded-none gap-2 overflow-hidden">
-              <Folder className="size-3.5 text-accent-brand shrink-0" />
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
-                {currentPath.split("/").map((part, i, arr) => (
-                  <React.Fragment key={i}>
-                    {part === "" && i === 0 ? (
-                      <button
-                        onClick={() => navigateTo("/")}
-                        className="hover:text-accent-brand transition-colors"
-                      >
-                        {t("fileManager.root")}
-                      </button>
-                    ) : part !== "" ? (
-                      <button
-                        onClick={() =>
-                          navigateTo(arr.slice(0, i + 1).join("/") || "/")
-                        }
-                        className="hover:text-accent-brand transition-colors"
-                      >
-                        {part}
-                      </button>
-                    ) : null}
-                    {i < arr.length - 1 && part !== "" && (
-                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
-                    )}
-                    {i === 0 && arr.length > 1 && part === "" && (
-                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {selectedFiles.length > 0 && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-accent-brand/10 border border-accent-brand/20 text-accent-brand text-[10px] font-black uppercase tracking-tighter">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-accent-brand hover:bg-accent-brand/20 rounded-none"
-                    onClick={() => handleDeleteFiles(selectedFiles)}
-                  >
-                    <Trash2 className="size-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-accent-brand hover:bg-accent-brand/20 rounded-none"
-                    onClick={() => handleCopyFiles(selectedFiles)}
-                  >
-                    <Copy className="size-3.5" />
-                  </Button>
-                </div>
-              )}
-
-              <div className="relative w-28 md:w-48">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-                <Input
-                  placeholder={t("fileManager.searchFiles")}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 pl-8 text-xs bg-muted/50 border-border rounded-none focus:ring-1 focus:ring-accent-brand/50"
-                />
-              </div>
-
-              <div className="flex items-center border border-border rounded-none overflow-hidden">
-                <Button
-                  variant={viewMode === "grid" ? "secondary" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("grid")}
-                  className={`size-8 rounded-none border-y-0 border-l-0 border-r border-border ${viewMode === "grid" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
-                >
-                  <Grid3X3 className="size-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "secondary" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("list")}
-                  className={`size-8 rounded-none border-y-0 border-r-0 border-border ${viewMode === "list" ? "bg-accent-brand/10 text-accent-brand" : ""}`}
-                >
-                  <List className="size-4" />
-                </Button>
-              </div>
-
-              <label
-                className="hidden md:block cursor-pointer"
-                title={t("fileManager.upload")}
-              >
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (files) handleFilesDropped(files);
-                  }}
-                />
-                <div className="h-8 px-3 flex items-center gap-1.5 border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-[10px] font-bold uppercase tracking-widest">
-                  <Upload className="size-3.5" /> {t("fileManager.upload")}
-                </div>
-              </label>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none font-bold uppercase tracking-widest text-[10px]"
-                  >
-                    <Plus className="size-3.5" />
-                    {t("fileManager.new")}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-44 rounded-none border-border bg-card"
-                  onCloseAutoFocus={(e) => e.preventDefault()}
-                >
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      setTimeout(() => handleCreateNewFolder(), 0);
-                    }}
-                    className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
-                  >
-                    <FolderPlus className="size-4 text-accent-brand" />
-                    {t("fileManager.newFolder")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      setTimeout(() => handleCreateNewFile(), 0);
-                    }}
-                    className="rounded-none text-xs font-semibold gap-2 focus:bg-accent-brand/10 focus:text-accent-brand"
-                  >
-                    <FilePlus className="size-4 text-muted-foreground" />
-                    {t("fileManager.newFile")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-[10px] uppercase tracking-widest text-muted-foreground py-1">
-                    {t("fileManager.sortBy")}
-                  </DropdownMenuLabel>
-                  <DropdownMenuRadioGroup
-                    value={sortBy}
-                    onValueChange={(v) =>
-                      setSortBy(v as "name" | "modified" | "size")
-                    }
-                  >
-                    <DropdownMenuRadioItem
-                      value="name"
-                      className="rounded-none text-xs"
-                    >
-                      {t("fileManager.sortByName")}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem
-                      value="modified"
-                      className="rounded-none text-xs"
-                    >
-                      {t("fileManager.sortByDate")}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem
-                      value="size"
-                      className="rounded-none text-xs"
-                    >
-                      {t("fileManager.sortBySize")}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuRadioGroup
-                    value={sortOrder}
-                    onValueChange={(v) => setSortOrder(v as "asc" | "desc")}
-                  >
-                    <DropdownMenuRadioItem
-                      value="asc"
-                      className="rounded-none text-xs"
-                    >
-                      {t("fileManager.ascending")}
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem
-                      value="desc"
-                      className="rounded-none text-xs"
-                    >
-                      {t("fileManager.descending")}
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-
-          {/* Mobile breadcrumb row */}
-          <div className="md:hidden flex items-center px-3 pb-2 gap-2">
-            <div className="flex-1 flex items-center px-3 h-8 bg-muted/50 border border-border gap-2 overflow-hidden">
-              <Folder className="size-3.5 text-accent-brand shrink-0" />
-              <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
-                {currentPath.split("/").map((part, i, arr) => (
-                  <React.Fragment key={i}>
-                    {part === "" && i === 0 ? (
-                      <button
-                        onClick={() => navigateTo("/")}
-                        className="hover:text-accent-brand transition-colors"
-                      >
-                        {t("fileManager.root")}
-                      </button>
-                    ) : part !== "" ? (
-                      <button
-                        onClick={() =>
-                          navigateTo(arr.slice(0, i + 1).join("/") || "/")
-                        }
-                        className="hover:text-accent-brand transition-colors"
-                      >
-                        {part}
-                      </button>
-                    ) : null}
-                    {i < arr.length - 1 && part !== "" && (
-                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
-                    )}
-                    {i === 0 && arr.length > 1 && part === "" && (
-                      <ChevronRight className="size-3 text-muted-foreground shrink-0" />
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <FileManagerToolbar
+          t={t}
+          currentPath={currentPath}
+          navIndex={navIndex}
+          navHistoryLength={navHistory.length}
+          isLoading={isLoading}
+          sshSessionId={sshSessionId}
+          selectedFiles={selectedFiles}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          sortOrder={sortOrder}
+          setSortOrder={setSortOrder}
+          setMobileSidebarOpen={setMobileSidebarOpen}
+          goBack={goBack}
+          goForward={goForward}
+          goUp={goUp}
+          navigateTo={navigateTo}
+          handleRefreshDirectory={handleRefreshDirectory}
+          handleDeleteFiles={handleDeleteFiles}
+          handleCopyFiles={handleCopyFiles}
+          handleFilesDropped={handleFilesDropped}
+          handleCreateNewFolder={handleCreateNewFolder}
+          handleCreateNewFile={handleCreateNewFile}
+        />
 
         <div
           className="flex-1 flex px-3 pb-3 pt-2 gap-3 min-h-0 relative"
@@ -2861,6 +2650,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onPathChange={navigateTo}
                 onLoadDirectory={loadDirectory}
                 onFileOpen={handleSidebarFileOpen}
+                onItemContextMenu={handleSidebarItemContextMenu}
                 sshSessionId={sshSessionId}
                 refreshTrigger={sidebarRefreshTrigger}
                 diskInfo={diskInfo ?? undefined}
@@ -2873,11 +2663,8 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
               <FileManagerGrid
                 files={filteredFiles}
                 selectedFiles={selectedFiles}
-                onFileSelect={() => {}}
                 onFileOpen={handleFileOpen}
                 onSelectionChange={setSelection}
-                currentPath={currentPath}
-                onPathChange={navigateTo}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}
                 sortBy={sortBy}
@@ -2963,69 +2750,51 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onExtractArchive={handleExtractArchive}
                 onCompress={handleOpenCompressDialog}
                 onCopyPath={handleCopyPath}
+                onTransferToHost={handleOpenTransferDialog}
               />
             </div>
           </div>
         </div>
       </div>
 
-      <CompressDialog
-        open={compressDialogFiles.length > 0}
-        onOpenChange={(open) => !open && setCompressDialogFiles([])}
-        fileNames={compressDialogFiles.map((f) => f.name)}
-        onCompress={handleCompress}
-      />
-
-      <TOTPDialog
-        isOpen={totpRequired}
-        prompt={totpPrompt}
-        onSubmit={handleTotpSubmit}
-        onCancel={handleTotpCancel}
-        backgroundColor="var(--bg-canvas)"
-      />
-
-      <WarpgateDialog
-        isOpen={warpgateRequired}
-        url={warpgateUrl}
-        securityKey={warpgateSecurityKey}
-        onContinue={handleWarpgateContinue}
-        onCancel={handleWarpgateCancel}
-        onOpenUrl={handleWarpgateOpenUrl}
-        backgroundColor="var(--bg-canvas)"
-      />
-
       {currentHost && (
-        <SSHAuthDialog
-          isOpen={showAuthDialog}
-          reason={authDialogReason}
-          onSubmit={handleAuthDialogSubmit}
-          onCancel={handleAuthDialogCancel}
-          hostInfo={{
-            ip: currentHost.ip,
-            port: currentHost.port,
-            username: currentHost.username,
-            name: currentHost.name,
-          }}
-          backgroundColor="var(--bg-canvas)"
+        <TransferToHostDialog
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          files={transferFiles}
+          move={transferMove}
+          sourceHost={currentHost}
+          sourceSessionId={sshSessionId}
+          onConfirm={handleTransferConfirm}
         />
       )}
 
-      <PermissionsDialog
-        file={permissionsDialogFile}
-        open={permissionsDialogFile !== null}
-        onOpenChange={(open) => {
-          if (!open) setPermissionsDialogFile(null);
-        }}
-        onSave={handleSavePermissions}
-      />
-
-      <SudoPasswordDialog
-        open={sudoDialogOpen}
-        onOpenChange={(open) => {
-          setSudoDialogOpen(open);
-          if (!open) setPendingSudoOperation(null);
-        }}
-        onSubmit={handleSudoPasswordSubmit}
+      <FileManagerDialogs
+        compressDialogFiles={compressDialogFiles}
+        setCompressDialogFiles={setCompressDialogFiles}
+        handleCompress={handleCompress}
+        totpRequired={totpRequired}
+        totpPrompt={totpPrompt}
+        handleTotpSubmit={handleTotpSubmit}
+        handleTotpCancel={handleTotpCancel}
+        warpgateRequired={warpgateRequired}
+        warpgateUrl={warpgateUrl}
+        warpgateSecurityKey={warpgateSecurityKey}
+        handleWarpgateContinue={handleWarpgateContinue}
+        handleWarpgateCancel={handleWarpgateCancel}
+        handleWarpgateOpenUrl={handleWarpgateOpenUrl}
+        currentHost={currentHost}
+        showAuthDialog={showAuthDialog}
+        authDialogReason={authDialogReason}
+        handleAuthDialogSubmit={handleAuthDialogSubmit}
+        handleAuthDialogCancel={handleAuthDialogCancel}
+        permissionsDialogFile={permissionsDialogFile}
+        setPermissionsDialogFile={setPermissionsDialogFile}
+        handleSavePermissions={handleSavePermissions}
+        sudoDialogOpen={sudoDialogOpen}
+        setSudoDialogOpen={setSudoDialogOpen}
+        setPendingSudoOperation={setPendingSudoOperation}
+        handleSudoPasswordSubmit={handleSudoPasswordSubmit}
       />
       <ConnectionLog
         isConnecting={isReconnecting || isLoading}

@@ -30,5 +30,6 @@
     "src/backend/**/*.ts",
     "src/types/**/*.ts",
     "src/ui/types/**/*.ts"
-  ]
+  ],
+  "exclude": ["src/**/*.test.ts", "src/backend/test-helpers/**"]
 }

@@ -297,7 +297,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
   const authManagerInstance = AuthManager.getInstance();
   const payload = await authManagerInstance.verifyJWTToken(token);
-  if (!payload || !payload.userId) {
+  if (!payload?.userId || payload.pendingTOTP) {
     ws.close(1008, "Authentication required");
     return;
   }

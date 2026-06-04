@@ -18,6 +18,7 @@ finish-args:
   - --socket=ssh-auth
   - --socket=session-bus
   - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.freedesktop.portal.Desktop
   - --env=ELECTRON_TRASH=gio
   - --env=XCURSOR_PATH=/run/host/user-share/icons:/run/host/share/icons
   - --env=ELECTRON_OZONE_PLATFORM_HINT=auto

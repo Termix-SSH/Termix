@@ -80,7 +80,7 @@ Create and manage server-to-server SSH tunnels with automatic reconnection, heal
 <td width="50%" valign="top">
 
 **Remote File Manager:**
-Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
+Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support. Includes support for moving files from server to server.
 
 </td>
 </tr>

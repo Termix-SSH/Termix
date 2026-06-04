@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils.ts";
@@ -21,33 +22,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { FileItem } from "@/types/index";
-
-interface CreateIntent {
-  id: string;
-  type: "file" | "directory";
-  defaultName: string;
-  currentName: string;
-}
-
-function formatFileSize(bytes?: number): string {
-  if (bytes === undefined || bytes === null) return "-";
-
-  if (bytes === 0) return "0 B";
-
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  const formattedSize =
-    size < 10 && unitIndex > 0 ? size.toFixed(1) : Math.round(size).toString();
-
-  return `${formattedSize} ${units[unitIndex]}`;
-}
+import type { CreateIntent } from "./file-manager-types.ts";
+import { formatFileSize } from "./file-manager-utils.ts";
 
 interface DragState {
   type: "none" | "internal" | "external";
@@ -61,11 +37,8 @@ interface DragState {
 interface FileManagerGridProps {
   files: FileItem[];
   selectedFiles: FileItem[];
-  onFileSelect: (file: FileItem, multiSelect?: boolean) => void;
   onFileOpen: (file: FileItem) => void;
   onSelectionChange: (files: FileItem[]) => void;
-  currentPath: string;
-  onPathChange: (path: string) => void;
   onRefresh: () => void;
   onUpload?: (files: FileList) => void;
   onDownload?: (files: FileItem[]) => void;
@@ -182,8 +155,6 @@ export function FileManagerGrid({
   selectedFiles,
   onFileOpen,
   onSelectionChange,
-  currentPath,
-  onPathChange,
   onRefresh,
   onUpload,
   onDownload,
@@ -368,92 +339,6 @@ export function FileManagerGrid({
   } | null>(null);
   const [justFinishedSelecting, setJustFinishedSelecting] = useState(false);
 
-  const [navigationHistory, setNavigationHistory] = useState<string[]>([
-    currentPath,
-  ]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-
-  const [isEditingPath, setIsEditingPath] = useState(false);
-  const [editPathValue, setEditPathValue] = useState(currentPath);
-
-  useEffect(() => {
-    const lastPath = navigationHistory[historyIndex];
-    if (currentPath !== lastPath) {
-      const newHistory = navigationHistory.slice(0, historyIndex + 1);
-      newHistory.push(currentPath);
-      setNavigationHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-    }
-  }, [currentPath]);
-
-  const goBack = () => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      onPathChange(navigationHistory[newIndex]);
-    }
-  };
-
-  const goForward = () => {
-    if (historyIndex < navigationHistory.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      onPathChange(navigationHistory[newIndex]);
-    }
-  };
-
-  const goUp = () => {
-    const parts = currentPath.split("/").filter(Boolean);
-    if (parts.length > 0) {
-      parts.pop();
-      const parentPath = "/" + parts.join("/");
-      onPathChange(parentPath);
-    } else if (currentPath !== "/") {
-      onPathChange("/");
-    }
-  };
-
-  const pathParts = currentPath.split("/").filter(Boolean);
-  const navigateToPath = (index: number) => {
-    if (index === -1) {
-      onPathChange("/");
-    } else {
-      const newPath = "/" + pathParts.slice(0, index + 1).join("/");
-      onPathChange(newPath);
-    }
-  };
-
-  const startEditingPath = () => {
-    setEditPathValue(currentPath);
-    setIsEditingPath(true);
-  };
-
-  const cancelEditingPath = () => {
-    setIsEditingPath(false);
-    setEditPathValue(currentPath);
-  };
-
-  const confirmEditingPath = () => {
-    const trimmedPath = editPathValue.trim();
-    if (trimmedPath) {
-      const needsExpansion =
-        trimmedPath.startsWith("~") || trimmedPath.includes("$");
-      const normalizedPath = needsExpansion
-        ? trimmedPath
-        : trimmedPath.startsWith("/")
-          ? trimmedPath
-          : "/" + trimmedPath;
-      onPathChange(normalizedPath);
-    }
-    setIsEditingPath(false);
-  };
-
-  useEffect(() => {
-    if (!isEditingPath) {
-      setEditPathValue(currentPath);
-    }
-  }, [currentPath, isEditingPath]);
-
   const handleDragEnter = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -490,7 +375,7 @@ export function FileManagerGrid({
         });
       }
     },
-    [dragState.type, dragState.counter],
+    [dragState.type],
   );
 
   const handleDragOver = useCallback(
@@ -691,7 +576,7 @@ export function FileManagerGrid({
 
       setDragState({ type: "none", files: [], counter: 0 });
     },
-    [onUpload, onDownload, dragState],
+    [onUpload, dragState],
   );
 
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {

@@ -8,7 +8,10 @@ COPY package*.json ./
 COPY .npmrc ./
 COPY vendor ./vendor
 
+COPY scripts/patch-guacamole-lite.cjs ./scripts/
+
 RUN npm ci --ignore-scripts && \
+    node scripts/patch-guacamole-lite.cjs && \
     npm cache clean --force
 
 # Stage 2: Build frontend
@@ -42,8 +45,11 @@ COPY package*.json ./
 COPY .npmrc ./
 COPY vendor ./vendor
 
+COPY scripts/patch-guacamole-lite.cjs ./scripts/
+
 RUN npm ci --omit=dev --ignore-scripts && \
-    npm rebuild better-sqlite3 bcryptjs && \
+    node scripts/patch-guacamole-lite.cjs && \
+    npm rebuild better-sqlite3 bcryptjs ssh2 && \
     npm cache clean --force
 
 # Stage 5: Final optimized image

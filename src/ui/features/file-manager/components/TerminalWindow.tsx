@@ -1,6 +1,10 @@
 import React from "react";
 import { DraggableWindow } from "./DraggableWindow.tsx";
-import { Terminal } from "@/features/terminal/Terminal.tsx";
+import {
+  Terminal,
+  type TerminalHandle,
+  type TerminalHostConfig,
+} from "@/features/terminal/Terminal.tsx";
 import { useWindowManager } from "./WindowManager.tsx";
 import { useTranslation } from "react-i18next";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
@@ -26,7 +30,7 @@ export function TerminalWindow({
   const { t } = useTranslation();
   const { closeWindow, maximizeWindow, focusWindow, windows } =
     useWindowManager();
-  const terminalRef = React.useRef<{ fit?: () => void } | null>(null);
+  const terminalRef = React.useRef<TerminalHandle | null>(null);
   const resizeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   React.useEffect(() => {
@@ -101,8 +105,8 @@ export function TerminalWindow({
         zIndex={currentWindow.zIndex}
       >
         <Terminal
-          ref={terminalRef as any}
-          hostConfig={hostConfig as any}
+          ref={terminalRef}
+          hostConfig={hostConfig as TerminalHostConfig}
           isVisible={!currentWindow.isMinimized}
           initialPath={initialPath}
           executeCommand={executeCommand}

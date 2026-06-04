@@ -221,15 +221,6 @@ const Root: React.FC<RootProps> = ({
       .filter(Boolean) as string[];
   }, []);
 
-  const getAllItemIds = useCallback(() => {
-    const items = Array.from(
-      treeRef.current?.querySelectorAll('[role="treeitem"]') || [],
-    );
-    return items
-      .map((item) => item.getAttribute("data-id"))
-      .filter(Boolean) as string[];
-  }, []);
-
   const [treeHasFocus, setTreeHasFocus] = useState(false);
 
   const handleTreeFocus = useCallback(() => {

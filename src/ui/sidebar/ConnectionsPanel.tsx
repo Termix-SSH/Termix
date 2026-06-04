@@ -1,12 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { ExternalLink, Plug, Search, X } from "lucide-react";
-import { getActiveSessions, deleteOpenTab, type ActiveSessionInfo, type OpenTabRecord } from "@/main-axios";
+import {
+  getActiveSessions,
+  deleteOpenTab,
+  type ActiveSessionInfo,
+  type OpenTabRecord,
+} from "@/main-axios";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, TabType } from "@/types/ui-types";
 import { Badge } from "@/components/badge";
 import { Input } from "@/components/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
 
 const CONNECTION_TAB_TYPES: TabType[] = [
   "terminal",
@@ -128,7 +138,10 @@ function ConnectionRow({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onSwitch(); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSwitch();
+                  }}
                   className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 rounded transition-colors"
                 >
                   <ExternalLink className="size-3" />
@@ -138,7 +151,10 @@ function ConnectionRow({
             </Tooltip>
           )}
           <button
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 rounded transition-colors"
           >
             <X className="size-3" />
@@ -178,7 +194,10 @@ export function ConnectionsPanel({
   backgroundTabRecords: OpenTabRecord[];
   onSwitchToTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
-  onReopenTab: (record: OpenTabRecord, restoredSessionId: string | null) => void;
+  onReopenTab: (
+    record: OpenTabRecord,
+    restoredSessionId: string | null,
+  ) => void;
   onForgetBackground: (recordId: string) => void;
 }) {
   const { t } = useTranslation();
@@ -187,15 +206,23 @@ export function ConnectionsPanel({
   const [search, setSearch] = useState("");
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const openTabs = tabs.filter((tab) => CONNECTION_TAB_TYPES.includes(tab.type));
+  const openTabs = tabs.filter((tab) =>
+    CONNECTION_TAB_TYPES.includes(tab.type),
+  );
 
   // Filter background records to only those not already open in the tab bar
-  const openInstanceIds = new Set(tabs.map((t) => t.instanceId).filter(Boolean));
-  const backgroundTabs = backgroundTabRecords.filter((r) => !openInstanceIds.has(r.id));
+  const openInstanceIds = new Set(
+    tabs.map((t) => t.instanceId).filter(Boolean),
+  );
+  const backgroundTabs = backgroundTabRecords.filter(
+    (r) => !openInstanceIds.has(r.id),
+  );
 
   const q = search.trim().toLowerCase();
   const filteredOpenTabs = q
-    ? openTabs.filter((tab) => (tab.host?.name ?? tab.label).toLowerCase().includes(q))
+    ? openTabs.filter((tab) =>
+        (tab.host?.name ?? tab.label).toLowerCase().includes(q),
+      )
     : openTabs;
   const filteredBackgroundTabs = q
     ? backgroundTabs.filter((r) => {
@@ -225,13 +252,18 @@ export function ConnectionsPanel({
   useEffect(() => {
     refresh();
     pollTimerRef.current = setInterval(refresh, 5000);
-    return () => { if (pollTimerRef.current) clearInterval(pollTimerRef.current); };
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
   }, [refresh]);
 
-  const sessionByInstanceId = new Map(activeSessions.map((s) => [s.tabInstanceId, s]));
+  const sessionByInstanceId = new Map(
+    activeSessions.map((s) => [s.tabInstanceId, s]),
+  );
 
   const hasAnything = openTabs.length > 0 || backgroundTabs.length > 0;
-  const hasResults = filteredOpenTabs.length > 0 || filteredBackgroundTabs.length > 0;
+  const hasResults =
+    filteredOpenTabs.length > 0 || filteredBackgroundTabs.length > 0;
 
   if (!hasAnything) {
     return (
@@ -265,19 +297,27 @@ export function ConnectionsPanel({
 
       {!hasResults && (
         <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-          <span className="text-xs text-muted-foreground/50">{t("connections.noSearchResults")}</span>
+          <span className="text-xs text-muted-foreground/50">
+            {t("connections.noSearchResults")}
+          </span>
         </div>
       )}
 
       {filteredOpenTabs.length > 0 && (
         <div className="flex flex-col">
-          <SectionHeader label={t("connections.sectionOpen")} count={filteredOpenTabs.length} />
+          <SectionHeader
+            label={t("connections.sectionOpen")}
+            count={filteredOpenTabs.length}
+          />
           {filteredOpenTabs.map((tab) => {
             const isActive = tab.id === activeTabId;
-            const liveSession = tab.instanceId ? sessionByInstanceId.get(tab.instanceId) : undefined;
-            const isLive = tab.type === "terminal"
-              ? (liveSession?.isConnected ?? false)
-              : true;
+            const liveSession = tab.instanceId
+              ? sessionByInstanceId.get(tab.instanceId)
+              : undefined;
+            const isLive =
+              tab.type === "terminal"
+                ? (liveSession?.isConnected ?? false)
+                : true;
             const duration = liveSession?.createdAt
               ? formatDuration(now - liveSession.createdAt)
               : formatDuration(now - tab.openedAt);
@@ -306,8 +346,13 @@ export function ConnectionsPanel({
       )}
 
       {filteredBackgroundTabs.length > 0 && (
-        <div className={`flex flex-col ${filteredOpenTabs.length > 0 ? "mt-2" : ""}`}>
-          <SectionHeader label={t("connections.sectionBackground")} count={filteredBackgroundTabs.length} />
+        <div
+          className={`flex flex-col ${filteredOpenTabs.length > 0 ? "mt-2" : ""}`}
+        >
+          <SectionHeader
+            label={t("connections.sectionBackground")}
+            count={filteredBackgroundTabs.length}
+          />
           <div className="px-3 py-1.5 border-b border-border/40">
             <span className="text-[10px] text-muted-foreground/50">
               {t("connections.backgroundDesc")}

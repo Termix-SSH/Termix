@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/exhaustive-deps */
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";
@@ -29,8 +31,11 @@ import type {
   Host,
   SplitMode,
   HostFolder,
+  ThemeId,
+  FontSizeId,
 } from "@/types/ui-types";
-import { PANE_COUNTS } from "@/lib/theme";
+import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
+import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
   getUserInfo,
@@ -46,6 +51,7 @@ import {
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
+import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
@@ -140,7 +146,8 @@ export function AppShell({
   username: string;
   onLogout: () => void;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { setTheme } = useTheme();
   const [tabs, setTabs] = useState<Tab[]>([
     {
       id: "dashboard",
@@ -362,7 +369,19 @@ export function AppShell({
 
   useEffect(() => {
     getUserPreferences()
-      .then((prefs) => setUserPrefs(prefs))
+      .then((prefs) => {
+        setUserPrefs(prefs);
+        if (prefs.theme) setTheme(prefs.theme as ThemeId);
+        if (prefs.fontSize) applyFontSize(prefs.fontSize as FontSizeId);
+        if (prefs.accentColor) {
+          localStorage.setItem("termix-accent", prefs.accentColor);
+          applyAccentColor(prefs.accentColor);
+        }
+        if (prefs.language && prefs.language !== i18n.language) {
+          localStorage.setItem("i18nextLng", prefs.language);
+          void i18n.changeLanguage(prefs.language);
+        }
+      })
       .catch(() => {})
       .finally(() => setUserPrefsLoaded(true));
   }, []);
@@ -464,6 +483,13 @@ export function AppShell({
               if (!host && !hostlessTypes.includes(saved.tabType as TabType))
                 continue;
 
+              if (host) {
+                if (saved.tabType === "terminal" && !host.enableSsh) continue;
+                if (saved.tabType === "rdp" && !host.enableRdp) continue;
+                if (saved.tabType === "vnc" && !host.enableVnc) continue;
+                if (saved.tabType === "telnet" && !host.enableTelnet) continue;
+              }
+
               // Singleton tabs use their type as the stable ID; host-bound tabs get a unique ID
               const tabId = host
                 ? `${host.name}-${saved.tabType}-${Date.now()}-${saved.tabOrder}`
@@ -509,7 +535,6 @@ export function AppShell({
     }
 
     loadSavedTabs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hostsLoaded, userPrefsLoaded]);
 
   // Debounced tab-order sync: when tab order changes, patch each persistent tab's tabOrder in DB.
@@ -844,7 +869,7 @@ export function AppShell({
     const id = requestAnimationFrame(() => {
       tabs.forEach((tab) => {
         if (!tab.terminalRef) return;
-        const ref = tab.terminalRef.current as any;
+        const ref = tab.terminalRef.current;
         ref?.fit?.();
         ref?.notifyResize?.();
       });
@@ -896,7 +921,7 @@ export function AppShell({
           node.style.display = "";
           node.style.visibility = activeInline ? "visible" : "hidden";
           node.style.pointerEvents = activeInline ? "auto" : "none";
-          node.style.zIndex = activeInline && !isSplit ? "1" : "0";
+          node.style.zIndex = activeInline ? "1" : "0";
         } else {
           node.style.visibility = "";
           node.style.pointerEvents = "";
@@ -907,7 +932,6 @@ export function AppShell({
     }
   });
 
-  const activeTab = tabs.find((t) => t.id === activeTabId)!;
   const terminalTabs = tabs.filter((t) => t.type === "terminal");
 
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
@@ -1086,10 +1110,6 @@ export function AppShell({
           railView={railView}
           sidebarOpen={sidebarOpen}
           splitMode={splitMode}
-          connectionCount={
-            tabs.filter((t) => PERSISTENT_TAB_TYPES.includes(t.type)).length +
-            backgroundTabRecords.length
-          }
           username={username}
           isAdmin={isAdmin}
           profileDropdownOpen={profileDropdownOpen}
@@ -1189,12 +1209,20 @@ export function AppShell({
               {/* Normal-view container. Tab nodes are appended here (or to pane elements)
                   by the DOM-placement effect above. React portals each tab's content
                   into its stable per-tab node so the component is never remounted.
-                  Hidden when split is active — pane-assigned nodes escape via vanilla DOM
-                  appendChild to paneEl, so hiding this doesn't affect them. */}
+                  When split is active, shown on top only if the active tab is not in a pane. */}
               <div
                 ref={normalViewRef}
                 className="absolute inset-0"
-                style={{ display: isSplit && !isMobile ? "none" : undefined }}
+                style={{
+                  display:
+                    isSplit && !isMobile && paneTabIds.includes(activeTabId)
+                      ? "none"
+                      : undefined,
+                  zIndex:
+                    isSplit && !paneTabIds.includes(activeTabId)
+                      ? 10
+                      : undefined,
+                }}
               >
                 {tabs.map((tab) => {
                   const tabNode = getTabNode(tab.id, tab.type === "terminal");
@@ -1247,6 +1275,7 @@ export function AppShell({
           }
         }}
       />
+      <TransferMonitor />
     </>
   );
 }

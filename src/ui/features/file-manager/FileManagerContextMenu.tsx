@@ -18,9 +18,12 @@ import {
   Star,
   Bookmark,
   FileArchive,
+  ArrowRightLeft,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Kbd, KbdKey, KbdSeparator } from "@/components/kbd.tsx";
+
+const VIEWPORT_PADDING = 16;
 
 interface FileItem {
   name: string;
@@ -64,6 +67,7 @@ interface ContextMenuProps {
   onExtractArchive?: (file: FileItem) => void;
   onCompress?: (files: FileItem[]) => void;
   onCopyPath?: (files: FileItem[]) => void;
+  onTransferToHost?: (files: FileItem[], move: boolean) => void;
 }
 
 interface MenuItem {
@@ -74,29 +78,6 @@ interface MenuItem {
   separator?: boolean;
   disabled?: boolean;
   danger?: boolean;
-}
-
-const VIEWPORT_PADDING = 10;
-
-function getClampedMenuPosition(
-  x: number,
-  y: number,
-  menuWidth: number,
-  menuHeight: number,
-) {
-  const maxX = Math.max(
-    VIEWPORT_PADDING,
-    window.innerWidth - menuWidth - VIEWPORT_PADDING,
-  );
-  const maxY = Math.max(
-    VIEWPORT_PADDING,
-    window.innerHeight - menuHeight - VIEWPORT_PADDING,
-  );
-
-  return {
-    x: Math.min(Math.max(VIEWPORT_PADDING, x), maxX),
-    y: Math.min(Math.max(VIEWPORT_PADDING, y), maxY),
-  };
 }
 
 export function FileManagerContextMenu({
@@ -129,6 +110,7 @@ export function FileManagerContextMenu({
   onExtractArchive,
   onCompress,
   onCopyPath,
+  onTransferToHost,
 }: ContextMenuProps) {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -275,6 +257,29 @@ export function FileManagerContextMenu({
           : t("fileManager.downloadFile"),
         action: () => onDownload(files),
         shortcut: "Ctrl+D",
+      });
+    }
+
+    if (isFileContext && onTransferToHost) {
+      const isOnlyDirectories =
+        files.length > 0 && files.every((f) => f.type === "directory");
+      menuItems.push({
+        icon: <ArrowRightLeft className="size-3.5" />,
+        label: isMultipleFiles
+          ? t("transfer.copyItemsToHost", { count: files.length })
+          : isOnlyDirectories && isSingleFile
+            ? t("transfer.copyFolderToHost")
+            : t("transfer.copyToHost"),
+        action: () => onTransferToHost(files, false),
+      });
+      menuItems.push({
+        icon: <ArrowRightLeft className="size-3.5" />,
+        label: isMultipleFiles
+          ? t("transfer.moveItemsToHost", { count: files.length })
+          : isOnlyDirectories && isSingleFile
+            ? t("transfer.moveFolderToHost")
+            : t("transfer.moveToHost"),
+        action: () => onTransferToHost(files, true),
       });
     }
 

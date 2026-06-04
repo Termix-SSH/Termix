@@ -46,7 +46,7 @@ export function ElectronLoginForm({
           localStorage.setItem("jwt", token);
         }
         await onAuthSuccessRef.current(token);
-      } catch (_err) {
+      } catch {
         setError(t("errors.authTokenSaveFailed"));
         isAuthenticatingRef.current = false;
         setIsAuthenticating(false);

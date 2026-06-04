@@ -25,7 +25,6 @@ import {
   Network,
   User,
   KeyRound,
-  LayoutDashboard,
   Monitor,
   MousePointerClick,
   Clock,
@@ -33,13 +32,13 @@ import {
   Pencil,
 } from "lucide-react";
 import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
-import type { Host } from "@/types/ui-types";
+import type { Host, TabType } from "@/types/ui-types";
 
 interface CommandPaletteProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   hosts: Host[];
-  onOpenTab: (type: any, label?: string, pendingEvent?: string) => void;
+  onOpenTab: (type: TabType, label?: string, pendingEvent?: string) => void;
 }
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -53,7 +52,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
   rdp: <Monitor className="size-3.5" />,
 };
 
-const ACTIVITY_TAB_TYPE: Record<string, string> = {
+const ACTIVITY_TAB_TYPE: Record<string, TabType> = {
   terminal: "terminal",
   file_manager: "files",
   server_stats: "stats",
@@ -64,7 +63,11 @@ const ACTIVITY_TAB_TYPE: Record<string, string> = {
   rdp: "rdp",
 };
 
-function getSshActions(host: Host) {
+function getSshActions(host: Host): {
+  type: TabType;
+  icon: React.ElementType;
+  label: string;
+}[] {
   const metricsEnabled = host.statsConfig?.metricsEnabled !== false;
   return [
     host.enableTerminal !== false && {
@@ -81,7 +84,7 @@ function getSshActions(host: Host) {
     host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
     metricsEnabled && { type: "stats", icon: Activity, label: "Stats" },
   ].filter(Boolean) as {
-    type: string;
+    type: TabType;
     icon: React.ElementType;
     label: string;
   }[];
@@ -188,23 +191,6 @@ export function CommandPalette({
               className="px-2"
             >
               <CommandItem
-                onSelect={() => handleAction(() => onOpenTab("host-manager"))}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <LayoutDashboard className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.hostManager")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.hostManagerDesc")}
-                  </span>
-                </div>
-              </CommandItem>
-
-              <CommandItem
                 onSelect={() =>
                   handleAction(() =>
                     onOpenTab(
@@ -302,7 +288,7 @@ export function CommandPalette({
                       onSelect={() =>
                         handleAction(() =>
                           onOpenTab(
-                            ACTIVITY_TAB_TYPE[item.type] as any,
+                            ACTIVITY_TAB_TYPE[item.type],
                             item.hostName,
                           ),
                         )
@@ -351,7 +337,18 @@ export function CommandPalette({
                       <CommandItem
                         key={i}
                         onSelect={() =>
-                          handleAction(() => onOpenTab("terminal", host.name))
+                          handleAction(() => {
+                            const type = host.enableSsh
+                              ? "terminal"
+                              : host.enableRdp
+                                ? "rdp"
+                                : host.enableVnc
+                                  ? "vnc"
+                                  : host.enableTelnet
+                                    ? "telnet"
+                                    : "terminal";
+                            onOpenTab(type, host.name);
+                          })
                         }
                         className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
                       >
@@ -388,7 +385,7 @@ export function CommandPalette({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleAction(() =>
-                                      onOpenTab(type as any, host.name),
+                                      onOpenTab(type, host.name),
                                     );
                                   }}
                                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"

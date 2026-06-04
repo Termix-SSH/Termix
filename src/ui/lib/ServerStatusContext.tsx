@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useContext,
@@ -132,10 +133,7 @@ export function ServerStatusProvider({
     }
   }, [isAuthenticated]);
 
-  const stableEnabledHostIds = useMemo(
-    () => enabledHostIds,
-    [[...enabledHostIds].sort().join(",")],
-  );
+  const stableEnabledHostIds = useMemo(() => enabledHostIds, [enabledHostIds]);
 
   const getStatus = useCallback(
     (hostId: number): StatusValue => {

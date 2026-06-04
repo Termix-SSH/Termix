@@ -3,18 +3,12 @@ import ssh2Pkg, {
   type Client as SSHClientType,
   type ClientChannel,
   type PseudoTtyOptions,
-  type ParsedKey,
-  type SignCallback,
-  type SigningRequestOptions,
-  type IdentityCallback,
 } from "ssh2";
-const { Client, BaseAgent, utils: ssh2Utils } = ssh2Pkg;
-import net from "net";
-import dgram from "dgram";
+const { Client, utils: ssh2Utils } = ssh2Pkg;
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
-import { sshCredentials, hosts } from "../database/db/schema.js";
+import { hosts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -27,82 +21,14 @@ import {
 import { SSHAuthManager } from "./auth-manager.js";
 import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { createJumpHostChain } from "./terminal-jump-hosts.js";
 import { sessionManager } from "./terminal-session-manager.js";
 import {
   detectTmux,
   attachOrCreateTmuxSession,
   waitForTmuxSession,
 } from "./tmux-helper.js";
-
-class MemoryAgent extends BaseAgent {
-  private key: ParsedKey;
-
-  constructor(key: ParsedKey) {
-    super();
-    this.key = key;
-  }
-
-  getIdentities(cb: IdentityCallback<ParsedKey>): void {
-    cb(null, [this.key]);
-  }
-
-  sign(
-    pubKey: ParsedKey | Buffer | string,
-    data: Buffer,
-    optionsOrCb: SigningRequestOptions | SignCallback,
-    cb?: SignCallback,
-  ): void {
-    const callback = typeof optionsOrCb === "function" ? optionsOrCb : cb!;
-    const options = typeof optionsOrCb === "function" ? {} : optionsOrCb;
-    try {
-      const algo =
-        options.hash === "sha256"
-          ? "rsa-sha2-256"
-          : options.hash === "sha512"
-            ? "rsa-sha2-512"
-            : undefined;
-      const signature = this.key.sign(data, algo);
-      callback(null, signature);
-    } catch (err) {
-      callback(err instanceof Error ? err : new Error(String(err)));
-    }
-  }
-}
-
-async function performPortKnocking(
-  host: string,
-  sequence: Array<{ port: number; protocol?: string; delay?: number }>,
-): Promise<void> {
-  for (const knock of sequence) {
-    const protocol = knock.protocol || "tcp";
-    const delay = knock.delay ?? 100;
-
-    await new Promise<void>((resolve) => {
-      if (protocol === "udp") {
-        const client = dgram.createSocket("udp4");
-        client.send(Buffer.alloc(0), knock.port, host, () => {
-          client.close();
-          resolve();
-        });
-      } else {
-        const socket = new net.Socket();
-        socket.once("connect", () => {
-          socket.destroy();
-          resolve();
-        });
-        socket.once("error", () => {
-          socket.destroy();
-          resolve();
-        });
-        socket.connect(knock.port, host);
-      }
-    });
-
-    if (delay > 0) {
-      await new Promise<void>((r) => setTimeout(r, delay));
-    }
-  }
-}
+import { MemoryAgent, performPortKnocking } from "./terminal-auth-helpers.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -164,331 +90,6 @@ const userCrypto = UserCrypto.getInstance();
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
-interface JumpHostConfig {
-  id: number;
-  ip: string;
-  port: number;
-  username: string;
-  password?: string;
-  key?: string;
-  keyPassword?: string;
-  keyType?: string;
-  authType?: string;
-  credentialId?: number;
-  [key: string]: unknown;
-}
-
-async function resolveJumpHost(
-  hostId: number,
-  userId: string,
-): Promise<JumpHostConfig | null> {
-  sshLogger.info("Resolving jump host", {
-    operation: "terminal_jumphost_resolve",
-    userId,
-    hostId,
-  });
-  try {
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
-      "ssh_data",
-      userId,
-    );
-
-    if (hostResults.length === 0) {
-      return null;
-    }
-
-    const host = hostResults[0];
-    const ownerId = (host.userId || userId) as string;
-
-    if (host.credentialId) {
-      if (userId !== ownerId) {
-        try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            hostId,
-            userId,
-          );
-          if (sharedCred) {
-            return {
-              ...host,
-              password: sharedCred.password,
-              key: sharedCred.key,
-              keyPassword: sharedCred.keyPassword,
-              keyType: sharedCred.keyType,
-              authType: sharedCred.key
-                ? "key"
-                : sharedCred.password
-                  ? "password"
-                  : "none",
-            } as JumpHostConfig;
-          }
-        } catch {
-          // fall through to owner credential lookup
-        }
-      }
-
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, ownerId),
-            ),
-          ),
-        "ssh_credentials",
-        ownerId,
-      );
-
-      if (credentials.length > 0) {
-        const credential = credentials[0];
-        return {
-          ...host,
-          password: credential.password as string | undefined,
-          key: (credential.key || credential.privateKey) as string | undefined,
-          keyPassword: credential.keyPassword as string | undefined,
-          keyType: credential.keyType as string | undefined,
-          authType: credential.authType as string | undefined,
-        } as JumpHostConfig;
-      }
-    }
-
-    return host as JumpHostConfig;
-  } catch (error) {
-    sshLogger.error("Failed to resolve jump host", error, {
-      operation: "resolve_jump_host",
-      hostId,
-      userId,
-    });
-    return null;
-  }
-}
-
-async function createJumpHostChain(
-  jumpHosts: Array<{ hostId: number }>,
-  userId: string,
-  socks5Config?: SOCKS5Config | null,
-): Promise<SSHClientType | null> {
-  if (!jumpHosts || jumpHosts.length === 0) {
-    return null;
-  }
-
-  let currentClient: SSHClientType | null = null;
-  const clients: SSHClientType[] = [];
-
-  try {
-    const jumpHostConfigs = await Promise.all(
-      jumpHosts.map((jh) => resolveJumpHost(jh.hostId, userId)),
-    );
-
-    const totalHops = jumpHostConfigs.length;
-
-    for (let i = 0; i < jumpHostConfigs.length; i++) {
-      if (!jumpHostConfigs[i]) {
-        sshLogger.error(`Jump host ${i + 1} not found`, undefined, {
-          operation: "jump_host_chain",
-          hostId: jumpHosts[i].hostId,
-          hopIndex: i,
-          totalHops,
-        });
-        clients.forEach((c) => c.end());
-        return null;
-      }
-    }
-
-    let proxySocket: import("net").Socket | null = null;
-    if (socks5Config?.useSocks5) {
-      const firstHop = jumpHostConfigs[0];
-      proxySocket = await createSocks5Connection(
-        firstHop.ip,
-        firstHop.port || 22,
-        socks5Config,
-      );
-    }
-
-    for (let i = 0; i < jumpHostConfigs.length; i++) {
-      const jumpHostConfig = jumpHostConfigs[i];
-
-      const jumpClient = new Client();
-      clients.push(jumpClient);
-
-      const jumpHostVerifier = await SSHHostKeyVerifier.createHostVerifier(
-        jumpHostConfig.id,
-        jumpHostConfig.ip,
-        jumpHostConfig.port || 22,
-        null,
-        userId,
-        true,
-      );
-
-      const connected = await new Promise<boolean>((resolve) => {
-        const timeout = setTimeout(() => {
-          resolve(false);
-        }, 30000);
-
-        jumpClient.on("ready", () => {
-          clearTimeout(timeout);
-          sshLogger.success("Jump host connection established", {
-            operation: "terminal_jumphost_connected",
-            userId,
-            hostId: jumpHostConfig.id,
-            ip: jumpHostConfig.ip,
-            depth: i,
-            hopIndex: i,
-            totalHops,
-            usedProxySocket: i === 0 && !!proxySocket,
-          });
-          resolve(true);
-        });
-
-        jumpClient.on("error", (err) => {
-          clearTimeout(timeout);
-          sshLogger.error(
-            `Jump host ${i + 1}/${totalHops} connection failed`,
-            err,
-            {
-              operation: "jump_host_connect",
-              hostId: jumpHostConfig.id,
-              ip: jumpHostConfig.ip,
-              hopIndex: i,
-              totalHops,
-              previousHop:
-                i > 0
-                  ? jumpHostConfigs[i - 1]?.ip
-                  : proxySocket
-                    ? "proxy"
-                    : "direct",
-              usedProxySocket: i === 0 && !!proxySocket,
-            },
-          );
-          resolve(false);
-        });
-
-        const connectConfig: Record<string, unknown> = {
-          host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
-          port: jumpHostConfig.port || 22,
-          username: jumpHostConfig.username,
-          tryKeyboard: jumpHostConfig.authType !== "none",
-          readyTimeout: 60000,
-          hostVerifier: jumpHostVerifier,
-          algorithms: {
-            kex: [
-              "curve25519-sha256",
-              "curve25519-sha256@libssh.org",
-              "ecdh-sha2-nistp521",
-              "ecdh-sha2-nistp384",
-              "ecdh-sha2-nistp256",
-              "diffie-hellman-group-exchange-sha256",
-              "diffie-hellman-group18-sha512",
-              "diffie-hellman-group17-sha512",
-              "diffie-hellman-group16-sha512",
-              "diffie-hellman-group15-sha512",
-              "diffie-hellman-group14-sha256",
-              "diffie-hellman-group14-sha1",
-              "diffie-hellman-group-exchange-sha1",
-              "diffie-hellman-group1-sha1",
-            ],
-            serverHostKey: [
-              "ssh-ed25519",
-              "ecdsa-sha2-nistp521",
-              "ecdsa-sha2-nistp384",
-              "ecdsa-sha2-nistp256",
-              "rsa-sha2-512",
-              "rsa-sha2-256",
-              "ssh-rsa",
-              "ssh-dss",
-            ],
-            cipher: SSH_ALGORITHMS.cipher,
-            hmac: [
-              "hmac-sha2-512-etm@openssh.com",
-              "hmac-sha2-256-etm@openssh.com",
-              "hmac-sha2-512",
-              "hmac-sha2-256",
-              "hmac-sha1",
-              "hmac-md5",
-            ],
-            compress: ["none", "zlib@openssh.com", "zlib"],
-          },
-        };
-
-        if (jumpHostConfig.authType === "password" && jumpHostConfig.password) {
-          connectConfig.password = jumpHostConfig.password;
-        } else if (jumpHostConfig.authType === "key" && jumpHostConfig.key) {
-          const cleanKey = jumpHostConfig.key
-            .trim()
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n");
-          connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
-          if (jumpHostConfig.keyPassword) {
-            connectConfig.passphrase = jumpHostConfig.keyPassword;
-          }
-        }
-
-        jumpClient.on(
-          "keyboard-interactive",
-          (
-            _name: string,
-            _instructions: string,
-            _lang: string,
-            prompts: Array<{ prompt: string; echo: boolean }>,
-            finish: (responses: string[]) => void,
-          ) => {
-            const responses = prompts.map((p) => {
-              if (/password/i.test(p.prompt) && jumpHostConfig.password) {
-                return jumpHostConfig.password as string;
-              }
-              return "";
-            });
-            finish(responses);
-          },
-        );
-
-        if (currentClient) {
-          currentClient.forwardOut(
-            "127.0.0.1",
-            0,
-            jumpHostConfig.ip,
-            jumpHostConfig.port || 22,
-            (err, stream) => {
-              if (err) {
-                clearTimeout(timeout);
-                resolve(false);
-                return;
-              }
-              connectConfig.sock = stream;
-              jumpClient.connect(connectConfig);
-            },
-          );
-        } else if (proxySocket) {
-          connectConfig.sock = proxySocket;
-          jumpClient.connect(connectConfig);
-        } else {
-          jumpClient.connect(connectConfig);
-        }
-      });
-
-      if (!connected) {
-        clients.forEach((c) => c.end());
-        return null;
-      }
-
-      currentClient = jumpClient;
-    }
-
-    return currentClient;
-  } catch (error) {
-    sshLogger.error("Failed to create jump host chain", error, {
-      operation: "jump_host_chain",
-    });
-    clients.forEach((c) => c.end());
-    return null;
-  }
-}
-
 const wss = new WebSocketServer({
   port: 30002,
 });
@@ -525,7 +126,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     const payload = await authManager.verifyJWTToken(token);
-    if (!payload) {
+    if (!payload?.userId || payload.pendingTOTP) {
       ws.close(1008, "Authentication required");
       return;
     }
@@ -848,9 +449,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
         cwdPending = true;
         cwdBuffer = "";
-        // Split the sentinel across shell variables so the echoed command
-        // itself never contains "TERMIX_CWD:" — only the output line does.
-        activeStream.write('a=TERMIX_CWD; echo "$a:$(pwd)"\r');
+        activeStream.write('\x15a=TERMIX_CWD; echo "$a:$(pwd)"\r');
         break;
       }
 
@@ -1227,8 +826,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const {
       id,
       ip: rawIp,
-      port,
-      username,
+      port: clientPort,
+      username: clientUsername,
       password,
       key,
       keyPassword,
@@ -1236,7 +835,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
       authType,
       credentialId,
     } = hostConfig;
-    const ip = rawIp?.replace(/^\[|\]$/g, "").trim() || rawIp;
+    const clientIp = rawIp?.replace(/^\[|\]$/g, "").trim() || rawIp;
+    let ip = clientIp;
+    let port = clientPort;
+    let username = clientUsername;
     sshLogger.info("Resolving SSH host configuration", {
       operation: "terminal_host_resolve",
       sessionId,
@@ -1339,6 +941,71 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }, 120000);
 
+    let resolvedHostData:
+      | (Record<string, unknown> & {
+          ip?: string;
+          port?: number;
+          username?: string;
+          password?: string;
+          key?: string;
+          keyPassword?: string;
+          keyType?: string;
+          authType?: string;
+          jumpHosts?: Array<{ hostId: number }>;
+          useSocks5?: boolean;
+          socks5Host?: string;
+          socks5Port?: number;
+          socks5Username?: string;
+          socks5Password?: string;
+          socks5ProxyChain?: unknown;
+          terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
+        })
+      | null = null;
+
+    if (id && userId) {
+      try {
+        const { resolveHostById } = await import("./host-resolver.js");
+        resolvedHostData = (await resolveHostById(
+          id,
+          userId,
+        )) as unknown as typeof resolvedHostData;
+
+        if (resolvedHostData) {
+          if (
+            (!hostConfig.jumpHosts || hostConfig.jumpHosts.length === 0) &&
+            resolvedHostData.jumpHosts &&
+            resolvedHostData.jumpHosts.length > 0
+          ) {
+            hostConfig.jumpHosts = resolvedHostData.jumpHosts;
+            sendLog(
+              "jump",
+              "info",
+              `Loaded ${resolvedHostData.jumpHosts.length} jump host(s) from server-side host data`,
+            );
+          }
+
+          if (!hostConfig.useSocks5 && resolvedHostData.useSocks5) {
+            hostConfig.useSocks5 = resolvedHostData.useSocks5;
+            hostConfig.socks5Host = resolvedHostData.socks5Host;
+            hostConfig.socks5Port = resolvedHostData.socks5Port;
+            hostConfig.socks5Username = resolvedHostData.socks5Username;
+            hostConfig.socks5Password = resolvedHostData.socks5Password;
+            hostConfig.socks5ProxyChain = resolvedHostData.socks5ProxyChain;
+          }
+
+          if (!hostConfig.terminalConfig && resolvedHostData.terminalConfig) {
+            hostConfig.terminalConfig = resolvedHostData.terminalConfig;
+          }
+        }
+      } catch (error) {
+        sshLogger.warn(`Failed to resolve server-side host data for ${id}`, {
+          operation: "ssh_host_data",
+          hostId: id,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
+    }
+
     // Resolve credentials server-side when frontend doesn't provide them
     let resolvedCredentials = {
       username,
@@ -1352,18 +1019,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const authMethodNotAvailable = false;
     if (id && userId && !password && !key) {
       try {
-        const { resolveHostById } = await import("./host-resolver.js");
-        const resolvedHost = await resolveHostById(id, userId);
-        if (resolvedHost) {
+        if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username: resolvedHost.username || username,
-            password: resolvedHost.password,
-            key: resolvedHost.key,
-            keyPassword: keyPassword || resolvedHost.keyPassword,
-            keyType: resolvedHost.keyType,
-            authType: resolvedHost.authType,
-            certPublicKey: (resolvedHost as unknown as Record<string, unknown>)
-              .certPublicKey as string | undefined,
+            username: resolvedHostData.username || username,
+            password: resolvedHostData.password,
+            key: resolvedHostData.key,
+            keyPassword: keyPassword || resolvedHostData.keyPassword,
+            keyType: resolvedHostData.keyType,
+            authType: resolvedHostData.authType,
+            certPublicKey: resolvedHostData.certPublicKey as string | undefined,
           };
           sendLog(
             "auth",
@@ -1380,19 +1047,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     } else if (credentialId && id && userId) {
       try {
-        const { resolveHostById } = await import("./host-resolver.js");
-        const resolvedHost = await resolveHostById(id, userId);
-        if (resolvedHost) {
+        if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username: resolvedHost.username || username,
-            password: resolvedHost.password,
-            key: resolvedHost.key,
+            username: resolvedHostData.username || username,
+            password: resolvedHostData.password,
+            key: resolvedHostData.key,
             // Preserve user-supplied keyPassword (e.g. from passphrase dialog) over the empty DB value
-            keyPassword: keyPassword || resolvedHost.keyPassword,
-            keyType: resolvedHost.keyType,
-            authType: resolvedHost.authType,
-            certPublicKey: (resolvedHost as unknown as Record<string, unknown>)
-              .certPublicKey as string | undefined,
+            keyPassword: keyPassword || resolvedHostData.keyPassword,
+            keyType: resolvedHostData.keyType,
+            authType: resolvedHostData.authType,
+            certPublicKey: resolvedHostData.certPublicKey as string | undefined,
           };
         }
       } catch (error) {
@@ -1787,7 +1454,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const runPostShellCommands = (delay: number) => {
             setTimeout(() => {
               if (initialPath && initialPath.trim() !== "") {
-                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}" && pwd\r`;
+                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}"\r`;
                 stream.write(cdCommand);
               }
               if (executeCommand && executeCommand.trim() !== "") {
@@ -2283,9 +1950,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
           ? hostKeepaliveInterval * 1000
-          : 60000,
+          : 30000,
       keepaliveCountMax:
-        typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 5,
+        typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 3,
       readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,

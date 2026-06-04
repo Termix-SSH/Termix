@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { useState, useEffect, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -10,6 +11,7 @@ import {
   Cpu,
   FolderOpen,
   FolderSearch,
+  Key,
   Link,
   Loader2,
   MemoryStick,
@@ -24,6 +26,7 @@ import {
   Share2,
   Terminal,
   Trash2,
+  X,
   Zap,
 } from "lucide-react";
 import {
@@ -41,9 +44,12 @@ import {
   bulkUpdateSSHHosts,
   createSSHHost,
   deleteSSHHost,
+  getHostPassword,
+  renameFolder,
   wakeOnLan,
 } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
+import type { SSHHostData } from "@/types/index";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
@@ -159,6 +165,38 @@ function collectAllFolders(children: (Host | HostFolder)[]): string[] {
   return Array.from(names).sort();
 }
 
+async function writeClipboardText(value: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+}
+
+function canCopyHostPassword(host: Host): boolean {
+  return (
+    host.authType === "password" ||
+    host.authType === "credential" ||
+    !!host.hasPassword ||
+    !!host.password
+  );
+}
+
+function canCopyHostSudoPassword(host: Host): boolean {
+  return (
+    !!host.hasSudoPassword ||
+    !!host.sudoPassword ||
+    !!host.terminalConfig?.sudoPassword
+  );
+}
+
 function folderHostCount(folder: HostFolder): {
   total: number;
   online: number;
@@ -221,6 +259,30 @@ export function HostItem({
     const v = localStorage.getItem("showHostTags");
     return v !== null ? v === "true" : true;
   });
+  const isTouchOnly =
+    typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
+  const shouldUseClickTray = trayOnClick || isTouchOnly;
+  const showPasswordCopy = canCopyHostPassword(host);
+  const showSudoPasswordCopy = canCopyHostSudoPassword(host);
+
+  async function handleCopyPassword(
+    e: MouseEvent,
+    field: "password" | "sudoPassword",
+  ) {
+    e.stopPropagation();
+    const password = await getHostPassword(Number(host.id), field);
+    if (!password) {
+      toast.error(t("nav.failedToCopyPassword"));
+      return;
+    }
+
+    try {
+      await writeClipboardText(password);
+      toast.success(t("nav.passwordCopied"));
+    } catch {
+      toast.error(t("nav.failedToCopyPassword"));
+    }
+  }
 
   useEffect(() => {
     const handler = () =>
@@ -262,13 +324,9 @@ export function HostItem({
           onToggleSelect?.();
           return;
         }
-        // On touch devices open the action tray instead of immediately launching a tab
-        if (window.matchMedia("(hover: none)").matches) {
+        // Touch devices open the tray instead of launching
+        if (isTouchOnly) {
           e.stopPropagation();
-          onTrayOpenChange?.(!isTrayOpen);
-          return;
-        }
-        if (trayOnClick) {
           onTrayOpenChange?.(!isTrayOpen);
           return;
         }
@@ -303,12 +361,28 @@ export function HostItem({
           {host.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}
+          {!selectionMode && shouldUseClickTray && (
+            <button
+              title={
+                isTrayOpen
+                  ? t("hosts.collapseActions")
+                  : t("hosts.expandActions")
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                onTrayOpenChange?.(!isTrayOpen);
+              }}
+              className="ml-auto flex items-center justify-center size-5 rounded text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted-foreground/10 transition-colors shrink-0"
+            >
+              <ChevronRight
+                className={`size-3 transition-transform duration-150 ${isTrayOpen ? "rotate-90" : ""}`}
+              />
+            </button>
+          )}
         </div>
 
-        {/* Address — only visible on hover (or click when trayOnClick) or while menu is open */}
-        <span
-          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 ${!trayOnClick ? "group-hover:opacity-100 group-hover:h-auto" : ""} ${isMenuOpen || (trayOnClick && isTrayOpen) ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
-        >
+        {/* Address — always visible */}
+        <span className="text-[11px] text-muted-foreground/45 truncate leading-none pl-3">
           {host.username}@{host.ip}
         </span>
 
@@ -331,9 +405,88 @@ export function HostItem({
           </div>
         )}
 
-        {/* Action tray — slides open on CSS hover, on click (when trayOnClick), or while menu is open */}
+        {/* Connection buttons — always visible in click-tray mode, inside hover tray otherwise */}
+        {shouldUseClickTray && !selectionMode && (
+          <div className="flex items-center flex-wrap gap-1 pl-2 pb-1">
+            {getSshActions(host).map(({ type, icon: Icon, label }) => (
+              <button
+                key={type}
+                title={label}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab(type);
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <Icon className="size-3.5" />
+              </button>
+            ))}
+            {host.enableSsh &&
+              (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+              getSshActions(host).length > 0 && (
+                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+              )}
+            {host.enableRdp && (
+              <button
+                title="RDP"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab("rdp");
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <Monitor className="size-3.5" />
+              </button>
+            )}
+            {host.enableVnc && (
+              <button
+                title="VNC"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab("vnc");
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <MousePointerClick className="size-3.5" />
+              </button>
+            )}
+            {host.enableTelnet && (
+              <button
+                title="Telnet"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab("telnet");
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <MessagesSquare className="size-3.5" />
+              </button>
+            )}
+            {host.macAddress && (
+              <button
+                title={t("hosts.wakeOnLanAction")}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    await wakeOnLan(host.id);
+                    toast.success(
+                      t("hosts.wakeOnLanSuccess", { name: host.name }),
+                    );
+                  } catch {
+                    toast.error(t("hosts.wakeOnLanError"));
+                  }
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <Zap className="size-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Action tray — slides open on hover (default) or via chevron in click-tray mode */}
         <div
-          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!trayOnClick ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (trayOnClick && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!shouldUseClickTray ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (shouldUseClickTray && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
         >
           {host.online &&
             ((host.cpu != null && host.cpu > 0) ||
@@ -371,85 +524,105 @@ export function HostItem({
             )}
 
           <div className="flex flex-col gap-0.5 pt-1.5 pl-2 pb-1">
-            {/* Connection buttons — wrap naturally to a second line */}
-            <div className="flex items-center flex-wrap gap-1">
-              {getSshActions(host).map(({ type, icon: Icon, label }) => (
-                <button
-                  key={type}
-                  title={label}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab(type);
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Icon className="size-3.5" />
-                </button>
-              ))}
-              {host.enableSsh &&
-                (host.enableRdp || host.enableVnc || host.enableTelnet) &&
-                getSshActions(host).length > 0 && (
-                  <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+            {/* Connection buttons — only shown here in hover mode */}
+            {!shouldUseClickTray && (
+              <div className="flex items-center flex-wrap gap-1">
+                {getSshActions(host).map(({ type, icon: Icon, label }) => (
+                  <button
+                    key={type}
+                    title={label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab(type);
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Icon className="size-3.5" />
+                  </button>
+                ))}
+                {host.enableSsh &&
+                  (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+                  getSshActions(host).length > 0 && (
+                    <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                  )}
+                {host.enableRdp && (
+                  <button
+                    title="RDP"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("rdp");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Monitor className="size-3.5" />
+                  </button>
                 )}
-              {host.enableRdp && (
-                <button
-                  title="RDP"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("rdp");
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Monitor className="size-3.5" />
-                </button>
-              )}
-              {host.enableVnc && (
-                <button
-                  title="VNC"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("vnc");
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <MousePointerClick className="size-3.5" />
-                </button>
-              )}
-              {host.enableTelnet && (
-                <button
-                  title="Telnet"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("telnet");
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <MessagesSquare className="size-3.5" />
-                </button>
-              )}
-              {host.macAddress && (
-                <button
-                  title={t("hosts.wakeOnLanAction")}
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    try {
-                      await wakeOnLan(host.id);
-                      toast.success(
-                        t("hosts.wakeOnLanSuccess", { name: host.name }),
-                      );
-                    } catch {
-                      toast.error(t("hosts.wakeOnLanError"));
-                    }
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Zap className="size-3.5" />
-                </button>
-              )}
-            </div>
+                {host.enableVnc && (
+                  <button
+                    title="VNC"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("vnc");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MousePointerClick className="size-3.5" />
+                  </button>
+                )}
+                {host.enableTelnet && (
+                  <button
+                    title="Telnet"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("telnet");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MessagesSquare className="size-3.5" />
+                  </button>
+                )}
+                {host.macAddress && (
+                  <button
+                    title={t("hosts.wakeOnLanAction")}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await wakeOnLan(host.id);
+                        toast.success(
+                          t("hosts.wakeOnLanSuccess", { name: host.name }),
+                        );
+                      } catch {
+                        toast.error(t("hosts.wakeOnLanError"));
+                      }
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Zap className="size-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
 
-            {/* Separator + management buttons row — always fixed position */}
+            {/* Management buttons row */}
             <div className="flex items-center gap-1 pt-0.5 border-t border-border/40 mt-0.5">
+              {showPasswordCopy && (
+                <button
+                  title={t("nav.copyPassword")}
+                  onClick={(e) => handleCopyPassword(e, "password")}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Key className="size-3.5" />
+                </button>
+              )}
+              {showSudoPasswordCopy && (
+                <button
+                  title={t("nav.copySudoPassword")}
+                  onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Key className="size-3.5" />
+                </button>
+              )}
               {onEditHost && (
                 <button
                   title="Edit Host"
@@ -497,6 +670,22 @@ export function HostItem({
                     <Copy className="size-3.5 mr-2" />
                     {t("hosts.copyAddress")}
                   </DropdownMenuItem>
+                  {showPasswordCopy && (
+                    <DropdownMenuItem
+                      onClick={(e) => handleCopyPassword(e, "password")}
+                    >
+                      <Key className="size-3.5 mr-2" />
+                      {t("nav.copyPassword")}
+                    </DropdownMenuItem>
+                  )}
+                  {showSudoPasswordCopy && (
+                    <DropdownMenuItem
+                      onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                    >
+                      <Key className="size-3.5 mr-2" />
+                      {t("nav.copySudoPassword")}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <Link className="size-3.5 mr-2" />
@@ -667,6 +856,11 @@ export function FolderItem({
   onMenuOpenChange,
   openTrayHostId,
   onTrayOpenChange,
+  editingFolderName,
+  editingFolderValue,
+  onEditingFolderNameChange,
+  onEditingFolderValueChange,
+  onRenameFolder,
 }: {
   folder: HostFolder;
   depth?: number;
@@ -686,6 +880,11 @@ export function FolderItem({
   onMenuOpenChange: (hostId: string | null) => void;
   openTrayHostId: string | null;
   onTrayOpenChange: (hostId: string | null) => void;
+  editingFolderName: string | null;
+  editingFolderValue: string;
+  onEditingFolderNameChange: (name: string | null) => void;
+  onEditingFolderValueChange: (value: string) => void;
+  onRenameFolder: (oldName: string, newName: string) => Promise<void>;
 }) {
   const { total, online } = folderHostCount(folder);
 
@@ -693,12 +892,13 @@ export function FolderItem({
 
   const isOpen = query ? true : openFolders.has(folder.name);
   const stripeIndex = stripeMap.get(folder) ?? 0;
+  const isEditing = editingFolderName === folder.name;
 
   return (
     <div>
       <button
-        onClick={() => !query && onToggleFolder(folder.name)}
-        className={`flex items-center gap-2 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left cursor-pointer ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""}`}
+        onClick={() => !query && !isEditing && onToggleFolder(folder.name)}
+        className={`group/folder flex items-center gap-2 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left cursor-pointer ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""}`}
       >
         <ChevronRight
           className={`size-3 shrink-0 text-muted-foreground/50 transition-transform ${isOpen ? "rotate-90" : ""}`}
@@ -706,15 +906,61 @@ export function FolderItem({
         <FolderOpen
           className={`size-3.5 shrink-0 ${isOpen ? "text-accent-brand" : "text-muted-foreground/60"}`}
         />
-        <span className="text-[13px] font-semibold text-foreground/80 truncate flex-1">
-          {folder.name}
-        </span>
-        <span className="text-[10px] tabular-nums shrink-0 ml-1">
-          {online > 0 && (
-            <span className="text-accent-brand font-semibold">{online}</span>
-          )}
-          <span className="text-muted-foreground/40">/{total}</span>
-        </span>
+        {isEditing ? (
+          <>
+            <input
+              autoFocus
+              value={editingFolderValue}
+              onChange={(e) => onEditingFolderValueChange(e.target.value)}
+              onBlur={async () => {
+                const newName = editingFolderValue.trim();
+                onEditingFolderNameChange(null);
+                if (newName && newName !== folder.name) {
+                  await onRenameFolder(folder.name, newName);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") onEditingFolderNameChange(null);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] font-semibold bg-background border border-accent-brand/60 px-1 outline-none text-foreground min-w-0 flex-1"
+            />
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditingFolderNameChange(null);
+              }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <X className="size-3" />
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-[13px] font-semibold text-foreground/80 truncate flex-1">
+              {folder.name}
+            </span>
+            <span className="text-[10px] tabular-nums shrink-0 ml-1">
+              {online > 0 && (
+                <span className="text-accent-brand font-semibold">
+                  {online}
+                </span>
+              )}
+              <span className="text-muted-foreground/40">/{total}</span>
+            </span>
+            <span
+              className="opacity-0 group-hover/folder:opacity-100 transition-opacity ml-1 text-muted-foreground/50 hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditingFolderNameChange(folder.name);
+                onEditingFolderValueChange(folder.name);
+              }}
+            >
+              <Pencil className="size-2.5" />
+            </span>
+          </>
+        )}
       </button>
       {isOpen && (
         <div className="border-l border-border/40 ml-[30px]">
@@ -740,6 +986,11 @@ export function FolderItem({
                 onMenuOpenChange={onMenuOpenChange}
                 openTrayHostId={openTrayHostId}
                 onTrayOpenChange={onTrayOpenChange}
+                editingFolderName={editingFolderName}
+                editingFolderValue={editingFolderValue}
+                onEditingFolderNameChange={onEditingFolderNameChange}
+                onEditingFolderValueChange={onEditingFolderValueChange}
+                onRenameFolder={onRenameFolder}
               />
             ) : (
               <HostItem
@@ -798,6 +1049,10 @@ export function SidebarTree({
   );
   const [openMenuHostId, setOpenMenuHostId] = useState<string | null>(null);
   const [openTrayHostId, setOpenTrayHostId] = useState<string | null>(null);
+  const [editingFolderName, setEditingFolderName] = useState<string | null>(
+    null,
+  );
+  const [editingFolderValue, setEditingFolderValue] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
@@ -806,7 +1061,11 @@ export function SidebarTree({
   function toggleFolder(name: string) {
     setOpenFolders((prev) => {
       const next = new Set(prev);
-      next.has(name) ? next.delete(name) : next.add(name);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
       return next;
     });
   }
@@ -814,7 +1073,11 @@ export function SidebarTree({
   function toggleSelect(id: string) {
     setSelectedHostIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   }
@@ -836,7 +1099,7 @@ export function SidebarTree({
 
   async function handleDuplicateHost(host: Host) {
     try {
-      await createSSHHost({
+      const duplicateHost: SSHHostData = {
         name: `${host.name} (copy)`,
         ip: host.ip,
         port: host.port,
@@ -893,11 +1156,22 @@ export function SidebarTree({
         statsConfig: host.statsConfig,
         guacamoleConfig: host.guacamoleConfig ?? null,
         terminalConfig: host.terminalConfig ?? null,
-      } as any);
+      };
+      await createSSHHost(duplicateHost);
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.duplicatedHost", { name: host.name }));
     } catch {
       toast.error(t("hosts.failedToDuplicateHost"));
+    }
+  }
+
+  async function handleRenameFolder(oldName: string, newName: string) {
+    try {
+      await renameFolder(oldName, newName);
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      toast.success(t("hosts.folderRenamedTo", { name: newName }));
+    } catch {
+      toast.error(t("hosts.failedToRenameFolder"));
     }
   }
 
@@ -966,6 +1240,11 @@ export function SidebarTree({
                 onMenuOpenChange={setOpenMenuHostId}
                 openTrayHostId={openTrayHostId}
                 onTrayOpenChange={setOpenTrayHostId}
+                editingFolderName={editingFolderName}
+                editingFolderValue={editingFolderValue}
+                onEditingFolderNameChange={setEditingFolderName}
+                onEditingFolderValueChange={setEditingFolderValue}
+                onRenameFolder={handleRenameFolder}
               />
             ) : (
               <HostItem

@@ -226,6 +226,24 @@ export const fileManagerShortcuts = sqliteTable("file_manager_shortcuts", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const transferRecent = sqliteTable("transfer_recent", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  sourceHostId: integer("source_host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  destHostId: integer("dest_host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  destPath: text("dest_path").notNull(),
+  destPathLabel: text("dest_path_label").notNull(),
+  lastUsed: text("last_used")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const dismissedAlerts = sqliteTable("dismissed_alerts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -658,6 +676,10 @@ export const userPreferences = sqliteTable("user_preferences", {
   reopenTabsOnLogin: integer("reopen_tabs_on_login", { mode: "boolean" })
     .notNull()
     .default(false),
+  theme: text("theme"),
+  fontSize: text("font_size"),
+  accentColor: text("accent_color"),
+  language: text("language"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

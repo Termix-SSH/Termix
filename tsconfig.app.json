@@ -32,5 +32,10 @@
       "@/*": ["./src/ui/*"]
     }
   },
-  "include": ["src"]
+  "include": [
+    "src/main.tsx",
+    "src/ui/**/*.ts",
+    "src/ui/**/*.tsx",
+    "src/types/**/*.ts"
+  ]
 }

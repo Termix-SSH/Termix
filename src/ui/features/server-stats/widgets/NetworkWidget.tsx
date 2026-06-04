@@ -1,4 +1,4 @@
-import { Network, WifiOff } from "lucide-react";
+import { Cable, Container, Network, Wifi, WifiOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ServerMetrics } from "@/main-axios.ts";
 import { SectionCard } from "@/components/section-card";
@@ -24,6 +24,16 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
   };
   const interfaces = metricsWithNetwork?.network?.interfaces ?? [];
 
+  const ifaceIcon = (name: string) => {
+    if (/^(wl|wlan|wifi|ath)/.test(name))
+      return <Wifi className="size-3 text-muted-foreground/50" />;
+    if (/^(eth|en|enp|eno|ens)/.test(name))
+      return <Cable className="size-3 text-muted-foreground/50" />;
+    if (/^(docker|br-|veth|virbr|vlan|bond|tun|tap|wg|lo)/.test(name))
+      return <Container className="size-3 text-muted-foreground/50" />;
+    return <Network className="size-3 text-muted-foreground/50" />;
+  };
+
   return (
     <SectionCard
       title={t("serverStats.networkInterfaces")}
@@ -46,6 +56,7 @@ export function NetworkWidget({ metrics }: NetworkWidgetProps) {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
+                    {ifaceIcon(iface.name)}
                     <div
                       className={`size-1.5 rounded-full ${iface.state === "UP" ? "bg-accent-brand" : "bg-muted-foreground"}`}
                     />

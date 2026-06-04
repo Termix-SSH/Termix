@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
@@ -28,6 +29,7 @@ import {
   saveServerConfig,
   isElectron,
   getEmbeddedServerStatus,
+  getCurrentToken,
 } from "@/main-axios";
 import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm.tsx";
@@ -36,20 +38,14 @@ import {
   shouldTriggerSilentSignin,
 } from "./silent-signin";
 
-function isMissingServerConfigError(error: unknown): boolean {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-
-  return (
-    (error as Error & { code?: string }).code === "NO_SERVER_CONFIGURED" ||
-    error.message.includes("no-server-configured")
-  );
-}
-
 interface ExtendedWindow extends Window {
   IS_ELECTRON_WEBVIEW?: boolean;
+  ReactNativeWebView?: { postMessage: (msg: string) => void };
 }
+
+const isInMobileWebView = () =>
+  /Termix-Mobile\/(Android|iOS)/.test(navigator.userAgent) ||
+  !!(window as ExtendedWindow).ReactNativeWebView;
 
 interface AuthProps extends React.ComponentProps<"div"> {
   setLoggedIn: (loggedIn: boolean) => void;
@@ -91,7 +87,8 @@ export function Auth({
       window.matchMedia("(prefers-color-scheme: dark)").matches);
   const lineColor = isDarkMode ? "#151517" : "#f9f9f9";
 
-  const isInElectronWebView = () => {
+  const isInElectronWebView = useCallback(() => {
+    if (isInMobileWebView()) return false;
     if ((window as ExtendedWindow).IS_ELECTRON_WEBVIEW) {
       return true;
     }
@@ -103,7 +100,7 @@ export function Auth({
       return true;
     }
     return false;
-  };
+  }, []);
 
   const [tab, setTab] = useState<"login" | "signup" | "external" | "reset">(
     "login",
@@ -147,6 +144,15 @@ export function Auth({
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
   const totpInputRef = React.useRef<HTMLInputElement>(null);
 
+  // Hand the JWT to the native app embedding this page in a React Native WebView.
+  // The mobile onMessage handler only reads { type, token }.
+  const postMobileAuthSuccess = useCallback((token: string) => {
+    (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+      JSON.stringify({ type: "AUTH_SUCCESS", token }),
+    );
+    setWebviewAuthSuccess(true);
+  }, []);
+
   const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
     null,
   );
@@ -154,54 +160,51 @@ export function Auth({
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(false);
 
-  const handleElectronAuthSuccess = useCallback(
-    async (token: string | null) => {
-      try {
-        // token was stored in localStorage by ElectronLoginForm before this runs,
-        // so getUserInfo() can authenticate via the cookie interceptor or localStorage jwt.
-        let retries = 5;
-        let meRes = null;
-        while (retries-- > 0) {
-          try {
-            meRes = await getUserInfo();
-            break;
-          } catch (err: unknown) {
-            const isNoServer =
-              (err as { code?: string })?.code === "NO_SERVER_CONFIGURED" ||
-              (err as Error)?.message?.includes("no-server-configured");
-            if (isNoServer && retries > 0) {
-              await new Promise((r) => setTimeout(r, 500));
-            } else {
-              throw err;
-            }
+  const handleElectronAuthSuccess = useCallback(async () => {
+    try {
+      // token was stored in localStorage by ElectronLoginForm before this runs,
+      // so getUserInfo() can authenticate via the cookie interceptor or localStorage jwt.
+      let retries = 5;
+      let meRes = null;
+      while (retries-- > 0) {
+        try {
+          meRes = await getUserInfo();
+          break;
+        } catch (err: unknown) {
+          const isNoServer =
+            (err as { code?: string })?.code === "NO_SERVER_CONFIGURED" ||
+            (err as Error)?.message?.includes("no-server-configured");
+          if (isNoServer && retries > 0) {
+            await new Promise((r) => setTimeout(r, 500));
+          } else {
+            throw err;
           }
         }
-        if (!meRes) throw new Error("Failed to get user info");
-        setInternalLoggedIn(true);
-        setLoggedIn(true);
-        setIsAdmin(!!meRes.is_admin);
-        setUsername(meRes.username || null);
-        setUserId(meRes.userId || null);
-        onAuthSuccess({
-          isAdmin: !!meRes.is_admin,
-          username: meRes.username || null,
-          userId: meRes.userId || null,
-        });
-        toast.success(t("messages.loginSuccess"));
-      } catch {
-        toast.error(t("errors.failedUserInfo"));
       }
-    },
-    [
-      onAuthSuccess,
-      setLoggedIn,
-      setIsAdmin,
-      setUsername,
-      setUserId,
-      t,
-      setInternalLoggedIn,
-    ],
-  );
+      if (!meRes) throw new Error("Failed to get user info");
+      setInternalLoggedIn(true);
+      setLoggedIn(true);
+      setIsAdmin(!!meRes.is_admin);
+      setUsername(meRes.username || null);
+      setUserId(meRes.userId || null);
+      onAuthSuccess({
+        isAdmin: !!meRes.is_admin,
+        username: meRes.username || null,
+        userId: meRes.userId || null,
+      });
+      toast.success(t("messages.loginSuccess"));
+    } catch {
+      toast.error(t("errors.failedUserInfo"));
+    }
+  }, [
+    onAuthSuccess,
+    setLoggedIn,
+    setIsAdmin,
+    setUsername,
+    setUserId,
+    t,
+    setInternalLoggedIn,
+  ]);
 
   useEffect(() => {
     setInternalLoggedIn(loggedIn);
@@ -225,7 +228,7 @@ export function Auth({
     getRegistrationAllowed().then((res) => {
       setRegistrationAllowed(res.allowed);
     });
-  }, []);
+  }, [isInElectronWebView]);
 
   useEffect(() => {
     getPasswordLoginAllowed()
@@ -340,6 +343,12 @@ export function Auth({
 
       if (!res || !res.success) {
         throw new Error(t("errors.loginFailed"));
+      }
+
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the login response body.
+        postMobileAuthSuccess(res.token || "");
+        return;
       }
 
       if (isInElectronWebView()) {
@@ -546,6 +555,13 @@ export function Auth({
         throw new Error(t("errors.loginFailed"));
       }
 
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the verify response body.
+        postMobileAuthSuccess(res.token || "");
+        setTotpLoading(false);
+        return;
+      }
+
       if (isInElectronWebView()) {
         try {
           window.parent.postMessage(
@@ -699,6 +715,30 @@ export function Auth({
 
     if (success) {
       setOidcLoading(true);
+
+      if (isInMobileWebView()) {
+        // The OIDC callback authenticated via an HttpOnly cookie on this origin,
+        // so prefer a token in the URL (termix-mobile:-origin callbacks include
+        // one), otherwise read it back from the cookie via /users/me/token.
+        const finish = (token: string) => {
+          postMobileAuthSuccess(token);
+          setOidcLoading(false);
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname,
+          );
+        };
+        const urlToken = urlParams.get("token");
+        if (urlToken) {
+          finish(urlToken);
+        } else {
+          getCurrentToken()
+            .then((token) => finish(token ?? ""))
+            .catch(() => finish(""));
+        }
+        return;
+      }
 
       if (isInElectronWebView()) {
         try {
@@ -1107,18 +1147,19 @@ export function Auth({
                 </AlertDescription>
               </Alert>
             )}
-            {isInElectronWebView() && webviewAuthSuccess && (
-              <div className="flex flex-col items-center justify-center h-64 gap-4">
-                <div className="text-center">
-                  <h2 className="text-xl font-bold mb-2">
-                    {t("messages.loginSuccess")}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {t("auth.redirectingToApp")}
-                  </p>
+            {(isInElectronWebView() || isInMobileWebView()) &&
+              webviewAuthSuccess && (
+                <div className="flex flex-col items-center justify-center h-64 gap-4">
+                  <div className="text-center">
+                    <h2 className="text-xl font-bold mb-2">
+                      {t("messages.loginSuccess")}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      {t("auth.redirectingToApp")}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             {!webviewAuthSuccess && totpRequired && (
               <form
                 className="flex flex-col gap-5"

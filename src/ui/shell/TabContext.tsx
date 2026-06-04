@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, {
   createContext,
   useContext,
@@ -40,7 +41,6 @@ interface TabContextType {
 
 const TabContext = createContext<TabContextType | undefined>(undefined);
 
-
 export function useTabs() {
   const context = useContext(TabContext);
   if (context === undefined) {
@@ -80,7 +80,9 @@ export function clearTermixSessionStorage() {
 
 export function TabProvider({ children }: TabProviderProps) {
   const { t } = useTranslation();
-  const [tabs, setTabs] = useState<Tab[]>([{ id: 1, type: "home", title: "Home" }]);
+  const [tabs, setTabs] = useState<Tab[]>([
+    { id: 1, type: "home", title: "Home" },
+  ]);
   const [currentTab, setCurrentTab] = useState<number>(1);
   const [allSplitScreenTab, setAllSplitScreenTab] = useState<number[]>([]);
   const [previewTerminalTheme, setPreviewTerminalTheme] = useState<
@@ -106,151 +108,158 @@ export function TabProvider({ children }: TabProviderProps) {
     );
   }, [t]);
 
-  function computeUniqueTitle(
-    tabType: Tab["type"],
-    desiredTitle: string | undefined,
-  ): string {
-    const defaultTitle =
-      tabType === "server_stats"
-        ? t("nav.serverStats")
-        : tabType === "file_manager"
-          ? t("nav.fileManager")
-          : tabType === "tunnel"
-            ? t("nav.tunnels")
-            : tabType === "docker"
-              ? t("nav.docker")
-              : t("nav.terminal");
-    const baseTitle = (desiredTitle || defaultTitle).trim();
-    const match = baseTitle.match(/^(.*) \((\d+)\)$/);
-    const root = match ? match[1] : baseTitle;
+  const computeUniqueTitle = useCallback(
+    (tabType: Tab["type"], desiredTitle: string | undefined): string => {
+      const defaultTitle =
+        tabType === "server_stats"
+          ? t("nav.serverStats")
+          : tabType === "file_manager"
+            ? t("nav.fileManager")
+            : tabType === "tunnel"
+              ? t("nav.tunnels")
+              : tabType === "docker"
+                ? t("nav.docker")
+                : t("nav.terminal");
+      const baseTitle = (desiredTitle || defaultTitle).trim();
+      const match = baseTitle.match(/^(.*) \((\d+)\)$/);
+      const root = match ? match[1] : baseTitle;
 
-    const usedNumbers = new Set<number>();
-    let rootUsed = false;
-    tabs.forEach((t) => {
-      if (!t.title) return;
-      if (t.title === root) {
-        rootUsed = true;
-        return;
-      }
-      const m = t.title.match(
-        new RegExp(
-          `^${root.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")} \\((\\d+)\\)$`,
-        ),
-      );
-      if (m) {
-        const n = parseInt(m[1], 10);
-        if (!isNaN(n)) usedNumbers.add(n);
-      }
-    });
-
-    if (!rootUsed) return root;
-    let n = 2;
-    while (usedNumbers.has(n)) n += 1;
-    return `${root} (${n})`;
-  }
-
-  const addTab = (tabData: Omit<Tab, "id">): number => {
-    if (tabData.type === "ssh_manager") {
-      const existingTab = tabs.find((t) => t.type === "ssh_manager");
-      if (existingTab) {
-        setTabs((prev) =>
-          prev.map((t) =>
-            t.id === existingTab.id
-              ? {
-                  ...t,
-                  title: existingTab.title,
-                  hostConfig: tabData.hostConfig
-                    ? { ...tabData.hostConfig }
-                    : undefined,
-                  initialTab: tabData.initialTab,
-                  _updateTimestamp: Date.now(),
-                }
-              : t,
+      const usedNumbers = new Set<number>();
+      let rootUsed = false;
+      tabs.forEach((t) => {
+        if (!t.title) return;
+        if (t.title === root) {
+          rootUsed = true;
+          return;
+        }
+        const m = t.title.match(
+          new RegExp(
+            `^${root.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")} \\((\\d+)\\)$`,
           ),
         );
-        setCurrentTab(existingTab.id);
-        setAllSplitScreenTab((prev) =>
-          prev.filter((tid) => tid !== existingTab.id),
-        );
-        return existingTab.id;
-      }
-    }
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (!isNaN(n)) usedNumbers.add(n);
+        }
+      });
 
-    const id = nextTabId.current++;
-    const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const needsUniqueTitle =
-      tabData.type === "terminal" ||
-      tabData.type === "server_stats" ||
-      tabData.type === "file_manager" ||
-      tabData.type === "tunnel" ||
-      tabData.type === "docker";
-    const effectiveTitle = needsUniqueTitle
-      ? computeUniqueTitle(tabData.type, tabData.title)
-      : tabData.title || "";
-    const newTab: Tab = {
-      ...tabData,
-      id,
-      instanceId,
-      title: effectiveTitle,
-      terminalRef:
-        tabData.type === "terminal"
-          ? React.createRef<TerminalRefHandle>()
+      if (!rootUsed) return root;
+      let n = 2;
+      while (usedNumbers.has(n)) n += 1;
+      return `${root} (${n})`;
+    },
+    [t, tabs],
+  );
+
+  const addTab = useCallback(
+    (tabData: Omit<Tab, "id">): number => {
+      if (tabData.type === "ssh_manager") {
+        const existingTab = tabs.find((t) => t.type === "ssh_manager");
+        if (existingTab) {
+          setTabs((prev) =>
+            prev.map((t) =>
+              t.id === existingTab.id
+                ? {
+                    ...t,
+                    title: existingTab.title,
+                    hostConfig: tabData.hostConfig
+                      ? { ...tabData.hostConfig }
+                      : undefined,
+                    initialTab: tabData.initialTab,
+                    _updateTimestamp: Date.now(),
+                  }
+                : t,
+            ),
+          );
+          setCurrentTab(existingTab.id);
+          setAllSplitScreenTab((prev) =>
+            prev.filter((tid) => tid !== existingTab.id),
+          );
+          return existingTab.id;
+        }
+      }
+
+      const id = nextTabId.current++;
+      const instanceId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const needsUniqueTitle =
+        tabData.type === "terminal" ||
+        tabData.type === "server_stats" ||
+        tabData.type === "file_manager" ||
+        tabData.type === "tunnel" ||
+        tabData.type === "docker";
+      const effectiveTitle = needsUniqueTitle
+        ? computeUniqueTitle(tabData.type, tabData.title)
+        : tabData.title || "";
+      const newTab: Tab = {
+        ...tabData,
+        id,
+        instanceId,
+        title: effectiveTitle,
+        terminalRef:
+          tabData.type === "terminal"
+            ? React.createRef<TerminalRefHandle>()
+            : undefined,
+        hostConfig: tabData.hostConfig
+          ? {
+              ...tabData.hostConfig,
+              instanceId,
+            }
           : undefined,
-      hostConfig: tabData.hostConfig
-        ? {
-            ...tabData.hostConfig,
-            instanceId,
-          }
-        : undefined,
-    };
-    setTabs((prev) => [...prev, newTab]);
-    setCurrentTab(id);
-    setAllSplitScreenTab((prev) => prev.filter((tid) => tid !== id));
-    return id;
-  };
+      };
+      setTabs((prev) => [...prev, newTab]);
+      setCurrentTab(id);
+      setAllSplitScreenTab((prev) => prev.filter((tid) => tid !== id));
+      return id;
+    },
+    [computeUniqueTitle, tabs],
+  );
 
   const pendingCurrentTabRef = useRef<number | null>(null);
 
-  const removeTab = (tabId: number) => {
-    const tab = tabs.find((t) => t.id === tabId);
-    if (
-      tab &&
-      tab.terminalRef?.current &&
-      typeof tab.terminalRef.current.disconnect === "function"
-    ) {
-      tab.terminalRef.current.disconnect();
-    }
-
-    setTabs((prev) => {
-      const closedIndex = prev.findIndex((t) => t.id === tabId);
-      const filtered = prev.filter((t) => t.id !== tabId);
-
-      if (filtered.length === 0) {
-        pendingCurrentTabRef.current = 1;
-        return [{ id: 1, type: "home", title: t("nav.home") }];
+  const removeTab = useCallback(
+    (tabId: number) => {
+      const tab = tabs.find((t) => t.id === tabId);
+      if (
+        tab &&
+        tab.terminalRef?.current &&
+        typeof tab.terminalRef.current.disconnect === "function"
+      ) {
+        tab.terminalRef.current.disconnect();
       }
 
-      // If the closed tab was active, compute the next tab to activate
-      // using the latest prev so rapid closes don't use stale data
-      const nextIndex =
-        closedIndex < filtered.length ? closedIndex : filtered.length - 1;
-      pendingCurrentTabRef.current = filtered[Math.max(0, nextIndex)]?.id ?? 1;
+      setTabs((prev) => {
+        const closedIndex = prev.findIndex((t) => t.id === tabId);
+        const filtered = prev.filter((t) => t.id !== tabId);
 
-      return filtered;
-    });
+        if (filtered.length === 0) {
+          pendingCurrentTabRef.current = 1;
+          return [{ id: 1, type: "home", title: t("nav.home") }];
+        }
 
-    setAllSplitScreenTab((prev) => {
-      const newSplits = prev.filter((id) => id !== tabId);
-      return newSplits.length <= 1 ? [] : newSplits;
-    });
+        // If the closed tab was active, compute the next tab to activate
+        // using the latest prev so rapid closes don't use stale data
+        const nextIndex =
+          closedIndex < filtered.length ? closedIndex : filtered.length - 1;
+        pendingCurrentTabRef.current =
+          filtered[Math.max(0, nextIndex)]?.id ?? 1;
 
-    setCurrentTab((prevCurrentTab) => {
-      if (prevCurrentTab !== tabId) return prevCurrentTab;
-      return pendingCurrentTabRef.current ?? 1;
-    });
-  };
+        return filtered;
+      });
 
-  const setSplitScreenTab = (tabId: number) => {
+      setAllSplitScreenTab((prev) => {
+        const newSplits = prev.filter((id) => id !== tabId);
+        return newSplits.length <= 1 ? [] : newSplits;
+      });
+
+      setCurrentTab((prevCurrentTab) => {
+        if (prevCurrentTab !== tabId) return prevCurrentTab;
+        return pendingCurrentTabRef.current ?? 1;
+      });
+    },
+    [t, tabs],
+  );
+
+  const setSplitScreenTab = useCallback((tabId: number) => {
     setAllSplitScreenTab((prev) => {
       if (prev.includes(tabId)) {
         return prev.filter((id) => id !== tabId);
@@ -259,15 +268,18 @@ export function TabProvider({ children }: TabProviderProps) {
       }
       return prev;
     });
-  };
+  }, []);
 
-  const getTab = (tabId: number) => {
-    return tabs.find((tab) => tab.id === tabId);
-  };
+  const getTab = useCallback(
+    (tabId: number) => {
+      return tabs.find((tab) => tab.id === tabId);
+    },
+    [tabs],
+  );
 
   const isReorderingRef = useRef(false);
 
-  const reorderTabs = (fromIndex: number, toIndex: number) => {
+  const reorderTabs = useCallback((fromIndex: number, toIndex: number) => {
     if (isReorderingRef.current) return;
 
     isReorderingRef.current = true;
@@ -287,7 +299,7 @@ export function TabProvider({ children }: TabProviderProps) {
 
       return newTabs;
     });
-  };
+  }, []);
 
   const updateHostConfig = useCallback(
     (

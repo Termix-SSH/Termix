@@ -3,6 +3,7 @@ import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { Label } from "@/components/label.tsx";
 import { Alert, AlertTitle, AlertDescription } from "@/components/alert.tsx";
+import { Switch } from "@/components/switch.tsx";
 import { useTranslation } from "react-i18next";
 import {
   getServerConfig,
@@ -28,6 +29,7 @@ export function ElectronServerConfig({
 }: ServerConfigProps) {
   const { t } = useTranslation();
   const [serverUrl, setServerUrl] = useState("");
+  const [allowInvalidCertificate, setAllowInvalidCertificate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [embeddedLoading, setEmbeddedLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +48,7 @@ export function ElectronServerConfig({
       if (config?.serverUrl) {
         setServerUrl(config.serverUrl);
       }
+      setAllowInvalidCertificate(!!config?.allowInvalidCertificate);
     } catch (error) {
       console.error("Server config operation failed:", error);
     }
@@ -141,6 +144,8 @@ export function ElectronServerConfig({
       const config: ServerConfig = {
         serverUrl: normalizedUrl,
         lastUpdated: new Date().toISOString(),
+        allowInvalidCertificate:
+          normalizedUrl.startsWith("https://") && allowInvalidCertificate,
       };
 
       const success = await saveServerConfig(config);
@@ -224,6 +229,25 @@ export function ElectronServerConfig({
               disabled={loading || embeddedLoading}
             />
           </div>
+
+          {serverUrl.trim().startsWith("https://") && (
+            <div className="flex items-start justify-between gap-3 border border-border bg-muted/20 p-3">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="allow-invalid-certificate">
+                  {t("serverConfig.allowInvalidCertificate")}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t("serverConfig.allowInvalidCertificateDesc")}
+                </p>
+              </div>
+              <Switch
+                id="allow-invalid-certificate"
+                checked={allowInvalidCertificate}
+                onCheckedChange={setAllowInvalidCertificate}
+                disabled={loading || embeddedLoading}
+              />
+            </div>
+          )}
 
           {error && (
             <Alert variant="destructive">
