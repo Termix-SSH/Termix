@@ -23,6 +23,8 @@ import {
 import { useTranslation } from "react-i18next";
 import { Kbd, KbdKey, KbdSeparator } from "@/components/kbd.tsx";
 
+const VIEWPORT_PADDING = 16;
+
 interface FileItem {
   name: string;
   type: "file" | "directory" | "link";
@@ -262,7 +264,7 @@ export function FileManagerContextMenu({
       const isOnlyDirectories =
         files.length > 0 && files.every((f) => f.type === "directory");
       menuItems.push({
-        icon: <ArrowRightLeft className="w-4 h-4" />,
+        icon: <ArrowRightLeft className="size-3.5" />,
         label: isMultipleFiles
           ? t("transfer.copyItemsToHost", { count: files.length })
           : isOnlyDirectories && isSingleFile
@@ -271,7 +273,7 @@ export function FileManagerContextMenu({
         action: () => onTransferToHost(files, false),
       });
       menuItems.push({
-        icon: <ArrowRightLeft className="w-4 h-4" />,
+        icon: <ArrowRightLeft className="size-3.5" />,
         label: isMultipleFiles
           ? t("transfer.moveItemsToHost", { count: files.length })
           : isOnlyDirectories && isSingleFile

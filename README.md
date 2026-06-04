@@ -80,7 +80,7 @@ Create and manage server-to-server SSH tunnels with automatic reconnection, heal
 <td width="50%" valign="top">
 
 **Remote File Manager:**
-Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support.
+Manage files directly on remote servers with support for viewing and editing code, images, audio, and video. Upload, download, rename, delete, and move files seamlessly with sudo support. Includes support for moving files from server to server.
 
 </td>
 </tr>
@@ -162,7 +162,6 @@ Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/tr
 <summary><b>More features</b></summary>
 <br />
 
-- **Host-to-host transfer** - Copy or move files between two SSH hosts via the Termix server with progress, cancel, retry, and resume. See [readme/HOST-TO-HOST-TRANSFER.md](readme/HOST-TO-HOST-TRANSFER.md).
 - **Dashboard** - View server information at a glance on your dashboard
 - **API Keys** - Create user-scoped API keys with expiration dates to be used for automation/CI
 - **Data Export/Import** - Export and import SSH hosts, credentials, and file manager data
@@ -252,29 +251,6 @@ networks:
   termix-net:
     driver: bridge
 ```
-
-Cloudflare Tunnel example:
-
-```yaml
-tunnel: <tunnel-id>
-credentials-file: /etc/cloudflared/<tunnel-id>.json
-
-ingress:
-  - hostname: termix.example.com
-    service: http://termix:8080
-    originRequest:
-      httpHostHeader: termix.example.com
-      noTLSVerify: false
-      disableChunkedEncoding: false
-  - service: http_status:404
-```
-
-Point the tunnel at Termix over plain HTTP (`http://termix:8080`) and let
-Cloudflare terminate public HTTPS. If you point Cloudflare Tunnel at Termix's
-self-signed HTTPS origin, Full Strict mode will reject the origin certificate
-unless that certificate matches the public hostname and chains to a trusted CA.
-Keep WebSocket support enabled in Cloudflare because SSH terminals and remote
-desktop sessions use upgrade connections.
 
 <br />
 

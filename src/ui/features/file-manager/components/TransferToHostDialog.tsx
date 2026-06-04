@@ -459,7 +459,7 @@ export function TransferToHostDialog({
       return;
     }
 
-    const lockKey = `${archiveSourcePathsKey}|${methodPreference}`;
+    const lockKey = `${archiveSourcePathsKey}|${methodPreference}|${selectedHost?.id}|${destPath.trim() || browsePath}`;
     if (methodPreviewLockKeyRef.current === lockKey) {
       return;
     }
@@ -510,6 +510,8 @@ export function TransferToHostDialog({
     isHostReady,
     archiveSourcePathsKey,
     methodPreference,
+    destPath,
+    browsePath,
     files,
   ]);
 
@@ -518,6 +520,9 @@ export function TransferToHostDialog({
     setBrowsePath("/");
     setDestPath("");
     setShortcuts([]);
+    setMethodPreview(null);
+    setMethodPreviewError(null);
+    methodPreviewLockKeyRef.current = null;
     pendingBrowsePathRef.current = null;
     lastBrowseHostIdRef.current = null;
   };
@@ -974,6 +979,29 @@ export function TransferToHostDialog({
                             ? t("transfer.methodTarHint")
                             : t("transfer.methodItemSftpHint")}
                       </p>
+                      <div className="space-y-2 pt-1">
+                        <Label>{t("transfer.parallelSegmentsLabel")}</Label>
+                        <Select
+                          value={parallelSegmentCount}
+                          onValueChange={setParallelSegmentCount}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4].map((n) => (
+                              <SelectItem key={n} value={n.toString()}>
+                                {t("transfer.parallelSegmentsOption", {
+                                  count: n,
+                                })}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {t("transfer.parallelSegmentsHint")}
+                        </p>
+                      </div>
                       {methodPreviewLoading && (
                         <p className="text-xs text-muted-foreground">
                           {t("transfer.methodPreviewLoading")}
