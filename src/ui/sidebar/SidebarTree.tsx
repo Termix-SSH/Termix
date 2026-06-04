@@ -26,6 +26,7 @@ import {
   Share2,
   Terminal,
   Trash2,
+  X,
   Zap,
 } from "lucide-react";
 import {
@@ -44,6 +45,7 @@ import {
   createSSHHost,
   deleteSSHHost,
   getHostPassword,
+  renameFolder,
   wakeOnLan,
 } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
@@ -361,7 +363,11 @@ export function HostItem({
           )}
           {!selectionMode && shouldUseClickTray && (
             <button
-              title={isTrayOpen ? t("hosts.collapseActions") : t("hosts.expandActions")}
+              title={
+                isTrayOpen
+                  ? t("hosts.collapseActions")
+                  : t("hosts.expandActions")
+              }
               onClick={(e) => {
                 e.stopPropagation();
                 onTrayOpenChange?.(!isTrayOpen);
@@ -850,6 +856,11 @@ export function FolderItem({
   onMenuOpenChange,
   openTrayHostId,
   onTrayOpenChange,
+  editingFolderName,
+  editingFolderValue,
+  onEditingFolderNameChange,
+  onEditingFolderValueChange,
+  onRenameFolder,
 }: {
   folder: HostFolder;
   depth?: number;
@@ -869,6 +880,11 @@ export function FolderItem({
   onMenuOpenChange: (hostId: string | null) => void;
   openTrayHostId: string | null;
   onTrayOpenChange: (hostId: string | null) => void;
+  editingFolderName: string | null;
+  editingFolderValue: string;
+  onEditingFolderNameChange: (name: string | null) => void;
+  onEditingFolderValueChange: (value: string) => void;
+  onRenameFolder: (oldName: string, newName: string) => Promise<void>;
 }) {
   const { total, online } = folderHostCount(folder);
 
@@ -876,12 +892,13 @@ export function FolderItem({
 
   const isOpen = query ? true : openFolders.has(folder.name);
   const stripeIndex = stripeMap.get(folder) ?? 0;
+  const isEditing = editingFolderName === folder.name;
 
   return (
     <div>
       <button
-        onClick={() => !query && onToggleFolder(folder.name)}
-        className={`flex items-center gap-2 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left cursor-pointer ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""}`}
+        onClick={() => !query && !isEditing && onToggleFolder(folder.name)}
+        className={`group/folder flex items-center gap-2 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left cursor-pointer ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""}`}
       >
         <ChevronRight
           className={`size-3 shrink-0 text-muted-foreground/50 transition-transform ${isOpen ? "rotate-90" : ""}`}
@@ -889,15 +906,61 @@ export function FolderItem({
         <FolderOpen
           className={`size-3.5 shrink-0 ${isOpen ? "text-accent-brand" : "text-muted-foreground/60"}`}
         />
-        <span className="text-[13px] font-semibold text-foreground/80 truncate flex-1">
-          {folder.name}
-        </span>
-        <span className="text-[10px] tabular-nums shrink-0 ml-1">
-          {online > 0 && (
-            <span className="text-accent-brand font-semibold">{online}</span>
-          )}
-          <span className="text-muted-foreground/40">/{total}</span>
-        </span>
+        {isEditing ? (
+          <>
+            <input
+              autoFocus
+              value={editingFolderValue}
+              onChange={(e) => onEditingFolderValueChange(e.target.value)}
+              onBlur={async () => {
+                const newName = editingFolderValue.trim();
+                onEditingFolderNameChange(null);
+                if (newName && newName !== folder.name) {
+                  await onRenameFolder(folder.name, newName);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") onEditingFolderNameChange(null);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] font-semibold bg-background border border-accent-brand/60 px-1 outline-none text-foreground min-w-0 flex-1"
+            />
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditingFolderNameChange(null);
+              }}
+              className="text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <X className="size-3" />
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="text-[13px] font-semibold text-foreground/80 truncate flex-1">
+              {folder.name}
+            </span>
+            <span className="text-[10px] tabular-nums shrink-0 ml-1">
+              {online > 0 && (
+                <span className="text-accent-brand font-semibold">
+                  {online}
+                </span>
+              )}
+              <span className="text-muted-foreground/40">/{total}</span>
+            </span>
+            <span
+              className="opacity-0 group-hover/folder:opacity-100 transition-opacity ml-1 text-muted-foreground/50 hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditingFolderNameChange(folder.name);
+                onEditingFolderValueChange(folder.name);
+              }}
+            >
+              <Pencil className="size-2.5" />
+            </span>
+          </>
+        )}
       </button>
       {isOpen && (
         <div className="border-l border-border/40 ml-[30px]">
@@ -923,6 +986,11 @@ export function FolderItem({
                 onMenuOpenChange={onMenuOpenChange}
                 openTrayHostId={openTrayHostId}
                 onTrayOpenChange={onTrayOpenChange}
+                editingFolderName={editingFolderName}
+                editingFolderValue={editingFolderValue}
+                onEditingFolderNameChange={onEditingFolderNameChange}
+                onEditingFolderValueChange={onEditingFolderValueChange}
+                onRenameFolder={onRenameFolder}
               />
             ) : (
               <HostItem
@@ -981,6 +1049,10 @@ export function SidebarTree({
   );
   const [openMenuHostId, setOpenMenuHostId] = useState<string | null>(null);
   const [openTrayHostId, setOpenTrayHostId] = useState<string | null>(null);
+  const [editingFolderName, setEditingFolderName] = useState<string | null>(
+    null,
+  );
+  const [editingFolderValue, setEditingFolderValue] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
@@ -1093,6 +1165,16 @@ export function SidebarTree({
     }
   }
 
+  async function handleRenameFolder(oldName: string, newName: string) {
+    try {
+      await renameFolder(oldName, newName);
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      toast.success(t("hosts.folderRenamedTo", { name: newName }));
+    } catch {
+      toast.error(t("hosts.failedToRenameFolder"));
+    }
+  }
+
   const allHosts = collectAllHosts(children);
   const allFolders = collectAllFolders(children);
 
@@ -1158,6 +1240,11 @@ export function SidebarTree({
                 onMenuOpenChange={setOpenMenuHostId}
                 openTrayHostId={openTrayHostId}
                 onTrayOpenChange={setOpenTrayHostId}
+                editingFolderName={editingFolderName}
+                editingFolderValue={editingFolderValue}
+                onEditingFolderNameChange={setEditingFolderName}
+                onEditingFolderValueChange={setEditingFolderValue}
+                onRenameFolder={handleRenameFolder}
               />
             ) : (
               <HostItem
