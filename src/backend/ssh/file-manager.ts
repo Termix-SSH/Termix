@@ -17,12 +17,26 @@ import {
 } from "../utils/socks5-helper.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { resolveHostById } from "./host-resolver.js";
+import type { SSHHost } from "../../types/index.js";
+import {
+  startHostTransfer,
+  getTransferStatus,
+  listActiveTransfers,
+  probeHungStreamTransfers,
+  requestTransferCancel,
+  cleanupCancelledTransfer,
+  retryHostTransfer,
+  previewArchiveTransferMethod,
+  type HostTransferDeps,
+} from "./host-transfer.js";
 import { registerFileContentRoutes } from "./file-manager-content-routes.js";
 import { createConnectionLog } from "./file-manager-log.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
 import {
   ChannelOpenSerializer,
   execChannel,
+  getSessionSftp,
   type PendingTOTPSession,
   type SSHSession,
 } from "./file-manager-session.js";
@@ -101,6 +115,353 @@ function scheduleSessionCleanup(sessionId: string) {
 
 function verifySessionOwnership(session: SSHSession, userId: string): boolean {
   return !session.userId || session.userId === userId;
+}
+
+function resolveBrowseHostId(
+  browseSessionId: string,
+  browseSession: SSHSession,
+): number | undefined {
+  if (browseSession.hostId) return browseSession.hostId;
+  const parsed = Number.parseInt(browseSessionId, 10);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+async function buildDedicatedTransferConnectConfig(
+  host: SSHHost,
+  userId: string,
+  client: SSHClient,
+): Promise<Record<string, unknown>> {
+  const { ip, port, username } = host;
+  const config: Record<string, unknown> = {
+    host: ip?.replace(/^\[|\]$/g, "") || ip,
+    port,
+    username,
+    tryKeyboard: true,
+    keepaliveInterval: 30000,
+    keepaliveCountMax: 120,
+    readyTimeout: 60000,
+    tcpKeepAlive: true,
+    tcpKeepAliveInitialDelay: 5000,
+    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+      host.id,
+      ip,
+      port,
+      null,
+      userId,
+      false,
+    ),
+    env: {
+      TERM: "xterm-256color",
+      LANG: "en_US.UTF-8",
+      LC_ALL: "en_US.UTF-8",
+    },
+    algorithms: {
+      kex: [
+        "curve25519-sha256",
+        "curve25519-sha256@libssh.org",
+        "ecdh-sha2-nistp521",
+        "ecdh-sha2-nistp384",
+        "ecdh-sha2-nistp256",
+        "diffie-hellman-group-exchange-sha256",
+        "diffie-hellman-group14-sha256",
+        "diffie-hellman-group14-sha1",
+        "diffie-hellman-group-exchange-sha1",
+        "diffie-hellman-group1-sha1",
+      ],
+      serverHostKey: [
+        "ssh-ed25519",
+        "ecdsa-sha2-nistp521",
+        "ecdsa-sha2-nistp384",
+        "ecdsa-sha2-nistp256",
+        "rsa-sha2-512",
+        "rsa-sha2-256",
+        "ssh-rsa",
+        "ssh-dss",
+      ],
+      cipher: SSH_ALGORITHMS.cipher,
+      hmac: [
+        "hmac-sha2-512-etm@openssh.com",
+        "hmac-sha2-256-etm@openssh.com",
+        "hmac-sha2-512",
+        "hmac-sha2-256",
+        "hmac-sha1",
+        "hmac-md5",
+      ],
+      compress: ["none", "zlib@openssh.com", "zlib"],
+    },
+  };
+
+  const authType = host.authType;
+
+  if (authType === "key" && host.key?.trim()) {
+    const cleanKey = host.key
+      .trim()
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+    config.privateKey = Buffer.from(cleanKey, "utf8");
+    if (host.keyPassword) config.passphrase = host.keyPassword;
+  } else if (authType === "password") {
+    if (!host.password) {
+      throw new Error("Password required for transfer connection");
+    }
+    config.password = host.password;
+  } else if (authType === "opkssh") {
+    const { getOPKSSHToken } = await import("./opkssh-auth.js");
+    const token = await getOPKSSHToken(userId, host.id);
+    if (!token) {
+      throw new Error(
+        "OPKSSH authentication required. Open a Terminal connection to this host first.",
+      );
+    }
+    const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+    await setupOPKSSHCertAuth(
+      config as import("ssh2").ConnectConfig,
+      client,
+      token,
+      username,
+    );
+  } else if (authType !== "none") {
+    throw new Error(`Unsupported auth type for transfer: ${authType}`);
+  }
+
+  return config;
+}
+
+function attachDedicatedKeyboardInteractive(
+  client: SSHClient,
+  host: SSHHost,
+): void {
+  client.on(
+    "keyboard-interactive",
+    (
+      _name: string,
+      _instructions: string,
+      _instructionsLang: string,
+      prompts: Array<{ prompt: string; echo: boolean }>,
+      finish: (responses: string[]) => void,
+    ) => {
+      const responses = prompts.map((p) => {
+        if (/password/i.test(p.prompt) && host.password) {
+          return host.password;
+        }
+        return "";
+      });
+      finish(responses);
+    },
+  );
+}
+
+async function startDedicatedTransferConnect(
+  client: SSHClient,
+  config: Record<string, unknown>,
+  host: SSHHost,
+  userId: string,
+): Promise<void> {
+  const proxyConfig: SOCKS5Config | null =
+    host.useSocks5 &&
+    (host.socks5Host ||
+      (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+      ? {
+          useSocks5: host.useSocks5,
+          socks5Host: host.socks5Host,
+          socks5Port: host.socks5Port,
+          socks5Username: host.socks5Username,
+          socks5Password: host.socks5Password,
+          socks5ProxyChain: host.socks5ProxyChain,
+        }
+      : null;
+
+  const jumpHosts = host.jumpHosts;
+  const hasJumpHosts = jumpHosts && jumpHosts.length > 0;
+
+  if (hasJumpHosts) {
+    const jumpClient = await createJumpHostChain(
+      jumpHosts,
+      userId,
+      proxyConfig,
+    );
+    if (!jumpClient) {
+      throw new Error("Failed to connect through jump hosts for transfer");
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      jumpClient.forwardOut(
+        "127.0.0.1",
+        0,
+        host.ip,
+        host.port,
+        (err, stream) => {
+          if (err) {
+            jumpClient.end();
+            reject(
+              new Error(
+                `Failed to forward through jump host for transfer: ${err.message}`,
+              ),
+            );
+            return;
+          }
+          config.sock = stream;
+          client.connect(config);
+          resolve();
+        },
+      );
+    });
+    return;
+  }
+
+  if (proxyConfig) {
+    const proxySocket = await createSocks5Connection(
+      host.ip,
+      host.port,
+      proxyConfig,
+    );
+    if (proxySocket) {
+      config.sock = proxySocket;
+    }
+  }
+
+  client.connect(config);
+}
+
+async function openDedicatedTransferSession(
+  browseSessionId: string,
+  dedicatedSessionId: string,
+  userId: string,
+  transferId: string,
+  options?: { allowBrowseDisconnected?: boolean },
+): Promise<SSHSession> {
+  const browseSession = sshSessions[browseSessionId];
+  if (!options?.allowBrowseDisconnected && !browseSession?.isConnected) {
+    throw new Error("Browse SSH session not connected");
+  }
+  if (browseSession && !verifySessionOwnership(browseSession, userId)) {
+    throw new Error("Session access denied");
+  }
+
+  const hostId = browseSession
+    ? resolveBrowseHostId(browseSessionId, browseSession)
+    : (() => {
+        const parsed = Number.parseInt(browseSessionId, 10);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      })();
+  if (!hostId) {
+    throw new Error("Cannot open transfer connection: unknown host");
+  }
+
+  const host = await resolveHostById(hostId, userId);
+  if (!host) {
+    throw new Error("Host not found for transfer connection");
+  }
+
+  if (sshSessions[dedicatedSessionId]?.isConnected) {
+    closeDedicatedTransferSession(dedicatedSessionId);
+  }
+
+  const client = new SSHClient();
+  attachDedicatedKeyboardInteractive(client, host);
+  const config = await buildDedicatedTransferConnectConfig(
+    host,
+    userId,
+    client,
+  );
+
+  fileLogger.info("Opening dedicated transfer SSH session", {
+    operation: "transfer_ssh_connect",
+    transferId,
+    browseSessionId,
+    dedicatedSessionId,
+    hostId,
+    ip: host.ip,
+    port: host.port,
+    username: host.username,
+  });
+
+  await new Promise<void>((resolve, reject) => {
+    const connectTimeout = setTimeout(() => {
+      client.end();
+      reject(new Error("Transfer SSH connection timed out"));
+    }, 60000);
+
+    const fail = (err: Error) => {
+      clearTimeout(connectTimeout);
+      reject(err);
+    };
+
+    client.once("ready", () => {
+      clearTimeout(connectTimeout);
+      resolve();
+    });
+    client.once("error", fail);
+
+    void startDedicatedTransferConnect(client, config, host, userId).catch(
+      fail,
+    );
+  });
+
+  const session: SSHSession = {
+    client,
+    isConnected: true,
+    lastActive: Date.now(),
+    activeOperations: 0,
+    channelOpener: new ChannelOpenSerializer(),
+    userId,
+    ip: host.ip,
+    port: host.port,
+    hostId: host.id,
+    username: host.username,
+    transferDedicated: true,
+    transferId,
+    browseSessionId,
+  };
+
+  client.on("close", () => {
+    fileLogger.info("Dedicated transfer SSH connection closed", {
+      operation: "transfer_ssh_disconnected",
+      transferId,
+      dedicatedSessionId,
+      browseSessionId,
+      hostId,
+    });
+    const existing = sshSessions[dedicatedSessionId];
+    if (existing) {
+      existing.isConnected = false;
+      closeDedicatedTransferSession(dedicatedSessionId);
+    }
+  });
+
+  sshSessions[dedicatedSessionId] = session;
+  return session;
+}
+
+function closeDedicatedTransferSession(sessionId: string): void {
+  const session = sshSessions[sessionId];
+  if (!session?.transferDedicated) return;
+
+  fileLogger.info("Closing dedicated transfer SSH session", {
+    operation: "transfer_ssh_close",
+    sessionId,
+    transferId: session.transferId,
+    browseSessionId: session.browseSessionId,
+  });
+
+  try {
+    if (session.sftp) {
+      session.sftp.end();
+      session.sftp = undefined;
+    }
+  } catch {
+    // expected
+  }
+  session.sftpPending = undefined;
+
+  try {
+    session.client.end();
+  } catch {
+    // expected
+  }
+
+  clearTimeout(session.timeout);
+  delete sshSessions[sessionId];
 }
 
 app.use("/ssh/file_manager/ssh", (req, res, next) => {
@@ -711,6 +1072,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       activeOperations: 0,
       channelOpener: new ChannelOpenSerializer(),
       userId,
+      ip,
+      port,
+      hostId,
+      username,
       sudoPassword: resolvedCredentials.sudoPassword,
     };
     scheduleSessionCleanup(sessionId);
@@ -1357,6 +1722,10 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
         activeOperations: 0,
         channelOpener: new ChannelOpenSerializer(),
         userId,
+        ip: session.ip,
+        port: session.port,
+        hostId: session.hostId,
+        username: session.username,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1560,6 +1929,10 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
         activeOperations: 0,
         channelOpener: new ChannelOpenSerializer(),
         userId,
+        ip: session.ip,
+        port: session.port,
+        hostId: session.hostId,
+        username: session.username,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2269,6 +2642,222 @@ app.post("/ssh/file_manager/ssh/compressFiles", async (req, res) => {
       }
     });
   });
+});
+
+const hostTransferDeps: HostTransferDeps = {
+  sshSessions,
+  getSessionSftp,
+  execChannel,
+  verifySessionOwnership,
+  openDedicatedTransferSession,
+  closeDedicatedTransferSession,
+};
+
+app.post("/ssh/file_manager/ssh/transferMethodPreview", async (req, res) => {
+  const {
+    sourceSessionId,
+    destSessionId,
+    sourcePaths,
+    destPath,
+    methodPreference,
+  } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (
+    !sourceSessionId ||
+    !destSessionId ||
+    !destPath ||
+    !sourcePaths ||
+    !Array.isArray(sourcePaths) ||
+    sourcePaths.length === 0
+  ) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    const preview = await previewArchiveTransferMethod(hostTransferDeps, {
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+      destPath,
+      methodPreference:
+        methodPreference === "tar" || methodPreference === "item_sftp"
+          ? methodPreference
+          : "auto",
+      userId,
+    });
+    res.json(preview);
+  } catch (err) {
+    fileLogger.error("Failed to preview transfer method", err, {
+      operation: "host_transfer",
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+    });
+    res.status(500).json({
+      error: err instanceof Error ? err.message : "Failed to preview method",
+    });
+  }
+});
+
+app.post("/ssh/file_manager/ssh/transferToHost", async (req, res) => {
+  const {
+    sourceSessionId,
+    sourcePaths,
+    destSessionId,
+    destPath,
+    move,
+    methodPreference,
+    parallelSegmentCount: parallelSegmentCountRaw,
+  } = req.body;
+  const userId = (req as AuthenticatedRequest).userId;
+
+  if (
+    !sourceSessionId ||
+    !destSessionId ||
+    !destPath ||
+    !sourcePaths ||
+    !Array.isArray(sourcePaths) ||
+    sourcePaths.length === 0
+  ) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  const sourceSession = sshSessions[sourceSessionId];
+  const destSession = sshSessions[destSessionId];
+
+  if (!sourceSession?.isConnected || !destSession?.isConnected) {
+    return res.status(400).json({ error: "SSH session not connected" });
+  }
+
+  if (
+    !verifySessionOwnership(sourceSession, userId) ||
+    !verifySessionOwnership(destSession, userId)
+  ) {
+    return res.status(403).json({ error: "Session access denied" });
+  }
+
+  sourceSession.lastActive = Date.now();
+  destSession.lastActive = Date.now();
+  scheduleSessionCleanup(sourceSessionId);
+  scheduleSessionCleanup(destSessionId);
+
+  try {
+    const rawParallel = Number(parallelSegmentCountRaw);
+    const parallelSegmentCount = Number.isFinite(rawParallel)
+      ? Math.max(1, Math.min(8, Math.floor(rawParallel)))
+      : 2;
+
+    const { transferId } = startHostTransfer(hostTransferDeps, {
+      sourceSessionId,
+      sourcePaths,
+      destSessionId,
+      destPath,
+      move: !!move,
+      userId,
+      methodPreference:
+        methodPreference === "tar" || methodPreference === "item_sftp"
+          ? methodPreference
+          : "auto",
+      parallelSegmentCount,
+    });
+
+    res.json({ transferId });
+  } catch (err) {
+    fileLogger.error("Failed to start host transfer", err, {
+      operation: "host_transfer",
+      sourceSessionId,
+      destSessionId,
+      sourcePaths,
+    });
+    res.status(500).json({ error: "Failed to start transfer" });
+  }
+});
+
+app.get("/ssh/file_manager/ssh/activeTransfers", async (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  await probeHungStreamTransfers(hostTransferDeps);
+  res.json({ transfers: listActiveTransfers(userId) });
+});
+
+app.get(
+  "/ssh/file_manager/ssh/transferStatus/:transferId",
+  async (req, res) => {
+    const userId = (req as unknown as AuthenticatedRequest).userId;
+    const transferId = req.params.transferId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    await probeHungStreamTransfers(hostTransferDeps);
+    const status = getTransferStatus(transferId, userId);
+    if (!status) {
+      return res.status(404).json({ error: "Transfer not found" });
+    }
+
+    res.json(status);
+  },
+);
+
+app.post("/ssh/file_manager/ssh/transferCancel/:transferId", (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const transferId = req.params.transferId;
+
+  const cancelled = requestTransferCancel(transferId, userId);
+  if (!cancelled) {
+    return res.status(404).json({ error: "Transfer not found or not running" });
+  }
+
+  res.json({ ok: true });
+});
+
+app.post(
+  "/ssh/file_manager/ssh/transferCleanup/:transferId",
+  async (req, res) => {
+    const userId = (req as unknown as AuthenticatedRequest).userId;
+    const transferId = req.params.transferId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    try {
+      const result = await cleanupCancelledTransfer(
+        hostTransferDeps,
+        transferId,
+        userId,
+      );
+      res.json(result);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to clean up transfer";
+      const status = message === "Transfer not found" ? 404 : 400;
+      res.status(status).json({ error: message });
+    }
+  },
+);
+
+app.post("/ssh/file_manager/ssh/transferRetry/:transferId", (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const transferId = req.params.transferId;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const retried = retryHostTransfer(hostTransferDeps, transferId, userId);
+  if (!retried) {
+    return res
+      .status(404)
+      .json({ error: "Transfer not found or not retryable" });
+  }
+
+  res.json({ ok: true, transferId });
 });
 
 process.on("SIGINT", () => {

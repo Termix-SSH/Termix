@@ -32,6 +32,13 @@ export interface SSHSession {
   channelOpener: ChannelOpenSerializer;
   poolKey?: string;
   userId?: string;
+  hostId?: number;
+  ip?: string;
+  port?: number;
+  username?: string;
+  transferDedicated?: boolean;
+  transferId?: string;
+  browseSessionId?: string;
 }
 
 export interface PendingTOTPSession {

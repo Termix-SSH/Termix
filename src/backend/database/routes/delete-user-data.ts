@@ -22,6 +22,7 @@ import {
   sshCredentialUsage,
   sshCredentials,
   sshFolders,
+  transferRecent,
   userOpenTabs,
   userPreferences,
   userRoles,
@@ -59,6 +60,8 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db
       .delete(fileManagerShortcuts)
       .where(eq(fileManagerShortcuts.userId, userId));
+
+    await db.delete(transferRecent).where(eq(transferRecent.userId, userId));
 
     await db.delete(recentActivity).where(eq(recentActivity.userId, userId));
     await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));

@@ -342,9 +342,7 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
           endpointIP: isDirect
             ? sshHost.ip
             : (endpointSsh?.ip ?? tunnel.endpointHost ?? ""),
-          endpointSSHPort: isDirect
-            ? sshHost.port
-            : (endpointSsh?.port ?? 22),
+          endpointSSHPort: isDirect ? sshHost.port : (endpointSsh?.port ?? 22),
           endpointUsername: isDirect
             ? sshHost.username
             : (endpointSsh?.username ?? ""),

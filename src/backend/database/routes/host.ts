@@ -8,13 +8,14 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
+  transferRecent,
   commandHistory,
   recentActivity,
   hostAccess,
   userRoles,
   sessionRecordings,
 } from "../db/schema.js";
-import { eq, and, or, isNull, gte, sql, inArray } from "drizzle-orm";
+import { eq, and, or, isNull, gte, sql, inArray, desc } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
 import multer from "multer";
@@ -1787,6 +1788,15 @@ router.delete(
         .where(eq(fileManagerShortcuts.hostId, numericHostId));
 
       await db
+        .delete(transferRecent)
+        .where(
+          or(
+            eq(transferRecent.sourceHostId, numericHostId),
+            eq(transferRecent.destHostId, numericHostId),
+          ),
+        );
+
+      await db
         .delete(commandHistory)
         .where(eq(commandHistory.hostId, numericHostId));
 
@@ -1849,6 +1859,119 @@ router.delete(
 
 registerHostFileManagerBookmarkRoutes(router, authenticateJWT);
 
+router.get(
+  "/transfer/recent",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const sourceHostIdQuery = Array.isArray(req.query.sourceHostId)
+      ? req.query.sourceHostId[0]
+      : req.query.sourceHostId;
+    const sourceHostId = sourceHostIdQuery
+      ? parseInt(sourceHostIdQuery as string)
+      : null;
+
+    if (!isNonEmptyString(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    if (!sourceHostId) {
+      return res.status(400).json({ error: "Source host ID is required" });
+    }
+
+    try {
+      const recent = await db
+        .select()
+        .from(transferRecent)
+        .where(
+          and(
+            eq(transferRecent.userId, userId),
+            eq(transferRecent.sourceHostId, sourceHostId),
+          ),
+        )
+        .orderBy(desc(transferRecent.lastUsed))
+        .limit(10);
+
+      res.json(recent);
+    } catch (err) {
+      sshLogger.error("Failed to fetch transfer recent destinations", err);
+      res.status(500).json({ error: "Failed to fetch recent destinations" });
+    }
+  },
+);
+
+router.post(
+  "/transfer/recent",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const { sourceHostId, destHostId, destPath, destPathLabel } = req.body;
+
+    if (
+      !isNonEmptyString(userId) ||
+      !sourceHostId ||
+      !destHostId ||
+      !destPath
+    ) {
+      return res.status(400).json({ error: "Invalid data" });
+    }
+
+    try {
+      const existing = await db
+        .select()
+        .from(transferRecent)
+        .where(
+          and(
+            eq(transferRecent.userId, userId),
+            eq(transferRecent.sourceHostId, sourceHostId),
+            eq(transferRecent.destHostId, destHostId),
+            eq(transferRecent.destPath, destPath),
+          ),
+        );
+
+      if (existing.length > 0) {
+        await db
+          .update(transferRecent)
+          .set({ lastUsed: new Date().toISOString() })
+          .where(eq(transferRecent.id, existing[0].id));
+      } else {
+        await db.insert(transferRecent).values({
+          userId,
+          sourceHostId,
+          destHostId,
+          destPath,
+          destPathLabel: destPathLabel || destPath,
+          lastUsed: new Date().toISOString(),
+        });
+      }
+
+      const allRecent = await db
+        .select()
+        .from(transferRecent)
+        .where(
+          and(
+            eq(transferRecent.userId, userId),
+            eq(transferRecent.sourceHostId, sourceHostId),
+          ),
+        )
+        .orderBy(desc(transferRecent.lastUsed));
+
+      if (allRecent.length > 10) {
+        const toDelete = allRecent.slice(10);
+        for (const entry of toDelete) {
+          await db
+            .delete(transferRecent)
+            .where(eq(transferRecent.id, entry.id));
+        }
+      }
+
+      res.json({ message: "Recent destination saved" });
+    } catch (err) {
+      sshLogger.error("Failed to save transfer recent destination", err);
+      res.status(500).json({ error: "Failed to save recent destination" });
+    }
+  },
+);
 registerHostCommandHistoryRoutes(router, authenticateJWT);
 
 async function resolveHostCredentials(
@@ -2015,6 +2138,14 @@ router.delete(
         await db
           .delete(fileManagerShortcuts)
           .where(eq(fileManagerShortcuts.hostId, hostId));
+        await db
+          .delete(transferRecent)
+          .where(
+            or(
+              eq(transferRecent.sourceHostId, hostId),
+              eq(transferRecent.destHostId, hostId),
+            ),
+          );
         await db
           .delete(commandHistory)
           .where(eq(commandHistory.hostId, hostId));

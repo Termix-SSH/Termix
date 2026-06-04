@@ -143,7 +143,24 @@ router.post("/create", async (req, res) => {
         .prepare(
           "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
-        .run(id, username, password_hash, first ? 1 : 0, 0, "", "", "", "", "", "", "", "openid email profile", null, 0, null);
+        .run(
+          id,
+          username,
+          password_hash,
+          first ? 1 : 0,
+          0,
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "openid email profile",
+          null,
+          0,
+          null,
+        );
       return first;
     })();
 
@@ -971,7 +988,22 @@ router.get("/oidc/callback", async (req, res) => {
           .prepare(
             "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
           )
-          .run(id, name, "", first ? 1 : 0, 1, identifier, String(config.client_id), String(config.client_secret), String(config.issuer_url), String(config.authorization_url), String(config.token_url), String(config.identifier_path), String(config.name_path), String(config.scopes));
+          .run(
+            id,
+            name,
+            "",
+            first ? 1 : 0,
+            1,
+            identifier,
+            String(config.client_id),
+            String(config.client_secret),
+            String(config.issuer_url),
+            String(config.authorization_url),
+            String(config.token_url),
+            String(config.identifier_path),
+            String(config.name_path),
+            String(config.scopes),
+          );
         return first;
       })();
 

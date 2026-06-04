@@ -1,6 +1,6 @@
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { db, DatabaseSaveTrigger } from "../db/index.js";
@@ -16,6 +16,7 @@ import {
   sshCredentialUsage,
   sshCredentials,
   sshFolders,
+  transferRecent,
 } from "../db/schema.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
@@ -331,6 +332,15 @@ export function registerHostFolderRoutes(
           await db
             .delete(fileManagerShortcuts)
             .where(inArray(fileManagerShortcuts.hostId, hostIds));
+
+          await db
+            .delete(transferRecent)
+            .where(
+              or(
+                inArray(transferRecent.sourceHostId, hostIds),
+                inArray(transferRecent.destHostId, hostIds),
+              ),
+            );
 
           await db
             .delete(commandHistory)

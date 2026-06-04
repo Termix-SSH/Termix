@@ -1,6 +1,10 @@
 import express, { type Response } from "express";
 import { createServer } from "http";
-import { createServer as createTcpServer, Socket as TcpSocket, type Server as TcpServer } from "net";
+import {
+  createServer as createTcpServer,
+  Socket as TcpSocket,
+  type Server as TcpServer,
+} from "net";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ClientChannel } from "ssh2";
@@ -622,7 +626,9 @@ async function establishDirectTunnel(
     }
 
     forwardOut(sourceClient, targetHost, targetPort, tunnelName)
-      .then((outbound) => pipeTunnelStreams(socket, Promise.resolve(outbound), tunnelName))
+      .then((outbound) =>
+        pipeTunnelStreams(socket, Promise.resolve(outbound), tunnelName),
+      )
       .catch(() => socket.destroy());
   });
 

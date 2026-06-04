@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
+import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
 import type { SSHHost, FileItem } from "@/types/index";
 import {
@@ -61,7 +62,12 @@ import {
   compressSSHFiles,
   setSudoPassword,
   getServerMetricsById,
+  transferToHost,
+  addTransferRecent,
+  type TransferMethodPreference,
 } from "@/main-axios.ts";
+import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
+import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
 import type { SidebarItem } from "./FileManagerSidebar.tsx";
 import type {
   CreateIntent,
@@ -74,6 +80,10 @@ import { formatFileSize } from "./file-manager-utils.ts";
 function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
+  const formatTransferMetrics = useMemo(
+    () => createFormatTransferMetrics(t),
+    [t],
+  );
   const { confirmWithToast } = useConfirmation();
   const {
     addLog,
@@ -174,6 +184,9 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   const [compressDialogFiles, setCompressDialogFiles] = useState<FileItem[]>(
     [],
   );
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferFiles, setTransferFiles] = useState<FileItem[]>([]);
+  const [transferMove, setTransferMove] = useState(false);
 
   const [sudoDialogOpen, setSudoDialogOpen] = useState(false);
   const [pendingSudoOperation, setPendingSudoOperation] =
@@ -702,6 +715,19 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     currentLoadingPathRef.current = "";
     loadDirectory(currentPath);
   }, [currentPath, lastRefreshTime, loadDirectory]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ hostId: number; path: string }>)
+        .detail;
+      if (!detail || !currentHost?.id) return;
+      if (detail.hostId === currentHost.id) {
+        handleRefreshDirectory();
+      }
+    };
+    window.addEventListener("file-manager:refresh", handler);
+    return () => window.removeEventListener("file-manager:refresh", handler);
+  }, [currentHost?.id, handleRefreshDirectory]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -1285,6 +1311,19 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
     });
   }
 
+  function handleSidebarItemContextMenu(
+    event: React.MouseEvent,
+    item: SidebarItem,
+  ) {
+    const file: FileItem = {
+      name: item.name,
+      path: item.path,
+      type:
+        item.type === "recent" || item.type === "pinned" ? "file" : "directory",
+    };
+    handleContextMenu(event, file);
+  }
+
   function handleCopyFiles(files: FileItem[]) {
     setClipboard({ files, operation: "copy" });
     toast.success(
@@ -1547,6 +1586,76 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
+    }
+  }
+
+  function handleOpenTransferDialog(files: FileItem[], move: boolean) {
+    setTransferFiles(files);
+    setTransferMove(move);
+    setTransferDialogOpen(true);
+  }
+
+  async function handleTransferConfirm(
+    destSessionId: string,
+    destHostId: number,
+    destPath: string,
+    destPathLabel: string,
+    methodPreference: TransferMethodPreference,
+    parallelSegmentCount: number,
+  ) {
+    if (!sshSessionId || !currentHost?.id || transferFiles.length === 0) return;
+
+    const sourcePaths = transferFiles.map((f) => f.path);
+
+    try {
+      await ensureSSHConnection();
+
+      const { transferId } = await transferToHost(
+        sshSessionId,
+        sourcePaths,
+        destSessionId,
+        destPath,
+        transferMove,
+        methodPreference,
+        parallelSegmentCount,
+      );
+
+      const monitorHandle = beginTransferProgressMonitoring(transferId, t, {
+        formatTransferMetrics,
+      });
+      if (!monitorHandle) return;
+
+      const finalStatus = await monitorHandle.waitForCompletion;
+
+      if (
+        finalStatus.status !== "success" &&
+        finalStatus.status !== "partial"
+      ) {
+        return;
+      }
+
+      void addTransferRecent(
+        currentHost.id,
+        destHostId,
+        destPathLabel,
+        destPathLabel,
+      );
+
+      window.dispatchEvent(
+        new CustomEvent("file-manager:refresh", {
+          detail: { hostId: destHostId, path: destPathLabel },
+        }),
+      );
+
+      if (transferMove) {
+        handleRefreshDirectory();
+        clearSelection();
+      }
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("transfer.transferError")}: ${err.message || t("fileManager.unknownError")}`,
+      );
     }
   }
 
@@ -2541,6 +2650,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onPathChange={navigateTo}
                 onLoadDirectory={loadDirectory}
                 onFileOpen={handleSidebarFileOpen}
+                onItemContextMenu={handleSidebarItemContextMenu}
                 sshSessionId={sshSessionId}
                 refreshTrigger={sidebarRefreshTrigger}
                 diskInfo={diskInfo ?? undefined}
@@ -2640,11 +2750,24 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onExtractArchive={handleExtractArchive}
                 onCompress={handleOpenCompressDialog}
                 onCopyPath={handleCopyPath}
+                onTransferToHost={handleOpenTransferDialog}
               />
             </div>
           </div>
         </div>
       </div>
+
+      {currentHost && (
+        <TransferToHostDialog
+          open={transferDialogOpen}
+          onOpenChange={setTransferDialogOpen}
+          files={transferFiles}
+          move={transferMove}
+          sourceHost={currentHost}
+          sourceSessionId={sshSessionId}
+          onConfirm={handleTransferConfirm}
+        />
+      )}
 
       <FileManagerDialogs
         compressDialogFiles={compressDialogFiles}

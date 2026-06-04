@@ -1089,9 +1089,7 @@ export function HostEditor({
                                 setField("serverTunnels", updated);
                               }}
                             >
-                              <option value="">
-                                {t("hosts.sameHost")}
-                              </option>
+                              <option value="">{t("hosts.sameHost")}</option>
                               {hosts
                                 .filter((h) => h.enableSsh)
                                 .map((h) => (
