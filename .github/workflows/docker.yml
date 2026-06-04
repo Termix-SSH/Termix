@@ -14,6 +14,16 @@ on:
         options:
           - Development
           - Production
+  workflow_call:
+    inputs:
+      version:
+        description: "Version to build (e.g., 1.8.0)"
+        required: true
+        type: string
+      build_type:
+        description: "Build type (Development or Production)"
+        required: true
+        type: string
 
 jobs:
   build:
@@ -35,8 +45,8 @@ jobs:
       - name: Determine tags
         id: tags
         run: |
-          VERSION=${{ github.event.inputs.version }}
-          BUILD_TYPE=${{ github.event.inputs.build_type }}
+          VERSION=${{ inputs.version }}
+          BUILD_TYPE=${{ inputs.build_type }}
 
           TAGS=()
           ALL_TAGS=()
@@ -64,7 +74,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Login to Docker Hub (prod only)
-        if: ${{ github.event.inputs.build_type == 'Production' }}
+        if: ${{ inputs.build_type == 'Production' }}
         uses: docker/login-action@v4
         with:
           username: bugattiguy527
