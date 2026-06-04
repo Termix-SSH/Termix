@@ -700,3 +700,95 @@ export async function compressSSHFiles(
 }
 
 // ============================================================================
+
+export type HostConnectionState =
+  | "disconnected"
+  | "connecting"
+  | "ready"
+  | "auth_required"
+  | "error";
+
+export interface EnsureSSHSessionResult {
+  state: HostConnectionState;
+  sessionId?: string;
+  error?: string;
+}
+
+export async function ensureSSHSessionForHost(
+  host: SSHHost,
+): Promise<EnsureSSHSessionResult> {
+  const sessionId = host.id.toString();
+  try {
+    const status = await getSSHStatus(sessionId);
+    if (status?.connected) {
+      return { state: "ready", sessionId };
+    }
+  } catch {
+    // not connected — fall through to connect
+  }
+
+  try {
+    const result = await connectSSH(sessionId, {
+      hostId: host.id,
+      ip: host.ip,
+      port: host.port,
+      username: host.username,
+      password: host.password,
+      sshKey: host.key,
+      keyPassword: host.keyPassword,
+      authType: host.authType,
+      credentialId: host.credentialId,
+      userId: host.userId,
+      forceKeyboardInteractive: host.forceKeyboardInteractive,
+      jumpHosts: host.jumpHosts,
+      useSocks5: host.useSocks5,
+      socks5Host: host.socks5Host,
+      socks5Port: host.socks5Port,
+      socks5Username: host.socks5Username,
+      socks5Password: host.socks5Password,
+      socks5ProxyChain: host.socks5ProxyChain,
+    });
+
+    if (
+      result?.requires_totp ||
+      result?.requires_warpgate ||
+      result?.status === "auth_required"
+    ) {
+      return { state: "auth_required", sessionId };
+    }
+
+    return { state: "ready", sessionId };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Connection failed";
+    return { state: "error", error: message };
+  }
+}
+
+export interface BrowseSSHDirectoryResult {
+  status: "ok" | "not_found" | "error";
+  path: string;
+  files: Array<{ name: string; type: "file" | "directory" | "link" }>;
+}
+
+export async function browseSSHDirectory(
+  sessionId: string,
+  path: string,
+): Promise<BrowseSSHDirectoryResult> {
+  try {
+    const result = await listSSHFiles(sessionId, path);
+    return {
+      status: "ok",
+      path: result.path,
+      files: result.files as Array<{
+        name: string;
+        type: "file" | "directory" | "link";
+      }>,
+    };
+  } catch (err) {
+    const status =
+      (err as { response?: { status?: number } })?.response?.status === 404
+        ? "not_found"
+        : "error";
+    return { status, path, files: [] };
+  }
+}

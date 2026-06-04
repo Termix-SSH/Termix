@@ -39,6 +39,7 @@ import {
   SiDocker,
 } from "react-icons/si";
 import { Button } from "@/components/button.tsx";
+import { Kbd, KbdKey } from "@/components/kbd.tsx";
 import type { CodeEditorHandle } from "./CodeEditor.tsx";
 
 const CodeEditor = lazy(() =>

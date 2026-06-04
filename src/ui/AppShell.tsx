@@ -483,6 +483,13 @@ export function AppShell({
               if (!host && !hostlessTypes.includes(saved.tabType as TabType))
                 continue;
 
+              if (host) {
+                if (saved.tabType === "terminal" && !host.enableSsh) continue;
+                if (saved.tabType === "rdp" && !host.enableRdp) continue;
+                if (saved.tabType === "vnc" && !host.enableVnc) continue;
+                if (saved.tabType === "telnet" && !host.enableTelnet) continue;
+              }
+
               // Singleton tabs use their type as the stable ID; host-bound tabs get a unique ID
               const tabId = host
                 ? `${host.name}-${saved.tabType}-${Date.now()}-${saved.tabOrder}`

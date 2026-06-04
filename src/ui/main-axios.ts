@@ -631,16 +631,6 @@ export function getConfiguredServerUrl(): string | null {
   return configuredServerUrl;
 }
 
-interface AxiosRequestConfigExtended extends AxiosRequestConfig {
-  startTime?: number;
-  requestId?: string;
-  __silentRetry?: boolean;
-}
-
-interface AxiosErrorExtended extends AxiosError {
-  config?: AxiosRequestConfigExtended;
-}
-
 export async function testServerConnection(
   serverUrl: string,
 ): Promise<{ success: boolean; error?: string }> {
@@ -1091,6 +1081,109 @@ export async function getTransferMethodPreview(
   }
 }
 
+export interface TransferHopMetrics {
+  id: string;
+  mbPerSec?: number;
+}
+
+export interface TransferTimings {
+  prepareDestMs?: number;
+  compressMs?: number;
+  transferMs?: number;
+  extractMs?: number;
+  sourceDeleteMs?: number;
+  totalMs?: number;
+  transferBytes?: number;
+  endToEndMbPerSec?: number;
+  hops?: TransferHopMetrics[];
+}
+
+export function getTransferProgressPercent(
+  status: TransferProgressResponse,
+): number | undefined {
+  if (
+    status.bytesTransferred !== undefined &&
+    status.totalBytes !== undefined &&
+    status.totalBytes > 0
+  ) {
+    return Math.min(
+      100,
+      Math.round((status.bytesTransferred / status.totalBytes) * 100),
+    );
+  }
+  if (
+    status.itemsCompleted !== undefined &&
+    status.totalItems !== undefined &&
+    status.totalItems > 0
+  ) {
+    return Math.min(
+      100,
+      Math.round((status.itemsCompleted / status.totalItems) * 100),
+    );
+  }
+  return undefined;
+}
+
+export function formatTransferMbPerSec(
+  mbPerSec?: number,
+  _bytes?: number,
+  _ms?: number,
+): string {
+  if (mbPerSec === undefined || mbPerSec <= 0) return "";
+  if (mbPerSec < 1) return `${(mbPerSec * 1024).toFixed(0)} KB/s`;
+  return `${mbPerSec.toFixed(1)} MB/s`;
+}
+
+export function formatDurationMs(ms?: number): string {
+  if (ms === undefined) return "";
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.round((ms % 60000) / 1000);
+  return `${minutes}m ${seconds}s`;
+}
+
+interface TransferProgressTracker {
+  update(status: TransferProgressResponse): { rate: number | undefined; stalled: boolean };
+}
+
+export function createTransferProgressTracker(): TransferProgressTracker {
+  let lastBytes: number | undefined;
+  let lastTime: number | undefined;
+  let lastRate: number | undefined;
+  let lastActivityTime: number | undefined;
+  const STALL_THRESHOLD_MS = 5000;
+
+  return {
+    update(status) {
+      const now = Date.now();
+      const bytes = status.bytesTransferred;
+
+      if (bytes !== undefined && lastBytes !== undefined && lastTime !== undefined) {
+        const deltaBytes = bytes - lastBytes;
+        const deltaMs = now - lastTime;
+        if (deltaMs > 0 && deltaBytes >= 0) {
+          lastRate = (deltaBytes / deltaMs / 1024 / 1024) * 1000;
+          if (deltaBytes > 0) lastActivityTime = now;
+        }
+      } else if (bytes !== undefined) {
+        lastActivityTime = now;
+      }
+
+      lastBytes = bytes;
+      lastTime = now;
+
+      const stalled =
+        lastActivityTime !== undefined &&
+        now - lastActivityTime > STALL_THRESHOLD_MS &&
+        status.status === "running" &&
+        status.phase === "transferring";
+
+      return { rate: lastRate, stalled };
+    },
+  };
+}
+
 export interface TransferProgressResponse {
   transferId: string;
   status: "running" | "success" | "partial" | "error" | "cancelled";
@@ -1261,100 +1354,6 @@ export async function pollTransferUntilComplete(
 // FILE MANAGER DATA
 // ============================================================================
 
-export async function getRecentFiles(
-  hostId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/host/file_manager/recent", {
-      params: { hostId },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "get recent files");
-    throw error;
-  }
-}
-
-export async function addRecentFile(
-  hostId: number,
-  path: string,
-  name?: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/host/file_manager/recent", {
-      hostId,
-      path,
-      name,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "add recent file");
-    throw error;
-  }
-}
-
-export async function removeRecentFile(
-  hostId: number,
-  path: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.delete("/host/file_manager/recent", {
-      data: { hostId, path },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "remove recent file");
-    throw error;
-  }
-}
-
-export async function getPinnedFiles(
-  hostId: number,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.get("/host/file_manager/pinned", {
-      params: { hostId },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "get pinned files");
-    throw error;
-  }
-}
-
-export async function addPinnedFile(
-  hostId: number,
-  path: string,
-  name?: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.post("/host/file_manager/pinned", {
-      hostId,
-      path,
-      name,
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "add pinned file");
-    throw error;
-  }
-}
-
-export async function removePinnedFile(
-  hostId: number,
-  path: string,
-): Promise<Record<string, unknown>> {
-  try {
-    const response = await authApi.delete("/host/file_manager/pinned", {
-      data: { hostId, path },
-    });
-    return response.data;
-  } catch (error) {
-    handleApiError(error, "remove pinned file");
-    throw error;
-  }
-}
-
 export interface TransferDestination {
   id: number;
   userId: string;
@@ -1467,6 +1466,11 @@ export {
   changeSSHPermissions,
   extractSSHArchive,
   compressSSHFiles,
+  ensureSSHSessionForHost,
+  browseSSHDirectory,
+  type HostConnectionState,
+  type EnsureSSHSessionResult,
+  type BrowseSSHDirectoryResult,
 } from "@/api/ssh-file-operations-api";
 
 export {

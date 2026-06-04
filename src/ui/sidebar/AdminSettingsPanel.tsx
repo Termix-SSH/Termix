@@ -51,6 +51,12 @@ import {
   AdminGeneralSettingsSection,
   AdminOidcSettingsSection,
 } from "./AdminSettingsSections";
+import { AdminApiKeysSection } from "./AdminApiKeysSection";
+import {
+  AdminCreateUserDialog,
+  AdminEditUserDialog,
+  AdminLinkAccountDialog,
+} from "./AdminUserDialogs";
 
 type ApiErrorLike = {
   response?: {

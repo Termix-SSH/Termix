@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
-import { getSSHHosts, bulkImportSSHHosts } from "@/main-axios";
+import { getSSHHosts, bulkImportSSHHosts, exportAllSSHHosts } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 
@@ -240,18 +240,23 @@ export function HostsPanel({
     }
   }
 
-  function handleExportHosts() {
-    const data = JSON.stringify({ hosts: rawHosts }, null, 2);
-    const blob = new Blob([data], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "termix-hosts.json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success(t("hosts.hostsExported"));
+  async function handleExportHosts() {
+    try {
+      const result = await exportAllSSHHosts();
+      const data = JSON.stringify(result, null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "termix-hosts.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(t("hosts.hostsExported"));
+    } catch {
+      toast.error(t("hosts.exportFailed"));
+    }
   }
 
   function handleDownloadSample() {

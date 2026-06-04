@@ -322,13 +322,9 @@ export function HostItem({
           onToggleSelect?.();
           return;
         }
-        // On touch devices open the action tray instead of immediately launching a tab
+        // Touch devices open the tray instead of launching
         if (isTouchOnly) {
           e.stopPropagation();
-          onTrayOpenChange?.(!isTrayOpen);
-          return;
-        }
-        if (trayOnClick) {
           onTrayOpenChange?.(!isTrayOpen);
           return;
         }
@@ -363,64 +359,24 @@ export function HostItem({
           {host.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
           )}
-          {!selectionMode && (
-            <div className="ml-auto flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-              {host.enableSsh && host.enableTerminal && (
-                <button
-                  title="Terminal"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("terminal");
-                  }}
-                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Terminal className="size-3" />
-                </button>
-              )}
-              {host.enableSsh && host.enableFileManager && (
-                <button
-                  title="Files"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("files");
-                  }}
-                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <FolderOpen className="size-3" />
-                </button>
-              )}
-              {host.enableRdp && (
-                <button
-                  title="RDP"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("rdp");
-                  }}
-                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Monitor className="size-3" />
-                </button>
-              )}
-              {host.enableVnc && (
-                <button
-                  title="VNC"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("vnc");
-                  }}
-                  className="flex items-center justify-center size-5 rounded text-muted-foreground/40 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <MousePointerClick className="size-3" />
-                </button>
-              )}
-            </div>
+          {!selectionMode && shouldUseClickTray && (
+            <button
+              title={isTrayOpen ? t("hosts.collapseActions") : t("hosts.expandActions")}
+              onClick={(e) => {
+                e.stopPropagation();
+                onTrayOpenChange?.(!isTrayOpen);
+              }}
+              className="ml-auto flex items-center justify-center size-5 rounded text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted-foreground/10 transition-colors shrink-0"
+            >
+              <ChevronRight
+                className={`size-3 transition-transform duration-150 ${isTrayOpen ? "rotate-90" : ""}`}
+              />
+            </button>
           )}
         </div>
 
-        {/* Address — only visible on hover (or click when trayOnClick) or while menu is open */}
-        <span
-          className={`text-[11px] text-muted-foreground/55 truncate leading-none pl-3 transition-opacity duration-100 ${!shouldUseClickTray ? "group-hover:opacity-100 group-hover:h-auto" : ""} ${isMenuOpen || (shouldUseClickTray && isTrayOpen) ? "opacity-100 h-auto" : "opacity-0 h-0 overflow-hidden"}`}
-        >
+        {/* Address — always visible */}
+        <span className="text-[11px] text-muted-foreground/45 truncate leading-none pl-3">
           {host.username}@{host.ip}
         </span>
 
@@ -443,7 +399,86 @@ export function HostItem({
           </div>
         )}
 
-        {/* Action tray — slides open on CSS hover, on click (when trayOnClick), or while menu is open */}
+        {/* Connection buttons — always visible in click-tray mode, inside hover tray otherwise */}
+        {shouldUseClickTray && !selectionMode && (
+          <div className="flex items-center flex-wrap gap-1 pl-2 pb-1">
+            {getSshActions(host).map(({ type, icon: Icon, label }) => (
+              <button
+                key={type}
+                title={label}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab(type);
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <Icon className="size-3.5" />
+              </button>
+            ))}
+            {host.enableSsh &&
+              (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+              getSshActions(host).length > 0 && (
+                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+              )}
+            {host.enableRdp && (
+              <button
+                title="RDP"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab("rdp");
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <Monitor className="size-3.5" />
+              </button>
+            )}
+            {host.enableVnc && (
+              <button
+                title="VNC"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab("vnc");
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <MousePointerClick className="size-3.5" />
+              </button>
+            )}
+            {host.enableTelnet && (
+              <button
+                title="Telnet"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenTab("telnet");
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <MessagesSquare className="size-3.5" />
+              </button>
+            )}
+            {host.macAddress && (
+              <button
+                title={t("hosts.wakeOnLanAction")}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    await wakeOnLan(host.id);
+                    toast.success(
+                      t("hosts.wakeOnLanSuccess", { name: host.name }),
+                    );
+                  } catch {
+                    toast.error(t("hosts.wakeOnLanError"));
+                  }
+                }}
+                className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+              >
+                <Zap className="size-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Action tray — slides open on hover (default) or via chevron in click-tray mode */}
         <div
           className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!shouldUseClickTray ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (shouldUseClickTray && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
         >
@@ -483,84 +518,86 @@ export function HostItem({
             )}
 
           <div className="flex flex-col gap-0.5 pt-1.5 pl-2 pb-1">
-            {/* Connection buttons — wrap naturally to a second line */}
-            <div className="flex items-center flex-wrap gap-1">
-              {getSshActions(host).map(({ type, icon: Icon, label }) => (
-                <button
-                  key={type}
-                  title={label}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab(type);
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Icon className="size-3.5" />
-                </button>
-              ))}
-              {host.enableSsh &&
-                (host.enableRdp || host.enableVnc || host.enableTelnet) &&
-                getSshActions(host).length > 0 && (
-                  <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+            {/* Connection buttons — only shown here in hover mode */}
+            {!shouldUseClickTray && (
+              <div className="flex items-center flex-wrap gap-1">
+                {getSshActions(host).map(({ type, icon: Icon, label }) => (
+                  <button
+                    key={type}
+                    title={label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab(type);
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Icon className="size-3.5" />
+                  </button>
+                ))}
+                {host.enableSsh &&
+                  (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+                  getSshActions(host).length > 0 && (
+                    <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                  )}
+                {host.enableRdp && (
+                  <button
+                    title="RDP"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("rdp");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Monitor className="size-3.5" />
+                  </button>
                 )}
-              {host.enableRdp && (
-                <button
-                  title="RDP"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("rdp");
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Monitor className="size-3.5" />
-                </button>
-              )}
-              {host.enableVnc && (
-                <button
-                  title="VNC"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("vnc");
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <MousePointerClick className="size-3.5" />
-                </button>
-              )}
-              {host.enableTelnet && (
-                <button
-                  title="Telnet"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenTab("telnet");
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <MessagesSquare className="size-3.5" />
-                </button>
-              )}
-              {host.macAddress && (
-                <button
-                  title={t("hosts.wakeOnLanAction")}
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    try {
-                      await wakeOnLan(host.id);
-                      toast.success(
-                        t("hosts.wakeOnLanSuccess", { name: host.name }),
-                      );
-                    } catch {
-                      toast.error(t("hosts.wakeOnLanError"));
-                    }
-                  }}
-                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                >
-                  <Zap className="size-3.5" />
-                </button>
-              )}
-            </div>
+                {host.enableVnc && (
+                  <button
+                    title="VNC"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("vnc");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MousePointerClick className="size-3.5" />
+                  </button>
+                )}
+                {host.enableTelnet && (
+                  <button
+                    title="Telnet"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("telnet");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MessagesSquare className="size-3.5" />
+                  </button>
+                )}
+                {host.macAddress && (
+                  <button
+                    title={t("hosts.wakeOnLanAction")}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await wakeOnLan(host.id);
+                        toast.success(
+                          t("hosts.wakeOnLanSuccess", { name: host.name }),
+                        );
+                      } catch {
+                        toast.error(t("hosts.wakeOnLanError"));
+                      }
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Zap className="size-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
 
-            {/* Separator + management buttons row — always fixed position */}
+            {/* Management buttons row */}
             <div className="flex items-center gap-1 pt-0.5 border-t border-border/40 mt-0.5">
               {showPasswordCopy && (
                 <button

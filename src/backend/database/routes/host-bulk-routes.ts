@@ -383,7 +383,7 @@ export function registerHostBulkRoutes(
             overrideCredentialUsername: hostData.overrideCredentialUsername
               ? 1
               : 0,
-            enableSsh: hostData.enableSsh ?? false,
+            enableSsh: hostData.enableSsh ?? effectiveConnectionType === "ssh",
             enableRdp: hostData.enableRdp ?? false,
             enableVnc: hostData.enableVnc ?? false,
             enableTelnet: hostData.enableTelnet ?? false,

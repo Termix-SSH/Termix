@@ -25,7 +25,6 @@ import {
   Network,
   User,
   KeyRound,
-  LayoutDashboard,
   Monitor,
   MousePointerClick,
   Clock,
@@ -192,23 +191,6 @@ export function CommandPalette({
               className="px-2"
             >
               <CommandItem
-                onSelect={() => handleAction(() => onOpenTab("host-manager"))}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <LayoutDashboard className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.hostManager")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.hostManagerDesc")}
-                  </span>
-                </div>
-              </CommandItem>
-
-              <CommandItem
                 onSelect={() =>
                   handleAction(() =>
                     onOpenTab(
@@ -355,7 +337,18 @@ export function CommandPalette({
                       <CommandItem
                         key={i}
                         onSelect={() =>
-                          handleAction(() => onOpenTab("terminal", host.name))
+                          handleAction(() => {
+                            const type = host.enableSsh
+                              ? "terminal"
+                              : host.enableRdp
+                                ? "rdp"
+                                : host.enableVnc
+                                  ? "vnc"
+                                  : host.enableTelnet
+                                    ? "telnet"
+                                    : "terminal";
+                            onOpenTab(type, host.name);
+                          })
                         }
                         className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
                       >

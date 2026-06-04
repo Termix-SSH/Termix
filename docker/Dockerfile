@@ -49,7 +49,7 @@ COPY scripts/patch-guacamole-lite.cjs ./scripts/
 
 RUN npm ci --omit=dev --ignore-scripts && \
     node scripts/patch-guacamole-lite.cjs && \
-    npm rebuild better-sqlite3 bcryptjs && \
+    npm rebuild better-sqlite3 bcryptjs ssh2 && \
     npm cache clean --force
 
 # Stage 5: Final optimized image
