@@ -16,16 +16,10 @@ import {
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { Label } from "@/components/label.tsx";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/select.tsx";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
+  ArrowRightLeft,
   Bookmark,
   ChevronDown,
   ChevronRight,
@@ -138,6 +132,21 @@ function splitPathForCompletion(
   const dirPath = beforeCursor.slice(0, lastSlash) || "/";
   const partial = beforeCursor.slice(lastSlash + 1);
   return { dirPath, partial, replaceStart: lastSlash + 1 };
+}
+
+function connectionStatusDot(state: HostConnectionState): string {
+  switch (state) {
+    case "ready":
+      return "bg-green-500";
+    case "connecting":
+      return "bg-yellow-500 animate-pulse";
+    case "auth_required":
+      return "bg-yellow-500";
+    case "error":
+      return "bg-red-500";
+    default:
+      return "bg-muted-foreground/40";
+  }
 }
 
 function connectionLabel(
@@ -677,394 +686,392 @@ export function TransferToHostDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex w-[min(calc(100vw-2rem),32rem)] max-w-[32rem] flex-col gap-0 overflow-hidden p-0 sm:max-w-[32rem]">
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-6 pt-6">
-          <DialogHeader>
-            <DialogTitle>
-              {move
-                ? files.length > 1
-                  ? t("transfer.moveItemsToHost", { count: files.length })
-                  : t("transfer.moveToHost")
-                : files.length > 1
-                  ? t("transfer.copyItemsToHost", { count: files.length })
-                  : t("transfer.copyToHost")}
-            </DialogTitle>
-            <DialogDescription className="truncate" title={sourceLabel}>
-              {sourceLabel}
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg rounded-none border-border bg-card">
+        <DialogHeader>
+          <DialogTitle className="text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+            <ArrowRightLeft className="size-4 text-accent-brand" />
+            {move
+              ? files.length > 1
+                ? t("transfer.moveItemsToHost", { count: files.length })
+                : t("transfer.moveToHost")
+              : files.length > 1
+                ? t("transfer.copyItemsToHost", { count: files.length })
+                : t("transfer.copyToHost")}
+          </DialogTitle>
+          <DialogDescription
+            className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground font-mono truncate"
+            title={sourceLabel}
+          >
+            {sourceLabel}
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="min-h-0 max-h-[min(60vh,28rem)] overflow-y-auto overflow-x-hidden py-2">
-            <div className="space-y-4">
-              {loadingHosts ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("fileManager.connecting")}
-                </p>
-              ) : availableHosts.length === 0 ? (
-                <div className="rounded-md border border-[var(--color-dark-border)] bg-[var(--color-dark-bg-panel)] p-4 text-sm">
-                  <p>{t("transfer.noHostsConnected")}</p>
-                  <p className="mt-1 text-muted-foreground">
-                    {t("transfer.noHostsConnectedHint")}
-                  </p>
+        <div className="flex flex-col gap-4 py-2 max-h-[min(60vh,28rem)] overflow-y-auto overflow-x-hidden">
+          {loadingHosts ? (
+            <p className="text-xs text-muted-foreground">
+              {t("fileManager.connecting")}
+            </p>
+          ) : availableHosts.length === 0 ? (
+            <div className="border border-border bg-muted/10 p-3">
+              <p className="text-xs font-semibold">
+                {t("transfer.noHostsConnected")}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {t("transfer.noHostsConnectedHint")}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Destination host */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("transfer.selectDestinationHost")}
+                </Label>
+                <div className="relative">
+                  <select
+                    value={selectedHostId}
+                    onChange={(e) => handleHostChange(e.target.value)}
+                    className="w-full appearance-none px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring pr-7"
+                  >
+                    <option value="" disabled>
+                      {t("transfer.selectDestinationHost")}
+                    </option>
+                    {availableHosts.map((host) => (
+                      <option key={host.id} value={host.id.toString()}>
+                        {host.name || host.ip}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
                 </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label>{t("transfer.selectDestinationHost")}</Label>
-                    <Select
-                      value={selectedHostId}
-                      onValueChange={handleHostChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={t("transfer.selectDestinationHost")}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableHosts.map((host) => {
-                          const state =
-                            connectionStates[host.id] ?? "disconnected";
-                          return (
-                            <SelectItem
-                              key={host.id}
-                              value={host.id.toString()}
-                            >
-                              {host.name || host.ip} —{" "}
-                              {connectionLabel(state, t)}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    {selectedHost && (
-                      <p
-                        className={`text-xs ${
-                          isHostReady
-                            ? "text-green-500"
-                            : selectedConnectionState === "error"
-                              ? "text-red-400"
-                              : "text-muted-foreground"
-                        }`}
-                      >
-                        {connectionLabel(selectedConnectionState, t)}
-                        {connectionErrors[selectedHost.id]
-                          ? `: ${connectionErrors[selectedHost.id]}`
-                          : ""}
-                      </p>
-                    )}
-                  </div>
+                {selectedHost && (
+                  <p
+                    className={`text-[10px] font-bold uppercase tracking-widest ${
+                      isHostReady
+                        ? "text-green-500"
+                        : selectedConnectionState === "error"
+                          ? "text-red-400"
+                          : "text-muted-foreground"
+                    }`}
+                  >
+                    {connectionLabel(selectedConnectionState, t)}
+                    {connectionErrors[selectedHost.id]
+                      ? `: ${connectionErrors[selectedHost.id]}`
+                      : ""}
+                  </p>
+                )}
+              </div>
 
-                  {selectedHost && shortcuts.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-1">
-                        <Bookmark className="w-3.5 h-3.5" />
-                        {t("fileManager.folderShortcuts")}
-                      </Label>
-                      <div className="flex min-w-0 flex-col gap-1">
-                        {shortcuts.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="flex min-w-0 items-stretch gap-1"
+              {/* Shortcuts */}
+              {selectedHost && shortcuts.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                    <Bookmark className="size-3" />
+                    {t("fileManager.folderShortcuts")}
+                  </Label>
+                  <div className="border border-border">
+                    {shortcuts.map((entry, i) => (
+                      <div
+                        key={entry.id}
+                        className={`flex min-w-0 items-stretch ${i < shortcuts.length - 1 ? "border-b border-border" : ""}`}
+                      >
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 text-left px-3 py-2 hover:bg-accent-brand/10 hover:text-accent-brand transition-colors"
+                          onClick={() =>
+                            handleSelectDestination(selectedHost.id, entry.path)
+                          }
+                        >
+                          <span className="block truncate text-xs font-semibold">
+                            {entry.name}
+                          </span>
+                          <span
+                            className="block truncate text-[10px] text-muted-foreground font-mono"
+                            title={entry.path}
                           >
-                            <button
-                              type="button"
-                              className="min-w-0 flex-1 text-left text-sm rounded px-2 py-1.5 hover:bg-[var(--color-dark-hover)]"
-                              onClick={() =>
-                                handleSelectDestination(
-                                  selectedHost.id,
-                                  entry.path,
-                                )
-                              }
-                            >
-                              <span className="block truncate font-medium">
-                                {entry.name}
-                              </span>
-                              <span
-                                className="block truncate text-muted-foreground"
-                                title={entry.path}
-                              >
-                                {formatTruncatedDestination(
-                                  selectedHost.name || selectedHost.ip,
-                                  entry.path,
-                                )}
-                              </span>
-                            </button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-auto shrink-0 px-2 text-muted-foreground hover:text-red-400"
-                              title={t("fileManager.removeShortcut")}
-                              aria-label={t("fileManager.removeShortcut")}
-                              onClick={() =>
-                                void handleRemoveShortcut(entry.path)
-                              }
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        ))}
+                            {formatTruncatedDestination(
+                              selectedHost.name || selectedHost.ip,
+                              entry.path,
+                            )}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className="shrink-0 px-3 text-muted-foreground hover:text-red-400 border-l border-border transition-colors"
+                          title={t("fileManager.removeShortcut")}
+                          aria-label={t("fileManager.removeShortcut")}
+                          onClick={() => void handleRemoveShortcut(entry.path)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent destinations */}
+              {recents.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setRecentsCollapsed((prev) => !prev)}
+                    aria-expanded={!recentsCollapsed}
+                  >
+                    {recentsCollapsed ? (
+                      <ChevronRight className="size-3 shrink-0" />
+                    ) : (
+                      <ChevronDown className="size-3 shrink-0" />
+                    )}
+                    <Clock className="size-3 shrink-0" />
+                    {t("transfer.recentDestinations")}
+                    <span className="font-normal normal-case tracking-normal">
+                      ({recents.length})
+                    </span>
+                  </button>
+                  {!recentsCollapsed && (
+                    <div className="border border-border">
+                      {recents.map((recent, i) => (
+                        <button
+                          key={recent.id}
+                          type="button"
+                          className={`w-full min-w-0 text-left px-3 py-2 hover:bg-accent-brand/10 hover:text-accent-brand transition-colors ${i < recents.length - 1 ? "border-b border-border" : ""}`}
+                          title={`${hostName(recent.destHostId)}:${recent.destPathLabel || recent.destPath}`}
+                          onClick={() =>
+                            handleSelectDestination(
+                              recent.destHostId,
+                              recent.destPath,
+                            )
+                          }
+                        >
+                          <span className="block truncate text-xs font-semibold">
+                            {formatTruncatedDestination(
+                              hostName(recent.destHostId),
+                              recent.destPathLabel || recent.destPath,
+                            )}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   )}
+                </div>
+              )}
 
-                  {recents.length > 0 && (
-                    <div className="space-y-1">
+              {/* Folder browser */}
+              {selectedHost && isHostReady && (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("transfer.browseFolders")}
+                  </Label>
+                  <div className="border border-border">
+                    <div className="flex min-w-0 items-center gap-2 border-b border-border px-2 py-1.5 bg-muted/30">
                       <button
                         type="button"
-                        className="flex w-full items-center gap-1.5 text-sm font-medium"
-                        onClick={() => setRecentsCollapsed((prev) => !prev)}
-                        aria-expanded={!recentsCollapsed}
-                        title={
-                          recentsCollapsed
-                            ? t("transfer.expandRecentDestinations")
-                            : t("transfer.collapseRecentDestinations")
-                        }
+                        className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                        disabled={browsePath === "/"}
+                        onClick={handleBrowseUp}
                       >
-                        {recentsCollapsed ? (
-                          <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5 shrink-0" />
-                        )}
-                        <Clock className="w-3.5 h-3.5 shrink-0" />
-                        <span>{t("transfer.recentDestinations")}</span>
-                        <span className="text-xs text-muted-foreground font-normal">
-                          ({recents.length})
-                        </span>
+                        <ChevronUp className="size-3.5" />
+                        {t("transfer.goUp")}
                       </button>
-                      {!recentsCollapsed && (
-                        <div className="flex min-w-0 flex-col gap-1 pl-5">
-                          {recents.map((recent) => (
-                            <button
-                              key={recent.id}
-                              type="button"
-                              className="min-w-0 max-w-full truncate text-left text-sm rounded px-2 py-1.5 hover:bg-[var(--color-dark-hover)]"
-                              title={`${hostName(recent.destHostId)}:${recent.destPathLabel || recent.destPath}`}
-                              onClick={() =>
-                                handleSelectDestination(
-                                  recent.destHostId,
-                                  recent.destPath,
-                                )
-                              }
-                            >
-                              {formatTruncatedDestination(
-                                hostName(recent.destHostId),
-                                recent.destPathLabel || recent.destPath,
-                              )}
-                            </button>
-                          ))}
-                        </div>
+                      <span
+                        className="min-w-0 flex-1 truncate text-[10px] font-mono text-muted-foreground"
+                        title={browsePath}
+                      >
+                        {formatBrowsePathLabel(browsePath)}
+                      </span>
+                    </div>
+                    <div className="max-h-36 overflow-y-auto overflow-x-hidden">
+                      {browseLoading ? (
+                        <p className="text-[10px] text-muted-foreground px-3 py-2">
+                          {t("fileManager.connecting")}
+                        </p>
+                      ) : browseStatus === "not_found" ? (
+                        <p className="text-[10px] text-muted-foreground px-3 py-2">
+                          {t("transfer.browsePathWillBeCreated")}
+                        </p>
+                      ) : browseStatus === "error" ? (
+                        <p className="text-[10px] text-amber-500 px-3 py-2">
+                          {t("transfer.browsePathError")}
+                        </p>
+                      ) : browseEntries.length === 0 ? (
+                        <p className="text-[10px] text-muted-foreground px-3 py-2">
+                          {t("fileManager.emptyFolder")}
+                        </p>
+                      ) : (
+                        browseEntries.map((entry, i) => (
+                          <button
+                            key={entry.path}
+                            type="button"
+                            className={`flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-accent-brand/10 hover:text-accent-brand transition-colors ${i < browseEntries.length - 1 ? "border-b border-border" : ""}`}
+                            onClick={() => handleBrowseInto(entry.path)}
+                          >
+                            <Folder className="size-3.5 shrink-0 text-yellow-500" />
+                            <span className="truncate">{entry.name}</span>
+                          </button>
+                        ))
                       )}
                     </div>
-                  )}
+                  </div>
+                </div>
+              )}
 
-                  {selectedHost && isHostReady && (
-                    <div className="space-y-2">
-                      <Label>{t("transfer.browseFolders")}</Label>
-                      <div className="min-w-0 overflow-hidden rounded-md border border-[var(--color-dark-border)] bg-[var(--color-dark-bg-panel)]">
-                        <div className="flex min-w-0 items-center gap-2 border-b border-[var(--color-dark-border)] px-2 py-1.5">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 shrink-0 px-2"
-                            disabled={browsePath === "/"}
-                            onClick={handleBrowseUp}
-                          >
-                            <ChevronUp className="w-4 h-4" />
-                            {t("transfer.goUp")}
-                          </Button>
-                          <span
-                            className="min-w-0 flex-1 truncate text-xs text-muted-foreground"
-                            title={browsePath}
-                          >
-                            {formatBrowsePathLabel(browsePath)}
-                          </span>
-                        </div>
-                        <div className="max-h-40 overflow-y-auto overflow-x-hidden p-1">
-                          {browseLoading ? (
-                            <p className="text-xs text-muted-foreground p-2">
-                              {t("fileManager.connecting")}
-                            </p>
-                          ) : browseStatus === "not_found" ? (
-                            <p className="text-xs text-muted-foreground p-2">
-                              {t("transfer.browsePathWillBeCreated")}
-                            </p>
-                          ) : browseStatus === "error" ? (
-                            <p className="text-xs text-amber-500 p-2">
-                              {t("transfer.browsePathError")}
-                            </p>
-                          ) : browseEntries.length === 0 ? (
-                            <p className="text-xs text-muted-foreground p-2">
-                              {t("fileManager.emptyFolder")}
-                            </p>
-                          ) : (
-                            browseEntries.map((entry) => (
-                              <button
-                                key={entry.path}
-                                type="button"
-                                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-[var(--color-dark-hover)]"
-                                onClick={() => handleBrowseInto(entry.path)}
-                              >
-                                <Folder className="w-4 h-4 shrink-0 text-yellow-500" />
-                                <span className="truncate">{entry.name}</span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </div>
+              {/* Destination path input */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("transfer.destinationPath")}
+                </Label>
+                <Input
+                  ref={destPathInputRef}
+                  value={destPath}
+                  onChange={(e) => setDestPath(e.target.value)}
+                  onKeyDown={handleDestPathKeyDown}
+                  placeholder="/home/user"
+                  disabled={!selectedHost}
+                  className="rounded-none bg-muted/50 border-border font-mono text-xs"
+                />
+                {isArchiveTransfer && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {t("transfer.destMustBeDirectory")}
+                  </p>
+                )}
+              </div>
+
+              {/* Bookmark button */}
+              {selectedHost && destPath.trim() && (
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 self-start text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-accent-brand transition-colors border border-border px-2.5 py-1.5 hover:border-accent-brand/40 hover:bg-accent-brand/10"
+                  onClick={() => void handleAddShortcut()}
+                >
+                  <Bookmark className="size-3" />
+                  {t("fileManager.addToShortcuts")}
+                </button>
+              )}
+
+              {/* Transfer method + parallel lanes (archive transfers only) */}
+              {isArchiveTransfer && (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("transfer.methodLabel")}
+                    </Label>
+                    <div className="relative">
+                      <select
+                        value={methodPreference}
+                        onChange={(e) =>
+                          setMethodPreference(
+                            e.target.value as TransferMethodPreference,
+                          )
+                        }
+                        className="w-full appearance-none px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring pr-7"
+                      >
+                        <option value="auto">{t("transfer.methodAuto")}</option>
+                        <option value="tar">{t("transfer.methodTar")}</option>
+                        <option value="item_sftp">
+                          {t("transfer.methodItemSftp")}
+                        </option>
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
                     </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>{t("transfer.destinationPath")}</Label>
-                    <Input
-                      ref={destPathInputRef}
-                      value={destPath}
-                      onChange={(e) => setDestPath(e.target.value)}
-                      onKeyDown={handleDestPathKeyDown}
-                      placeholder="/home/user"
-                      disabled={!selectedHost}
-                      className="font-mono text-sm"
-                    />
-                    {isArchiveTransfer && (
-                      <p className="text-xs text-muted-foreground">
-                        {t("transfer.destMustBeDirectory")}
-                      </p>
-                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      {methodPreference === "auto"
+                        ? t("transfer.methodAutoHint")
+                        : methodPreference === "tar"
+                          ? t("transfer.methodTarHint")
+                          : t("transfer.methodItemSftpHint")}
+                    </p>
                   </div>
 
-                  {selectedHost && destPath.trim() && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleAddShortcut()}
-                      >
-                        <Bookmark className="w-3.5 h-3.5 mr-1" />
-                        {t("fileManager.addToShortcuts")}
-                      </Button>
-                    </div>
-                  )}
-
-                  {isArchiveTransfer && (
-                    <div className="space-y-2">
-                      <Label>{t("transfer.methodLabel")}</Label>
-                      <Select
-                        value={methodPreference}
-                        onValueChange={(value) =>
-                          setMethodPreference(value as TransferMethodPreference)
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("transfer.parallelSegmentsLabel")}
+                    </Label>
+                    <div className="relative">
+                      <select
+                        value={parallelSegmentCount}
+                        onChange={(e) =>
+                          setParallelSegmentCount(e.target.value)
                         }
+                        className="w-full appearance-none px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring pr-7"
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">
-                            {t("transfer.methodAuto")}
-                          </SelectItem>
-                          <SelectItem value="tar">
-                            {t("transfer.methodTar")}
-                          </SelectItem>
-                          <SelectItem value="item_sftp">
-                            {t("transfer.methodItemSftp")}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        {methodPreference === "auto"
-                          ? t("transfer.methodAutoHint")
-                          : methodPreference === "tar"
-                            ? t("transfer.methodTarHint")
-                            : t("transfer.methodItemSftpHint")}
+                        {[1, 2, 3, 4].map((n) => (
+                          <option key={n} value={n.toString()}>
+                            {t("transfer.parallelSegmentsOption", { count: n })}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("transfer.parallelSegmentsHint")}
+                    </p>
+                  </div>
+
+                  {methodPreviewLoading && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("transfer.methodPreviewLoading")}
+                    </p>
+                  )}
+                  {methodPreviewError && (
+                    <p className="text-[10px] text-amber-500">
+                      {t("transfer.methodPreviewError")}
+                    </p>
+                  )}
+                  {methodPreview && !methodPreviewLoading && (
+                    <div className="border border-border bg-muted/10 px-3 py-2 flex flex-col gap-1">
+                      <p className="text-[10px] font-bold uppercase tracking-widest">
+                        {methodPreview.resolvedMethod === "tar"
+                          ? t("transfer.methodPreviewWillUseTar")
+                          : t("transfer.methodPreviewWillUseItemSftp")}
                       </p>
-                      <div className="space-y-2 pt-1">
-                        <Label>{t("transfer.parallelSegmentsLabel")}</Label>
-                        <Select
-                          value={parallelSegmentCount}
-                          onValueChange={setParallelSegmentCount}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4].map((n) => (
-                              <SelectItem key={n} value={n.toString()}>
-                                {t("transfer.parallelSegmentsOption", {
-                                  count: n,
-                                })}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          {t("transfer.parallelSegmentsHint")}
+                      <p className="text-[10px] text-muted-foreground">
+                        {t(`transfer.methodReason.${methodPreview.reasonKey}`, {
+                          fileCount: methodPreview.summary.fileCount,
+                          totalSize: formatByteSize(
+                            methodPreview.summary.totalBytes,
+                          ),
+                          largestSize: formatByteSize(
+                            methodPreview.summary.largestFileBytes,
+                          ),
+                        })}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("transfer.methodPreviewScanSummary", {
+                          fileCount: methodPreview.summary.fileCount,
+                          totalSize: formatByteSize(
+                            methodPreview.summary.totalBytes,
+                          ),
+                        })}
+                      </p>
+                      {methodPreview.resolvedMethod === "item_sftp" && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("transfer.methodItemSftpLimitation")}
                         </p>
-                      </div>
-                      {methodPreviewLoading && (
-                        <p className="text-xs text-muted-foreground">
-                          {t("transfer.methodPreviewLoading")}
-                        </p>
-                      )}
-                      {methodPreviewError && (
-                        <p className="text-xs text-amber-500">
-                          {t("transfer.methodPreviewError")}
-                        </p>
-                      )}
-                      {methodPreview && !methodPreviewLoading && (
-                        <div className="rounded-md border border-[var(--color-dark-border)] bg-[var(--color-dark-bg-panel)] px-3 py-2 text-xs space-y-1">
-                          <p className="font-medium">
-                            {methodPreview.resolvedMethod === "tar"
-                              ? t("transfer.methodPreviewWillUseTar")
-                              : t("transfer.methodPreviewWillUseItemSftp")}
-                          </p>
-                          <p className="text-muted-foreground">
-                            {t(
-                              `transfer.methodReason.${methodPreview.reasonKey}`,
-                              {
-                                fileCount: methodPreview.summary.fileCount,
-                                totalSize: formatByteSize(
-                                  methodPreview.summary.totalBytes,
-                                ),
-                                largestSize: formatByteSize(
-                                  methodPreview.summary.largestFileBytes,
-                                ),
-                              },
-                            )}
-                          </p>
-                          <p className="text-muted-foreground">
-                            {t("transfer.methodPreviewScanSummary", {
-                              fileCount: methodPreview.summary.fileCount,
-                              totalSize: formatByteSize(
-                                methodPreview.summary.totalBytes,
-                              ),
-                            })}
-                          </p>
-                          {methodPreview.resolvedMethod === "item_sftp" && (
-                            <p className="text-muted-foreground">
-                              {t("transfer.methodItemSftpLimitation")}
-                            </p>
-                          )}
-                        </div>
                       )}
                     </div>
                   )}
-
-                  <p className="text-xs text-muted-foreground">
-                    {t("transfer.jumpHostLimitation")}
-                  </p>
                 </>
               )}
-            </div>
-          </div>
+
+              <p className="text-[10px] text-muted-foreground">
+                {t("transfer.jumpHostLimitation")}
+              </p>
+            </>
+          )}
         </div>
 
-        <DialogFooter className="shrink-0 gap-2 border-t border-[var(--color-dark-border)] px-6 py-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            className="rounded-none text-[10px] font-bold uppercase tracking-widest"
+          >
             {t("transfer.cancel")}
           </Button>
           <Button
+            variant="outline"
             onClick={handleConfirm}
             disabled={
               !selectedHost ||
@@ -1072,7 +1079,9 @@ export function TransferToHostDialog({
               !isHostReady ||
               availableHosts.length === 0
             }
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest"
           >
+            <ArrowRightLeft className="size-3.5 mr-1" />
             {move ? t("transfer.confirmMove") : t("transfer.confirmCopy")}
           </Button>
         </DialogFooter>
