@@ -1331,22 +1331,6 @@ function promisifySftpFstat(
   });
 }
 
-function promisifySftpWrite(
-  sftp: SFTPWrapper,
-  handle: Buffer,
-  buffer: Buffer,
-  offset: number,
-  length: number,
-  position: number,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.write(handle, buffer, offset, length, position, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
-
 interface PipelinedXferOptions {
   fileSize?: number;
   initialOffset?: number;
@@ -2895,7 +2879,6 @@ async function runTransfer(
     );
 
     const sourceSftp = await deps.getSessionSftp(sourceSession);
-    const destSftp = await deps.getSessionSftp(destSession);
 
     for (const path of sourcePaths) {
       try {

@@ -134,21 +134,6 @@ function splitPathForCompletion(
   return { dirPath, partial, replaceStart: lastSlash + 1 };
 }
 
-function connectionStatusDot(state: HostConnectionState): string {
-  switch (state) {
-    case "ready":
-      return "bg-green-500";
-    case "connecting":
-      return "bg-yellow-500 animate-pulse";
-    case "auth_required":
-      return "bg-yellow-500";
-    case "error":
-      return "bg-red-500";
-    default:
-      return "bg-muted-foreground/40";
-  }
-}
-
 function connectionLabel(
   state: HostConnectionState,
   t: (key: string) => string,

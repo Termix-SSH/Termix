@@ -1144,7 +1144,10 @@ export function formatDurationMs(ms?: number): string {
 }
 
 interface TransferProgressTracker {
-  update(status: TransferProgressResponse): { rate: number | undefined; stalled: boolean };
+  update(status: TransferProgressResponse): {
+    rate: number | undefined;
+    stalled: boolean;
+  };
 }
 
 export function createTransferProgressTracker(): TransferProgressTracker {
@@ -1159,7 +1162,11 @@ export function createTransferProgressTracker(): TransferProgressTracker {
       const now = Date.now();
       const bytes = status.bytesTransferred;
 
-      if (bytes !== undefined && lastBytes !== undefined && lastTime !== undefined) {
+      if (
+        bytes !== undefined &&
+        lastBytes !== undefined &&
+        lastTime !== undefined
+      ) {
         const deltaBytes = bytes - lastBytes;
         const deltaMs = now - lastTime;
         if (deltaMs > 0 && deltaBytes >= 0) {
