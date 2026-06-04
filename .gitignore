@@ -10,6 +10,7 @@ node_modules
 src/mcp-server/node_modules
 dist
 dist-ssr
+coverage
 *.local
 
 .vscode/
