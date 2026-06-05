@@ -3,8 +3,13 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      dry_run:
+        description: "Test run: build everything but perform NO pushes, merges, releases, registry pushes, Crowdin calls, submissions, or branch deletes"
+        required: false
+        default: false
+        type: boolean
       skip_submit:
-        description: "Skip store submissions and branch cleanup (dry run)"
+        description: "Skip store submissions and branch cleanup only (still pushes, merges to main, and publishes the release)"
         required: false
         default: false
         type: boolean
@@ -104,12 +109,19 @@ jobs:
             exit 0
           fi
 
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "DRY RUN: would commit and push the following changes to ${{ needs.prep.outputs.dev_branch }}:"
+            git --no-pager diff --stat
+            exit 0
+          fi
+
           git add -A
           git commit -m "chore: lint, format, and bump version to ${{ needs.prep.outputs.version }}"
           git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
 
   crowdin:
     needs: [prep, normalize]
+    if: ${{ inputs.dry_run != true }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout dev branch
@@ -177,10 +189,12 @@ jobs:
           git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
 
   merge-to-main:
-    needs: [prep, crowdin]
+    needs: [prep, normalize, crowdin]
+    if: ${{ always() && needs.normalize.result == 'success' && (needs.crowdin.result == 'success' || needs.crowdin.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
+      build_ref: ${{ steps.merge.outputs.build_ref }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -208,6 +222,14 @@ jobs:
           DEV_BRANCH="${{ needs.prep.outputs.dev_branch }}"
           TITLE="release-${{ needs.prep.outputs.version }}"
 
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "DRY RUN: would open and squash-merge a PR from $DEV_BRANCH into main."
+            echo "DRY RUN: downstream jobs will build from $DEV_BRANCH instead of main."
+            echo "build_ref=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
+            echo "main_sha=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --head "$DEV_BRANCH" --base main --state open --json number -q '.[0].number' || true)
           if [ -z "$PR_NUMBER" ]; then
             PR_NUMBER=$(gh pr create --repo ${{ github.repository }} \
@@ -226,6 +248,7 @@ jobs:
 
           MAIN_SHA=$(gh api repos/${{ github.repository }}/commits/main -q .sha)
           echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
+          echo "build_ref=main" >> "$GITHUB_OUTPUT"
 
   docker:
     needs: [prep, merge-to-main]
@@ -233,10 +256,12 @@ jobs:
     with:
       version: ${{ needs.prep.outputs.version }}
       build_type: Production
+      dry_run: ${{ inputs.dry_run == true }}
     secrets: inherit
 
   create-release:
     needs: [prep, merge-to-main, docker]
+    if: ${{ inputs.dry_run != true }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout main
@@ -270,17 +295,18 @@ jobs:
           fi
 
   electron-release:
-    needs: [prep, create-release]
+    needs: [prep, merge-to-main, create-release]
+    if: ${{ always() && needs.merge-to-main.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
-      artifact_destination: release
+      artifact_destination: ${{ inputs.dry_run == true && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
     secrets: inherit
 
   electron-submit:
     needs: [prep, electron-release]
-    if: ${{ inputs.skip_submit != true }}
+    if: ${{ inputs.dry_run != true && inputs.skip_submit != true }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
@@ -289,6 +315,7 @@ jobs:
 
   cask-commit-back:
     needs: [prep, electron-release]
+    if: ${{ inputs.dry_run != true }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -327,12 +354,13 @@ jobs:
 
   docs:
     needs: [prep, merge-to-main]
+    if: ${{ always() && needs.merge-to-main.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
-      - name: Checkout Termix (main)
+      - name: Checkout Termix
         uses: actions/checkout@v5
         with:
-          ref: main
+          ref: ${{ needs.merge-to-main.outputs.build_ref }}
           fetch-depth: 1
           path: termix
 
@@ -380,11 +408,18 @@ jobs:
             exit 0
           fi
 
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "DRY RUN: would commit and push the following docs changes to dev-${{ needs.prep.outputs.version }}:"
+            git --no-pager diff --stat
+            exit 0
+          fi
+
           git add -A
           git commit -m "feat: update API docs for ${{ needs.prep.outputs.version }}"
           git push origin "dev-${{ needs.prep.outputs.version }}"
 
       - name: Open and squash-merge docs PR
+        if: ${{ inputs.dry_run != true }}
         working-directory: docs-repo
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
@@ -408,7 +443,7 @@ jobs:
 
   publish-youtube:
     needs: [prep, electron-submit]
-    if: ${{ inputs.skip_submit != true }}
+    if: ${{ inputs.dry_run != true && inputs.skip_submit != true }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout main
@@ -439,7 +474,7 @@ jobs:
         docs,
         publish-youtube,
       ]
-    if: ${{ success() && inputs.skip_submit != true }}
+    if: ${{ success() && inputs.dry_run != true && inputs.skip_submit != true }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Delete dev branch in Termix
