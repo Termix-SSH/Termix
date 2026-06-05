@@ -132,6 +132,8 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableFileManager = updates.enableFileManager;
         if (typeof updates.enableDocker === "boolean")
           simpleUpdates.enableDocker = updates.enableDocker;
+        if (typeof updates.enableProxmox === "boolean")
+          simpleUpdates.enableProxmox = updates.enableProxmox;
 
         if (Object.keys(simpleUpdates).length > 0) {
           await db
@@ -340,6 +342,7 @@ export function registerHostBulkRoutes(
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
             enableDocker: hostData.enableDocker || false,
+            enableProxmox: hostData.enableProxmox || false,
             showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
             showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
             showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,
@@ -361,6 +364,9 @@ export function registerHostBulkRoutes(
               : null,
             dockerConfig: hostData.dockerConfig
               ? JSON.stringify(hostData.dockerConfig)
+              : null,
+            proxmoxConfig: hostData.proxmoxConfig
+              ? JSON.stringify(hostData.proxmoxConfig)
               : null,
             terminalConfig: hostData.terminalConfig
               ? JSON.stringify(hostData.terminalConfig)

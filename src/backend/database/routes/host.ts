@@ -152,6 +152,7 @@ router.post(
       enableTunnel,
       enableFileManager,
       enableDocker,
+      enableProxmox,
       showTerminalInSidebar,
       showFileManagerInSidebar,
       showTunnelInSidebar,
@@ -163,6 +164,7 @@ router.post(
       quickActions,
       statsConfig,
       dockerConfig,
+      proxmoxConfig,
       terminalConfig,
       forceKeyboardInteractive,
       domain,
@@ -252,6 +254,7 @@ router.post(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
+      enableProxmox: enableProxmox ? 1 : 0,
       showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
       showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
       showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
@@ -267,6 +270,11 @@ router.post(
         ? typeof dockerConfig === "string"
           ? dockerConfig
           : JSON.stringify(dockerConfig)
+        : null,
+      proxmoxConfig: proxmoxConfig
+        ? typeof proxmoxConfig === "string"
+          ? proxmoxConfig
+          : JSON.stringify(proxmoxConfig)
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -571,6 +579,7 @@ router.post(
         enableTunnel: false,
         enableFileManager: true,
         enableDocker: false,
+        enableProxmox: false,
         showTerminalInSidebar: true,
         showFileManagerInSidebar: false,
         showTunnelInSidebar: false,
@@ -690,6 +699,7 @@ router.put(
       enableTunnel,
       enableFileManager,
       enableDocker,
+      enableProxmox,
       showTerminalInSidebar,
       showFileManagerInSidebar,
       showTunnelInSidebar,
@@ -701,6 +711,7 @@ router.put(
       quickActions,
       statsConfig,
       dockerConfig,
+      proxmoxConfig,
       terminalConfig,
       forceKeyboardInteractive,
       domain,
@@ -787,6 +798,7 @@ router.put(
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
+      enableProxmox: enableProxmox ? 1 : 0,
       showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
       showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
       showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
@@ -802,6 +814,11 @@ router.put(
         ? typeof dockerConfig === "string"
           ? dockerConfig
           : JSON.stringify(dockerConfig)
+        : null,
+      proxmoxConfig: proxmoxConfig
+        ? typeof proxmoxConfig === "string"
+          ? proxmoxConfig
+          : JSON.stringify(proxmoxConfig)
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -1122,6 +1139,7 @@ router.get(
           quickActions: hosts.quickActions,
           notes: hosts.notes,
           enableDocker: hosts.enableDocker,
+          enableProxmox: hosts.enableProxmox,
           showTerminalInSidebar: hosts.showTerminalInSidebar,
           showFileManagerInSidebar: hosts.showFileManagerInSidebar,
           showTunnelInSidebar: hosts.showTunnelInSidebar,
@@ -1140,6 +1158,7 @@ router.get(
           guacamoleConfig: hosts.guacamoleConfig,
           macAddress: hosts.macAddress,
           dockerConfig: hosts.dockerConfig,
+          proxmoxConfig: hosts.proxmoxConfig,
           enableSsh: hosts.enableSsh,
           enableRdp: hosts.enableRdp,
           enableVnc: hosts.enableVnc,
@@ -1511,6 +1530,7 @@ router.get(
             enableTunnel: !!resolvedHost.enableTunnel,
             enableFileManager: !!resolvedHost.enableFileManager,
             enableDocker: !!resolvedHost.enableDocker,
+            enableProxmox: !!resolvedHost.enableProxmox,
             showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
             showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
             showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
@@ -1532,6 +1552,9 @@ router.get(
               : null,
             dockerConfig: resolvedHost.dockerConfig
               ? JSON.parse(resolvedHost.dockerConfig as string)
+              : null,
+            proxmoxConfig: resolvedHost.proxmoxConfig
+              ? JSON.parse(resolvedHost.proxmoxConfig as string)
               : null,
             terminalConfig: resolvedHost.terminalConfig
               ? JSON.parse(resolvedHost.terminalConfig as string)
@@ -1654,6 +1677,7 @@ router.get(
               enableTunnel: !!resolvedHost.enableTunnel,
               enableFileManager: !!resolvedHost.enableFileManager,
               enableDocker: !!resolvedHost.enableDocker,
+              enableProxmox: !!resolvedHost.enableProxmox,
               showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
               showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
               showTunnelInSidebar: !!resolvedHost.showTunnelInSidebar,
@@ -1675,6 +1699,9 @@ router.get(
                 : null,
               dockerConfig: resolvedHost.dockerConfig
                 ? JSON.parse(resolvedHost.dockerConfig as string)
+                : null,
+              proxmoxConfig: resolvedHost.proxmoxConfig
+                ? JSON.parse(resolvedHost.proxmoxConfig as string)
                 : null,
               terminalConfig: resolvedHost.terminalConfig
                 ? JSON.parse(resolvedHost.terminalConfig as string)

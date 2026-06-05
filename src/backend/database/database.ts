@@ -15,6 +15,7 @@ import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
 import userPreferencesRoutes from "./routes/user-preferences.js";
+import proxmoxRoutes from "./routes/proxmox.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import fs from "fs";
 import path from "path";
@@ -1782,6 +1783,7 @@ app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
 app.use("/user-preferences", userPreferencesRoutes);
+app.use("/proxmox", proxmoxRoutes);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),
