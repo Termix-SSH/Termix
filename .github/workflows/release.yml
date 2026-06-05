@@ -406,8 +406,39 @@ jobs:
 
           gh pr merge "$PR_NUMBER" --repo Termix-SSH/Docs --squash --admin
 
+  publish-youtube:
+    needs: [prep, electron-submit]
+    if: ${{ inputs.skip_submit != true }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Set release video to public
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/publish-youtube.cjs
+
   cleanup:
-    needs: [prep, merge-to-main, electron-release, cask-commit-back, docs]
+    needs:
+      [
+        prep,
+        merge-to-main,
+        electron-release,
+        cask-commit-back,
+        docs,
+        publish-youtube,
+      ]
     if: ${{ success() && inputs.skip_submit != true }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
