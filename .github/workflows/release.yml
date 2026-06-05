@@ -3,16 +3,16 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      dry_run:
-        description: "Test run: build everything but perform NO pushes, merges, releases, registry pushes, Crowdin calls, submissions, or branch deletes"
-        required: false
-        default: false
-        type: boolean
-      skip_submit:
-        description: "Skip store submissions and branch cleanup only (still pushes, merges to main, and publishes the release)"
-        required: false
-        default: false
-        type: boolean
+      mode:
+        description: "Release mode"
+        required: true
+        default: Everything
+        type: choice
+        options:
+          - Everything
+          - Overwrite release
+          - Dry run
+          - Skip submit
 
 permissions:
   contents: write
@@ -26,10 +26,16 @@ jobs:
       mobile_version: ${{ steps.info.outputs.mobile_version }}
       dev_branch: ${{ steps.info.outputs.dev_branch }}
     steps:
-      - name: Guard branch
-        if: ${{ !startsWith(github.ref, 'refs/heads/dev-') }}
+      - name: Guard branch (release modes)
+        if: ${{ inputs.mode != 'Overwrite release' && !startsWith(github.ref, 'refs/heads/dev-') }}
         run: |
-          echo "Releases must be run from a dev branch (got ${{ github.ref }})."
+          echo "This mode must be run from a dev branch (got ${{ github.ref }})."
+          exit 1
+
+      - name: Guard branch (overwrite mode)
+        if: ${{ inputs.mode == 'Overwrite release' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Overwrite release must be run from main (got ${{ github.ref }})."
           exit 1
 
       - name: Checkout repository
@@ -47,8 +53,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          DEV_BRANCH="${GITHUB_REF#refs/heads/}"
-          VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
+          if [ "${{ inputs.mode }}" = "Overwrite release" ]; then
+            DEV_BRANCH=""
+            VERSION=$(node -p "require('./package.json').version")
+          else
+            DEV_BRANCH="${GITHUB_REF#refs/heads/}"
+            VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
+          fi
           echo "dev_branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "release_tag=release-$VERSION-tag" >> "$GITHUB_OUTPUT"
@@ -70,6 +81,7 @@ jobs:
 
   normalize:
     needs: [prep]
+    if: ${{ inputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout dev branch
@@ -109,7 +121,7 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ inputs.mode }}" = "Dry run" ]; then
             echo "DRY RUN: would commit and push the following changes to ${{ needs.prep.outputs.dev_branch }}:"
             git --no-pager diff --stat
             exit 0
@@ -121,7 +133,7 @@ jobs:
 
   crowdin:
     needs: [prep, normalize]
-    if: ${{ inputs.dry_run != true }}
+    if: ${{ inputs.mode != 'Dry run' && inputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout dev branch
@@ -190,7 +202,7 @@ jobs:
 
   merge-to-main:
     needs: [prep, normalize, crowdin]
-    if: ${{ always() && needs.normalize.result == 'success' && (needs.crowdin.result == 'success' || needs.crowdin.result == 'skipped') }}
+    if: ${{ always() && needs.prep.result == 'success' && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.crowdin.result == 'success' || needs.crowdin.result == 'skipped') }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       main_sha: ${{ steps.merge.outputs.main_sha }}
@@ -222,7 +234,14 @@ jobs:
           DEV_BRANCH="${{ needs.prep.outputs.dev_branch }}"
           TITLE="release-${{ needs.prep.outputs.version }}"
 
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ inputs.mode }}" = "Overwrite release" ]; then
+            echo "OVERWRITE: no merge; building from main as-is."
+            echo "build_ref=main" >> "$GITHUB_OUTPUT"
+            echo "main_sha=$(gh api repos/${{ github.repository }}/commits/main -q .sha)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ inputs.mode }}" = "Dry run" ]; then
             echo "DRY RUN: would open and squash-merge a PR from $DEV_BRANCH into main."
             echo "DRY RUN: downstream jobs will build from $DEV_BRANCH instead of main."
             echo "build_ref=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
@@ -256,12 +275,12 @@ jobs:
     with:
       version: ${{ needs.prep.outputs.version }}
       build_type: Production
-      dry_run: ${{ inputs.dry_run == true }}
+      dry_run: ${{ inputs.mode == 'Dry run' }}
     secrets: inherit
 
   create-release:
     needs: [prep, merge-to-main, docker]
-    if: ${{ inputs.dry_run != true }}
+    if: ${{ inputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout main
@@ -275,7 +294,23 @@ jobs:
         with:
           node-version-file: ".nvmrc"
 
+      - name: Clear existing release artifacts (overwrite mode)
+        if: ${{ inputs.mode == 'Overwrite release' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.prep.outputs.release_tag }}"
+          if ! gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
+            echo "Overwrite release: no existing release $TAG to overwrite."
+            exit 1
+          fi
+          echo "Clearing existing assets from $TAG..."
+          gh release view "$TAG" --repo ${{ github.repository }} --json assets -q '.assets[].name' | while read -r ASSET; do
+            [ -n "$ASSET" ] && gh release delete-asset "$TAG" "$ASSET" --repo ${{ github.repository }} --yes || true
+          done
+
       - name: Generate release body
+        if: ${{ inputs.mode != 'Overwrite release' }}
         run: |
           node scripts/generate-release-body.cjs \
             --version "${{ needs.prep.outputs.version }}" \
@@ -283,6 +318,7 @@ jobs:
             --notes RELEASE_NOTES.md > RELEASE_BODY.md
 
       - name: Create or update GitHub release
+        if: ${{ inputs.mode != 'Overwrite release' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -300,13 +336,13 @@ jobs:
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
-      artifact_destination: ${{ inputs.dry_run == true && 'file' || 'release' }}
+      artifact_destination: ${{ inputs.mode == 'Dry run' && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
     secrets: inherit
 
   electron-submit:
     needs: [prep, electron-release]
-    if: ${{ inputs.dry_run != true && inputs.skip_submit != true }}
+    if: ${{ inputs.mode != 'Dry run' && inputs.mode != 'Skip submit' }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
@@ -315,7 +351,7 @@ jobs:
 
   cask-commit-back:
     needs: [prep, electron-release]
-    if: ${{ inputs.dry_run != true }}
+    if: ${{ inputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -354,7 +390,7 @@ jobs:
 
   docs:
     needs: [prep, merge-to-main]
-    if: ${{ always() && needs.merge-to-main.result == 'success' }}
+    if: ${{ always() && needs.merge-to-main.result == 'success' && inputs.mode != 'Overwrite release' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout Termix
@@ -408,7 +444,7 @@ jobs:
             exit 0
           fi
 
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "${{ inputs.mode }}" = "Dry run" ]; then
             echo "DRY RUN: would commit and push the following docs changes to dev-${{ needs.prep.outputs.version }}:"
             git --no-pager diff --stat
             exit 0
@@ -419,7 +455,7 @@ jobs:
           git push origin "dev-${{ needs.prep.outputs.version }}"
 
       - name: Open and squash-merge docs PR
-        if: ${{ inputs.dry_run != true }}
+        if: ${{ inputs.mode != 'Dry run' }}
         working-directory: docs-repo
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
@@ -442,8 +478,8 @@ jobs:
           gh pr merge "$PR_NUMBER" --repo Termix-SSH/Docs --squash --admin
 
   publish-youtube:
-    needs: [prep, electron-submit]
-    if: ${{ inputs.dry_run != true && inputs.skip_submit != true }}
+    needs: [prep, electron-release]
+    if: ${{ always() && inputs.mode != 'Dry run' && inputs.mode != 'Overwrite release' && needs.electron-release.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Checkout main
@@ -474,7 +510,7 @@ jobs:
         docs,
         publish-youtube,
       ]
-    if: ${{ success() && inputs.dry_run != true && inputs.skip_submit != true }}
+    if: ${{ always() && (inputs.mode == 'Everything' || inputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' && needs.electron-release.result == 'success' && needs.cask-commit-back.result == 'success' && needs.docs.result == 'success' && needs.publish-youtube.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Delete dev branch in Termix
