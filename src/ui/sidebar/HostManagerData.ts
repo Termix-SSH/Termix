@@ -62,6 +62,8 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
+    enableProxmox: h.enableProxmox ?? false,
+    proxmoxConfig: h.proxmoxConfig ?? null,
     enableRdp: h.enableRdp != null ? h.enableRdp : h.connectionType === "rdp",
     enableVnc: h.enableVnc != null ? h.enableVnc : h.connectionType === "vnc",
     enableTelnet:

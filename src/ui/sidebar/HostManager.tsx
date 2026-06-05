@@ -233,7 +233,11 @@ export function HostManager({
     const tabs = isHost
       ? makeHostTabs(t).filter((tab) => {
           if (tab.id === "general") return true;
-          if (["ssh", "tunnels", "docker", "files", "stats"].includes(tab.id))
+          if (
+            ["ssh", "tunnels", "docker", "proxmox", "files", "stats"].includes(
+              tab.id,
+            )
+          )
             return editingProtocols.enableSsh;
           if (tab.id === "rdp") return editingProtocols.enableRdp;
           if (tab.id === "vnc") return editingProtocols.enableVnc;

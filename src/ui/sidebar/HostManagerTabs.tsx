@@ -8,6 +8,7 @@ import {
   Monitor,
   MousePointerClick,
   Network,
+  Server,
   Settings,
   Terminal,
 } from "lucide-react";
@@ -17,6 +18,7 @@ export type HostTabId =
   | "ssh"
   | "tunnels"
   | "docker"
+  | "proxmox"
   | "files"
   | "stats"
   | "rdp"
@@ -56,6 +58,11 @@ export function makeHostTabs(t: (key: string) => string): HostTab[] {
       id: "docker",
       label: t("hosts.tabDocker"),
       icon: <Box className="size-3" />,
+    },
+    {
+      id: "proxmox",
+      label: t("hosts.tabProxmox"),
+      icon: <Server className="size-3" />,
     },
     {
       id: "files",
@@ -102,7 +109,13 @@ export function makeCredentialTabs(
   ];
 }
 
-const SSH_DEP_TABS = new Set(["tunnels", "docker", "files", "stats"]);
+const SSH_DEP_TABS = new Set([
+  "tunnels",
+  "docker",
+  "proxmox",
+  "files",
+  "stats",
+]);
 
 export function TabStrip({
   tabs,

@@ -3,6 +3,7 @@ import { useState, useEffect, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
+  Boxes,
   Check,
   ChevronDown,
   ChevronRight,
@@ -221,6 +222,7 @@ export function HostItem({
   onOpenTab,
   onEditHost,
   onShareHost,
+  onProxmoxDiscover,
   onDelete,
   onDuplicate,
   query = "",
@@ -248,6 +250,7 @@ export function HostItem({
   onMenuOpenChange?: (open: boolean) => void;
   isTrayOpen?: boolean;
   onTrayOpenChange?: (open: boolean) => void;
+  onProxmoxDiscover?: () => void;
 }) {
   const { t } = useTranslation();
   const metricsEnabled =
@@ -647,6 +650,18 @@ export function HostItem({
                   <Share2 className="size-3.5" />
                 </button>
               )}
+              {host.enableProxmox && onProxmoxDiscover && (
+                <button
+                  title={t("hosts.proxmoxDiscoverAction")}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onProxmoxDiscover();
+                  }}
+                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                >
+                  <Boxes className="size-3.5" />
+                </button>
+              )}
               <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -845,6 +860,7 @@ export function FolderItem({
   onShareHost,
   onDeleteHost,
   onDuplicateHost,
+  onProxmoxDiscover,
   query = "",
   stripeMap,
   openFolders,
@@ -869,6 +885,7 @@ export function FolderItem({
   onShareHost?: (host: Host) => void;
   onDeleteHost: (host: Host) => void;
   onDuplicateHost: (host: Host) => void;
+  onProxmoxDiscover?: (host: Host) => void;
   query?: string;
   stripeMap: Map<Host | HostFolder, number>;
   openFolders: Set<string>;
@@ -975,6 +992,7 @@ export function FolderItem({
                 onShareHost={onShareHost}
                 onDeleteHost={onDeleteHost}
                 onDuplicateHost={onDuplicateHost}
+                onProxmoxDiscover={onProxmoxDiscover}
                 query={query}
                 stripeMap={stripeMap}
                 openFolders={openFolders}
@@ -999,6 +1017,9 @@ export function FolderItem({
                 onOpenTab={(t) => onOpenTab(child, t)}
                 onEditHost={onEditHost ? () => onEditHost(child) : undefined}
                 onShareHost={onShareHost ? () => onShareHost(child) : undefined}
+                onProxmoxDiscover={
+                  onProxmoxDiscover ? () => onProxmoxDiscover(child) : undefined
+                }
                 onDelete={() => onDeleteHost(child)}
                 onDuplicate={() => onDuplicateHost(child)}
                 query={query}
@@ -1028,6 +1049,7 @@ export function SidebarTree({
   onOpenTab,
   onEditHost,
   onShareHost,
+  onProxmoxDiscover,
   query = "",
   selectionMode,
   onToggleSelectionMode,
@@ -1037,6 +1059,7 @@ export function SidebarTree({
   onOpenTab: (host: Host, type: TabType) => void;
   onEditHost: (host: Host) => void;
   onShareHost?: (host: Host) => void;
+  onProxmoxDiscover?: (host: Host) => void;
   query?: string;
   selectionMode: boolean;
   onToggleSelectionMode: () => void;
@@ -1229,6 +1252,7 @@ export function SidebarTree({
                 onShareHost={onShareHost}
                 onDeleteHost={handleDeleteHost}
                 onDuplicateHost={handleDuplicateHost}
+                onProxmoxDiscover={onProxmoxDiscover}
                 query={query}
                 stripeMap={stripeMap}
                 openFolders={openFolders}
@@ -1253,6 +1277,9 @@ export function SidebarTree({
                 onOpenTab={(type) => onOpenTab(child, type)}
                 onEditHost={() => onEditHost(child)}
                 onShareHost={onShareHost ? () => onShareHost(child) : undefined}
+                onProxmoxDiscover={
+                  onProxmoxDiscover ? () => onProxmoxDiscover(child) : undefined
+                }
                 onDelete={() => handleDeleteHost(child)}
                 onDuplicate={() => handleDuplicateHost(child)}
                 query={query}
