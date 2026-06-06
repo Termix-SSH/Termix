@@ -571,6 +571,8 @@
     "disableTunnelsFeature": "Disable Tunnels",
     "enableDockerFeature": "Enable Docker",
     "disableDockerFeature": "Disable Docker",
+    "enableProxmoxFeature": "Enable Proxmox",
+    "disableProxmoxFeature": "Disable Proxmox",
     "addTagsPlaceholder": "Add tags...",
     "authDetails": "Authentication Details",
     "credType": "Type",

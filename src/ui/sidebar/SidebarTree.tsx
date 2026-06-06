@@ -1540,6 +1540,18 @@ export function SidebarTree({
                     value: false,
                     icon: Box,
                   },
+                  {
+                    labelKey: "hosts.enableProxmoxFeature",
+                    field: "enableProxmox",
+                    value: true,
+                    icon: Boxes,
+                  },
+                  {
+                    labelKey: "hosts.disableProxmoxFeature",
+                    field: "enableProxmox",
+                    value: false,
+                    icon: Boxes,
+                  },
                 ].map(({ labelKey, field, value, icon: Icon }) => (
                   <DropdownMenuItem
                     key={labelKey}
