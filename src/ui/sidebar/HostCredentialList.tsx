@@ -173,7 +173,7 @@ function CredentialFolderItem({
   onEdit: (cred: Credential) => void;
   onDelete: (cred: Credential) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div>

@@ -15,6 +15,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { FolderPathPicker } from "./FolderPathPicker";
+import { getSSHFolders } from "@/main-axios";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
@@ -38,6 +40,46 @@ export function HostEditorGeneralTab({
   host: Host | null;
 }) {
   const { t } = useTranslation();
+
+  const [folderMeta, setFolderMeta] = React.useState<
+    Map<string, { color?: string; icon?: string }>
+  >(new Map());
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      getSSHFolders()
+        .then((folders) => {
+          if (cancelled) return;
+          const map = new Map<string, { color?: string; icon?: string }>();
+          for (const f of folders) {
+            map.set(f.name, {
+              color: f.color ?? undefined,
+              icon: f.icon ?? undefined,
+            });
+          }
+          setFolderMeta(map);
+        })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("termix:hosts-changed", load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("termix:hosts-changed", load);
+    };
+  }, []);
+
+  // Folders come from two sources: paths referenced by existing hosts, and
+  // standalone folder records (including empty ones just created).
+  const folderPaths = React.useMemo(() => {
+    const set = new Set<string>();
+    for (const h of hosts) {
+      if (h.folder) set.add(h.folder);
+    }
+    for (const path of folderMeta.keys()) set.add(path);
+    return [...set];
+  }, [hosts, folderMeta]);
 
   return (
     <>
@@ -170,10 +212,11 @@ export function HostEditorGeneralTab({
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("hosts.folder")}
             </label>
-            <Input
-              placeholder="e.g. Production"
+            <FolderPathPicker
               value={form.folder}
-              onChange={(e) => setField("folder", e.target.value)}
+              onChange={(path) => setField("folder", path)}
+              folderPaths={folderPaths}
+              folderMeta={folderMeta}
             />
           </div>
           <div className="flex flex-col gap-1.5">

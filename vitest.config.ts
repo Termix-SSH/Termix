@@ -44,6 +44,14 @@ export default defineConfig({
           include: ["src/ui/**/*.test.{ts,tsx}"],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: "scripts",
+          environment: "node",
+          include: ["scripts/**/*.test.ts"],
+        },
+      },
     ],
   },
 });

@@ -6,6 +6,26 @@ export function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
 }
 
+export const FOLDER_PATH_SEPARATOR = " / ";
+
+/**
+ * Re-paths a folder string when its ancestor folder is renamed. Returns the new
+ * path for an exact match or any nested child, or null when the path is unrelated.
+ * Mirrors the SQL CASE expression used in the folder rename route.
+ */
+export function renameFolderPath(
+  folderPath: string,
+  oldName: string,
+  newName: string,
+): string | null {
+  if (folderPath === oldName) return newName;
+  const prefix = `${oldName}${FOLDER_PATH_SEPARATOR}`;
+  if (folderPath.startsWith(prefix)) {
+    return `${newName}${FOLDER_PATH_SEPARATOR}${folderPath.slice(prefix.length)}`;
+  }
+  return null;
+}
+
 function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }

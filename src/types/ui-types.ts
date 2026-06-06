@@ -151,6 +151,9 @@ export type Credential = {
 export type HostFolder = {
   name: string;
   children: (Host | HostFolder)[];
+  path?: string;
+  color?: string;
+  icon?: string;
 };
 
 export type TabType =

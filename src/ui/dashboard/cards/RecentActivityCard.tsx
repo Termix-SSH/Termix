@@ -110,8 +110,8 @@ export function RecentActivityCard({
                   ) : (
                     <Terminal size={20} className="shrink-0" />
                   )}
-                  <div className="flex flex-col items-start min-w-0 ml-2">
-                    <p className="truncate font-semibold leading-none">
+                  <div className="flex flex-col items-start min-w-0 w-full ml-2">
+                    <p className="truncate w-full font-semibold leading-none">
                       {item.hostName}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-none">

@@ -3,9 +3,14 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowUpDown,
   Check,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Download,
   Filter,
+  FolderPlus,
+  Group,
   ListChecks,
+  MoreHorizontal,
   Plus,
   RefreshCw,
   Search,
@@ -26,6 +31,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import {
@@ -61,6 +69,62 @@ const DEFAULT_FILTERS: FilterState = {
   features: [],
   tags: [],
 };
+
+type GroupKey = "folder" | "tag" | "status" | "protocol" | "auth";
+
+function flattenHosts(folder: HostFolder): Host[] {
+  const out: Host[] = [];
+  for (const child of folder.children) {
+    if (isFolder(child)) out.push(...flattenHosts(child));
+    else out.push(child);
+  }
+  return out;
+}
+
+function hostGroupNames(host: Host, key: GroupKey): string[] {
+  switch (key) {
+    case "tag":
+      return host.tags && host.tags.length > 0 ? host.tags : ["__none__"];
+    case "status":
+      return [host.online ? "online" : "offline"];
+    case "protocol": {
+      const protos: string[] = [];
+      if (host.enableSsh) protos.push("ssh");
+      if (host.enableRdp) protos.push("rdp");
+      if (host.enableVnc) protos.push("vnc");
+      if (host.enableTelnet) protos.push("telnet");
+      return protos.length > 0 ? protos : ["__none__"];
+    }
+    case "auth":
+      return [host.authType || "none"];
+    default:
+      return ["__none__"];
+  }
+}
+
+function groupHosts(
+  tree: HostFolder,
+  key: GroupKey,
+  labelFor: (key: GroupKey, group: string) => string,
+): HostFolder {
+  if (key === "folder") return tree;
+  const hosts = flattenHosts(tree);
+  const groups = new Map<string, Host[]>();
+  for (const host of hosts) {
+    for (const name of hostGroupNames(host, key)) {
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name)!.push(host);
+    }
+  }
+  const children: (Host | HostFolder)[] = [...groups.entries()]
+    .sort((a, b) => labelFor(key, a[0]).localeCompare(labelFor(key, b[0])))
+    .map(([group, members]) => ({
+      name: labelFor(key, group),
+      path: `__group__:${key}:${group}`,
+      children: members,
+    }));
+  return { name: "root", children };
+}
 
 function sortHostTree(folder: HostFolder, key: SortKey): HostFolder {
   if (key === "default") return folder;
@@ -190,6 +254,9 @@ export function HostsPanel({
   const [sortKey, setSortKey] = useState<SortKey>(
     () => (localStorage.getItem("hostSortKey") as SortKey) ?? "default",
   );
+  const [groupKey, setGroupKey] = useState<GroupKey>(
+    () => (localStorage.getItem("hostGroupKey") as GroupKey) ?? "folder",
+  );
   const [filterState, setFilterState] = useState<FilterState>(() => {
     try {
       const saved = localStorage.getItem("hostFilterState");
@@ -206,6 +273,25 @@ export function HostsPanel({
   function handleSortChange(key: SortKey) {
     setSortKey(key);
     localStorage.setItem("hostSortKey", key);
+  }
+
+  function handleGroupChange(key: GroupKey) {
+    setGroupKey(key);
+    localStorage.setItem("hostGroupKey", key);
+  }
+
+  function groupLabel(key: GroupKey, group: string): string {
+    if (group === "__none__") return t("hosts.groupUngrouped");
+    if (key === "status")
+      return group === "online"
+        ? t("hosts.filterOnline")
+        : t("hosts.filterOffline");
+    if (key === "protocol") return group.toUpperCase();
+    if (key === "auth")
+      return t(
+        `hosts.filterAuth${group.charAt(0).toUpperCase() + group.slice(1)}`,
+      );
+    return group;
   }
 
   function handleFilterToggle<K extends keyof FilterState>(
@@ -711,6 +797,136 @@ export function HostsPanel({
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`size-7 ${groupKey !== "folder" || selectionMode ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                    title={t("hosts.moreActions")}
+                  >
+                    <MoreHorizontal className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="text-xs min-w-[180px]"
+                >
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                      <Group className="size-3.5 shrink-0" />
+                      {t("hosts.groupBy")}
+                      {groupKey !== "folder" && (
+                        <span className="ml-auto text-accent-brand">
+                          {t(
+                            `hosts.GroupBy${groupKey.charAt(0).toUpperCase() + groupKey.slice(1)}`,
+                          )}
+                        </span>
+                      )}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="text-xs min-w-[150px]">
+                      {(
+                        [
+                          ["folder", "GroupByFolder"],
+                          ["tag", "GroupByTag"],
+                          ["status", "GroupByStatus"],
+                          ["protocol", "GroupByProtocol"],
+                          ["auth", "GroupByAuth"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => handleGroupChange(key)}
+                          className="flex items-center gap-1.5"
+                        >
+                          {groupKey === key ? (
+                            <Check className="size-3 shrink-0 text-accent-brand" />
+                          ) : (
+                            <span className="size-3 shrink-0 inline-block" />
+                          )}
+                          {t(`hosts.${label}`)}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent("hosts:create-folder"),
+                      )
+                    }
+                  >
+                    <FolderPlus className="size-3.5 mr-2" />
+                    {t("hosts.newFolder")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("hosts:expand-all"))
+                    }
+                  >
+                    <ChevronsUpDown className="size-3.5 mr-2" />
+                    {t("hosts.expandAll")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.dispatchEvent(
+                        new CustomEvent("hosts:collapse-all"),
+                      )
+                    }
+                  >
+                    <ChevronsDownUp className="size-3.5 mr-2" />
+                    {t("hosts.collapseAll")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={toggleSelectionMode}
+                    className={selectionMode ? "text-accent-brand" : ""}
+                  >
+                    <ListChecks className="size-3.5 mr-2" />
+                    {selectionMode
+                      ? t("hosts.exitSelectionTitle")
+                      : t("hosts.selectHosts")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                      <Upload className="size-3.5 shrink-0" />
+                      {t("hosts.importExportBtn")}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="text-xs min-w-[170px]">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          importOverwriteRef.current = false;
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        <Upload className="size-3.5 mr-2" />
+                        {t("hosts.importSkipExisting")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          importOverwriteRef.current = true;
+                          fileInputRef.current?.click();
+                        }}
+                      >
+                        <Upload className="size-3.5 mr-2" />
+                        {t("hosts.importOverwrite")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={handleExportHosts}
+                        disabled={rawHosts.length === 0}
+                      >
+                        <Download className="size-3.5 mr-2" />
+                        {t("hosts.exportAll")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDownloadSample}>
+                        <Download className="size-3.5 mr-2" />
+                        {t("hosts.downloadSample")}
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <button
               onClick={() =>
@@ -732,8 +948,11 @@ export function HostsPanel({
         <SidebarTree
           children={
             hostTree
-              ? applyFilters(sortHostTree(hostTree, sortKey), filterState)
-                  .children
+              ? groupHosts(
+                  applyFilters(sortHostTree(hostTree, sortKey), filterState),
+                  groupKey,
+                  groupLabel,
+                ).children
               : []
           }
           onOpenTab={onOpenTab}
