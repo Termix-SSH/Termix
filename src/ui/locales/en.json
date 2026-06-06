@@ -197,6 +197,7 @@
     "uploadFile": "Upload File",
     "tabGeneral": "General",
     "tabSsh": "SSH",
+    "tabTerminal": "Terminal",
     "tabRdp": "RDP",
     "tabVnc": "VNC",
     "tabTunnels": "Tunnels",
