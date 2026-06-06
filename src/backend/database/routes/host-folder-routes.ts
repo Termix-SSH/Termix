@@ -1,9 +1,9 @@
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { db, DatabaseSaveTrigger } from "../db/index.js";
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
   commandHistory,
   fileManagerPinned,
@@ -75,27 +75,32 @@ export function registerHostFolderRoutes(
       }
 
       try {
-        const updatedHosts = await SimpleDBOps.update(
-          hosts,
-          "ssh_data",
-          and(eq(hosts.userId, userId), eq(hosts.folder, oldName)),
-          {
-            folder: newName,
-            updatedAt: new Date().toISOString(),
-          },
-          userId,
-        );
+        const now = new Date().toISOString();
+        const oldPrefix = `${oldName} / `;
+        const newPrefix = `${newName} / `;
+        const childLike = `${oldPrefix}%`;
+
+        // folder is a plaintext column, so a SQL expression renames the exact
+        // folder and re-paths every nested child in one statement.
+        const renameExpr = (col: SQLiteColumn) =>
+          sql`CASE WHEN ${col} = ${oldName} THEN ${newName} ELSE ${newPrefix} || substr(${col}, ${oldPrefix.length + 1}) END`;
+
+        const folderMatch = (col: SQLiteColumn) =>
+          or(eq(col, oldName), like(col, childLike));
+
+        const updatedHosts = await db
+          .update(hosts)
+          .set({ folder: renameExpr(hosts.folder), updatedAt: now })
+          .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)))
+          .returning();
 
         const updatedCredentials = await db
           .update(sshCredentials)
-          .set({
-            folder: newName,
-            updatedAt: new Date().toISOString(),
-          })
+          .set({ folder: renameExpr(sshCredentials.folder), updatedAt: now })
           .where(
             and(
               eq(sshCredentials.userId, userId),
-              eq(sshCredentials.folder, oldName),
+              folderMatch(sshCredentials.folder),
             ),
           )
           .returning();
@@ -104,12 +109,9 @@ export function registerHostFolderRoutes(
 
         await db
           .update(sshFolders)
-          .set({
-            name: newName,
-            updatedAt: new Date().toISOString(),
-          })
+          .set({ name: renameExpr(sshFolders.name), updatedAt: now })
           .where(
-            and(eq(sshFolders.userId, userId), eq(sshFolders.name, oldName)),
+            and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)),
           );
 
         res.json({
@@ -306,17 +308,15 @@ export function registerHostFolderRoutes(
       });
 
       try {
+        // Match the folder itself and any nested children (e.g. "fgh / sub").
+        const childLike = `${folderName} / %`;
+        const folderMatch = (col: SQLiteColumn) =>
+          or(eq(col, folderName), like(col, childLike));
+
         const hostsToDelete = await db
           .select()
           .from(hosts)
-          .where(and(eq(hosts.userId, userId), eq(hosts.folder, folderName)));
-
-        if (hostsToDelete.length === 0) {
-          return res.json({
-            message: "No hosts found in folder",
-            deletedCount: 0,
-          });
-        }
+          .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
 
         const hostIds = hostsToDelete.map((host) => host.id);
 
@@ -363,14 +363,18 @@ export function registerHostFolderRoutes(
             .where(inArray(sessionRecordings.hostId, hostIds));
         }
 
-        await db
-          .delete(hosts)
-          .where(and(eq(hosts.userId, userId), eq(hosts.folder, folderName)));
+        if (hostIds.length > 0) {
+          await db
+            .delete(hosts)
+            .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
+        }
 
+        // Always remove the folder records (and nested children), even when the
+        // folder held no hosts, so empty folders don't reappear on reload.
         await db
           .delete(sshFolders)
           .where(
-            and(eq(sshFolders.userId, userId), eq(sshFolders.name, folderName)),
+            and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)),
           );
 
         DatabaseSaveTrigger.triggerSave("folder_hosts_delete");

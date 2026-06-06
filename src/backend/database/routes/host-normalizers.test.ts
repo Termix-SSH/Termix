@@ -3,6 +3,7 @@ import {
   isNonEmptyString,
   isValidPort,
   normalizeImportedHost,
+  renameFolderPath,
   stripSensitiveFields,
   transformHostResponse,
 } from "./host-normalizers.js";
@@ -19,6 +20,42 @@ describe("isNonEmptyString", () => {
     expect(isNonEmptyString(123)).toBe(false);
     expect(isNonEmptyString(null)).toBe(false);
     expect(isNonEmptyString(undefined)).toBe(false);
+  });
+});
+
+describe("renameFolderPath", () => {
+  it("renames an exact folder match", () => {
+    expect(renameFolderPath("Production", "Production", "Prod")).toBe("Prod");
+  });
+
+  it("re-paths nested children under the renamed ancestor", () => {
+    expect(renameFolderPath("Production / Web", "Production", "Prod")).toBe(
+      "Prod / Web",
+    );
+    expect(
+      renameFolderPath("Production / Web / app01", "Production", "Prod"),
+    ).toBe("Prod / Web / app01");
+  });
+
+  it("renames a nested folder itself and keeps its parent", () => {
+    expect(
+      renameFolderPath("Production / Web", "Production / Web", "Frontend"),
+    ).toBe("Frontend");
+    expect(
+      renameFolderPath(
+        "Production / Web / app01",
+        "Production / Web",
+        "Production / Frontend",
+      ),
+    ).toBe("Production / Frontend / app01");
+  });
+
+  it("returns null for unrelated folders", () => {
+    expect(renameFolderPath("Staging", "Production", "Prod")).toBeNull();
+    expect(renameFolderPath("Production2", "Production", "Prod")).toBeNull();
+    expect(
+      renameFolderPath("ProductionExtra / Web", "Production", "Prod"),
+    ).toBeNull();
   });
 });
 

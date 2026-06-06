@@ -38,6 +38,7 @@ import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
+  getSSHFolders,
   getUserInfo,
   getOpenTabs,
   addOpenTab,
@@ -106,7 +107,10 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
   };
 }
 
-function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
+function buildHostTree(
+  hosts: SSHHostWithStatus[],
+  folderMeta?: Map<string, { color?: string; icon?: string }>,
+): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
   const folderMap = new Map<string, HostFolder>();
   const getOrCreateFolder = (path: string): HostFolder => {
@@ -117,7 +121,14 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
     for (const part of parts) {
       accumulated = accumulated ? `${accumulated} / ${part}` : part;
       if (!folderMap.has(accumulated)) {
-        const folder: HostFolder = { name: part, children: [] };
+        const meta = folderMeta?.get(accumulated);
+        const folder: HostFolder = {
+          name: part,
+          path: accumulated,
+          color: meta?.color,
+          icon: meta?.icon,
+          children: [],
+        };
         folderMap.set(accumulated, folder);
         current.children.push(folder);
       }
@@ -125,6 +136,10 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
     }
     return current;
   };
+  // Surface empty folders (created but with no hosts yet) so they stay visible.
+  if (folderMeta) {
+    for (const path of folderMeta.keys()) getOrCreateFolder(path);
+  }
   for (const h of hosts) {
     const host = sshHostToHost(h);
     if (h.folder) {
@@ -389,10 +404,20 @@ export function AppShell({
   // Load real hosts from API
   const loadHosts = useCallback(async () => {
     try {
-      const raw = await getSSHHosts();
+      const [raw, folders] = await Promise.all([
+        getSSHHosts(),
+        getSSHFolders().catch(() => []),
+      ]);
       const converted = raw.map(sshHostToHost);
       setAllHosts(converted);
-      setRealHostTree(buildHostTree(raw));
+      const folderMeta = new Map<string, { color?: string; icon?: string }>();
+      for (const f of folders) {
+        folderMeta.set(f.name, {
+          color: f.color ?? undefined,
+          icon: f.icon ?? undefined,
+        });
+      }
+      setRealHostTree(buildHostTree(raw, folderMeta));
     } catch {
       // Keep empty state on error
     } finally {

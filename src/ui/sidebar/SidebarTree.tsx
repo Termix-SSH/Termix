@@ -26,7 +26,6 @@ import {
   Share2,
   Terminal,
   Trash2,
-  X,
   Zap,
 } from "lucide-react";
 import {
@@ -46,10 +45,14 @@ import {
   deleteSSHHost,
   getHostPassword,
   renameFolder,
+  updateFolderMetadata,
+  deleteAllHostsInFolder,
   wakeOnLan,
 } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type { SSHHostData } from "@/types/index";
+import { FolderIconEl } from "@/components/folder-style";
+import { FolderMetadataDialog } from "./FolderMetadataDialog";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
@@ -131,7 +134,7 @@ function collectVisibleRows(
       const visible = query ? folderHasMatch(child, query) : true;
       if (!visible) continue;
       out.push({ item: child, depth });
-      const childOpen = query ? true : openSet.has(child.name);
+      const childOpen = query ? true : openSet.has(child.path ?? child.name);
       if (childOpen)
         collectVisibleRows(child.children, query, openSet, out, depth + 1);
     } else {
@@ -154,15 +157,19 @@ function collectAllHosts(children: (Host | HostFolder)[]): Host[] {
   return out;
 }
 
-function collectAllFolders(children: (Host | HostFolder)[]): string[] {
-  const names = new Set<string>();
+// Open/close state and folder assignment are both keyed by the full " / " path,
+// so two folders that share a leaf name don't collapse together. Synthetic group
+// headers (group-by views) are excluded from the assignable-folder list.
+function collectAllFolderPaths(children: (Host | HostFolder)[]): string[] {
+  const paths = new Set<string>();
   for (const child of children) {
     if (isFolder(child)) {
-      names.add(child.name);
-      for (const f of collectAllFolders(child.children)) names.add(f);
+      const path = child.path ?? child.name;
+      if (!path.startsWith("__group__:")) paths.add(path);
+      for (const p of collectAllFolderPaths(child.children)) paths.add(p);
     }
   }
-  return Array.from(names).sort();
+  return Array.from(paths).sort((a, b) => a.localeCompare(b));
 }
 
 async function writeClipboardText(value: string): Promise<void> {
@@ -232,6 +239,8 @@ export function HostItem({
   onMenuOpenChange,
   isTrayOpen = false,
   onTrayOpenChange,
+  onDragStart,
+  onDragEnd,
 }: {
   host: Host;
   onOpenTab: (type: TabType) => void;
@@ -248,6 +257,8 @@ export function HostItem({
   onMenuOpenChange?: (open: boolean) => void;
   isTrayOpen?: boolean;
   onTrayOpenChange?: (open: boolean) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }) {
   const { t } = useTranslation();
   const metricsEnabled =
@@ -312,6 +323,12 @@ export function HostItem({
 
   return (
     <div
+      draggable={!selectionMode && !isTouchOnly}
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart?.();
+      }}
+      onDragEnd={() => onDragEnd?.()}
       className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/40 ${
         selected
           ? "bg-accent-brand/5"
@@ -856,11 +873,12 @@ export function FolderItem({
   onMenuOpenChange,
   openTrayHostId,
   onTrayOpenChange,
-  editingFolderName,
-  editingFolderValue,
-  onEditingFolderNameChange,
-  onEditingFolderValueChange,
-  onRenameFolder,
+  onManageFolder,
+  onDeleteFolder,
+  onMoveHostsToFolder,
+  draggedHostIds,
+  onDragHostStart,
+  onDragEnd,
 }: {
   folder: HostFolder;
   depth?: number;
@@ -880,63 +898,58 @@ export function FolderItem({
   onMenuOpenChange: (hostId: string | null) => void;
   openTrayHostId: string | null;
   onTrayOpenChange: (hostId: string | null) => void;
-  editingFolderName: string | null;
-  editingFolderValue: string;
-  onEditingFolderNameChange: (name: string | null) => void;
-  onEditingFolderValueChange: (value: string) => void;
-  onRenameFolder: (oldName: string, newName: string) => Promise<void>;
+  onManageFolder: (folder: HostFolder) => void;
+  onDeleteFolder: (folder: HostFolder) => void;
+  onMoveHostsToFolder: (hostIds: string[], targetPath: string) => void;
+  draggedHostIds: string[] | null;
+  onDragHostStart: (hostId: string) => void;
+  onDragEnd: () => void;
 }) {
+  const { t } = useTranslation();
   const { total, online } = folderHostCount(folder);
+  const [dragOver, setDragOver] = useState(false);
 
   if (query && !folderHasMatch(folder, query)) return null;
 
-  const isOpen = query ? true : openFolders.has(folder.name);
+  const folderPath = folder.path ?? folder.name;
+  const isOpen = query ? true : openFolders.has(folderPath);
   const stripeIndex = stripeMap.get(folder) ?? 0;
-  const isEditing = editingFolderName === folder.name;
+  // Synthetic group headers (group-by tag/status/etc.) are not real folders, so
+  // they can't be edited, deleted, or used as drop targets.
+  const isGroup = folderPath.startsWith("__group__:");
 
   return (
-    <div>
+    <div
+      onDragOver={(e) => {
+        if (draggedHostIds && !isGroup) {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        if (draggedHostIds && !isGroup) {
+          e.preventDefault();
+          e.stopPropagation();
+          setDragOver(false);
+          onMoveHostsToFolder(draggedHostIds, folderPath);
+        }
+      }}
+    >
       <button
-        onClick={() => !query && !isEditing && onToggleFolder(folder.name)}
-        className={`group/folder flex items-center gap-2 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left cursor-pointer ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""}`}
+        onClick={() => !query && onToggleFolder(folderPath)}
+        className={`group/folder flex items-center gap-2 w-full px-3 py-2 hover:bg-muted/50 transition-colors text-left cursor-pointer ${stripeIndex % 2 === 1 ? "bg-muted/20" : ""} ${dragOver ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10" : ""}`}
       >
         <ChevronRight
           className={`size-3 shrink-0 text-muted-foreground/50 transition-transform ${isOpen ? "rotate-90" : ""}`}
         />
-        <FolderOpen
-          className={`size-3.5 shrink-0 ${isOpen ? "text-accent-brand" : "text-muted-foreground/60"}`}
+        <FolderIconEl
+          icon={folder.icon ?? "folder"}
+          className={`size-3.5 shrink-0 ${folder.color ? "" : isOpen ? "text-accent-brand" : "text-muted-foreground/60"}`}
+          style={folder.color ? { color: folder.color } : undefined}
         />
-        {isEditing ? (
-          <>
-            <input
-              autoFocus
-              value={editingFolderValue}
-              onChange={(e) => onEditingFolderValueChange(e.target.value)}
-              onBlur={async () => {
-                const newName = editingFolderValue.trim();
-                onEditingFolderNameChange(null);
-                if (newName && newName !== folder.name) {
-                  await onRenameFolder(folder.name, newName);
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-                if (e.key === "Escape") onEditingFolderNameChange(null);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="text-[10px] font-semibold bg-background border border-accent-brand/60 px-1 outline-none text-foreground min-w-0 flex-1"
-            />
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditingFolderNameChange(null);
-              }}
-              className="text-muted-foreground hover:text-foreground shrink-0"
-            >
-              <X className="size-3" />
-            </span>
-          </>
-        ) : (
+        {
           <>
             <span className="text-[13px] font-semibold text-foreground/80 truncate flex-1">
               {folder.name}
@@ -949,18 +962,32 @@ export function FolderItem({
               )}
               <span className="text-muted-foreground/40">/{total}</span>
             </span>
-            <span
-              className="opacity-0 group-hover/folder:opacity-100 transition-opacity ml-1 text-muted-foreground/50 hover:text-foreground"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditingFolderNameChange(folder.name);
-                onEditingFolderValueChange(folder.name);
-              }}
-            >
-              <Pencil className="size-2.5" />
-            </span>
+            {!isGroup && (
+              <span className="flex items-center gap-1.5 ml-1 opacity-0 group-hover/folder:opacity-100 transition-opacity">
+                <span
+                  title={t("hosts.editFolder")}
+                  className="text-muted-foreground/50 hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageFolder(folder);
+                  }}
+                >
+                  <Pencil className="size-2.5" />
+                </span>
+                <span
+                  title={t("hosts.deleteFolder")}
+                  className="text-muted-foreground/50 hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteFolder(folder);
+                  }}
+                >
+                  <Trash2 className="size-2.5" />
+                </span>
+              </span>
+            )}
           </>
-        )}
+        }
       </button>
       {isOpen && (
         <div className="border-l border-border/40 ml-[30px]">
@@ -986,11 +1013,12 @@ export function FolderItem({
                 onMenuOpenChange={onMenuOpenChange}
                 openTrayHostId={openTrayHostId}
                 onTrayOpenChange={onTrayOpenChange}
-                editingFolderName={editingFolderName}
-                editingFolderValue={editingFolderValue}
-                onEditingFolderNameChange={onEditingFolderNameChange}
-                onEditingFolderValueChange={onEditingFolderValueChange}
-                onRenameFolder={onRenameFolder}
+                onManageFolder={onManageFolder}
+                onDeleteFolder={onDeleteFolder}
+                onMoveHostsToFolder={onMoveHostsToFolder}
+                draggedHostIds={draggedHostIds}
+                onDragHostStart={onDragHostStart}
+                onDragEnd={onDragEnd}
               />
             ) : (
               <HostItem
@@ -1014,6 +1042,8 @@ export function FolderItem({
                 onTrayOpenChange={(open) =>
                   onTrayOpenChange(open ? child.id : null)
                 }
+                onDragStart={() => onDragHostStart(child.id)}
+                onDragEnd={onDragEnd}
               />
             ),
           )}
@@ -1043,20 +1073,138 @@ export function SidebarTree({
   loading?: boolean;
 }) {
   const { t } = useTranslation();
-  const [openFolders, setOpenFolders] = useState<Set<string>>(new Set());
+  const [openFolders, setOpenFolders] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("hostOpenFolders");
+      return saved ? new Set<string>(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
   const [selectedHostIds, setSelectedHostIds] = useState<Set<string>>(
     new Set(),
   );
   const [openMenuHostId, setOpenMenuHostId] = useState<string | null>(null);
   const [openTrayHostId, setOpenTrayHostId] = useState<string | null>(null);
-  const [editingFolderName, setEditingFolderName] = useState<string | null>(
-    null,
-  );
-  const [editingFolderValue, setEditingFolderValue] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
   } | null>(null);
+  const [draggedHostIds, setDraggedHostIds] = useState<string[] | null>(null);
+  const [rootDragOver, setRootDragOver] = useState(false);
+  const [folderDialog, setFolderDialog] = useState<{
+    mode: "create" | "edit";
+    folder?: HostFolder;
+  } | null>(null);
+
+  function handleDragHostStart(hostId: string) {
+    // When the dragged host is part of an active selection, move the whole set.
+    if (selectionMode && selectedHostIds.has(hostId)) {
+      setDraggedHostIds([...selectedHostIds]);
+    } else {
+      setDraggedHostIds([hostId]);
+    }
+  }
+
+  async function handleMoveHostsToFolder(
+    hostIds: string[],
+    targetPath: string,
+  ) {
+    setDraggedHostIds(null);
+    try {
+      await bulkUpdateSSHHosts(hostIds.map(Number), { folder: targetPath });
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      toast.success(
+        t("hosts.movedToFolder", {
+          count: hostIds.length,
+          folder: targetPath || t("hosts.folderPickerNone"),
+        }),
+      );
+    } catch {
+      toast.error(t("hosts.failedToMoveHosts"));
+    }
+  }
+
+  function handleManageFolder(folder: HostFolder) {
+    setFolderDialog({ mode: "edit", folder });
+  }
+
+  async function handleSaveFolderMetadata(value: {
+    name: string;
+    color: string;
+    icon: string;
+  }) {
+    const existing = folderDialog?.folder;
+    try {
+      if (existing) {
+        const oldPath = existing.path ?? existing.name;
+        const parent = oldPath.includes(" / ")
+          ? oldPath.slice(0, oldPath.lastIndexOf(" / "))
+          : "";
+        const newPath = parent ? `${parent} / ${value.name}` : value.name;
+        if (newPath !== oldPath) {
+          await renameFolder(oldPath, newPath);
+        }
+        await updateFolderMetadata(newPath, value.color, value.icon);
+      } else {
+        await updateFolderMetadata(value.name, value.color, value.icon);
+      }
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      toast.success(t("hosts.folderSaved"));
+    } catch {
+      toast.error(t("hosts.failedToSaveFolder"));
+    }
+  }
+
+  function handleDeleteFolder(folder: HostFolder) {
+    const folderPath = folder.path ?? folder.name;
+    const { total } = folderHostCount(folder);
+    setConfirmDialog({
+      message: t("hosts.deleteFolderConfirm", {
+        name: folder.name,
+        count: total,
+      }),
+      onConfirm: async () => {
+        try {
+          await deleteAllHostsInFolder(folderPath);
+          window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+          toast.success(t("hosts.folderDeleted", { name: folder.name }));
+        } catch {
+          toast.error(t("hosts.failedToDeleteFolder"));
+        }
+      },
+    });
+  }
+
+  useEffect(() => {
+    const openCreate = () => setFolderDialog({ mode: "create" });
+    const expandAll = () => {
+      const next = new Set(collectAllFolderPaths(children));
+      persistOpenFolders(next);
+      setOpenFolders(next);
+    };
+    const collapseAll = () => {
+      const next = new Set<string>();
+      persistOpenFolders(next);
+      setOpenFolders(next);
+    };
+    window.addEventListener("hosts:create-folder", openCreate);
+    window.addEventListener("hosts:expand-all", expandAll);
+    window.addEventListener("hosts:collapse-all", collapseAll);
+    return () => {
+      window.removeEventListener("hosts:create-folder", openCreate);
+      window.removeEventListener("hosts:expand-all", expandAll);
+      window.removeEventListener("hosts:collapse-all", collapseAll);
+    };
+  }, [children]);
+
+  function persistOpenFolders(next: Set<string>) {
+    try {
+      localStorage.setItem("hostOpenFolders", JSON.stringify([...next]));
+    } catch {
+      // ignore quota/serialization failures
+    }
+  }
 
   function toggleFolder(name: string) {
     setOpenFolders((prev) => {
@@ -1066,6 +1214,7 @@ export function SidebarTree({
       } else {
         next.add(name);
       }
+      persistOpenFolders(next);
       return next;
     });
   }
@@ -1165,18 +1314,8 @@ export function SidebarTree({
     }
   }
 
-  async function handleRenameFolder(oldName: string, newName: string) {
-    try {
-      await renameFolder(oldName, newName);
-      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-      toast.success(t("hosts.folderRenamedTo", { name: newName }));
-    } catch {
-      toast.error(t("hosts.failedToRenameFolder"));
-    }
-  }
-
   const allHosts = collectAllHosts(children);
-  const allFolders = collectAllFolders(children);
+  const allFolderPaths = collectAllFolderPaths(children);
 
   const visibleRows = collectVisibleRows(children, query, openFolders);
   const stripeMap = new Map<Host | HostFolder, number>(
@@ -1210,7 +1349,25 @@ export function SidebarTree({
 
   return (
     <div className="relative flex flex-col flex-1 min-h-0">
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div
+        className={`flex-1 min-h-0 overflow-y-auto ${rootDragOver ? "ring-1 ring-inset ring-accent-brand/50" : ""}`}
+        onDragOver={(e) => {
+          if (draggedHostIds) {
+            e.preventDefault();
+            setRootDragOver(true);
+          }
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget === e.target) setRootDragOver(false);
+        }}
+        onDrop={(e) => {
+          if (draggedHostIds) {
+            e.preventDefault();
+            setRootDragOver(false);
+            handleMoveHostsToFolder(draggedHostIds, "");
+          }
+        }}
+      >
         {visibleRows.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-4">
             <Server className="size-8 text-muted-foreground/20 mb-2" />
@@ -1240,11 +1397,12 @@ export function SidebarTree({
                 onMenuOpenChange={setOpenMenuHostId}
                 openTrayHostId={openTrayHostId}
                 onTrayOpenChange={setOpenTrayHostId}
-                editingFolderName={editingFolderName}
-                editingFolderValue={editingFolderValue}
-                onEditingFolderNameChange={setEditingFolderName}
-                onEditingFolderValueChange={setEditingFolderValue}
-                onRenameFolder={handleRenameFolder}
+                onManageFolder={handleManageFolder}
+                onDeleteFolder={handleDeleteFolder}
+                onMoveHostsToFolder={handleMoveHostsToFolder}
+                draggedHostIds={draggedHostIds}
+                onDragHostStart={handleDragHostStart}
+                onDragEnd={() => setDraggedHostIds(null)}
               />
             ) : (
               <HostItem
@@ -1268,6 +1426,8 @@ export function SidebarTree({
                 onTrayOpenChange={(open) =>
                   setOpenTrayHostId(open ? child.id : null)
                 }
+                onDragStart={() => handleDragHostStart(child.id)}
+                onDragEnd={() => setDraggedHostIds(null)}
               />
             ),
           )
@@ -1404,7 +1564,7 @@ export function SidebarTree({
                   <FolderOpen className="size-3.5 mr-2" />
                   {t("hosts.noFolderOption")}
                 </DropdownMenuItem>
-                {allFolders.map((f) => (
+                {allFolderPaths.map((f) => (
                   <DropdownMenuItem
                     key={f}
                     onClick={async () => {
@@ -1503,6 +1663,22 @@ export function SidebarTree({
           </div>
         </div>
       )}
+
+      <FolderMetadataDialog
+        open={folderDialog !== null}
+        mode={folderDialog?.mode ?? "create"}
+        initial={
+          folderDialog?.folder
+            ? {
+                name: folderDialog.folder.name,
+                color: folderDialog.folder.color,
+                icon: folderDialog.folder.icon,
+              }
+            : undefined
+        }
+        onOpenChange={(v) => !v && setFolderDialog(null)}
+        onSubmit={handleSaveFolderMetadata}
+      />
     </div>
   );
 }
