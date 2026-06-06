@@ -90,6 +90,13 @@ export type Host = {
   defaultPath?: string;
 
   enableDocker: boolean;
+  enableProxmox: boolean;
+  proxmoxConfig?: {
+    defaultCredentialId: number | null;
+    windowsPatterns: string;
+    dockerPatterns: string;
+    preferredPrefixes: string;
+  } | null;
 
   statsConfig?: {
     statusCheckEnabled: boolean;

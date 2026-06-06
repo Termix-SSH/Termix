@@ -190,4 +190,22 @@ describe("transformHostResponse", () => {
     expect(result.vncPort).toBe(5900);
     expect(result.telnetPort).toBe(23);
   });
+
+  it("coerces enableProxmox and parses proxmoxConfig", () => {
+    const result = transformHostResponse({
+      enableProxmox: 1,
+      proxmoxConfig: '{"defaultCredentialId":3,"windowsPatterns":"win"}',
+    });
+    expect(result.enableProxmox).toBe(true);
+    expect(result.proxmoxConfig).toEqual({
+      defaultCredentialId: 3,
+      windowsPatterns: "win",
+    });
+  });
+
+  it("defaults enableProxmox to false when absent", () => {
+    const result = transformHostResponse({ port: 22 });
+    expect(result.enableProxmox).toBe(false);
+    expect(result.proxmoxConfig).toBeUndefined();
+  });
 });

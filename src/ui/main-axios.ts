@@ -1411,6 +1411,7 @@ export {
   updateSSHHost,
   wakeOnLan,
   bulkImportSSHHosts,
+  discoverProxmoxGuests,
   bulkUpdateSSHHosts,
   deleteSSHHost,
   getSSHHostById,

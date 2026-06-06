@@ -8,6 +8,7 @@ import {
   Monitor,
   MousePointerClick,
   Network,
+  Server,
   Settings,
   SquareTerminal,
   Terminal,
@@ -19,6 +20,7 @@ export type HostTabId =
   | "terminal"
   | "tunnels"
   | "docker"
+  | "proxmox"
   | "files"
   | "stats"
   | "rdp"
@@ -42,6 +44,7 @@ export const SSH_GROUP_TABS = new Set<HostTabId>([
   "terminal",
   "tunnels",
   "docker",
+  "proxmox",
   "files",
   "stats",
 ]);
@@ -97,6 +100,11 @@ export function makeHostSshSubTabs(t: (key: string) => string): HostTab[] {
       id: "docker",
       label: t("hosts.tabDocker"),
       icon: <Box className="size-3" />,
+    },
+    {
+      id: "proxmox",
+      label: t("hosts.tabProxmox"),
+      icon: <Server className="size-3" />,
     },
     {
       id: "files",

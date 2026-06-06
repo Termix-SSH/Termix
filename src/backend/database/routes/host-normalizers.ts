@@ -99,6 +99,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableTunnel?: unknown;
   enableFileManager?: unknown;
   enableDocker?: unknown;
+  enableProxmox?: unknown;
   showTerminalInSidebar?: unknown;
   showFileManagerInSidebar?: unknown;
   showTunnelInSidebar?: unknown;
@@ -111,6 +112,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   quickActions?: unknown;
   statsConfig?: unknown;
   dockerConfig?: unknown;
+  proxmoxConfig?: unknown;
   terminalConfig?: unknown;
   forceKeyboardInteractive?: unknown;
   notes?: unknown;
@@ -236,6 +238,7 @@ export function transformHostResponse(
     enableTunnel: !!host.enableTunnel,
     enableFileManager: !!host.enableFileManager,
     enableDocker: !!host.enableDocker,
+    enableProxmox: !!host.enableProxmox,
     showTerminalInSidebar: !!host.showTerminalInSidebar,
     showFileManagerInSidebar: !!host.showFileManagerInSidebar,
     showTunnelInSidebar: !!host.showTunnelInSidebar,
@@ -283,6 +286,9 @@ export function transformHostResponse(
       : undefined,
     dockerConfig: host.dockerConfig
       ? JSON.parse(host.dockerConfig as string)
+      : undefined,
+    proxmoxConfig: host.proxmoxConfig
+      ? JSON.parse(host.proxmoxConfig as string)
       : undefined,
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     socks5ProxyChain: host.socks5ProxyChain

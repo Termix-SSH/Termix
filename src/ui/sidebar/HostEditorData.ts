@@ -90,6 +90,13 @@ export function createHostEditorForm(host: Host | null) {
     enableTerminal: host?.enableTerminal ?? true,
     enableFileManager: host?.enableFileManager ?? false,
     enableDocker: host?.enableDocker ?? false,
+    enableProxmox: host?.enableProxmox ?? false,
+    proxmoxConfig: host?.proxmoxConfig ?? {
+      defaultCredentialId: null as number | null,
+      windowsPatterns: "win, windows",
+      dockerPatterns: "docker",
+      preferredPrefixes: "10., 192.168.",
+    },
     enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
@@ -215,6 +222,8 @@ export function buildHostEditorPayload(
     enableTunnel: form.enableTunnel,
     enableFileManager: form.enableFileManager,
     enableDocker: form.enableDocker,
+    enableProxmox: form.enableProxmox,
+    proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
     defaultPath: form.defaultPath || "/",
     useSocks5: form.useSocks5,
     socks5Host:

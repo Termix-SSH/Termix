@@ -46,7 +46,11 @@ import {
   type HostFastScrollModifier,
   type HostProtocols,
 } from "./HostEditorData";
-import { HostDockerTab, HostFilesTab } from "./HostEditorFeatureTabs";
+import {
+  HostDockerTab,
+  HostProxmoxTab,
+  HostFilesTab,
+} from "./HostEditorFeatureTabs";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import {
   HostEditorRdpTab,
@@ -1234,6 +1238,10 @@ export function HostEditor({
 
         {activeTab === "docker" && (
           <HostDockerTab form={form} setField={setField} />
+        )}
+
+        {activeTab === "proxmox" && (
+          <HostProxmoxTab form={form} setField={setField} />
         )}
 
         {activeTab === "files" && (

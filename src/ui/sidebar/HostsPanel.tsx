@@ -14,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Server,
   Upload,
   X,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { toast } from "sonner";
 import { SidebarTree, isFolder } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
+import { ProxmoxDiscoverDialog } from "@/components/proxmox/ProxmoxDiscoverDialog";
 import { Button } from "@/components/button";
 import {
   DropdownMenu,
@@ -239,6 +241,16 @@ export function HostsPanel({
   const [refreshing, setRefreshing] = useState(false);
   const [rawHosts, setRawHosts] = useState<SSHHostWithStatus[]>([]);
   const [shareModalHost, setShareModalHost] = useState<Host | null>(null);
+  const [proxmoxDialogOpen, setProxmoxDialogOpen] = useState(false);
+  const [proxmoxHostId, setProxmoxHostId] = useState<number | undefined>(
+    undefined,
+  );
+  const [proxmoxDefaultCredentialId, setProxmoxDefaultCredentialId] = useState<
+    number | null
+  >(null);
+  const [proxmoxDefaultUsername, setProxmoxDefaultUsername] = useState<
+    string | undefined
+  >(undefined);
   const [sortKey, setSortKey] = useState<SortKey>(
     () => (localStorage.getItem("hostSortKey") as SortKey) ?? "default",
   );
@@ -503,6 +515,75 @@ export function HostsPanel({
                   className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
                 />
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground hover:text-foreground"
+                    title={t("hosts.importExportBtn")}
+                  >
+                    <Upload className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="text-xs">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      importOverwriteRef.current = false;
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <Upload className="size-3.5 mr-2" />
+                    {t("hosts.importSkipExisting")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      importOverwriteRef.current = true;
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <Upload className="size-3.5 mr-2" />
+                    {t("hosts.importOverwrite")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setProxmoxHostId(undefined);
+                      setProxmoxDialogOpen(true);
+                    }}
+                    disabled={
+                      !rawHosts.some(
+                        (h) => !isFolder(h) && (h as any).enableProxmox,
+                      )
+                    }
+                  >
+                    <Server className="size-3.5 mr-2" />
+                    {t("hosts.proxmoxImportTitle")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleExportHosts}
+                    disabled={rawHosts.length === 0}
+                  >
+                    <Download className="size-3.5 mr-2" />
+                    {t("hosts.exportAll")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadSample}>
+                    <Download className="size-3.5 mr-2" />
+                    {t("hosts.downloadSample")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <button
+                title={
+                  selectionMode
+                    ? t("hosts.exitSelectionTitle")
+                    : t("hosts.selectHosts")
+                }
+                onClick={toggleSelectionMode}
+                className={`flex items-center justify-center size-7 rounded-sm shrink-0 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/10 border border-accent-brand/30" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 border border-transparent"}`}
+              >
+                <ListChecks className="size-3.5" />
+              </button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -877,6 +958,13 @@ export function HostsPanel({
           onOpenTab={onOpenTab}
           onEditHost={onEditHost}
           onShareHost={(host) => setShareModalHost(host)}
+          onProxmoxDiscover={(host) => {
+            const cfg = host.proxmoxConfig;
+            setProxmoxHostId(Number(host.id));
+            setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
+            setProxmoxDefaultUsername(undefined);
+            setProxmoxDialogOpen(true);
+          }}
           query={hostSearch.trim().toLowerCase()}
           selectionMode={selectionMode}
           onToggleSelectionMode={toggleSelectionMode}
@@ -894,6 +982,19 @@ export function HostsPanel({
         open={shareModalHost !== null}
         onClose={() => setShareModalHost(null)}
         host={shareModalHost}
+      />
+
+      <ProxmoxDiscoverDialog
+        open={proxmoxDialogOpen}
+        onClose={() => {
+          setProxmoxDialogOpen(false);
+          setProxmoxHostId(undefined);
+        }}
+        hosts={rawHosts}
+        onHostsChanged={setRawHosts}
+        preselectedHostId={proxmoxHostId}
+        defaultCredentialId={proxmoxDefaultCredentialId}
+        defaultUsername={proxmoxDefaultUsername}
       />
     </div>
   );

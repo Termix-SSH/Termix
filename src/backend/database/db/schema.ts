@@ -126,6 +126,10 @@ export const hosts = sqliteTable("ssh_data", {
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   dockerConfig: text("docker_config"),
+  enableProxmox: integer("enable_proxmox", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  proxmoxConfig: text("proxmox_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
