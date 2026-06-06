@@ -834,7 +834,7 @@ router.get("/oidc/callback", async (req, res) => {
       }
     }
 
-    if (!userInfo && tokenData.access_token) {
+    if (tokenData.access_token) {
       for (const userInfoUrl of userInfoUrls) {
         try {
           const userInfoResponse = await fetch(userInfoUrl, {
@@ -844,10 +844,11 @@ router.get("/oidc/callback", async (req, res) => {
           });
 
           if (userInfoResponse.ok) {
-            userInfo = (await userInfoResponse.json()) as Record<
+            const fetchedUserInfo = (await userInfoResponse.json()) as Record<
               string,
               unknown
             >;
+            userInfo = { ...userInfo, ...fetchedUserInfo };
             break;
           } else {
             authLogger.error(
@@ -1107,9 +1108,29 @@ router.get("/oidc/callback", async (req, res) => {
 
     // Sync admin status based on OIDC group membership
     if (config.admin_group) {
-      const groups = (userInfo.groups || userInfo.roles || []) as string[];
+      const rawGroups = userInfo.groups || userInfo.roles || userInfo.group;
+      const groups = Array.isArray(rawGroups)
+        ? rawGroups.map(String)
+        : typeof rawGroups === "string"
+          ? rawGroups.split(",").map((s) => s.trim())
+          : [];
+
+      authLogger.info(
+        `Evaluating OIDC admin group sync. rawGroups: ${JSON.stringify(rawGroups)}, parsedGroups: ${JSON.stringify(groups)}, configuredAdminGroup: ${config.admin_group}, availableUserInfoKeys: ${Object.keys(userInfo).join(",")}`,
+        {
+          operation: "oidc_admin_group_sync_eval",
+          userId: userRecord.id,
+        }
+      );
+
       const shouldBeAdmin = groups.includes(config.admin_group);
       if (!!userRecord.isAdmin !== shouldBeAdmin) {
+        authLogger.info("Syncing admin status based on OIDC group membership", {
+          operation: "oidc_admin_group_sync",
+          userId: userRecord.id,
+          group: config.admin_group,
+          isAdmin: shouldBeAdmin,
+        });
         await db
           .update(users)
           .set({ isAdmin: shouldBeAdmin })
