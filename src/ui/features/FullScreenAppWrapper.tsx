@@ -136,7 +136,7 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
       <TabProvider>
         <CommandHistoryProvider>
           <div
-            className="w-full h-full overflow-hidden"
+            className="w-full h-screen overflow-hidden"
             style={{ backgroundColor: "var(--bg-base)" }}
           >
             {children(hostConfig, loading)}
