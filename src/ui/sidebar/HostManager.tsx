@@ -23,7 +23,13 @@ import { CredentialEditorView } from "./CredentialEditorView";
 import { HostEditor } from "./HostEditor";
 import { mapCredentials, sshHostToHost } from "./HostManagerData";
 import { HostCredentialList } from "./HostCredentialList";
-import { makeCredentialTabs, makeHostTabs, TabStrip } from "./HostManagerTabs";
+import {
+  makeCredentialTabs,
+  makeHostTabs,
+  makeHostSshSubTabs,
+  SSH_GROUP_TABS,
+  TabStrip,
+} from "./HostManagerTabs";
 
 export function HostManager({
   pendingEditId,
@@ -233,8 +239,7 @@ export function HostManager({
     const tabs = isHost
       ? makeHostTabs(t).filter((tab) => {
           if (tab.id === "general") return true;
-          if (["ssh", "tunnels", "docker", "files", "stats"].includes(tab.id))
-            return editingProtocols.enableSsh;
+          if (tab.id === "ssh") return editingProtocols.enableSsh;
           if (tab.id === "rdp") return editingProtocols.enableRdp;
           if (tab.id === "vnc") return editingProtocols.enableVnc;
           if (tab.id === "telnet") return editingProtocols.enableTelnet;
@@ -243,6 +248,11 @@ export function HostManager({
       : makeCredentialTabs(t);
     const activeTab = isHost ? activeHostTab : activeCredentialTab;
     const setActiveTab = isHost ? setActiveHostTab : setActiveCredentialTab;
+    const showSshSubTabs =
+      isHost &&
+      editingProtocols.enableSsh &&
+      SSH_GROUP_TABS.has(activeHostTab as never);
+    const sshSubTabs = makeHostSshSubTabs(t);
 
     return (
       <div className="flex flex-col flex-1 min-h-0">
@@ -276,8 +286,32 @@ export function HostManager({
           <TabStrip
             tabs={tabs}
             activeTab={activeTab}
-            onTabChange={setActiveTab}
+            onTabChange={(id) => {
+              if (isHost && id === "ssh") {
+                if (!SSH_GROUP_TABS.has(activeHostTab as never)) {
+                  setActiveHostTab("ssh");
+                }
+              } else {
+                setActiveTab(id);
+              }
+            }}
+            isActive={
+              isHost
+                ? (id) =>
+                    id === "ssh"
+                      ? SSH_GROUP_TABS.has(activeHostTab as never)
+                      : activeHostTab === id
+                : undefined
+            }
           />
+          {showSshSubTabs && (
+            <TabStrip
+              tabs={sshSubTabs}
+              activeTab={activeHostTab}
+              onTabChange={setActiveHostTab}
+              variant="secondary"
+            />
+          )}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3">
           {isHost ? (
