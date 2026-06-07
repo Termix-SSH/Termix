@@ -20,7 +20,6 @@ import type { SSHHost } from "@/types";
 import { isElectron } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
-import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import {
   TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
@@ -50,10 +49,26 @@ export function ConsoleTerminal({
     [hostConfig.terminalConfig],
   );
 
+  const isDarkMode =
+    appTheme === "dark" ||
+    appTheme === "dracula" ||
+    appTheme === "gentlemansChoice" ||
+    appTheme === "midnightEspresso" ||
+    appTheme === "catppuccinMocha" ||
+    (appTheme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   const themeColors = React.useMemo(() => {
     const activeTheme = terminalConfig.theme;
-    return resolveTermixThemeColors(activeTheme, appTheme);
-  }, [terminalConfig.theme, appTheme]);
+    if (activeTheme === "termix") {
+      return isDarkMode
+        ? TERMINAL_THEMES.termixDark.colors
+        : TERMINAL_THEMES.termixLight.colors;
+    }
+    return (
+      TERMINAL_THEMES[activeTheme]?.colors ?? TERMINAL_THEMES.termixDark.colors
+    );
+  }, [terminalConfig.theme, isDarkMode]);
 
   const [isConnected, setIsConnected] = React.useState(false);
   const [isConnecting, setIsConnecting] = React.useState(false);
