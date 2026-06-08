@@ -90,9 +90,9 @@ function getSshActions(
         label: "Tunnel",
       },
     metricsEnabled && {
-      type: "stats" as TabType,
+      type: "host-metrics" as TabType,
       icon: Server,
-      label: "Stats",
+      label: "Host Metrics",
     },
   ].filter(Boolean) as {
     type: TabType;

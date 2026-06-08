@@ -25,6 +25,16 @@ const authenticateJWT = authManager.createAuthMiddleware();
  */
 const TAB_TTL_MS = 30 * 60 * 1000;
 
+// Legacy tab types that were renamed. Normalize on read so previously saved
+// tabs still restore to the correct (renamed) tab type.
+const LEGACY_TAB_TYPE_MAP: Record<string, string> = {
+  stats: "host-metrics",
+};
+
+function normalizeTabType(tabType: string): string {
+  return LEGACY_TAB_TYPE_MAP[tabType] ?? tabType;
+}
+
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
@@ -40,7 +50,9 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       )
       .orderBy(userOpenTabs.tabOrder)
       .all();
-    return res.json(tabs);
+    return res.json(
+      tabs.map((tab) => ({ ...tab, tabType: normalizeTabType(tab.tabType) })),
+    );
   } catch (e) {
     databaseLogger.error("Failed to get open tabs", e, {
       operation: "get_open_tabs",

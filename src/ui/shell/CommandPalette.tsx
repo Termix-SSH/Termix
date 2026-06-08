@@ -55,7 +55,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 const ACTIVITY_TAB_TYPE: Record<string, TabType> = {
   terminal: "terminal",
   file_manager: "files",
-  server_stats: "stats",
+  server_stats: "host-metrics",
   tunnel: "tunnel",
   docker: "docker",
   telnet: "telnet",
@@ -82,7 +82,11 @@ function getSshActions(host: Host): {
     },
     host.enableDocker && { type: "docker", icon: Box, label: "Docker" },
     host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
-    metricsEnabled && { type: "stats", icon: Activity, label: "Stats" },
+    metricsEnabled && {
+      type: "host-metrics",
+      icon: Activity,
+      label: "Host Metrics",
+    },
   ].filter(Boolean) as {
     type: TabType;
     icon: React.ElementType;

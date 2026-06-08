@@ -148,7 +148,7 @@ export function HostEditor({
       "tunnels",
       "docker",
       "files",
-      "stats",
+      "host-metrics",
     ];
     if (!value) {
       if (proto === "enableSsh" && sshGroupTabs.includes(activeTab)) {
@@ -1248,7 +1248,7 @@ export function HostEditor({
           <HostFilesTab form={form} setField={setField} />
         )}
 
-        {activeTab === "stats" && (
+        {activeTab === "host-metrics" && (
           <HostStatsTab form={form} setField={setField} snippets={snippets} />
         )}
 

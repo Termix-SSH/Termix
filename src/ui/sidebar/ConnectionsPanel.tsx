@@ -25,7 +25,7 @@ const CONNECTION_TAB_TYPES: TabType[] = [
   "telnet",
   "files",
   "docker",
-  "stats",
+  "host-metrics",
   "tunnel",
 ];
 
@@ -36,7 +36,7 @@ const TYPE_LABELS: Record<string, string> = {
   telnet: "Telnet",
   files: "Files",
   docker: "Docker",
-  stats: "Stats",
+  "host-metrics": "Host Metrics",
   tunnel: "Tunnel",
 };
 

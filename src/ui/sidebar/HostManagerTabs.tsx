@@ -22,7 +22,7 @@ export type HostTabId =
   | "docker"
   | "proxmox"
   | "files"
-  | "stats"
+  | "host-metrics"
   | "rdp"
   | "vnc"
   | "telnet";
@@ -46,7 +46,7 @@ export const SSH_GROUP_TABS = new Set<HostTabId>([
   "docker",
   "proxmox",
   "files",
-  "stats",
+  "host-metrics",
 ]);
 
 export function makeHostTabs(t: (key: string) => string): HostTab[] {
@@ -112,8 +112,8 @@ export function makeHostSshSubTabs(t: (key: string) => string): HostTab[] {
       icon: <Folder className="size-3" />,
     },
     {
-      id: "stats",
-      label: t("hosts.tabStats"),
+      id: "host-metrics",
+      label: t("hosts.tabHostMetrics"),
       icon: <Activity className="size-3" />,
     },
   ];

@@ -31,6 +31,10 @@ import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 import { registerServerStatsSettingsRoutes } from "./server-stats-settings-routes.js";
 import { registerServerStatsViewerRoutes } from "./server-stats-viewer-routes.js";
+import { registerHostMetricsPreferencesRoutes } from "./host-metrics-preferences-routes.js";
+import { registerManagerRoutes } from "./managers/index.js";
+import { AccessDeniedError } from "./managers/route-helpers.js";
+import type { ManagerHost } from "./managers/types.js";
 import { createJumpHostChain } from "./server-stats-jump-hosts.js";
 import {
   createConnectionLog,
@@ -71,6 +75,7 @@ interface SSHHostWithCredentials {
   key?: string;
   keyPassword?: string;
   keyType?: string;
+  sudoPassword?: string;
   credentialId?: number;
   enableTerminal: boolean;
   enableTunnel: boolean;
@@ -762,6 +767,7 @@ async function resolveHostCredentials(
         : [],
       jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
       statsConfig: host.statsConfig || undefined,
+      sudoPassword: (host.sudoPassword as string) || undefined,
       createdAt: host.createdAt,
       updatedAt: host.updatedAt,
       userId: host.userId,
@@ -2487,6 +2493,39 @@ registerServerStatsSettingsRoutes(app, {
   requireAdmin,
   defaultStatsConfig: DEFAULT_STATS_CONFIG,
   refreshAllPolling: () => pollingManager.refreshAllPolling(),
+});
+
+registerHostMetricsPreferencesRoutes(app, {
+  validateHostId,
+  fetchHostById: async (hostId, userId) =>
+    (await fetchHostById(hostId, userId)) ?? null,
+  parseStatsConfig: (statsConfig) =>
+    pollingManager.parseStatsConfig(
+      statsConfig as string | StatsConfig | undefined,
+    ),
+  canAccessHost: async (userId, hostId, level) =>
+    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
+});
+
+registerManagerRoutes(app, {
+  validateHostId,
+  runOnHost: async (hostId, userId, level, fn) => {
+    const access = await permissionManager.canAccessHost(userId, hostId, level);
+    if (!access.hasAccess) {
+      throw new AccessDeniedError();
+    }
+    const host = await fetchHostById(hostId, userId);
+    if (!host) {
+      throw new AccessDeniedError("Host not found");
+    }
+    const managerHost: ManagerHost = {
+      id: host.id,
+      userId: host.userId,
+      sudoPassword: host.sudoPassword,
+      enableDocker: !!(host as { enableDocker?: boolean }).enableDocker,
+    };
+    return withSshConnection(host, (client) => fn(client, managerHost));
+  },
 });
 
 process.on("SIGINT", () => {

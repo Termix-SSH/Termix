@@ -162,7 +162,7 @@ export type TabType =
   | "rdp"
   | "vnc"
   | "telnet"
-  | "stats"
+  | "host-metrics"
   | "files"
   | "host-manager"
   | "user-profile"

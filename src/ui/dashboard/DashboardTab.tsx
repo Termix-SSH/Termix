@@ -403,7 +403,7 @@ function HostStatusCard({
           return (
             <div
               key={i}
-              onClick={() => onOpenTab(host, "stats")}
+              onClick={() => onOpenTab(host, "host-metrics")}
               className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
@@ -508,7 +508,7 @@ function RecentActivityCard({
   const typeToTab: Record<RecentActivityItem["type"], TabType> = {
     terminal: "terminal",
     file_manager: "files",
-    server_stats: "stats",
+    server_stats: "host-metrics",
     tunnel: "tunnel",
     docker: "docker",
     rdp: "rdp",

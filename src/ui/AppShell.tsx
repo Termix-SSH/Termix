@@ -469,7 +469,7 @@ export function AppShell({
     "telnet",
     "files",
     "docker",
-    "stats",
+    "host-metrics",
     "tunnel",
   ];
 

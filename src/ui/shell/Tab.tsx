@@ -212,7 +212,7 @@ export function Tab({
     const displayTitle =
       title ||
       (isServer
-        ? t("nav.serverStats")
+        ? t("nav.hostMetrics")
         : isFileManager
           ? t("nav.fileManager")
           : isTunnel
