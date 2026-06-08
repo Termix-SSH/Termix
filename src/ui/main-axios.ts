@@ -1586,13 +1586,14 @@ export {
   submitMetricsTOTP,
   refreshServerPolling,
   notifyHostCreatedOrUpdated,
-} from "@/api/server-stats-api";
+} from "@/api/host-metrics-status-api";
 
 export {
   getHostMetricsLayout,
   saveHostMetricsLayout,
   getHostPlatform,
   managerGet,
+  managerGetSub,
   managerPost,
   type PlatformInfo,
 } from "@/api/host-metrics-api";

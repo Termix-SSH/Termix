@@ -64,6 +64,23 @@ export async function managerGet<T>(
 }
 
 /**
+ * GET a manager sub-resource where the host id sits in the middle of the path,
+ * e.g. /managers/logs/{id}/files.
+ */
+export async function managerGetSub<T>(
+  hostId: number,
+  resource: string,
+  sub: string,
+  params?: Record<string, string | number>,
+): Promise<T> {
+  const res = await statsApi.get(
+    `/host-metrics/managers/${resource}/${hostId}/${sub}`,
+    { params },
+  );
+  return res.data as T;
+}
+
+/**
  * POST a manager action. `resource` is the manager name; `action` is the
  * optional sub-path (e.g. "action", "signal", "renew"). The host id always
  * sits between them: /managers/{resource}/{id}[/{action}].

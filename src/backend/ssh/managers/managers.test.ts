@@ -30,6 +30,8 @@ import {
 import {
   buildIssueCommand,
   buildRenewCommand,
+  buildRevokeCommand,
+  isValidCertName,
   parseCertbotCertificates,
 } from "./ssl.js";
 import { buildIptablesRuleCommand, buildNftRuleCommand } from "./firewall.js";
@@ -42,10 +44,13 @@ describe("exec-elevated", () => {
     expect(shellSingleQuote("abc")).toBe("'abc'");
     expect(shellSingleQuote("a'b")).toBe(`'a'"'"'b'`);
   });
-  it("builds the sudo -S pipeline wrapping the command in sh -c", () => {
+  it("builds the sudo -S pipeline wrapping the command in sh -c with a success marker", () => {
     expect(buildSudoCommand("systemctl restart nginx", "pw")).toBe(
-      `echo 'pw' | sudo -S -p '' sh -c 'systemctl restart nginx' 2>&1`,
+      `echo 'pw' | sudo -S -p '' sh -c 'echo __TX_SUDO_OK__; systemctl restart nginx'`,
     );
+  });
+  it("does not merge stderr into stdout (no 2>&1)", () => {
+    expect(buildSudoCommand("id", "pw")).not.toContain("2>&1");
   });
   it("escapes a password containing a quote", () => {
     expect(buildSudoCommand("id", "p'w")).toContain(`echo 'p'"'"'w'`);
@@ -280,6 +285,22 @@ describe("ssl (dual client)", () => {
     expect(buildRenewCommand("certbot", true)).toBe("certbot renew --dry-run");
     expect(buildRenewCommand("acme.sh", false)).toContain("--renew-all");
   });
+  it("builds revoke per client", () => {
+    expect(buildRevokeCommand("certbot", "example.com")).toBe(
+      "certbot revoke --non-interactive --cert-name 'example.com' --delete-after-revoke",
+    );
+    const acme = buildRevokeCommand("acme.sh", "example.com");
+    expect(acme).toContain("--revoke -d 'example.com'");
+    expect(acme).toContain("--remove -d 'example.com'");
+  });
+  it("validates certificate names (rejects shell metachars)", () => {
+    expect(isValidCertName("example.com")).toBe(true);
+    expect(isValidCertName("example.com-0001")).toBe(true);
+    expect(isValidCertName("*.example.com")).toBe(true);
+    expect(isValidCertName("a.com; rm -rf /")).toBe(false);
+    expect(isValidCertName("")).toBe(false);
+    expect(isValidCertName(undefined)).toBe(false);
+  });
   it("parses certbot certificates", () => {
     const out = [
       "Found the following certs:",
@@ -387,9 +408,9 @@ describe("logs", () => {
     expect(clampLines("abc")).toBe(200);
     expect(clampLines(0)).toBe(1);
   });
-  it("builds a quoted tail command", () => {
+  it("builds a quoted tail command without suppressing stderr", () => {
     expect(buildTailCommand("/var/log/syslog", 100)).toBe(
-      "tail -n 100 '/var/log/syslog' 2>/dev/null",
+      "tail -n 100 '/var/log/syslog'",
     );
   });
 });

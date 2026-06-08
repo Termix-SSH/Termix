@@ -2,24 +2,24 @@ import type { Express, RequestHandler } from "express";
 import { getDb } from "../database/db/index.js";
 import { statsLogger } from "../utils/logger.js";
 
-type ServerStatsSettingsConfig = {
+type HostMetricsSettingsConfig = {
   statusCheckInterval: number;
   metricsInterval: number;
 };
 
-type ServerStatsSettingsRoutesDeps = {
+type HostMetricsSettingsRoutesDeps = {
   requireAdmin: RequestHandler;
-  defaultStatsConfig: ServerStatsSettingsConfig;
+  defaultStatsConfig: HostMetricsSettingsConfig;
   refreshAllPolling: () => Promise<void>;
 };
 
-export function registerServerStatsSettingsRoutes(
+export function registerHostMetricsSettingsRoutes(
   app: Express,
   {
     requireAdmin,
     defaultStatsConfig: DEFAULT_STATS_CONFIG,
     refreshAllPolling,
-  }: ServerStatsSettingsRoutesDeps,
+  }: HostMetricsSettingsRoutesDeps,
 ): void {
   /**
    * @openapi
@@ -27,7 +27,7 @@ export function registerServerStatsSettingsRoutes(
    *   get:
    *     summary: Get global monitoring defaults
    *     tags:
-   *       - Stats
+   *       - Host Metrics
    *     responses:
    *       200:
    *         description: Global monitoring settings.
@@ -88,7 +88,7 @@ export function registerServerStatsSettingsRoutes(
    *   post:
    *     summary: Update global monitoring defaults
    *     tags:
-   *       - Stats
+   *       - Host Metrics
    *     requestBody:
    *       required: true
    *       content:

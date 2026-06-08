@@ -104,18 +104,10 @@ const DEFAULT_COLSPAN: Partial<Record<HostMetricsCardId, HostMetricsColSpan>> =
     login_stats: 2,
   };
 
-const DEFAULT_HEIGHT: Partial<Record<HostMetricsCardId, number | null>> = {
-  cpu: 200,
-  memory: 200,
-  disk: 200,
-  uptime: 160,
-  system: 240,
-  network: 280,
-  processes: 320,
-  ports: 320,
-  firewall: 340,
-  login_stats: 320,
-};
+// All cards default to content/auto height (null); the masonry packs them
+// tetris-style and scrollable cards cap their own body height. Users can still
+// pin an explicit height by dragging a card's resize handle.
+const DEFAULT_HEIGHT: Partial<Record<HostMetricsCardId, number | null>> = {};
 
 /**
  * Build a default layout from a list of enabled metric-card ids (e.g. the host's
@@ -143,5 +135,5 @@ export function defaultColSpanFor(id: HostMetricsCardId): HostMetricsColSpan {
 
 export function defaultHeightFor(id: HostMetricsCardId): number | null {
   if (id in DEFAULT_HEIGHT) return DEFAULT_HEIGHT[id] ?? null;
-  return isManagerCardId(id) ? 340 : null;
+  return null;
 }

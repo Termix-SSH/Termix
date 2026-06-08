@@ -29,18 +29,18 @@ import {
 } from "../utils/socks5-helper.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { connectionPool, withConnection } from "./ssh-connection-pool.js";
-import { registerServerStatsSettingsRoutes } from "./server-stats-settings-routes.js";
-import { registerServerStatsViewerRoutes } from "./server-stats-viewer-routes.js";
+import { registerHostMetricsSettingsRoutes } from "./host-metrics-settings-routes.js";
+import { registerHostMetricsViewerRoutes } from "./host-metrics-viewer-routes.js";
 import { registerHostMetricsPreferencesRoutes } from "./host-metrics-preferences-routes.js";
 import { registerManagerRoutes } from "./managers/index.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
-import { createJumpHostChain } from "./server-stats-jump-hosts.js";
+import { createJumpHostChain } from "./host-metrics-jump-hosts.js";
 import {
   createConnectionLog,
   isTcpPingEnabled,
   supportsMetrics,
-} from "./server-stats-helpers.js";
+} from "./host-metrics-helpers.js";
 import {
   cleanupMetricsSession,
   getSessionKey,
@@ -48,13 +48,13 @@ import {
   pendingTOTPSessions,
   scheduleMetricsSessionCleanup,
   type MetricsViewer,
-} from "./server-stats-sessions.js";
+} from "./host-metrics-sessions.js";
 import {
   authFailureTracker,
   metricsCache,
   pollingBackoff,
   requestQueue,
-} from "./server-stats-state.js";
+} from "./host-metrics-state.js";
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
@@ -1484,7 +1484,7 @@ function tcpPing(
  *     summary: Get all host statuses
  *     description: Retrieves the status of all hosts for the authenticated user.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     responses:
  *       200:
  *         description: A map of host IDs to their status entries.
@@ -1520,7 +1520,7 @@ app.get("/status", async (req, res) => {
  *     summary: Get host status by ID
  *     description: Retrieves the status of a specific host by its ID.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     parameters:
  *       - in: path
  *         name: id
@@ -1566,7 +1566,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
  *     summary: Clear all SSH connections
  *     description: Clears all SSH connections from the connection pool.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     responses:
  *       200:
  *         description: All SSH connections cleared.
@@ -1594,7 +1594,7 @@ app.post("/clear-connections", async (req, res) => {
  *     summary: Refresh polling
  *     description: Clears all SSH connections and refreshes host polling.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     responses:
  *       200:
  *         description: Polling refreshed.
@@ -1624,7 +1624,7 @@ app.post("/refresh", async (req, res) => {
  *     summary: Start polling for updated host
  *     description: Starts polling for a specific host after it has been updated.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     requestBody:
  *       required: true
  *       content:
@@ -1688,7 +1688,7 @@ app.post("/host-updated", async (req, res) => {
  *     summary: Stop polling for deleted host
  *     description: Stops polling for a specific host after it has been deleted.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     requestBody:
  *       required: true
  *       content:
@@ -1743,7 +1743,7 @@ app.post("/host-deleted", async (req, res) => {
  *     summary: Get host metrics
  *     description: Retrieves current metrics for a specific host including CPU, memory, disk, network, processes, and system information.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     parameters:
  *       - in: path
  *         name: id
@@ -1802,7 +1802,7 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
  *     summary: Start metrics collection
  *     description: Establishes an SSH connection and starts collecting metrics for a specific host.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     parameters:
  *       - in: path
  *         name: id
@@ -2238,7 +2238,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
  *     summary: Stop metrics collection
  *     description: Stops metrics collection for a specific host and cleans up the SSH session.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     parameters:
  *       - in: path
  *         name: id
@@ -2311,7 +2311,7 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
  *     summary: Complete TOTP verification for metrics
  *     description: Verifies the TOTP code and completes the metrics SSH connection.
  *     tags:
- *       - Server Stats
+ *       - Host Metrics
  *     requestBody:
  *       required: true
  *       content:
@@ -2476,7 +2476,7 @@ app.post("/metrics/connect-totp", async (req, res) => {
   }
 });
 
-registerServerStatsViewerRoutes(app, {
+registerHostMetricsViewerRoutes(app, {
   fetchHostById,
   supportsMetrics: (host: SSHHostWithCredentials) => supportsMetrics(host),
   parseStatsConfig: (statsConfig: SSHHostWithCredentials["statsConfig"]) =>
@@ -2489,7 +2489,7 @@ registerServerStatsViewerRoutes(app, {
     pollingManager.unregisterViewer(hostId, viewerSessionId),
 });
 
-registerServerStatsSettingsRoutes(app, {
+registerHostMetricsSettingsRoutes(app, {
   requireAdmin,
   defaultStatsConfig: DEFAULT_STATS_CONFIG,
   refreshAllPolling: () => pollingManager.refreshAllPolling(),

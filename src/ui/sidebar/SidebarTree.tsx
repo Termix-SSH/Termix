@@ -785,13 +785,13 @@ export function HostItem({
                           onClick={(e) => {
                             e.stopPropagation();
                             navigator.clipboard.writeText(
-                              `${window.location.origin}?view=server-stats&hostId=${host.id}`,
+                              `${window.location.origin}?view=host-metrics&hostId=${host.id}`,
                             );
-                            toast.success(t("hosts.serverStatsUrlCopied"));
+                            toast.success(t("hosts.hostMetricsUrlCopied"));
                           }}
                         >
                           <Server className="size-3.5 mr-2" />
-                          {t("hosts.copyServerStatsUrlAction")}
+                          {t("hosts.copyHostMetricsUrlAction")}
                         </DropdownMenuItem>
                       )}
                       {host.enableRdp && (

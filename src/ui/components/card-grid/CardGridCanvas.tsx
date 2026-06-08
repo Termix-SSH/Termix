@@ -1,5 +1,7 @@
 import {
   useCallback,
+  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -28,23 +30,19 @@ import {
   removeSlot,
   setColSpan,
   setHeight,
+  heightToRowSpan,
 } from "./layout-utils";
 
 type DragState = { id: string; order: number } | null;
 
-interface CardGridCanvasProps {
-  slots: GridSlot[];
-  columns: number;
-  editMode: boolean;
-  /** Render the card body for a given slot id. */
-  renderCard: (id: string) => ReactNode;
-  /** Cards available to add in edit mode (already-present ones are filtered out). */
-  cardCatalog: GridCardCatalogEntry[];
-  onChange: (slots: GridSlot[], columns: number) => void;
-  /** Human label lookup for a card id (used by remove/add chrome). */
-  cardLabel?: (id: string) => string;
-  className?: string;
-}
+/**
+ * Masonry is implemented with the CSS-grid row-span trick: the grid has many
+ * tiny rows (`ROW_UNIT`px each) and every tile spans `ceil(height / ROW_UNIT)`
+ * rows. With `grid-auto-flow: row dense` the browser packs short tiles under
+ * tall ones (tetris) while still honouring multi-column spans natively.
+ */
+const ROW_UNIT = 8;
+const ROW_GAP = 12;
 
 function DropZone({
   order,
@@ -164,6 +162,122 @@ function AddTray({
   );
 }
 
+/**
+ * One masonry tile. Measures its natural (or overridden) height and reports the
+ * number of grid rows it should span so the parent grid can pack densely.
+ */
+function MasonryTile({
+  slot,
+  span,
+  rows,
+  editMode,
+  isDragging,
+  effectiveColumns,
+  label,
+  measureRef,
+  children,
+  onReportRows,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  onRemove,
+  onCycleWidth,
+  onResizeStart,
+}: {
+  slot: GridSlot;
+  span: number;
+  rows: number;
+  editMode: boolean;
+  isDragging: boolean;
+  effectiveColumns: number;
+  label: string;
+  measureRef: (el: HTMLDivElement | null) => void;
+  children: ReactNode;
+  onReportRows: (rows: number) => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDragOver: (e: DragEvent) => void;
+  onDrop: () => void;
+  onRemove: () => void;
+  onCycleWidth: () => void;
+  onResizeStart: (e: ReactMouseEvent) => void;
+}) {
+  const innerRef = useRef<HTMLDivElement | null>(null);
+  const fixedHeight = slot.height ?? undefined;
+
+  // Report the span (in row units) from the measured content height. When an
+  // explicit height override is set we derive rows from it directly.
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const report = () => {
+      const h = fixedHeight ?? el.getBoundingClientRect().height;
+      onReportRows(heightToRowSpan(h, ROW_UNIT, ROW_GAP));
+    };
+    report();
+    if (fixedHeight != null) return;
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixedHeight, span, effectiveColumns]);
+
+  return (
+    <div
+      ref={measureRef}
+      draggable={editMode}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      className={cn(
+        "relative flex min-w-0 flex-col transition-opacity",
+        editMode && "select-none",
+        isDragging ? "opacity-40" : "opacity-100",
+      )}
+      style={{
+        gridColumn: `span ${span} / span ${span}`,
+        gridRow: `span ${rows} / span ${rows}`,
+      }}
+    >
+      <div
+        ref={innerRef}
+        className={cn(
+          "min-h-0",
+          fixedHeight != null && "overflow-hidden [&>*]:h-full",
+        )}
+        style={fixedHeight != null ? { height: fixedHeight } : undefined}
+      >
+        {children}
+      </div>
+      {editMode && (
+        <TileChrome
+          columns={effectiveColumns}
+          label={label}
+          onRemove={onRemove}
+          onCycleWidth={onCycleWidth}
+          onResizeStart={onResizeStart}
+        />
+      )}
+    </div>
+  );
+}
+
+interface CardGridCanvasProps {
+  slots: GridSlot[];
+  columns: number;
+  editMode: boolean;
+  /** Render the card body for a given slot id. */
+  renderCard: (id: string) => ReactNode;
+  /** Cards available to add in edit mode (already-present ones are filtered out). */
+  cardCatalog: GridCardCatalogEntry[];
+  onChange: (slots: GridSlot[], columns: number) => void;
+  /** Human label lookup for a card id (used by remove/add chrome). */
+  cardLabel?: (id: string) => string;
+  className?: string;
+}
+
 export function CardGridCanvas({
   slots,
   columns,
@@ -177,6 +291,7 @@ export function CardGridCanvas({
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [dragState, setDragState] = useState<DragState>(null);
+  const [rowSpans, setRowSpans] = useState<Record<string, number>>({});
   const tileRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
 
   const sorted = sortSlots(slots);
@@ -185,6 +300,24 @@ export function CardGridCanvas({
     (id: string) => cardLabel?.(id) ?? id,
     [cardLabel],
   );
+
+  // Drop row-span entries for cards that are no longer present.
+  useEffect(() => {
+    setRowSpans((prev) => {
+      const next: Record<string, number> = {};
+      let changed = false;
+      for (const s of slots) {
+        if (prev[s.id] != null) next[s.id] = prev[s.id];
+        else changed = true;
+      }
+      if (Object.keys(next).length !== Object.keys(prev).length) changed = true;
+      return changed ? next : prev;
+    });
+  }, [slots]);
+
+  const reportRows = useCallback((id: string, rows: number) => {
+    setRowSpans((prev) => (prev[id] === rows ? prev : { ...prev, [id]: rows }));
+  }, []);
 
   const commitSlots = useCallback(
     (next: GridSlot[]) => onChange(next, columns),
@@ -260,50 +393,45 @@ export function CardGridCanvas({
   return (
     <div className={cn("flex flex-col", className)}>
       <div
-        className="grid items-start gap-3"
+        className="grid items-start"
         style={{
           gridTemplateColumns: `repeat(${effectiveColumns}, minmax(0, 1fr))`,
+          gridAutoRows: `${ROW_UNIT}px`,
+          gridAutoFlow: "row dense",
+          columnGap: `${ROW_GAP}px`,
+          rowGap: `${ROW_GAP}px`,
         }}
       >
         {sorted.map((slot) => {
           const span = Math.min(slot.colSpan, effectiveColumns);
           const isDragging = dragState?.id === slot.id;
+          const rows = rowSpans[slot.id] ?? 24;
           return (
-            <div
+            <MasonryTile
               key={slot.id}
-              ref={(el) => {
+              slot={slot}
+              span={span}
+              rows={rows}
+              editMode={editMode}
+              isDragging={isDragging}
+              effectiveColumns={effectiveColumns}
+              label={labelFor(slot.id)}
+              measureRef={(el) => {
                 tileRefs.current.set(slot.id, el);
               }}
-              draggable={editMode}
+              onReportRows={(r) => reportRows(slot.id, r)}
               onDragStart={() =>
                 setDragState({ id: slot.id, order: slot.order })
               }
               onDragEnd={() => setDragState(null)}
               onDragOver={handleDragOver}
               onDrop={() => handleDropAt(slot.order)}
-              className={cn(
-                "relative flex min-w-0 flex-col transition-opacity",
-                editMode && "select-none",
-                isDragging ? "opacity-40" : "opacity-100",
-              )}
-              style={{
-                gridColumn: `span ${span} / span ${span}`,
-                height: slot.height ?? undefined,
-              }}
+              onRemove={() => handleRemove(slot.id)}
+              onCycleWidth={() => handleCycleWidth(slot.id)}
+              onResizeStart={(e) => handleResizeStart(slot.id, e)}
             >
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {renderCard(slot.id)}
-              </div>
-              {editMode && (
-                <TileChrome
-                  columns={effectiveColumns}
-                  label={labelFor(slot.id)}
-                  onRemove={() => handleRemove(slot.id)}
-                  onCycleWidth={() => handleCycleWidth(slot.id)}
-                  onResizeStart={(e) => handleResizeStart(slot.id, e)}
-                />
-              )}
-            </div>
+              {renderCard(slot.id)}
+            </MasonryTile>
           );
         })}
       </div>

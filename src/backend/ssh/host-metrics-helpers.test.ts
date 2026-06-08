@@ -3,7 +3,7 @@ import {
   supportsMetrics,
   isTcpPingEnabled,
   createConnectionLog,
-} from "./server-stats-helpers.js";
+} from "./host-metrics-helpers.js";
 
 describe("supportsMetrics", () => {
   it("supports plain ssh hosts", () => {

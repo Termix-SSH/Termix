@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Cog, Play, Square, RotateCw } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Cog, Play, Square, RotateCw, Power } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { managerPost } from "@/main-axios";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
+import { ManagerSearch } from "./ManagerToolbar";
 
 interface SystemdService {
   unit: string;
@@ -21,11 +22,15 @@ export function ServiceManagerCard({ hostId }: { hostId: number | null }) {
   const [filter, setFilter] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
-  const services = (data?.services ?? []).filter(
-    (s) =>
-      !filter ||
-      s.unit.toLowerCase().includes(filter.toLowerCase()) ||
-      s.description.toLowerCase().includes(filter.toLowerCase()),
+  const services = useMemo(
+    () =>
+      (data?.services ?? []).filter(
+        (s) =>
+          !filter ||
+          s.unit.toLowerCase().includes(filter.toLowerCase()) ||
+          s.description.toLowerCase().includes(filter.toLowerCase()),
+      ),
+    [data?.services, filter],
   );
 
   const act = async (unit: string, action: string) => {
@@ -60,11 +65,10 @@ export function ServiceManagerCard({ hostId }: { hostId: number | null }) {
       onRefresh={refresh}
       empty={!loading && services.length === 0}
     >
-      <input
+      <ManagerSearch
         value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder={t("hostMetrics.managers.filter")}
-        className="mb-2 h-7 w-full border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+        onChange={setFilter}
+        count={services.length}
       />
       <div className="flex flex-col">
         {services.map((s) => (
@@ -106,6 +110,17 @@ export function ServiceManagerCard({ hostId }: { hostId: number | null }) {
                 title={t("hostMetrics.managers.stop")}
               >
                 <Square className="size-3" />
+              </ActionBtn>
+              <ActionBtn
+                onClick={() =>
+                  act(s.unit, s.sub === "running" ? "disable" : "enable")
+                }
+                busy={
+                  busy === `${s.unit}:enable` || busy === `${s.unit}:disable`
+                }
+                title={t("hostMetrics.managers.enableDisable")}
+              >
+                <Power className="size-3" />
               </ActionBtn>
             </div>
           </div>

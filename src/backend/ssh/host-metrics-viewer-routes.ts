@@ -7,7 +7,7 @@ type ViewerStatsConfig = {
   metricsEnabled: boolean;
 };
 
-type ServerStatsViewerRoutesDeps<
+type HostMetricsViewerRoutesDeps<
   THost extends { statsConfig?: string | TStatsConfig },
   TStatsConfig extends ViewerStatsConfig,
 > = {
@@ -23,7 +23,7 @@ type ServerStatsViewerRoutesDeps<
   unregisterViewer: (hostId: number, viewerSessionId: string) => void;
 };
 
-export function registerServerStatsViewerRoutes<
+export function registerHostMetricsViewerRoutes<
   THost extends { statsConfig?: string | TStatsConfig },
   TStatsConfig extends ViewerStatsConfig,
 >(
@@ -35,7 +35,7 @@ export function registerServerStatsViewerRoutes<
     updateHeartbeat,
     registerViewer,
     unregisterViewer,
-  }: ServerStatsViewerRoutesDeps<THost, TStatsConfig>,
+  }: HostMetricsViewerRoutesDeps<THost, TStatsConfig>,
 ): void {
   /**
    * @openapi
@@ -44,7 +44,7 @@ export function registerServerStatsViewerRoutes<
    *     summary: Update viewer heartbeat
    *     description: Updates the heartbeat timestamp for a metrics viewer session to keep it alive.
    *     tags:
-   *       - Server Stats
+   *       - Host Metrics
    *     requestBody:
    *       required: true
    *       content:
@@ -105,7 +105,7 @@ export function registerServerStatsViewerRoutes<
    *     summary: Register metrics viewer
    *     description: Registers a new viewer session for a host to track who is viewing metrics.
    *     tags:
-   *       - Server Stats
+   *       - Host Metrics
    *     requestBody:
    *       required: true
    *       content:
@@ -233,7 +233,7 @@ export function registerServerStatsViewerRoutes<
    *     summary: Unregister metrics viewer
    *     description: Unregisters a viewer session when they stop viewing metrics for a host.
    *     tags:
-   *       - Server Stats
+   *       - Host Metrics
    *     requestBody:
    *       required: true
    *       content:

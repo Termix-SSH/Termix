@@ -8,6 +8,7 @@ import {
   removeSlot,
   setColSpan,
   setHeight,
+  heightToRowSpan,
   MIN_TILE_HEIGHT,
 } from "./layout-utils";
 import type { GridSlot } from "./types";
@@ -108,5 +109,23 @@ describe("setColSpan / setHeight", () => {
     expect(out[0].height).toBe(MIN_TILE_HEIGHT);
     const out2 = setHeight([slot("a", 0)], "a", 300);
     expect(out2[0].height).toBe(300);
+  });
+});
+
+describe("heightToRowSpan", () => {
+  const unit = 8;
+  const gap = 12;
+  it("returns at least one row for tiny tiles", () => {
+    expect(heightToRowSpan(0, unit, gap)).toBe(1);
+    expect(heightToRowSpan(5, unit, gap)).toBe(1);
+  });
+  it("grows the row span with height (taller -> more rows)", () => {
+    const short = heightToRowSpan(200, unit, gap);
+    const tall = heightToRowSpan(400, unit, gap);
+    expect(tall).toBeGreaterThan(short);
+  });
+  it("rounds up so content is never clipped", () => {
+    // 200px content: ceil((200 + 12) / (8 + 12)) = ceil(10.6) = 11
+    expect(heightToRowSpan(200, unit, gap)).toBe(11);
   });
 });

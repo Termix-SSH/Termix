@@ -29,11 +29,14 @@ export function clampLines(n: unknown): number {
 }
 
 export function buildTailCommand(path: string, lines: number): string {
-  return `tail -n ${lines} ${shellSingleQuote(path)} 2>/dev/null`;
+  // Keep stderr intact so execElevated can detect a permission error and
+  // escalate; suppressing it (2>/dev/null) would hide the denial and return an
+  // empty log with no chance to retry under sudo.
+  return `tail -n ${lines} ${shellSingleQuote(path)}`;
 }
 
 export function buildJournalCommand(unit: string, lines: number): string {
-  return `journalctl -u ${shellSingleQuote(unit)} -n ${lines} --no-pager 2>/dev/null`;
+  return `journalctl -u ${shellSingleQuote(unit)} -n ${lines} --no-pager`;
 }
 
 export function registerLogRoutes(

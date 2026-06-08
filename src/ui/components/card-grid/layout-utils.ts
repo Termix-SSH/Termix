@@ -89,3 +89,17 @@ export function setHeight(
   const h = Math.max(MIN_TILE_HEIGHT, Math.round(height));
   return slots.map((s) => (s.id === id ? { ...s, height: h } : s));
 }
+
+/**
+ * Convert a tile pixel height into the number of grid rows it should span for
+ * the masonry (row-span) layout. The grid uses `rowUnit`px rows separated by
+ * `rowGap`px, so a tile of height H occupies ceil((H + gap) / (unit + gap))
+ * rows. Kept pure for unit testing the packing math.
+ */
+export function heightToRowSpan(
+  height: number,
+  rowUnit: number,
+  rowGap: number,
+): number {
+  return Math.max(1, Math.ceil((height + rowGap) / (rowUnit + rowGap)));
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Package, ArrowUpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { Button } from "@/components/button";
 import { managerPost } from "@/main-axios";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
+import { ManagerSearch } from "./ManagerToolbar";
 
 interface UpgradablePackage {
   name: string;
@@ -20,7 +21,15 @@ export function PackageManagerCard({ hostId }: { hostId: number | null }) {
     upgradable: UpgradablePackage[];
   }>(hostId, "packages");
   const [busy, setBusy] = useState<string | null>(null);
-  const pkgs = data?.upgradable ?? [];
+  const [filter, setFilter] = useState("");
+  const all = useMemo(() => data?.upgradable ?? [], [data?.upgradable]);
+  const pkgs = useMemo(
+    () =>
+      all.filter(
+        (p) => !filter || p.name.toLowerCase().includes(filter.toLowerCase()),
+      ),
+    [all, filter],
+  );
 
   const run = async (action: string, pkg?: string) => {
     if (hostId == null) return;
@@ -54,10 +63,10 @@ export function PackageManagerCard({ hostId }: { hostId: number | null }) {
       loading={loading}
       error={error}
       onRefresh={refresh}
-      empty={!loading && pkgs.length === 0}
+      empty={!loading && all.length === 0}
       emptyMessage={t("hostMetrics.managers.allUpToDate")}
       headerExtra={
-        pkgs.length > 0 ? (
+        all.length > 0 ? (
           <Button
             variant="outline"
             size="xs"
@@ -70,6 +79,13 @@ export function PackageManagerCard({ hostId }: { hostId: number | null }) {
         ) : undefined
       }
     >
+      {all.length > 5 && (
+        <ManagerSearch
+          value={filter}
+          onChange={setFilter}
+          count={pkgs.length}
+        />
+      )}
       <div className="flex flex-col">
         {pkgs.map((p) => (
           <div

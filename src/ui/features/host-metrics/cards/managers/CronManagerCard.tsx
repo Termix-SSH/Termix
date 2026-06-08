@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Clock4, Plus, Trash2, Save } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -6,6 +6,7 @@ import { Button } from "@/components/button";
 import { managerPost } from "@/main-axios";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
+import { ManagerSearch } from "./ManagerToolbar";
 
 interface CronEntry {
   raw: string;
@@ -22,6 +23,21 @@ export function CronManagerCard({ hostId }: { hostId: number | null }) {
   const [entries, setEntries] = useState<CronEntry[]>([]);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState("");
+
+  // Keep the real array index so edits/removes target the right entry even when
+  // the list is filtered by the search box.
+  const visible = useMemo(() => {
+    const q = query.toLowerCase();
+    return entries
+      .map((entry, index) => ({ entry, index }))
+      .filter(
+        ({ entry }) =>
+          !q ||
+          entry.schedule.toLowerCase().includes(q) ||
+          entry.command.toLowerCase().includes(q),
+      );
+  }, [entries, query]);
 
   useEffect(() => {
     if (data?.entries) {
@@ -98,8 +114,15 @@ export function CronManagerCard({ hostId }: { hostId: number | null }) {
       }
       empty={!loading && entries.length === 0}
     >
+      {entries.length > 5 && (
+        <ManagerSearch
+          value={query}
+          onChange={setQuery}
+          count={visible.length}
+        />
+      )}
       <div className="flex flex-col gap-2">
-        {entries.map((e, i) => (
+        {visible.map(({ entry: e, index: i }) => (
           <div
             key={i}
             className="flex flex-col gap-1 border border-border bg-muted/20 p-2"

@@ -8,10 +8,8 @@ import { DiskCard } from "./DiskCard";
 import { NetworkCard } from "./NetworkCard";
 import { UptimeCard } from "./UptimeCard";
 import { SystemCard } from "./SystemCard";
-import { ProcessesCard } from "./ProcessesCard";
 import { LoginStatsCard } from "./LoginStatsCard";
 import { PortsCard } from "./PortsCard";
-import { FirewallCard } from "./FirewallCard";
 import { ServiceManagerCard } from "./managers/ServiceManagerCard";
 import { ProcessInspectorCard } from "./managers/ProcessInspectorCard";
 import { PackageManagerCard } from "./managers/PackageManagerCard";
@@ -109,14 +107,12 @@ export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
   network: metricCard("network", "hostMetrics.networkInterfaces", NetworkCard),
   uptime: metricCard("uptime", "hostMetrics.uptime", UptimeCard),
   system: metricCard("system", "hostMetrics.systemInfo", SystemCard),
-  processes: metricCard("processes", "hostMetrics.processes", ProcessesCard),
   login_stats: metricCard(
     "login_stats",
     "hostMetrics.loginStats",
     LoginStatsCard,
   ),
   ports: metricCard("ports", "hostMetrics.ports.title", PortsCard),
-  firewall: metricCard("firewall", "hostMetrics.firewall.title", FirewallCard),
   service_manager: managerCard(
     "service_manager",
     "hostMetrics.managers.services",

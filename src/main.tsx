@@ -71,6 +71,7 @@ function FullscreenApp() {
       return <FileManagerApp hostId={hostId || undefined} />;
     case "tunnel":
       return <TunnelApp hostId={hostId || undefined} />;
+    case "host-metrics":
     case "server-stats":
       return <HostMetricsApp hostId={hostId || undefined} />;
     case "docker":
