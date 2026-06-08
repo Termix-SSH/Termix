@@ -3,6 +3,7 @@ import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { logger } from "../utils/logger.js";
+import { pickResolvedUsername } from "./credential-username.js";
 import type { SSHHost } from "../../types/index.js";
 
 const sshLogger = logger;
@@ -109,9 +110,11 @@ export async function resolveHostById(
               host.key = cred.key;
               host.keyPassword = cred.keyPassword;
               host.keyType = cred.keyType;
-              if (!host.overrideCredentialUsername) {
-                host.username = cred.username;
-              }
+              host.username = pickResolvedUsername(
+                host.username,
+                cred.username,
+                host.overrideCredentialUsername,
+              );
               host.authType = cred.key
                 ? "key"
                 : cred.password
@@ -137,9 +140,11 @@ export async function resolveHostById(
             host.key = sharedCred.key;
             host.keyPassword = sharedCred.keyPassword;
             host.keyType = sharedCred.keyType;
-            if (!host.overrideCredentialUsername) {
-              host.username = sharedCred.username;
-            }
+            host.username = pickResolvedUsername(
+              host.username,
+              sharedCred.username,
+              host.overrideCredentialUsername,
+            );
             host.authType = sharedCred.key
               ? "key"
               : sharedCred.password
@@ -182,9 +187,11 @@ export async function resolveHostById(
         // CA-signed certificate for cert-based auth
         (host as Record<string, unknown>).certPublicKey =
           cred.certPublicKey || null;
-        if (!host.overrideCredentialUsername) {
-          host.username = cred.username;
-        }
+        host.username = pickResolvedUsername(
+          host.username,
+          cred.username,
+          host.overrideCredentialUsername,
+        );
         host.authType = host.key ? "key" : host.password ? "password" : "none";
       }
     } catch (e) {

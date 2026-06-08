@@ -11,7 +11,7 @@ vi.mock("../../utils/logger.js", () => ({
   },
 }));
 
-const { isOIDCUserAllowed, getOIDCConfigFromEnv } =
+const { isOIDCUserAllowed, getOIDCConfigFromEnv, extractOidcGroups } =
   await import("./user-oidc-utils.js");
 
 describe("isOIDCUserAllowed", () => {
@@ -130,5 +130,55 @@ describe("getOIDCConfigFromEnv", () => {
     const config = getOIDCConfigFromEnv();
     expect(config?.identifier_path).toBe("email");
     expect(config?.scopes).toBe("openid");
+  });
+});
+
+describe("extractOidcGroups", () => {
+  it("reads the standard groups claim as an array", () => {
+    expect(extractOidcGroups({ groups: ["admin", "user"] })).toEqual([
+      "admin",
+      "user",
+    ]);
+  });
+
+  it("splits a comma-separated string claim", () => {
+    expect(extractOidcGroups({ roles: "admin, user" })).toEqual([
+      "admin",
+      "user",
+    ]);
+  });
+
+  it("falls back through groups, roles, then group", () => {
+    expect(extractOidcGroups({ group: "ops" })).toEqual(["ops"]);
+  });
+
+  it("reads a custom claim path when provided", () => {
+    const userInfo = {
+      "zitadel:grants:groups:123": ["user", "admin"],
+      groups: ["ignored"],
+    };
+    expect(extractOidcGroups(userInfo, "zitadel:grants:groups:123")).toEqual([
+      "user",
+      "admin",
+    ]);
+  });
+
+  it("uses object keys as group names (Zitadel roles object)", () => {
+    const userInfo = {
+      "urn:zitadel:iam:org:project:roles": { admin: {}, user: {} },
+    };
+    expect(
+      extractOidcGroups(userInfo, "urn:zitadel:iam:org:project:roles"),
+    ).toEqual(["admin", "user"]);
+  });
+
+  it("falls back to defaults when the custom claim is absent", () => {
+    expect(extractOidcGroups({ groups: ["admin"] }, "missing")).toEqual([
+      "admin",
+    ]);
+  });
+
+  it("returns an empty array when no groups are present", () => {
+    expect(extractOidcGroups({})).toEqual([]);
   });
 });

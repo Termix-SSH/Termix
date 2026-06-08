@@ -1120,7 +1120,11 @@ export function DashboardTab({
     getCredentials()
       .then((res) =>
         setCredentialCount(
-          Array.isArray(res?.credentials) ? res.credentials.length : 0,
+          Array.isArray(res)
+            ? res.length
+            : Array.isArray(res?.credentials)
+              ? res.credentials.length
+              : 0,
         ),
       )
       .catch(() => {});

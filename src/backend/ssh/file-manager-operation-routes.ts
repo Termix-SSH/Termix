@@ -449,7 +449,7 @@ export function registerFileOperationRoutes(
                 return;
               }
 
-              if (outputData.includes("SUCCESS") || code === 0) {
+              if (outputData.includes("SUCCESS")) {
                 fileLogger.success("Item deleted successfully", {
                   operation: "file_delete_success",
                   sessionId,
@@ -465,8 +465,22 @@ export function registerFileOperationRoutes(
                   },
                 });
               } else {
+                // The shell didn't echo our SUCCESS sentinel. This happens on
+                // non-POSIX shells (e.g. Windows PowerShell, where `rm -f` is
+                // not supported) and the command can exit 0 while doing nothing.
+                // Surface whatever the shell produced so the failure isn't silent.
+                const detail =
+                  errorData.trim() ||
+                  outputData.trim() ||
+                  `command exited with code ${code} and produced no output (the remote shell may not support the delete command)`;
+                fileLogger.error(`Delete failed for ${itemPath}: ${detail}`, {
+                  operation: "file_delete_failed",
+                  sessionId,
+                  userId,
+                  path: itemPath,
+                });
                 res.status(500).json({
-                  error: `Command failed: ${errorData}`,
+                  error: `Delete failed: ${detail}`,
                 });
               }
               resolve();

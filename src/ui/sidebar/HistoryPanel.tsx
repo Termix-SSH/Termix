@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Copy, Search, Terminal, Trash2 } from "lucide-react";
@@ -154,7 +155,7 @@ export function HistoryPanel({
                   variant="ghost"
                   size="icon"
                   className="size-6 text-muted-foreground hover:text-foreground"
-                  onClick={() => navigator.clipboard.writeText(cmd)}
+                  onClick={() => copyToClipboard(cmd)}
                 >
                   <Copy className="size-3" />
                 </Button>

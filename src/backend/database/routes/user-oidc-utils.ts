@@ -12,6 +12,7 @@ export type OIDCConfig = {
   scopes: string;
   allowed_users: string;
   admin_group: string;
+  group_claim?: string;
 };
 
 export function getOIDCConfigFromEnv(): OIDCConfig | null {
@@ -43,7 +44,44 @@ export function getOIDCConfigFromEnv(): OIDCConfig | null {
     scopes: process.env.OIDC_SCOPES || "openid email profile",
     allowed_users: process.env.OIDC_ALLOWED_USERS || "",
     admin_group: process.env.OIDC_ADMIN_GROUP || "",
+    group_claim: process.env.OIDC_GROUP_CLAIM || "",
   };
+}
+
+/**
+ * Extracts the list of group/role names from an OIDC userInfo payload.
+ *
+ * When `groupClaim` is set, that claim is read first (useful for providers like
+ * Zitadel that nest roles under a custom path such as
+ * `urn:zitadel:iam:org:project:roles`). Otherwise the common `groups`, `roles`
+ * and `group` claims are tried. Values may be an array, a comma-separated
+ * string, or an object whose keys are the group names.
+ */
+export function extractOidcGroups(
+  userInfo: Record<string, unknown>,
+  groupClaim?: string,
+): string[] {
+  let raw: unknown;
+  if (groupClaim && groupClaim.trim()) {
+    raw = userInfo[groupClaim.trim()];
+  }
+  if (raw === undefined || raw === null) {
+    raw = userInfo.groups ?? userInfo.roles ?? userInfo.group;
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.map(String);
+  }
+  if (typeof raw === "string") {
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  if (raw && typeof raw === "object") {
+    return Object.keys(raw as Record<string, unknown>);
+  }
+  return [];
 }
 
 export function isOIDCUserAllowed(

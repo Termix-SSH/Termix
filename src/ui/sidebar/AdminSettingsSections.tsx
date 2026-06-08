@@ -260,6 +260,10 @@ type OidcSettingsSectionProps = {
   setOidcUserinfoUrl: Dispatch<SetStateAction<string>>;
   oidcAllowedUsers: string;
   setOidcAllowedUsers: Dispatch<SetStateAction<string>>;
+  oidcAdminGroup: string;
+  setOidcAdminGroup: Dispatch<SetStateAction<string>>;
+  oidcGroupClaim: string;
+  setOidcGroupClaim: Dispatch<SetStateAction<string>>;
   oidcSaving: boolean;
   handleRemoveOidc: () => void;
   handleSaveOidc: () => void;
@@ -288,6 +292,10 @@ export function AdminOidcSettingsSection({
   setOidcUserinfoUrl,
   oidcAllowedUsers,
   setOidcAllowedUsers,
+  oidcAdminGroup,
+  setOidcAdminGroup,
+  oidcGroupClaim,
+  setOidcGroupClaim,
   oidcSaving,
   handleRemoveOidc,
   handleSaveOidc,
@@ -427,6 +435,34 @@ export function AdminOidcSettingsSection({
             placeholder={"user@example.com\nanother@example.com"}
             rows={3}
             className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {t("admin.oidcAdminGroup")}
+          </label>
+          <span className="text-[10px] text-muted-foreground">
+            {t("admin.oidcAdminGroupDesc")}
+          </span>
+          <input
+            value={oidcAdminGroup}
+            onChange={(e) => setOidcAdminGroup(e.target.value)}
+            placeholder="admin"
+            className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring font-mono"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {t("admin.oidcGroupClaim")}
+          </label>
+          <span className="text-[10px] text-muted-foreground">
+            {t("admin.oidcGroupClaimDesc")}
+          </span>
+          <input
+            value={oidcGroupClaim}
+            onChange={(e) => setOidcGroupClaim(e.target.value)}
+            placeholder="groups"
+            className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring font-mono"
           />
         </div>
         <div className="flex gap-2 justify-end">

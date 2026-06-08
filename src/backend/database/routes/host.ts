@@ -25,6 +25,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
+import { pickResolvedUsername } from "../../ssh/credential-username.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -2029,11 +2030,13 @@ async function resolveHostCredentials(
               keyType: sharedCred.keyType,
             };
 
-            if (
-              !host.overrideCredentialUsername &&
-              isNonEmptyString(sharedCred.username)
-            ) {
-              resolvedHost.username = sharedCred.username;
+            const resolvedUsername = pickResolvedUsername(
+              host.username,
+              sharedCred.username,
+              host.overrideCredentialUsername,
+            );
+            if (resolvedUsername !== undefined) {
+              resolvedHost.username = resolvedUsername;
             }
 
             return resolvedHost;
@@ -2078,11 +2081,13 @@ async function resolveHostCredentials(
           keyType: credential.keyType,
         };
 
-        if (
-          !host.overrideCredentialUsername &&
-          isNonEmptyString(credential.username)
-        ) {
-          resolvedHost.username = credential.username;
+        const resolvedUsername = pickResolvedUsername(
+          host.username,
+          credential.username,
+          host.overrideCredentialUsername,
+        );
+        if (resolvedUsername !== undefined) {
+          resolvedHost.username = resolvedUsername;
         }
 
         return resolvedHost;

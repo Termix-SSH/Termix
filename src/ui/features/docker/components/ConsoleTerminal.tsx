@@ -3,6 +3,7 @@ import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
+import { copyToClipboard } from "@/lib/clipboard";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Button } from "@/components/button.tsx";
 import {
@@ -22,7 +23,6 @@ import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import {
-  TERMINAL_THEMES,
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
 } from "@/lib/terminal-themes";
@@ -93,15 +93,11 @@ export function ConsoleTerminal({
       if (window.electronClipboard) {
         return window.electronClipboard.readText();
       }
-      return navigator.clipboard.readText();
+      return (await navigator.clipboard?.readText?.()) ?? "";
     };
 
     const writeTextToClipboard = async (text: string): Promise<void> => {
-      if (window.electronClipboard) {
-        await window.electronClipboard.writeText(text);
-        return;
-      }
-      await navigator.clipboard.writeText(text);
+      await copyToClipboard(text);
     };
 
     terminal.attachCustomKeyEventHandler((e: KeyboardEvent): boolean => {

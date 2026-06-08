@@ -20,6 +20,7 @@ import {
   getOIDCConfigFromEnv,
   isOIDCUserAllowed,
   verifyOIDCToken,
+  extractOidcGroups,
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
@@ -272,6 +273,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
       scopes,
       allowed_users,
       admin_group,
+      group_claim,
     } = req.body;
 
     const isDisableRequest =
@@ -331,6 +333,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         scopes: scopes || "openid email profile",
         allowed_users: allowed_users || "",
         admin_group: admin_group || "",
+        group_claim: group_claim || "",
       };
 
       let encryptedConfig;
@@ -1108,19 +1111,17 @@ router.get("/oidc/callback", async (req, res) => {
 
     // Sync admin status based on OIDC group membership
     if (config.admin_group) {
-      const rawGroups = userInfo.groups || userInfo.roles || userInfo.group;
-      const groups = Array.isArray(rawGroups)
-        ? rawGroups.map(String)
-        : typeof rawGroups === "string"
-          ? rawGroups.split(",").map((s) => s.trim())
-          : [];
+      const groups = extractOidcGroups(
+        userInfo as Record<string, unknown>,
+        config.group_claim,
+      );
 
       authLogger.info(
-        `Evaluating OIDC admin group sync. rawGroups: ${JSON.stringify(rawGroups)}, parsedGroups: ${JSON.stringify(groups)}, configuredAdminGroup: ${config.admin_group}, availableUserInfoKeys: ${Object.keys(userInfo).join(",")}`,
+        `Evaluating OIDC admin group sync. parsedGroups: ${JSON.stringify(groups)}, configuredAdminGroup: ${config.admin_group}, groupClaim: ${config.group_claim || "(default)"}, availableUserInfoKeys: ${Object.keys(userInfo).join(",")}`,
         {
           operation: "oidc_admin_group_sync_eval",
           userId: userRecord.id,
-        }
+        },
       );
 
       const shouldBeAdmin = groups.includes(config.admin_group);

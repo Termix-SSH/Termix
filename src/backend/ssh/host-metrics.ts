@@ -4,6 +4,7 @@ import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
+import { pickResolvedUsername } from "./credential-username.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
@@ -799,9 +800,11 @@ async function resolveHostCredentials(
             baseHost.credentialId = host.credentialId;
             baseHost.authType = sharedCred.authType;
 
-            if (!host.overrideCredentialUsername) {
-              baseHost.username = sharedCred.username;
-            }
+            baseHost.username = pickResolvedUsername(
+              host.username,
+              sharedCred.username,
+              host.overrideCredentialUsername,
+            );
 
             if (sharedCred.password) {
               baseHost.password = sharedCred.password;
@@ -838,9 +841,11 @@ async function resolveHostCredentials(
                   ? "key"
                   : "none");
 
-            if (!host.overrideCredentialUsername) {
-              baseHost.username = credential.username;
-            }
+            baseHost.username = pickResolvedUsername(
+              host.username,
+              credential.username,
+              host.overrideCredentialUsername,
+            );
 
             if (credential.password) {
               baseHost.password = credential.password;

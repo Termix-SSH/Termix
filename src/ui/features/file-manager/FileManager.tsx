@@ -34,6 +34,7 @@ import {
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import { copyToClipboard } from "@/lib/clipboard.ts";
 import {
   listSSHFiles,
   resolveSSHPath,
@@ -1343,19 +1344,17 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
     const paths = files.map((file) => file.path).join("\n");
 
-    navigator.clipboard.writeText(paths).then(
-      () => {
+    copyToClipboard(paths).then((ok) => {
+      if (ok) {
         toast.success(
           files.length === 1
             ? t("fileManager.pathCopiedToClipboard")
             : t("fileManager.pathsCopiedToClipboard", { count: files.length }),
         );
-      },
-      (err) => {
-        console.error("Failed to copy path to clipboard:", err);
+      } else {
         toast.error(t("fileManager.failedToCopyPath"));
-      },
-    );
+      }
+    });
   }
 
   async function handlePasteFiles() {

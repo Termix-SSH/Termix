@@ -632,6 +632,18 @@ export function FileManagerGrid({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Every open file-manager tab mounts its own grid with a global keydown
+      // listener, so without this guard a shortcut (notably Delete) would fire
+      // in every tab at once - including hidden ones - and act on their
+      // selections. Only the visible grid should respond. See issue #783.
+      const grid = gridRef.current;
+      if (!grid) return;
+      const isVisible =
+        typeof grid.checkVisibility === "function"
+          ? grid.checkVisibility({ visibilityProperty: true })
+          : grid.offsetParent !== null;
+      if (!isVisible) return;
+
       const activeElement = document.activeElement;
       if (
         activeElement &&

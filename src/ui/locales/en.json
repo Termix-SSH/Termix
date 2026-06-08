@@ -20,7 +20,9 @@
     "certTypeLabel": "Certificate type",
     "pasteOrUploadCert": "Paste or upload a -cert.pub certificate...",
     "hasCaCert": "Has CA Certificate",
-    "noCaCert": "No CA Certificate"
+    "noCaCert": "No CA Certificate",
+    "noPublicKeyAvailable": "No public key available. Open the credential editor first.",
+    "deployCommandCopied": "Deploy command copied"
   },
   "homepage": {
     "failedToLoadAlerts": "Failed to load alerts",
@@ -1953,6 +1955,10 @@
     "oidcUserinfoUrl": "Override Userinfo URL",
     "oidcAllowedUsers": "Allowed Users",
     "oidcAllowedUsersDesc": "One email per line. Leave empty to allow all.",
+    "oidcAdminGroup": "Admin Group",
+    "oidcAdminGroupDesc": "Users in this group are granted admin. Leave empty to disable group sync.",
+    "oidcGroupClaim": "Group Claim",
+    "oidcGroupClaimDesc": "Optional. The claim path that contains the user's groups. Defaults to groups, roles, then group. Use this for providers with a custom claim (e.g. Zitadel).",
     "removeOidc": "Remove",
     "usersCount": "{{count}} users",
     "createUser": "Create",

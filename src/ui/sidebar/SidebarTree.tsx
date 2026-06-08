@@ -53,6 +53,7 @@ import {
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type { SSHHostData } from "@/types/index";
 import { FolderIconEl } from "@/components/folder-style";
+import { copyToClipboard } from "@/lib/clipboard";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
@@ -174,18 +175,7 @@ function collectAllFolderPaths(children: (Host | HostFolder)[]): string[] {
 }
 
 async function writeClipboardText(value: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(value);
-  } catch {
-    const textarea = document.createElement("textarea");
-    textarea.value = value;
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    document.body.removeChild(textarea);
-  }
+  await copyToClipboard(value);
 }
 
 function canCopyHostPassword(host: Host): boolean {
@@ -344,17 +334,31 @@ export function HostItem({
           onToggleSelect?.();
           return;
         }
-        // Touch devices open the tray instead of launching
+        const launchDefault = () => {
+          if (host.enableSsh) onOpenTab("terminal");
+          else if (host.enableRdp) onOpenTab("rdp");
+          else if (host.enableVnc) onOpenTab("vnc");
+          else if (host.enableTelnet) onOpenTab("telnet");
+          else onOpenTab("terminal");
+        };
+        // On touch devices, open the action tray so the per-protocol buttons are
+        // reachable. If the host only exposes a single action, just launch it.
         if (isTouchOnly) {
           e.stopPropagation();
-          onTrayOpenChange?.(!isTrayOpen);
+          const actionCount = getSshActions(host).length;
+          const otherProtocols = [
+            host.enableRdp,
+            host.enableVnc,
+            host.enableTelnet,
+          ].filter(Boolean).length;
+          if (actionCount + otherProtocols <= 1) {
+            launchDefault();
+          } else {
+            onTrayOpenChange?.(!isTrayOpen);
+          }
           return;
         }
-        if (host.enableSsh) onOpenTab("terminal");
-        else if (host.enableRdp) onOpenTab("rdp");
-        else if (host.enableVnc) onOpenTab("vnc");
-        else if (host.enableTelnet) onOpenTab("telnet");
-        else onOpenTab("terminal");
+        launchDefault();
       }}
     >
       {/* Status stripe */}
@@ -693,7 +697,7 @@ export function HostItem({
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigator.clipboard.writeText(
+                      writeClipboardText(
                         `${host.username}@${host.ip}`,
                       );
                       toast.success(t("hosts.copiedToClipboard"));
@@ -728,7 +732,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=terminal&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.terminalUrlCopied"));
@@ -742,7 +746,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=file-manager&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.fileManagerUrlCopied"));
@@ -756,7 +760,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=tunnel&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.tunnelUrlCopied"));
@@ -770,7 +774,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=docker&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.dockerUrlCopied"));
@@ -784,7 +788,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=host-metrics&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.hostMetricsUrlCopied"));
@@ -798,7 +802,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=rdp&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.rdpUrlCopied"));
@@ -812,7 +816,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=vnc&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.vncUrlCopied"));
@@ -826,7 +830,7 @@ export function HostItem({
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigator.clipboard.writeText(
+                            writeClipboardText(
                               `${window.location.origin}?view=telnet&hostId=${host.id}`,
                             );
                             toast.success(t("hosts.telnetUrlCopied"));
@@ -1283,6 +1287,7 @@ export function SidebarTree({
         macAddress: host.macAddress,
         authType: host.authType,
         password: host.password ?? null,
+        key: host.key ?? null,
         keyPassword: host.keyPassword ?? null,
         keyType: host.keyType ?? null,
         credentialId: host.credentialId ? Number(host.credentialId) : null,

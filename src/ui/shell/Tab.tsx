@@ -3,6 +3,7 @@ import { Button } from "@/components/button.tsx";
 import { useTranslation } from "react-i18next";
 import { getHostPassword } from "@/main-axios.ts";
 import { cn } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   Home,
   SeparatorVertical,
@@ -86,24 +87,9 @@ export function Tab({
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(passwordToCopy);
-      toast.success(t("nav.passwordCopied"));
-    } catch {
-      try {
-        const textarea = document.createElement("textarea");
-        textarea.value = passwordToCopy;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-        toast.success(t("nav.passwordCopied"));
-      } catch {
-        toast.error(t("nav.failedToCopyPassword"));
-      }
-    }
+    const ok = await copyToClipboard(passwordToCopy);
+    if (ok) toast.success(t("nav.passwordCopied"));
+    else toast.error(t("nav.failedToCopyPassword"));
   };
 
   const hasPassword =

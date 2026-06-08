@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Copy, Info, Lock, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -422,7 +423,7 @@ export function CredentialEditorView({
                       className="h-6 text-[10px] px-2"
                       disabled={!credForm.publicKey}
                       onClick={() => {
-                        navigator.clipboard.writeText(credForm.publicKey ?? "");
+                        copyToClipboard(credForm.publicKey ?? "");
                         toast.success(t("hosts.publicKeyCopied"));
                       }}
                     >

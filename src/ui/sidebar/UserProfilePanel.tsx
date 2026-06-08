@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   getUserInfo,
   getApiKeys,
@@ -1271,7 +1272,7 @@ export function UserProfilePanel({
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(totpSecret);
+                      copyToClipboard(totpSecret);
                       toast.info(t("newUi.sidebar.userProfile.secretCopied"));
                     }}
                     className="text-muted-foreground hover:text-accent-brand shrink-0"
