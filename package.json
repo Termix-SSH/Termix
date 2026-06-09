@@ -63,7 +63,7 @@
     "socks": "^2.8.7",
     "speakeasy": "^2.0.0",
     "ssh2": "^1.17.0",
-    "undici": "^7.0.0",
+    "undici": "^8.4.0",
     "ws": "^8.20.0"
   },
   "devDependencies": {
