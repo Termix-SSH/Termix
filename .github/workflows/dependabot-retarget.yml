@@ -1,0 +1,105 @@
+name: Retarget and Merge Dependabot PRs
+
+# Dependabot always opens PRs against the default branch (main), but releases
+# are cut from the newest dev-X.Y.Z branch. This workflow moves each open
+# Dependabot PR onto the newest dev branch, lets Dependabot rebase against the
+# new base, then squash-merges it once PR Check is green. PRs with real merge
+# conflicts (which nothing can auto-resolve) are left retargeted for manual work.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  retarget-and-merge:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Resolve newest dev branch
+        id: dev
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
+          # The helper exits non-zero when no dev-X.Y.Z branch exists; treat that
+          # as "nothing to do" rather than a workflow failure.
+          if DEV_BRANCH=$(printf '%s\n' "$REFS" | node scripts/latest-dev-branch.cjs 2>/dev/null); then
+            echo "Newest dev branch: $DEV_BRANCH"
+            echo "branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "No dev-X.Y.Z branch open; nothing to retarget."
+            echo "branch=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Retarget and merge Dependabot PRs
+        if: ${{ steps.dev.outputs.branch != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          DEV_BRANCH: ${{ steps.dev.outputs.branch }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # All open Dependabot PRs currently targeting main.
+          PR_NUMBERS=$(gh pr list --repo "$REPO" \
+            --author "app/dependabot" \
+            --base main \
+            --state open \
+            --json number -q '.[].number')
+
+          if [ -z "$PR_NUMBERS" ]; then
+            echo "No open Dependabot PRs targeting main."
+            exit 0
+          fi
+
+          for PR in $PR_NUMBERS; do
+            echo "::group::PR #$PR"
+
+            echo "Retargeting PR #$PR onto $DEV_BRANCH"
+            gh pr edit "$PR" --repo "$REPO" --base "$DEV_BRANCH"
+
+            # Changing the base makes Dependabot rebase the PR. Poll until GitHub
+            # has recomputed mergeability and the branch is no longer BEHIND.
+            MERGE_STATE=""
+            MERGEABLE=""
+            for i in $(seq 1 30); do
+              read -r MERGEABLE MERGE_STATE < <(gh pr view "$PR" --repo "$REPO" \
+                --json mergeable,mergeStateStatus \
+                -q '.mergeable + " " + .mergeStateStatus')
+              echo "  attempt $i: mergeable=$MERGEABLE mergeStateStatus=$MERGE_STATE"
+
+              # BEHIND/UNKNOWN mean GitHub/Dependabot are still catching up.
+              if [ "$MERGE_STATE" != "BEHIND" ] && [ "$MERGE_STATE" != "UNKNOWN" ] && [ "$MERGEABLE" != "UNKNOWN" ]; then
+                break
+              fi
+              sleep 20
+            done
+
+            if [ "$MERGEABLE" = "CONFLICTING" ] || [ "$MERGE_STATE" = "DIRTY" ]; then
+              echo "  PR #$PR has conflicts; asking Dependabot to recreate it."
+              gh pr comment "$PR" --repo "$REPO" --body "@dependabot recreate"
+              echo "  Leaving PR #$PR for manual resolution (retargeted to $DEV_BRANCH)."
+              echo "::endgroup::"
+              continue
+            fi
+
+            echo "  Enabling squash auto-merge for PR #$PR (merges when PR Check passes)."
+            if gh pr merge "$PR" --repo "$REPO" --squash --auto; then
+              echo "  Auto-merge armed for PR #$PR."
+            else
+              echo "  Auto-merge unavailable; attempting an admin squash-merge."
+              gh pr merge "$PR" --repo "$REPO" --squash --admin || \
+                echo "  Could not merge PR #$PR now; it will be retried next run."
+            fi
+
+            echo "::endgroup::"
+          done
