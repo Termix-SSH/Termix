@@ -52,7 +52,7 @@ jobs:
           ALL_TAGS=()
 
           if [ "$BUILD_TYPE" = "Production" ]; then
-            TAGS+=("release-$VERSION" "latest")
+            TAGS+=("release-$VERSION" "$VERSION" "latest")
             for tag in "${TAGS[@]}"; do
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
               ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
