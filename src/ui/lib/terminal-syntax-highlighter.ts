@@ -1,28 +1,28 @@
-const ANSI_CODES = {
+const ANSI = {
   reset: "\x1b[0m",
-  colors: {
-    red: "\x1b[31m",
-    green: "\x1b[32m",
-    yellow: "\x1b[33m",
-    blue: "\x1b[34m",
-    magenta: "\x1b[35m",
-    cyan: "\x1b[36m",
-    white: "\x1b[37m",
-    brightBlack: "\x1b[90m",
-    brightRed: "\x1b[91m",
-    brightGreen: "\x1b[92m",
-    brightYellow: "\x1b[93m",
-    brightBlue: "\x1b[94m",
-    brightMagenta: "\x1b[95m",
-    brightCyan: "\x1b[96m",
-    brightWhite: "\x1b[97m",
-  },
-  styles: {
-    bold: "\x1b[1m",
-    dim: "\x1b[2m",
-    italic: "\x1b[3m",
-    underline: "\x1b[4m",
-  },
+  // Standard colors
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  // Bright colors
+  brightBlack: "\x1b[90m",
+  brightRed: "\x1b[91m",
+  brightGreen: "\x1b[92m",
+  brightYellow: "\x1b[93m",
+  brightBlue: "\x1b[94m",
+  brightMagenta: "\x1b[95m",
+  brightCyan: "\x1b[96m",
+  brightWhite: "\x1b[97m",
+  // Styles
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  underline: "\x1b[4m",
+  // True-color brand orange matching --accent-brand: #f59145
+  brandOrange: "\x1b[38;2;245;145;69m",
 } as const;
 
 interface HighlightPattern {
@@ -30,7 +30,6 @@ interface HighlightPattern {
   regex: RegExp;
   ansiCode: string;
   priority: number;
-  quickCheck?: string;
 }
 
 interface MatchResult {
@@ -40,92 +39,116 @@ interface MatchResult {
   priority: number;
 }
 
+interface TextSegment {
+  isAnsi: boolean;
+  content: string;
+}
+
 const MAX_LINE_LENGTH = 5000;
-const MAX_ANSI_CODES = 10;
 
 const PATTERNS: HighlightPattern[] = [
+  // user@hostname prompt segments -- brand orange to match app accent
+  {
+    name: "shell-prompt",
+    regex: /\b([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+)\b/g,
+    ansiCode: ANSI.brandOrange,
+    priority: 11,
+  },
+
+  // IPv4 addresses with optional port
   {
     name: "ipv4",
     regex:
       /(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(?::\d{1,5})?/g,
-    ansiCode: ANSI_CODES.colors.magenta,
+    ansiCode: ANSI.magenta,
     priority: 10,
   },
 
+  // ISO dates and bracket timestamps like [12:34:56]
   {
-    name: "log-error",
+    name: "timestamp",
     regex:
-      /\b(ERROR|FATAL|CRITICAL|FAIL(?:ED)?|denied|invalid|DENIED)\b|\[ERROR\]/gi,
-    ansiCode: ANSI_CODES.colors.brightRed,
+      /\b\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?\b|\[\d{2}:\d{2}(?::\d{2})?\]/g,
+    ansiCode: ANSI.brightBlack,
     priority: 9,
   },
 
+  // Error-level log keywords
+  {
+    name: "log-error",
+    regex: /\b(ERROR|FATAL|CRITICAL|FAIL(?:ED)?|DENIED)\b|\[ERROR\]/gi,
+    ansiCode: ANSI.brightRed,
+    priority: 9,
+  },
+
+  // Warning-level log keywords
   {
     name: "log-warn",
     regex: /\b(WARN(?:ING)?|ALERT)\b|\[WARN(?:ING)?\]/gi,
-    ansiCode: ANSI_CODES.colors.yellow,
+    ansiCode: ANSI.yellow,
     priority: 9,
   },
 
+  // Success-level log keywords (removed "up"/"active"/"connected" -- too many false positives)
   {
     name: "log-success",
-    regex:
-      /\b(SUCCESS|OK|PASS(?:ED)?|COMPLETE(?:D)?|connected|active|up|Up|UP|FULL)\b/gi,
-    ansiCode: ANSI_CODES.colors.brightGreen,
+    regex: /\b(SUCCESS|OK|PASS(?:ED)?|COMPLETE(?:D)?|FULL)\b/gi,
+    ansiCode: ANSI.brightGreen,
     priority: 8,
   },
 
+  // URLs
   {
     name: "url",
     regex: /https?:\/\/[^\s\])}]+/g,
-    ansiCode: `${ANSI_CODES.colors.blue}${ANSI_CODES.styles.underline}`,
+    ansiCode: `${ANSI.blue}${ANSI.underline}`,
     priority: 8,
   },
 
+  // Absolute filesystem paths -- relaxed regex, negative lookbehind avoids matching inside URLs
   {
     name: "path-absolute",
-    regex: /\/[a-zA-Z][a-zA-Z0-9_\-@.]*(?:\/[a-zA-Z0-9_\-@.]+)+/g,
-    ansiCode: ANSI_CODES.colors.cyan,
+    regex: /(?<![:\w])\/(?:[^\s\x1b"'`(){}\[\]<>|&;\\])+(?:\/(?:[^\s\x1b"'`(){}\[\]<>|&;\\])*)*/g,
+    ansiCode: ANSI.cyan,
     priority: 7,
   },
 
+  // Home-relative paths (~/)
   {
     name: "path-home",
-    regex: /~\/[a-zA-Z0-9_\-@./]+/g,
-    ansiCode: ANSI_CODES.colors.cyan,
+    regex: /~\/[^\s\x1b"'`(){}\[\]<>|&;\\]+/g,
+    ansiCode: ANSI.cyan,
     priority: 7,
   },
 
+  // Info-level log keywords
   {
     name: "log-info",
     regex: /\bINFO\b|\[INFO\]/gi,
-    ansiCode: ANSI_CODES.colors.blue,
+    ansiCode: ANSI.blue,
     priority: 6,
   },
+
+  // Debug/trace log keywords
   {
     name: "log-debug",
     regex: /\b(?:DEBUG|TRACE)\b|\[(?:DEBUG|TRACE)\]/gi,
-    ansiCode: ANSI_CODES.colors.brightBlack,
+    ansiCode: ANSI.brightBlack,
     priority: 6,
+  },
+
+  // Standalone numbers (ports, exit codes, counts) surrounded by non-word context
+  {
+    name: "number",
+    regex: /(?<=[\s:[(,])(\d+)(?=[\s\],:).]|$)/g,
+    ansiCode: ANSI.brightCyan,
+    priority: 5,
   },
 ];
 
-function hasExistingAnsiCodes(text: string): boolean {
-  const ansiCount = (
-    text.match(
-      /\x1b[[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nq-uy=><~]/g,
-    ) || []
-  ).length;
-  return ansiCount > MAX_ANSI_CODES;
-}
-
 function hasIncompleteAnsiSequence(text: string): boolean {
-  return /\x1b(?:\[(?:[0-9;?>=!]*)?)?$/.test(text);
-}
-
-interface TextSegment {
-  isAnsi: boolean;
-  content: string;
+  // Only bail out when ESC[ is present but not yet terminated by a letter
+  return /\x1b\[[0-9;?>=!]*$/.test(text);
 }
 
 function parseAnsiSegments(text: string): TextSegment[] {
@@ -136,36 +159,21 @@ function parseAnsiSegments(text: string): TextSegment[] {
 
   while ((match = ansiRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
-      segments.push({
-        isAnsi: false,
-        content: text.slice(lastIndex, match.index),
-      });
+      segments.push({ isAnsi: false, content: text.slice(lastIndex, match.index) });
     }
-
-    segments.push({
-      isAnsi: true,
-      content: match[0],
-    });
-
+    segments.push({ isAnsi: true, content: match[0] });
     lastIndex = ansiRegex.lastIndex;
   }
 
   if (lastIndex < text.length) {
-    segments.push({
-      isAnsi: false,
-      content: text.slice(lastIndex),
-    });
+    segments.push({ isAnsi: false, content: text.slice(lastIndex) });
   }
 
   return segments;
 }
 
 function highlightPlainText(text: string): string {
-  if (text.length > MAX_LINE_LENGTH) {
-    return text;
-  }
-
-  if (!text.trim()) {
+  if (text.length > MAX_LINE_LENGTH || !text.trim()) {
     return text;
   }
 
@@ -173,7 +181,6 @@ function highlightPlainText(text: string): string {
 
   for (const pattern of PATTERNS) {
     pattern.regex.lastIndex = 0;
-
     let match;
     while ((match = pattern.regex.exec(text)) !== null) {
       matches.push({
@@ -185,26 +192,21 @@ function highlightPlainText(text: string): string {
     }
   }
 
-  if (matches.length === 0) {
-    return text;
-  }
+  if (matches.length === 0) return text;
 
-  matches.sort((a, b) => {
-    if (a.priority !== b.priority) {
-      return b.priority - a.priority;
-    }
-    return a.start - b.start;
-  });
+  // Sort by priority descending, then position ascending
+  matches.sort((a, b) =>
+    a.priority !== b.priority ? b.priority - a.priority : a.start - b.start,
+  );
 
   const appliedRanges: Array<{ start: number; end: number }> = [];
   const finalMatches = matches.filter((match) => {
     const overlaps = appliedRanges.some(
-      (range) =>
-        (match.start >= range.start && match.start < range.end) ||
-        (match.end > range.start && match.end <= range.end) ||
-        (match.start <= range.start && match.end >= range.end),
+      (r) =>
+        (match.start >= r.start && match.start < r.end) ||
+        (match.end > r.start && match.end <= r.end) ||
+        (match.start <= r.start && match.end >= r.end),
     );
-
     if (!overlaps) {
       appliedRanges.push({ start: match.start, end: match.end });
       return true;
@@ -213,51 +215,30 @@ function highlightPlainText(text: string): string {
   });
 
   let result = text;
+  // Apply in reverse order so offsets remain valid
   finalMatches.reverse().forEach((match) => {
-    const before = result.slice(0, match.start);
-    const matched = result.slice(match.start, match.end);
-    const after = result.slice(match.end);
-
-    result = before + match.ansiCode + matched + ANSI_CODES.reset + after;
+    result =
+      result.slice(0, match.start) +
+      match.ansiCode +
+      result.slice(match.start, match.end) +
+      ANSI.reset +
+      result.slice(match.end);
   });
 
   return result;
 }
 
-export function highlightTerminalOutput(text: string): string {
-  if (!text || !text.trim()) {
-    return text;
-  }
-
-  if (hasIncompleteAnsiSequence(text)) {
-    return text;
-  }
-
-  if (hasExistingAnsiCodes(text)) {
-    return text;
-  }
-
-  const segments = parseAnsiSegments(text);
-
-  if (segments.length === 0) {
-    return highlightPlainText(text);
-  }
-
-  const highlightedSegments = segments.map((segment) => {
-    if (segment.isAnsi) {
-      return segment.content;
-    } else {
-      return highlightPlainText(segment.content);
-    }
-  });
-
-  return highlightedSegments.join("");
+function highlightLine(line: string): string {
+  if (!line.trim()) return line;
+  const segments = parseAnsiSegments(line);
+  return segments
+    .map((s) => (s.isAnsi ? s.content : highlightPlainText(s.content)))
+    .join("");
 }
 
-export function isSyntaxHighlightingEnabled(): boolean {
-  try {
-    return localStorage.getItem("terminalSyntaxHighlighting") === "true";
-  } catch {
-    return false;
-  }
+export function highlightTerminalOutput(text: string): string {
+  if (!text || !text.trim()) return text;
+  if (hasIncompleteAnsiSequence(text)) return text;
+  // Process line-by-line so patterns don't accidentally span across prompt/output boundaries
+  return text.split("\n").map(highlightLine).join("\n");
 }

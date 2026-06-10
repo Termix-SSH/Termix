@@ -583,6 +583,7 @@ export interface TerminalConfig {
   keepaliveInterval?: number;
   keepaliveCountMax?: number;
   autoTmux: boolean;
+  syntaxHighlighting: boolean;
 }
 
 // ============================================================================

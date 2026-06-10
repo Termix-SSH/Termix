@@ -137,6 +137,7 @@ export function createHostEditorForm(host: Host | null) {
     sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
     keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
     keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
+    syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     environmentVariables:
       host?.terminalConfig?.environmentVariables ??
       ([] as { key: string; value: string }[]),
@@ -308,6 +309,7 @@ export function buildHostEditorPayload(
           keepaliveInterval: Number(form.keepaliveInterval),
           keepaliveCountMax: Number(form.keepaliveCountMax),
           environmentVariables: form.environmentVariables,
+          syntaxHighlighting: form.syntaxHighlighting,
         }
       : null,
   };

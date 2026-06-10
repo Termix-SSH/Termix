@@ -760,6 +760,15 @@ export function HostEditor({
                     onChange={(v) => setField("rightClickSelectsWord", v)}
                   />
                 </SettingRow>
+                <SettingRow
+                  label={t("hosts.syntaxHighlightingLabel")}
+                  description={t("hosts.syntaxHighlightingDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.syntaxHighlighting}
+                    onChange={(v) => setField("syntaxHighlighting", v)}
+                  />
+                </SettingRow>
               </div>
             </SectionCard>
 

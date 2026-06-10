@@ -492,9 +492,6 @@ export function UserProfilePanel({
   const [commandHistoryTracking, setCommandHistoryTracking] = useState(
     () => localStorage.getItem("commandHistoryTracking") === "true",
   );
-  const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] = useState(
-    () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
-  );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
@@ -995,27 +992,6 @@ export function UserProfilePanel({
                   localStorage.setItem("commandHistoryTracking", v.toString());
                   window.dispatchEvent(
                     new Event("commandHistoryTrackingChanged"),
-                  );
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.syntaxHighlighting")}
-              description={t(
-                "newUi.sidebar.userProfile.syntaxHighlightingDesc",
-              )}
-              badge="BETA"
-            >
-              <FakeSwitch
-                checked={terminalSyntaxHighlighting}
-                onChange={(v) => {
-                  setTerminalSyntaxHighlighting(v);
-                  localStorage.setItem(
-                    "terminalSyntaxHighlighting",
-                    v.toString(),
-                  );
-                  window.dispatchEvent(
-                    new Event("terminalSyntaxHighlightingChanged"),
                   );
                 }}
               />

@@ -983,7 +983,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
               const syntaxHighlightingEnabled =
-                localStorage.getItem("terminalSyntaxHighlighting") === "true";
+                hostConfig.terminalConfig?.syntaxHighlighting !== false;
 
               const outputData = syntaxHighlightingEnabled
                 ? highlightTerminalOutput(msg.data)
@@ -1046,7 +1046,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             } else {
               const syntaxHighlightingEnabled =
-                localStorage.getItem("terminalSyntaxHighlighting") === "true";
+                hostConfig.terminalConfig?.syntaxHighlighting !== false;
 
               const stringData = String(msg.data);
               const outputData = syntaxHighlightingEnabled
