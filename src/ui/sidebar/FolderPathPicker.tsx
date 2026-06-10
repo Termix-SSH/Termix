@@ -121,7 +121,7 @@ export function FolderPathPicker({
         align="start"
         sideOffset={4}
         collisionPadding={8}
-        className="w-(--radix-popover-trigger-width) max-h-(--radix-popover-content-available-height) p-0 rounded-none border-0 ring-1 ring-border shadow-md flex flex-col overflow-hidden"
+        className="w-max min-w-(--radix-popover-trigger-width) max-w-72 max-h-(--radix-popover-content-available-height) p-0 rounded-none border-0 ring-1 ring-border shadow-md flex flex-col overflow-hidden"
       >
         <div className="flex items-center gap-2 border-b border-border px-2.5 h-8 shrink-0">
           <Search className="size-3 shrink-0 text-muted-foreground/60" />
