@@ -190,36 +190,57 @@ export function TmuxMonitor({
   );
 
   // -- hosts ----------------------------------------------------------------
-  useEffect(() => {
-    getSSHHosts()
-      .then((all: SSHHost[]) => {
+  const loadHosts = useCallback(
+    async (initial: boolean) => {
+      try {
+        const all: SSHHost[] = await getSSHHosts();
         const sshHosts = all.filter(
           (h) =>
             (h.connectionType ?? "ssh") === "ssh" && h.enableTerminal !== false,
         );
         setHosts(sshHosts);
-        if (sshHosts.length > 0) {
-          let preferred: number | undefined;
-          if (
-            initialHostId != null &&
-            sshHosts.some((h) => h.id === initialHostId)
-          ) {
-            preferred = initialHostId;
-          } else {
+        setSelectedHostId((prev) => {
+          if (prev !== null && sshHosts.some((h) => h.id === prev)) return prev;
+          if (sshHosts.length === 0) return null;
+          if (initial) {
+            if (
+              initialHostId != null &&
+              sshHosts.some((h) => h.id === initialHostId)
+            )
+              return initialHostId;
             const stored = Number(localStorage.getItem(LS_LAST_HOST_KEY));
             if (
               Number.isFinite(stored) &&
               sshHosts.some((h) => h.id === stored)
             )
-              preferred = stored;
+              return stored;
           }
-          setSelectedHostId(preferred ?? sshHosts[0].id);
-        }
-      })
-      .catch(() => toast.error(t("tmuxMonitor.failedToLoadHosts")))
-      .finally(() => setHostsLoading(false));
+          return sshHosts[0].id;
+        });
+      } catch {
+        if (initial) toast.error(t("tmuxMonitor.failedToLoadHosts"));
+      } finally {
+        if (initial) setHostsLoading(false);
+      }
+    },
+    // initialHostId is only consulted on the initial load; the mount effect
+    // already runs once and the follow-initialHostId effect handles updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    [t],
+  );
+
+  useEffect(() => {
+    loadHosts(true);
+  }, [loadHosts]);
+
+  // The tab stays mounted while hosts are added or removed elsewhere (Host
+  // Manager, sidebar), so follow the app-wide change event to keep the list
+  // and selection current.
+  useEffect(() => {
+    const handler = () => loadHosts(false);
+    window.addEventListener("termix:hosts-changed", handler);
+    return () => window.removeEventListener("termix:hosts-changed", handler);
+  }, [loadHosts]);
 
   // Reopening the singleton tab from a host action updates initialHostId;
   // follow it so the requested host gets selected without a remount.
@@ -316,19 +337,19 @@ export function TmuxMonitor({
 
   useEffect(() => {
     activeHostRef.current = selectedHostId;
+    setOverview(null);
+    setSelectedPane(null);
+    setSearchResults(null);
+    setMetrics([]);
     if (selectedHostId === null) return;
     try {
       localStorage.setItem(LS_LAST_HOST_KEY, String(selectedHostId));
     } catch {
       // localStorage may be unavailable
     }
-    setOverview(null);
-    setSelectedPane(null);
-    setSearchResults(null);
     const storedExpanded = readStoredExpanded(selectedHostId);
     expandedRestoredRef.current = storedExpanded !== null;
     setExpandedSessions(storedExpanded ?? new Set());
-    setMetrics([]);
     loadOverview(selectedHostId);
   }, [selectedHostId, loadOverview]);
 
