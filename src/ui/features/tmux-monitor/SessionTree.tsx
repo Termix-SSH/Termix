@@ -265,7 +265,15 @@ export function SessionTree({
                   </span>
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="right" className="w-56 p-0" sideOffset={8}>
+              {/* The base TooltipContent is the inverted one-line chip; this
+              is a multi-row card, so reskin it as a popover surface (and hide
+              the chip's arrow) so the muted/dot tokens inside read correctly
+              on the dark background. */}
+              <TooltipContent
+                side="right"
+                sideOffset={8}
+                className="w-56 rounded-md border bg-popover p-0 text-popover-foreground shadow-md [&_svg]:!hidden"
+              >
                 {/* Session status board (also the only place the numbers
                     live when the panel is too narrow for the inline label) */}
                 <div className="px-3 py-2">
