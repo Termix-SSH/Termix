@@ -576,6 +576,29 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     }
   }
 
+  // After killing the selected pane/window, keep the preview on the same
+  // session by selecting its now-active pane (tmux focuses a sibling
+  // automatically); only fall back to the empty state when the whole session
+  // died with it.
+  const selectSurvivor = useCallback(
+    (data: TmuxOverview, sessionName: string) => {
+      const session = data.sessions.find((s) => s.name === sessionName);
+      const win =
+        session?.windows.find((w) => w.active) ?? session?.windows[0];
+      const pane = win?.panes.find((p) => p.active) ?? win?.panes[0];
+      if (session && win && pane) {
+        setSelectedPane({
+          paneId: pane.id,
+          sessionName: session.name,
+          windowIndex: win.index,
+        });
+      } else {
+        setSelectedPane(null);
+      }
+    },
+    [],
+  );
+
   // -- kill window ------------------------------------------------------------
   const [killWindowTarget, setKillWindowTarget] = useState<{
     sessionName: string;
@@ -593,13 +616,13 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
         killWindowTarget.sessionName,
         killWindowTarget.windowIndex,
       );
-      if (
+      const wasViewing =
         selectedPane?.sessionName === killWindowTarget.sessionName &&
-        selectedPane?.windowIndex === killWindowTarget.windowIndex
-      )
-        setSelectedPane(null);
+        selectedPane?.windowIndex === killWindowTarget.windowIndex;
       setKillWindowTarget(null);
-      loadOverview(selectedHostId, true);
+      const data = await getTmuxOverview(selectedHostId);
+      setOverview(data);
+      if (wasViewing) selectSurvivor(data, killWindowTarget.sessionName);
       nudgePreviewRedraw();
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
@@ -621,9 +644,14 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     setKillingPane(true);
     try {
       await killTmuxPane(selectedHostId, killPaneTarget);
-      if (selectedPane?.paneId === killPaneTarget) setSelectedPane(null);
+      const viewedSession =
+        selectedPane?.paneId === killPaneTarget
+          ? selectedPane.sessionName
+          : null;
       setKillPaneTarget(null);
-      loadOverview(selectedHostId, true);
+      const data = await getTmuxOverview(selectedHostId);
+      setOverview(data);
+      if (viewedSession) selectSurvivor(data, viewedSession);
       nudgePreviewRedraw();
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
