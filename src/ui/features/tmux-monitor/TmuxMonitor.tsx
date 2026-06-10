@@ -514,14 +514,32 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   }
 
   // -- tags -----------------------------------------------------------------
-  async function saveTags(sessionName: string, tags: string[]) {
-    if (selectedHostId === null) return;
+  const [tagsTarget, setTagsTarget] = useState<string | null>(null);
+  const [tagsDraft, setTagsDraft] = useState("");
+  const [savingTags, setSavingTags] = useState(false);
+
+  function openTagsEditor(sessionName: string) {
+    const session = overview?.sessions.find((s) => s.name === sessionName);
+    setTagsDraft(session?.tags.join(", ") ?? "");
+    setTagsTarget(sessionName);
+  }
+
+  async function confirmTags() {
+    if (selectedHostId === null || tagsTarget === null || savingTags) return;
+    const tags = tagsDraft
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    setSavingTags(true);
     try {
-      await setTmuxSessionTags(selectedHostId, sessionName, tags);
+      await setTmuxSessionTags(selectedHostId, tagsTarget, tags);
       toast.success(t("tmuxMonitor.tagsSaved"));
+      setTagsTarget(null);
       loadOverview(selectedHostId, true);
     } catch {
       toast.error(t("tmuxMonitor.tagsSaveFailed"));
+    } finally {
+      setSavingTags(false);
     }
   }
 
@@ -733,7 +751,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                 onSelectPane={selectPane}
                 metricsByPane={metricsByPane}
                 metricsBySession={metricsBySession}
-                onSaveTags={saveTags}
+                onEditTags={openTagsEditor}
                 onAttachSession={openTerminal}
                 onNewWindow={newWindow}
                 onRenameSession={(name) => {
@@ -873,6 +891,42 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               onClick={confirmRename}
             >
               {t("tmuxMonitor.rename")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit tags dialog */}
+      <Dialog
+        open={tagsTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setTagsTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {t("tmuxMonitor.editTagsTitle", { name: tagsTarget })}
+            </DialogTitle>
+          </DialogHeader>
+          <Input
+            value={tagsDraft}
+            placeholder="YOLO, lab, training"
+            autoFocus
+            onChange={(e) => setTagsDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") confirmTags();
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("tmuxMonitor.tagsHint")}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTagsTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button disabled={savingTags} onClick={confirmTags}>
+              {t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
