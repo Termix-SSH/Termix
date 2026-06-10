@@ -35,19 +35,26 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Copy,
   Eye,
   EyeOff,
+  Hammer,
   KeyRound,
+  LayoutPanelLeft,
   Network,
   Palette,
+  Play,
+  Plug,
   Plus,
+  Server,
   Shield,
   ShieldCheck,
   Trash2,
   Type,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
 import {
@@ -513,6 +520,14 @@ export function UserProfilePanel({
   const [confirmTabClose, setConfirmTabClose] = useState(
     () => localStorage.getItem("confirmTabClose") === "true",
   );
+  const [hiddenRailTabs, setHiddenRailTabs] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("hiddenRailTabs");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   // API keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -1095,6 +1110,88 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
+          </div>
+
+          <div className="flex flex-col gap-1 border-t border-border pt-3">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+              {t("newUi.sidebar.userProfile.settingsNavigation")}
+            </span>
+            <p className="text-[10px] text-muted-foreground mb-2">
+              {t("newUi.sidebar.userProfile.navigationTabsDesc")}
+            </p>
+            {(
+              [
+                {
+                  id: "hosts",
+                  icon: <Server size={12} />,
+                  label: t("nav.hosts"),
+                },
+                {
+                  id: "credentials",
+                  icon: <KeyRound size={12} />,
+                  label: t("nav.credentials"),
+                },
+                {
+                  id: "connections",
+                  icon: <Plug size={12} />,
+                  label: t("nav.connections"),
+                },
+                {
+                  id: "quick-connect",
+                  icon: <Zap size={12} />,
+                  label: t("nav.quickConnect"),
+                },
+                {
+                  id: "ssh-tools",
+                  icon: <Hammer size={12} />,
+                  label: t("nav.sshTools"),
+                },
+                {
+                  id: "snippets",
+                  icon: <Play size={12} />,
+                  label: t("nav.snippets"),
+                },
+                {
+                  id: "history",
+                  icon: <Clock size={12} />,
+                  label: t("nav.history"),
+                },
+                {
+                  id: "split-screen",
+                  icon: <LayoutPanelLeft size={12} />,
+                  label: t("nav.splitScreen"),
+                },
+                {
+                  id: "network_graph",
+                  icon: <Network size={12} />,
+                  label: t("nav.networkGraph"),
+                },
+              ] as { id: string; icon: React.ReactNode; label: string }[]
+            ).map((tab) => (
+              <div
+                key={tab.id}
+                className="flex items-center justify-between py-1.5"
+              >
+                <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <span className="text-muted-foreground">{tab.icon}</span>
+                  {tab.label}
+                </span>
+                <FakeSwitch
+                  checked={!hiddenRailTabs.has(tab.id)}
+                  onChange={(visible) => {
+                    const next = new Set(hiddenRailTabs);
+                    if (visible) next.delete(tab.id);
+                    else next.add(tab.id);
+                    setHiddenRailTabs(next);
+                    localStorage.setItem(
+                      "hiddenRailTabs",
+                      JSON.stringify([...next]),
+                    );
+                    window.dispatchEvent(new Event("hiddenRailTabsChanged"));
+                  }}
+                />
+              </div>
+            ))}
           </div>
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
