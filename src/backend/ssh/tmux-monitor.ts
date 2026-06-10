@@ -6,7 +6,8 @@ import { createCorsMiddleware } from "../utils/cors-config.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
-import { tmuxSessionTags } from "../database/db/schema.js";
+import { tmuxSessionTags, users } from "../database/db/schema.js";
+import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import { sshLogger } from "../utils/logger.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
@@ -328,6 +329,7 @@ app.use(authManager.createAuthMiddleware());
 async function requireHost(
   req: express.Request,
   res: express.Response,
+  permission: "read" | "execute" = "read",
 ): Promise<SSHHost | null> {
   const userId = (req as unknown as AuthenticatedRequest).userId;
   const hostId = parseInt(String(req.params.hostId), 10);
@@ -355,7 +357,7 @@ async function requireHost(
     hostId,
     userId,
     host.userId || userId,
-    "read",
+    permission,
   );
   if (!hasAccess) {
     res.status(403).json({ error: "Access denied" });
@@ -366,6 +368,42 @@ async function requireHost(
 
 function toErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : "Unknown error";
+}
+
+// Destructive tmux actions terminate processes on the remote host, so they
+// land in the audit log like other host-level mutations (see host.ts).
+async function auditTmuxAction(
+  req: express.Request,
+  host: SSHHost,
+  action: string,
+  resourceName: string,
+  details?: Record<string, unknown>,
+): Promise<void> {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const { ipAddress, userAgent } = getRequestMeta(req);
+  let username = userId;
+  try {
+    const actor = await getDb()
+      .select({ username: users.username })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    username = actor[0]?.username ?? userId;
+  } catch {
+    // fall back to the raw user id
+  }
+  await logAudit({
+    userId,
+    username,
+    action,
+    resourceType: "host",
+    resourceId: String(host.id),
+    resourceName,
+    details: details ? JSON.stringify(details) : undefined,
+    ipAddress,
+    userAgent,
+    success: true,
+  });
 }
 
 // Typed error codes so the frontend can render a helpful state instead of a
@@ -446,7 +484,7 @@ app.get("/tmux_monitor/:hostId/overview", async (req, res) => {
 // Focus a pane: select its window and pane on the server so every attached
 // client (including the monitor's embedded terminal) switches to it.
 app.post("/tmux_monitor/:hostId/focus", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const paneId = String((req.body as { paneId?: string })?.paneId || "");
@@ -471,7 +509,7 @@ app.post("/tmux_monitor/:hostId/focus", async (req, res) => {
 
 // Create a detached session. Starts the tmux server if none is running.
 app.post("/tmux_monitor/:hostId/sessions", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const name = String((req.body as { name?: string })?.name || "").trim();
@@ -504,7 +542,7 @@ app.post("/tmux_monitor/:hostId/sessions", async (req, res) => {
 // target's meaning (":" and "." are window/pane separators in tmux targets);
 // "=" prefixes the target for an exact-name match.
 app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const sessionName = String(
@@ -516,10 +554,7 @@ app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
 
   try {
     await withHostConnection(host, (conn) =>
-      execCommand(
-        conn,
-        `tmux new-window -t ${shellEscape(`=${sessionName}`)}`,
-      ),
+      execCommand(conn, `tmux new-window -t ${shellEscape(`=${sessionName}`)}`),
     );
     sshLogger.info("tmux window created", {
       operation: "tmux_window_create",
@@ -538,7 +573,7 @@ app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
 // Rename a session. Saved tags follow the session to its new name (for every
 // user — the session itself is shared on the host).
 app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const body = req.body as { sessionName?: string; newName?: string };
@@ -567,10 +602,14 @@ app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
           eq(tmuxSessionTags.sessionName, sessionName),
         ),
       );
+    await DatabaseSaveTrigger.triggerSave("tmux_session_tags_updated");
     sshLogger.info("tmux session renamed", {
       operation: "tmux_session_rename",
       hostId: host.id,
       sessionName,
+      newName,
+    });
+    await auditTmuxAction(req, host, "tmux_session_rename", sessionName, {
       newName,
     });
     res.json({ ok: true, name: newName });
@@ -589,7 +628,7 @@ app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
 
 // Kill a session and drop its saved tags.
 app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const sessionName = String(
@@ -601,7 +640,10 @@ app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
 
   try {
     await withHostConnection(host, (conn) =>
-      execCommand(conn, `tmux kill-session -t ${shellEscape(`=${sessionName}`)}`),
+      execCommand(
+        conn,
+        `tmux kill-session -t ${shellEscape(`=${sessionName}`)}`,
+      ),
     );
     await getDb()
       .delete(tmuxSessionTags)
@@ -611,11 +653,13 @@ app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
           eq(tmuxSessionTags.sessionName, sessionName),
         ),
       );
+    await DatabaseSaveTrigger.triggerSave("tmux_session_tags_updated");
     sshLogger.info("tmux session killed", {
       operation: "tmux_session_kill",
       hostId: host.id,
       sessionName,
     });
+    await auditTmuxAction(req, host, "tmux_session_kill", sessionName);
     res.json({ ok: true });
   } catch (err) {
     if (/can't find session|no such session/i.test(toErrorMessage(err))) {
@@ -628,7 +672,7 @@ app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
 // Kill a window (and every pane in it). Killing the last window of a session
 // ends the session — tmux semantics.
 app.post("/tmux_monitor/:hostId/kill-window", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const body = req.body as { sessionName?: string; windowIndex?: number };
@@ -654,11 +698,16 @@ app.post("/tmux_monitor/:hostId/kill-window", async (req, res) => {
       sessionName,
       windowIndex,
     });
+    await auditTmuxAction(req, host, "tmux_window_kill", sessionName, {
+      windowIndex,
+    });
     res.json({ ok: true });
   } catch (err) {
-    if (/can't find window|no such window|can't find session/i.test(
+    if (
+      /can't find window|no such window|can't find session/i.test(
         toErrorMessage(err),
-      )) {
+      )
+    ) {
       return res.status(404).json({ error: "Window not found" });
     }
     sendTmuxError(res, err, "kill window", host.id);
@@ -668,7 +717,7 @@ app.post("/tmux_monitor/:hostId/kill-window", async (req, res) => {
 // Kill a single pane. Killing the last pane of a window closes the window,
 // and the last window of a session ends the session — tmux semantics.
 app.post("/tmux_monitor/:hostId/kill-pane", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const paneId = String((req.body as { paneId?: string })?.paneId || "");
@@ -685,6 +734,7 @@ app.post("/tmux_monitor/:hostId/kill-pane", async (req, res) => {
       hostId: host.id,
       paneId,
     });
+    await auditTmuxAction(req, host, "tmux_pane_kill", paneId);
     res.json({ ok: true });
   } catch (err) {
     if (/can't find pane|no such pane/i.test(toErrorMessage(err))) {
@@ -698,7 +748,7 @@ app.post("/tmux_monitor/:hostId/kill-pane", async (req, res) => {
 // "v" below — matching tmux's own -h/-v semantics. The new pane starts in the
 // source pane's working directory.
 app.post("/tmux_monitor/:hostId/split", async (req, res) => {
-  const host = await requireHost(req, res);
+  const host = await requireHost(req, res, "execute");
   if (!host) return;
 
   const body = req.body as { paneId?: string; direction?: string };

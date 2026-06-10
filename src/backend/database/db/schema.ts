@@ -733,7 +733,9 @@ export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id").notNull(),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
   sessionName: text("session_name").notNull(),
   tag: text("tag").notNull(),
   createdAt: text("created_at")

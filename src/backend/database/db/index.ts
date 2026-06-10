@@ -1441,7 +1441,8 @@ const migrateSchema = () => {
           session_name TEXT NOT NULL,
           tag TEXT NOT NULL,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
         );
       `);
     } catch (createError) {
@@ -1450,6 +1451,53 @@ const migrateSchema = () => {
         error: createError,
       });
     }
+  }
+
+  // Rebuild pre-release tables created without the host FK so deleting a
+  // host cascades to its tags (SQLite cannot add a FK via ALTER TABLE).
+  try {
+    const tagFks = sqlite
+      .prepare("PRAGMA foreign_key_list(tmux_session_tags)")
+      .all() as Array<{ table: string; from: string }>;
+    const hasHostFk = tagFks.some(
+      (fk) => fk.from === "host_id" && fk.table === "ssh_data",
+    );
+    if (!hasHostFk) {
+      sqlite.exec(`
+        BEGIN;
+        CREATE TABLE tmux_session_tags_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          session_name TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+        );
+        INSERT INTO tmux_session_tags_new (id, user_id, host_id, session_name, tag, created_at)
+          SELECT id, user_id, host_id, session_name, tag, created_at
+          FROM tmux_session_tags
+          WHERE user_id IN (SELECT id FROM users)
+            AND host_id IN (SELECT id FROM ssh_data);
+        DROP TABLE tmux_session_tags;
+        ALTER TABLE tmux_session_tags_new RENAME TO tmux_session_tags;
+        COMMIT;
+      `);
+      databaseLogger.info("Rebuilt tmux_session_tags with host FK", {
+        operation: "schema_migration",
+      });
+    }
+  } catch (rebuildError) {
+    try {
+      sqlite.exec("ROLLBACK;");
+    } catch {
+      // no transaction open
+    }
+    databaseLogger.warn("Failed to add host FK to tmux_session_tags", {
+      operation: "schema_migration",
+      error: rebuildError,
+    });
   }
   // --- tmux-monitor end ---
 
