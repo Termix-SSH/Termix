@@ -641,7 +641,13 @@ export function AppShell({
   }
 
   const openSingletonTab = useCallback(
-    function openSingletonTab(type: TabType, pendingEvent?: string) {
+    // --- tmux-monitor --- (added optional `host` so tmux_monitor can open
+    // with a preselected host; existing callers are unaffected)
+    function openSingletonTab(
+      type: TabType,
+      pendingEvent?: string,
+      host?: Host,
+    ) {
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
           setSidebarOpen(true);
@@ -677,6 +683,7 @@ export function AppShell({
         docker: t("nav.docker"),
         tunnel: t("nav.tunnels"),
         network_graph: t("nav.networkGraph"),
+        tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
       };
       setTabs((prev) => {
         if (prev.find((t) => t.id === id)) return prev;
@@ -688,6 +695,7 @@ export function AppShell({
             type,
             label: singletonLabels[type] ?? type,
             openedAt: Date.now(),
+            ...(host ? { host } : {}), // --- tmux-monitor ---
           },
         ];
       });
@@ -1269,6 +1277,13 @@ export function AppShell({
             ].includes(type)
           ) {
             openSingletonTab(type, pendingEvent);
+          } else if (type === "tmux_monitor") {
+            // --- tmux-monitor --- singleton tab, optionally preselecting a host
+            openSingletonTab(
+              type,
+              undefined,
+              label ? allHosts.find((h) => h.name === label) : undefined,
+            );
           } else if (label) {
             const host = allHosts.find((h) => h.name === label);
             if (host) openTab(host, type);

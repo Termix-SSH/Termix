@@ -159,7 +159,8 @@ export type TabType =
   | "admin-settings"
   | "docker"
   | "tunnel"
-  | "network_graph";
+  | "network_graph"
+  | "tmux_monitor"; // --- tmux-monitor ---
 
 export type TunnelStatusValue =
   | "CONNECTED"

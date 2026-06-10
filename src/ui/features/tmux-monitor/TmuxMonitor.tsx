@@ -65,7 +65,7 @@ interface SelectedPane {
   windowIndex: number;
 }
 
-export function TmuxMonitor() {
+export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   const { t } = useTranslation();
   const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [hostsLoading, setHostsLoading] = useState(true);
@@ -96,7 +96,14 @@ export function TmuxMonitor() {
             (h.connectionType ?? "ssh") === "ssh" && h.enableTerminal !== false,
         );
         setHosts(sshHosts);
-        if (sshHosts.length > 0) setSelectedHostId(sshHosts[0].id);
+        if (sshHosts.length > 0) {
+          const preferred =
+            initialHostId != null &&
+            sshHosts.some((h) => h.id === initialHostId)
+              ? initialHostId
+              : sshHosts[0].id;
+          setSelectedHostId(preferred);
+        }
       })
       .catch(() => toast.error(t("tmuxMonitor.failedToLoadHosts")))
       .finally(() => setHostsLoading(false));

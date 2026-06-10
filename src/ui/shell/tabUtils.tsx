@@ -11,6 +11,7 @@ import {
   User,
   Activity,
   TerminalSquare,
+  Layers, // --- tmux-monitor ---
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
@@ -22,6 +23,8 @@ import type {
 import { FileManager } from "@/features/file-manager/FileManager";
 import { DockerManager } from "@/features/docker/DockerManager";
 import { ServerStats } from "@/features/server-stats/ServerStats";
+// --- tmux-monitor ---
+import { TmuxMonitor } from "@/features/tmux-monitor/TmuxMonitor";
 import GuacamoleApp from "@/features/guacamole/GuacamoleApp";
 import { DashboardTab } from "@/dashboard/DashboardTab";
 import { TunnelTab } from "@/features/tunnel/TunnelTab";
@@ -112,6 +115,9 @@ export function tabIcon(type: TabType) {
       return <Network className="size-3.5" />;
     case "network_graph":
       return <Network className="size-3.5" />;
+    // --- tmux-monitor ---
+    case "tmux_monitor":
+      return <Layers className="size-3.5" />;
   }
 }
 
@@ -246,6 +252,12 @@ export function renderTabContent(
 
     case "network_graph":
       return <NetworkGraphCard embedded={false} />;
+
+    // --- tmux-monitor ---
+    case "tmux_monitor":
+      return (
+        <TmuxMonitor initialHostId={host ? parseInt(host.id, 10) : undefined} />
+      );
 
     case "host-manager":
     case "user-profile":

@@ -533,6 +533,7 @@ export interface TabContextTab {
     | "user_profile"
     | "docker"
     | "network_graph"
+    | "tmux_monitor" // --- tmux-monitor ---
     | "rdp"
     | "vnc"
     | "telnet";

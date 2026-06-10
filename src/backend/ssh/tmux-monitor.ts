@@ -103,7 +103,7 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
   return base;
 }
 
-function connectToHost(host: SSHHost): () => Promise<Client> {
+export function connectToHost(host: SSHHost): () => Promise<Client> {
   return async () => {
     const config = await buildSshConfig(host);
     const client = new Client();
