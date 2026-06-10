@@ -256,7 +256,10 @@ export function renderTabContent(
     // --- tmux-monitor ---
     case "tmux_monitor":
       return (
-        <TmuxMonitor initialHostId={host ? parseInt(host.id, 10) : undefined} />
+        <TmuxMonitor
+          initialHostId={host ? parseInt(host.id, 10) : undefined}
+          isVisible={isVisible}
+        />
       );
 
     case "host-manager":

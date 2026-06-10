@@ -142,134 +142,130 @@ export function SessionTree({
           <div key={session.name} className="mb-0.5">
             <Tooltip>
               <TooltipTrigger asChild>
-            <div
-              className="group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted/40"
-              onClick={() => onToggleSession(session.name)}
-            >
-              {expanded ? (
-                <ChevronDown className="size-3.5 shrink-0" />
-              ) : (
-                <ChevronRight className="size-3.5 shrink-0" />
-              )}
-              <span
-                className={`size-2 shrink-0 rounded-full ${session.attachedClients > 0 ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
-                title={
-                  session.attachedClients > 0
-                    ? t("tmuxMonitor.attached")
-                    : t("tmuxMonitor.detached")
-                }
-              />
-              <span className="truncate text-sm font-medium">
-                {session.name}
-              </span>
-              {session.tags.slice(0, MAX_INLINE_TAGS).map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="h-4 shrink-0 px-1.5 text-[10px]"
+                <div
+                  className="group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted/40"
+                  onClick={() => onToggleSession(session.name)}
                 >
-                  {tag}
-                </Badge>
-              ))}
-              {session.tags.length > MAX_INLINE_TAGS && (
-                <Badge
-                  variant="secondary"
-                  className="h-4 shrink-0 px-1.5 text-[10px]"
-                  title={session.tags.join(", ")}
-                >
-                  +{session.tags.length - MAX_INLINE_TAGS}
-                </Badge>
-              )}
+                  {expanded ? (
+                    <ChevronDown className="size-3.5 shrink-0" />
+                  ) : (
+                    <ChevronRight className="size-3.5 shrink-0" />
+                  )}
+                  <span
+                    className={`size-2 shrink-0 rounded-full ${session.attachedClients > 0 ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
+                    title={
+                      session.attachedClients > 0
+                        ? t("tmuxMonitor.attached")
+                        : t("tmuxMonitor.detached")
+                    }
+                  />
+                  <span className="truncate text-sm font-medium">
+                    {session.name}
+                  </span>
+                  {session.tags.slice(0, MAX_INLINE_TAGS).map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="h-4 shrink-0 px-1.5 text-[10px]"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                  {session.tags.length > MAX_INLINE_TAGS && (
+                    <Badge
+                      variant="secondary"
+                      className="h-4 shrink-0 px-1.5 text-[10px]"
+                      title={session.tags.join(", ")}
+                    >
+                      +{session.tags.length - MAX_INLINE_TAGS}
+                    </Badge>
+                  )}
 
-              {/* Meta label and hover actions stacked in one grid cell: the
+                  {/* Meta label and hover actions stacked in one grid cell: the
                   label fades out while the actions fade in, so the row never
                   changes size. Buttons stay keyboard-focusable (opacity, not
                   display:none) and focus-within reveals them. */}
-              <span className="ml-auto grid shrink-0">
-                {/* pointer-events-none + z-10 matter: at opacity-0 the label
+                  <span className="ml-auto grid shrink-0">
+                    {/* pointer-events-none + z-10 matter: at opacity-0 the label
                     becomes a stacking context painted above its plain-flow
                     sibling, and would swallow the buttons' clicks. */}
-                {!compact && (
-                  <span className="pointer-events-none col-start-1 row-start-1 justify-self-end self-center text-xs text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0">
-                    {metaLabel(session)}
-                  </span>
-                )}
-                <span className="pointer-events-none z-10 col-start-1 row-start-1 flex items-center gap-1.5 justify-self-end opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
-                  <button
-                    className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
-                    title={t("tmuxMonitor.attachSessionTooltip", {
-                      session: session.name,
-                    })}
-                    aria-label={t("tmuxMonitor.attachSessionTooltip", {
-                      session: session.name,
-                    })}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAttachSession(session.name);
-                    }}
-                  >
-                    <Play className="size-3.5" />
-                  </button>
-                  <button
-                    className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
-                    title={t("tmuxMonitor.newWindow")}
-                    aria-label={t("tmuxMonitor.newWindow")}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onNewWindow(session.name);
-                    }}
-                  >
-                    <Plus className="size-3.5" />
-                  </button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    {!compact && (
+                      <span className="pointer-events-none col-start-1 row-start-1 justify-self-end self-center text-xs text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0">
+                        {metaLabel(session)}
+                      </span>
+                    )}
+                    <span className="pointer-events-none z-10 col-start-1 row-start-1 flex items-center gap-1.5 justify-self-end opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
                       <button
-                        className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground data-[state=open]:text-foreground"
-                        title={t("tmuxMonitor.moreActions")}
-                        aria-label={t("tmuxMonitor.moreActions")}
-                        onClick={(e) => e.stopPropagation()}
+                        className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                        title={t("tmuxMonitor.attachSessionTooltip", {
+                          session: session.name,
+                        })}
+                        aria-label={t("tmuxMonitor.attachSessionTooltip", {
+                          session: session.name,
+                        })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAttachSession(session.name);
+                        }}
                       >
-                        <MoreHorizontal className="size-3.5" />
+                        <Play className="size-3.5" />
                       </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="min-w-36"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DropdownMenuItem
-                        className="whitespace-nowrap"
-                        onSelect={() => onRenameSession(session.name)}
+                      <button
+                        className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                        title={t("tmuxMonitor.newWindow")}
+                        aria-label={t("tmuxMonitor.newWindow")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNewWindow(session.name);
+                        }}
                       >
-                        <Pencil className="size-3.5" />
-                        {t("tmuxMonitor.rename")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="whitespace-nowrap"
-                        onSelect={() => onEditTags(session.name)}
-                      >
-                        <Tag className="size-3.5" />
-                        {t("tmuxMonitor.editTags")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        className="whitespace-nowrap"
-                        onSelect={() => onKillSession(session.name)}
-                      >
-                        <Trash2 className="size-3.5" />
-                        {t("tmuxMonitor.kill")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </span>
-              </span>
-            </div>
+                        <Plus className="size-3.5" />
+                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground data-[state=open]:text-foreground"
+                            title={t("tmuxMonitor.moreActions")}
+                            aria-label={t("tmuxMonitor.moreActions")}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="size-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="min-w-36"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DropdownMenuItem
+                            className="whitespace-nowrap"
+                            onSelect={() => onRenameSession(session.name)}
+                          >
+                            <Pencil className="size-3.5" />
+                            {t("tmuxMonitor.rename")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="whitespace-nowrap"
+                            onSelect={() => onEditTags(session.name)}
+                          >
+                            <Tag className="size-3.5" />
+                            {t("tmuxMonitor.editTags")}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            className="whitespace-nowrap"
+                            onSelect={() => onKillSession(session.name)}
+                          >
+                            <Trash2 className="size-3.5" />
+                            {t("tmuxMonitor.kill")}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </span>
+                  </span>
+                </div>
               </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="w-56 p-0"
-                sideOffset={8}
-              >
+              <TooltipContent side="right" className="w-56 p-0" sideOffset={8}>
                 {/* Session status board (also the only place the numbers
                     live when the panel is too narrow for the inline label) */}
                 <div className="px-3 py-2">

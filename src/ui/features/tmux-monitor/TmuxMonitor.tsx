@@ -14,11 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import {
   Dialog,
   DialogContent,
@@ -100,7 +96,13 @@ function readStoredExpanded(hostId: number): Set<string> | null {
   }
 }
 
-export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
+export function TmuxMonitor({
+  initialHostId,
+  isVisible = true,
+}: {
+  initialHostId?: number;
+  isVisible?: boolean;
+}) {
   const { t } = useTranslation();
   const [hosts, setHosts] = useState<SSHHost[]>([]);
   const [hostsLoading, setHostsLoading] = useState(true);
@@ -126,6 +128,10 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   // Bumped every 30s so relative "Xm ago" labels do not go stale.
   const [now, setNow] = useState(() => Date.now());
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Host whose data is currently on screen; responses for any other host are
+  // stale (the user switched away while the request was in flight) and must
+  // not overwrite the current tree.
+  const activeHostRef = useRef<number | null>(null);
   // True when the expanded-session set for the current host was restored from
   // localStorage (or touched by the user) and must not be overwritten by the
   // default expand-all behavior.
@@ -241,6 +247,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
       }
       try {
         const data = await getTmuxOverview(hostId);
+        if (activeHostRef.current !== hostId) return true;
         setOverview(data);
         setExpandedSessions((prev) => {
           if (expandedRestoredRef.current || prev.size > 0) return prev;
@@ -248,6 +255,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
         });
         return true;
       } catch (err) {
+        if (activeHostRef.current !== hostId) return true;
         if (!silent) {
           const axiosErr = err as {
             code?: string;
@@ -279,7 +287,8 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
         }
         return false;
       } finally {
-        if (!silent) setOverviewLoading(false);
+        if (!silent && activeHostRef.current === hostId)
+          setOverviewLoading(false);
       }
     },
     [t],
@@ -306,6 +315,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   }, [selectedHostId, refreshing, overview, loadOverview, t]);
 
   useEffect(() => {
+    activeHostRef.current = selectedHostId;
     if (selectedHostId === null) return;
     try {
       localStorage.setItem(LS_LAST_HOST_KEY, String(selectedHostId));
@@ -320,15 +330,22 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     setExpandedSessions(storedExpanded ?? new Set());
     setMetrics([]);
     loadOverview(selectedHostId);
+  }, [selectedHostId, loadOverview]);
+
+  // Poll only while this app tab is shown: the component stays mounted when
+  // the user switches tabs (AppShell keeps tab content alive) and would
+  // otherwise keep running SSH execs against the host forever.
+  useEffect(() => {
+    if (selectedHostId === null || !isVisible) return;
     const interval = setInterval(() => {
       if (!document.hidden) loadOverview(selectedHostId, true);
     }, OVERVIEW_POLL_MS);
     return () => clearInterval(interval);
-  }, [selectedHostId, loadOverview]);
+  }, [selectedHostId, isVisible, loadOverview]);
 
   // -- metrics polling ------------------------------------------------------
   useEffect(() => {
-    if (selectedHostId === null || !overview?.available) return;
+    if (selectedHostId === null || !overview?.available || !isVisible) return;
     let cancelled = false;
     const load = () => {
       if (document.hidden) return;
@@ -344,10 +361,13 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [selectedHostId, overview?.available]);
+  }, [selectedHostId, overview?.available, isVisible]);
 
   // -- keyboard shortcuts -----------------------------------------------------
+  // Gated on isVisible: the listener is global, and a hidden-but-mounted tab
+  // must not swallow "/" or Escape typed in other tabs.
   useEffect(() => {
+    if (!isVisible) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "/") {
         const target = e.target as HTMLElement | null;
@@ -363,7 +383,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [searchResults, selectedPane]);
+  }, [searchResults, selectedPane, isVisible]);
 
   // -- search ---------------------------------------------------------------
   async function runSearch() {
@@ -583,8 +603,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   const selectSurvivor = useCallback(
     (data: TmuxOverview, sessionName: string) => {
       const session = data.sessions.find((s) => s.name === sessionName);
-      const win =
-        session?.windows.find((w) => w.active) ?? session?.windows[0];
+      const win = session?.windows.find((w) => w.active) ?? session?.windows[0];
       const pane = win?.panes.find((p) => p.active) ?? win?.panes[0];
       if (session && win && pane) {
         setSelectedPane({

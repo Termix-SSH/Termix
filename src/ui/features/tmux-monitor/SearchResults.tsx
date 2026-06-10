@@ -1,10 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
-import type {
-  TmuxSearchMatch,
-  TmuxSearchResult,
-} from "@/api/tmux-monitor-api";
+import type { TmuxSearchMatch, TmuxSearchResult } from "@/api/tmux-monitor-api";
 
 interface SearchResultsProps {
   results: TmuxSearchMatch[];

@@ -705,9 +705,7 @@ export function HostItem({
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
-                      writeClipboardText(
-                        `${host.username}@${host.ip}`,
-                      );
+                      writeClipboardText(`${host.username}@${host.ip}`);
                       toast.success(t("hosts.copiedToClipboard"));
                     }}
                   >
