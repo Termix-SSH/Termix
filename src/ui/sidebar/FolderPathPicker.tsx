@@ -12,14 +12,14 @@ import { FolderIconEl } from "@/components/folder-style";
 
 const SEP = " / ";
 
-function splitPath(path: string): string[] {
+export function splitPath(path: string): string[] {
   return path
-    .split(SEP)
+    .split(/\s*\/\s*/)
     .map((p) => p.trim())
     .filter(Boolean);
 }
 
-function normalizePath(path: string): string {
+export function normalizePath(path: string): string {
   return splitPath(path).join(SEP);
 }
 
@@ -48,8 +48,15 @@ export function FolderPathPicker({
 
   const query = search.trim();
   const normalizedQuery = normalizePath(query);
+  const normalizedQueryLower = normalizedQuery.toLowerCase();
   const filtered = query
-    ? allPaths.filter((p) => p.toLowerCase().includes(query.toLowerCase()))
+    ? allPaths.filter((p) => {
+        const lower = p.toLowerCase();
+        return (
+          lower.includes(query.toLowerCase()) ||
+          lower.includes(normalizedQueryLower)
+        );
+      })
     : allPaths;
 
   const canCreate =

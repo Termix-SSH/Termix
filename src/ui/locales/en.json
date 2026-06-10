@@ -506,7 +506,7 @@
     "failedToDeleteFolder": "Failed to delete folder",
     "deleteAllInFolder": "Delete all hosts in \"{{name}}\"? This cannot be undone.",
     "folderPickerPlaceholder": "No folder",
-    "folderPickerSearch": "Search or create a folder...",
+    "folderPickerSearch": "Search or create (use / for subfolders)...",
     "folderPickerNone": "No folder",
     "folderPickerCreate": "Create \"{{path}}\"",
     "folderPickerEmpty": "No matching folders",
