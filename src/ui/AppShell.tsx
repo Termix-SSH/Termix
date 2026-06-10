@@ -18,6 +18,7 @@ import { QuickConnectPanel } from "@/sidebar/QuickConnectPanel";
 import { SshToolsPanel } from "@/sidebar/SshToolsPanel";
 import { SnippetsPanel } from "@/sidebar/SnippetsPanel";
 import { HistoryPanel } from "@/sidebar/HistoryPanel";
+import { SessionLogsPanel } from "@/sidebar/SessionLogsPanel";
 import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
@@ -291,6 +292,7 @@ export function AppShell({
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
     history: "History",
+    "session-logs": t("nav.sessionLogs"),
     "split-screen": "Split Screen",
     connections: t("nav.connections"),
     "user-profile": "User Profile",
@@ -736,6 +738,9 @@ export function AppShell({
 
   function doCloseTab(id: string) {
     const tabToClose = tabs.find((t) => t.id === id);
+    if (tabToClose?.terminalRef?.current?.disconnect) {
+      tabToClose.terminalRef.current.disconnect();
+    }
     if (
       tabToClose?.instanceId &&
       PERSISTENT_TAB_TYPES.includes(tabToClose.type)
@@ -1075,6 +1080,12 @@ export function AppShell({
               );
             }}
           />
+        </div>
+      )}
+
+      {railView === "session-logs" && (
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <SessionLogsPanel />
         </div>
       )}
 

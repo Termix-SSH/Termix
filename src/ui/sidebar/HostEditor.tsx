@@ -722,6 +722,15 @@ export function HostEditor({
                     onChange={(v) => setField("autoTmux", v)}
                   />
                 </SettingRow>
+                <SettingRow
+                  label={t("hosts.enableSessionLogging")}
+                  description={t("hosts.enableSessionLoggingDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.enableSessionLogging}
+                    onChange={(v) => setField("enableSessionLogging", v)}
+                  />
+                </SettingRow>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

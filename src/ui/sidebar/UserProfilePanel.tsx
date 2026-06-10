@@ -47,6 +47,7 @@ import {
   Play,
   Plug,
   Plus,
+  ScrollText,
   Server,
   Shield,
   ShieldCheck,
@@ -1155,6 +1156,11 @@ export function UserProfilePanel({
                   id: "history",
                   icon: <Clock size={12} />,
                   label: t("nav.history"),
+                },
+                {
+                  id: "session-logs",
+                  icon: <ScrollText size={12} />,
+                  label: t("nav.sessionLogs"),
                 },
                 {
                   id: "split-screen",

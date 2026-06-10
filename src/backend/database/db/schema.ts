@@ -97,6 +97,9 @@ export const hosts = sqliteTable("ssh_data", {
   enableTerminal: integer("enable_terminal", { mode: "boolean" })
     .notNull()
     .default(true),
+  enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
+    .notNull()
+    .default(true),
   enableTunnel: integer("enable_tunnel", { mode: "boolean" })
     .notNull()
     .default(true),

@@ -1,9 +1,14 @@
 import { type Client, type ClientChannel } from "ssh2";
 import { WebSocket } from "ws";
+import fs from "fs";
+import path from "path";
 import { sshLogger } from "../utils/logger.js";
 import { getDb } from "../database/db/index.js";
+import { sessionRecordings } from "../database/db/schema.js";
 
 const MAX_BUFFER_BYTES = 512 * 1024;
+const DATA_DIR = process.env.DATA_DIR ?? "./db/data";
+const SESSION_LOGS_DIR = path.join(DATA_DIR, "session_logs");
 const DEFAULT_TIMEOUT_MINUTES = 30;
 const HEALTH_CHECK_INTERVAL_MS = 60_000;
 const MAX_SESSIONS_PER_USER = 10;
@@ -32,6 +37,9 @@ export interface TerminalSession {
   outputBuffer: string[];
   outputBufferBytes: number;
   tmuxSessionName: string | null;
+  sessionLoggingEnabled: boolean;
+  sessionStartedAt: number;
+  lastPersistedBytes: number;
 }
 
 class TerminalSessionManager {
@@ -60,6 +68,7 @@ class TerminalSessionManager {
     cols: number,
     rows: number,
     tabInstanceId?: string,
+    sessionLoggingEnabled = true,
   ): string {
     const userSessions = this.getUserSessions(userId);
     if (userSessions.length >= MAX_SESSIONS_PER_USER) {
@@ -107,6 +116,7 @@ class TerminalSessionManager {
     }
 
     const id = crypto.randomUUID();
+    const now = Date.now();
     const session: TerminalSession = {
       id,
       userId,
@@ -119,13 +129,16 @@ class TerminalSessionManager {
       cols,
       rows,
       isConnected: false,
-      createdAt: Date.now(),
+      createdAt: now,
       attachedWs: null,
       lastDetachedAt: null,
       detachTimeout: null,
       outputBuffer: [],
       outputBufferBytes: 0,
       tmuxSessionName: null,
+      sessionLoggingEnabled,
+      sessionStartedAt: now,
+      lastPersistedBytes: 0,
     };
     this.sessions.set(id, session);
 
@@ -288,6 +301,10 @@ class TerminalSessionManager {
     session.attachedWs = null;
     session.lastDetachedAt = Date.now();
 
+    // Persist log immediately when the user detaches so it appears right away,
+    // regardless of whether the session is later reattached or times out.
+    this.maybePersistLog(session);
+
     const timeoutMs = this.getTimeoutMs();
 
     session.detachTimeout = setTimeout(() => {
@@ -315,6 +332,8 @@ class TerminalSessionManager {
       clearTimeout(session.detachTimeout);
       session.detachTimeout = null;
     }
+
+    this.maybePersistLog(session, true);
 
     if (session.sshStream) {
       try {
@@ -354,6 +373,83 @@ class TerminalSessionManager {
       sessionId,
       userId: session.userId,
       hostId: session.hostId,
+    });
+  }
+
+  private stripAnsi(raw: string): string {
+    return (
+      raw
+        // ESC sequences: CSI, OSC, DCS, PM, APC, SOS
+        .replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, "")
+        .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+        .replace(/\x1b[PX^_][^\x1b]*\x1b\\/g, "")
+        // Single-char ESC sequences (e.g. ESC M, ESC =)
+        .replace(/\x1b[^[\]PX^_]/g, "")
+        // Other C0/C1 control chars except newline, carriage return, tab
+        .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+        // Collapse carriage returns used for line overwrites
+        .replace(/[^\n]*\r(?!\n)/g, "")
+    );
+  }
+
+  private maybePersistLog(session: TerminalSession, force = false): void {
+    if (!session.sessionLoggingEnabled) return;
+    if (session.outputBufferBytes === 0) return;
+    // Only save if new output arrived since last persist (unless forced)
+    if (!force && session.outputBufferBytes === session.lastPersistedBytes)
+      return;
+    const snapshot = session.outputBuffer.join("");
+    session.lastPersistedBytes = session.outputBufferBytes;
+    this.persistSessionLog(session, snapshot).catch((err) => {
+      sshLogger.warn("Failed to persist session log", {
+        operation: "session_log_persist_error",
+        sessionId: session.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
+
+  private async persistSessionLog(
+    session: TerminalSession,
+    logContent: string,
+  ): Promise<void> {
+    const cleaned = this.stripAnsi(logContent);
+    if (!cleaned.trim()) return;
+
+    const userLogDir = path.join(SESSION_LOGS_DIR, session.userId);
+    await fs.promises.mkdir(userLogDir, { recursive: true });
+
+    const logFile = path.join(userLogDir, `${session.id}.log`);
+    await fs.promises.writeFile(logFile, cleaned, "utf-8");
+
+    const endedAt = Date.now();
+    const duration = Math.floor((endedAt - session.sessionStartedAt) / 1000);
+
+    try {
+      const db = getDb();
+      await db.insert(sessionRecordings).values({
+        hostId: session.hostId,
+        userId: session.userId,
+        startedAt: new Date(session.sessionStartedAt).toISOString(),
+        endedAt: new Date(endedAt).toISOString(),
+        duration,
+        recordingPath: logFile,
+      });
+    } catch (err) {
+      sshLogger.warn("Failed to insert session recording row", {
+        operation: "session_recording_insert_error",
+        sessionId: session.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    sshLogger.info("Session log persisted", {
+      operation: "session_log_persisted",
+      sessionId: session.id,
+      userId: session.userId,
+      hostId: session.hostId,
+      duration,
+      bytes: cleaned.length,
     });
   }
 

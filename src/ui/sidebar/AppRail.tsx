@@ -8,6 +8,7 @@ import {
   Network,
   Play,
   Plug,
+  ScrollText,
   Server,
   Settings,
   User,
@@ -27,6 +28,7 @@ export type RailView =
   | "quick-connect"
   | ToolsTab
   | "connections"
+  | "session-logs"
   | "user-profile"
   | "admin-settings";
 
@@ -75,6 +77,12 @@ function buildRailButtons(
     { view: "snippets", icon: <Play size={16} />, title: t("nav.snippets") },
     { kind: "separator" },
     { view: "history", icon: <Clock size={16} />, title: t("nav.history") },
+    { kind: "separator" },
+    {
+      view: "session-logs",
+      icon: <ScrollText size={16} />,
+      title: t("nav.sessionLogs"),
+    },
     { kind: "separator" },
     {
       view: "split-screen",
@@ -179,12 +187,12 @@ export function AppRail({
 
   return (
     <div
-      className="hidden md:flex flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200"
+      className="hidden md:flex flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0"
       style={{ width: railExpanded ? 160 : 40 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="flex flex-col flex-1 gap-1">
+      <div className="flex flex-col flex-1 gap-1 overflow-y-auto scrollbar-none min-h-0">
         {railButtons.map((item, i) =>
           item.kind === "separator" ? (
             <div

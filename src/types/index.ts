@@ -59,6 +59,7 @@ export interface Host {
   overrideCredentialUsername?: boolean;
   userId?: string;
   enableTerminal: boolean;
+  enableSessionLogging: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
   enableDocker: boolean;
@@ -159,6 +160,7 @@ export interface HostData {
   credentialId?: number | null;
   overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;
+  enableSessionLogging?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   enableDocker?: boolean;
