@@ -30,7 +30,7 @@ describe("parseSessions", () => {
       lastActivity: 1760001000,
       attachedClients: 1,
     });
-    // Session names containing "|" survive because SEP is a control char
+    // Session names containing "|" survive because SEP is a multi-char token
     expect(sessions[1].name).toBe("lab|with|pipes");
     expect(sessions[1].attachedClients).toBe(0);
   });

@@ -2,8 +2,10 @@
 // Kept free of SSH/Express dependencies so they can be unit-tested.
 
 // Field separator used in tmux -F format strings. Session names, pane titles
-// and paths may contain "|", so a control character (unit separator) is used.
-export const SEP = "";
+// and paths may contain "|", and tmux sanitizes control characters (and, under
+// non-UTF-8 locales, multibyte characters) in format output to "_", so a
+// printable ASCII token is the only separator that survives everywhere.
+export const SEP = "<<TMX>>";
 
 export interface TmuxPane {
   id: string;
