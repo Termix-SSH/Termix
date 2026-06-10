@@ -828,7 +828,7 @@ export function TmuxMonitor({
               <PopoverTrigger asChild>
                 <button
                   className="text-muted-foreground hover:text-foreground disabled:opacity-40"
-                  disabled={selectedHostId === null}
+                  disabled={selectedHostId === null || !overview?.available}
                   title={t("tmuxMonitor.newSession")}
                   aria-label={t("tmuxMonitor.newSession")}
                 >
@@ -1038,6 +1038,12 @@ export function TmuxMonitor({
                 className="h-8 w-64 pl-7 text-sm"
                 placeholder={t("tmuxMonitor.searchPlaceholder")}
                 value={searchQuery}
+                disabled={!overview?.available}
+                title={
+                  overview && !overview.available
+                    ? t("tmuxMonitor.tmuxUnavailable")
+                    : undefined
+                }
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") runSearch();
