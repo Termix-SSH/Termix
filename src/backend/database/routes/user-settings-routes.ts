@@ -328,4 +328,110 @@ export function registerUserSettingsRoutes(
       res.status(500).json({ error: "Failed to set session timeout" });
     }
   });
+
+  /**
+   * @openapi
+   * /users/tailscale-settings:
+   *   get:
+   *     summary: Get Tailscale settings
+   *     description: Returns whether a Tailscale API key is configured (value is masked).
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: Tailscale settings.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 apiKey:
+   *                   type: string
+   *                   description: Masked API key or empty string if not set.
+   *                 hasApiKey:
+   *                   type: boolean
+   */
+  router.get("/tailscale-settings", authenticateJWT, async (_req, res) => {
+    try {
+      const row = db.$client
+        .prepare("SELECT value FROM settings WHERE key = 'tailscale_api_key'")
+        .get() as { value: string } | undefined;
+      const apiKey = row?.value ?? "";
+      res.json({
+        apiKey: apiKey
+          ? `${apiKey.slice(0, 6)}${"*".repeat(Math.max(0, apiKey.length - 6))}`
+          : "",
+        hasApiKey: !!apiKey,
+      });
+    } catch (err) {
+      authLogger.error("Failed to get Tailscale settings", err);
+      res.status(500).json({ error: "Failed to get Tailscale settings" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/tailscale-settings:
+   *   patch:
+   *     summary: Update Tailscale settings (admin only)
+   *     description: Saves or clears the Tailscale API key used for device discovery.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               apiKey:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Tailscale settings updated.
+   *       403:
+   *         description: Not authorized.
+   *       500:
+   *         description: Failed to update Tailscale settings.
+   */
+  router.patch("/tailscale-settings", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const user = await db.select().from(users).where(eq(users.id, userId));
+      if (!user || user.length === 0 || !user[0].isAdmin) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { apiKey } = req.body;
+      if (typeof apiKey !== "string") {
+        return res.status(400).json({ error: "apiKey must be a string" });
+      }
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('tailscale_api_key', ?)",
+        )
+        .run(apiKey);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: actorRecord[0]?.username ?? userId,
+        action: "update_tailscale_settings",
+        resourceType: "setting",
+        details: JSON.stringify({ hasApiKey: !!apiKey }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ hasApiKey: !!apiKey });
+    } catch (err) {
+      authLogger.error("Failed to update Tailscale settings", err);
+      res.status(500).json({ error: "Failed to update Tailscale settings" });
+    }
+  });
 }

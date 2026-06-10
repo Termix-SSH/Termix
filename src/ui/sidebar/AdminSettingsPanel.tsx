@@ -26,14 +26,21 @@ import {
   updateLogLevel,
   getGuacamoleSettings,
   updateGuacamoleSettings,
-  getAdminOIDCConfig,
-  updateOIDCConfig,
-  disableOIDCConfig,
   getOidcAutoProvision,
   updateOidcAutoProvision,
   isElectron,
   getUserRoles,
 } from "@/main-axios";
+import {
+  getTailscaleSettings,
+  updateTailscaleSettings,
+} from "@/api/settings-api";
+import {
+  getAdminSSOProviders,
+  updateSSOProvider,
+  deleteSSOProvider,
+} from "@/api/sso-provider-api";
+import type { SSOProvider } from "@/types/index";
 import type { ApiKey, CreatedApiKey, UserRole } from "@/main-axios";
 import type { AdminSection } from "@/types/ui-types";
 import type { Role } from "@/main-axios";
@@ -49,8 +56,9 @@ import { getBasePath } from "@/lib/base-path";
 import {
   AdminDatabaseSection,
   AdminGeneralSettingsSection,
-  AdminOidcSettingsSection,
+  AdminSSOSection,
 } from "./AdminSettingsSections";
+import { SSOProviderDialog } from "./SSOProviderDialog";
 import { AdminApiKeysSection } from "./AdminApiKeysSection";
 import { AdminAuditLogSection } from "./AdminAuditLogSection";
 import {
@@ -85,22 +93,14 @@ export function AdminSettingsPanel() {
   const [guacEnabled, setGuacEnabled] = useState(false);
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
+  const [tailscaleApiKey, setTailscaleApiKey] = useState("");
 
-  // OIDC state
+  // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
-  const [oidcClientId, setOidcClientId] = useState("");
-  const [oidcClientSecret, setOidcClientSecret] = useState("");
-  const [oidcAuthUrl, setOidcAuthUrl] = useState("");
-  const [oidcIssuerUrl, setOidcIssuerUrl] = useState("");
-  const [oidcTokenUrl, setOidcTokenUrl] = useState("");
-  const [oidcUserIdentifier, setOidcUserIdentifier] = useState("sub");
-  const [oidcDisplayName, setOidcDisplayName] = useState("name");
-  const [oidcScopes, setOidcScopes] = useState("openid email profile");
-  const [oidcUserinfoUrl, setOidcUserinfoUrl] = useState("");
-  const [oidcAllowedUsers, setOidcAllowedUsers] = useState("");
-  const [oidcAdminGroup, setOidcAdminGroup] = useState("");
-  const [oidcGroupClaim, setOidcGroupClaim] = useState("");
-  const [oidcSaving, setOidcSaving] = useState(false);
+  const [ssoProviders, setSsoProviders] = useState<SSOProvider[]>([]);
+  const [ssoDialogOpen, setSsoDialogOpen] = useState(false);
+  const [ssoDialogProvider, setSsoDialogProvider] =
+    useState<SSOProvider | null>(null);
 
   // Create user dialog
   const [createUserOpen, setCreateUserOpen] = useState(false);
@@ -154,7 +154,7 @@ export function AdminSettingsPanel() {
     loadRoles();
     loadApiKeys();
     loadGeneralSettings();
-    loadOidcConfig();
+    loadSSOProviders();
   }, []);
 
   useEffect(() => {
@@ -213,6 +213,7 @@ export function AdminSettingsPanel() {
         level,
         guac,
         oidcProv,
+        tailscale,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -222,6 +223,7 @@ export function AdminSettingsPanel() {
         getLogLevel(),
         getGuacamoleSettings(),
         getOidcAutoProvision(),
+        getTailscaleSettings(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -241,36 +243,20 @@ export function AdminSettingsPanel() {
         setGuacEnabled(guac.value.enabled);
         setGuacUrl(guac.value.url || "guacd:4822");
       }
+      if (tailscale.status === "fulfilled") {
+        setTailscaleApiKey(tailscale.value.apiKey ?? "");
+      }
     } catch {
       // non-fatal
     }
   }
 
-  async function loadOidcConfig() {
+  async function loadSSOProviders() {
     try {
-      const config = await getAdminOIDCConfig();
-      if (!config) return;
-      setOidcClientId((config.client_id as string) ?? "");
-      setOidcClientSecret((config.client_secret as string) ?? "");
-      setOidcAuthUrl((config.authorization_url as string) ?? "");
-      setOidcIssuerUrl((config.issuer_url as string) ?? "");
-      setOidcTokenUrl((config.token_url as string) ?? "");
-      setOidcUserIdentifier((config.identifier_path as string) ?? "sub");
-      setOidcDisplayName((config.name_path as string) ?? "name");
-      setOidcScopes((config.scopes as string) ?? "openid email profile");
-      setOidcUserinfoUrl((config.userinfo_url as string) ?? "");
-      setOidcAllowedUsers(
-        typeof config.allowed_users === "string"
-          ? (config.allowed_users as string)
-              .split(",")
-              .filter(Boolean)
-              .join("\n")
-          : "",
-      );
-      setOidcAdminGroup((config.admin_group as string) ?? "");
-      setOidcGroupClaim((config.group_claim as string) ?? "");
+      const providers = await getAdminSSOProviders();
+      if (providers) setSsoProviders(providers);
     } catch {
-      // no OIDC configured yet
+      // non-fatal
     }
   }
 
@@ -374,6 +360,15 @@ export function AdminSettingsPanel() {
     }
   }
 
+  async function handleSaveTailscaleApiKey() {
+    try {
+      await updateTailscaleSettings(tailscaleApiKey);
+      toast.success(t("admin.tailscaleSettingsSaved"));
+    } catch {
+      toast.error(t("admin.tailscaleSettingsSaveFailed"));
+    }
+  }
+
   async function handleSaveLogLevel(level: string) {
     setLogLevel(level);
     try {
@@ -383,52 +378,53 @@ export function AdminSettingsPanel() {
     }
   }
 
-  async function handleSaveOidc() {
-    setOidcSaving(true);
+  function handleAddProvider() {
+    setSsoDialogProvider(null);
+    setSsoDialogOpen(true);
+  }
+
+  function handleEditProvider(provider: SSOProvider) {
+    setSsoDialogProvider(provider);
+    setSsoDialogOpen(true);
+  }
+
+  async function handleDeleteProvider(id: number) {
+    if (!window.confirm(t("admin.ssoDeleteConfirm"))) return;
     try {
-      await updateOIDCConfig({
-        client_id: oidcClientId,
-        client_secret: oidcClientSecret,
-        authorization_url: oidcAuthUrl,
-        issuer_url: oidcIssuerUrl,
-        token_url: oidcTokenUrl,
-        identifier_path: oidcUserIdentifier,
-        name_path: oidcDisplayName,
-        scopes: oidcScopes,
-        userinfo_url: oidcUserinfoUrl || "",
-        allowed_users: oidcAllowedUsers
-          ? oidcAllowedUsers.split("\n").filter(Boolean).join(",")
-          : "",
-        admin_group: oidcAdminGroup,
-        group_claim: oidcGroupClaim,
-      });
-      toast.success(t("admin.oidcSaved"));
-    } catch (e: unknown) {
-      toast.error(apiErrorMessage(e, t("admin.oidcSaveFailed")));
-    } finally {
-      setOidcSaving(false);
+      await deleteSSOProvider(id);
+      setSsoProviders((prev) => prev.filter((p) => p.id !== id));
+      toast.success(t("common.deleted"));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("common.deleteFailed")));
     }
   }
 
-  async function handleRemoveOidc() {
+  async function handleToggleProviderEnabled(id: number, enabled: boolean) {
+    const provider = ssoProviders.find((p) => p.id === id);
+    if (!provider) return;
+    setSsoProviders((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, enabled } : p)),
+    );
     try {
-      await disableOIDCConfig();
-      setOidcClientId("");
-      setOidcClientSecret("");
-      setOidcAuthUrl("");
-      setOidcIssuerUrl("");
-      setOidcTokenUrl("");
-      setOidcUserIdentifier("sub");
-      setOidcDisplayName("name");
-      setOidcScopes("openid email profile");
-      setOidcUserinfoUrl("");
-      setOidcAllowedUsers("");
-      setOidcAdminGroup("");
-      setOidcGroupClaim("");
-      toast.success(t("admin.oidcRemoved"));
-    } catch {
-      toast.error(t("admin.oidcRemoveFailed"));
+      await updateSSOProvider(id, { enabled });
+    } catch (e) {
+      setSsoProviders((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, enabled: !enabled } : p)),
+      );
+      toast.error(apiErrorMessage(e, t("common.saveFailed")));
     }
+  }
+
+  function handleProviderSaved(saved: SSOProvider) {
+    setSsoProviders((prev) => {
+      const idx = prev.findIndex((p) => p.id === saved.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = saved;
+        return next;
+      }
+      return [...prev, saved];
+    });
   }
 
   async function handleCreateUser() {
@@ -700,38 +696,26 @@ export function AdminSettingsPanel() {
         handleSaveGuacamole={handleSaveGuacamole}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}
+        tailscaleApiKey={tailscaleApiKey}
+        setTailscaleApiKey={setTailscaleApiKey}
+        handleSaveTailscaleApiKey={handleSaveTailscaleApiKey}
       />
 
-      <AdminOidcSettingsSection
-        open={openSection === "oidc"}
-        onToggle={() => toggle("oidc")}
-        oidcClientId={oidcClientId}
-        setOidcClientId={setOidcClientId}
-        oidcClientSecret={oidcClientSecret}
-        setOidcClientSecret={setOidcClientSecret}
-        oidcAuthUrl={oidcAuthUrl}
-        setOidcAuthUrl={setOidcAuthUrl}
-        oidcIssuerUrl={oidcIssuerUrl}
-        setOidcIssuerUrl={setOidcIssuerUrl}
-        oidcTokenUrl={oidcTokenUrl}
-        setOidcTokenUrl={setOidcTokenUrl}
-        oidcUserIdentifier={oidcUserIdentifier}
-        setOidcUserIdentifier={setOidcUserIdentifier}
-        oidcDisplayName={oidcDisplayName}
-        setOidcDisplayName={setOidcDisplayName}
-        oidcScopes={oidcScopes}
-        setOidcScopes={setOidcScopes}
-        oidcUserinfoUrl={oidcUserinfoUrl}
-        setOidcUserinfoUrl={setOidcUserinfoUrl}
-        oidcAllowedUsers={oidcAllowedUsers}
-        setOidcAllowedUsers={setOidcAllowedUsers}
-        oidcAdminGroup={oidcAdminGroup}
-        setOidcAdminGroup={setOidcAdminGroup}
-        oidcGroupClaim={oidcGroupClaim}
-        setOidcGroupClaim={setOidcGroupClaim}
-        oidcSaving={oidcSaving}
-        handleRemoveOidc={handleRemoveOidc}
-        handleSaveOidc={handleSaveOidc}
+      <AdminSSOSection
+        open={openSection === "sso"}
+        onToggle={() => toggle("sso")}
+        providers={ssoProviders}
+        onAddProvider={handleAddProvider}
+        onEditProvider={handleEditProvider}
+        onDeleteProvider={handleDeleteProvider}
+        onToggleEnabled={handleToggleProviderEnabled}
+      />
+
+      <SSOProviderDialog
+        open={ssoDialogOpen}
+        onOpenChange={setSsoDialogOpen}
+        provider={ssoDialogProvider}
+        onSaved={handleProviderSaved}
       />
 
       <AdminUsersSection

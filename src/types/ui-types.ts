@@ -10,7 +10,7 @@ export type Host = {
   ram: number | null;
   lastAccess: string;
   tags?: string[];
-  authType: "password" | "key" | "credential" | "none" | "opkssh";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
   credentialId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
@@ -269,7 +269,7 @@ export type UserProfileSection =
   | "api-keys";
 export type AdminSection =
   | "general"
-  | "oidc"
+  | "sso"
   | "users"
   | "sessions"
   | "roles"

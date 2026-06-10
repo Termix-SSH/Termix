@@ -65,6 +65,7 @@ interface ConnectToHostData {
       keepaliveCountMax?: number;
       [key: string]: unknown;
     };
+    enableSessionLogging?: boolean;
   };
   initialPath?: string;
   executeCommand?: string;
@@ -963,6 +964,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           socks5Password?: string;
           socks5ProxyChain?: unknown;
           terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
+          enableSessionLogging?: boolean;
         })
       | null = null;
 
@@ -1109,6 +1111,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
       const hostDisplayName = `${username}@${ip}:${port}`;
       const tabInstanceId = hostConfig.instanceId;
+      const sessionLoggingEnabled =
+        resolvedHostData?.enableSessionLogging ??
+        hostConfig.enableSessionLogging ??
+        true;
       currentSessionId = sessionManager.createSession(
         userId,
         id,
@@ -1116,6 +1122,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         data.cols,
         data.rows,
         tabInstanceId,
+        sessionLoggingEnabled,
       );
 
       // If createSession returned an existing live session (duplicate tabInstanceId),
@@ -1980,7 +1987,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard: resolvedCredentials.authType !== "none",
+      tryKeyboard:
+        resolvedCredentials.authType !== "none" &&
+        resolvedCredentials.authType !== "tailscale",
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
           ? hostKeepaliveInterval * 1000
@@ -2051,8 +2060,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     };
 
-    if (resolvedCredentials.authType === "none") {
-      // no credentials needed
+    if (
+      resolvedCredentials.authType === "none" ||
+      resolvedCredentials.authType === "tailscale"
+    ) {
+      // Tailscale SSH and "none" auth: daemon handles authorization, no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

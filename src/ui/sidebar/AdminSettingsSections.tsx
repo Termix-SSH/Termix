@@ -3,8 +3,17 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { SettingRow } from "@/components/section-card";
-import { Database, RefreshCw, Settings, Shield, Trash2 } from "lucide-react";
+import {
+  Database,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Settings,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
+import type { SSOProvider, SSOProviderType } from "@/types/index";
 
 type GeneralSettingsSectionProps = {
   open: boolean;
@@ -32,6 +41,9 @@ type GeneralSettingsSectionProps = {
   handleSaveGuacamole: () => void;
   logLevel: string;
   handleSaveLogLevel: (level: string) => void;
+  tailscaleApiKey: string;
+  setTailscaleApiKey: Dispatch<SetStateAction<string>>;
+  handleSaveTailscaleApiKey: () => void;
 };
 
 export function AdminGeneralSettingsSection({
@@ -60,6 +72,9 @@ export function AdminGeneralSettingsSection({
   handleSaveGuacamole,
   logLevel,
   handleSaveLogLevel,
+  tailscaleApiKey,
+  setTailscaleApiKey,
+  handleSaveTailscaleApiKey,
 }: GeneralSettingsSectionProps) {
   const { t } = useTranslation();
 
@@ -214,6 +229,34 @@ export function AdminGeneralSettingsSection({
               </div>
             </div>
           )}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("admin.tailscaleApiKey")}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.tailscaleApiKeyDescription")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="password"
+              value={tailscaleApiKey}
+              onChange={(e) => setTailscaleApiKey(e.target.value)}
+              placeholder="tskey-api-..."
+              className="text-sm"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7 shrink-0"
+              onClick={handleSaveTailscaleApiKey}
+            >
+              {t("common.save")}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
@@ -577,6 +620,105 @@ export function AdminDatabaseSection({
             )}
           </div>
         </div>
+      </div>
+    </AccordionSection>
+  );
+}
+
+const SSO_TYPE_LABELS: Record<SSOProviderType, string> = {
+  oidc: "OIDC",
+  ldap: "LDAP",
+  github: "GitHub",
+  google: "Google",
+};
+
+type AdminSSOSectionProps = {
+  open: boolean;
+  onToggle: () => void;
+  providers: SSOProvider[];
+  onAddProvider: () => void;
+  onEditProvider: (provider: SSOProvider) => void;
+  onDeleteProvider: (id: number) => void;
+  onToggleEnabled: (id: number, enabled: boolean) => void;
+};
+
+export function AdminSSOSection({
+  open,
+  onToggle,
+  providers,
+  onAddProvider,
+  onEditProvider,
+  onDeleteProvider,
+  onToggleEnabled,
+}: AdminSSOSectionProps) {
+  const { t } = useTranslation();
+
+  return (
+    <AccordionSection
+      label={t("admin.sectionSso")}
+      icon={<Shield className="size-3.5" />}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div className="flex flex-col gap-3 pt-3">
+        {providers.length === 0 ? (
+          <span className="text-[10px] text-muted-foreground">
+            {t("admin.ssoNoProviders")}
+          </span>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {providers.map((provider) => (
+              <div
+                key={provider.id}
+                className="flex items-center gap-2 p-2 border border-border bg-background"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium truncate">
+                      {provider.name}
+                    </span>
+                    <span className="text-[9px] px-1 py-0.5 bg-muted text-muted-foreground font-mono uppercase">
+                      {SSO_TYPE_LABELS[provider.type] ?? provider.type}
+                    </span>
+                  </div>
+                </div>
+                <AdminToggle
+                  on={provider.enabled}
+                  onToggle={() =>
+                    onToggleEnabled(provider.id, !provider.enabled)
+                  }
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={() => onEditProvider(provider)}
+                  title={t("admin.ssoEditProvider")}
+                >
+                  <Pencil className="size-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => onDeleteProvider(provider.id)}
+                  title={t("admin.ssoDeleteProvider")}
+                >
+                  <Trash2 className="size-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+          onClick={onAddProvider}
+        >
+          <Plus className="size-3" />
+          {t("admin.ssoAddProvider")}
+        </Button>
       </div>
     </AccordionSection>
   );

@@ -13,6 +13,7 @@ import {
   FolderOpen,
   FolderSearch,
   Key,
+  KeyRound,
   Layers, // --- tmux-monitor ---
   Link,
   Loader2,
@@ -652,7 +653,7 @@ export function HostItem({
                   onClick={(e) => handleCopyPassword(e, "sudoPassword")}
                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
-                  <Key className="size-3.5" />
+                  <KeyRound className="size-3.5" />
                 </button>
               )}
               {onEditHost && (
@@ -724,7 +725,7 @@ export function HostItem({
                     <DropdownMenuItem
                       onClick={(e) => handleCopyPassword(e, "sudoPassword")}
                     >
-                      <Key className="size-3.5 mr-2" />
+                      <KeyRound className="size-3.5 mr-2" />
                       {t("nav.copySudoPassword")}
                     </DropdownMenuItem>
                   )}

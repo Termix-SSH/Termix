@@ -185,7 +185,7 @@ export function TabStrip({
   return (
     <div
       ref={ref}
-      className={`overflow-x-auto ${
+      className={`overflow-x-auto scrollbar-none ${
         variant === "secondary" ? "border-t border-border bg-card" : ""
       }`}
     >

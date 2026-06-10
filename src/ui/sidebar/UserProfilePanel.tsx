@@ -47,6 +47,7 @@ import {
   Play,
   Plug,
   Plus,
+  ScrollText,
   Server,
   Shield,
   ShieldCheck,
@@ -490,9 +491,6 @@ export function UserProfilePanel({
   );
   const [commandHistoryTracking, setCommandHistoryTracking] = useState(
     () => localStorage.getItem("commandHistoryTracking") === "true",
-  );
-  const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] = useState(
-    () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
   );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
@@ -999,27 +997,6 @@ export function UserProfilePanel({
               />
             </SettingRow>
             <SettingRow
-              label={t("newUi.sidebar.userProfile.syntaxHighlighting")}
-              description={t(
-                "newUi.sidebar.userProfile.syntaxHighlightingDesc",
-              )}
-              badge="BETA"
-            >
-              <FakeSwitch
-                checked={terminalSyntaxHighlighting}
-                onChange={(v) => {
-                  setTerminalSyntaxHighlighting(v);
-                  localStorage.setItem(
-                    "terminalSyntaxHighlighting",
-                    v.toString(),
-                  );
-                  window.dispatchEvent(
-                    new Event("terminalSyntaxHighlightingChanged"),
-                  );
-                }}
-              />
-            </SettingRow>
-            <SettingRow
               label={t("newUi.sidebar.userProfile.commandPalette")}
               description={t("newUi.sidebar.userProfile.commandPaletteDesc")}
             >
@@ -1155,6 +1132,11 @@ export function UserProfilePanel({
                   id: "history",
                   icon: <Clock size={12} />,
                   label: t("nav.history"),
+                },
+                {
+                  id: "session-logs",
+                  icon: <ScrollText size={12} />,
+                  label: t("nav.sessionLogs"),
                 },
                 {
                   id: "split-screen",

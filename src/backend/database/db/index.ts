@@ -533,6 +533,17 @@ async function initializeCompleteDatabase(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_host_health_history_lookup
         ON host_health_history (user_id, host_id, check_id, ts);
 
+    CREATE TABLE IF NOT EXISTS sso_providers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        display_order INTEGER NOT NULL DEFAULT 0,
+        config TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
 `);
 
   try {
@@ -707,6 +718,11 @@ const migrateSchema = () => {
   addColumnIfNotExists(
     "ssh_data",
     "enable_terminal",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_session_logging",
     "INTEGER NOT NULL DEFAULT 1",
   );
   addColumnIfNotExists(
@@ -1603,6 +1619,43 @@ const migrateSchema = () => {
     databaseLogger.warn("Failed to seed system roles", {
       operation: "schema_migration",
       error: seedError,
+    });
+  }
+
+  addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
+
+  // Migrate legacy single oidc_config settings blob into sso_providers table
+  try {
+    const migrationDone = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'sso_migration_v1'")
+      .get();
+    if (!migrationDone) {
+      const providerCount = (
+        sqlite.prepare("SELECT COUNT(*) as c FROM sso_providers").get() as { c: number }
+      ).c;
+      if (providerCount === 0) {
+        const legacyRow = sqlite
+          .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
+          .get() as { value: string } | undefined;
+        if (legacyRow) {
+          sqlite
+            .prepare(
+              "INSERT INTO sso_providers (name, type, enabled, display_order, config) VALUES (?, 'oidc', 1, 0, ?)",
+            )
+            .run("OIDC", legacyRow.value);
+          databaseLogger.info("Migrated legacy oidc_config into sso_providers table", {
+            operation: "sso_migration_v1",
+          });
+        }
+      }
+      sqlite
+        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('sso_migration_v1', 'true')")
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Failed to run SSO migration v1", {
+      operation: "sso_migration_v1",
+      error: e,
     });
   }
 

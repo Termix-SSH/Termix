@@ -88,6 +88,7 @@ export function createHostEditorForm(host: Host | null) {
       : "single") as "single" | "chain",
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
     enableTerminal: host?.enableTerminal ?? true,
+    enableSessionLogging: host?.enableSessionLogging ?? true,
     enableFileManager: host?.enableFileManager ?? false,
     enableDocker: host?.enableDocker ?? false,
     enableProxmox: host?.enableProxmox ?? false,
@@ -136,6 +137,7 @@ export function createHostEditorForm(host: Host | null) {
     sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
     keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
     keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
+    syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     environmentVariables:
       host?.terminalConfig?.environmentVariables ??
       ([] as { key: string; value: string }[]),
@@ -232,6 +234,7 @@ export function buildHostEditorPayload(
     notes: form.notes,
     macAddress: form.macAddress || null,
     enableTerminal: form.enableTerminal,
+    enableSessionLogging: form.enableSessionLogging,
     enableTunnel: form.enableTunnel,
     enableFileManager: form.enableFileManager,
     enableDocker: form.enableDocker,
@@ -306,6 +309,7 @@ export function buildHostEditorPayload(
           keepaliveInterval: Number(form.keepaliveInterval),
           keepaliveCountMax: Number(form.keepaliveCountMax),
           environmentVariables: form.environmentVariables,
+          syntaxHighlighting: form.syntaxHighlighting,
         }
       : null,
   };

@@ -1885,10 +1885,12 @@ export async function changePassword(oldPassword: string, newPassword: string) {
 export async function getOIDCAuthorizeUrl(
   rememberMe = false,
   desktopCallbackPort?: number,
+  providerId?: number,
+  appCallbackUrl?: string,
 ): Promise<OIDCAuthorize> {
   try {
     const response = await authApi.get("/users/oidc/authorize", {
-      params: { rememberMe, desktopCallbackPort },
+      params: { rememberMe, desktopCallbackPort, providerId, appCallbackUrl },
     });
     return response.data;
   } catch (error) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ChevronRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +17,7 @@ import {
   HexColorPicker,
   IconPicker,
 } from "@/components/folder-style";
+import { normalizePath, splitPath } from "./FolderPathPicker";
 
 export type FolderMetadataValue = {
   name: string;
@@ -50,9 +52,9 @@ export function FolderMetadataDialog({
   }, [open, initial]);
 
   function handleSubmit() {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    onSubmit({ name: trimmed, color, icon });
+    const normalized = normalizePath(name);
+    if (!normalized) return;
+    onSubmit({ name: normalized, color, icon });
     onOpenChange(false);
   }
 
@@ -109,8 +111,17 @@ export function FolderMetadataDialog({
                 className="size-4 shrink-0"
                 style={{ color }}
               />
-              <span className="text-sm font-semibold">
-                {name || t("hosts.folderNameFallback")}
+              <span className="flex items-center gap-0.5 text-sm font-semibold flex-wrap">
+                {name
+                  ? splitPath(name).map((seg, i) => (
+                      <span key={i} className="flex items-center gap-0.5">
+                        {i > 0 && (
+                          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/50" />
+                        )}
+                        {seg}
+                      </span>
+                    ))
+                  : t("hosts.folderNameFallback")}
               </span>
             </div>
           </div>

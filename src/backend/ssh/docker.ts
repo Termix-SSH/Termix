@@ -314,7 +314,9 @@ async function createJumpHostChain(
           host: jumpHostConfig.ip?.replace(/^\[|\]$/g, "") || jumpHostConfig.ip,
           port: jumpHostConfig.port || 22,
           username: jumpHostConfig.username,
-          tryKeyboard: jumpHostConfig.authType !== "none",
+          tryKeyboard:
+            jumpHostConfig.authType !== "none" &&
+            jumpHostConfig.authType !== "tailscale",
           readyTimeout: 60000,
           hostVerifier: jumpHostVerifier,
           algorithms: {
@@ -848,8 +850,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
       ),
     };
 
-    if (resolvedCredentials.authType === "none") {
-      // no credentials needed
+    if (
+      resolvedCredentials.authType === "none" ||
+      resolvedCredentials.authType === "tailscale"
+    ) {
+      // Tailscale SSH and "none" auth: no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (resolvedCredentials.password) {
         config.password = resolvedCredentials.password;
@@ -1008,7 +1013,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
       connectionLogs.push(
         createConnectionLog("info", "auth", "Authenticating with SSH key"),
       );
-    } else if (resolvedCredentials.authType === "none") {
+    } else if (
+      resolvedCredentials.authType === "none" ||
+      resolvedCredentials.authType === "tailscale"
+    ) {
       connectionLogs.push(
         createConnectionLog(
           "info",
@@ -1144,7 +1152,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
       }
 
       if (
-        resolvedCredentials.authType === "none" &&
+        (resolvedCredentials.authType === "none" ||
+          resolvedCredentials.authType === "tailscale") &&
         (err.message.includes("authentication") ||
           err.message.includes("All configured authentication methods failed"))
       ) {
@@ -1305,7 +1314,8 @@ app.post("/docker/ssh/connect", async (req, res) => {
           );
 
           if (
-            resolvedCredentials.authType === "none" &&
+            (resolvedCredentials.authType === "none" ||
+              resolvedCredentials.authType === "tailscale") &&
             passwordPromptIndex !== -1
           ) {
             if (responseSent) return;
