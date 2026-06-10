@@ -100,6 +100,18 @@ export async function killTmuxSession(
   await tmuxMonitorApi.post(`/${hostId}/kill`, { sessionName });
 }
 
+/** Kill a window and every pane in it. */
+export async function killTmuxWindow(
+  hostId: number,
+  sessionName: string,
+  windowIndex: number,
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/kill-window`, {
+    sessionName,
+    windowIndex,
+  });
+}
+
 /** Kill a single pane (last pane of a window closes the window). */
 export async function killTmuxPane(
   hostId: number,

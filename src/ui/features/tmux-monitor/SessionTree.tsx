@@ -29,6 +29,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
 import type {
   TmuxPaneMetrics,
   TmuxSessionOverview,
@@ -66,6 +72,11 @@ interface SessionTreeProps {
   onKillPane: (paneId: string) => void;
   /** Split the window containing a pane (hover actions on pane rows). */
   onSplitPane: (paneId: string, direction: "h" | "v") => void;
+  /** Open the kill confirmation for a window (hover ✕ on window rows). */
+  onKillWindow: (sessionName: string, windowIndex: number) => void;
+  /** Narrow tree panel: the inline time/cpu/mem label is hidden (the hover
+   * tooltip still carries the full status). */
+  compact: boolean;
   /** Timestamp used to render relative times; bumped periodically by the
    * parent so "Xm ago" labels do not go stale. */
   now: number;
@@ -86,6 +97,8 @@ export function SessionTree({
   onKillSession,
   onKillPane,
   onSplitPane,
+  onKillWindow,
+  compact,
   now,
 }: SessionTreeProps) {
   const { t } = useTranslation();
@@ -117,11 +130,18 @@ export function SessionTree({
   }
 
   return (
-    <>
+    <TooltipProvider delayDuration={500}>
       {sessions.map((session) => {
         const expanded = expandedSessions.has(session.name);
+        const agg = metricsBySession.get(session.name);
+        const paneCount = session.windows.reduce(
+          (sum, w) => sum + w.panes.length,
+          0,
+        );
         return (
           <div key={session.name} className="mb-0.5">
+            <Tooltip>
+              <TooltipTrigger asChild>
             <div
               className="group flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 hover:bg-muted/40"
               onClick={() => onToggleSession(session.name)}
@@ -169,9 +189,11 @@ export function SessionTree({
                 {/* pointer-events-none + z-10 matter: at opacity-0 the label
                     becomes a stacking context painted above its plain-flow
                     sibling, and would swallow the buttons' clicks. */}
-                <span className="pointer-events-none col-start-1 row-start-1 justify-self-end self-center text-xs text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0">
-                  {metaLabel(session)}
-                </span>
+                {!compact && (
+                  <span className="pointer-events-none col-start-1 row-start-1 justify-self-end self-center text-xs text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0">
+                    {metaLabel(session)}
+                  </span>
+                )}
                 <span className="pointer-events-none z-10 col-start-1 row-start-1 flex items-center gap-1.5 justify-self-end opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
                   <button
                     className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
@@ -242,6 +264,70 @@ export function SessionTree({
                 </span>
               </span>
             </div>
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                className="w-56 p-0"
+                sideOffset={8}
+              >
+                {/* Session status board (also the only place the numbers
+                    live when the panel is too narrow for the inline label) */}
+                <div className="px-3 py-2">
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <span
+                      className={`size-2 rounded-full ${session.attachedClients > 0 ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
+                    />
+                    <span className="text-xs font-semibold">
+                      {session.name}
+                    </span>
+                    <span className="ml-auto text-[10px] text-muted-foreground">
+                      {session.attachedClients > 0
+                        ? t("tmuxMonitor.attached")
+                        : t("tmuxMonitor.detached")}
+                    </span>
+                  </div>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px]">
+                    <dt className="text-muted-foreground">
+                      {t("tmuxMonitor.statusActivity")}
+                    </dt>
+                    <dd className="text-right">
+                      {formatRelativeTime(session.lastActivity, now, t)}
+                    </dd>
+                    <dt className="text-muted-foreground">
+                      {t("tmuxMonitor.statusWindows")}
+                    </dt>
+                    <dd className="text-right">
+                      {session.windows.length} / {paneCount}{" "}
+                      {t("tmuxMonitor.statusPanes")}
+                    </dd>
+                    <dt className="text-muted-foreground">CPU</dt>
+                    <dd className="text-right">
+                      {agg ? `${agg.cpu.toFixed(1)}%` : "—"}
+                    </dd>
+                    <dt className="text-muted-foreground">RAM</dt>
+                    <dd className="text-right">
+                      {agg ? formatMem(agg.memKb) : "—"}
+                    </dd>
+                    {agg && agg.gpuMb > 0 && (
+                      <>
+                        <dt className="text-muted-foreground">GPU</dt>
+                        <dd className="text-right">{agg.gpuMb} MB</dd>
+                      </>
+                    )}
+                    {session.tags.length > 0 && (
+                      <>
+                        <dt className="text-muted-foreground">
+                          {t("tmuxMonitor.statusTags")}
+                        </dt>
+                        <dd className="truncate text-right">
+                          {session.tags.join(", ")}
+                        </dd>
+                      </>
+                    )}
+                  </dl>
+                </div>
+              </TooltipContent>
+            </Tooltip>
 
             {expanded &&
               session.windows.map((win) => {
@@ -251,7 +337,7 @@ export function SessionTree({
                 return (
                   <div key={win.index} className="ml-4">
                     <div
-                      className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted/40"
+                      className="group flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted/40"
                       onClick={() => toggleWindow(session.name, win.index)}
                     >
                       {winCollapsed ? (
@@ -263,6 +349,17 @@ export function SessionTree({
                       <span className="truncate">
                         {win.index}: {win.name}
                       </span>
+                      <button
+                        className="-m-1 ml-auto rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                        title={t("tmuxMonitor.killWindow")}
+                        aria-label={t("tmuxMonitor.killWindow")}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onKillWindow(session.name, win.index);
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
                     </div>
                     {!winCollapsed &&
                       win.panes.map((pane) => {
@@ -339,6 +436,6 @@ export function SessionTree({
           </div>
         );
       })}
-    </>
+    </TooltipProvider>
   );
 }

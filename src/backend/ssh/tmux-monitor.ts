@@ -625,6 +625,46 @@ app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
   }
 });
 
+// Kill a window (and every pane in it). Killing the last window of a session
+// ends the session — tmux semantics.
+app.post("/tmux_monitor/:hostId/kill-window", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const body = req.body as { sessionName?: string; windowIndex?: number };
+  const sessionName = String(body?.sessionName || "").trim();
+  const windowIndex = Number(body?.windowIndex);
+  if (!sessionName || /[:.\n]/.test(sessionName)) {
+    return res.status(400).json({ error: "Invalid session name" });
+  }
+  if (!Number.isInteger(windowIndex) || windowIndex < 0) {
+    return res.status(400).json({ error: "Invalid window index" });
+  }
+
+  try {
+    await withHostConnection(host, (conn) =>
+      execCommand(
+        conn,
+        `tmux kill-window -t ${shellEscape(`=${sessionName}:${windowIndex}`)}`,
+      ),
+    );
+    sshLogger.info("tmux window killed", {
+      operation: "tmux_window_kill",
+      hostId: host.id,
+      sessionName,
+      windowIndex,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    if (/can't find window|no such window|can't find session/i.test(
+        toErrorMessage(err),
+      )) {
+      return res.status(404).json({ error: "Window not found" });
+    }
+    sendTmuxError(res, err, "kill window", host.id);
+  }
+});
+
 // Kill a single pane. Killing the last pane of a window closes the window,
 // and the last window of a session ends the session — tmux semantics.
 app.post("/tmux_monitor/:hostId/kill-pane", async (req, res) => {

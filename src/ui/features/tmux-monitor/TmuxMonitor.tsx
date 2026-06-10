@@ -58,6 +58,7 @@ import {
   createTmuxWindow,
   renameTmuxSession,
   killTmuxSession,
+  killTmuxWindow,
   killTmuxPane,
   splitTmuxPane,
   type TmuxOverview,
@@ -575,6 +576,41 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     }
   }
 
+  // -- kill window ------------------------------------------------------------
+  const [killWindowTarget, setKillWindowTarget] = useState<{
+    sessionName: string;
+    windowIndex: number;
+  } | null>(null);
+  const [killingWindow, setKillingWindow] = useState(false);
+
+  async function confirmKillWindow() {
+    if (selectedHostId === null || killWindowTarget === null || killingWindow)
+      return;
+    setKillingWindow(true);
+    try {
+      await killTmuxWindow(
+        selectedHostId,
+        killWindowTarget.sessionName,
+        killWindowTarget.windowIndex,
+      );
+      if (
+        selectedPane?.sessionName === killWindowTarget.sessionName &&
+        selectedPane?.windowIndex === killWindowTarget.windowIndex
+      )
+        setSelectedPane(null);
+      setKillWindowTarget(null);
+      loadOverview(selectedHostId, true);
+      nudgePreviewRedraw();
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      toast.error(
+        axiosErr.response?.data?.error || t("tmuxMonitor.windowKillFailed"),
+      );
+    } finally {
+      setKillingWindow(false);
+    }
+  }
+
   // -- kill pane ------------------------------------------------------------
   const [killPaneTarget, setKillPaneTarget] = useState<string | null>(null);
   const [killingPane, setKillingPane] = useState(false);
@@ -884,6 +920,10 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                 onKillSession={setKillTarget}
                 onKillPane={setKillPaneTarget}
                 onSplitPane={splitPane}
+                onKillWindow={(sessionName, windowIndex) =>
+                  setKillWindowTarget({ sessionName, windowIndex })
+                }
+                compact={treeWidth < 280}
                 now={now}
               />
             )}
@@ -1065,6 +1105,41 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Kill window confirmation */}
+      <AlertDialog
+        open={killWindowTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setKillWindowTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("tmuxMonitor.killWindowTitle", {
+                index: killWindowTarget?.windowIndex,
+                session: killWindowTarget?.sessionName,
+              })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("tmuxMonitor.killWindowBody")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={killingWindow}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmKillWindow();
+              }}
+            >
+              {t("tmuxMonitor.kill")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Kill pane confirmation */}
       <AlertDialog
