@@ -41,6 +41,7 @@
     "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never"
   },
   "dependencies": {
+    "@types/ldapjs": "^3.0.6",
     "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.9.0",
@@ -56,6 +57,7 @@
     "js-yaml": "^4.2.0",
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
+    "ldapjs": "^3.0.7",
     "motion": "^12.38.0",
     "multer": "^2.1.1",
     "nanoid": "^5.1.9",

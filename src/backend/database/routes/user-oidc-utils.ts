@@ -1,4 +1,9 @@
 import { authLogger } from "../../utils/logger.js";
+import type { SSOProviderType } from "../../../types/index.js";
+import { db } from "../db/index.js";
+import { ssoProviders } from "../db/schema.js";
+import { eq } from "drizzle-orm";
+import { DataCrypto } from "../../utils/data-crypto.js";
 
 export type OIDCConfig = {
   client_id: string;
@@ -207,4 +212,139 @@ export async function verifyOIDCToken(
   });
 
   return payload;
+}
+
+function decryptConfigSecret(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...config };
+  for (const field of ["client_secret", "bindPassword"] as const) {
+    const val = out[field] as string | undefined;
+    if (val?.startsWith("encoded:")) {
+      try {
+        out[field] = Buffer.from(val.substring(8), "base64").toString("utf8");
+      } catch {
+        // leave as-is
+      }
+    } else if (val?.startsWith("encrypted:")) {
+      // encrypted: prefix means it was encrypted with DataCrypto; without a
+      // userId/dataKey here we cannot decrypt it. The caller should use the
+      // full admin decrypt path when possible. Fall back to stripping prefix.
+      try {
+        out[field] = Buffer.from(val.substring(10), "base64").toString("utf8");
+      } catch {
+        // leave as-is
+      }
+    }
+  }
+  return out;
+}
+
+export async function loadProviderConfig(
+  providerId: number | null | undefined,
+  adminUserId?: string,
+): Promise<{
+  config: OIDCConfig;
+  providerType: SSOProviderType;
+  providerDbId: number | null;
+} | null> {
+  if (providerId != null) {
+    try {
+      const rows = await db
+        .select()
+        .from(ssoProviders)
+        .where(eq(ssoProviders.id, providerId))
+        .limit(1);
+      if (rows.length > 0) {
+        const row = rows[0];
+        let parsed: Record<string, unknown>;
+        try {
+          parsed = JSON.parse(row.config);
+        } catch {
+          parsed = {};
+        }
+        if (adminUserId) {
+          try {
+            const adminDataKey = DataCrypto.getUserDataKey(adminUserId);
+            if (adminDataKey) {
+              parsed = DataCrypto.decryptRecord(
+                "settings",
+                parsed,
+                adminUserId,
+                adminDataKey,
+              );
+            }
+          } catch {
+            parsed = decryptConfigSecret(parsed);
+          }
+        } else {
+          parsed = decryptConfigSecret(parsed);
+        }
+        const config = parsed as unknown as OIDCConfig;
+        return {
+          config,
+          providerType: row.type as SSOProviderType,
+          providerDbId: row.id,
+        };
+      }
+    } catch (err) {
+      authLogger.error("Failed to load SSO provider config by id", err, {
+        providerId,
+      });
+    }
+  }
+
+  // Fallback: env vars
+  const envConfig = getOIDCConfigFromEnv();
+  if (envConfig) {
+    return { config: envConfig, providerType: "oidc", providerDbId: null };
+  }
+
+  // Fallback: first enabled OIDC-type provider in ssoProviders table
+  try {
+    const rows = await db
+      .select()
+      .from(ssoProviders)
+      .where(eq(ssoProviders.enabled, true))
+      .orderBy();
+    const oidcRow = rows.find(
+      (r) => r.type === "oidc" || r.type === "github" || r.type === "google",
+    );
+    if (oidcRow) {
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(oidcRow.config);
+      } catch {
+        parsed = {};
+      }
+      parsed = decryptConfigSecret(parsed);
+      return {
+        config: parsed as unknown as OIDCConfig,
+        providerType: oidcRow.type as SSOProviderType,
+        providerDbId: oidcRow.id,
+      };
+    }
+  } catch {
+    // fall through to legacy
+  }
+
+  // Fallback: legacy settings blob
+  try {
+    const legacyRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
+      .get() as { value: string } | undefined;
+    if (legacyRow) {
+      let config = JSON.parse(legacyRow.value) as Record<string, unknown>;
+      config = decryptConfigSecret(config);
+      return {
+        config: config as unknown as OIDCConfig,
+        providerType: "oidc",
+        providerDbId: null,
+      };
+    }
+  } catch {
+    // no legacy config
+  }
+
+  return null;
 }

@@ -9,6 +9,7 @@ export const users = sqliteTable("users", {
 
   isOidc: integer("is_oidc", { mode: "boolean" }).notNull().default(false),
   oidcIdentifier: text("oidc_identifier"),
+  ssoProviderId: integer("sso_provider_id"),
   clientId: text("client_id"),
   clientSecret: text("client_secret"),
   issuerUrl: text("issuer_url"),
@@ -28,6 +29,21 @@ export const users = sqliteTable("users", {
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
+});
+
+export const ssoProviders = sqliteTable("sso_providers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  config: text("config").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const sessions = sqliteTable("sessions", {

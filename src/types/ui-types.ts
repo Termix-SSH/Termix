@@ -268,7 +268,7 @@ export type UserProfileSection =
   | "api-keys";
 export type AdminSection =
   | "general"
-  | "oidc"
+  | "sso"
   | "users"
   | "sessions"
   | "roles"

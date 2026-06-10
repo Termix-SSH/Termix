@@ -3,6 +3,56 @@ import type { Request } from "express";
 import type { RefObject } from "react";
 
 // ============================================================================
+// SSO / AUTHENTICATION PROVIDER TYPES
+// ============================================================================
+
+export type SSOProviderType = "oidc" | "ldap" | "github" | "google";
+
+export interface SSOProviderPublic {
+  id: number;
+  name: string;
+  type: SSOProviderType;
+  displayOrder: number;
+}
+
+export interface SSOProvider extends SSOProviderPublic {
+  enabled: boolean;
+  config: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OIDCProviderConfig {
+  client_id: string;
+  client_secret: string;
+  issuer_url: string;
+  authorization_url: string;
+  token_url: string;
+  userinfo_url?: string;
+  identifier_path: string;
+  name_path: string;
+  scopes: string;
+  allowed_users?: string;
+  admin_group?: string;
+  group_claim?: string;
+}
+
+export interface LDAPProviderConfig {
+  host: string;
+  port: number;
+  useTLS: boolean;
+  bindDN: string;
+  bindPassword: string;
+  userSearchBase: string;
+  userSearchFilter: string;
+  usernameAttribute: string;
+  displayNameAttribute: string;
+  groupSearchBase?: string;
+  adminGroup?: string;
+  allowedUsers?: string;
+}
+
+// ============================================================================
 // HOST TYPES (SSH, RDP, VNC, Telnet)
 // ============================================================================
 
