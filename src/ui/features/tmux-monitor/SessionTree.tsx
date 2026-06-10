@@ -15,6 +15,8 @@ import {
   Pencil,
   Play,
   Plus,
+  SquareSplitHorizontal,
+  SquareSplitVertical,
   SquareTerminal,
   Tag,
   Trash2,
@@ -62,6 +64,8 @@ interface SessionTreeProps {
   onKillSession: (sessionName: string) => void;
   /** Open the kill confirmation for a single pane (hover ✕ on pane rows). */
   onKillPane: (paneId: string) => void;
+  /** Split the window containing a pane (hover actions on pane rows). */
+  onSplitPane: (paneId: string, direction: "h" | "v") => void;
   /** Timestamp used to render relative times; bumped periodically by the
    * parent so "Xm ago" labels do not go stale. */
   now: number;
@@ -81,6 +85,7 @@ export function SessionTree({
   onRenameSession,
   onKillSession,
   onKillPane,
+  onSplitPane,
   now,
 }: SessionTreeProps) {
   const { t } = useTranslation();
@@ -291,6 +296,28 @@ export function SessionTree({
                                   {m.cpuPercent.toFixed(0)}%
                                 </span>
                               )}
+                              <button
+                                className="-m-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                                title={t("tmuxMonitor.splitRight")}
+                                aria-label={t("tmuxMonitor.splitRight")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSplitPane(pane.id, "h");
+                                }}
+                              >
+                                <SquareSplitHorizontal className="size-3" />
+                              </button>
+                              <button
+                                className="-m-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                                title={t("tmuxMonitor.splitDown")}
+                                aria-label={t("tmuxMonitor.splitDown")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onSplitPane(pane.id, "v");
+                                }}
+                              >
+                                <SquareSplitVertical className="size-3" />
+                              </button>
                               <button
                                 className="-m-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                                 title={t("tmuxMonitor.killPane")}

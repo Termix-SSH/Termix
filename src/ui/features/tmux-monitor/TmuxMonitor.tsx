@@ -448,20 +448,20 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   }
 
   // -- split ------------------------------------------------------------------
-  // Splits the window containing the selected pane. The embedded terminal is
-  // attached to the session, so the new pane appears there immediately; the
+  // Splits the window containing a pane. If the pane is in the previewed
+  // session the new pane appears in the attached terminal immediately; the
   // silent overview reload updates the tree.
   const splitPane = useCallback(
-    async (direction: "h" | "v") => {
-      if (selectedHostId === null || !selectedPane) return;
+    async (paneId: string, direction: "h" | "v") => {
+      if (selectedHostId === null) return;
       try {
-        await splitTmuxPane(selectedHostId, selectedPane.paneId, direction);
+        await splitTmuxPane(selectedHostId, paneId, direction);
         loadOverview(selectedHostId, true);
       } catch {
         toast.error(t("tmuxMonitor.splitFailed"));
       }
     },
-    [selectedHostId, selectedPane, loadOverview, t],
+    [selectedHostId, loadOverview, t],
   );
 
   // -- new window ---------------------------------------------------------------
@@ -867,6 +867,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                 }}
                 onKillSession={setKillTarget}
                 onKillPane={setKillPaneTarget}
+                onSplitPane={splitPane}
                 now={now}
               />
             )}
@@ -958,7 +959,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               host={selectedHost}
               pane={selectedPane}
               metrics={selectedPaneMetrics}
-              onSplit={splitPane}
+              onSplit={(direction) => splitPane(selectedPane.paneId, direction)}
               onKillPane={() => setKillPaneTarget(selectedPane.paneId)}
               onClose={() => setSelectedPane(null)}
             />
