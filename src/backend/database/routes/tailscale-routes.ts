@@ -11,7 +11,6 @@ interface TailscaleDevice {
   addresses: string[];
   os: string;
   lastSeen: string;
-  online: boolean;
 }
 
 interface TailscaleAPIDevice {
@@ -21,7 +20,6 @@ interface TailscaleAPIDevice {
   addresses: string[];
   os: string;
   lastSeen: string;
-  online?: boolean;
   nodeId?: string;
 }
 
@@ -67,7 +65,7 @@ export function registerTailscaleRoutes(
         return res.json({ devices: [], hasApiKey: false });
       }
 
-      const url = `${TAILSCALE_API_BASE}/tailnet/-/devices`;
+      const url = `${TAILSCALE_API_BASE}/tailnet/-/devices?fields=all`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -100,7 +98,6 @@ export function registerTailscaleRoutes(
         addresses: d.addresses ?? [],
         os: d.os,
         lastSeen: d.lastSeen,
-        online: d.online ?? false,
       }));
 
       res.json({ devices, hasApiKey: true });

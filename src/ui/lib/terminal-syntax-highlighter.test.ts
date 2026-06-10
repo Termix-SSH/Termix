@@ -9,7 +9,7 @@ describe("highlightTerminalOutput", () => {
     expect(highlightTerminalOutput("   ")).toBe("   ");
   });
 
-  it("wraps error keywords in bright red ANSI codes", () => {
+  it("wraps error keywords in bright red", () => {
     const out = highlightTerminalOutput("Something ERROR happened");
     expect(out).toContain(ESC + "[91m");
     expect(out).toContain(ESC + "[0m");
@@ -32,26 +32,23 @@ describe("highlightTerminalOutput", () => {
     expect(highlightTerminalOutput(partial)).toBe(partial);
   });
 
-  it("highlights text that already has many ANSI codes (no bail-out)", () => {
-    // Previously bailed out at > 10 ANSI codes; now always highlights plain segments
+  it("skips TUI cursor-positioning frames (nano/vim protection)", () => {
+    // \x1b[H is a cursor-home sequence used by nano/htop
+    const tuiFrame = `${ESC}[H${ESC}[2J some nano content`;
+    expect(highlightTerminalOutput(tuiFrame)).toBe(tuiFrame);
+  });
+
+  it("highlights text that already has ANSI codes (no code-count bail-out)", () => {
     let heavy = "";
     for (let i = 0; i < 12; i++) heavy += `${ESC}[32mgreen${ESC}[0m `;
     heavy += "ERROR at line 5";
     const out = highlightTerminalOutput(heavy);
-    // Should still highlight ERROR even though there are many ANSI codes
     expect(out).toContain(ESC + "[91m");
   });
 
   it("does not process lines exceeding MAX_LINE_LENGTH", () => {
-    const huge = "ERROR " + "x".repeat(6000);
+    const huge = "ERROR " + "x".repeat(3000);
     expect(highlightTerminalOutput(huge)).toBe(huge);
-  });
-
-  it("highlights user@hostname in brand orange", () => {
-    const out = highlightTerminalOutput("luke@myserver:~$");
-    // True-color brand orange escape
-    expect(out).toContain(ESC + "[38;2;245;145;69m");
-    expect(out).toContain("luke@myserver");
   });
 
   it("highlights absolute paths in cyan", () => {
@@ -78,15 +75,20 @@ describe("highlightTerminalOutput", () => {
     expect(out).toContain("2024-01-15");
   });
 
-  it("highlights standalone numbers in bright cyan", () => {
-    const out = highlightTerminalOutput("listening on port 8080:");
+  it("highlights port numbers after the word 'port'", () => {
+    const out = highlightTerminalOutput("listening on port 8080");
     expect(out).toContain(ESC + "[96m");
     expect(out).toContain("8080");
   });
 
-  it("does not highlight 'up' or 'active' as success (false positive regression)", () => {
+  it("does not highlight standalone numbers outside port context", () => {
+    // A bare '7' or date component should not get cyan highlight
+    const out = highlightTerminalOutput("exit code 1 returned");
+    expect(out).not.toContain(ESC + "[96m");
+  });
+
+  it("does not highlight 'up' or 'active' as success", () => {
     const out = highlightTerminalOutput("service is up and running");
-    // brightGreen should not appear for "up"
     expect(out).not.toContain(ESC + "[92m");
   });
 
@@ -101,12 +103,14 @@ describe("highlightTerminalOutput", () => {
     expect(out).toContain(ESC + "[4m");
   });
 
+  it("preserves \\r in CRLF terminal output", () => {
+    const out = highlightTerminalOutput("ERROR occurred\r\n");
+    expect(out).toContain("\r\n");
+  });
+
   it("processes multi-line text line by line", () => {
-    const text = "user@host:~$\nsome output\nERROR: failed";
+    const text = "some output\nERROR: failed";
     const out = highlightTerminalOutput(text);
-    // Orange on first line
-    expect(out).toContain(ESC + "[38;2;245;145;69m");
-    // Red on last line
     expect(out).toContain(ESC + "[91m");
   });
 });

@@ -104,7 +104,6 @@ export function HostEditor({
       addresses: string[];
       os: string;
       lastSeen: string;
-      online: boolean;
     }>
   >([]);
   const [tailscaleHasApiKey, setTailscaleHasApiKey] = useState(false);
@@ -496,7 +495,11 @@ export function HostEditor({
                       <>
                         <select
                           className="w-full border border-border bg-background text-foreground text-xs px-2 py-1.5 focus:outline-none focus:border-accent-brand/50"
-                          defaultValue=""
+                          value={
+                            tailscaleDevices.find((d) =>
+                              d.addresses.includes(form.ip),
+                            )?.id ?? ""
+                          }
                           onChange={(e) => {
                             const device = tailscaleDevices.find(
                               (d) => d.id === e.target.value,
@@ -517,14 +520,7 @@ export function HostEditor({
                           </option>
                           {tailscaleDevices.map((d) => (
                             <option key={d.id} value={d.id}>
-                              {d.hostname} (
-                              {d.addresses.find((a) => a.startsWith("100.")) ??
-                                d.addresses[0] ??
-                                ""}
-                              ){" "}
-                              {d.online
-                                ? `— ${t("hosts.tailscaleOnline")}`
-                                : `— ${t("hosts.tailscaleOffline")}`}
+                              {d.hostname} ({d.addresses.find((a) => a.startsWith("100.")) ?? d.addresses[0] ?? ""})
                             </option>
                           ))}
                         </select>

@@ -107,7 +107,6 @@ export async function getTailscaleDevices(): Promise<{
     addresses: string[];
     os: string;
     lastSeen: string;
-    online: boolean;
   }>;
   hasApiKey: boolean;
 }> {
