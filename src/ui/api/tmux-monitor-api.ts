@@ -83,6 +83,23 @@ export async function createTmuxWindow(
   await tmuxMonitorApi.post(`/${hostId}/windows`, { sessionName });
 }
 
+/** Rename a session. Saved tags follow the session to its new name. */
+export async function renameTmuxSession(
+  hostId: number,
+  sessionName: string,
+  newName: string,
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/rename`, { sessionName, newName });
+}
+
+/** Kill a session (terminates all of its windows and processes). */
+export async function killTmuxSession(
+  hostId: number,
+  sessionName: string,
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/kill`, { sessionName });
+}
+
 /** Split the window containing a pane: "h" adds a pane to the right,
  * "v" below (tmux -h/-v semantics). */
 export async function splitTmuxPane(

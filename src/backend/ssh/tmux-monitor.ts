@@ -535,6 +535,96 @@ app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
   }
 });
 
+// Rename a session. Saved tags follow the session to its new name (for every
+// user — the session itself is shared on the host).
+app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const body = req.body as { sessionName?: string; newName?: string };
+  const sessionName = String(body?.sessionName || "").trim();
+  const newName = String(body?.newName || "").trim();
+  if (!sessionName || /[:.\n]/.test(sessionName)) {
+    return res.status(400).json({ error: "Invalid session name" });
+  }
+  if (!SESSION_NAME_RE.test(newName)) {
+    return res.status(400).json({ error: "Invalid new session name" });
+  }
+
+  try {
+    await withHostConnection(host, (conn) =>
+      execCommand(
+        conn,
+        `tmux rename-session -t ${shellEscape(`=${sessionName}`)} ${shellEscape(newName)}`,
+      ),
+    );
+    await getDb()
+      .update(tmuxSessionTags)
+      .set({ sessionName: newName })
+      .where(
+        and(
+          eq(tmuxSessionTags.hostId, host.id),
+          eq(tmuxSessionTags.sessionName, sessionName),
+        ),
+      );
+    sshLogger.info("tmux session renamed", {
+      operation: "tmux_session_rename",
+      hostId: host.id,
+      sessionName,
+      newName,
+    });
+    res.json({ ok: true, name: newName });
+  } catch (err) {
+    if (/can't find session|no such session/i.test(toErrorMessage(err))) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    if (/duplicate session/i.test(toErrorMessage(err))) {
+      return res
+        .status(409)
+        .json({ error: "A session with this name already exists" });
+    }
+    sendTmuxError(res, err, "rename session", host.id);
+  }
+});
+
+// Kill a session and drop its saved tags.
+app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const sessionName = String(
+    (req.body as { sessionName?: string })?.sessionName || "",
+  ).trim();
+  if (!sessionName || /[:.\n]/.test(sessionName)) {
+    return res.status(400).json({ error: "Invalid session name" });
+  }
+
+  try {
+    await withHostConnection(host, (conn) =>
+      execCommand(conn, `tmux kill-session -t ${shellEscape(`=${sessionName}`)}`),
+    );
+    await getDb()
+      .delete(tmuxSessionTags)
+      .where(
+        and(
+          eq(tmuxSessionTags.hostId, host.id),
+          eq(tmuxSessionTags.sessionName, sessionName),
+        ),
+      );
+    sshLogger.info("tmux session killed", {
+      operation: "tmux_session_kill",
+      hostId: host.id,
+      sessionName,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    if (/can't find session|no such session/i.test(toErrorMessage(err))) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    sendTmuxError(res, err, "kill session", host.id);
+  }
+});
+
 // Split the window containing a pane. "h" places the new pane to the right,
 // "v" below — matching tmux's own -h/-v semantics. The new pane starts in the
 // source pane's working directory.

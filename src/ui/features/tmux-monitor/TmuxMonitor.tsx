@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
+  ChevronsDownUp,
+  ChevronsUpDown,
   Layers,
   MonitorPlay,
   Plus,
@@ -17,6 +19,23 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -36,6 +55,8 @@ import {
   focusTmuxPane,
   createTmuxSession,
   createTmuxWindow,
+  renameTmuxSession,
+  killTmuxSession,
   splitTmuxPane,
   type TmuxOverview,
   type TmuxPaneMetrics,
@@ -164,6 +185,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
           if (expandedRestoredRef.current || prev.size > 0) return prev;
           return new Set(data.sessions.map((s) => s.name));
         });
+        return true;
       } catch (err) {
         if (!silent) {
           const axiosErr = err as {
@@ -194,12 +216,33 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
             );
           }
         }
+        return false;
       } finally {
         if (!silent) setOverviewLoading(false);
       }
     },
     [t],
   );
+
+  // Manual refresh keeps the current tree on screen (no skeleton flash) and
+  // only spins the refresh icons; the skeleton is reserved for the first load
+  // of a host. Failures surface as a toast instead of silently keeping stale
+  // data.
+  const [refreshing, setRefreshing] = useState(false);
+  const manualRefresh = useCallback(async () => {
+    if (selectedHostId === null || refreshing) return;
+    if (overview === null) {
+      loadOverview(selectedHostId);
+      return;
+    }
+    setRefreshing(true);
+    try {
+      const ok = await loadOverview(selectedHostId, true);
+      if (!ok) toast.error(t("tmuxMonitor.refreshFailed"));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [selectedHostId, refreshing, overview, loadOverview, t]);
 
   useEffect(() => {
     if (selectedHostId === null) return;
@@ -388,6 +431,88 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     [selectedHostId, loadOverview, t],
   );
 
+  // -- collapse / expand all ----------------------------------------------------
+  const anyExpanded = expandedSessions.size > 0;
+  function toggleAllSessions() {
+    if (selectedHostId === null || !overview) return;
+    const next = anyExpanded
+      ? new Set<string>()
+      : new Set(overview.sessions.map((s) => s.name));
+    setExpandedSessions(next);
+    expandedRestoredRef.current = true;
+    persistExpanded(selectedHostId, next);
+  }
+
+  // -- rename / kill ------------------------------------------------------------
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renaming, setRenaming] = useState(false);
+  const renameDraftValid = /^[A-Za-z0-9_@%+=-]{1,64}$/.test(renameDraft.trim());
+  const [killTarget, setKillTarget] = useState<string | null>(null);
+  const [killing, setKilling] = useState(false);
+
+  async function confirmRename() {
+    if (
+      selectedHostId === null ||
+      renameTarget === null ||
+      !renameDraftValid ||
+      renaming
+    )
+      return;
+    const newName = renameDraft.trim();
+    setRenaming(true);
+    try {
+      await renameTmuxSession(selectedHostId, renameTarget, newName);
+      toast.success(t("tmuxMonitor.sessionRenamed", { name: newName }));
+      if (expandedSessions.has(renameTarget)) {
+        const next = new Set(expandedSessions);
+        next.delete(renameTarget);
+        next.add(newName);
+        setExpandedSessions(next);
+        persistExpanded(selectedHostId, next);
+      }
+      // Remounts the preview (keyed by session name) so it re-attaches under
+      // the new name.
+      if (selectedPane?.sessionName === renameTarget) {
+        setSelectedPane({ ...selectedPane, sessionName: newName });
+      }
+      setRenameTarget(null);
+      loadOverview(selectedHostId, true);
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      toast.error(
+        axiosErr.response?.data?.error || t("tmuxMonitor.sessionRenameFailed"),
+      );
+    } finally {
+      setRenaming(false);
+    }
+  }
+
+  async function confirmKill() {
+    if (selectedHostId === null || killTarget === null || killing) return;
+    setKilling(true);
+    try {
+      await killTmuxSession(selectedHostId, killTarget);
+      toast.success(t("tmuxMonitor.sessionKilled", { name: killTarget }));
+      if (selectedPane?.sessionName === killTarget) setSelectedPane(null);
+      if (expandedSessions.has(killTarget)) {
+        const next = new Set(expandedSessions);
+        next.delete(killTarget);
+        setExpandedSessions(next);
+        persistExpanded(selectedHostId, next);
+      }
+      setKillTarget(null);
+      loadOverview(selectedHostId, true);
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      toast.error(
+        axiosErr.response?.data?.error || t("tmuxMonitor.sessionKillFailed"),
+      );
+    } finally {
+      setKilling(false);
+    }
+  }
+
   // -- tags -----------------------------------------------------------------
   async function saveTags(sessionName: string, tags: string[]) {
     if (selectedHostId === null) return;
@@ -493,15 +618,34 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
             </Popover>
             <button
               className="text-muted-foreground hover:text-foreground disabled:opacity-40"
+              disabled={!overview?.available}
+              title={
+                anyExpanded
+                  ? t("tmuxMonitor.collapseAll")
+                  : t("tmuxMonitor.expandAll")
+              }
+              aria-label={
+                anyExpanded
+                  ? t("tmuxMonitor.collapseAll")
+                  : t("tmuxMonitor.expandAll")
+              }
+              onClick={toggleAllSessions}
+            >
+              {anyExpanded ? (
+                <ChevronsDownUp className="size-3.5" />
+              ) : (
+                <ChevronsUpDown className="size-3.5" />
+              )}
+            </button>
+            <button
+              className="text-muted-foreground hover:text-foreground disabled:opacity-40"
               disabled={selectedHostId === null || overviewLoading}
               title={t("tmuxMonitor.refresh")}
               aria-label={t("tmuxMonitor.refresh")}
-              onClick={() =>
-                selectedHostId !== null && loadOverview(selectedHostId)
-              }
+              onClick={manualRefresh}
             >
               <RefreshCw
-                className={`size-3.5 ${overviewLoading ? "animate-spin" : ""}`}
+                className={`size-3.5 ${overviewLoading || refreshing ? "animate-spin" : ""}`}
               />
             </button>
           </span>
@@ -592,6 +736,11 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                 onSaveTags={saveTags}
                 onAttachSession={openTerminal}
                 onNewWindow={newWindow}
+                onRenameSession={(name) => {
+                  setRenameDraft(name);
+                  setRenameTarget(name);
+                }}
+                onKillSession={setKillTarget}
                 now={now}
               />
             )}
@@ -626,11 +775,13 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               size="sm"
               className="h-8"
               disabled={selectedHostId === null || overviewLoading}
-              onClick={() =>
-                selectedHostId !== null && loadOverview(selectedHostId)
-              }
+              title={t("tmuxMonitor.refresh")}
+              aria-label={t("tmuxMonitor.refresh")}
+              onClick={manualRefresh}
             >
-              <RefreshCw className="size-3.5" />
+              <RefreshCw
+                className={`size-3.5 ${overviewLoading || refreshing ? "animate-spin" : ""}`}
+              />
             </Button>
             <Button
               size="sm"
@@ -687,6 +838,77 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
           )}
         </div>
       </div>
+
+      {/* Rename session dialog */}
+      <Dialog
+        open={renameTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRenameTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {t("tmuxMonitor.renameSessionTitle", { name: renameTarget })}
+            </DialogTitle>
+          </DialogHeader>
+          <Input
+            value={renameDraft}
+            placeholder={t("tmuxMonitor.newSessionPlaceholder")}
+            autoFocus
+            onChange={(e) => setRenameDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") confirmRename();
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("tmuxMonitor.newSessionHint")}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={!renameDraftValid || renaming}
+              onClick={confirmRename}
+            >
+              {t("tmuxMonitor.rename")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Kill session confirmation */}
+      <AlertDialog
+        open={killTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setKillTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("tmuxMonitor.killSessionTitle", { name: killTarget })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("tmuxMonitor.killSessionBody")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={killing}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmKill();
+              }}
+            >
+              {t("tmuxMonitor.kill")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
