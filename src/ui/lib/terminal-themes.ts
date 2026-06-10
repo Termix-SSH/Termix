@@ -733,47 +733,14 @@ export const TERMINAL_FONTS = [
   {
     value: "Caskaydia Cove Nerd Font Mono",
     label: "Caskaydia Cove Nerd Font Mono",
-    fallback:
-      '"Caskaydia Cove Nerd Font Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
   },
-  {
-    value: "JetBrains Mono",
-    label: "JetBrains Mono",
-    fallback:
-      '"JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", monospace',
-  },
-  {
-    value: "Fira Code",
-    label: "Fira Code",
-    fallback: '"Fira Code", "SF Mono", Consolas, "Liberation Mono", monospace',
-  },
-  {
-    value: "Cascadia Code",
-    label: "Cascadia Code",
-    fallback:
-      '"Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace',
-  },
-  {
-    value: "Source Code Pro",
-    label: "Source Code Pro",
-    fallback:
-      '"Source Code Pro", "SF Mono", Consolas, "Liberation Mono", monospace',
-  },
-  {
-    value: "SF Mono",
-    label: "SF Mono",
-    fallback: '"SF Mono", Consolas, "Liberation Mono", monospace',
-  },
-  {
-    value: "Consolas",
-    label: "Consolas",
-    fallback: 'Consolas, "Liberation Mono", monospace',
-  },
-  {
-    value: "Monaco",
-    label: "Monaco",
-    fallback: 'Monaco, "Liberation Mono", monospace',
-  },
+  { value: "JetBrains Mono", label: "JetBrains Mono" },
+  { value: "Fira Code", label: "Fira Code" },
+  { value: "Cascadia Code", label: "Cascadia Code" },
+  { value: "Source Code Pro", label: "Source Code Pro" },
+  { value: "SF Mono", label: "SF Mono" },
+  { value: "Consolas", label: "Consolas" },
+  { value: "Monaco", label: "Monaco" },
 ];
 
 export const CURSOR_STYLES = [

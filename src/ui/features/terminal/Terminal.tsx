@@ -37,6 +37,7 @@ import {
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
 } from "@/lib/terminal-themes.ts";
+import { resolveTerminalFontFamily } from "@/lib/fonts.ts";
 import "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
@@ -89,7 +90,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     },
     ref,
   ) {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const { instance: terminal, ref: xtermRef } = useXTerm();
     const commandHistoryContext = useCommandHistory();
     const { confirmWithToast } = useConfirmation();
@@ -1798,10 +1799,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const activeTheme = previewTheme || config.theme;
       const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
 
-      const fontConfig = TERMINAL_FONTS.find(
-        (f) => f.value === config.fontFamily,
+      const fontFamily = resolveTerminalFontFamily(
+        config.fontFamily || TERMINAL_FONTS[0].value,
+        i18n.language,
       );
-      const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
 
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
@@ -1852,7 +1853,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [terminal, hostConfig.terminalConfig, previewTheme, appTheme, isFitted]);
+    }, [
+      terminal,
+      hostConfig.terminalConfig,
+      previewTheme,
+      appTheme,
+      isFitted,
+      i18n.language,
+    ]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
@@ -1862,10 +1870,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ...hostConfig.terminalConfig,
       };
 
-      const fontConfig = TERMINAL_FONTS.find(
-        (f) => f.value === config.fontFamily,
+      const fontFamily = resolveTerminalFontFamily(
+        config.fontFamily || TERMINAL_FONTS[0].value,
+        i18n.language,
       );
-      const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
 
       const activeTheme = previewTheme || config.theme;
       const themeColors = resolveTermixThemeColors(activeTheme, appTheme);

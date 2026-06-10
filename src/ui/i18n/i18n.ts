@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 
 import enTranslation from "../locales/en.json";
+import { applyLocaleFonts } from "@/lib/fonts";
 
 type LocaleModule = { default: ResourceKey };
 
@@ -103,5 +104,13 @@ i18n
       useSuspense: false,
     },
   });
+
+i18n.on("initialized", () => {
+  applyLocaleFonts(i18n.language);
+});
+
+i18n.on("languageChanged", (lng) => {
+  applyLocaleFonts(lng);
+});
 
 export default i18n;

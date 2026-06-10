@@ -45,7 +45,12 @@
 
 @theme inline {
   --font-heading: var(--font-mono);
-  --font-mono: "JetBrains Mono Variable", monospace;
+  --font-cjk: "PingFang SC", "PingFang TC", "Hiragino Sans", "Yu Gothic UI",
+    "Apple SD Gothic Neo", "Malgun Gothic", "Microsoft YaHei",
+    "Microsoft JhengHei";
+  --font-mono: "JetBrains Mono Variable", "Caskaydia Cove Nerd Font Mono",
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+    var(--font-cjk), monospace;
   --color-accent-brand: var(--accent-brand);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

@@ -25,6 +25,8 @@ import {
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
 } from "@/lib/terminal-themes";
+import { resolveTerminalFontFamily } from "@/lib/fonts";
+import i18n from "@/i18n/i18n";
 import { useTheme } from "@/components/theme-provider";
 
 interface ConsoleTerminalProps {
@@ -91,10 +93,10 @@ export function ConsoleTerminal({
     terminal.loadAddon(clipboardAddon);
     terminal.loadAddon(webLinksAddon);
 
-    const fontConfig = TERMINAL_FONTS.find(
-      (f) => f.value === terminalConfig.fontFamily,
+    const fontFamily = resolveTerminalFontFamily(
+      terminalConfig.fontFamily || TERMINAL_FONTS[0].value,
+      i18n.language,
     );
-    const fontFamily = fontConfig?.fallback ?? TERMINAL_FONTS[0].fallback;
 
     terminal.options.cursorBlink = terminalConfig.cursorBlink;
     terminal.options.cursorStyle = terminalConfig.cursorStyle;

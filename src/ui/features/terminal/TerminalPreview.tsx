@@ -1,5 +1,7 @@
 import { useTheme } from "@/components/theme-provider";
 import { TERMINAL_THEMES, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import { resolveTerminalFontFamily } from "@/lib/fonts";
+import { useTranslation } from "react-i18next";
 
 interface TerminalPreviewProps {
   theme: string;
@@ -20,6 +22,7 @@ export function TerminalPreview({
   letterSpacing = 0,
   lineHeight = 1.0,
 }: TerminalPreviewProps) {
+  const { i18n } = useTranslation();
   const { theme: appTheme } = useTheme();
 
   const resolvedTheme =
@@ -32,9 +35,10 @@ export function TerminalPreview({
       : theme;
 
   const colors = TERMINAL_THEMES[resolvedTheme]?.colors;
-  const fontFallback =
-    TERMINAL_FONTS.find((f) => f.value === fontFamily)?.fallback ||
-    TERMINAL_FONTS[0].fallback;
+  const fontFallback = resolveTerminalFontFamily(
+    fontFamily || TERMINAL_FONTS[0].value,
+    i18n.language,
+  );
 
   return (
     <div className="border border-input overflow-hidden">
