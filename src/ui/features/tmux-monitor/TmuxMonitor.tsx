@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   Layers,
   MonitorPlay,
+  Plus,
   RefreshCw,
   Search,
   Server,
@@ -11,6 +12,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/popover";
 import {
   Select,
   SelectContent,
@@ -28,6 +34,8 @@ import {
   searchTmux,
   setTmuxSessionTags,
   focusTmuxPane,
+  createTmuxSession,
+  splitTmuxPane,
   type TmuxOverview,
   type TmuxPaneMetrics,
   type TmuxSearchMatch,
@@ -314,6 +322,57 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     }
   }
 
+  // -- create session ---------------------------------------------------------
+  const [newSessionName, setNewSessionName] = useState("");
+  const [newSessionOpen, setNewSessionOpen] = useState(false);
+  const [creatingSession, setCreatingSession] = useState(false);
+  // Mirrors the backend's SESSION_NAME_RE (tmux forbids ":" and ".").
+  const newSessionNameValid = /^[A-Za-z0-9_@%+=-]{1,64}$/.test(
+    newSessionName.trim(),
+  );
+
+  async function createSession() {
+    if (selectedHostId === null || !newSessionNameValid || creatingSession)
+      return;
+    const name = newSessionName.trim();
+    setCreatingSession(true);
+    try {
+      await createTmuxSession(selectedHostId, name);
+      toast.success(t("tmuxMonitor.sessionCreated", { name }));
+      setNewSessionOpen(false);
+      setNewSessionName("");
+      const next = new Set(expandedSessions).add(name);
+      setExpandedSessions(next);
+      expandedRestoredRef.current = true;
+      persistExpanded(selectedHostId, next);
+      loadOverview(selectedHostId, true);
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      toast.error(
+        axiosErr.response?.data?.error || t("tmuxMonitor.sessionCreateFailed"),
+      );
+    } finally {
+      setCreatingSession(false);
+    }
+  }
+
+  // -- split ------------------------------------------------------------------
+  // Splits the window containing the selected pane. The embedded terminal is
+  // attached to the session, so the new pane appears there immediately; the
+  // silent overview reload updates the tree.
+  const splitPane = useCallback(
+    async (direction: "h" | "v") => {
+      if (selectedHostId === null || !selectedPane) return;
+      try {
+        await splitTmuxPane(selectedHostId, selectedPane.paneId, direction);
+        loadOverview(selectedHostId, true);
+      } catch {
+        toast.error(t("tmuxMonitor.splitFailed"));
+      }
+    },
+    [selectedHostId, selectedPane, loadOverview, t],
+  );
+
   // -- tags -----------------------------------------------------------------
   async function saveTags(sessionName: string, tags: string[]) {
     if (selectedHostId === null) return;
@@ -373,13 +432,13 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
             {t("tmuxMonitor.title")}
           </span>
         </div>
-        <div className="border-b border-border p-2">
+        <div className="flex items-center gap-1 border-b border-border p-2">
           <Select
             value={selectedHostId !== null ? String(selectedHostId) : ""}
             disabled={hostsLoading}
             onValueChange={(value) => setSelectedHostId(Number(value))}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="min-w-0 flex-1">
               <SelectValue placeholder={t("tmuxMonitor.noHostSelected")} />
             </SelectTrigger>
             <SelectContent>
@@ -390,6 +449,50 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               ))}
             </SelectContent>
           </Select>
+          <Popover
+            open={newSessionOpen}
+            onOpenChange={(open) => {
+              setNewSessionOpen(open);
+              if (open) setNewSessionName("");
+            }}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 w-9 shrink-0 p-0"
+                disabled={selectedHostId === null}
+                title={t("tmuxMonitor.newSession")}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2" align="start">
+              <p className="mb-1 text-xs text-muted-foreground">
+                {t("tmuxMonitor.newSessionHint")}
+              </p>
+              <div className="flex gap-1">
+                <Input
+                  className="h-7 text-xs"
+                  value={newSessionName}
+                  placeholder={t("tmuxMonitor.newSessionPlaceholder")}
+                  autoFocus
+                  onChange={(e) => setNewSessionName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") createSession();
+                  }}
+                />
+                <Button
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  disabled={!newSessionNameValid || creatingSession}
+                  onClick={createSession}
+                >
+                  {t("tmuxMonitor.create")}
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <ScrollArea className="flex-1">
@@ -539,6 +642,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               host={selectedHost}
               pane={selectedPane}
               metrics={selectedPaneMetrics}
+              onSplit={splitPane}
               onClose={() => setSelectedPane(null)}
             />
           ) : (

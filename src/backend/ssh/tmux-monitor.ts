@@ -36,6 +36,9 @@ import {
 import type { SSHHost, AuthenticatedRequest } from "../../types/index.js";
 
 const PANE_ID_RE = /^%\d+$/;
+// tmux session names cannot contain ":" or "."; keep to a conservative
+// printable subset so the name is safe as a tmux target everywhere.
+const SESSION_NAME_RE = /^[A-Za-z0-9_@%+=-]{1,64}$/;
 const MAX_SEARCH_PANES = 100;
 const MAX_MATCHES_PER_PANE = 50;
 const SEARCH_HISTORY_LINES = 2000;
@@ -463,6 +466,72 @@ app.post("/tmux_monitor/:hostId/focus", async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     sendTmuxError(res, err, "focus", host.id);
+  }
+});
+
+// Create a detached session. Starts the tmux server if none is running.
+app.post("/tmux_monitor/:hostId/sessions", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const name = String((req.body as { name?: string })?.name || "").trim();
+  if (!SESSION_NAME_RE.test(name)) {
+    return res.status(400).json({ error: "Invalid session name" });
+  }
+
+  try {
+    await withHostConnection(host, (conn) =>
+      execCommand(conn, `tmux new-session -d -s ${shellEscape(name)}`),
+    );
+    sshLogger.info("tmux session created", {
+      operation: "tmux_session_create",
+      hostId: host.id,
+      sessionName: name,
+    });
+    res.json({ ok: true, name });
+  } catch (err) {
+    if (/duplicate session/i.test(toErrorMessage(err))) {
+      return res
+        .status(409)
+        .json({ error: "A session with this name already exists" });
+    }
+    sendTmuxError(res, err, "create session", host.id);
+  }
+});
+
+// Split the window containing a pane. "h" places the new pane to the right,
+// "v" below — matching tmux's own -h/-v semantics. The new pane starts in the
+// source pane's working directory.
+app.post("/tmux_monitor/:hostId/split", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const body = req.body as { paneId?: string; direction?: string };
+  const paneId = String(body?.paneId || "");
+  const direction = body?.direction === "v" ? "-v" : "-h";
+  if (!PANE_ID_RE.test(paneId)) {
+    return res.status(400).json({ error: "Invalid pane ID" });
+  }
+  if (body?.direction !== "h" && body?.direction !== "v") {
+    return res.status(400).json({ error: "Invalid split direction" });
+  }
+
+  try {
+    await withHostConnection(host, (conn) =>
+      execCommand(
+        conn,
+        `tmux split-window ${direction} -t ${shellEscape(paneId)} -c ${shellEscape("#{pane_current_path}")}`,
+      ),
+    );
+    sshLogger.info("tmux pane split", {
+      operation: "tmux_pane_split",
+      hostId: host.id,
+      paneId,
+      direction: body.direction,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    sendTmuxError(res, err, "split", host.id);
   }
 });
 

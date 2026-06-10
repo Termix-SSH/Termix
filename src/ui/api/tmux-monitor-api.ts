@@ -66,6 +66,25 @@ export async function focusTmuxPane(
   await tmuxMonitorApi.post(`/${hostId}/focus`, { paneId });
 }
 
+/** Create a new detached session on the host. Starts the tmux server if
+ * none is running yet. */
+export async function createTmuxSession(
+  hostId: number,
+  name: string,
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/sessions`, { name });
+}
+
+/** Split the window containing a pane: "h" adds a pane to the right,
+ * "v" below (tmux -h/-v semantics). */
+export async function splitTmuxPane(
+  hostId: number,
+  paneId: string,
+  direction: "h" | "v",
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/split`, { paneId, direction });
+}
+
 export interface TmuxSearchResult {
   matches: TmuxSearchMatch[];
   /** True when a search limit was hit and the results are partial. */

@@ -5,7 +5,14 @@
 
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Activity, Cpu, MemoryStick, X } from "lucide-react";
+import {
+  Activity,
+  Cpu,
+  MemoryStick,
+  SquareSplitHorizontal,
+  SquareSplitVertical,
+  X,
+} from "lucide-react";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
 import { Terminal } from "@/features/terminal/Terminal";
 import type { TerminalHostConfig } from "@/features/terminal/Terminal";
@@ -18,6 +25,9 @@ interface PanePreviewProps {
   host: SSHHost;
   pane: SelectedPane;
   metrics?: TmuxPaneMetrics;
+  /** Split the window containing this pane ("h" = new pane to the right,
+   * "v" = below — tmux -h/-v semantics). */
+  onSplit: (direction: "h" | "v") => void;
   onClose: () => void;
 }
 
@@ -27,7 +37,13 @@ function newInstanceId(): string {
     : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function PanePreview({ host, pane, metrics, onClose }: PanePreviewProps) {
+export function PanePreview({
+  host,
+  pane,
+  metrics,
+  onSplit,
+  onClose,
+}: PanePreviewProps) {
   const { t } = useTranslation();
   // One PTY per mount; the parent remounts this component (via key) when the
   // host or session changes. Pane switches within a session go through the
@@ -63,13 +79,29 @@ export function PanePreview({ host, pane, metrics, onClose }: PanePreviewProps) 
             )}
           </>
         )}
-        <button
-          className="ml-auto text-muted-foreground hover:text-foreground"
-          title={t("tmuxMonitor.closePreview")}
-          onClick={onClose}
-        >
-          <X className="size-3.5" />
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            className="text-muted-foreground hover:text-foreground"
+            title={t("tmuxMonitor.splitRight")}
+            onClick={() => onSplit("h")}
+          >
+            <SquareSplitHorizontal className="size-3.5" />
+          </button>
+          <button
+            className="text-muted-foreground hover:text-foreground"
+            title={t("tmuxMonitor.splitDown")}
+            onClick={() => onSplit("v")}
+          >
+            <SquareSplitVertical className="size-3.5" />
+          </button>
+          <button
+            className="text-muted-foreground hover:text-foreground"
+            title={t("tmuxMonitor.closePreview")}
+            onClick={onClose}
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <CommandHistoryProvider>
