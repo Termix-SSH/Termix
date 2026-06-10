@@ -169,7 +169,7 @@ export function TabBar({
   const target = dragTargetIndex ?? dragIdx;
 
   return (
-    <div className="flex flex-col shrink-0 min-w-0">
+    <div className="flex flex-col shrink-0 min-w-0" data-termix-tab-bar>
       <div
         className={`flex items-end bg-sidebar min-w-0 transition-all duration-200 ${open ? "h-12.5 border-b border-border" : "h-0 overflow-hidden"}`}
       >

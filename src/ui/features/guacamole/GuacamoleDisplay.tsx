@@ -10,6 +10,10 @@ import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
 import { getGuacamoleToken, isElectron, isEmbeddedMode } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import {
+  getGuacamoleDisplaySize,
+  waitForGuacamoleDisplaySize,
+} from "@/features/guacamole/guacamole-display-size.ts";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -44,6 +48,7 @@ interface GuacamoleDisplayProps {
 }
 
 const isDev = import.meta.env.DEV;
+const SIZE_SYNC_DEBOUNCE_MS = 100;
 
 export const GuacamoleDisplay = forwardRef<
   GuacamoleDisplayHandle,
@@ -235,34 +240,41 @@ export const GuacamoleDisplay = forwardRef<
     };
   }, [isVisible]);
 
-  const rescaleDisplay = useCallback((immediate: boolean = false) => {
+  const rescaleDisplay = useCallback(() => {
     if (!clientRef.current || !containerRef.current) return;
 
-    const performRescale = () => {
-      if (!clientRef.current || !containerRef.current) return;
+    const display = clientRef.current.getDisplay();
+    const { width: cWidth, height: cHeight } = getGuacamoleDisplaySize(
+      containerRef.current,
+    );
+    const displayWidth = display.getWidth();
+    const displayHeight = display.getHeight();
 
-      const display = clientRef.current.getDisplay();
-      const cWidth = containerRef.current.clientWidth;
-      const cHeight = containerRef.current.clientHeight;
-      const displayWidth = display.getWidth();
-      const displayHeight = display.getHeight();
-
-      if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
-        const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
-        scaleRef.current = scale;
-        display.scale(scale);
-      }
-    };
-
-    if (immediate) {
-      performRescale();
-    } else {
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-      resizeTimeoutRef.current = setTimeout(performRescale, 200);
+    if (displayWidth > 0 && displayHeight > 0 && cWidth > 0 && cHeight > 0) {
+      const scale = Math.min(cWidth / displayWidth, cHeight / displayHeight);
+      scaleRef.current = scale;
+      display.scale(scale);
     }
   }, []);
+
+  const syncRemoteDisplaySize = useCallback(() => {
+    if (!isVisible || !clientRef.current || !containerRef.current) return;
+
+    const { width, height } = getGuacamoleDisplaySize(containerRef.current);
+    if (width > 0 && height > 0) {
+      clientRef.current.sendSize(width, height);
+    }
+    rescaleDisplay();
+  }, [isVisible, rescaleDisplay]);
+
+  const scheduleRemoteDisplaySizeSync = useCallback(() => {
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+    resizeTimeoutRef.current = setTimeout(() => {
+      syncRemoteDisplaySize();
+    }, SIZE_SYNC_DEBOUNCE_MS);
+  }, [syncRemoteDisplaySize]);
 
   const connect = useCallback(async () => {
     if (isConnectingRef.current) return;
@@ -270,19 +282,8 @@ export const GuacamoleDisplay = forwardRef<
     setIsReady(false);
     setHasError(false);
 
-    // Wait two frames so the container is fully laid out before measuring.
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-
-    const rect = containerRef.current?.getBoundingClientRect();
-    let containerWidth = rect?.width || 0;
-    let containerHeight = rect?.height || 0;
-
-    if (containerWidth < 100 || containerHeight < 100) {
-      containerWidth = window.innerWidth || 1280;
-      containerHeight = window.innerHeight || 720;
-    }
+    const { width: containerWidth, height: containerHeight } =
+      await waitForGuacamoleDisplaySize(containerRef.current);
 
     const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
     if (!wsUrl) {
@@ -307,7 +308,7 @@ export const GuacamoleDisplay = forwardRef<
     displayElement.style.outline = "none";
 
     display.onresize = () => {
-      rescaleDisplay(true);
+      rescaleDisplay();
       setIsReady(true);
     };
 
@@ -367,13 +368,8 @@ export const GuacamoleDisplay = forwardRef<
           isConnectingRef.current = false;
           setIsReady(true);
           onConnect?.();
-          if (containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            const w = Math.round(rect.width);
-            const h = Math.round(rect.height);
-            if (w > 0 && h > 0) client.sendSize(w, h);
-          }
-          rescaleDisplay(false);
+          syncRemoteDisplaySize();
+          requestAnimationFrame(() => syncRemoteDisplaySize());
           break;
         case 4:
           break;
@@ -436,7 +432,7 @@ export const GuacamoleDisplay = forwardRef<
     onDisconnect,
     onError,
     refreshKeyboardHandlers,
-    rescaleDisplay,
+    syncRemoteDisplaySize,
     connectionConfig.protocol,
     connectionConfig.type,
     t,
@@ -458,10 +454,12 @@ export const GuacamoleDisplay = forwardRef<
   useEffect(() => {
     if (!isVisible) {
       hasKeyboardFocusRef.current = false;
+    } else if (isReady) {
+      syncRemoteDisplaySize();
     }
 
     refreshKeyboardHandlers();
-  }, [isVisible, refreshKeyboardHandlers]);
+  }, [isVisible, isReady, refreshKeyboardHandlers, syncRemoteDisplaySize]);
 
   useEffect(() => {
     const handleWindowFocus = () => {
@@ -512,28 +510,31 @@ export const GuacamoleDisplay = forwardRef<
   }, []);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      if (resizeTimeoutRef.current) clearTimeout(resizeTimeoutRef.current);
-      resizeTimeoutRef.current = setTimeout(() => {
-        if (clientRef.current && containerRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          const w = Math.round(rect.width);
-          const h = Math.round(rect.height);
-          if (w > 0 && h > 0) {
-            clientRef.current.sendSize(w, h);
-          }
-        }
-      }, 150);
+      scheduleRemoteDisplaySizeSync();
     });
+    resizeObserver.observe(container);
 
-    resizeObserver.observe(containerRef.current);
+    const tabBar = document.querySelector("[data-termix-tab-bar]");
+    const mobileBar = document.querySelector("[data-termix-mobile-bottom-bar]");
+    if (tabBar) resizeObserver.observe(tabBar);
+    if (mobileBar) resizeObserver.observe(mobileBar);
+
+    const onViewportChange = () => scheduleRemoteDisplaySizeSync();
+    window.addEventListener("resize", onViewportChange);
+    window.visualViewport?.addEventListener("resize", onViewportChange);
+    window.visualViewport?.addEventListener("scroll", onViewportChange);
 
     return () => {
       resizeObserver.disconnect();
+      window.removeEventListener("resize", onViewportChange);
+      window.visualViewport?.removeEventListener("resize", onViewportChange);
+      window.visualViewport?.removeEventListener("scroll", onViewportChange);
     };
-  }, [rescaleDisplay]);
+  }, [scheduleRemoteDisplaySizeSync]);
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;
@@ -585,7 +586,7 @@ export const GuacamoleDisplay = forwardRef<
     >
       <div
         ref={displayRef}
-        className="relative w-full h-full flex items-center justify-center"
+        className="relative w-full h-full flex items-start justify-center"
         style={{
           cursor: isReady ? "none" : "default",
           visibility: isReady ? "visible" : "hidden",

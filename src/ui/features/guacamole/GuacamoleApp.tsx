@@ -16,12 +16,14 @@ interface GuacamoleAppProps {
   hostId?: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
+  isVisible?: boolean;
 }
 
 const GuacamoleApp: React.FC<GuacamoleAppProps> = ({
   hostId,
   tabId,
   protocol,
+  isVisible = true,
 }) => {
   const { t } = useTranslation();
 
@@ -82,6 +84,7 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({
             hostConfig={hostConfig}
             tabId={tabId}
             protocol={protocol}
+            isVisible={isVisible}
           />
         );
       }}
@@ -94,6 +97,7 @@ interface GuacamoleAppInnerProps {
   hostConfig: Pick<SSHHost, "connectionType">;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
+  isVisible?: boolean;
 }
 
 const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
@@ -101,6 +105,7 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
   hostConfig,
   tabId,
   protocol,
+  isVisible = true,
 }) => {
   const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
@@ -233,7 +238,7 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
           protocol: resolvedProtocol,
           type: resolvedProtocol,
         }}
-        isVisible={true}
+        isVisible={isVisible}
         onError={(err) => setConnectionError(err)}
       />
       <GuacamoleToolbar displayRef={displayRef} protocol={resolvedProtocol} />

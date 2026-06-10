@@ -71,7 +71,10 @@ export function MobileBottomBar({
   const moreActive = MORE_ITEMS.some((i) => i.view === railView) && sidebarOpen;
 
   return (
-    <div className="md:hidden flex items-stretch shrink-0 bg-sidebar border-t border-border safe-bottom">
+    <div
+      className="md:hidden flex items-stretch shrink-0 bg-sidebar border-t border-border safe-bottom"
+      data-termix-mobile-bottom-bar
+    >
       {PRIMARY_ITEMS.map((item) => {
         const active = sidebarOpen && railView === item.view;
         const hasDot = item.view === "split-screen" && splitMode !== "none";
