@@ -2422,6 +2422,7 @@
     "editTagsTitle": "Edit tags for \"{{name}}\"",
     "killPane": "Kill pane",
     "resizeTree": "Drag to resize — double-click to reset",
+    "reattach": "Re-attach (fixes a garbled view)",
     "killPaneTitle": "Kill pane {{id}}?",
     "killPaneBody": "The process running in this pane will be terminated. Killing the last pane closes its window.",
     "paneKillFailed": "Failed to kill pane",

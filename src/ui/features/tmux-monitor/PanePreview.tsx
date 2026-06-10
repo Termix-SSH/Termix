@@ -3,12 +3,13 @@
 // the native tmux_attach flow, so the pane is fully usable — typing, mouse
 // scrolling and tmux copy-mode all behave exactly like a normal terminal tab.
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Activity,
   Cpu,
   MemoryStick,
+  RotateCw,
   SquareSplitHorizontal,
   SquareSplitVertical,
   Trash2,
@@ -16,7 +17,10 @@ import {
 } from "lucide-react";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
 import { Terminal } from "@/features/terminal/Terminal";
-import type { TerminalHostConfig } from "@/features/terminal/Terminal";
+import type {
+  TerminalHandle,
+  TerminalHostConfig,
+} from "@/features/terminal/Terminal";
 import type { SSHHost } from "@/types/index";
 import type { TmuxPaneMetrics } from "@/api/tmux-monitor-api";
 import { formatMem } from "./format";
@@ -26,6 +30,9 @@ interface PanePreviewProps {
   host: SSHHost;
   pane: SelectedPane;
   metrics?: TmuxPaneMetrics;
+  /** Imperative handle of the embedded terminal, used by the parent to nudge
+   * a refit/redraw after layout-changing tmux actions. */
+  terminalRef?: React.RefObject<TerminalHandle | null>;
   /** Split the window containing this pane ("h" = new pane to the right,
    * "v" = below — tmux -h/-v semantics). */
   onSplit: (direction: "h" | "v") => void;
@@ -44,6 +51,7 @@ export function PanePreview({
   host,
   pane,
   metrics,
+  terminalRef,
   onSplit,
   onKillPane,
   onClose,
@@ -53,6 +61,14 @@ export function PanePreview({
   // host or session changes. Pane switches within a session go through the
   // focus endpoint instead, so the connection is reused.
   const instanceIdRef = useRef<string>(newInstanceId());
+  // Bumping this remounts the embedded terminal with a fresh PTY — the rescue
+  // hatch when the attached client's rendering gets out of sync.
+  const [attachNonce, setAttachNonce] = useState(0);
+
+  function reattach() {
+    instanceIdRef.current = newInstanceId();
+    setAttachNonce((n) => n + 1);
+  }
 
   return (
     <>
@@ -111,6 +127,14 @@ export function PanePreview({
           <div className="h-3.5 border-l border-border" />
           <button
             className="text-muted-foreground hover:text-foreground"
+            title={t("tmuxMonitor.reattach")}
+            aria-label={t("tmuxMonitor.reattach")}
+            onClick={reattach}
+          >
+            <RotateCw className="size-3.5" />
+          </button>
+          <button
+            className="text-muted-foreground hover:text-foreground"
             title={t("tmuxMonitor.closePreview")}
             aria-label={t("tmuxMonitor.closePreview")}
             onClick={onClose}
@@ -120,8 +144,9 @@ export function PanePreview({
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <CommandHistoryProvider>
+        <CommandHistoryProvider key={attachNonce}>
           <Terminal
+            ref={terminalRef}
             hostConfig={
               {
                 ...host,

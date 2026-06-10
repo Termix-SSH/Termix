@@ -65,6 +65,7 @@ import {
   type TmuxSearchMatch,
   type TmuxSearchResult,
 } from "@/api/tmux-monitor-api";
+import type { TerminalHandle } from "@/features/terminal/Terminal";
 import { SessionTree, type SessionMetricsAgg } from "./SessionTree";
 import { SearchResults } from "./SearchResults";
 import { PanePreview } from "./PanePreview";
@@ -128,6 +129,18 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   // localStorage (or touched by the user) and must not be overwritten by the
   // default expand-all behavior.
   const expandedRestoredRef = useRef(false);
+  // Imperative handle of the preview's embedded terminal. After tmux actions
+  // that change the layout (split / kill-pane / new-window) the attached
+  // client can render stale borders; a refit forces a PTY resize which makes
+  // tmux fully redraw the client.
+  const previewTermRef = useRef<TerminalHandle | null>(null);
+  const nudgePreviewRedraw = useCallback(() => {
+    setTimeout(() => {
+      previewTermRef.current?.fit?.();
+      previewTermRef.current?.notifyResize?.();
+      previewTermRef.current?.refresh?.();
+    }, 300);
+  }, []);
 
   // -- resizable tree panel (same pattern as the AppShell host sidebar) -------
   const [treeWidth, setTreeWidth] = useState(() => {
@@ -457,11 +470,12 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
       try {
         await splitTmuxPane(selectedHostId, paneId, direction);
         loadOverview(selectedHostId, true);
+        nudgePreviewRedraw();
       } catch {
         toast.error(t("tmuxMonitor.splitFailed"));
       }
     },
-    [selectedHostId, loadOverview, t],
+    [selectedHostId, loadOverview, nudgePreviewRedraw, t],
   );
 
   // -- new window ---------------------------------------------------------------
@@ -471,11 +485,12 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
       try {
         await createTmuxWindow(selectedHostId, sessionName);
         loadOverview(selectedHostId, true);
+        nudgePreviewRedraw();
       } catch {
         toast.error(t("tmuxMonitor.windowCreateFailed"));
       }
     },
-    [selectedHostId, loadOverview, t],
+    [selectedHostId, loadOverview, nudgePreviewRedraw, t],
   );
 
   // -- collapse / expand all ----------------------------------------------------
@@ -573,6 +588,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
       if (selectedPane?.paneId === killPaneTarget) setSelectedPane(null);
       setKillPaneTarget(null);
       loadOverview(selectedHostId, true);
+      nudgePreviewRedraw();
     } catch (err) {
       const axiosErr = err as { response?: { data?: { error?: string } } };
       toast.error(
@@ -959,6 +975,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               host={selectedHost}
               pane={selectedPane}
               metrics={selectedPaneMetrics}
+              terminalRef={previewTermRef}
               onSplit={(direction) => splitPane(selectedPane.paneId, direction)}
               onKillPane={() => setKillPaneTarget(selectedPane.paneId)}
               onClose={() => setSelectedPane(null)}
