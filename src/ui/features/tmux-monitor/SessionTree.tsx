@@ -346,7 +346,7 @@ export function SessionTree({
                         {win.index}: {win.name}
                       </span>
                       <button
-                        className="-m-1 ml-auto rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                        className="-m-1 ml-auto shrink-0 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
                         title={t("tmuxMonitor.killWindow")}
                         aria-label={t("tmuxMonitor.killWindow")}
                         onClick={(e) => {
@@ -374,54 +374,60 @@ export function SessionTree({
                             }
                           >
                             <SquareTerminal className="size-3 shrink-0" />
-                            <span className="shrink-0">
+                            <span className="truncate">
                               {pane.index}: {pane.command}
                             </span>
                             <span
-                              className="truncate text-muted-foreground/70"
+                              className="min-w-0 flex-1 truncate text-muted-foreground/70"
                               title={pane.path}
                             >
                               {pane.path}
                             </span>
-                            <span className="ml-auto flex shrink-0 items-center gap-1">
+                            {/* Same overlay stack as the session rows: cpu
+                            label and hover actions share one grid cell so the
+                            buttons never widen the row (they would get
+                            clipped on a narrow panel). */}
+                            <span className="ml-auto grid shrink-0">
                               {m && m.cpuPercent > 0 && (
-                                <span className="text-[10px] text-muted-foreground">
+                                <span className="pointer-events-none col-start-1 row-start-1 justify-self-end self-center text-[10px] text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0">
                                   {m.cpuPercent.toFixed(0)}%
                                 </span>
                               )}
-                              <button
-                                className="-m-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
-                                title={t("tmuxMonitor.splitRight")}
-                                aria-label={t("tmuxMonitor.splitRight")}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onSplitPane(pane.id, "h");
-                                }}
-                              >
-                                <SquareSplitHorizontal className="size-3" />
-                              </button>
-                              <button
-                                className="-m-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
-                                title={t("tmuxMonitor.splitDown")}
-                                aria-label={t("tmuxMonitor.splitDown")}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onSplitPane(pane.id, "v");
-                                }}
-                              >
-                                <SquareSplitVertical className="size-3" />
-                              </button>
-                              <button
-                                className="-m-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
-                                title={t("tmuxMonitor.killPane")}
-                                aria-label={t("tmuxMonitor.killPane")}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onKillPane(pane.id);
-                                }}
-                              >
-                                <X className="size-3" />
-                              </button>
+                              <span className="pointer-events-none z-10 col-start-1 row-start-1 flex items-center gap-1 justify-self-end opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
+                                <button
+                                  className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                                  title={t("tmuxMonitor.splitRight")}
+                                  aria-label={t("tmuxMonitor.splitRight")}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSplitPane(pane.id, "h");
+                                  }}
+                                >
+                                  <SquareSplitHorizontal className="size-3" />
+                                </button>
+                                <button
+                                  className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                                  title={t("tmuxMonitor.splitDown")}
+                                  aria-label={t("tmuxMonitor.splitDown")}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSplitPane(pane.id, "v");
+                                  }}
+                                >
+                                  <SquareSplitVertical className="size-3" />
+                                </button>
+                                <button
+                                  className="-m-1 rounded p-1 text-muted-foreground hover:text-destructive"
+                                  title={t("tmuxMonitor.killPane")}
+                                  aria-label={t("tmuxMonitor.killPane")}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onKillPane(pane.id);
+                                  }}
+                                >
+                                  <X className="size-3" />
+                                </button>
+                              </span>
                             </span>
                           </div>
                         );
