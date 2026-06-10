@@ -161,10 +161,13 @@ export function SessionTree({
                   changes size. Buttons stay keyboard-focusable (opacity, not
                   display:none) and focus-within reveals them. */}
               <span className="ml-auto grid shrink-0">
-                <span className="col-start-1 row-start-1 justify-self-end self-center text-xs text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0">
+                {/* pointer-events-none + z-10 matter: at opacity-0 the label
+                    becomes a stacking context painted above its plain-flow
+                    sibling, and would swallow the buttons' clicks. */}
+                <span className="pointer-events-none col-start-1 row-start-1 justify-self-end self-center text-xs text-muted-foreground transition-opacity group-hover:opacity-0 group-focus-within:opacity-0">
                   {metaLabel(session)}
                 </span>
-                <span className="pointer-events-none col-start-1 row-start-1 flex items-center gap-1.5 justify-self-end opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
+                <span className="pointer-events-none z-10 col-start-1 row-start-1 flex items-center gap-1.5 justify-self-end opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
                   <button
                     className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
                     title={t("tmuxMonitor.attachSessionTooltip", {
