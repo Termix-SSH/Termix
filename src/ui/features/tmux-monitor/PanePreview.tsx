@@ -11,6 +11,7 @@ import {
   MemoryStick,
   SquareSplitHorizontal,
   SquareSplitVertical,
+  Trash2,
   X,
 } from "lucide-react";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
@@ -28,6 +29,8 @@ interface PanePreviewProps {
   /** Split the window containing this pane ("h" = new pane to the right,
    * "v" = below — tmux -h/-v semantics). */
   onSplit: (direction: "h" | "v") => void;
+  /** Ask for confirmation and kill this pane. */
+  onKillPane: () => void;
   onClose: () => void;
 }
 
@@ -42,6 +45,7 @@ export function PanePreview({
   pane,
   metrics,
   onSplit,
+  onKillPane,
   onClose,
 }: PanePreviewProps) {
   const { t } = useTranslation();
@@ -95,6 +99,14 @@ export function PanePreview({
             onClick={() => onSplit("v")}
           >
             <SquareSplitVertical className="size-3.5" />
+          </button>
+          <button
+            className="text-muted-foreground hover:text-destructive"
+            title={t("tmuxMonitor.killPane")}
+            aria-label={t("tmuxMonitor.killPane")}
+            onClick={onKillPane}
+          >
+            <Trash2 className="size-3.5" />
           </button>
           <div className="h-3.5 border-l border-border" />
           <button

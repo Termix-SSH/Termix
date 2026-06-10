@@ -100,6 +100,14 @@ export async function killTmuxSession(
   await tmuxMonitorApi.post(`/${hostId}/kill`, { sessionName });
 }
 
+/** Kill a single pane (last pane of a window closes the window). */
+export async function killTmuxPane(
+  hostId: number,
+  paneId: string,
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/kill-pane`, { paneId });
+}
+
 /** Split the window containing a pane: "h" adds a pane to the right,
  * "v" below (tmux -h/-v semantics). */
 export async function splitTmuxPane(

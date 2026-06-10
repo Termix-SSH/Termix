@@ -18,6 +18,7 @@ import {
   SquareTerminal,
   Tag,
   Trash2,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/badge";
 import {
@@ -59,6 +60,8 @@ interface SessionTreeProps {
   onRenameSession: (sessionName: string) => void;
   /** Open the kill confirmation for a session (… menu). */
   onKillSession: (sessionName: string) => void;
+  /** Open the kill confirmation for a single pane (hover ✕ on pane rows). */
+  onKillPane: (paneId: string) => void;
   /** Timestamp used to render relative times; bumped periodically by the
    * parent so "Xm ago" labels do not go stale. */
   now: number;
@@ -77,6 +80,7 @@ export function SessionTree({
   onNewWindow,
   onRenameSession,
   onKillSession,
+  onKillPane,
   now,
 }: SessionTreeProps) {
   const { t } = useTranslation();
@@ -162,7 +166,7 @@ export function SessionTree({
                 </span>
                 <span className="pointer-events-none col-start-1 row-start-1 flex items-center gap-1.5 justify-self-end opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
                   <button
-                    className="text-muted-foreground hover:text-foreground"
+                    className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
                     title={t("tmuxMonitor.attachSessionTooltip", {
                       session: session.name,
                     })}
@@ -177,7 +181,7 @@ export function SessionTree({
                     <Play className="size-3.5" />
                   </button>
                   <button
-                    className="text-muted-foreground hover:text-foreground"
+                    className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground"
                     title={t("tmuxMonitor.newWindow")}
                     aria-label={t("tmuxMonitor.newWindow")}
                     onClick={(e) => {
@@ -190,7 +194,7 @@ export function SessionTree({
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
-                        className="text-muted-foreground hover:text-foreground data-[state=open]:text-foreground"
+                        className="-m-1 rounded p-1 text-muted-foreground hover:text-foreground data-[state=open]:text-foreground"
                         title={t("tmuxMonitor.moreActions")}
                         aria-label={t("tmuxMonitor.moreActions")}
                         onClick={(e) => e.stopPropagation()}
@@ -259,7 +263,7 @@ export function SessionTree({
                         return (
                           <div
                             key={pane.id}
-                            className={`ml-5 flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs hover:bg-muted/40 ${isSelected ? "bg-accent-brand/10" : ""}`}
+                            className={`group ml-5 flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs hover:bg-muted/40 ${isSelected ? "bg-accent-brand/10" : ""}`}
                             onClick={() =>
                               onSelectPane({
                                 paneId: pane.id,
@@ -278,11 +282,24 @@ export function SessionTree({
                             >
                               {pane.path}
                             </span>
-                            {m && m.cpuPercent > 0 && (
-                              <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                                {m.cpuPercent.toFixed(0)}%
-                              </span>
-                            )}
+                            <span className="ml-auto flex shrink-0 items-center gap-1">
+                              {m && m.cpuPercent > 0 && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {m.cpuPercent.toFixed(0)}%
+                                </span>
+                              )}
+                              <button
+                                className="-m-1 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+                                title={t("tmuxMonitor.killPane")}
+                                aria-label={t("tmuxMonitor.killPane")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onKillPane(pane.id);
+                                }}
+                              >
+                                <X className="size-3" />
+                              </button>
+                            </span>
                           </div>
                         );
                       })}

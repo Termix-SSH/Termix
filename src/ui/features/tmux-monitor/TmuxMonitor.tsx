@@ -46,6 +46,7 @@ import {
 import { Skeleton } from "@/components/skeleton";
 import { ScrollArea } from "@/components/scroll-area";
 import { getSSHHosts } from "@/main-axios";
+import { isElectron } from "@/lib/electron";
 import type { SSHHost } from "@/types/index";
 import {
   getTmuxOverview,
@@ -57,6 +58,7 @@ import {
   createTmuxWindow,
   renameTmuxSession,
   killTmuxSession,
+  killTmuxPane,
   splitTmuxPane,
   type TmuxOverview,
   type TmuxPaneMetrics,
@@ -513,6 +515,29 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     }
   }
 
+  // -- kill pane ------------------------------------------------------------
+  const [killPaneTarget, setKillPaneTarget] = useState<string | null>(null);
+  const [killingPane, setKillingPane] = useState(false);
+
+  async function confirmKillPane() {
+    if (selectedHostId === null || killPaneTarget === null || killingPane)
+      return;
+    setKillingPane(true);
+    try {
+      await killTmuxPane(selectedHostId, killPaneTarget);
+      if (selectedPane?.paneId === killPaneTarget) setSelectedPane(null);
+      setKillPaneTarget(null);
+      loadOverview(selectedHostId, true);
+    } catch (err) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      toast.error(
+        axiosErr.response?.data?.error || t("tmuxMonitor.paneKillFailed"),
+      );
+    } finally {
+      setKillingPane(false);
+    }
+  }
+
   // -- tags -----------------------------------------------------------------
   const [tagsTarget, setTagsTarget] = useState<string | null>(null);
   const [tagsDraft, setTagsDraft] = useState("");
@@ -543,13 +568,46 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     }
   }
 
+  // Attach inside the monitor: expand the session and select its active pane
+  // so the embedded terminal (a real tmux attach) shows it.
+  const attachInline = useCallback(
+    (sessionName: string) => {
+      const session = overview?.sessions.find((s) => s.name === sessionName);
+      if (!session) return;
+      const activeWindow =
+        session.windows.find((w) => w.active) ?? session.windows[0];
+      const activePane =
+        activeWindow?.panes.find((p) => p.active) ?? activeWindow?.panes[0];
+      if (!activePane || !activeWindow) return;
+      if (!expandedSessions.has(sessionName)) {
+        const next = new Set(expandedSessions).add(sessionName);
+        setExpandedSessions(next);
+        expandedRestoredRef.current = true;
+        if (selectedHostId !== null) persistExpanded(selectedHostId, next);
+      }
+      selectPane({
+        paneId: activePane.id,
+        sessionName,
+        windowIndex: activeWindow.index,
+      });
+    },
+    [overview, expandedSessions, selectedHostId, persistExpanded, selectPane],
+  );
+
   function openTerminal(sessionName?: string) {
     if (selectedHostId === null) return;
+    const session = sessionName ?? selectedPane?.sessionName;
+    // window.open is denied by Electron's window-open handler (internal
+    // file:// URLs never reach the browser), so the desktop app attaches in
+    // the monitor's own terminal instead.
+    if (isElectron()) {
+      if (session) attachInline(session);
+      return;
+    }
     const params = new URLSearchParams({
       view: "terminal",
       hostId: String(selectedHostId),
     });
-    const session = sessionName ?? selectedPane?.sessionName;
     if (session) params.set("tmuxSession", session);
     window.open(`${window.location.pathname}?${params.toString()}`, "_blank");
   }
@@ -759,6 +817,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                   setRenameTarget(name);
                 }}
                 onKillSession={setKillTarget}
+                onKillPane={setKillPaneTarget}
                 now={now}
               />
             )}
@@ -844,6 +903,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               pane={selectedPane}
               metrics={selectedPaneMetrics}
               onSplit={splitPane}
+              onKillPane={() => setKillPaneTarget(selectedPane.paneId)}
               onClose={() => setSelectedPane(null)}
             />
           ) : (
@@ -931,6 +991,38 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Kill pane confirmation */}
+      <AlertDialog
+        open={killPaneTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setKillPaneTarget(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("tmuxMonitor.killPaneTitle", { id: killPaneTarget })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("tmuxMonitor.killPaneBody")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={killingPane}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmKillPane();
+              }}
+            >
+              {t("tmuxMonitor.kill")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Kill session confirmation */}
       <AlertDialog
