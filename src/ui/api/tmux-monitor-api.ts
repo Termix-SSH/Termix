@@ -61,9 +61,10 @@ export async function getTmuxPaneCapture(
   hostId: number,
   paneId: string,
   lines = 0,
+  ansi = false,
 ): Promise<string> {
   const response = await tmuxMonitorApi.get(`/${hostId}/capture`, {
-    params: { paneId, lines },
+    params: { paneId, lines, ...(ansi ? { ansi: 1 } : {}) },
   });
   return response.data.content ?? "";
 }

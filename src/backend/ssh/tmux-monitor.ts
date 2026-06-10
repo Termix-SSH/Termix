@@ -409,12 +409,15 @@ app.get("/tmux_monitor/:hostId/capture", async (req, res) => {
   }
   let lines = parseInt(String(req.query.lines || "0"), 10) || 0;
   lines = Math.min(Math.max(lines, 0), MAX_CAPTURE_LINES);
+  // ansi=1 preserves escape sequences (-e) so the frontend xterm preview can
+  // render colors. Default stays plain text (search endpoint relies on it).
+  const ansi = String(req.query.ansi || "") === "1";
 
   try {
     const content = await withHostConnection(host, (conn) =>
       execCommand(
         conn,
-        `tmux capture-pane -p -J -t ${shellEscape(paneId)}${lines > 0 ? ` -S -${lines}` : ""} 2>/dev/null`,
+        `tmux capture-pane -p${ansi ? " -e" : ""} -J -t ${shellEscape(paneId)}${lines > 0 ? ` -S -${lines}` : ""} 2>/dev/null`,
       ),
     );
     res.json({ paneId, content });

@@ -2,67 +2,54 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  Activity,
-  ChevronDown,
-  ChevronRight,
-  Cpu,
   Layers,
-  MemoryStick,
   MonitorPlay,
   RefreshCw,
   Search,
   Server,
   SquareTerminal,
-  Tag,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import { Badge } from "@/components/badge";
+import { Skeleton } from "@/components/skeleton";
 import { ScrollArea } from "@/components/scroll-area";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import { getSSHHosts } from "@/main-axios";
 import type { SSHHost } from "@/types/index";
 import {
   getTmuxOverview,
-  getTmuxPaneCapture,
   getTmuxMetrics,
   searchTmux,
   setTmuxSessionTags,
   type TmuxOverview,
   type TmuxPaneMetrics,
   type TmuxSearchMatch,
-  type TmuxSessionOverview,
 } from "@/api/tmux-monitor-api";
+import { SessionTree, type SessionMetricsAgg } from "./SessionTree";
+import { SearchResults } from "./SearchResults";
+import { PanePreview } from "./PanePreview";
+import type { SelectedPane } from "./types";
 
 const OVERVIEW_POLL_MS = 10_000;
-const CAPTURE_POLL_MS = 2_000;
 const METRICS_POLL_MS = 10_000;
+const TIME_TICK_MS = 30_000;
 
-function formatRelativeTime(
-  unixSeconds: number,
-  t: (k: string, o?: object) => string,
-): string {
-  if (!unixSeconds) return "";
-  const diff = Math.max(0, Date.now() / 1000 - unixSeconds);
-  if (diff < 60) return t("tmuxMonitor.timeJustNow");
-  if (diff < 3600)
-    return t("tmuxMonitor.timeMinutes", { count: Math.floor(diff / 60) });
-  if (diff < 86400)
-    return t("tmuxMonitor.timeHours", { count: Math.floor(diff / 3600) });
-  return t("tmuxMonitor.timeDays", { count: Math.floor(diff / 86400) });
+const LS_PREFIX = "termix-tmux-monitor-";
+const LS_LAST_HOST_KEY = `${LS_PREFIX}last-host`;
+
+function expandedStorageKey(hostId: number): string {
+  return `${LS_PREFIX}expanded-${hostId}`;
 }
 
-function formatMem(kb: number): string {
-  if (kb >= 1024 * 1024) return `${(kb / 1024 / 1024).toFixed(1)} GB`;
-  if (kb >= 1024) return `${(kb / 1024).toFixed(0)} MB`;
-  return `${kb} KB`;
-}
-
-interface SelectedPane {
-  paneId: string;
-  sessionName: string;
-  windowIndex: number;
+function readStoredExpanded(hostId: number): Set<string> | null {
+  try {
+    const raw = localStorage.getItem(expandedStorageKey(hostId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return new Set(parsed.filter((v): v is string => typeof v === "string"));
+  } catch {
+    return null;
+  }
 }
 
 export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
@@ -77,15 +64,20 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     new Set(),
   );
   const [selectedPane, setSelectedPane] = useState<SelectedPane | null>(null);
-  const [capture, setCapture] = useState("");
   const [metrics, setMetrics] = useState<TmuxPaneMetrics[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchedQuery, setSearchedQuery] = useState("");
   const [searchResults, setSearchResults] = useState<TmuxSearchMatch[] | null>(
     null,
   );
   const [searching, setSearching] = useState(false);
-  const [tagDraft, setTagDraft] = useState("");
-  const captureRef = useRef<HTMLPreElement>(null);
+  // Bumped every 30s so relative "Xm ago" labels do not go stale.
+  const [now, setNow] = useState(() => Date.now());
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // True when the expanded-session set for the current host was restored from
+  // localStorage (or touched by the user) and must not be overwritten by the
+  // default expand-all behavior.
+  const expandedRestoredRef = useRef(false);
 
   // -- hosts ----------------------------------------------------------------
   useEffect(() => {
@@ -97,17 +89,32 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
         );
         setHosts(sshHosts);
         if (sshHosts.length > 0) {
-          const preferred =
+          let preferred: number | undefined;
+          if (
             initialHostId != null &&
             sshHosts.some((h) => h.id === initialHostId)
-              ? initialHostId
-              : sshHosts[0].id;
-          setSelectedHostId(preferred);
+          ) {
+            preferred = initialHostId;
+          } else {
+            const stored = Number(localStorage.getItem(LS_LAST_HOST_KEY));
+            if (
+              Number.isFinite(stored) &&
+              sshHosts.some((h) => h.id === stored)
+            )
+              preferred = stored;
+          }
+          setSelectedHostId(preferred ?? sshHosts[0].id);
         }
       })
       .catch(() => toast.error(t("tmuxMonitor.failedToLoadHosts")))
       .finally(() => setHostsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // -- relative time refresh --------------------------------------------------
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), TIME_TICK_MS);
+    return () => clearInterval(interval);
   }, []);
 
   // -- overview polling -----------------------------------------------------
@@ -121,7 +128,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
         const data = await getTmuxOverview(hostId);
         setOverview(data);
         setExpandedSessions((prev) => {
-          if (prev.size > 0) return prev;
+          if (expandedRestoredRef.current || prev.size > 0) return prev;
           return new Set(data.sessions.map((s) => s.name));
         });
       } catch (err) {
@@ -140,10 +147,17 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
 
   useEffect(() => {
     if (selectedHostId === null) return;
+    try {
+      localStorage.setItem(LS_LAST_HOST_KEY, String(selectedHostId));
+    } catch {
+      // localStorage may be unavailable
+    }
     setOverview(null);
     setSelectedPane(null);
     setSearchResults(null);
-    setExpandedSessions(new Set());
+    const storedExpanded = readStoredExpanded(selectedHostId);
+    expandedRestoredRef.current = storedExpanded !== null;
+    setExpandedSessions(storedExpanded ?? new Set());
     setMetrics([]);
     loadOverview(selectedHostId);
     const interval = setInterval(() => {
@@ -172,38 +186,33 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     };
   }, [selectedHostId, overview?.available]);
 
-  // -- pane capture polling -------------------------------------------------
+  // -- keyboard shortcuts -----------------------------------------------------
   useEffect(() => {
-    if (selectedHostId === null || !selectedPane) return;
-    let cancelled = false;
-    const load = () => {
-      if (document.hidden) return;
-      getTmuxPaneCapture(selectedHostId, selectedPane.paneId)
-        .then((content) => {
-          if (cancelled) return;
-          setCapture(content);
-          requestAnimationFrame(() => {
-            const el = captureRef.current;
-            if (el) el.scrollTop = el.scrollHeight;
-          });
-        })
-        .catch(() => {});
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "/") {
+        const target = e.target as HTMLElement | null;
+        const tag = target?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable)
+          return;
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      } else if (e.key === "Escape") {
+        if (searchResults !== null) setSearchResults(null);
+        else if (selectedPane) setSelectedPane(null);
+      }
     };
-    setCapture("");
-    load();
-    const interval = setInterval(load, CAPTURE_POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [selectedHostId, selectedPane]);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [searchResults, selectedPane]);
 
   // -- search ---------------------------------------------------------------
   async function runSearch() {
     if (selectedHostId === null || !searchQuery.trim()) return;
+    const query = searchQuery.trim();
     setSearching(true);
     try {
-      setSearchResults(await searchTmux(selectedHostId, searchQuery.trim()));
+      setSearchResults(await searchTmux(selectedHostId, query));
+      setSearchedQuery(query);
     } catch {
       toast.error(t("tmuxMonitor.searchFailed"));
     } finally {
@@ -211,15 +220,45 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     }
   }
 
-  // -- tags -----------------------------------------------------------------
-  async function saveTags(session: TmuxSessionOverview) {
-    if (selectedHostId === null) return;
-    const tags = tagDraft
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+  const persistExpanded = useCallback((hostId: number, set: Set<string>) => {
     try {
-      await setTmuxSessionTags(selectedHostId, session.name, tags);
+      localStorage.setItem(
+        expandedStorageKey(hostId),
+        JSON.stringify([...set]),
+      );
+    } catch {
+      // localStorage may be unavailable
+    }
+  }, []);
+
+  function toggleSession(name: string) {
+    const next = new Set(expandedSessions);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    setExpandedSessions(next);
+    expandedRestoredRef.current = true;
+    if (selectedHostId !== null) persistExpanded(selectedHostId, next);
+  }
+
+  function handleSearchSelect(match: TmuxSearchMatch) {
+    setSelectedPane({
+      paneId: match.paneId,
+      sessionName: match.sessionName,
+      windowIndex: match.windowIndex,
+    });
+    if (!expandedSessions.has(match.sessionName)) {
+      const next = new Set(expandedSessions).add(match.sessionName);
+      setExpandedSessions(next);
+      expandedRestoredRef.current = true;
+      if (selectedHostId !== null) persistExpanded(selectedHostId, next);
+    }
+  }
+
+  // -- tags -----------------------------------------------------------------
+  async function saveTags(sessionName: string, tags: string[]) {
+    if (selectedHostId === null) return;
+    try {
+      await setTmuxSessionTags(selectedHostId, sessionName, tags);
       toast.success(t("tmuxMonitor.tagsSaved"));
       loadOverview(selectedHostId, true);
     } catch {
@@ -242,10 +281,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   }, [metrics]);
 
   const metricsBySession = useMemo(() => {
-    const map = new Map<
-      string,
-      { cpu: number; memKb: number; gpuMb: number }
-    >();
+    const map = new Map<string, SessionMetricsAgg>();
     for (const m of metrics) {
       const agg = map.get(m.sessionName) || { cpu: 0, memKb: 0, gpuMb: 0 };
       agg.cpu += m.cpuPercent;
@@ -257,18 +293,12 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   }, [metrics]);
 
   const selectedHost = hosts.find((h) => h.id === selectedHostId);
+  const hostLabel = selectedHost
+    ? selectedHost.name || `${selectedHost.username}@${selectedHost.ip}`
+    : "";
   const selectedPaneMetrics = selectedPane
     ? metricsByPane.get(selectedPane.paneId)
     : undefined;
-
-  function toggleSession(name: string) {
-    setExpandedSessions((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
-  }
 
   return (
     <div className="flex h-full w-full bg-dark-bg text-foreground">
@@ -297,151 +327,72 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
 
         <ScrollArea className="flex-1">
           <div className="p-2">
+            {!hostsLoading && hosts.length === 0 && (
+              <div className="px-2 py-4">
+                <p className="text-sm text-muted-foreground">
+                  {t("tmuxMonitor.noHosts")}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  {t("tmuxMonitor.noHostsHint")}
+                </p>
+              </div>
+            )}
             {overviewLoading && (
-              <p className="px-2 py-4 text-sm text-muted-foreground">
-                {t("common.loading")}
-              </p>
+              <div className="space-y-3 px-2 py-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="space-y-1.5">
+                    <Skeleton className="h-5 w-full rounded-md" />
+                    <Skeleton className="ml-6 h-3.5 w-3/4 rounded-md" />
+                    <Skeleton className="ml-6 h-3.5 w-2/3 rounded-md" />
+                  </div>
+                ))}
+              </div>
             )}
             {overviewError && (
-              <p className="px-2 py-4 text-sm text-red-500">{overviewError}</p>
+              <div className="space-y-2 px-2 py-4">
+                <p className="text-sm text-red-500">{overviewError}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() =>
+                    selectedHostId !== null && loadOverview(selectedHostId)
+                  }
+                >
+                  <RefreshCw className="mr-1 size-3" />
+                  {t("tmuxMonitor.retry")}
+                </Button>
+              </div>
             )}
             {overview && !overview.available && (
-              <p className="px-2 py-4 text-sm text-muted-foreground">
-                {t("tmuxMonitor.tmuxUnavailable")}
-              </p>
+              <div className="px-2 py-4">
+                <p className="text-sm text-muted-foreground">
+                  {t("tmuxMonitor.tmuxUnavailable")}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  {t("tmuxMonitor.tmuxInstallHint")}{" "}
+                  <code className="font-mono">sudo apt install tmux</code>
+                </p>
+              </div>
             )}
             {overview?.available && overview.sessions.length === 0 && (
               <p className="px-2 py-4 text-sm text-muted-foreground">
                 {t("tmuxMonitor.noSessions")}
               </p>
             )}
-            {overview?.available &&
-              overview.sessions.map((session) => {
-                const expanded = expandedSessions.has(session.name);
-                const agg = metricsBySession.get(session.name);
-                return (
-                  <div key={session.name} className="mb-1">
-                    <div
-                      className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 hover:bg-dark-hover"
-                      onClick={() => toggleSession(session.name)}
-                    >
-                      {expanded ? (
-                        <ChevronDown className="size-3.5 shrink-0" />
-                      ) : (
-                        <ChevronRight className="size-3.5 shrink-0" />
-                      )}
-                      <span
-                        className={`size-2 shrink-0 rounded-full ${session.attachedClients > 0 ? "bg-green-500" : "bg-gray-500"}`}
-                        title={
-                          session.attachedClients > 0
-                            ? t("tmuxMonitor.attached")
-                            : t("tmuxMonitor.detached")
-                        }
-                      />
-                      <span className="truncate text-sm font-medium">
-                        {session.name}
-                      </span>
-                      <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                        {formatRelativeTime(session.lastActivity, t)}
-                      </span>
-                    </div>
-
-                    <div className="ml-6 flex flex-wrap items-center gap-1 pb-1">
-                      {session.tags.map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="secondary"
-                          className="h-4 px-1.5 text-[10px]"
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                      <Popover
-                        onOpenChange={(open) => {
-                          if (open) setTagDraft(session.tags.join(", "));
-                        }}
-                      >
-                        <PopoverTrigger asChild>
-                          <button
-                            className="text-muted-foreground hover:text-foreground"
-                            title={t("tmuxMonitor.editTags")}
-                          >
-                            <Tag className="size-3" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-64 p-2" align="start">
-                          <p className="mb-1 text-xs text-muted-foreground">
-                            {t("tmuxMonitor.tagsHint")}
-                          </p>
-                          <div className="flex gap-1">
-                            <Input
-                              className="h-7 text-xs"
-                              value={tagDraft}
-                              placeholder="YOLO, lab, training"
-                              onChange={(e) => setTagDraft(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") saveTags(session);
-                              }}
-                            />
-                            <Button
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => saveTags(session)}
-                            >
-                              {t("common.save")}
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                      {agg && (
-                        <span className="ml-auto text-[10px] text-muted-foreground">
-                          {agg.cpu.toFixed(0)}% · {formatMem(agg.memKb)}
-                          {agg.gpuMb > 0 ? ` · ${agg.gpuMb} MB GPU` : ""}
-                        </span>
-                      )}
-                    </div>
-
-                    {expanded &&
-                      session.windows.map((win) => (
-                        <div key={win.index} className="ml-5">
-                          <div className="flex items-center gap-1 px-2 py-0.5 text-xs text-muted-foreground">
-                            <SquareTerminal className="size-3 shrink-0" />
-                            <span className="truncate">
-                              {win.index}: {win.name}
-                            </span>
-                          </div>
-                          {win.panes.map((pane) => {
-                            const m = metricsByPane.get(pane.id);
-                            const isSelected = selectedPane?.paneId === pane.id;
-                            return (
-                              <div
-                                key={pane.id}
-                                className={`ml-4 flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs hover:bg-dark-hover ${isSelected ? "bg-dark-active" : ""}`}
-                                onClick={() =>
-                                  setSelectedPane({
-                                    paneId: pane.id,
-                                    sessionName: session.name,
-                                    windowIndex: win.index,
-                                  })
-                                }
-                              >
-                                <MonitorPlay className="size-3 shrink-0" />
-                                <span className="truncate">
-                                  {pane.id} · {pane.command}
-                                </span>
-                                {m && m.cpuPercent > 0 && (
-                                  <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                                    {m.cpuPercent.toFixed(0)}%
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                  </div>
-                );
-              })}
+            {overview?.available && (
+              <SessionTree
+                sessions={overview.sessions}
+                expandedSessions={expandedSessions}
+                onToggleSession={toggleSession}
+                selectedPaneId={selectedPane?.paneId ?? null}
+                onSelectPane={setSelectedPane}
+                metricsByPane={metricsByPane}
+                metricsBySession={metricsBySession}
+                onSaveTags={saveTags}
+                now={now}
+              />
+            )}
           </div>
         </ScrollArea>
       </div>
@@ -452,15 +403,13 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
         <div className="flex items-center gap-2 border-b border-dark-border px-3 py-2">
           <Server className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate text-sm">
-            {selectedHost
-              ? selectedHost.name ||
-                `${selectedHost.username}@${selectedHost.ip}`
-              : t("tmuxMonitor.noHostSelected")}
+            {selectedHost ? hostLabel : t("tmuxMonitor.noHostSelected")}
           </span>
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchInputRef}
                 className="h-8 w-64 pl-7 text-sm"
                 placeholder={t("tmuxMonitor.searchPlaceholder")}
                 value={searchQuery}
@@ -485,6 +434,16 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               size="sm"
               className="h-8"
               disabled={selectedHostId === null}
+              title={
+                selectedHost
+                  ? selectedPane
+                    ? t("tmuxMonitor.attachTooltipPane", {
+                        host: hostLabel,
+                        session: selectedPane.sessionName,
+                      })
+                    : t("tmuxMonitor.attachTooltip", { host: hostLabel })
+                  : undefined
+              }
               onClick={openTerminal}
             >
               <SquareTerminal className="mr-1 size-3.5" />
@@ -495,91 +454,25 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
 
         {/* Search results */}
         {searchResults !== null && (
-          <div className="max-h-56 overflow-y-auto border-b border-dark-border bg-dark-bg-darker">
-            <div className="flex items-center justify-between px-3 py-1.5">
-              <span className="text-xs text-muted-foreground">
-                {searching
-                  ? t("common.loading")
-                  : t("tmuxMonitor.searchResults", {
-                      count: searchResults.length,
-                    })}
-              </span>
-              <button
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => setSearchResults(null)}
-              >
-                <X className="size-3.5" />
-              </button>
-            </div>
-            {searchResults.map((match, i) => (
-              <div
-                key={`${match.paneId}-${match.line}-${i}`}
-                className="flex cursor-pointer items-baseline gap-2 px-3 py-1 text-xs hover:bg-dark-hover"
-                onClick={() =>
-                  setSelectedPane({
-                    paneId: match.paneId,
-                    sessionName: match.sessionName,
-                    windowIndex: match.windowIndex,
-                  })
-                }
-              >
-                <span className="shrink-0 font-medium text-primary">
-                  {match.sessionName} · {match.paneId}
-                </span>
-                <span className="truncate font-mono text-muted-foreground">
-                  {match.text}
-                </span>
-              </div>
-            ))}
-          </div>
+          <SearchResults
+            results={searchResults}
+            searching={searching}
+            query={searchedQuery}
+            onSelect={handleSearchSelect}
+            onClose={() => setSearchResults(null)}
+          />
         )}
 
         {/* Pane preview */}
         <div className="flex min-h-0 flex-1 flex-col">
-          {selectedPane ? (
-            <>
-              <div className="flex items-center gap-3 border-b border-dark-border px-3 py-1.5 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">
-                  {selectedPane.sessionName} · {selectedPane.paneId}
-                </span>
-                {selectedPaneMetrics && (
-                  <>
-                    <span className="flex items-center gap-1">
-                      <Cpu className="size-3" />
-                      {selectedPaneMetrics.cpuPercent.toFixed(1)}%
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <MemoryStick className="size-3" />
-                      {formatMem(selectedPaneMetrics.memRssKb)}
-                    </span>
-                    {selectedPaneMetrics.gpuMemMb > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Activity className="size-3" />
-                        {selectedPaneMetrics.gpuMemMb} MB GPU
-                      </span>
-                    )}
-                    {selectedPaneMetrics.topCommand && (
-                      <span className="truncate">
-                        {selectedPaneMetrics.topCommand} (
-                        {selectedPaneMetrics.processCount})
-                      </span>
-                    )}
-                  </>
-                )}
-                <button
-                  className="ml-auto text-muted-foreground hover:text-foreground"
-                  onClick={() => setSelectedPane(null)}
-                >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-              <pre
-                ref={captureRef}
-                className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap break-all bg-dark-bg-darkest p-3 font-mono text-xs leading-snug"
-              >
-                {capture || t("tmuxMonitor.waitingForOutput")}
-              </pre>
-            </>
+          {selectedPane && selectedHostId !== null ? (
+            <PanePreview
+              hostId={selectedHostId}
+              pane={selectedPane}
+              metrics={selectedPaneMetrics}
+              onClose={() => setSelectedPane(null)}
+              onStructureChanged={() => loadOverview(selectedHostId, true)}
+            />
           ) : (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center text-muted-foreground">
