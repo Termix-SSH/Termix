@@ -76,6 +76,11 @@ const TIME_TICK_MS = 30_000;
 
 const LS_PREFIX = "termix-tmux-monitor-";
 const LS_LAST_HOST_KEY = `${LS_PREFIX}last-host`;
+const LS_TREE_WIDTH_KEY = `${LS_PREFIX}tree-width`;
+
+const TREE_WIDTH_DEFAULT = 288; // matches the old fixed w-72
+const TREE_WIDTH_MIN = 200;
+const TREE_WIDTH_MAX = 520;
 
 function expandedStorageKey(hostId: number): string {
   return `${LS_PREFIX}expanded-${hostId}`;
@@ -123,6 +128,46 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   // localStorage (or touched by the user) and must not be overwritten by the
   // default expand-all behavior.
   const expandedRestoredRef = useRef(false);
+
+  // -- resizable tree panel (same pattern as the AppShell host sidebar) -------
+  const [treeWidth, setTreeWidth] = useState(() => {
+    const saved = Number(localStorage.getItem(LS_TREE_WIDTH_KEY));
+    return Number.isFinite(saved) && saved >= TREE_WIDTH_MIN
+      ? Math.min(saved, TREE_WIDTH_MAX)
+      : TREE_WIDTH_DEFAULT;
+  });
+  const [treeDragging, setTreeDragging] = useState(false);
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_TREE_WIDTH_KEY, String(treeWidth));
+    } catch {
+      // localStorage may be unavailable
+    }
+  }, [treeWidth]);
+  const onTreeResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setTreeDragging(true);
+      const startX = e.clientX;
+      const startW = treeWidth;
+      function onMove(ev: MouseEvent) {
+        setTreeWidth(
+          Math.max(
+            TREE_WIDTH_MIN,
+            Math.min(TREE_WIDTH_MAX, startW + ev.clientX - startX),
+          ),
+        );
+      }
+      function onUp() {
+        setTreeDragging(false);
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      }
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [treeWidth],
+  );
 
   // -- hosts ----------------------------------------------------------------
   useEffect(() => {
@@ -640,8 +685,12 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
 
   return (
     <div className="flex h-full w-full bg-background text-foreground">
-      {/* Left rail: hosts + session tree */}
-      <div className="flex w-72 shrink-0 flex-col border-r border-border bg-card">
+      {/* Left rail: hosts + session tree. Resizable via the right-edge
+          handle; double-click resets to the default width. */}
+      <div
+        className="relative flex shrink-0 flex-col border-r border-border bg-card"
+        style={{ width: treeWidth }}
+      >
         {/* VSCode tmux-manager style header: title + new-session / refresh */}
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <Layers className="size-4" />
@@ -823,6 +872,13 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
             )}
           </div>
         </ScrollArea>
+
+        <div
+          onMouseDown={onTreeResizeMouseDown}
+          onDoubleClick={() => setTreeWidth(TREE_WIDTH_DEFAULT)}
+          title={t("tmuxMonitor.resizeTree")}
+          className={`absolute bottom-0 right-0 top-0 z-30 w-1 cursor-col-resize transition-colors ${treeDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
+        />
       </div>
 
       {/* Main area */}

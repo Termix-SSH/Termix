@@ -2421,6 +2421,7 @@
     "sessionRenameFailed": "Failed to rename session",
     "editTagsTitle": "Edit tags for \"{{name}}\"",
     "killPane": "Kill pane",
+    "resizeTree": "Drag to resize — double-click to reset",
     "killPaneTitle": "Kill pane {{id}}?",
     "killPaneBody": "The process running in this pane will be terminated. Killing the last pane closes its window.",
     "paneKillFailed": "Failed to kill pane",
