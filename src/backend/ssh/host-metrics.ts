@@ -768,7 +768,19 @@ async function resolveHostCredentials(
         : [],
       jumpHosts: host.jumpHosts ? JSON.parse(host.jumpHosts as string) : [],
       statsConfig: host.statsConfig || undefined,
-      sudoPassword: (host.sudoPassword as string) || undefined,
+      sudoPassword: (() => {
+        const top = host.sudoPassword as string | null | undefined;
+        if (top) return top;
+        try {
+          const tc =
+            typeof host.terminalConfig === "string"
+              ? JSON.parse(host.terminalConfig as string)
+              : host.terminalConfig;
+          return (tc?.sudoPassword as string) || undefined;
+        } catch {
+          return undefined;
+        }
+      })(),
       createdAt: host.createdAt,
       updatedAt: host.updatedAt,
       userId: host.userId,
@@ -2523,10 +2535,17 @@ registerManagerRoutes(app, {
     if (!host) {
       throw new AccessDeniedError("Host not found");
     }
+    // sudoPassword is encrypted with the owner's key; when the viewer is a
+    // different user, re-fetch under the owner's key to decrypt it correctly.
+    let sudoPassword = host.sudoPassword;
+    if (host.userId && host.userId !== userId) {
+      const ownerHost = await fetchHostById(hostId, host.userId);
+      if (ownerHost) sudoPassword = ownerHost.sudoPassword;
+    }
     const managerHost: ManagerHost = {
       id: host.id,
       userId: host.userId,
-      sudoPassword: host.sudoPassword,
+      sudoPassword,
       enableDocker: !!(host as { enableDocker?: boolean }).enableDocker,
     };
     return withSshConnection(host, (client) => fn(client, managerHost));
