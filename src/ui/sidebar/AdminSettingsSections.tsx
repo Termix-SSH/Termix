@@ -41,6 +41,9 @@ type GeneralSettingsSectionProps = {
   handleSaveGuacamole: () => void;
   logLevel: string;
   handleSaveLogLevel: (level: string) => void;
+  tailscaleApiKey: string;
+  setTailscaleApiKey: Dispatch<SetStateAction<string>>;
+  handleSaveTailscaleApiKey: () => void;
 };
 
 export function AdminGeneralSettingsSection({
@@ -69,6 +72,9 @@ export function AdminGeneralSettingsSection({
   handleSaveGuacamole,
   logLevel,
   handleSaveLogLevel,
+  tailscaleApiKey,
+  setTailscaleApiKey,
+  handleSaveTailscaleApiKey,
 }: GeneralSettingsSectionProps) {
   const { t } = useTranslation();
 
@@ -223,6 +229,34 @@ export function AdminGeneralSettingsSection({
               </div>
             </div>
           )}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("admin.tailscaleApiKey")}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.tailscaleApiKeyDescription")}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="password"
+              value={tailscaleApiKey}
+              onChange={(e) => setTailscaleApiKey(e.target.value)}
+              placeholder="tskey-api-..."
+              className="text-sm"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7 shrink-0"
+              onClick={handleSaveTailscaleApiKey}
+            >
+              {t("common.save")}
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">

@@ -220,7 +220,7 @@ async function buildDedicatedTransferConnectConfig(
       token,
       username,
     );
-  } else if (authType !== "none") {
+  } else if (authType !== "none" && authType !== "tailscale") {
     throw new Error(`Unsupported auth type for transfer: ${authType}`);
   }
 
@@ -984,7 +984,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         connectionLogs,
       });
     }
-  } else if (resolvedCredentials.authType === "none") {
+  } else if (
+    resolvedCredentials.authType === "none" ||
+    resolvedCredentials.authType === "tailscale"
+  ) {
     connectionLogs.push(
       createConnectionLog(
         "info",
@@ -1234,7 +1237,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
 
     if (
-      resolvedCredentials.authType === "none" &&
+      (resolvedCredentials.authType === "none" ||
+        resolvedCredentials.authType === "tailscale") &&
       (err.message.includes("authentication") ||
         err.message.includes("All configured authentication methods failed"))
     ) {
@@ -1392,14 +1396,16 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       } else {
         const hasStoredPassword =
           resolvedCredentials.password &&
-          resolvedCredentials.authType !== "none";
+          resolvedCredentials.authType !== "none" &&
+          resolvedCredentials.authType !== "tailscale";
 
         const passwordPromptIndex = prompts.findIndex((p) =>
           /password/i.test(p.prompt),
         );
 
         if (
-          resolvedCredentials.authType === "none" &&
+          (resolvedCredentials.authType === "none" ||
+            resolvedCredentials.authType === "tailscale") &&
           passwordPromptIndex !== -1
         ) {
           if (responseSent) return;

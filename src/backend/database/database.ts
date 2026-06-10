@@ -18,6 +18,7 @@ import openTabsRoutes from "./routes/open-tabs.js";
 import userPreferencesRoutes from "./routes/user-preferences.js";
 import proxmoxRoutes from "./routes/proxmox.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
+import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import fs from "fs";
 import path from "path";
@@ -1788,6 +1789,7 @@ app.use("/open-tabs", openTabsRoutes);
 app.use("/user-preferences", userPreferencesRoutes);
 app.use("/proxmox", proxmoxRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
+registerTailscaleRoutes(app, authenticateJWT);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),

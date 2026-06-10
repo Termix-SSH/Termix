@@ -1964,7 +1964,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard: resolvedCredentials.authType !== "none",
+      tryKeyboard:
+        resolvedCredentials.authType !== "none" &&
+        resolvedCredentials.authType !== "tailscale",
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
           ? hostKeepaliveInterval * 1000
@@ -2035,8 +2037,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     };
 
-    if (resolvedCredentials.authType === "none") {
-      // no credentials needed
+    if (
+      resolvedCredentials.authType === "none" ||
+      resolvedCredentials.authType === "tailscale"
+    ) {
+      // Tailscale SSH and "none" auth: daemon handles authorization, no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

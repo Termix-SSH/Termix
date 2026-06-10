@@ -32,6 +32,7 @@ import {
   connectTunnel,
   disconnectTunnel,
 } from "@/main-axios";
+import { getTailscaleDevices } from "@/api/settings-api";
 import type { Host } from "@/types/ui-types";
 import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
@@ -95,6 +96,19 @@ export function HostEditor({
   const [tunnelStatuses, setTunnelStatuses] = useState<
     Record<string, TunnelStatus>
   >({});
+  const [tailscaleDevices, setTailscaleDevices] = useState<
+    Array<{
+      id: string;
+      name: string;
+      hostname: string;
+      addresses: string[];
+      os: string;
+      lastSeen: string;
+      online: boolean;
+    }>
+  >([]);
+  const [tailscaleHasApiKey, setTailscaleHasApiKey] = useState(false);
+  const [tailscaleLoading, setTailscaleLoading] = useState(false);
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
 
   useEffect(() => {
@@ -108,6 +122,18 @@ export function HostEditor({
     const unsub = subscribeTunnelStatuses((s) => setTunnelStatuses(s));
     return unsub;
   }, [activeTab]);
+
+  useEffect(() => {
+    if (form.authType !== "tailscale") return;
+    setTailscaleLoading(true);
+    getTailscaleDevices()
+      .then((res) => {
+        setTailscaleDevices(res?.devices ?? []);
+        setTailscaleHasApiKey(res?.hasApiKey ?? false);
+      })
+      .catch(() => {})
+      .finally(() => setTailscaleLoading(false));
+  }, [form.authType]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -207,19 +233,24 @@ export function HostEditor({
                     {t("hosts.authMethod")}
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {["password", "key", "credential", "none", "opkssh"].map(
-                      (m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setField("authType", m as HostAuthType);
-                          }}
-                          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                        >
-                          {m}
-                        </button>
-                      ),
-                    )}
+                    {[
+                      "password",
+                      "key",
+                      "credential",
+                      "none",
+                      "opkssh",
+                      "tailscale",
+                    ].map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setField("authType", m as HostAuthType);
+                        }}
+                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4 mt-1">
@@ -444,6 +475,66 @@ export function HostEditor({
                     </>
                   )}
                 </div>
+                {authMethod === "tailscale" && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.tailscaleDeviceSelect")}
+                    </label>
+                    {!tailscaleHasApiKey && !tailscaleLoading ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.tailscaleNoApiKey")}
+                      </p>
+                    ) : tailscaleLoading ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.tailscaleLoadingDevices")}
+                      </p>
+                    ) : tailscaleDevices.length === 0 ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.tailscaleNoDevices")}
+                      </p>
+                    ) : (
+                      <>
+                        <select
+                          className="w-full border border-border bg-background text-foreground text-xs px-2 py-1.5 focus:outline-none focus:border-accent-brand/50"
+                          defaultValue=""
+                          onChange={(e) => {
+                            const device = tailscaleDevices.find(
+                              (d) => d.id === e.target.value,
+                            );
+                            if (device) {
+                              const tailscaleIp =
+                                device.addresses.find((a) =>
+                                  a.startsWith("100."),
+                                ) ??
+                                device.addresses[0] ??
+                                "";
+                              setField("ip", tailscaleIp);
+                            }
+                          }}
+                        >
+                          <option value="" disabled>
+                            {t("hosts.tailscaleDeviceSelectPlaceholder")}
+                          </option>
+                          {tailscaleDevices.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.hostname} (
+                              {d.addresses.find((a) => a.startsWith("100.")) ??
+                                d.addresses[0] ??
+                                ""}
+                              ){" "}
+                              {d.online
+                                ? `— ${t("hosts.tailscaleOnline")}`
+                                : `— ${t("hosts.tailscaleOffline")}`}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.tailscaleDeviceAutoFill")}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
                 <SettingRow
                   label={t("hosts.forceKeyboardInteractiveLabel")}
                   description={t("hosts.forceKeyboardInteractiveShortDesc")}

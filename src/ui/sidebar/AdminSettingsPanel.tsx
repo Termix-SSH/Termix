@@ -32,6 +32,10 @@ import {
   getUserRoles,
 } from "@/main-axios";
 import {
+  getTailscaleSettings,
+  updateTailscaleSettings,
+} from "@/api/settings-api";
+import {
   getAdminSSOProviders,
   updateSSOProvider,
   deleteSSOProvider,
@@ -89,6 +93,7 @@ export function AdminSettingsPanel() {
   const [guacEnabled, setGuacEnabled] = useState(false);
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
+  const [tailscaleApiKey, setTailscaleApiKey] = useState("");
 
   // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
@@ -208,6 +213,7 @@ export function AdminSettingsPanel() {
         level,
         guac,
         oidcProv,
+        tailscale,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -217,6 +223,7 @@ export function AdminSettingsPanel() {
         getLogLevel(),
         getGuacamoleSettings(),
         getOidcAutoProvision(),
+        getTailscaleSettings(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -235,6 +242,9 @@ export function AdminSettingsPanel() {
       if (guac.status === "fulfilled") {
         setGuacEnabled(guac.value.enabled);
         setGuacUrl(guac.value.url || "guacd:4822");
+      }
+      if (tailscale.status === "fulfilled") {
+        setTailscaleApiKey(tailscale.value.apiKey ?? "");
       }
     } catch {
       // non-fatal
@@ -347,6 +357,15 @@ export function AdminSettingsPanel() {
     } catch {
       setGuacEnabled(!newVal);
       toast.error(t("admin.guacamoleUpdateFailed"));
+    }
+  }
+
+  async function handleSaveTailscaleApiKey() {
+    try {
+      await updateTailscaleSettings(tailscaleApiKey);
+      toast.success(t("admin.tailscaleSettingsSaved"));
+    } catch {
+      toast.error(t("admin.tailscaleSettingsSaveFailed"));
     }
   }
 
@@ -677,6 +696,9 @@ export function AdminSettingsPanel() {
         handleSaveGuacamole={handleSaveGuacamole}
         logLevel={logLevel}
         handleSaveLogLevel={handleSaveLogLevel}
+        tailscaleApiKey={tailscaleApiKey}
+        setTailscaleApiKey={setTailscaleApiKey}
+        handleSaveTailscaleApiKey={handleSaveTailscaleApiKey}
       />
 
       <AdminSSOSection

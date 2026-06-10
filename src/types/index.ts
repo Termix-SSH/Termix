@@ -57,7 +57,13 @@ export interface LDAPProviderConfig {
 // ============================================================================
 
 export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
-export type SSHAuthType = "password" | "key" | "credential" | "none" | "opkssh";
+export type SSHAuthType =
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "tailscale";
 export type GuacamoleAuthType = "password" | "credential";
 
 export interface ProxmoxConfig {
@@ -93,7 +99,7 @@ export interface Host {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -201,7 +207,7 @@ export interface HostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -662,7 +668,13 @@ export type ErrorType =
 // AUTHENTICATION TYPES
 // ============================================================================
 
-export type AuthType = "password" | "key" | "credential" | "none" | "opkssh";
+export type AuthType =
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "tailscale";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 
