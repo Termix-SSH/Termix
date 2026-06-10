@@ -45,6 +45,12 @@ const GuacamoleApp = lazy(() =>
     default: m.default,
   })),
 );
+// --- tmux-monitor ---
+const TmuxMonitorApp = lazy(() =>
+  import("@/features/tmux-monitor/TmuxMonitorApp").then((m) => ({
+    default: m.default,
+  })),
+);
 
 const ElectronVersionCheck = lazy(() =>
   import("@/user/ElectronVersionCheck").then((module) => ({
@@ -79,6 +85,8 @@ function FullscreenApp() {
     case "vnc":
     case "telnet":
       return <GuacamoleApp hostId={hostId || undefined} />;
+    case "tmux-monitor": // --- tmux-monitor ---
+      return <TmuxMonitorApp />;
     default:
       return null;
   }

@@ -1382,6 +1382,31 @@ const migrateSchema = () => {
     }
   }
 
+  // --- tmux-monitor begin ---
+  try {
+    sqlite.prepare("SELECT id FROM tmux_session_tags LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS tmux_session_tags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          session_name TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create tmux_session_tags table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- tmux-monitor end ---
+
   try {
     const existingRoles = sqlite.prepare("SELECT name, is_system FROM roles").all() as Array<{ name: string; is_system: number }>;
 

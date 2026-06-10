@@ -1,0 +1,555 @@
+import express from "express";
+import cookieParser from "cookie-parser";
+import { Client, type ConnectConfig } from "ssh2";
+import { eq, and } from "drizzle-orm";
+import { createCorsMiddleware } from "../utils/cors-config.js";
+import { AuthManager } from "../utils/auth-manager.js";
+import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
+import { tmuxSessionTags } from "../database/db/schema.js";
+import { sshLogger } from "../utils/logger.js";
+import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
+import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { resolveHostById, checkHostAccess } from "./host-resolver.js";
+import { createJumpHostChain } from "./jump-host-chain.js";
+import {
+  createSocks5Connection,
+  type SOCKS5Config,
+} from "../utils/socks5-helper.js";
+import { withConnection } from "./ssh-connection-pool.js";
+import { execCommand } from "./tmux-helper.js";
+import {
+  SEP,
+  parseSessions,
+  parseWindows,
+  parsePanes,
+  parsePsOutput,
+  parseGpuOutput,
+  buildPaneMetrics,
+  attachPanesToWindows,
+  shellEscape,
+  type RawPane,
+  type TmuxSessionSummary,
+  type TmuxWindow,
+  type PaneMetrics,
+} from "./tmux-monitor-helpers.js";
+import type { SSHHost, AuthenticatedRequest } from "../../types/index.js";
+
+const PANE_ID_RE = /^%\d+$/;
+const MAX_CAPTURE_LINES = 5000;
+const MAX_SEARCH_PANES = 100;
+const SEARCH_HISTORY_LINES = 2000;
+const SEARCH_CONCURRENCY = 4;
+
+interface TmuxSessionOverview extends TmuxSessionSummary {
+  windows: TmuxWindow[];
+  tags: string[];
+}
+
+// ---------------------------------------------------------------------------
+// SSH connection (lean variant of the per-module pattern used by server-stats
+// and docker; jump hosts and SOCKS5 reuse the shared helpers)
+// ---------------------------------------------------------------------------
+
+async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
+  const base: ConnectConfig = {
+    host: (host.ip || "").replace(/^\[|\]$/g, ""),
+    port: host.port,
+    username: host.username,
+    tryKeyboard: true,
+    keepaliveInterval: 30000,
+    keepaliveCountMax: 3,
+    readyTimeout: 60000,
+    hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
+      host.id,
+      host.ip,
+      host.port,
+      null,
+      host.userId || "",
+      false,
+    ),
+    algorithms: SSH_ALGORITHMS,
+  } as ConnectConfig;
+
+  if (host.authType === "password") {
+    if (!host.password) {
+      throw new Error(`No password available for host ${host.ip}`);
+    }
+    base.password = host.password;
+  } else if (host.authType === "key") {
+    if (!host.key || !host.key.includes("-----BEGIN")) {
+      throw new Error(`No valid SSH key available for host ${host.ip}`);
+    }
+    const cleanKey = host.key
+      .trim()
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n");
+    (base as Record<string, unknown>).privateKey = Buffer.from(
+      cleanKey,
+      "utf8",
+    );
+    if (host.keyPassword) {
+      (base as Record<string, unknown>).passphrase = host.keyPassword;
+    }
+  } else if (host.authType === "none") {
+    // no credentials needed
+  } else {
+    // opkssh and other interactive flows are not supported by this module
+    throw new Error(
+      `Authentication type '${host.authType}' is not supported by the tmux monitor. Open a terminal connection instead.`,
+    );
+  }
+
+  return base;
+}
+
+function connectToHost(host: SSHHost): () => Promise<Client> {
+  return async () => {
+    const config = await buildSshConfig(host);
+    const client = new Client();
+
+    const proxyConfig: SOCKS5Config | null =
+      host.useSocks5 &&
+      (host.socks5Host ||
+        (host.socks5ProxyChain && host.socks5ProxyChain.length > 0))
+        ? {
+            useSocks5: host.useSocks5,
+            socks5Host: host.socks5Host,
+            socks5Port: host.socks5Port,
+            socks5Username: host.socks5Username,
+            socks5Password: host.socks5Password,
+            socks5ProxyChain: host.socks5ProxyChain,
+          }
+        : null;
+
+    let jumpClient: Client | null = null;
+    if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
+      jumpClient = await createJumpHostChain(
+        host.jumpHosts,
+        host.userId,
+        proxyConfig,
+      );
+      if (!jumpClient) {
+        throw new Error("Failed to establish jump host chain");
+      }
+    } else if (proxyConfig) {
+      const proxySocket = await createSocks5Connection(
+        host.ip,
+        host.port,
+        proxyConfig,
+      );
+      if (proxySocket) {
+        config.sock = proxySocket;
+      }
+    }
+
+    return new Promise<Client>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        client.end();
+        jumpClient?.end();
+        reject(new Error("SSH connection timeout"));
+      }, 30000);
+
+      client.on("ready", () => {
+        clearTimeout(timeout);
+        resolve(client);
+      });
+      client.on("error", (err) => {
+        clearTimeout(timeout);
+        jumpClient?.end();
+        reject(err);
+      });
+      client.on(
+        "keyboard-interactive",
+        (_name, _instructions, _lang, prompts, finish) => {
+          finish(
+            prompts.map((p) =>
+              /password/i.test(p.prompt) ? host.password || "" : "",
+            ),
+          );
+        },
+      );
+
+      if (jumpClient) {
+        jumpClient.forwardOut(
+          "127.0.0.1",
+          0,
+          host.ip,
+          host.port,
+          (err, stream) => {
+            if (err) {
+              clearTimeout(timeout);
+              jumpClient!.end();
+              reject(
+                new Error(
+                  "Failed to forward through jump host: " + err.message,
+                ),
+              );
+              return;
+            }
+            config.sock = stream;
+            client.connect(config);
+          },
+        );
+      } else {
+        client.connect(config);
+      }
+    });
+  };
+}
+
+function getPoolKey(host: SSHHost): string {
+  const socks5Key = host.useSocks5
+    ? `:socks5:${host.socks5Host}:${host.socks5Port}`
+    : "";
+  return `tmux-monitor:${host.userId}:${host.ip}:${host.port}:${host.username}${socks5Key}`;
+}
+
+async function withHostConnection<T>(
+  host: SSHHost,
+  fn: (client: Client) => Promise<T>,
+): Promise<T> {
+  return withConnection(getPoolKey(host), connectToHost(host), fn);
+}
+
+// ---------------------------------------------------------------------------
+// tmux queries
+// ---------------------------------------------------------------------------
+
+async function tmuxAvailable(conn: Client): Promise<boolean> {
+  try {
+    await execCommand(conn, "command -v tmux");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function runTmuxList(conn: Client, command: string): Promise<string> {
+  try {
+    return await execCommand(conn, command);
+  } catch {
+    return ""; // tmux server not running -- no sessions
+  }
+}
+
+function listSessionsCmd(): string {
+  return `tmux list-sessions -F "#{session_name}${SEP}#{session_created}${SEP}#{session_activity}${SEP}#{session_attached}" 2>/dev/null`;
+}
+
+function listWindowsCmd(): string {
+  return `tmux list-windows -a -F "#{session_name}${SEP}#{window_index}${SEP}#{window_active}${SEP}#{window_name}" 2>/dev/null`;
+}
+
+function listPanesCmd(): string {
+  return `tmux list-panes -a -F "#{session_name}${SEP}#{window_index}${SEP}#{pane_id}${SEP}#{pane_index}${SEP}#{pane_pid}${SEP}#{pane_active}${SEP}#{pane_width}${SEP}#{pane_height}${SEP}#{pane_current_command}${SEP}#{pane_current_path}${SEP}#{pane_title}" 2>/dev/null`;
+}
+
+async function listPanesRaw(conn: Client): Promise<RawPane[]> {
+  return parsePanes(await runTmuxList(conn, listPanesCmd()));
+}
+
+async function fetchSessionTags(
+  userId: string,
+  hostId: number,
+): Promise<Map<string, string[]>> {
+  const rows = await getDb()
+    .select()
+    .from(tmuxSessionTags)
+    .where(
+      and(
+        eq(tmuxSessionTags.userId, userId),
+        eq(tmuxSessionTags.hostId, hostId),
+      ),
+    );
+  const bySession = new Map<string, string[]>();
+  for (const row of rows) {
+    if (!bySession.has(row.sessionName)) bySession.set(row.sessionName, []);
+    bySession.get(row.sessionName)!.push(row.tag);
+  }
+  return bySession;
+}
+
+async function collectPaneMetrics(
+  conn: Client,
+  panes: RawPane[],
+): Promise<PaneMetrics[]> {
+  let psOutput = "";
+  try {
+    psOutput = await execCommand(
+      conn,
+      "ps -eo pid=,ppid=,pcpu=,pmem=,rss=,comm= 2>/dev/null",
+    );
+  } catch {
+    return [];
+  }
+
+  // GPU memory per pid (best effort; nvidia-smi may not exist)
+  let gpuOutput = "";
+  try {
+    gpuOutput = await execCommand(
+      conn,
+      "command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi --query-compute-apps=pid,used_gpu_memory --format=csv,noheader,nounits 2>/dev/null || true",
+    );
+  } catch {
+    // no GPU on host
+  }
+
+  return buildPaneMetrics(
+    panes,
+    parsePsOutput(psOutput),
+    parseGpuOutput(gpuOutput),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Express app
+// ---------------------------------------------------------------------------
+
+const app = express();
+const authManager = AuthManager.getInstance();
+
+app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
+app.use(cookieParser());
+app.use(express.json({ limit: "1mb" }));
+app.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+app.use(authManager.createAuthMiddleware());
+
+/**
+ * Resolve the host for a request and verify the user can access it.
+ * Sends the error response and returns null when access is denied.
+ */
+async function requireHost(
+  req: express.Request,
+  res: express.Response,
+): Promise<SSHHost | null> {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const hostId = parseInt(String(req.params.hostId), 10);
+  if (isNaN(hostId)) {
+    res.status(400).json({ error: "Invalid host ID" });
+    return null;
+  }
+  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    res.status(401).json({ error: "User data is locked" });
+    return null;
+  }
+
+  let host: SSHHost | null = null;
+  try {
+    host = await resolveHostById(hostId, userId);
+  } catch (err) {
+    sshLogger.error(`Failed to resolve host ${hostId} for tmux monitor`, err);
+  }
+  if (!host) {
+    res.status(404).json({ error: "Host not found" });
+    return null;
+  }
+
+  const hasAccess = await checkHostAccess(
+    hostId,
+    userId,
+    host.userId || userId,
+    "read",
+  );
+  if (!hasAccess) {
+    res.status(403).json({ error: "Access denied" });
+    return null;
+  }
+  return host;
+}
+
+function toErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "Unknown error";
+}
+
+app.get("/tmux_monitor/:hostId/overview", async (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  try {
+    const result = await withHostConnection(host, async (conn) => {
+      if (!(await tmuxAvailable(conn))) {
+        return { available: false, sessions: [] as TmuxSessionOverview[] };
+      }
+      const [sessionsOut, windowsOut, panesOut] = await Promise.all([
+        runTmuxList(conn, listSessionsCmd()),
+        runTmuxList(conn, listWindowsCmd()),
+        runTmuxList(conn, listPanesCmd()),
+      ]);
+      const sessions = parseSessions(sessionsOut);
+      const windows = parseWindows(windowsOut);
+      attachPanesToWindows(windows, parsePanes(panesOut));
+
+      const tags = await fetchSessionTags(userId, host.id);
+      const full: TmuxSessionOverview[] = sessions.map((s) => ({
+        ...s,
+        windows: windows.get(s.name) || [],
+        tags: tags.get(s.name) || [],
+      }));
+      return { available: true, sessions: full };
+    });
+    res.json(result);
+  } catch (err) {
+    sshLogger.error(`tmux overview failed for host ${host.id}`, err);
+    res.status(500).json({ error: toErrorMessage(err) });
+  }
+});
+
+app.get("/tmux_monitor/:hostId/capture", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const paneId = String(req.query.paneId || "");
+  if (!PANE_ID_RE.test(paneId)) {
+    return res.status(400).json({ error: "Invalid pane ID" });
+  }
+  let lines = parseInt(String(req.query.lines || "0"), 10) || 0;
+  lines = Math.min(Math.max(lines, 0), MAX_CAPTURE_LINES);
+
+  try {
+    const content = await withHostConnection(host, (conn) =>
+      execCommand(
+        conn,
+        `tmux capture-pane -p -J -t ${shellEscape(paneId)}${lines > 0 ? ` -S -${lines}` : ""} 2>/dev/null`,
+      ),
+    );
+    res.json({ paneId, content });
+  } catch (err) {
+    res.status(500).json({ error: toErrorMessage(err) });
+  }
+});
+
+app.get("/tmux_monitor/:hostId/search", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const query = String(req.query.q || "").trim();
+  if (!query) {
+    return res.status(400).json({ error: "Missing search query" });
+  }
+
+  try {
+    const results = await withHostConnection(host, async (conn) => {
+      const panes = (await listPanesRaw(conn)).slice(0, MAX_SEARCH_PANES);
+      const matches: Array<{
+        paneId: string;
+        sessionName: string;
+        windowIndex: number;
+        line: number;
+        text: string;
+      }> = [];
+
+      // Bounded concurrency; each search runs capture+grep remotely so only
+      // matching lines travel back over the wire.
+      for (let i = 0; i < panes.length; i += SEARCH_CONCURRENCY) {
+        const batch = panes.slice(i, i + SEARCH_CONCURRENCY);
+        await Promise.all(
+          batch.map(async (pane) => {
+            try {
+              const output = await execCommand(
+                conn,
+                `tmux capture-pane -p -J -t ${shellEscape(pane.id)} -S -${SEARCH_HISTORY_LINES} 2>/dev/null | grep -n -i -F -- ${shellEscape(query)} | head -50`,
+              );
+              for (const line of output.split("\n").filter(Boolean)) {
+                const sep = line.indexOf(":");
+                if (sep === -1) continue;
+                matches.push({
+                  paneId: pane.id,
+                  sessionName: pane.sessionName,
+                  windowIndex: pane.windowIndex,
+                  line: parseInt(line.slice(0, sep), 10) || 0,
+                  text: line.slice(sep + 1).slice(0, 500),
+                });
+              }
+            } catch {
+              // grep exits non-zero when there are no matches -- not an error
+            }
+          }),
+        );
+      }
+      return matches;
+    });
+    res.json({ query, matches: results });
+  } catch (err) {
+    res.status(500).json({ error: toErrorMessage(err) });
+  }
+});
+
+app.get("/tmux_monitor/:hostId/metrics", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  try {
+    const metrics = await withHostConnection(host, async (conn) => {
+      const panes = await listPanesRaw(conn);
+      if (panes.length === 0) return [];
+      return collectPaneMetrics(conn, panes);
+    });
+    res.json({ panes: metrics });
+  } catch (err) {
+    res.status(500).json({ error: toErrorMessage(err) });
+  }
+});
+
+app.put("/tmux_monitor/:hostId/tags", async (req, res) => {
+  const userId = (req as unknown as AuthenticatedRequest).userId;
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const { sessionName, tags } = req.body as {
+    sessionName?: string;
+    tags?: string[];
+  };
+  if (!sessionName || typeof sessionName !== "string") {
+    return res.status(400).json({ error: "Missing session name" });
+  }
+  if (!Array.isArray(tags) || tags.some((t) => typeof t !== "string")) {
+    return res.status(400).json({ error: "Tags must be an array of strings" });
+  }
+  const cleanTags = [
+    ...new Set(tags.map((t) => t.trim().slice(0, 64)).filter(Boolean)),
+  ].slice(0, 20);
+
+  try {
+    const db = getDb();
+    await db
+      .delete(tmuxSessionTags)
+      .where(
+        and(
+          eq(tmuxSessionTags.userId, userId),
+          eq(tmuxSessionTags.hostId, host.id),
+          eq(tmuxSessionTags.sessionName, sessionName),
+        ),
+      );
+    if (cleanTags.length > 0) {
+      await db.insert(tmuxSessionTags).values(
+        cleanTags.map((tag) => ({
+          userId,
+          hostId: host.id,
+          sessionName,
+          tag,
+        })),
+      );
+    }
+    await DatabaseSaveTrigger.triggerSave("tmux_session_tags_updated");
+    res.json({ sessionName, tags: cleanTags });
+  } catch (err) {
+    sshLogger.error(
+      `Failed to save tmux session tags for host ${host.id}`,
+      err,
+    );
+    res.status(500).json({ error: toErrorMessage(err) });
+  }
+});
+
+const PORT = 30010;
+app.listen(PORT, () => {
+  sshLogger.info(`Tmux monitor service started on port ${PORT}`, {
+    operation: "tmux_monitor_start",
+    port: PORT,
+  });
+});

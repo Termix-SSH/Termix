@@ -684,3 +684,18 @@ export const userPreferences = sqliteTable("user_preferences", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+// --- tmux-monitor begin ---
+export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id").notNull(),
+  sessionName: text("session_name").notNull(),
+  tag: text("tag").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- tmux-monitor end ---

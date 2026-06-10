@@ -780,6 +780,12 @@ function initializeApiInstances() {
 
   // Docker Management API (port 30007)
   dockerApi = createApiInstance(getApiUrl("/docker", 30007), "DOCKER");
+
+  // Tmux Monitor API (port 30010) --- tmux-monitor ---
+  tmuxMonitorApi = createApiInstance(
+    getApiUrl("/tmux_monitor", 30010),
+    "TMUX_MONITOR",
+  );
 }
 
 // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
@@ -807,6 +813,9 @@ export let rbacApi: AxiosInstance;
 
 // Docker Management API (port 30007)
 export let dockerApi: AxiosInstance;
+
+// Tmux Monitor API (port 30010) --- tmux-monitor ---
+export let tmuxMonitorApi: AxiosInstance;
 
 // Pre-initialize with default values to avoid undefined errors during early mounting
 initializeApiInstances();

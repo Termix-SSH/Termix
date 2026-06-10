@@ -606,7 +606,6 @@
     "filterFeatureTunnel": "Tunnel",
     "filterFeatureDocker": "Docker",
     "filterTagsGroup": "Tags",
-    "addHost": "Add Host",
     "shareHost": "Share Host",
     "shareHostTitle": "Share: {{name}}",
     "sharing": {
@@ -2181,5 +2180,29 @@
         "themeGruvbox": "Gruvbox"
       }
     }
+  },
+  "tmuxMonitor": {
+    "title": "Tmux Monitor",
+    "failedToLoadHosts": "Failed to load hosts",
+    "failedToLoad": "Failed to load tmux sessions",
+    "tmuxUnavailable": "tmux is not installed on this host",
+    "noSessions": "No tmux sessions on this host",
+    "noHostSelected": "No host selected",
+    "attached": "Attached",
+    "detached": "Detached",
+    "attach": "Attach",
+    "editTags": "Edit tags",
+    "tagsHint": "Comma-separated tags (e.g. YOLO, lab, training)",
+    "tagsSaved": "Tags saved",
+    "tagsSaveFailed": "Failed to save tags",
+    "searchPlaceholder": "Search output across sessions...",
+    "searchResults": "{{count}} matches",
+    "searchFailed": "Search failed",
+    "selectPaneHint": "Select a pane to preview its output",
+    "waitingForOutput": "Waiting for output...",
+    "timeJustNow": "just now",
+    "timeMinutes": "{{count}}m ago",
+    "timeHours": "{{count}}h ago",
+    "timeDays": "{{count}}d ago"
   }
 }
