@@ -9,6 +9,7 @@ import {
 } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 function getDefaultGuacUrl(): string {
   return `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
@@ -122,6 +123,24 @@ export function registerUserSettingsRoutes(
       const urlRow = db.$client
         .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
         .get() as { value: string } | undefined;
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: actorRecord[0]?.username ?? userId,
+        action: "update_guacamole_settings",
+        resourceType: "setting",
+        details: JSON.stringify({ enabled, url }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
       res.json({
         enabled: enabledRow ? enabledRow.value !== "false" : true,
         url: urlRow ? urlRow.value : getDefaultGuacUrl(),
@@ -194,6 +213,24 @@ export function registerUserSettingsRoutes(
         )
         .run(level);
       setGlobalLogLevel(level);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: actorRecord[0]?.username ?? userId,
+        action: "update_log_level",
+        resourceType: "setting",
+        details: JSON.stringify({ level }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
       res.json({ level });
     } catch (err) {
       authLogger.error("Failed to set log level", err);
@@ -267,6 +304,24 @@ export function registerUserSettingsRoutes(
           "INSERT OR REPLACE INTO settings (key, value) VALUES ('session_timeout_hours', ?)",
         )
         .run(String(timeoutHours));
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: actorRecord[0]?.username ?? userId,
+        action: "update_session_timeout",
+        resourceType: "setting",
+        details: JSON.stringify({ timeoutHours }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
       res.json({ timeoutHours });
     } catch (err) {
       authLogger.error("Failed to set session timeout", err);

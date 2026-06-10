@@ -11,6 +11,7 @@ import { getDb } from "../database/db/index.js";
 import { hosts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger, authLogger } from "../utils/logger.js";
+import { logAudit } from "../utils/audit-logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
@@ -1080,6 +1081,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
         userId,
         hostId: id,
         ip,
+      });
+
+      logAudit({
+        userId,
+        username: userId,
+        action: "ssh_connect",
+        resourceType: "host",
+        resourceId: String(id),
+        resourceName: `${username}@${ip}:${port}`,
+        success: true,
       });
       if (totpPromptSent) {
         authLogger.success("TOTP verification successful for SSH session", {

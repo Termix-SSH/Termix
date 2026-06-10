@@ -1,4 +1,5 @@
 import type { RequestHandler, Router } from "express";
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -6,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { apiKeys, users } from "../db/schema.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 export function registerUserApiKeyRoutes(
   router: Router,
@@ -105,6 +107,29 @@ export function registerUserApiKeyRoutes(
 
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
       await saveMemoryDatabaseToFile();
+
+      const actorId = (req as AuthenticatedRequest).userId;
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, actorId))
+        .limit(1);
+      await logAudit({
+        userId: actorId,
+        username: actorRecord[0]?.username ?? actorId,
+        action: "create_api_key",
+        resourceType: "api_key",
+        resourceId: keyId,
+        resourceName: name.trim(),
+        details: JSON.stringify({
+          targetUserId,
+          targetUsername: targetUser[0].username,
+        }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       return res.status(201).json({
         id: keyId,
@@ -206,6 +231,25 @@ export function registerUserApiKeyRoutes(
 
       const { saveMemoryDatabaseToFile } = await import("../db/index.js");
       await saveMemoryDatabaseToFile();
+
+      const actorId = (req as AuthenticatedRequest).userId;
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, actorId))
+        .limit(1);
+      await logAudit({
+        userId: actorId,
+        username: actorRecord[0]?.username ?? actorId,
+        action: "delete_api_key",
+        resourceType: "api_key",
+        resourceId: keyId,
+        resourceName: existing[0].name,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       return res.json({ success: true });
     } catch (err) {

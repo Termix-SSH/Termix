@@ -273,7 +273,8 @@ export type AdminSection =
   | "sessions"
   | "roles"
   | "database"
-  | "api-keys";
+  | "api-keys"
+  | "audit-log";
 export type AccentColorId = string;
 export type ThemeId =
   | "dark"

@@ -40,6 +40,7 @@ import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
 import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 const router = express.Router();
 
@@ -406,6 +407,25 @@ router.post(
         userId,
         hostId: createdHost.id as number,
         name,
+      });
+
+      const { ipAddress: chIp, userAgent: chUa } = getRequestMeta(req);
+      const { users: usersTable } = await import("../db/schema.js");
+      const chActor = await db
+        .select({ username: usersTable.username })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: chActor[0]?.username ?? userId,
+        action: "create_host",
+        resourceType: "host",
+        resourceId: String(createdHost.id),
+        resourceName: String(name ?? ip),
+        ipAddress: chIp,
+        userAgent: chUa,
+        success: true,
       });
 
       res.json(resolvedHost);
@@ -1046,6 +1066,25 @@ router.put(
         operation: "host_update_success",
         userId,
         hostId: parseInt(hostId),
+      });
+
+      const { ipAddress: uhIp, userAgent: uhUa } = getRequestMeta(req);
+      const { users: usersTableUpd } = await import("../db/schema.js");
+      const uhActor = await db
+        .select({ username: usersTableUpd.username })
+        .from(usersTableUpd)
+        .where(eq(usersTableUpd.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: uhActor[0]?.username ?? userId,
+        action: "update_host",
+        resourceType: "host",
+        resourceId: hostId,
+        resourceName: String(name ?? ip),
+        ipAddress: uhIp,
+        userAgent: uhUa,
+        success: true,
       });
 
       res.json(resolvedHost);
@@ -1850,6 +1889,25 @@ router.delete(
         operation: "host_delete_success",
         userId,
         hostId: parseInt(hostId),
+      });
+
+      const { ipAddress: dhIp, userAgent: dhUa } = getRequestMeta(req);
+      const { users: usersTableDel } = await import("../db/schema.js");
+      const dhActor = await db
+        .select({ username: usersTableDel.username })
+        .from(usersTableDel)
+        .where(eq(usersTableDel.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: dhActor[0]?.username ?? userId,
+        action: "delete_host",
+        resourceType: "host",
+        resourceId: hostId,
+        resourceName: hostToDelete[0].name ?? hostToDelete[0].ip,
+        ipAddress: dhIp,
+        userAgent: dhUa,
+        success: true,
       });
 
       try {

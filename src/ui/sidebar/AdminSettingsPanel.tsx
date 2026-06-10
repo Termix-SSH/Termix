@@ -52,6 +52,7 @@ import {
   AdminOidcSettingsSection,
 } from "./AdminSettingsSections";
 import { AdminApiKeysSection } from "./AdminApiKeysSection";
+import { AdminAuditLogSection } from "./AdminAuditLogSection";
 import {
   AdminCreateUserDialog,
   AdminEditUserDialog,
@@ -801,6 +802,12 @@ export function AdminSettingsPanel() {
         users={users}
         handleCreateApiKey={handleCreateApiKey}
         newKeyLoading={newKeyLoading}
+      />
+
+      <AdminAuditLogSection
+        open={openSection === "audit-log"}
+        onToggle={() => toggle("audit-log")}
+        users={users}
       />
 
       <AdminCreateUserDialog

@@ -30,6 +30,7 @@ import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -226,6 +227,20 @@ router.post("/create", async (req, res) => {
       username,
       isAdmin: isFirstUser,
     });
+
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    await logAudit({
+      userId: id,
+      username,
+      action: "create_user",
+      resourceType: "user",
+      resourceId: id,
+      resourceName: username,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
     res.json({
       message: "User created",
       is_admin: isFirstUser,
@@ -1433,6 +1448,17 @@ router.post("/login", async (req, res) => {
       sessionId: payload?.sessionId,
     });
 
+    const { ipAddress: loginIp, userAgent: loginUa } = getRequestMeta(req);
+    await logAudit({
+      userId: userRecord.id,
+      username,
+      action: "login",
+      resourceType: "session",
+      ipAddress: loginIp,
+      userAgent: loginUa,
+      success: true,
+    });
+
     const response: Record<string, unknown> = {
       success: true,
       is_admin: !!userRecord.isAdmin,
@@ -2119,6 +2145,23 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
     userId,
   });
 
+  const { ipAddress: pwIp, userAgent: pwUa } = getRequestMeta(req);
+  const pwUser = await db
+    .select({ username: users.username })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  await logAudit({
+    userId,
+    username: pwUser[0]?.username ?? userId,
+    action: "change_password",
+    resourceType: "user",
+    resourceId: userId,
+    ipAddress: pwIp,
+    userAgent: pwUa,
+    success: true,
+  });
+
   res.json({ message: "Password changed successfully. Please log in again." });
 });
 
@@ -2206,6 +2249,25 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
       targetUserId,
       targetUsername: username,
     });
+
+    const { ipAddress: deleteIp, userAgent: deleteUa } = getRequestMeta(req);
+    const delAdminRecord = await db
+      .select({ username: users.username })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    await logAudit({
+      userId,
+      username: delAdminRecord[0]?.username ?? userId,
+      action: "delete_user",
+      resourceType: "user",
+      resourceId: targetUserId,
+      resourceName: username,
+      ipAddress: deleteIp,
+      userAgent: deleteUa,
+      success: true,
+    });
+
     res.json({ message: `User ${username} deleted successfully` });
   } catch (err) {
     authLogger.error("Failed to delete user", err);
