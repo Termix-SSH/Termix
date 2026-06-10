@@ -877,18 +877,30 @@ export function TmuxMonitor({
         <div className="border-b border-border p-2">
           <Select
             value={selectedHostId !== null ? String(selectedHostId) : ""}
-            disabled={hostsLoading}
+            disabled={hostsLoading || hosts.length === 0}
             onValueChange={(value) => setSelectedHostId(Number(value))}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={t("tmuxMonitor.noHostSelected")} />
+              <SelectValue
+                placeholder={t(
+                  hostsLoading || hosts.length > 0
+                    ? "tmuxMonitor.noHostSelected"
+                    : "tmuxMonitor.noHosts",
+                )}
+              />
             </SelectTrigger>
             <SelectContent>
-              {hosts.map((h) => (
-                <SelectItem key={h.id} value={String(h.id)}>
-                  {h.name || `${h.username}@${h.ip}`}
-                </SelectItem>
-              ))}
+              {hosts.length === 0 ? (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  {t("tmuxMonitor.noHosts")}
+                </div>
+              ) : (
+                hosts.map((h) => (
+                  <SelectItem key={h.id} value={String(h.id)}>
+                    {h.name || `${h.username}@${h.ip}`}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -1067,6 +1079,16 @@ export function TmuxMonitor({
               onKillPane={() => setKillPaneTarget(selectedPane.paneId)}
               onClose={() => setSelectedPane(null)}
             />
+          ) : !hostsLoading && hosts.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center">
+              <div className="max-w-sm text-center text-muted-foreground">
+                <Server className="mx-auto mb-2 size-8 opacity-50" />
+                <p className="text-sm">{t("tmuxMonitor.noHosts")}</p>
+                <p className="mt-1 text-xs text-muted-foreground/70">
+                  {t("tmuxMonitor.noHostsHint")}
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-1 items-center justify-center">
               <div className="text-center text-muted-foreground">
