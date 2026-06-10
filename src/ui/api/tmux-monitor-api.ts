@@ -75,6 +75,14 @@ export async function createTmuxSession(
   await tmuxMonitorApi.post(`/${hostId}/sessions`, { name });
 }
 
+/** Create a new window in an existing session. */
+export async function createTmuxWindow(
+  hostId: number,
+  sessionName: string,
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/windows`, { sessionName });
+}
+
 /** Split the window containing a pane: "h" adds a pane to the right,
  * "v" below (tmux -h/-v semantics). */
 export async function splitTmuxPane(

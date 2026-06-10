@@ -499,6 +499,42 @@ app.post("/tmux_monitor/:hostId/sessions", async (req, res) => {
   }
 });
 
+// Create a window in an existing session. The session name comes from tmux's
+// own listing, so it is only checked for characters that would change the
+// target's meaning (":" and "." are window/pane separators in tmux targets);
+// "=" prefixes the target for an exact-name match.
+app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
+  const host = await requireHost(req, res);
+  if (!host) return;
+
+  const sessionName = String(
+    (req.body as { sessionName?: string })?.sessionName || "",
+  ).trim();
+  if (!sessionName || /[:.\n]/.test(sessionName)) {
+    return res.status(400).json({ error: "Invalid session name" });
+  }
+
+  try {
+    await withHostConnection(host, (conn) =>
+      execCommand(
+        conn,
+        `tmux new-window -t ${shellEscape(`=${sessionName}`)}`,
+      ),
+    );
+    sshLogger.info("tmux window created", {
+      operation: "tmux_window_create",
+      hostId: host.id,
+      sessionName,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    if (/can't find session|no such session/i.test(toErrorMessage(err))) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    sendTmuxError(res, err, "create window", host.id);
+  }
+});
+
 // Split the window containing a pane. "h" places the new pane to the right,
 // "v" below — matching tmux's own -h/-v semantics. The new pane starts in the
 // source pane's working directory.

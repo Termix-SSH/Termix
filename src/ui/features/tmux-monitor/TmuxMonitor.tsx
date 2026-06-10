@@ -35,6 +35,7 @@ import {
   setTmuxSessionTags,
   focusTmuxPane,
   createTmuxSession,
+  createTmuxWindow,
   splitTmuxPane,
   type TmuxOverview,
   type TmuxPaneMetrics,
@@ -373,6 +374,20 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     [selectedHostId, selectedPane, loadOverview, t],
   );
 
+  // -- new window ---------------------------------------------------------------
+  const newWindow = useCallback(
+    async (sessionName: string) => {
+      if (selectedHostId === null) return;
+      try {
+        await createTmuxWindow(selectedHostId, sessionName);
+        loadOverview(selectedHostId, true);
+      } catch {
+        toast.error(t("tmuxMonitor.windowCreateFailed"));
+      }
+    },
+    [selectedHostId, loadOverview, t],
+  );
+
   // -- tags -----------------------------------------------------------------
   async function saveTags(sessionName: string, tags: string[]) {
     if (selectedHostId === null) return;
@@ -426,19 +441,78 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     <div className="flex h-full w-full bg-background text-foreground">
       {/* Left rail: hosts + session tree */}
       <div className="flex w-72 shrink-0 flex-col border-r border-border bg-card">
+        {/* VSCode tmux-manager style header: title + new-session / refresh */}
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <Layers className="size-4" />
           <span className="text-sm font-semibold">
             {t("tmuxMonitor.title")}
           </span>
+          <span className="ml-auto flex items-center gap-2">
+            <Popover
+              open={newSessionOpen}
+              onOpenChange={(open) => {
+                setNewSessionOpen(open);
+                if (open) setNewSessionName("");
+              }}
+            >
+              <PopoverTrigger asChild>
+                <button
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-40"
+                  disabled={selectedHostId === null}
+                  title={t("tmuxMonitor.newSession")}
+                  aria-label={t("tmuxMonitor.newSession")}
+                >
+                  <Plus className="size-4" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-2" align="start">
+                <p className="mb-1 text-xs text-muted-foreground">
+                  {t("tmuxMonitor.newSessionHint")}
+                </p>
+                <div className="flex gap-1">
+                  <Input
+                    className="h-7 text-xs"
+                    value={newSessionName}
+                    placeholder={t("tmuxMonitor.newSessionPlaceholder")}
+                    autoFocus
+                    onChange={(e) => setNewSessionName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") createSession();
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    disabled={!newSessionNameValid || creatingSession}
+                    onClick={createSession}
+                  >
+                    {t("tmuxMonitor.create")}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <button
+              className="text-muted-foreground hover:text-foreground disabled:opacity-40"
+              disabled={selectedHostId === null || overviewLoading}
+              title={t("tmuxMonitor.refresh")}
+              aria-label={t("tmuxMonitor.refresh")}
+              onClick={() =>
+                selectedHostId !== null && loadOverview(selectedHostId)
+              }
+            >
+              <RefreshCw
+                className={`size-3.5 ${overviewLoading ? "animate-spin" : ""}`}
+              />
+            </button>
+          </span>
         </div>
-        <div className="flex items-center gap-1 border-b border-border p-2">
+        <div className="border-b border-border p-2">
           <Select
             value={selectedHostId !== null ? String(selectedHostId) : ""}
             disabled={hostsLoading}
             onValueChange={(value) => setSelectedHostId(Number(value))}
           >
-            <SelectTrigger className="min-w-0 flex-1">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={t("tmuxMonitor.noHostSelected")} />
             </SelectTrigger>
             <SelectContent>
@@ -449,50 +523,6 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
               ))}
             </SelectContent>
           </Select>
-          <Popover
-            open={newSessionOpen}
-            onOpenChange={(open) => {
-              setNewSessionOpen(open);
-              if (open) setNewSessionName("");
-            }}
-          >
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 w-9 shrink-0 p-0"
-                disabled={selectedHostId === null}
-                title={t("tmuxMonitor.newSession")}
-              >
-                <Plus className="size-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-2" align="start">
-              <p className="mb-1 text-xs text-muted-foreground">
-                {t("tmuxMonitor.newSessionHint")}
-              </p>
-              <div className="flex gap-1">
-                <Input
-                  className="h-7 text-xs"
-                  value={newSessionName}
-                  placeholder={t("tmuxMonitor.newSessionPlaceholder")}
-                  autoFocus
-                  onChange={(e) => setNewSessionName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") createSession();
-                  }}
-                />
-                <Button
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  disabled={!newSessionNameValid || creatingSession}
-                  onClick={createSession}
-                >
-                  {t("tmuxMonitor.create")}
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
         </div>
 
         <ScrollArea className="flex-1">
@@ -560,6 +590,8 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                 metricsByPane={metricsByPane}
                 metricsBySession={metricsBySession}
                 onSaveTags={saveTags}
+                onAttachSession={openTerminal}
+                onNewWindow={newWindow}
                 now={now}
               />
             )}

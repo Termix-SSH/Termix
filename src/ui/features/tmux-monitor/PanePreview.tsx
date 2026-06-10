@@ -83,6 +83,7 @@ export function PanePreview({
           <button
             className="text-muted-foreground hover:text-foreground"
             title={t("tmuxMonitor.splitRight")}
+            aria-label={t("tmuxMonitor.splitRight")}
             onClick={() => onSplit("h")}
           >
             <SquareSplitHorizontal className="size-3.5" />
@@ -90,13 +91,16 @@ export function PanePreview({
           <button
             className="text-muted-foreground hover:text-foreground"
             title={t("tmuxMonitor.splitDown")}
+            aria-label={t("tmuxMonitor.splitDown")}
             onClick={() => onSplit("v")}
           >
             <SquareSplitVertical className="size-3.5" />
           </button>
+          <div className="h-3.5 border-l border-border" />
           <button
             className="text-muted-foreground hover:text-foreground"
             title={t("tmuxMonitor.closePreview")}
+            aria-label={t("tmuxMonitor.closePreview")}
             onClick={onClose}
           >
             <X className="size-3.5" />
