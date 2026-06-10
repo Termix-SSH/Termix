@@ -10,6 +10,13 @@ export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
 export type SSHAuthType = "password" | "key" | "credential" | "none" | "opkssh";
 export type GuacamoleAuthType = "password" | "credential";
 
+export interface ProxmoxConfig {
+  defaultCredentialId: number | null;
+  windowsPatterns: string;
+  dockerPatterns: string;
+  preferredPrefixes: string;
+}
+
 export interface HostFeatureFlags {
   enableTerminal: boolean; // SSH, Telnet only
   enableTunnel: boolean; // SSH only
@@ -55,6 +62,8 @@ export interface Host {
   enableTunnel: boolean;
   enableFileManager: boolean;
   enableDocker: boolean;
+  enableProxmox: boolean;
+  proxmoxConfig?: ProxmoxConfig | null;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
   showTunnelInSidebar: boolean;
@@ -153,6 +162,8 @@ export interface HostData {
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   enableDocker?: boolean;
+  enableProxmox?: boolean;
+  proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   showTerminalInSidebar?: boolean;
   showFileManagerInSidebar?: boolean;
   showTunnelInSidebar?: boolean;

@@ -806,11 +806,11 @@ export function NetworkGraphCard({
             </button>
           )}
           <button
-            onClick={() => handleConnectAction("stats")}
+            onClick={() => handleConnectAction("host-metrics")}
             className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
           >
             <Server className="size-3 shrink-0" />
-            {t("networkGraph.serverStats")}
+            {t("networkGraph.hostMetrics")}
           </button>
           {!embedded && (
             <>

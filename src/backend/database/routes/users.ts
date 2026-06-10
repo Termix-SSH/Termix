@@ -20,6 +20,7 @@ import {
   getOIDCConfigFromEnv,
   isOIDCUserAllowed,
   verifyOIDCToken,
+  extractOidcGroups,
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
@@ -29,6 +30,7 @@ import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -225,6 +227,20 @@ router.post("/create", async (req, res) => {
       username,
       isAdmin: isFirstUser,
     });
+
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    await logAudit({
+      userId: id,
+      username,
+      action: "create_user",
+      resourceType: "user",
+      resourceId: id,
+      resourceName: username,
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
     res.json({
       message: "User created",
       is_admin: isFirstUser,
@@ -272,6 +288,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
       scopes,
       allowed_users,
       admin_group,
+      group_claim,
     } = req.body;
 
     const isDisableRequest =
@@ -331,6 +348,7 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         scopes: scopes || "openid email profile",
         allowed_users: allowed_users || "",
         admin_group: admin_group || "",
+        group_claim: group_claim || "",
       };
 
       let encryptedConfig;
@@ -834,7 +852,7 @@ router.get("/oidc/callback", async (req, res) => {
       }
     }
 
-    if (!userInfo && tokenData.access_token) {
+    if (tokenData.access_token) {
       for (const userInfoUrl of userInfoUrls) {
         try {
           const userInfoResponse = await fetch(userInfoUrl, {
@@ -844,10 +862,11 @@ router.get("/oidc/callback", async (req, res) => {
           });
 
           if (userInfoResponse.ok) {
-            userInfo = (await userInfoResponse.json()) as Record<
+            const fetchedUserInfo = (await userInfoResponse.json()) as Record<
               string,
               unknown
             >;
+            userInfo = { ...userInfo, ...fetchedUserInfo };
             break;
           } else {
             authLogger.error(
@@ -1107,9 +1126,27 @@ router.get("/oidc/callback", async (req, res) => {
 
     // Sync admin status based on OIDC group membership
     if (config.admin_group) {
-      const groups = (userInfo.groups || userInfo.roles || []) as string[];
+      const groups = extractOidcGroups(
+        userInfo as Record<string, unknown>,
+        config.group_claim,
+      );
+
+      authLogger.info(
+        `Evaluating OIDC admin group sync. parsedGroups: ${JSON.stringify(groups)}, configuredAdminGroup: ${config.admin_group}, groupClaim: ${config.group_claim || "(default)"}, availableUserInfoKeys: ${Object.keys(userInfo).join(",")}`,
+        {
+          operation: "oidc_admin_group_sync_eval",
+          userId: userRecord.id,
+        },
+      );
+
       const shouldBeAdmin = groups.includes(config.admin_group);
       if (!!userRecord.isAdmin !== shouldBeAdmin) {
+        authLogger.info("Syncing admin status based on OIDC group membership", {
+          operation: "oidc_admin_group_sync",
+          userId: userRecord.id,
+          group: config.admin_group,
+          isAdmin: shouldBeAdmin,
+        });
         await db
           .update(users)
           .set({ isAdmin: shouldBeAdmin })
@@ -1409,6 +1446,17 @@ router.post("/login", async (req, res) => {
       userId: userRecord.id,
       username,
       sessionId: payload?.sessionId,
+    });
+
+    const { ipAddress: loginIp, userAgent: loginUa } = getRequestMeta(req);
+    await logAudit({
+      userId: userRecord.id,
+      username,
+      action: "login",
+      resourceType: "session",
+      ipAddress: loginIp,
+      userAgent: loginUa,
+      success: true,
     });
 
     const response: Record<string, unknown> = {
@@ -2097,6 +2145,23 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
     userId,
   });
 
+  const { ipAddress: pwIp, userAgent: pwUa } = getRequestMeta(req);
+  const pwUser = await db
+    .select({ username: users.username })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  await logAudit({
+    userId,
+    username: pwUser[0]?.username ?? userId,
+    action: "change_password",
+    resourceType: "user",
+    resourceId: userId,
+    ipAddress: pwIp,
+    userAgent: pwUa,
+    success: true,
+  });
+
   res.json({ message: "Password changed successfully. Please log in again." });
 });
 
@@ -2184,6 +2249,25 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
       targetUserId,
       targetUsername: username,
     });
+
+    const { ipAddress: deleteIp, userAgent: deleteUa } = getRequestMeta(req);
+    const delAdminRecord = await db
+      .select({ username: users.username })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    await logAudit({
+      userId,
+      username: delAdminRecord[0]?.username ?? userId,
+      action: "delete_user",
+      resourceType: "user",
+      resourceId: targetUserId,
+      resourceName: username,
+      ipAddress: deleteIp,
+      userAgent: deleteUa,
+      success: true,
+    });
+
     res.json({ message: `User ${username} deleted successfully` });
   } catch (err) {
     authLogger.error("Failed to delete user", err);

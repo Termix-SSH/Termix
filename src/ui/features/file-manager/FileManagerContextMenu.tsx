@@ -192,6 +192,8 @@ export function FileManagerContextMenu({
       adjustedX = viewportWidth - menuWidth - 10;
     if (y + menuHeight > viewportHeight)
       adjustedY = Math.max(10, viewportHeight - menuHeight - 10);
+    adjustedX = Math.max(8, adjustedX);
+    adjustedY = Math.max(8, adjustedY);
     setMenuPosition({ x: adjustedX, y: adjustedY });
   }, [isVisible, x, y, files.length]);
 

@@ -46,7 +46,11 @@ import {
   type HostFastScrollModifier,
   type HostProtocols,
 } from "./HostEditorData";
-import { HostDockerTab, HostFilesTab } from "./HostEditorFeatureTabs";
+import {
+  HostDockerTab,
+  HostProxmoxTab,
+  HostFilesTab,
+} from "./HostEditorFeatureTabs";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import {
   HostEditorRdpTab,
@@ -138,7 +142,21 @@ export function HostEditor({
       enableVnc: "vnc",
       enableTelnet: "telnet",
     };
-    if (!value && activeTab === tabForProto[proto]) onTabChange("general");
+    const sshGroupTabs = [
+      "ssh",
+      "terminal",
+      "tunnels",
+      "docker",
+      "files",
+      "host-metrics",
+    ];
+    if (!value) {
+      if (proto === "enableSsh" && sshGroupTabs.includes(activeTab)) {
+        onTabChange("general");
+      } else if (activeTab === tabForProto[proto]) {
+        onTabChange("general");
+      }
+    }
     if (value && tabForProto[proto]) onTabChange(tabForProto[proto]);
   };
 
@@ -435,9 +453,35 @@ export function HostEditor({
                     onChange={(v) => setField("forceKeyboardInteractive", v)}
                   />
                 </SettingRow>
+                <SettingRow
+                  label={t("hosts.sudoPasswordAutoFillLabel")}
+                  description={t("hosts.sudoPasswordAutoFillDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.sudoPasswordAutoFill}
+                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
+                  />
+                </SettingRow>
+                {form.sudoPasswordAutoFill && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.sudoPasswordLabel")}
+                    </label>
+                    <PasswordInput
+                      className="h-8 text-xs pr-8"
+                      placeholder="••••••••"
+                      value={form.sudoPassword}
+                      onChange={(e) => setField("sudoPassword", e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             </SectionCard>
+          </>
+        )}
 
+        {activeTab === "terminal" && (
+          <>
             <SectionCard
               title={t("hosts.terminalAppearance")}
               icon={<Palette className="size-3.5" />}
@@ -678,28 +722,6 @@ export function HostEditor({
                     onChange={(v) => setField("autoTmux", v)}
                   />
                 </SettingRow>
-                <SettingRow
-                  label={t("hosts.sudoPasswordAutoFillLabel")}
-                  description={t("hosts.sudoPasswordAutoFillShortDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.sudoPasswordAutoFill}
-                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
-                  />
-                </SettingRow>
-                {form.sudoPasswordAutoFill && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.sudoPasswordLabel")}
-                    </label>
-                    <PasswordInput
-                      className="h-8 text-xs pr-8"
-                      placeholder="••••••••"
-                      value={form.sudoPassword}
-                      onChange={(e) => setField("sudoPassword", e.target.value)}
-                    />
-                  </div>
-                )}
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1218,11 +1240,15 @@ export function HostEditor({
           <HostDockerTab form={form} setField={setField} />
         )}
 
+        {activeTab === "proxmox" && (
+          <HostProxmoxTab form={form} setField={setField} />
+        )}
+
         {activeTab === "files" && (
           <HostFilesTab form={form} setField={setField} />
         )}
 
-        {activeTab === "stats" && (
+        {activeTab === "host-metrics" && (
           <HostStatsTab form={form} setField={setField} snippets={snippets} />
         )}
 

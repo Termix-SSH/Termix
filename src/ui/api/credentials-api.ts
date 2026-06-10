@@ -2,7 +2,9 @@ import { authApi, handleApiError, sshHostApi } from "@/main-axios";
 import type { SSHFolder } from "@/types/index";
 import { sshLogger } from "@/lib/frontend-logger";
 
-export async function getCredentials(): Promise<Record<string, unknown>> {
+export async function getCredentials(): Promise<
+  Record<string, unknown>[] | Record<string, unknown>
+> {
   try {
     const response = await authApi.get("/credentials");
     return response.data;

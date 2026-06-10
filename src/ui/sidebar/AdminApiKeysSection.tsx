@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { deleteApiKey } from "@/main-axios";
 import type { ApiKey } from "@/main-axios";
 import { Button } from "@/components/button";
@@ -103,7 +104,7 @@ export function AdminApiKeysSection({
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(createdKeyToken);
+                      copyToClipboard(createdKeyToken);
                       toast.info(t("admin.copiedToClipboard"));
                     }}
                     className="text-muted-foreground hover:text-accent-brand shrink-0"

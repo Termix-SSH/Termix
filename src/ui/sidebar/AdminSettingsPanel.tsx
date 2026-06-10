@@ -52,6 +52,7 @@ import {
   AdminOidcSettingsSection,
 } from "./AdminSettingsSections";
 import { AdminApiKeysSection } from "./AdminApiKeysSection";
+import { AdminAuditLogSection } from "./AdminAuditLogSection";
 import {
   AdminCreateUserDialog,
   AdminEditUserDialog,
@@ -97,6 +98,8 @@ export function AdminSettingsPanel() {
   const [oidcScopes, setOidcScopes] = useState("openid email profile");
   const [oidcUserinfoUrl, setOidcUserinfoUrl] = useState("");
   const [oidcAllowedUsers, setOidcAllowedUsers] = useState("");
+  const [oidcAdminGroup, setOidcAdminGroup] = useState("");
+  const [oidcGroupClaim, setOidcGroupClaim] = useState("");
   const [oidcSaving, setOidcSaving] = useState(false);
 
   // Create user dialog
@@ -264,6 +267,8 @@ export function AdminSettingsPanel() {
               .join("\n")
           : "",
       );
+      setOidcAdminGroup((config.admin_group as string) ?? "");
+      setOidcGroupClaim((config.group_claim as string) ?? "");
     } catch {
       // no OIDC configured yet
     }
@@ -394,6 +399,8 @@ export function AdminSettingsPanel() {
         allowed_users: oidcAllowedUsers
           ? oidcAllowedUsers.split("\n").filter(Boolean).join(",")
           : "",
+        admin_group: oidcAdminGroup,
+        group_claim: oidcGroupClaim,
       });
       toast.success(t("admin.oidcSaved"));
     } catch (e: unknown) {
@@ -416,6 +423,8 @@ export function AdminSettingsPanel() {
       setOidcScopes("openid email profile");
       setOidcUserinfoUrl("");
       setOidcAllowedUsers("");
+      setOidcAdminGroup("");
+      setOidcGroupClaim("");
       toast.success(t("admin.oidcRemoved"));
     } catch {
       toast.error(t("admin.oidcRemoveFailed"));
@@ -716,6 +725,10 @@ export function AdminSettingsPanel() {
         setOidcUserinfoUrl={setOidcUserinfoUrl}
         oidcAllowedUsers={oidcAllowedUsers}
         setOidcAllowedUsers={setOidcAllowedUsers}
+        oidcAdminGroup={oidcAdminGroup}
+        setOidcAdminGroup={setOidcAdminGroup}
+        oidcGroupClaim={oidcGroupClaim}
+        setOidcGroupClaim={setOidcGroupClaim}
         oidcSaving={oidcSaving}
         handleRemoveOidc={handleRemoveOidc}
         handleSaveOidc={handleSaveOidc}
@@ -789,6 +802,12 @@ export function AdminSettingsPanel() {
         users={users}
         handleCreateApiKey={handleCreateApiKey}
         newKeyLoading={newKeyLoading}
+      />
+
+      <AdminAuditLogSection
+        open={openSection === "audit-log"}
+        onToggle={() => toggle("audit-log")}
+        users={users}
       />
 
       <AdminCreateUserDialog

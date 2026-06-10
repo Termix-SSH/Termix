@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { useConnectionLog } from "./ConnectionLogContext.tsx";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/button.tsx";
 import {
   ChevronDown,
@@ -65,12 +66,9 @@ export function ConnectionLog({
       })
       .join("\n");
 
-    try {
-      await navigator.clipboard.writeText(logsText);
-      toast.success(t("terminal.connectionLogCopied"));
-    } catch {
-      toast.error(t("terminal.connectionLogCopyFailed"));
-    }
+    const ok = await copyToClipboard(logsText);
+    if (ok) toast.success(t("terminal.connectionLogCopied"));
+    else toast.error(t("terminal.connectionLogCopyFailed"));
   };
 
   const getIcon = (type: string) => {

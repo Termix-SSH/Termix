@@ -32,8 +32,8 @@ const FileManagerApp = lazy(() =>
 const TunnelApp = lazy(() =>
   import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
 );
-const ServerStatsApp = lazy(() =>
-  import("@/features/server-stats/ServerStatsApp").then((m) => ({
+const HostMetricsApp = lazy(() =>
+  import("@/features/host-metrics/HostMetricsApp").then((m) => ({
     default: m.default,
   })),
 );
@@ -77,8 +77,9 @@ function FullscreenApp() {
       return <FileManagerApp hostId={hostId || undefined} />;
     case "tunnel":
       return <TunnelApp hostId={hostId || undefined} />;
+    case "host-metrics":
     case "server-stats":
-      return <ServerStatsApp hostId={hostId || undefined} />;
+      return <HostMetricsApp hostId={hostId || undefined} />;
     case "docker":
       return <DockerApp hostId={hostId || undefined} />;
     case "rdp":

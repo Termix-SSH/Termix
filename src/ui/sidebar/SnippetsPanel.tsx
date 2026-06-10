@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   getSnippets,
@@ -751,7 +752,7 @@ function SnippetCard({
   }
 
   function handleCopy() {
-    navigator.clipboard.writeText(snippet.content);
+    copyToClipboard(snippet.content);
     toast.success(
       t("newUi.sidebar.snippets.copySuccess", { name: snippet.name }),
     );

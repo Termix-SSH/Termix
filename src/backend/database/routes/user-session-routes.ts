@@ -5,6 +5,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { sessions, users } from "../db/schema.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 type UserSessionRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -166,6 +167,25 @@ export function registerUserSessionRoutes(
           revokedBy: userId,
           sessionUserId: session.userId,
         });
+
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        const actorUser = await db
+          .select({ username: users.username })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        await logAudit({
+          userId,
+          username: actorUser[0]?.username ?? userId,
+          action: "revoke_session",
+          resourceType: "session",
+          resourceId: sessionId,
+          details: JSON.stringify({ targetUserId: session.userId }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+
         res.json({ success: true, message: "Session revoked successfully" });
       } else {
         res.status(500).json({ error: "Failed to revoke session" });
@@ -242,6 +262,30 @@ export function registerUserSessionRoutes(
         revokedBy: userId,
         exceptCurrent,
         revokedCount,
+      });
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorUser = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const targetUserRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, revokeUserId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: actorUser[0]?.username ?? userId,
+        action: "revoke_all_sessions",
+        resourceType: "session",
+        resourceId: revokeUserId,
+        resourceName: targetUserRecord[0]?.username,
+        details: JSON.stringify({ revokedCount, exceptCurrent }),
+        ipAddress,
+        userAgent,
+        success: true,
       });
 
       res.json({

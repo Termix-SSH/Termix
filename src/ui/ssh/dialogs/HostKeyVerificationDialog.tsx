@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "@/components/button.tsx";
 import { Shield, AlertTriangle, Copy, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 
 interface HostKeyVerificationDialogProps {
   isOpen: boolean;
@@ -38,8 +39,8 @@ export function HostKeyVerificationDialog({
 
   if (!isOpen) return null;
 
-  const copyToClipboard = (text: string, isOld: boolean = false) => {
-    navigator.clipboard.writeText(text);
+  const copyFingerprint = (text: string, isOld: boolean = false) => {
+    copyToClipboard(text);
     if (isOld) {
       setCopiedOldFingerprint(true);
       setTimeout(() => setCopiedOldFingerprint(false), 2000);
@@ -103,7 +104,7 @@ export function HostKeyVerificationDialog({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => copyToClipboard(fingerprint)}
+                    onClick={() => copyFingerprint(fingerprint)}
                     className="rounded-none shrink-0"
                   >
                     {copiedFingerprint ? (
@@ -146,7 +147,7 @@ export function HostKeyVerificationDialog({
                       variant="ghost"
                       size="icon"
                       onClick={() =>
-                        copyToClipboard(oldFingerprint || "", true)
+                        copyFingerprint(oldFingerprint || "", true)
                       }
                       className="rounded-none shrink-0"
                     >
@@ -170,7 +171,7 @@ export function HostKeyVerificationDialog({
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => copyToClipboard(fingerprint)}
+                      onClick={() => copyFingerprint(fingerprint)}
                       className="rounded-none shrink-0"
                     >
                       {copiedFingerprint ? (

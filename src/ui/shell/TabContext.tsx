@@ -112,7 +112,7 @@ export function TabProvider({ children }: TabProviderProps) {
     (tabType: Tab["type"], desiredTitle: string | undefined): string => {
       const defaultTitle =
         tabType === "server_stats"
-          ? t("nav.serverStats")
+          ? t("nav.hostMetrics")
           : tabType === "file_manager"
             ? t("nav.fileManager")
             : tabType === "tunnel"

@@ -1,9 +1,19 @@
 version: 2
 updates:
+  # npm dependencies (single root package.json, no workspaces)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 15
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
     groups:
       dev-patch-updates:
         dependency-type: "development"
@@ -21,20 +31,53 @@ updates:
         dependency-type: "production"
         update-types:
           - "minor"
+      # Major bumps grouped so they land as a single reviewable PR instead of
+      # one-per-package noise. These often need manual follow-up (Electron,
+      # React, Vite, Tailwind, Express 5, etc.).
+      major-updates:
+        update-types:
+          - "major"
 
+  # Docker base images (docker/Dockerfile + docker-compose / compose-dev)
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
     groups:
-      patch-updates:
+      docker-patch-updates:
         update-types:
           - "patch"
-      minor-updates:
+      docker-minor-updates:
         update-types:
           - "minor"
+      docker-major-updates:
+        update-types:
+          - "major"
 
+  # GitHub Actions used across the workflows in .github/workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    groups:
+      github-actions:
+        update-types:
+          - "patch"
+          - "minor"
+          - "major"

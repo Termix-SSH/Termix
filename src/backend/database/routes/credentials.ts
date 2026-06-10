@@ -15,6 +15,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 const router = express.Router();
 
@@ -185,6 +186,25 @@ router.post(
         credentialData,
         userId,
       )) as typeof credentialData & { id: number };
+
+      const { ipAddress: ccIp, userAgent: ccUa } = getRequestMeta(req);
+      const { users: usersTableCc } = await import("../db/schema.js");
+      const ccActor = await db
+        .select({ username: usersTableCc.username })
+        .from(usersTableCc)
+        .where(eq(usersTableCc.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: ccActor[0]?.username ?? userId,
+        action: "create_credential",
+        resourceType: "credential",
+        resourceId: String(created.id),
+        resourceName: name,
+        ipAddress: ccIp,
+        userAgent: ccUa,
+        success: true,
+      });
 
       authLogger.success(
         `SSH credential created: ${name} (${authType}) by user ${userId}`,
@@ -567,6 +587,25 @@ router.put(
         credentialId: parseInt(id),
       });
 
+      const { ipAddress: cuIp, userAgent: cuUa } = getRequestMeta(req);
+      const { users: usersTableCu } = await import("../db/schema.js");
+      const cuActor = await db
+        .select({ username: usersTableCu.username })
+        .from(usersTableCu)
+        .where(eq(usersTableCu.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: cuActor[0]?.username ?? userId,
+        action: "update_credential",
+        resourceType: "credential",
+        resourceId: id,
+        resourceName: existing[0].name,
+        ipAddress: cuIp,
+        userAgent: cuUa,
+        success: true,
+      });
+
       res.json(formatCredentialOutput(updated[0]));
     } catch (err) {
       authLogger.error("Failed to update credential", err);
@@ -695,6 +734,25 @@ router.delete(
         operation: "credential_delete_success",
         userId,
         credentialId: parseInt(id),
+      });
+
+      const { ipAddress: cdIp, userAgent: cdUa } = getRequestMeta(req);
+      const { users: usersTableCd } = await import("../db/schema.js");
+      const cdActor = await db
+        .select({ username: usersTableCd.username })
+        .from(usersTableCd)
+        .where(eq(usersTableCd.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: cdActor[0]?.username ?? userId,
+        action: "delete_credential",
+        resourceType: "credential",
+        resourceId: id,
+        resourceName: credentialToDelete[0].name,
+        ipAddress: cdIp,
+        userAgent: cdUa,
+        success: true,
       });
 
       res.json({ message: "Credential deleted successfully" });

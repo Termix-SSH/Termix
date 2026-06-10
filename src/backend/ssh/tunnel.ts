@@ -24,6 +24,7 @@ import type {
 } from "../../types/index.js";
 import { CONNECTION_STATES } from "../../types/index.js";
 import { tunnelLogger } from "../utils/logger.js";
+import { logAudit } from "../utils/audit-logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { DataCrypto } from "../utils/data-crypto.js";
@@ -1184,6 +1185,20 @@ async function connectSSHTunnel(
         mode: getTunnelMode(tunnelConfig),
         sourcePort: tunnelConfig.sourcePort,
         endpointPort: tunnelConfig.endpointPort,
+      });
+
+      logAudit({
+        userId: tunnelConfig.sourceUserId,
+        username: tunnelConfig.sourceUserId,
+        action: "tunnel_connect",
+        resourceType: "tunnel",
+        resourceId: String(tunnelConfig.sourceHostId),
+        resourceName: tunnelName,
+        details: JSON.stringify({
+          mode: getTunnelMode(tunnelConfig),
+          sourcePort: tunnelConfig.sourcePort,
+        }),
+        success: true,
       });
 
       broadcastTunnelStatus(tunnelName, {

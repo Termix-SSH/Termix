@@ -4,6 +4,7 @@ import { Input } from "@/components/input.tsx";
 import { Shield, Copy, ExternalLink, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/clipboard";
 
 interface WarpgateDialogProps {
   isOpen: boolean;
@@ -30,12 +31,12 @@ export function WarpgateDialog({
   if (!isOpen) return null;
 
   const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyToClipboard(url);
+    if (ok) {
       setCopied(true);
       toast.success(t("common.copied"));
       setTimeout(() => setCopied(false), 2000);
-    } catch {
+    } else {
       toast.error(t("common.copyFailed"));
     }
   };

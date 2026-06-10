@@ -90,6 +90,13 @@ export function createHostEditorForm(host: Host | null) {
     enableTerminal: host?.enableTerminal ?? true,
     enableFileManager: host?.enableFileManager ?? false,
     enableDocker: host?.enableDocker ?? false,
+    enableProxmox: host?.enableProxmox ?? false,
+    proxmoxConfig: host?.proxmoxConfig ?? {
+      defaultCredentialId: null as number | null,
+      windowsPatterns: "win, windows",
+      dockerPatterns: "docker",
+      preferredPrefixes: "10., 192.168.",
+    },
     enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
@@ -178,6 +185,13 @@ export function buildHostEditorPayload(
   form: HostEditorForm,
   protocols: HostProtocols,
 ): SSHHostData {
+  // Only carry the auth fields that belong to the selected method so switching
+  // method (e.g. on a cloned host) doesn't leave a stale credentialId or key
+  // behind that the backend would keep resolving.
+  const usesCredential = form.authType === "credential";
+  const usesKey = form.authType === "key";
+  const usesPassword = form.authType === "password";
+
   return {
     connectionType: protocols.enableSsh
       ? "ssh"
@@ -200,14 +214,20 @@ export function buildHostEditorPayload(
     tags: form.tags,
     pin: form.pin,
     authType: form.authType,
-    password: form.password || null,
-    key: form.key === "existing_key" ? undefined : form.key || null,
-    keyPassword:
-      form.keyPassword === "existing_key_password"
+    password: usesPassword ? form.password || null : null,
+    key: usesKey
+      ? form.key === "existing_key"
         ? undefined
-        : form.keyPassword || null,
-    keyType: form.keyType !== "auto" ? form.keyType : null,
-    credentialId: form.credentialId ? Number(form.credentialId) : null,
+        : form.key || null
+      : null,
+    keyPassword: usesKey
+      ? form.keyPassword === "existing_key_password"
+        ? undefined
+        : form.keyPassword || null
+      : null,
+    keyType: usesKey && form.keyType !== "auto" ? form.keyType : null,
+    credentialId:
+      usesCredential && form.credentialId ? Number(form.credentialId) : null,
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
     macAddress: form.macAddress || null,
@@ -215,6 +235,8 @@ export function buildHostEditorPayload(
     enableTunnel: form.enableTunnel,
     enableFileManager: form.enableFileManager,
     enableDocker: form.enableDocker,
+    enableProxmox: form.enableProxmox,
+    proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
     defaultPath: form.defaultPath || "/",
     useSocks5: form.useSocks5,
     socks5Host:

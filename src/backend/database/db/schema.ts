@@ -126,6 +126,10 @@ export const hosts = sqliteTable("ssh_data", {
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   dockerConfig: text("docker_config"),
+  enableProxmox: integer("enable_proxmox", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  proxmoxConfig: text("proxmox_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
@@ -441,21 +445,6 @@ export const networkTopology = sqliteTable("network_topology", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const dashboardPreferences = sqliteTable("dashboard_preferences", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
-  layout: text("layout").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const hostAccess = sqliteTable("host_access", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   hostId: integer("host_id")
@@ -683,6 +672,59 @@ export const userPreferences = sqliteTable("user_preferences", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const hostMetricsPreferences = sqliteTable("host_metrics_preferences", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  // JSON-encoded HostMetricsLayout. Layout has no secrets, so it is stored as
+  // plain JSON (no field-level encryption).
+  layout: text("layout").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const hostHealthChecks = sqliteTable("host_health_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  // JSON array of { id, name, type: "tcp"|"http", target, port, path }
+  checks: text("checks").notNull(),
+  intervalSeconds: integer("interval_seconds").notNull().default(300),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const hostHealthHistory = sqliteTable("host_health_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  checkId: text("check_id").notNull(),
+  ts: text("ts").notNull().default(sql`CURRENT_TIMESTAMP`),
+  ok: integer("ok", { mode: "boolean" }).notNull(),
+  latencyMs: integer("latency_ms"),
+  detail: text("detail"),
 });
 
 // --- tmux-monitor begin ---

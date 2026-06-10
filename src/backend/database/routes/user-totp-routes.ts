@@ -1,6 +1,6 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Router } from "express";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import QRCode from "qrcode";
 import speakeasy from "speakeasy";
@@ -21,6 +21,57 @@ interface UserTotpRoutesDeps {
   authenticateJWT: RequestHandler;
   authManager: AuthManager;
   isNativeAppRequest: NativeAppRequestChecker;
+}
+
+type TotpUserRecord = typeof users.$inferSelect;
+
+export async function verifyTotpReauth(
+  userRecord: TotpUserRecord,
+  credential: string,
+): Promise<boolean> {
+  if (!userRecord.isOidc && userRecord.passwordHash) {
+    const passwordMatch = await bcrypt.compare(
+      credential,
+      userRecord.passwordHash,
+    );
+    if (passwordMatch) {
+      return true;
+    }
+  }
+
+  if (userRecord.totpSecret) {
+    const totpMatch = speakeasy.totp.verify({
+      secret: userRecord.totpSecret,
+      encoding: "base32",
+      token: credential,
+      window: 2,
+    });
+    if (totpMatch) {
+      return true;
+    }
+  }
+
+  let backupCodes: unknown = [];
+  try {
+    backupCodes = userRecord.totpBackupCodes
+      ? JSON.parse(userRecord.totpBackupCodes)
+      : [];
+  } catch {
+    backupCodes = [];
+  }
+  if (Array.isArray(backupCodes)) {
+    const backupIndex = backupCodes.indexOf(credential);
+    if (backupIndex !== -1) {
+      backupCodes.splice(backupIndex, 1);
+      await db
+        .update(users)
+        .set({ totpBackupCodes: JSON.stringify(backupCodes) })
+        .where(eq(users.id, userRecord.id));
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export function registerUserTotpRoutes(
@@ -113,6 +164,7 @@ export function registerUserTotpRoutes(
    */
   router.post("/totp/enable", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
+    const sessionId = (req as AuthenticatedRequest).sessionId;
     const { totp_code } = req.body;
 
     if (!totp_code) {
@@ -158,7 +210,13 @@ export function registerUserTotpRoutes(
         })
         .where(eq(users.id, userId));
 
-      await db.delete(sessions).where(eq(sessions.userId, userId));
+      await db
+        .delete(sessions)
+        .where(
+          sessionId
+            ? and(eq(sessions.userId, userId), ne(sessions.id, sessionId))
+            : eq(sessions.userId, userId),
+        );
       await db.delete(trustedDevices).where(eq(trustedDevices.userId, userId));
 
       try {
@@ -219,11 +277,12 @@ export function registerUserTotpRoutes(
   router.post("/totp/disable", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { password, totp_code } = req.body;
+    const credential = password || totp_code;
 
-    if (!password || !totp_code) {
+    if (!credential) {
       return res
         .status(400)
-        .json({ error: "Both password and TOTP code are required" });
+        .json({ error: "A TOTP code or password is required" });
     }
 
     try {
@@ -238,22 +297,11 @@ export function registerUserTotpRoutes(
         return res.status(400).json({ error: "TOTP is not enabled" });
       }
 
-      if (!userRecord.isOidc) {
-        const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
-        if (!isMatch) {
-          return res.status(401).json({ error: "Incorrect password" });
-        }
-      }
-
-      const verified = speakeasy.totp.verify({
-        secret: userRecord.totpSecret!,
-        encoding: "base32",
-        token: totp_code,
-        window: 2,
-      });
-
+      const verified = await verifyTotpReauth(userRecord, credential);
       if (!verified) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
+        return res
+          .status(401)
+          .json({ error: "Incorrect password or invalid TOTP code" });
       }
 
       await db
@@ -310,11 +358,12 @@ export function registerUserTotpRoutes(
   router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { password, totp_code } = req.body;
+    const credential = password || totp_code;
 
-    if (!password || !totp_code) {
+    if (!credential) {
       return res
         .status(400)
-        .json({ error: "Both password and TOTP code are required" });
+        .json({ error: "A TOTP code or password is required" });
     }
 
     try {
@@ -329,22 +378,11 @@ export function registerUserTotpRoutes(
         return res.status(400).json({ error: "TOTP is not enabled" });
       }
 
-      if (!userRecord.isOidc) {
-        const isMatch = await bcrypt.compare(password, userRecord.passwordHash);
-        if (!isMatch) {
-          return res.status(401).json({ error: "Incorrect password" });
-        }
-      }
-
-      const verified = speakeasy.totp.verify({
-        secret: userRecord.totpSecret!,
-        encoding: "base32",
-        token: totp_code,
-        window: 2,
-      });
-
+      const verified = await verifyTotpReauth(userRecord, credential);
       if (!verified) {
-        return res.status(401).json({ error: "Invalid TOTP code" });
+        return res
+          .status(401)
+          .json({ error: "Incorrect password or invalid TOTP code" });
       }
 
       const backupCodes = Array.from({ length: 8 }, () =>

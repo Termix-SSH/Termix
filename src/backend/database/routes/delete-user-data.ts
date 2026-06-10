@@ -4,7 +4,6 @@ import { db } from "../db/index.js";
 import {
   auditLogs,
   commandHistory,
-  dashboardPreferences,
   dismissedAlerts,
   fileManagerPinned,
   fileManagerRecent,
@@ -77,9 +76,6 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
 
     await db.delete(networkTopology).where(eq(networkTopology.userId, userId));
-    await db
-      .delete(dashboardPreferences)
-      .where(eq(dashboardPreferences.userId, userId));
     await db.delete(opksshTokens).where(eq(opksshTokens.userId, userId));
     await db.delete(userOpenTabs).where(eq(userOpenTabs.userId, userId));
     await db.delete(userPreferences).where(eq(userPreferences.userId, userId));

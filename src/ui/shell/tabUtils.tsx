@@ -22,7 +22,7 @@ import type {
 } from "@/features/terminal/Terminal";
 import { FileManager } from "@/features/file-manager/FileManager";
 import { DockerManager } from "@/features/docker/DockerManager";
-import { ServerStats } from "@/features/server-stats/ServerStats";
+import { HostMetricsTab } from "@/features/host-metrics/HostMetricsTab";
 // --- tmux-monitor ---
 import { TmuxMonitor } from "@/features/tmux-monitor/TmuxMonitor";
 import GuacamoleApp from "@/features/guacamole/GuacamoleApp";
@@ -99,7 +99,7 @@ export function tabIcon(type: TabType) {
       return <Monitor className="size-3.5" />;
     case "telnet":
       return <Terminal className="size-3.5" />;
-    case "stats":
+    case "host-metrics":
       return <Server className="size-3.5" />;
     case "files":
       return <FolderSearch className="size-3.5" />;
@@ -217,13 +217,13 @@ export function renderTabContent(
         />
       );
 
-    case "stats":
+    case "host-metrics":
       if (!host)
         return (
-          <EmptyState icon={Activity} messageKey="serverStats.noHostSelected" />
+          <EmptyState icon={Activity} messageKey="hostMetrics.noHostSelected" />
         );
       return (
-        <ServerStats
+        <HostMetricsTab
           hostConfig={hostToSSHHost(host)}
           title={label}
           isVisible={isVisible}

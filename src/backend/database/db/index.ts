@@ -488,6 +488,51 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS host_metrics_preferences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        layout TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_host_metrics_prefs_user_host
+        ON host_metrics_preferences (user_id, host_id);
+
+    CREATE TABLE IF NOT EXISTS host_health_checks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        checks TEXT NOT NULL,
+        interval_seconds INTEGER NOT NULL DEFAULT 300,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_host_health_checks_user_host
+        ON host_health_checks (user_id, host_id);
+
+    CREATE TABLE IF NOT EXISTS host_health_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        check_id TEXT NOT NULL,
+        ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ok INTEGER NOT NULL,
+        latency_ms INTEGER,
+        detail TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_host_health_history_lookup
+        ON host_health_history (user_id, host_id, check_id, ts);
+
 `);
 
   try {
@@ -714,6 +759,12 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_proxmox",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_data", "proxmox_config", "TEXT");
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
   addColumnIfNotExists("ssh_data", "domain", "TEXT");
@@ -1000,30 +1051,6 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite
-      .prepare("SELECT id FROM dashboard_preferences LIMIT 1")
-      .get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS dashboard_preferences (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL UNIQUE,
-          layout TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create dashboard_preferences table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
     sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
   } catch {
     try {
@@ -1181,6 +1208,25 @@ const migrateSchema = () => {
         error: e,
       });
     }
+  }
+
+  // Rename the legacy "stats" tab type to "host-metrics" so previously saved
+  // open tabs restore correctly after the Server Stats -> Host Metrics rename.
+  try {
+    sqlite.prepare("SELECT id FROM user_open_tabs LIMIT 1").get();
+    const result = sqlite
+      .prepare(
+        "UPDATE user_open_tabs SET tab_type = 'host-metrics' WHERE tab_type = 'stats'",
+      )
+      .run();
+    if (result.changes > 0) {
+      databaseLogger.info(
+        `Migrated ${result.changes} open tab(s) from 'stats' to 'host-metrics'`,
+        { operation: "open_tabs_tab_type_migration" },
+      );
+    }
+  } catch {
+    // user_open_tabs table not present yet; nothing to migrate.
   }
 
   try {
