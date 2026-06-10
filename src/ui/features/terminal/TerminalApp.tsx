@@ -5,9 +5,17 @@ import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
 
 interface TerminalAppProps {
   hostId?: string;
+  /** tmux session to attach to once the shell is ready (tmux monitor "Attach"). */
+  tmuxSession?: string;
 }
 
-const TerminalApp: React.FC<TerminalAppProps> = ({ hostId }) => {
+// Only the session name travels in the URL (never a raw command), so a crafted
+// link cannot execute arbitrary input. `=` forces exact-name matching in tmux.
+function tmuxAttachCommand(session: string): string {
+  return `tmux attach-session -t '=${session.replace(/'/g, "'\\''")}'`;
+}
+
+const TerminalApp: React.FC<TerminalAppProps> = ({ hostId, tmuxSession }) => {
   const { t } = useTranslation();
   return (
     <FullScreenAppWrapper hostId={hostId}>
@@ -43,6 +51,9 @@ const TerminalApp: React.FC<TerminalAppProps> = ({ hostId }) => {
             showTitle={false}
             splitScreen={false}
             onClose={() => {}}
+            executeCommand={
+              tmuxSession ? tmuxAttachCommand(tmuxSession) : undefined
+            }
           />
         );
       }}

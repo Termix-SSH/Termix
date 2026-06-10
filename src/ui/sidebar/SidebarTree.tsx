@@ -13,6 +13,7 @@ import {
   FolderOpen,
   FolderSearch,
   Key,
+  Layers, // --- tmux-monitor ---
   Link,
   Loader2,
   MemoryStick,
@@ -95,6 +96,13 @@ function getSshActions(
       icon: Server,
       label: "Host Metrics",
     },
+    // --- tmux-monitor ---
+    host.enableSsh &&
+      host.enableTerminal && {
+        type: "tmux_monitor" as TabType,
+        icon: Layers,
+        label: "Tmux Monitor",
+      },
   ].filter(Boolean) as {
     type: TabType;
     icon: typeof Terminal;
@@ -796,6 +804,20 @@ export function HostItem({
                         >
                           <Server className="size-3.5 mr-2" />
                           {t("hosts.copyHostMetricsUrlAction")}
+                        </DropdownMenuItem>
+                      )}
+                      {host.enableSsh && host.enableTerminal && (
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            writeClipboardText(
+                              `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
+                            );
+                            toast.success(t("hosts.tmuxMonitorUrlCopied"));
+                          }}
+                        >
+                          <Layers className="size-3.5 mr-2" />
+                          {t("hosts.copyTmuxMonitorUrlAction")}
                         </DropdownMenuItem>
                       )}
                       {host.enableRdp && (

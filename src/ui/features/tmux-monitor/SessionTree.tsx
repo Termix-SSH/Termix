@@ -68,7 +68,7 @@ export function SessionTree({
         return (
           <div key={session.name} className="mb-1">
             <div
-              className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 hover:bg-dark-hover"
+              className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 hover:bg-muted/40"
               onClick={() => onToggleSession(session.name)}
             >
               {expanded ? (
@@ -77,7 +77,7 @@ export function SessionTree({
                 <ChevronRight className="size-3.5 shrink-0" />
               )}
               <span
-                className={`size-2 shrink-0 rounded-full ${session.attachedClients > 0 ? "bg-green-500" : "bg-gray-500"}`}
+                className={`size-2 shrink-0 rounded-full ${session.attachedClients > 0 ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
                 title={
                   session.attachedClients > 0
                     ? t("tmuxMonitor.attached")
@@ -162,7 +162,7 @@ export function SessionTree({
                     return (
                       <div
                         key={pane.id}
-                        className={`ml-4 flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs hover:bg-dark-hover ${isSelected ? "bg-dark-active" : ""}`}
+                        className={`ml-4 flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs hover:bg-muted/40 ${isSelected ? "bg-accent-brand/10" : ""}`}
                         onClick={() =>
                           onSelectPane({
                             paneId: pane.id,

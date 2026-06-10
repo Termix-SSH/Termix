@@ -69,10 +69,16 @@ function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
   const hostId = searchParams.get("hostId");
+  const tmuxSession = searchParams.get("tmuxSession");
 
   switch (view) {
     case "terminal":
-      return <TerminalApp hostId={hostId || undefined} />;
+      return (
+        <TerminalApp
+          hostId={hostId || undefined}
+          tmuxSession={tmuxSession || undefined}
+        />
+      );
     case "file-manager":
       return <FileManagerApp hostId={hostId || undefined} />;
     case "tunnel":
@@ -87,7 +93,8 @@ function FullscreenApp() {
     case "telnet":
       return <GuacamoleApp hostId={hostId || undefined} />;
     case "tmux-monitor": // --- tmux-monitor ---
-      return <TmuxMonitorApp />;
+    case "tmux_monitor": // tab type spelling, so copied links also resolve
+      return <TmuxMonitorApp hostId={hostId || undefined} />;
     default:
       return null;
   }

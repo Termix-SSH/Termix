@@ -11,6 +11,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/select";
 import { Skeleton } from "@/components/skeleton";
 import { ScrollArea } from "@/components/scroll-area";
 import { getSSHHosts } from "@/main-axios";
@@ -20,9 +27,11 @@ import {
   getTmuxMetrics,
   searchTmux,
   setTmuxSessionTags,
+  focusTmuxPane,
   type TmuxOverview,
   type TmuxPaneMetrics,
   type TmuxSearchMatch,
+  type TmuxSearchResult,
 } from "@/api/tmux-monitor-api";
 import { SessionTree, type SessionMetricsAgg } from "./SessionTree";
 import { SearchResults } from "./SearchResults";
@@ -70,6 +79,10 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
   const [searchResults, setSearchResults] = useState<TmuxSearchMatch[] | null>(
     null,
   );
+  const [searchLimits, setSearchLimits] = useState<Pick<
+    TmuxSearchResult,
+    "truncated" | "searchedLines" | "maxPanes"
+  > | null>(null);
   const [searching, setSearching] = useState(false);
   // Bumped every 30s so relative "Xm ago" labels do not go stale.
   const [now, setNow] = useState(() => Date.now());
@@ -111,6 +124,17 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Reopening the singleton tab from a host action updates initialHostId;
+  // follow it so the requested host gets selected without a remount.
+  useEffect(() => {
+    if (initialHostId == null) return;
+    if (hosts.some((h) => h.id === initialHostId))
+      setSelectedHostId(initialHostId);
+    // Intentionally not depending on `hosts`: the mount effect already picks
+    // the initial host once hosts load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialHostId]);
+
   // -- relative time refresh --------------------------------------------------
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), TIME_TICK_MS);
@@ -133,10 +157,33 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
         });
       } catch (err) {
         if (!silent) {
-          setOverview(null);
-          setOverviewError(
-            err instanceof Error ? err.message : t("tmuxMonitor.failedToLoad"),
-          );
+          const axiosErr = err as {
+            code?: string;
+            response?: { data?: { error?: string; code?: string } };
+          };
+          const data = axiosErr.response?.data;
+          // The client request can time out before the backend finishes its
+          // own SSH connect timeout, so treat that like HOST_UNREACHABLE too.
+          const unreachable =
+            data?.code === "HOST_UNREACHABLE" ||
+            axiosErr.code === "ECONNABORTED";
+          if (data?.code === "TMUX_NOT_INSTALLED") {
+            // Same friendly empty-state as the overview's available:false.
+            setOverview({ available: false, sessions: [] });
+            setOverviewError(null);
+          } else {
+            setOverview(null);
+            setOverviewError(
+              unreachable
+                ? t("tmuxMonitor.hostUnreachable")
+                : data?.code === "TMUX_NO_SERVER"
+                  ? t("tmuxMonitor.noServer")
+                  : data?.error ||
+                    (err instanceof Error
+                      ? err.message
+                      : t("tmuxMonitor.failedToLoad")),
+            );
+          }
         }
       } finally {
         if (!silent) setOverviewLoading(false);
@@ -211,7 +258,9 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     const query = searchQuery.trim();
     setSearching(true);
     try {
-      setSearchResults(await searchTmux(selectedHostId, query));
+      const result = await searchTmux(selectedHostId, query);
+      setSearchResults(result.matches);
+      setSearchLimits(result);
       setSearchedQuery(query);
     } catch {
       toast.error(t("tmuxMonitor.searchFailed"));
@@ -240,8 +289,19 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     if (selectedHostId !== null) persistExpanded(selectedHostId, next);
   }
 
+  // Selecting a pane also focuses it on the server so the attached PTY (and
+  // any other tmux client) switches to that window/pane.
+  const selectPane = useCallback(
+    (pane: SelectedPane) => {
+      setSelectedPane(pane);
+      if (selectedHostId !== null)
+        focusTmuxPane(selectedHostId, pane.paneId).catch(() => {});
+    },
+    [selectedHostId],
+  );
+
   function handleSearchSelect(match: TmuxSearchMatch) {
-    setSelectedPane({
+    selectPane({
       paneId: match.paneId,
       sessionName: match.sessionName,
       windowIndex: match.windowIndex,
@@ -266,12 +326,15 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     }
   }
 
-  function openTerminal() {
+  function openTerminal(sessionName?: string) {
     if (selectedHostId === null) return;
-    window.open(
-      `${window.location.pathname}?view=terminal&hostId=${selectedHostId}`,
-      "_blank",
-    );
+    const params = new URLSearchParams({
+      view: "terminal",
+      hostId: String(selectedHostId),
+    });
+    const session = sessionName ?? selectedPane?.sessionName;
+    if (session) params.set("tmuxSession", session);
+    window.open(`${window.location.pathname}?${params.toString()}`, "_blank");
   }
 
   const metricsByPane = useMemo(() => {
@@ -301,28 +364,32 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
     : undefined;
 
   return (
-    <div className="flex h-full w-full bg-dark-bg text-foreground">
+    <div className="flex h-full w-full bg-background text-foreground">
       {/* Left rail: hosts + session tree */}
-      <div className="flex w-72 shrink-0 flex-col border-r border-dark-border bg-dark-bg-darker">
-        <div className="flex items-center gap-2 border-b border-dark-border px-3 py-2">
+      <div className="flex w-72 shrink-0 flex-col border-r border-border bg-card">
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <Layers className="size-4" />
           <span className="text-sm font-semibold">
             {t("tmuxMonitor.title")}
           </span>
         </div>
-        <div className="border-b border-dark-border p-2">
-          <select
-            className="w-full rounded-md border border-dark-border bg-dark-bg-input px-2 py-1.5 text-sm"
-            value={selectedHostId ?? ""}
+        <div className="border-b border-border p-2">
+          <Select
+            value={selectedHostId !== null ? String(selectedHostId) : ""}
             disabled={hostsLoading}
-            onChange={(e) => setSelectedHostId(Number(e.target.value))}
+            onValueChange={(value) => setSelectedHostId(Number(value))}
           >
-            {hosts.map((h) => (
-              <option key={h.id} value={h.id}>
-                {h.name || `${h.username}@${h.ip}`}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={t("tmuxMonitor.noHostSelected")} />
+            </SelectTrigger>
+            <SelectContent>
+              {hosts.map((h) => (
+                <SelectItem key={h.id} value={String(h.id)}>
+                  {h.name || `${h.username}@${h.ip}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <ScrollArea className="flex-1">
@@ -350,7 +417,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
             )}
             {overviewError && (
               <div className="space-y-2 px-2 py-4">
-                <p className="text-sm text-red-500">{overviewError}</p>
+                <p className="text-sm text-destructive">{overviewError}</p>
                 <Button
                   variant="outline"
                   size="sm"
@@ -386,7 +453,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                 expandedSessions={expandedSessions}
                 onToggleSession={toggleSession}
                 selectedPaneId={selectedPane?.paneId ?? null}
-                onSelectPane={setSelectedPane}
+                onSelectPane={selectPane}
                 metricsByPane={metricsByPane}
                 metricsBySession={metricsBySession}
                 onSaveTags={saveTags}
@@ -400,7 +467,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
       {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Toolbar */}
-        <div className="flex items-center gap-2 border-b border-dark-border px-3 py-2">
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
           <Server className="size-4 shrink-0 text-muted-foreground" />
           <span className="truncate text-sm">
             {selectedHost ? hostLabel : t("tmuxMonitor.noHostSelected")}
@@ -444,7 +511,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
                     : t("tmuxMonitor.attachTooltip", { host: hostLabel })
                   : undefined
               }
-              onClick={openTerminal}
+              onClick={() => openTerminal()}
             >
               <SquareTerminal className="mr-1 size-3.5" />
               {t("tmuxMonitor.attach")}
@@ -458,6 +525,7 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
             results={searchResults}
             searching={searching}
             query={searchedQuery}
+            limits={searchLimits}
             onSelect={handleSearchSelect}
             onClose={() => setSearchResults(null)}
           />
@@ -465,13 +533,13 @@ export function TmuxMonitor({ initialHostId }: { initialHostId?: number }) {
 
         {/* Pane preview */}
         <div className="flex min-h-0 flex-1 flex-col">
-          {selectedPane && selectedHostId !== null ? (
+          {selectedPane && selectedHost ? (
             <PanePreview
-              hostId={selectedHostId}
+              key={`${selectedHost.id}:${selectedPane.sessionName}`}
+              host={selectedHost}
               pane={selectedPane}
               metrics={selectedPaneMetrics}
               onClose={() => setSelectedPane(null)}
-              onStructureChanged={() => loadOverview(selectedHostId, true)}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center">

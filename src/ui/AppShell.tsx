@@ -664,6 +664,11 @@ export function AppShell({
             : host.enableTelnet
               ? "telnet"
               : "terminal");
+    // --- tmux-monitor --- singleton tab, not a per-host tab
+    if (type === "tmux_monitor") {
+      openSingletonTab(type, undefined, host);
+      return;
+    }
     openTab(host, type);
   }
 
@@ -713,7 +718,12 @@ export function AppShell({
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
       };
       setTabs((prev) => {
-        if (prev.find((t) => t.id === id)) return prev;
+        const existing = prev.find((t) => t.id === id);
+        if (existing) {
+          // --- tmux-monitor --- refocusing with a host preselects it
+          if (!host) return prev;
+          return prev.map((t) => (t.id === id ? { ...t, host } : t));
+        }
         return [
           ...prev,
           {

@@ -1,187 +1,44 @@
-// Read-only xterm.js preview of a tmux pane. Initial content comes from the
-// REST capture endpoint (with ANSI escapes), then live updates stream over
-// the tmux-monitor WebSocket. If the live stream is unavailable the component
-// falls back to the original 2s REST polling.
+// Interactive view of a tmux pane. Embeds the real SSH terminal (the same
+// component as the Terminal feature) and attaches to the selected session via
+// the native tmux_attach flow, so the pane is fully usable — typing, mouse
+// scrolling and tmux copy-mode all behave exactly like a normal terminal tab.
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import "@xterm/xterm/css/xterm.css";
 import { Activity, Cpu, MemoryStick, X } from "lucide-react";
-import {
-  getTmuxPaneCapture,
-  type TmuxPaneMetrics,
-} from "@/api/tmux-monitor-api";
-import { useTmuxLive } from "./useTmuxLive";
+import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
+import { Terminal } from "@/features/terminal/Terminal";
+import type { TerminalHostConfig } from "@/features/terminal/Terminal";
+import type { SSHHost } from "@/types/index";
+import type { TmuxPaneMetrics } from "@/api/tmux-monitor-api";
 import { formatMem } from "./format";
 import type { SelectedPane } from "./types";
 
-const CAPTURE_POLL_MS = 2_000;
-
-const TERMINAL_FONT_FAMILY =
-  '"JetBrains Mono", "SF Mono", Consolas, "Liberation Mono", monospace';
-
 interface PanePreviewProps {
-  hostId: number;
+  host: SSHHost;
   pane: SelectedPane;
   metrics?: TmuxPaneMetrics;
   onClose: () => void;
-  onStructureChanged: () => void;
 }
 
-export function PanePreview({
-  hostId,
-  pane,
-  metrics,
-  onClose,
-  onStructureChanged,
-}: PanePreviewProps) {
+function newInstanceId(): string {
+  return typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+export function PanePreview({ host, pane, metrics, onClose }: PanePreviewProps) {
   const { t } = useTranslation();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<Terminal | null>(null);
-  const onStructureChangedRef = useRef(onStructureChanged);
-  onStructureChangedRef.current = onStructureChanged;
-
-  const { status, subscribe, unsubscribe } = useTmuxLive();
-  // True once the live stream failed for the current pane; switches the
-  // preview to the REST polling fallback.
-  const [fallback, setFallback] = useState(false);
-
-  // Create the terminal once. It is strictly read-only: stdin is disabled and
-  // no onData handler is wired.
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const term = new Terminal({
-      disableStdin: true,
-      cursorBlink: false,
-      convertEol: true,
-      fontSize: 12,
-      fontFamily: TERMINAL_FONT_FAMILY,
-      scrollback: 5000,
-      theme: {
-        background: "#09090b",
-        foreground: "#d4d4d8",
-        cursor: "#09090b",
-        cursorAccent: "#09090b",
-      },
-    });
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    term.open(container);
-    try {
-      fitAddon.fit();
-    } catch {
-      // container may not be measurable yet
-    }
-
-    const resizeObserver = new ResizeObserver(() => {
-      try {
-        fitAddon.fit();
-      } catch {
-        // ignore fit errors during teardown
-      }
-    });
-    resizeObserver.observe(container);
-
-    termRef.current = term;
-    return () => {
-      resizeObserver.disconnect();
-      termRef.current = null;
-      term.dispose();
-    };
-  }, []);
-
-  // Pane selection flow: reset terminal, fetch initial ANSI capture once,
-  // then subscribe to the live stream.
-  useEffect(() => {
-    const term = termRef.current;
-    if (!term) return;
-    let cancelled = false;
-
-    term.reset();
-    setFallback(false);
-
-    getTmuxPaneCapture(hostId, pane.paneId, 0, true)
-      .then((content) => {
-        if (cancelled) return;
-        const current = termRef.current;
-        if (current && content) {
-          current.write(content, () => current.scrollToBottom());
-        }
-      })
-      .catch(() => {
-        // Initial capture is best-effort; the live stream (or the polling
-        // fallback) still provides content.
-      })
-      .finally(() => {
-        if (cancelled) return;
-        subscribe(hostId, pane.sessionName, pane.paneId, {
-          onData: (data) => termRef.current?.write(data),
-          onStructureChanged: () => onStructureChangedRef.current(),
-          onDetached: () => setFallback(true),
-        });
-      });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [hostId, pane.paneId, pane.sessionName, subscribe, unsubscribe]);
-
-  // FALLBACK: original 2s REST polling, used only when the live WebSocket is
-  // unavailable (detached pane, auth/connection failure, exhausted retries).
-  useEffect(() => {
-    if (!fallback) return;
-    let cancelled = false;
-
-    const load = () => {
-      if (document.hidden) return;
-      getTmuxPaneCapture(hostId, pane.paneId, 0, true)
-        .then((content) => {
-          if (cancelled) return;
-          const term = termRef.current;
-          if (!term) return;
-          term.reset();
-          term.write(content, () => term.scrollToBottom());
-        })
-        .catch(() => {});
-    };
-
-    load();
-    const interval = setInterval(load, CAPTURE_POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [fallback, hostId, pane.paneId]);
-
-  const live = !fallback && status === "live";
+  // One PTY per mount; the parent remounts this component (via key) when the
+  // host or session changes. Pane switches within a session go through the
+  // focus endpoint instead, so the connection is reused.
+  const instanceIdRef = useRef<string>(newInstanceId());
 
   return (
     <>
-      <div className="flex items-center gap-3 border-b border-dark-border px-3 py-1.5 text-xs text-muted-foreground">
+      <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
         <span className="font-medium text-foreground">
           {pane.sessionName} · {pane.paneId}
-        </span>
-        <span
-          className="flex items-center gap-1 rounded-full border border-dark-border px-1.5 py-0.5 text-[10px]"
-          title={
-            live
-              ? t("tmuxMonitor.liveTooltip")
-              : t("tmuxMonitor.pollingTooltip")
-          }
-        >
-          <span
-            className={`size-1.5 rounded-full ${live ? "bg-green-500" : "bg-gray-500"}`}
-          />
-          {live
-            ? t("tmuxMonitor.live")
-            : fallback
-              ? t("tmuxMonitor.polling")
-              : t("tmuxMonitor.connecting")}
         </span>
         {metrics && (
           <>
@@ -214,11 +71,25 @@ export function PanePreview({
           <X className="size-3.5" />
         </button>
       </div>
-      <div
-        ref={containerRef}
-        className="min-h-0 flex-1 overflow-hidden p-2"
-        style={{ backgroundColor: "#09090b" }}
-      />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <CommandHistoryProvider>
+          <Terminal
+            hostConfig={
+              {
+                ...host,
+                sshPort: host.port,
+                instanceId: instanceIdRef.current,
+              } as TerminalHostConfig
+            }
+            isVisible={true}
+            title={pane.sessionName}
+            showTitle={false}
+            splitScreen={false}
+            tmuxAttachSession={pane.sessionName}
+            onClose={onClose}
+          />
+        </CommandHistoryProvider>
+      </div>
     </>
   );
 }

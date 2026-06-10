@@ -72,6 +72,8 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
+  /** Attach to this tmux session right after connecting (tmux monitor). */
+  tmuxAttachSession?: string;
   onOpenFileManager?: (path?: string) => void;
   previewTheme?: string | null;
 }
@@ -85,6 +87,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onClose,
       initialPath,
       executeCommand,
+      tmuxAttachSession,
       onOpenFileManager,
       previewTheme,
     },
@@ -948,7 +951,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           ws.send(
             JSON.stringify({
               type: "connectToHost",
-              data: { cols, rows, hostConfig, initialPath, executeCommand },
+              data: {
+                cols,
+                rows,
+                hostConfig,
+                initialPath,
+                executeCommand,
+                tmuxAttachSession,
+              },
             }),
           );
         }

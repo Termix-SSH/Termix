@@ -57,26 +57,36 @@ export async function getTmuxOverview(hostId: number): Promise<TmuxOverview> {
   return response.data;
 }
 
-export async function getTmuxPaneCapture(
+/** Select a pane's window+pane on the server so the attached terminal
+ * (and any other attached client) switches to it. */
+export async function focusTmuxPane(
   hostId: number,
   paneId: string,
-  lines = 0,
-  ansi = false,
-): Promise<string> {
-  const response = await tmuxMonitorApi.get(`/${hostId}/capture`, {
-    params: { paneId, lines, ...(ansi ? { ansi: 1 } : {}) },
-  });
-  return response.data.content ?? "";
+): Promise<void> {
+  await tmuxMonitorApi.post(`/${hostId}/focus`, { paneId });
+}
+
+export interface TmuxSearchResult {
+  matches: TmuxSearchMatch[];
+  /** True when a search limit was hit and the results are partial. */
+  truncated: boolean;
+  searchedLines: number;
+  maxPanes: number;
 }
 
 export async function searchTmux(
   hostId: number,
   query: string,
-): Promise<TmuxSearchMatch[]> {
+): Promise<TmuxSearchResult> {
   const response = await tmuxMonitorApi.get(`/${hostId}/search`, {
     params: { q: query },
   });
-  return response.data.matches ?? [];
+  return {
+    matches: response.data.matches ?? [],
+    truncated: response.data.truncated ?? false,
+    searchedLines: response.data.searchedLines ?? 0,
+    maxPanes: response.data.maxPanes ?? 0,
+  };
 }
 
 export async function getTmuxMetrics(

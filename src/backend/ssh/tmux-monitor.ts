@@ -36,8 +36,8 @@ import {
 import type { SSHHost, AuthenticatedRequest } from "../../types/index.js";
 
 const PANE_ID_RE = /^%\d+$/;
-const MAX_CAPTURE_LINES = 5000;
 const MAX_SEARCH_PANES = 100;
+const MAX_MATCHES_PER_PANE = 50;
 const SEARCH_HISTORY_LINES = 2000;
 const SEARCH_CONCURRENCY = 4;
 
@@ -365,6 +365,48 @@ function toErrorMessage(err: unknown): string {
   return err instanceof Error ? err.message : "Unknown error";
 }
 
+// Typed error codes so the frontend can render a helpful state instead of a
+// raw 500 (same pattern as SESSION_EXPIRED handling in main-axios).
+type TmuxErrorCode =
+  | "TMUX_NOT_INSTALLED"
+  | "TMUX_NO_SERVER"
+  | "HOST_UNREACHABLE"
+  | "TMUX_ERROR";
+
+function classifyTmuxError(err: unknown): TmuxErrorCode {
+  const msg = err instanceof Error ? err.message : "";
+  if (/command not found|exited with code 127/i.test(msg))
+    return "TMUX_NOT_INSTALLED";
+  if (/no server running|lost server/i.test(msg)) return "TMUX_NO_SERVER";
+  if (
+    /timeout|timed out|econnrefused|ehostunreach|enotfound|enetunreach|econnreset|authentication|handshake|keepalive/i.test(
+      msg,
+    )
+  )
+    return "HOST_UNREACHABLE";
+  return "TMUX_ERROR";
+}
+
+function sendTmuxError(
+  res: express.Response,
+  err: unknown,
+  context: string,
+  hostId: number,
+): void {
+  const code = classifyTmuxError(err);
+  const status = code === "TMUX_ERROR" ? 500 : 503;
+  const error =
+    code === "TMUX_NOT_INSTALLED"
+      ? "tmux is not installed on this host"
+      : code === "TMUX_NO_SERVER"
+        ? "No tmux server is running on this host"
+        : code === "HOST_UNREACHABLE"
+          ? "Could not connect to the host"
+          : toErrorMessage(err);
+  sshLogger.error(`tmux ${context} failed for host ${hostId}`, err);
+  res.status(status).json({ error, code });
+}
+
 app.get("/tmux_monitor/:hostId/overview", async (req, res) => {
   const userId = (req as unknown as AuthenticatedRequest).userId;
   const host = await requireHost(req, res);
@@ -394,35 +436,33 @@ app.get("/tmux_monitor/:hostId/overview", async (req, res) => {
     });
     res.json(result);
   } catch (err) {
-    sshLogger.error(`tmux overview failed for host ${host.id}`, err);
-    res.status(500).json({ error: toErrorMessage(err) });
+    sendTmuxError(res, err, "overview", host.id);
   }
 });
 
-app.get("/tmux_monitor/:hostId/capture", async (req, res) => {
+// Focus a pane: select its window and pane on the server so every attached
+// client (including the monitor's embedded terminal) switches to it.
+app.post("/tmux_monitor/:hostId/focus", async (req, res) => {
   const host = await requireHost(req, res);
   if (!host) return;
 
-  const paneId = String(req.query.paneId || "");
+  const paneId = String((req.body as { paneId?: string })?.paneId || "");
   if (!PANE_ID_RE.test(paneId)) {
     return res.status(400).json({ error: "Invalid pane ID" });
   }
-  let lines = parseInt(String(req.query.lines || "0"), 10) || 0;
-  lines = Math.min(Math.max(lines, 0), MAX_CAPTURE_LINES);
-  // ansi=1 preserves escape sequences (-e) so the frontend xterm preview can
-  // render colors. Default stays plain text (search endpoint relies on it).
-  const ansi = String(req.query.ansi || "") === "1";
 
   try {
-    const content = await withHostConnection(host, (conn) =>
+    await withHostConnection(host, (conn) =>
+      // A pane id is a valid window target: tmux resolves it to the window
+      // containing the pane.
       execCommand(
         conn,
-        `tmux capture-pane -p${ansi ? " -e" : ""} -J -t ${shellEscape(paneId)}${lines > 0 ? ` -S -${lines}` : ""} 2>/dev/null`,
+        `tmux select-window -t ${shellEscape(paneId)} \\; select-pane -t ${shellEscape(paneId)}`,
       ),
     );
-    res.json({ paneId, content });
+    res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: toErrorMessage(err) });
+    sendTmuxError(res, err, "focus", host.id);
   }
 });
 
@@ -437,7 +477,11 @@ app.get("/tmux_monitor/:hostId/search", async (req, res) => {
 
   try {
     const results = await withHostConnection(host, async (conn) => {
-      const panes = (await listPanesRaw(conn)).slice(0, MAX_SEARCH_PANES);
+      const allPanes = await listPanesRaw(conn);
+      const panes = allPanes.slice(0, MAX_SEARCH_PANES);
+      // Flips to true whenever a limit was hit, so the UI can tell the user
+      // the results are partial instead of silently truncating.
+      let truncated = allPanes.length > MAX_SEARCH_PANES;
       const matches: Array<{
         paneId: string;
         sessionName: string;
@@ -455,9 +499,11 @@ app.get("/tmux_monitor/:hostId/search", async (req, res) => {
             try {
               const output = await execCommand(
                 conn,
-                `tmux capture-pane -p -J -t ${shellEscape(pane.id)} -S -${SEARCH_HISTORY_LINES} 2>/dev/null | grep -n -i -F -- ${shellEscape(query)} | head -50`,
+                `tmux capture-pane -p -J -t ${shellEscape(pane.id)} -S -${SEARCH_HISTORY_LINES} 2>/dev/null | grep -n -i -F -- ${shellEscape(query)} | head -${MAX_MATCHES_PER_PANE}`,
               );
-              for (const line of output.split("\n").filter(Boolean)) {
+              const lines = output.split("\n").filter(Boolean);
+              if (lines.length >= MAX_MATCHES_PER_PANE) truncated = true;
+              for (const line of lines) {
                 const sep = line.indexOf(":");
                 if (sep === -1) continue;
                 matches.push({
@@ -474,11 +520,17 @@ app.get("/tmux_monitor/:hostId/search", async (req, res) => {
           }),
         );
       }
-      return matches;
+      return { matches, truncated };
     });
-    res.json({ query, matches: results });
+    res.json({
+      query,
+      matches: results.matches,
+      truncated: results.truncated,
+      searchedLines: SEARCH_HISTORY_LINES,
+      maxPanes: MAX_SEARCH_PANES,
+    });
   } catch (err) {
-    res.status(500).json({ error: toErrorMessage(err) });
+    sendTmuxError(res, err, "search", host.id);
   }
 });
 
@@ -494,7 +546,7 @@ app.get("/tmux_monitor/:hostId/metrics", async (req, res) => {
     });
     res.json({ panes: metrics });
   } catch (err) {
-    res.status(500).json({ error: toErrorMessage(err) });
+    sendTmuxError(res, err, "metrics", host.id);
   }
 });
 

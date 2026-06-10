@@ -1,10 +1,15 @@
 import React from "react";
 import { TmuxMonitor } from "@/features/tmux-monitor/TmuxMonitor.tsx";
 
-const TmuxMonitorApp: React.FC = () => {
+interface TmuxMonitorAppProps {
+  hostId?: string;
+}
+
+const TmuxMonitorApp: React.FC<TmuxMonitorAppProps> = ({ hostId }) => {
+  const parsed = hostId ? parseInt(hostId, 10) : NaN;
   return (
     <div className="h-screen w-screen overflow-hidden">
-      <TmuxMonitor />
+      <TmuxMonitor initialHostId={Number.isFinite(parsed) ? parsed : undefined} />
     </div>
   );
 };

@@ -68,6 +68,9 @@ interface ConnectToHostData {
   };
   initialPath?: string;
   executeCommand?: string;
+  /** Attach straight to this tmux session once the shell is ready
+   * (tmux monitor opens its panes through a real PTY this way). */
+  tmuxAttachSession?: string;
 }
 
 interface ResizeData {
@@ -823,7 +826,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   async function handleConnectToHost(data: ConnectToHostData) {
-    const { hostConfig, initialPath, executeCommand } = data;
+    const { hostConfig, initialPath, executeCommand, tmuxAttachSession } = data;
     const {
       id,
       ip: rawIp,
@@ -1476,7 +1479,27 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }, delay);
           };
 
-          if (autoTmux && conn) {
+          if (tmuxAttachSession && conn) {
+            // Direct attach (tmux monitor): the session is known to exist, so
+            // skip detection and reuse the same path as the manual
+            // "tmux_attach" websocket message.
+            attachOrCreateTmuxSession(stream, tmuxAttachSession);
+            {
+              const session = sessionManager.getSession(boundSessionId);
+              if (session) session.tmuxSessionName = tmuxAttachSession;
+            }
+            sshLogger.info("Attached to requested tmux session", {
+              operation: "tmux_direct_attach",
+              sessionName: tmuxAttachSession,
+              hostId: id,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "tmux_session_attached",
+                sessionName: tmuxAttachSession,
+              }),
+            );
+          } else if (autoTmux && conn) {
             (async () => {
               try {
                 const detection = await detectTmux(conn);
