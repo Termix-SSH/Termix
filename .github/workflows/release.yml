@@ -191,12 +191,11 @@ jobs:
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
 
-          if git diff --quiet; then
+          git add src/ui/locales/translated
+          if git diff --cached --quiet; then
             echo "No translation changes to commit."
             exit 0
           fi
-
-          git add src/ui/locales/translated
           git commit -m "chore: sync Crowdin translations for ${{ needs.prep.outputs.version }}"
           git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
 
