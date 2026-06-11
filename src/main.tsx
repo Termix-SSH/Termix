@@ -79,7 +79,12 @@ function FullscreenApp() {
     case "rdp":
     case "vnc":
     case "telnet":
-      return <GuacamoleApp hostId={hostId || undefined} />;
+      return (
+        <GuacamoleApp
+          hostId={hostId || undefined}
+          protocol={view as "rdp" | "vnc" | "telnet"}
+        />
+      );
     default:
       return null;
   }
