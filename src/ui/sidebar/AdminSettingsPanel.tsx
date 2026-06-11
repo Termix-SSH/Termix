@@ -121,6 +121,7 @@ export function AdminSettingsPanel() {
   const [linkAccountTarget, setLinkAccountTarget] = useState<{
     id: string;
     username: string;
+    isOidc: boolean;
   } | null>(null);
 
   // Create role form
@@ -254,7 +255,7 @@ export function AdminSettingsPanel() {
   async function loadSSOProviders() {
     try {
       const providers = await getAdminSSOProviders();
-      if (providers) setSsoProviders(providers);
+      setSsoProviders(providers);
     } catch {
       // non-fatal
     }
@@ -826,6 +827,7 @@ export function AdminSettingsPanel() {
         onOpenChange={setLinkAccountOpen}
         linkAccountTarget={linkAccountTarget}
         setUsers={setUsers}
+        users={users}
       />
     </div>
   );

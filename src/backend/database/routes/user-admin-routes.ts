@@ -38,10 +38,19 @@ export function registerUserAdminRoutes(
           username: users.username,
           isAdmin: users.isAdmin,
           isOidc: users.isOidc,
+          passwordHash: users.passwordHash,
         })
         .from(users);
 
-      res.json({ users: allUsers });
+      res.json({
+        users: allUsers.map((u) => ({
+          userId: u.id,
+          username: u.username,
+          is_admin: u.isAdmin,
+          is_oidc: u.isOidc,
+          password_hash: u.passwordHash ? "set" : null,
+        })),
+      });
     } catch (err) {
       authLogger.error("Failed to list users", err);
       res.status(500).json({ error: "Failed to list users" });
