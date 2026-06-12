@@ -1919,6 +1919,8 @@ export {
   updatePasswordResetAllowed,
   updateOIDCConfig,
   disableOIDCConfig,
+  getCommandHistoryEnabled,
+  updateCommandHistoryEnabled,
   type ApiKey,
   type CreatedApiKey,
 } from "@/api/user-management-api";

@@ -727,6 +727,11 @@ const migrateSchema = () => {
   );
   addColumnIfNotExists(
     "ssh_data",
+    "enable_command_history",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
     "enable_tunnel",
     "INTEGER NOT NULL DEFAULT 1",
   );

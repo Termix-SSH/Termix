@@ -370,6 +370,8 @@
     "enableAutoTmuxDesc": "Automatically launch or attach to tmux session",
     "enableSessionLogging": "Session Logging",
     "enableSessionLoggingDesc": "Record terminal session output for later review",
+    "enableCommandHistory": "Command History",
+    "enableCommandHistoryDesc": "Record commands run in this terminal for history and autocomplete",
     "sudoPasswordAutoFillLabel": "Sudo Password Auto-fill",
     "sudoPasswordAutoFillShortDesc": "Automatically provide sudo password when prompted",
     "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
@@ -2033,6 +2035,9 @@
     "oidcAutoProvisionDesc": "Auto-create accounts for OIDC users even when registration is disabled",
     "allowPasswordReset": "Allow Password Reset",
     "allowPasswordResetDesc": "Reset code via Docker logs",
+    "commandHistoryEnabled": "Command History",
+    "commandHistoryEnabledDesc": "Allow command history recording. When disabled, history is not saved regardless of per-host settings.",
+    "updateCommandHistoryFailed": "Failed to update command history setting",
     "sessionTimeout": "Session Timeout",
     "hours": "hours",
     "sessionTimeoutRange": "Min 1h · Max 720h",
@@ -2228,7 +2233,7 @@
         "clearAll": "Clear All",
         "noHistoryEntries": "No history entries",
         "trackingDisabled": "History tracking is disabled",
-        "trackingDisabledHint": "Enable it in your profile settings to record commands."
+        "trackingDisabledHint": "Enable it in the host's terminal settings."
       },
       "sshTools": {
         "keyRecordingTitle": "Key Recording",

@@ -216,30 +216,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
-    const [commandHistoryTrackingEnabled, setCommandHistoryTrackingEnabled] =
-      useState<boolean>(
-        () => localStorage.getItem("commandHistoryTracking") === "true",
-      );
-
-    useEffect(() => {
-      const handleCommandHistoryTrackingChanged = () => {
-        setCommandHistoryTrackingEnabled(
-          localStorage.getItem("commandHistoryTracking") === "true",
-        );
-      };
-
-      window.addEventListener(
-        "commandHistoryTrackingChanged",
-        handleCommandHistoryTrackingChanged,
-      );
-
-      return () => {
-        window.removeEventListener(
-          "commandHistoryTrackingChanged",
-          handleCommandHistoryTrackingChanged,
-        );
-      };
-    }, []);
+    const commandHistoryTrackingEnabled =
+      hostConfig.enableCommandHistory !== false;
 
     const { trackInput, getCurrentCommand, updateCurrentCommand } =
       useCommandTracker({

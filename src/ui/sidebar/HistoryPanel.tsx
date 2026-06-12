@@ -21,23 +21,11 @@ export function HistoryPanel({
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [commands, setCommands] = useState<string[]>([]);
-  const [trackingEnabled, setTrackingEnabled] = useState(
-    () => localStorage.getItem("commandHistoryTracking") === "true",
-  );
 
   const activeTab = terminalTabs.find((t) => t.id === activeTabId);
   const activeIsTerminal = !!activeTab;
   const hostId = activeTab?.host?.id ? parseInt(activeTab.host.id, 10) : null;
-
-  useEffect(() => {
-    const handler = () =>
-      setTrackingEnabled(
-        localStorage.getItem("commandHistoryTracking") === "true",
-      );
-    window.addEventListener("commandHistoryTrackingChanged", handler);
-    return () =>
-      window.removeEventListener("commandHistoryTrackingChanged", handler);
-  }, []);
+  const trackingEnabled = activeTab?.host?.enableCommandHistory !== false;
 
   useEffect(() => {
     if (!hostId || !trackingEnabled) {

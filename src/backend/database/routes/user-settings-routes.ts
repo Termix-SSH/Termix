@@ -434,4 +434,114 @@ export function registerUserSettingsRoutes(
       res.status(500).json({ error: "Failed to update Tailscale settings" });
     }
   });
+
+  /**
+   * @openapi
+   * /users/command-history-enabled:
+   *   get:
+   *     summary: Get command history enabled setting
+   *     description: Returns whether command history recording is globally enabled.
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: Command history enabled status.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 enabled:
+   *                   type: boolean
+   */
+  router.get("/command-history-enabled", authenticateJWT, async (_req, res) => {
+    try {
+      const row = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'command_history_enabled'",
+        )
+        .get() as { value: string } | undefined;
+      res.json({ enabled: row ? row.value !== "false" : true });
+    } catch (err) {
+      authLogger.error("Failed to get command history enabled setting", err);
+      res
+        .status(500)
+        .json({ error: "Failed to get command history enabled setting" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/command-history-enabled:
+   *   patch:
+   *     summary: Update command history enabled setting (admin only)
+   *     description: Globally enables or disables command history recording for all hosts.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               enabled:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Setting updated.
+   *       403:
+   *         description: Not authorized.
+   *       500:
+   *         description: Failed to update setting.
+   */
+  router.patch(
+    "/command-history-enabled",
+    authenticateJWT,
+    async (req, res) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      try {
+        const user = await db.select().from(users).where(eq(users.id, userId));
+        if (!user || user.length === 0 || !user[0].isAdmin) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+        const { enabled } = req.body;
+        if (typeof enabled !== "boolean") {
+          return res.status(400).json({ error: "enabled must be a boolean" });
+        }
+        db.$client
+          .prepare(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES ('command_history_enabled', ?)",
+          )
+          .run(enabled ? "true" : "false");
+
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        const actorRecord = await db
+          .select({ username: users.username })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        await logAudit({
+          userId,
+          username: actorRecord[0]?.username ?? userId,
+          action: "update_command_history_enabled",
+          resourceType: "setting",
+          details: JSON.stringify({ enabled }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+
+        res.json({ enabled });
+      } catch (err) {
+        authLogger.error(
+          "Failed to update command history enabled setting",
+          err,
+        );
+        res
+          .status(500)
+          .json({ error: "Failed to update command history enabled setting" });
+      }
+    },
+  );
 }

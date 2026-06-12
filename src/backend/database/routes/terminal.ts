@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { commandHistory } from "../db/schema.js";
+import { commandHistory, hosts } from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
@@ -79,6 +79,36 @@ router.post(
 
     const trimmedCommand = command.trim();
     if (sensitivePatterns.some((p: RegExp) => p.test(trimmedCommand))) {
+      return res.status(201).json({
+        id: 0,
+        userId,
+        hostId: parseInt(hostId, 10),
+        command: trimmedCommand,
+        executedAt: new Date().toISOString(),
+      });
+    }
+
+    const globalEnabledRow = db.$client
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'command_history_enabled'",
+      )
+      .get() as { value: string } | undefined;
+    if (globalEnabledRow && globalEnabledRow.value === "false") {
+      return res.status(201).json({
+        id: 0,
+        userId,
+        hostId: parseInt(hostId, 10),
+        command: trimmedCommand,
+        executedAt: new Date().toISOString(),
+      });
+    }
+
+    const hostRecord = await db
+      .select({ enableCommandHistory: hosts.enableCommandHistory })
+      .from(hosts)
+      .where(eq(hosts.id, parseInt(hostId, 10)))
+      .limit(1);
+    if (hostRecord.length > 0 && hostRecord[0].enableCommandHistory === false) {
       return res.status(201).json({
         id: 0,
         userId,

@@ -60,6 +60,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       h.enableTerminal ??
       (h.enableSsh != null ? h.enableSsh : h.connectionType === "ssh"),
     enableSessionLogging: h.enableSessionLogging ?? true,
+    enableCommandHistory: h.enableCommandHistory ?? true,
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,

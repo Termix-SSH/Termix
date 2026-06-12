@@ -27,6 +27,7 @@ export type Host = {
   pin?: boolean;
 
   enableTerminal: boolean;
+  enableCommandHistory: boolean;
   terminalConfig?: {
     cursorBlink: boolean;
     cursorStyle: "block" | "underline" | "bar";

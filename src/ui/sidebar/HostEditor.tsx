@@ -888,6 +888,15 @@ export function HostEditor({
                     onChange={(v) => setField("enableSessionLogging", v)}
                   />
                 </SettingRow>
+                <SettingRow
+                  label={t("hosts.enableCommandHistory")}
+                  description={t("hosts.enableCommandHistoryDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.enableCommandHistory}
+                    onChange={(v) => setField("enableCommandHistory", v)}
+                  />
+                </SettingRow>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

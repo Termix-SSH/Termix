@@ -489,9 +489,6 @@ export function UserProfilePanel({
   const [commandAutocomplete, setCommandAutocomplete] = useState(
     () => localStorage.getItem("commandAutocomplete") === "true",
   );
-  const [commandHistoryTracking, setCommandHistoryTracking] = useState(
-    () => localStorage.getItem("commandHistoryTracking") === "true",
-  );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
@@ -978,21 +975,6 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setCommandAutocomplete(v);
                   localStorage.setItem("commandAutocomplete", v.toString());
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.historyTracking")}
-              description={t("newUi.sidebar.userProfile.historyTrackingDesc")}
-            >
-              <FakeSwitch
-                checked={commandHistoryTracking}
-                onChange={(v) => {
-                  setCommandHistoryTracking(v);
-                  localStorage.setItem("commandHistoryTracking", v.toString());
-                  window.dispatchEvent(
-                    new Event("commandHistoryTrackingChanged"),
-                  );
                 }}
               />
             </SettingRow>

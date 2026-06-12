@@ -26,6 +26,8 @@ type GeneralSettingsSectionProps = {
   handleToggleOidcAutoProvision: () => void;
   allowPasswordReset: boolean;
   handleTogglePasswordReset: () => void;
+  commandHistoryEnabled: boolean;
+  handleToggleCommandHistory: () => void;
   sessionTimeout: string;
   setSessionTimeout: Dispatch<SetStateAction<string>>;
   handleSaveSessionTimeout: () => void;
@@ -57,6 +59,8 @@ export function AdminGeneralSettingsSection({
   handleToggleOidcAutoProvision,
   allowPasswordReset,
   handleTogglePasswordReset,
+  commandHistoryEnabled,
+  handleToggleCommandHistory,
   sessionTimeout,
   setSessionTimeout,
   handleSaveSessionTimeout,
@@ -120,6 +124,15 @@ export function AdminGeneralSettingsSection({
           <AdminToggle
             on={allowPasswordReset}
             onToggle={handleTogglePasswordReset}
+          />
+        </SettingRow>
+        <SettingRow
+          label={t("admin.commandHistoryEnabled")}
+          description={t("admin.commandHistoryEnabledDesc")}
+        >
+          <AdminToggle
+            on={commandHistoryEnabled}
+            onToggle={handleToggleCommandHistory}
           />
         </SettingRow>
 

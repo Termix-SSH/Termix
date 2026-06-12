@@ -28,6 +28,8 @@ import {
   updateGuacamoleSettings,
   getOidcAutoProvision,
   updateOidcAutoProvision,
+  getCommandHistoryEnabled,
+  updateCommandHistoryEnabled,
   isElectron,
   getUserRoles,
 } from "@/main-axios";
@@ -94,6 +96,7 @@ export function AdminSettingsPanel() {
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
   const [tailscaleApiKey, setTailscaleApiKey] = useState("");
+  const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
 
   // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
@@ -215,6 +218,7 @@ export function AdminSettingsPanel() {
         guac,
         oidcProv,
         tailscale,
+        cmdHistory,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -225,6 +229,7 @@ export function AdminSettingsPanel() {
         getGuacamoleSettings(),
         getOidcAutoProvision(),
         getTailscaleSettings(),
+        getCommandHistoryEnabled(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -246,6 +251,9 @@ export function AdminSettingsPanel() {
       }
       if (tailscale.status === "fulfilled") {
         setTailscaleApiKey(tailscale.value.apiKey ?? "");
+      }
+      if (cmdHistory.status === "fulfilled") {
+        setCommandHistoryEnabled(cmdHistory.value.enabled);
       }
     } catch {
       // non-fatal
@@ -306,6 +314,17 @@ export function AdminSettingsPanel() {
     } catch {
       setAllowPasswordReset(!newVal);
       toast.error(t("admin.updatePasswordResetFailed"));
+    }
+  }
+
+  async function handleToggleCommandHistory() {
+    const newVal = !commandHistoryEnabled;
+    setCommandHistoryEnabled(newVal);
+    try {
+      await updateCommandHistoryEnabled(newVal);
+    } catch {
+      setCommandHistoryEnabled(!newVal);
+      toast.error(t("admin.updateCommandHistoryFailed"));
     }
   }
 
@@ -682,6 +701,8 @@ export function AdminSettingsPanel() {
         handleToggleOidcAutoProvision={handleToggleOidcAutoProvision}
         allowPasswordReset={allowPasswordReset}
         handleTogglePasswordReset={handleTogglePasswordReset}
+        commandHistoryEnabled={commandHistoryEnabled}
+        handleToggleCommandHistory={handleToggleCommandHistory}
         sessionTimeout={sessionTimeout}
         setSessionTimeout={setSessionTimeout}
         handleSaveSessionTimeout={handleSaveSessionTimeout}
