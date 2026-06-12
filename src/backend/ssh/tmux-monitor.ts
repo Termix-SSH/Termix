@@ -925,9 +925,4 @@ app.put("/tmux_monitor/:hostId/tags", async (req, res) => {
 });
 
 const PORT = 30010;
-app.listen(PORT, () => {
-  sshLogger.info(`Tmux monitor service started on port ${PORT}`, {
-    operation: "tmux_monitor_start",
-    port: PORT,
-  });
-});
+app.listen(PORT, () => {});

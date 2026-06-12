@@ -22,13 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/select";
 import { Skeleton } from "@/components/skeleton";
 import { ScrollArea } from "@/components/scroll-area";
 import { getSSHHosts } from "@/main-axios";
@@ -890,37 +883,6 @@ export function TmuxMonitor({
             </button>
           </span>
         </div>
-        <div className="border-b border-border p-2">
-          <Select
-            value={selectedHostId !== null ? String(selectedHostId) : ""}
-            disabled={hostsLoading || hosts.length === 0}
-            onValueChange={(value) => setSelectedHostId(Number(value))}
-          >
-            <SelectTrigger className="w-full rounded-none border-border">
-              <SelectValue
-                placeholder={t(
-                  hostsLoading || hosts.length > 0
-                    ? "tmuxMonitor.noHostSelected"
-                    : "tmuxMonitor.noHosts",
-                )}
-              />
-            </SelectTrigger>
-            <SelectContent className="rounded-none border-0 ring-1 ring-border [&_[data-slot=select-item]]:rounded-none">
-              {hosts.length === 0 ? (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  {t("tmuxMonitor.noHosts")}
-                </div>
-              ) : (
-                hosts.map((h) => (
-                  <SelectItem key={h.id} value={String(h.id)}>
-                    {h.name || `${h.username}@${h.ip}`}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Radix wraps the viewport content in a display:table div sized to
             the widest row, so one long pane path would stretch every row and
             clip the right-aligned actions; force block so rows shrink and
