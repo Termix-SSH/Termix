@@ -770,6 +770,62 @@ export function HostEditor({
                     onChange={(v) => setField("syntaxHighlighting", v)}
                   />
                 </SettingRow>
+                {form.syntaxHighlighting && (
+                  <div className="flex flex-col ml-4">
+                    {(
+                      [
+                        [
+                          "logLevels",
+                          "syntaxCategoryLogLevels",
+                          "syntaxCategoryLogLevelsDesc",
+                        ],
+                        [
+                          "paths",
+                          "syntaxCategoryPaths",
+                          "syntaxCategoryPathsDesc",
+                        ],
+                        [
+                          "timestamps",
+                          "syntaxCategoryTimestamps",
+                          "syntaxCategoryTimestampsDesc",
+                        ],
+                        [
+                          "ipAddresses",
+                          "syntaxCategoryIpAddresses",
+                          "syntaxCategoryIpAddressesDesc",
+                        ],
+                        [
+                          "urls",
+                          "syntaxCategoryUrls",
+                          "syntaxCategoryUrlsDesc",
+                        ],
+                        [
+                          "numbers",
+                          "syntaxCategoryNumbers",
+                          "syntaxCategoryNumbersDesc",
+                        ],
+                      ] as const
+                    ).map(([key, labelKey, descKey]) => (
+                      <SettingRow
+                        key={key}
+                        label={t(`hosts.${labelKey}`)}
+                        description={t(`hosts.${descKey}`)}
+                      >
+                        <FakeSwitch
+                          checked={
+                            form.syntaxHighlightingOptions?.[key] ?? true
+                          }
+                          onChange={(v) =>
+                            setField("syntaxHighlightingOptions", {
+                              ...form.syntaxHighlightingOptions,
+                              [key]: v,
+                            })
+                          }
+                        />
+                      </SettingRow>
+                    ))}
+                  </div>
+                )}
               </div>
             </SectionCard>
 

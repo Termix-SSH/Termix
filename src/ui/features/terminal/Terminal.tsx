@@ -996,7 +996,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 hostConfig.terminalConfig?.syntaxHighlighting !== false;
 
               const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(msg.data)
+                ? highlightTerminalOutput(
+                    msg.data,
+                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
+                  )
                 : msg.data;
 
               terminal.write(outputData);
@@ -1060,7 +1063,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               const stringData = String(msg.data);
               const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(stringData)
+                ? highlightTerminalOutput(
+                    stringData,
+                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
+                  )
                 : stringData;
 
               terminal.write(outputData);

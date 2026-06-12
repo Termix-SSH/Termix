@@ -207,7 +207,7 @@ export function AppShell({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
-    return saved ? parseInt(saved, 10) : 266;
+    return saved ? parseInt(saved, 10) : 290;
   });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
@@ -1141,7 +1141,7 @@ export function AppShell({
             size="icon"
             className="h-full w-12.5 border-y-0 border-border rounded-none text-muted-foreground hover:text-foreground"
             title="Reset width"
-            onClick={() => setSidebarWidth(266)}
+            onClick={() => setSidebarWidth(290)}
           >
             <Maximize2 className="size-3.5" />
           </Button>

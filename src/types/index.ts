@@ -587,6 +587,14 @@ export interface TerminalConfig {
   keepaliveCountMax?: number;
   autoTmux: boolean;
   syntaxHighlighting: boolean;
+  syntaxHighlightingOptions?: {
+    logLevels: boolean;
+    paths: boolean;
+    timestamps: boolean;
+    ipAddresses: boolean;
+    urls: boolean;
+    numbers: boolean;
+  };
 }
 
 // ============================================================================

@@ -139,6 +139,17 @@ export function createHostEditorForm(host: Host | null) {
     keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
     keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
     syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
+    syntaxHighlightingOptions: {
+      logLevels:
+        host?.terminalConfig?.syntaxHighlightingOptions?.logLevels ?? true,
+      paths: host?.terminalConfig?.syntaxHighlightingOptions?.paths ?? true,
+      timestamps:
+        host?.terminalConfig?.syntaxHighlightingOptions?.timestamps ?? true,
+      ipAddresses:
+        host?.terminalConfig?.syntaxHighlightingOptions?.ipAddresses ?? true,
+      urls: host?.terminalConfig?.syntaxHighlightingOptions?.urls ?? true,
+      numbers: host?.terminalConfig?.syntaxHighlightingOptions?.numbers ?? true,
+    },
     environmentVariables:
       host?.terminalConfig?.environmentVariables ??
       ([] as { key: string; value: string }[]),
@@ -312,6 +323,7 @@ export function buildHostEditorPayload(
           keepaliveCountMax: Number(form.keepaliveCountMax),
           environmentVariables: form.environmentVariables,
           syntaxHighlighting: form.syntaxHighlighting,
+          syntaxHighlightingOptions: form.syntaxHighlightingOptions,
         }
       : null,
   };
