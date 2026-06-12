@@ -725,6 +725,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedIp = ip;
   let resolvedPort = port;
   let resolvedUsername = username;
+  let resolvedJumpHosts = jumpHosts;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
@@ -742,6 +743,20 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
+        if (
+          (!resolvedJumpHosts || resolvedJumpHosts.length === 0) &&
+          resolvedHost.jumpHosts &&
+          resolvedHost.jumpHosts.length > 0
+        ) {
+          resolvedJumpHosts = resolvedHost.jumpHosts;
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "jump",
+              `Loaded ${resolvedHost.jumpHosts.length} jump host(s) from server-side host data`,
+            ),
+          );
+        }
         connectionLogs.push(
           createConnectionLog(
             "info",
@@ -775,6 +790,20 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
+        if (
+          (!resolvedJumpHosts || resolvedJumpHosts.length === 0) &&
+          resolvedHost.jumpHosts &&
+          resolvedHost.jumpHosts.length > 0
+        ) {
+          resolvedJumpHosts = resolvedHost.jumpHosts;
+          connectionLogs.push(
+            createConnectionLog(
+              "info",
+              "jump",
+              `Loaded ${resolvedHost.jumpHosts.length} jump host(s) from server-side host data`,
+            ),
+          );
+        }
         connectionLogs.push(
           createConnectionLog(
             "info",
@@ -1496,7 +1525,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         }
       : null;
 
-  const hasJumpHosts = jumpHosts && jumpHosts.length > 0 && userId;
+  const hasJumpHosts = resolvedJumpHosts && resolvedJumpHosts.length > 0 && userId;
 
   if (hasJumpHosts) {
     try {
@@ -1513,11 +1542,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         createConnectionLog(
           "info",
           "jump",
-          `Connecting via ${jumpHosts.length} jump host(s)`,
+          `Connecting via ${resolvedJumpHosts.length} jump host(s)`,
         ),
       );
       const jumpClient = await createJumpHostChain(
-        jumpHosts,
+        resolvedJumpHosts,
         userId,
         proxyConfig,
       );

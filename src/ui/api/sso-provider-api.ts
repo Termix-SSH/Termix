@@ -14,9 +14,10 @@ export async function getSSOProviders(): Promise<SSOProviderPublic[]> {
 export async function getAdminSSOProviders(): Promise<SSOProvider[]> {
   try {
     const response = await authApi.get("/users/sso-providers/admin");
-    return response.data;
+    return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     handleApiError(error, "fetch admin SSO providers");
+    return [];
   }
 }
 

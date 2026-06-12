@@ -91,7 +91,12 @@ function FullscreenApp() {
     case "rdp":
     case "vnc":
     case "telnet":
-      return <GuacamoleApp hostId={hostId || undefined} />;
+      return (
+        <GuacamoleApp
+          hostId={hostId || undefined}
+          protocol={view as "rdp" | "vnc" | "telnet"}
+        />
+      );
     case "tmux-monitor": // --- tmux-monitor ---
     case "tmux_monitor": // tab type spelling, so copied links also resolve
       return <TmuxMonitorApp hostId={hostId || undefined} />;
