@@ -23,16 +23,6 @@ import {
   DialogTitle,
 } from "@/components/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/alert-dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -835,7 +825,10 @@ export function TmuxMonitor({
                   <Plus className="size-4" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-2" align="start">
+              <PopoverContent
+                className="w-64 rounded-none border-0 p-2 ring-1 ring-border"
+                align="start"
+              >
                 <p className="mb-1 text-xs text-muted-foreground">
                   {t("tmuxMonitor.newSessionHint")}
                 </p>
@@ -901,7 +894,7 @@ export function TmuxMonitor({
             disabled={hostsLoading || hosts.length === 0}
             onValueChange={(value) => setSelectedHostId(Number(value))}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full rounded-none border-border">
               <SelectValue
                 placeholder={t(
                   hostsLoading || hosts.length > 0
@@ -910,7 +903,7 @@ export function TmuxMonitor({
                 )}
               />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="rounded-none border-0 ring-1 ring-border [&_[data-slot=select-item]]:rounded-none">
               {hosts.length === 0 ? (
                 <div className="px-2 py-1.5 text-sm text-muted-foreground">
                   {t("tmuxMonitor.noHosts")}
@@ -1207,103 +1200,100 @@ export function TmuxMonitor({
       </Dialog>
 
       {/* Kill window confirmation */}
-      <AlertDialog
+      <Dialog
         open={killWindowTarget !== null}
         onOpenChange={(open) => {
           if (!open) setKillWindowTarget(null);
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
               {t("tmuxMonitor.killWindowTitle", {
                 index: killWindowTarget?.windowIndex,
                 session: killWindowTarget?.sessionName,
               })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("tmuxMonitor.killWindowBody")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {t("tmuxMonitor.killWindowBody")}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKillWindowTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
               disabled={killingWindow}
-              onClick={(e) => {
-                e.preventDefault();
-                confirmKillWindow();
-              }}
+              onClick={confirmKillWindow}
             >
               {t("tmuxMonitor.kill")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Kill pane confirmation */}
-      <AlertDialog
+      <Dialog
         open={killPaneTarget !== null}
         onOpenChange={(open) => {
           if (!open) setKillPaneTarget(null);
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
               {t("tmuxMonitor.killPaneTitle", { id: killPaneTarget })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("tmuxMonitor.killPaneBody")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {t("tmuxMonitor.killPaneBody")}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKillPaneTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
               disabled={killingPane}
-              onClick={(e) => {
-                e.preventDefault();
-                confirmKillPane();
-              }}
+              onClick={confirmKillPane}
             >
               {t("tmuxMonitor.kill")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Kill session confirmation */}
-      <AlertDialog
+      <Dialog
         open={killTarget !== null}
         onOpenChange={(open) => {
           if (!open) setKillTarget(null);
         }}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
               {t("tmuxMonitor.killSessionTitle", { name: killTarget })}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("tmuxMonitor.killSessionBody")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            {t("tmuxMonitor.killSessionBody")}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setKillTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
               disabled={killing}
-              onClick={(e) => {
-                e.preventDefault();
-                confirmKill();
-              }}
+              onClick={confirmKill}
             >
               {t("tmuxMonitor.kill")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

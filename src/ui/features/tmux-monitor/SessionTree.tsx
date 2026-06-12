@@ -272,7 +272,7 @@ export function SessionTree({
               <TooltipContent
                 side="right"
                 sideOffset={8}
-                className="w-56 rounded-md border bg-popover p-0 text-popover-foreground shadow-md [&_svg]:!hidden"
+                className="w-56 rounded-none border-0 bg-popover p-0 text-popover-foreground shadow-md ring-1 ring-border [&_svg]:!hidden"
               >
                 {/* Session status board (also the only place the numbers
                     live when the panel is too narrow for the inline label) */}
