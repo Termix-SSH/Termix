@@ -127,6 +127,9 @@ export const hosts = sqliteTable("ssh_data", {
   enableDocker: integer("enable_docker", { mode: "boolean" })
     .notNull()
     .default(false),
+  enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
+    .notNull()
+    .default(false),
   showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -745,3 +748,20 @@ export const hostHealthHistory = sqliteTable("host_health_history", {
   latencyMs: integer("latency_ms"),
   detail: text("detail"),
 });
+
+// --- tmux-monitor begin ---
+export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  sessionName: text("session_name").notNull(),
+  tag: text("tag").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- tmux-monitor end ---

@@ -19,6 +19,7 @@ import {
   Network,
   ArrowDownUp as TunnelIcon,
   Container as DockerIcon,
+  Layers as TmuxMonitorIcon, // --- tmux-monitor ---
   Key,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -188,12 +189,14 @@ export function Tab({
     tabType === "telnet" ||
     tabType === "tunnel" ||
     tabType === "docker" ||
+    tabType === "tmux_monitor" || // --- tmux-monitor ---
     tabType === "user_profile"
   ) {
     const isServer = tabType === "server_stats";
     const isFileManager = tabType === "file_manager";
     const isTunnel = tabType === "tunnel";
     const isDocker = tabType === "docker";
+    const isTmuxMonitor = tabType === "tmux_monitor"; // --- tmux-monitor ---
     const isUserProfile = tabType === "user_profile";
     const displayTitle =
       title ||
@@ -205,11 +208,15 @@ export function Tab({
             ? t("nav.tunnels")
             : isDocker
               ? t("nav.docker")
-              : isUserProfile
-                ? t("nav.userProfile")
-                : tabType === "rdp" || tabType === "vnc" || tabType === "telnet"
-                  ? tabType.toUpperCase()
-                  : t("nav.terminal"));
+              : isTmuxMonitor // --- tmux-monitor ---
+                ? t("nav.tmuxMonitor")
+                : isUserProfile
+                  ? t("nav.userProfile")
+                  : tabType === "rdp" ||
+                      tabType === "vnc" ||
+                      tabType === "telnet"
+                    ? tabType.toUpperCase()
+                    : t("nav.terminal"));
 
     const { base, suffix } = splitTitle(displayTitle);
 
@@ -232,6 +239,8 @@ export function Tab({
             <TunnelIcon className="h-4 w-4 flex-shrink-0" />
           ) : isDocker ? (
             <DockerIcon className="h-4 w-4 flex-shrink-0" />
+          ) : isTmuxMonitor ? ( // --- tmux-monitor ---
+            <TmuxMonitorIcon className="h-4 w-4 flex-shrink-0" />
           ) : isUserProfile ? (
             <UserIcon className="h-4 w-4 flex-shrink-0" />
           ) : tabType === "rdp" ? (

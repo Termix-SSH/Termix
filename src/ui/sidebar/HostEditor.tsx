@@ -13,6 +13,7 @@ import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
   Globe,
+  Layers, // --- tmux-monitor ---
   Network,
   Palette,
   Plus,
@@ -520,7 +521,11 @@ export function HostEditor({
                           </option>
                           {tailscaleDevices.map((d) => (
                             <option key={d.id} value={d.id}>
-                              {d.hostname} ({d.addresses.find((a) => a.startsWith("100.")) ?? d.addresses[0] ?? ""})
+                              {d.hostname} (
+                              {d.addresses.find((a) => a.startsWith("100.")) ??
+                                d.addresses[0] ??
+                                ""}
+                              )
                             </option>
                           ))}
                         </select>
@@ -1001,6 +1006,23 @@ export function HostEditor({
                     />
                   </div>
                 </div>
+              </div>
+            </SectionCard>
+            {/* --- tmux-monitor --- */}
+            <SectionCard
+              title={t("tmuxMonitor.title")}
+              icon={<Layers className="size-3.5" />}
+            >
+              <div className="flex flex-col gap-4 py-3">
+                <SettingRow
+                  label={t("hosts.enableTmuxMonitor")}
+                  description={t("hosts.enableTmuxMonitorDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.enableTmuxMonitor}
+                    onChange={(v) => setField("enableTmuxMonitor", v)}
+                  />
+                </SettingRow>
               </div>
             </SectionCard>
           </>

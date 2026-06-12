@@ -45,6 +45,12 @@ const GuacamoleApp = lazy(() =>
     default: m.default,
   })),
 );
+// --- tmux-monitor ---
+const TmuxMonitorApp = lazy(() =>
+  import("@/features/tmux-monitor/TmuxMonitorApp").then((m) => ({
+    default: m.default,
+  })),
+);
 
 const ElectronVersionCheck = lazy(() =>
   import("@/user/ElectronVersionCheck").then((module) => ({
@@ -63,10 +69,16 @@ function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
   const hostId = searchParams.get("hostId");
+  const tmuxSession = searchParams.get("tmuxSession");
 
   switch (view) {
     case "terminal":
-      return <TerminalApp hostId={hostId || undefined} />;
+      return (
+        <TerminalApp
+          hostId={hostId || undefined}
+          tmuxSession={tmuxSession || undefined}
+        />
+      );
     case "file-manager":
       return <FileManagerApp hostId={hostId || undefined} />;
     case "tunnel":
@@ -85,6 +97,9 @@ function FullscreenApp() {
           protocol={view as "rdp" | "vnc" | "telnet"}
         />
       );
+    case "tmux-monitor": // --- tmux-monitor ---
+    case "tmux_monitor": // tab type spelling, so copied links also resolve
+      return <TmuxMonitorApp hostId={hostId || undefined} />;
     default:
       return null;
   }

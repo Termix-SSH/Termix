@@ -91,6 +91,7 @@ export type Host = {
 
   enableDocker: boolean;
   enableProxmox: boolean;
+  enableTmuxMonitor: boolean;
   proxmoxConfig?: {
     defaultCredentialId: number | null;
     windowsPatterns: string;
@@ -169,7 +170,8 @@ export type TabType =
   | "admin-settings"
   | "docker"
   | "tunnel"
-  | "network_graph";
+  | "network_graph"
+  | "tmux_monitor"; // --- tmux-monitor ---
 
 export type TunnelStatusValue =
   | "CONNECTED"
