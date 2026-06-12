@@ -520,7 +520,11 @@ export function HostEditor({
                           </option>
                           {tailscaleDevices.map((d) => (
                             <option key={d.id} value={d.id}>
-                              {d.hostname} ({d.addresses.find((a) => a.startsWith("100.")) ?? d.addresses[0] ?? ""})
+                              {d.hostname} (
+                              {d.addresses.find((a) => a.startsWith("100.")) ??
+                                d.addresses[0] ??
+                                ""}
+                              )
                             </option>
                           ))}
                         </select>
