@@ -276,7 +276,7 @@ export function SessionTree({
               >
                 {/* Session status board (also the only place the numbers
                     live when the panel is too narrow for the inline label) */}
-                <div className="px-3 py-2">
+                <div className="w-full px-3 py-2">
                   <div className="mb-1 flex items-center gap-1.5">
                     <span
                       className={`size-2 rounded-full ${session.attachedClients > 0 ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
