@@ -4,7 +4,6 @@ import {
   Clock,
   Hammer,
   KeyRound,
-  Layers, // --- tmux-monitor ---
   LayoutPanelLeft,
   Network,
   Play,
@@ -97,14 +96,6 @@ function buildRailButtons(
       tabType: "network_graph" as TabType,
       icon: <Network size={16} />,
       title: t("nav.networkGraph"),
-    },
-    { kind: "separator" },
-    // --- tmux-monitor ---
-    {
-      kind: "tab",
-      tabType: "tmux_monitor" as TabType,
-      icon: <Layers size={16} />,
-      title: t("nav.tmuxMonitor"),
     },
     { kind: "separator" },
   ];
