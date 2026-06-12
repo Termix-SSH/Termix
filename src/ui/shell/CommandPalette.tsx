@@ -82,12 +82,13 @@ function getSshActions(host: Host): {
       label: "Files",
     },
     host.enableDocker && { type: "docker", icon: Box, label: "Docker" },
-    // --- tmux-monitor ---
-    host.enableTerminal !== false && {
-      type: "tmux_monitor",
-      icon: Layers,
-      label: "Tmux Monitor",
-    },
+    // --- tmux-monitor --- opt-in per host, off by default
+    host.enableTerminal !== false &&
+      host.enableTmuxMonitor && {
+        type: "tmux_monitor",
+        icon: Layers,
+        label: "Tmux Monitor",
+      },
     host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
     metricsEnabled && {
       type: "host-metrics",

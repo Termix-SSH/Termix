@@ -127,6 +127,9 @@ export const hosts = sqliteTable("ssh_data", {
   enableDocker: integer("enable_docker", { mode: "boolean" })
     .notNull()
     .default(false),
+  enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
+    .notNull()
+    .default(false),
   showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
     .notNull()
     .default(true),

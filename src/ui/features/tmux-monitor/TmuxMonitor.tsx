@@ -186,7 +186,9 @@ export function TmuxMonitor({
         const all: SSHHost[] = await getSSHHosts();
         const sshHosts = all.filter(
           (h) =>
-            (h.connectionType ?? "ssh") === "ssh" && h.enableTerminal !== false,
+            (h.connectionType ?? "ssh") === "ssh" &&
+            h.enableTerminal !== false &&
+            h.enableTmuxMonitor === true,
         );
         setHosts(sshHosts);
         setSelectedHostId((prev) => {

@@ -91,6 +91,7 @@ export type Host = {
 
   enableDocker: boolean;
   enableProxmox: boolean;
+  enableTmuxMonitor: boolean;
   proxmoxConfig?: {
     defaultCredentialId: number | null;
     windowsPatterns: string;

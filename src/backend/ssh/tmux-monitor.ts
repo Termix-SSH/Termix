@@ -363,6 +363,15 @@ async function requireHost(
     res.status(403).json({ error: "Access denied" });
     return null;
   }
+
+  // The monitor is opt-in per host (same pattern as enableDocker in
+  // docker.ts): hiding the UI is not enough, the API must refuse too.
+  if (!host.enableTmuxMonitor) {
+    res
+      .status(403)
+      .json({ error: "Tmux Monitor is not enabled for this host" });
+    return null;
+  }
   return host;
 }
 

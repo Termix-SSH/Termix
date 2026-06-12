@@ -97,9 +97,10 @@ function getSshActions(
       icon: Server,
       label: "Host Metrics",
     },
-    // --- tmux-monitor ---
+    // --- tmux-monitor --- opt-in per host, off by default
     host.enableSsh &&
-      host.enableTerminal && {
+      host.enableTerminal &&
+      host.enableTmuxMonitor && {
         type: "tmux_monitor" as TabType,
         icon: Layers,
         label: "Tmux Monitor",
@@ -805,20 +806,22 @@ export function HostItem({
                           {t("hosts.copyHostMetricsUrlAction")}
                         </DropdownMenuItem>
                       )}
-                      {host.enableSsh && host.enableTerminal && (
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            writeClipboardText(
-                              `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
-                            );
-                            toast.success(t("hosts.tmuxMonitorUrlCopied"));
-                          }}
-                        >
-                          <Layers className="size-3.5 mr-2" />
-                          {t("hosts.copyTmuxMonitorUrlAction")}
-                        </DropdownMenuItem>
-                      )}
+                      {host.enableSsh &&
+                        host.enableTerminal &&
+                        host.enableTmuxMonitor && (
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              writeClipboardText(
+                                `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
+                              );
+                              toast.success(t("hosts.tmuxMonitorUrlCopied"));
+                            }}
+                          >
+                            <Layers className="size-3.5 mr-2" />
+                            {t("hosts.copyTmuxMonitorUrlAction")}
+                          </DropdownMenuItem>
+                        )}
                       {host.enableRdp && (
                         <DropdownMenuItem
                           onClick={(e) => {

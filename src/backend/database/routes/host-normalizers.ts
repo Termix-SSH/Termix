@@ -100,6 +100,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableFileManager?: unknown;
   enableDocker?: unknown;
   enableProxmox?: unknown;
+  enableTmuxMonitor?: unknown;
   showTerminalInSidebar?: unknown;
   showFileManagerInSidebar?: unknown;
   showTunnelInSidebar?: unknown;
@@ -239,6 +240,7 @@ export function transformHostResponse(
     enableFileManager: !!host.enableFileManager,
     enableDocker: !!host.enableDocker,
     enableProxmox: !!host.enableProxmox,
+    enableTmuxMonitor: !!host.enableTmuxMonitor,
     showTerminalInSidebar: !!host.showTerminalInSidebar,
     showFileManagerInSidebar: !!host.showFileManagerInSidebar,
     showTunnelInSidebar: !!host.showTunnelInSidebar,
