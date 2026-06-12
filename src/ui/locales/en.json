@@ -2488,6 +2488,7 @@
     "collapseAll": "Collapse all",
     "expandAll": "Expand all",
     "moreActions": "More actions",
+    "sessionStats": "Session stats",
     "renameSessionTitle": "Rename session \"{{name}}\"",
     "rename": "Rename",
     "sessionRenamed": "Session renamed to \"{{name}}\"",
