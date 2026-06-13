@@ -401,6 +401,77 @@ export function AppShell({
           localStorage.setItem("i18nextLng", prefs.language);
           void i18n.changeLanguage(prefs.language);
         }
+        if (prefs.storageMode === "cloud") {
+          if (
+            prefs.commandAutocomplete !== null &&
+            prefs.commandAutocomplete !== undefined
+          )
+            localStorage.setItem(
+              "commandAutocomplete",
+              String(prefs.commandAutocomplete),
+            );
+          if (
+            prefs.commandPaletteEnabled !== null &&
+            prefs.commandPaletteEnabled !== undefined
+          )
+            localStorage.setItem(
+              "commandPaletteShortcutEnabled",
+              String(prefs.commandPaletteEnabled),
+            );
+          if (prefs.showHostTags !== null && prefs.showHostTags !== undefined) {
+            localStorage.setItem("showHostTags", String(prefs.showHostTags));
+            window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+          }
+          if (
+            prefs.hostTrayOnClick !== null &&
+            prefs.hostTrayOnClick !== undefined
+          )
+            localStorage.setItem(
+              "hostTrayOnClick",
+              String(prefs.hostTrayOnClick),
+            );
+          if (prefs.pinAppRail !== null && prefs.pinAppRail !== undefined)
+            localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+          if (
+            prefs.foldersCollapsed !== null &&
+            prefs.foldersCollapsed !== undefined
+          )
+            localStorage.setItem(
+              "defaultSnippetFoldersCollapsed",
+              String(prefs.foldersCollapsed),
+            );
+          if (
+            prefs.confirmSnippetExecution !== null &&
+            prefs.confirmSnippetExecution !== undefined
+          )
+            localStorage.setItem(
+              "confirmSnippetExecution",
+              String(prefs.confirmSnippetExecution),
+            );
+          if (
+            prefs.disableUpdateCheck !== null &&
+            prefs.disableUpdateCheck !== undefined
+          )
+            localStorage.setItem(
+              "disableUpdateCheck",
+              String(prefs.disableUpdateCheck),
+            );
+          if (
+            prefs.confirmTabClose !== null &&
+            prefs.confirmTabClose !== undefined
+          )
+            localStorage.setItem(
+              "confirmTabClose",
+              String(prefs.confirmTabClose),
+            );
+          if (
+            prefs.hiddenRailTabs !== null &&
+            prefs.hiddenRailTabs !== undefined
+          ) {
+            localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
+            window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+          }
+        }
       })
       .catch(() => {})
       .finally(() => setUserPrefsLoaded(true));

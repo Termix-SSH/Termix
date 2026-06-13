@@ -694,6 +694,17 @@ export const userPreferences = sqliteTable("user_preferences", {
   fontSize: text("font_size"),
   accentColor: text("accent_color"),
   language: text("language"),
+  storageMode: text("storage_mode"),
+  commandAutocomplete: integer("command_autocomplete", { mode: "boolean" }),
+  commandPaletteEnabled: integer("command_palette_enabled", { mode: "boolean" }),
+  showHostTags: integer("show_host_tags", { mode: "boolean" }),
+  hostTrayOnClick: integer("host_tray_on_click", { mode: "boolean" }),
+  pinAppRail: integer("pin_app_rail", { mode: "boolean" }),
+  foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
+  confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
+  disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
+  confirmTabClose: integer("confirm_tab_close", { mode: "boolean" }),
+  hiddenRailTabs: text("hidden_rail_tabs"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

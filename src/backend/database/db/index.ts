@@ -683,6 +683,17 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
   addColumnIfNotExists("user_preferences", "language", "TEXT");
+  addColumnIfNotExists("user_preferences", "storage_mode", "TEXT");
+  addColumnIfNotExists("user_preferences", "command_autocomplete", "INTEGER");
+  addColumnIfNotExists("user_preferences", "command_palette_enabled", "INTEGER");
+  addColumnIfNotExists("user_preferences", "show_host_tags", "INTEGER");
+  addColumnIfNotExists("user_preferences", "host_tray_on_click", "INTEGER");
+  addColumnIfNotExists("user_preferences", "pin_app_rail", "INTEGER");
+  addColumnIfNotExists("user_preferences", "folders_collapsed", "INTEGER");
+  addColumnIfNotExists("user_preferences", "confirm_snippet_execution", "INTEGER");
+  addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");
+  addColumnIfNotExists("user_preferences", "confirm_tab_close", "INTEGER");
+  addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
 
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 

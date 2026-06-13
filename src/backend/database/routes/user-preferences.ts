@@ -17,6 +17,17 @@ const pickPreferences = (row?: typeof userPreferences.$inferSelect) => ({
   fontSize: row?.fontSize ?? null,
   accentColor: row?.accentColor ?? null,
   language: row?.language ?? null,
+  storageMode: row?.storageMode ?? "local",
+  commandAutocomplete: row?.commandAutocomplete ?? null,
+  commandPaletteEnabled: row?.commandPaletteEnabled ?? null,
+  showHostTags: row?.showHostTags ?? null,
+  hostTrayOnClick: row?.hostTrayOnClick ?? null,
+  pinAppRail: row?.pinAppRail ?? null,
+  foldersCollapsed: row?.foldersCollapsed ?? null,
+  confirmSnippetExecution: row?.confirmSnippetExecution ?? null,
+  disableUpdateCheck: row?.disableUpdateCheck ?? null,
+  confirmTabClose: row?.confirmTabClose ?? null,
+  hiddenRailTabs: row?.hiddenRailTabs ?? null,
 });
 
 /**
@@ -36,6 +47,51 @@ const pickPreferences = (row?: typeof userPreferences.$inferSelect) => ({
  *               properties:
  *                 reopenTabsOnLogin:
  *                   type: boolean
+ *                 theme:
+ *                   type: string
+ *                   nullable: true
+ *                 fontSize:
+ *                   type: string
+ *                   nullable: true
+ *                 accentColor:
+ *                   type: string
+ *                   nullable: true
+ *                 language:
+ *                   type: string
+ *                   nullable: true
+ *                 storageMode:
+ *                   type: string
+ *                   nullable: true
+ *                 commandAutocomplete:
+ *                   type: boolean
+ *                   nullable: true
+ *                 commandPaletteEnabled:
+ *                   type: boolean
+ *                   nullable: true
+ *                 showHostTags:
+ *                   type: boolean
+ *                   nullable: true
+ *                 hostTrayOnClick:
+ *                   type: boolean
+ *                   nullable: true
+ *                 pinAppRail:
+ *                   type: boolean
+ *                   nullable: true
+ *                 foldersCollapsed:
+ *                   type: boolean
+ *                   nullable: true
+ *                 confirmSnippetExecution:
+ *                   type: boolean
+ *                   nullable: true
+ *                 disableUpdateCheck:
+ *                   type: boolean
+ *                   nullable: true
+ *                 confirmTabClose:
+ *                   type: boolean
+ *                   nullable: true
+ *                 hiddenRailTabs:
+ *                   type: string
+ *                   nullable: true
  */
 router.get("/", authenticateJWT, (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
@@ -72,20 +128,77 @@ router.get("/", authenticateJWT, (req: Request, res: Response) => {
  *             properties:
  *               reopenTabsOnLogin:
  *                 type: boolean
+ *               theme:
+ *                 type: string
+ *               fontSize:
+ *                 type: string
+ *               accentColor:
+ *                 type: string
+ *               language:
+ *                 type: string
+ *               storageMode:
+ *                 type: string
+ *               commandAutocomplete:
+ *                 type: boolean
+ *               commandPaletteEnabled:
+ *                 type: boolean
+ *               showHostTags:
+ *                 type: boolean
+ *               hostTrayOnClick:
+ *                 type: boolean
+ *               pinAppRail:
+ *                 type: boolean
+ *               foldersCollapsed:
+ *                 type: boolean
+ *               confirmSnippetExecution:
+ *                 type: boolean
+ *               disableUpdateCheck:
+ *                 type: boolean
+ *               confirmTabClose:
+ *                 type: boolean
+ *               hiddenRailTabs:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Preferences updated successfully.
  */
 router.put("/", authenticateJWT, (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
-  const { reopenTabsOnLogin, theme, fontSize, accentColor, language } =
-    req.body as {
-      reopenTabsOnLogin?: boolean;
-      theme?: string | null;
-      fontSize?: string | null;
-      accentColor?: string | null;
-      language?: string | null;
-    };
+  const {
+    reopenTabsOnLogin,
+    theme,
+    fontSize,
+    accentColor,
+    language,
+    storageMode,
+    commandAutocomplete,
+    commandPaletteEnabled,
+    showHostTags,
+    hostTrayOnClick,
+    pinAppRail,
+    foldersCollapsed,
+    confirmSnippetExecution,
+    disableUpdateCheck,
+    confirmTabClose,
+    hiddenRailTabs,
+  } = req.body as {
+    reopenTabsOnLogin?: boolean;
+    theme?: string | null;
+    fontSize?: string | null;
+    accentColor?: string | null;
+    language?: string | null;
+    storageMode?: string | null;
+    commandAutocomplete?: boolean | null;
+    commandPaletteEnabled?: boolean | null;
+    showHostTags?: boolean | null;
+    hostTrayOnClick?: boolean | null;
+    pinAppRail?: boolean | null;
+    foldersCollapsed?: boolean | null;
+    confirmSnippetExecution?: boolean | null;
+    disableUpdateCheck?: boolean | null;
+    confirmTabClose?: boolean | null;
+    hiddenRailTabs?: string | null;
+  };
 
   const updates: Partial<typeof userPreferences.$inferInsert> = {
     updatedAt: new Date().toISOString(),
@@ -105,9 +218,28 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
     fontSize,
     accentColor,
     language,
+    storageMode,
+    hiddenRailTabs,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
       return res.status(400).json({ error: `${key} must be a string` });
+    }
+  }
+
+  const boolFields: Record<string, boolean | null | undefined> = {
+    commandAutocomplete,
+    commandPaletteEnabled,
+    showHostTags,
+    hostTrayOnClick,
+    pinAppRail,
+    foldersCollapsed,
+    confirmSnippetExecution,
+    disableUpdateCheck,
+    confirmTabClose,
+  };
+  for (const [key, value] of Object.entries(boolFields)) {
+    if (value !== undefined && value !== null && typeof value !== "boolean") {
+      return res.status(400).json({ error: `${key} must be a boolean` });
     }
   }
 
@@ -115,6 +247,22 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
   if (fontSize !== undefined) updates.fontSize = fontSize;
   if (accentColor !== undefined) updates.accentColor = accentColor;
   if (language !== undefined) updates.language = language;
+  if (storageMode !== undefined) updates.storageMode = storageMode;
+  if (hiddenRailTabs !== undefined) updates.hiddenRailTabs = hiddenRailTabs;
+  if (commandAutocomplete !== undefined)
+    updates.commandAutocomplete = commandAutocomplete;
+  if (commandPaletteEnabled !== undefined)
+    updates.commandPaletteEnabled = commandPaletteEnabled;
+  if (showHostTags !== undefined) updates.showHostTags = showHostTags;
+  if (hostTrayOnClick !== undefined) updates.hostTrayOnClick = hostTrayOnClick;
+  if (pinAppRail !== undefined) updates.pinAppRail = pinAppRail;
+  if (foldersCollapsed !== undefined)
+    updates.foldersCollapsed = foldersCollapsed;
+  if (confirmSnippetExecution !== undefined)
+    updates.confirmSnippetExecution = confirmSnippetExecution;
+  if (disableUpdateCheck !== undefined)
+    updates.disableUpdateCheck = disableUpdateCheck;
+  if (confirmTabClose !== undefined) updates.confirmTabClose = confirmTabClose;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

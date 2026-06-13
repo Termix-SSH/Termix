@@ -416,7 +416,20 @@ export function UserProfilePanel({
 }: {
   username?: string;
   onLogout?: () => void;
-  userPrefs?: { reopenTabsOnLogin: boolean };
+  userPrefs?: {
+    reopenTabsOnLogin: boolean;
+    storageMode?: string | null;
+    commandAutocomplete?: boolean | null;
+    commandPaletteEnabled?: boolean | null;
+    showHostTags?: boolean | null;
+    hostTrayOnClick?: boolean | null;
+    pinAppRail?: boolean | null;
+    foldersCollapsed?: boolean | null;
+    confirmSnippetExecution?: boolean | null;
+    disableUpdateCheck?: boolean | null;
+    confirmTabClose?: boolean | null;
+    hiddenRailTabs?: string | null;
+  };
   onPrefsChange?: (prefs: { reopenTabsOnLogin: boolean }) => void;
 }) {
   const { t } = useTranslation();
@@ -483,6 +496,9 @@ export function UserProfilePanel({
   );
   const [language, setLanguage] = useState(
     () => localStorage.getItem("i18nextLng") ?? "en",
+  );
+  const [storageMode, setStorageMode] = useState<"local" | "cloud">(() =>
+    userPrefs?.storageMode === "cloud" ? "cloud" : "local",
   );
 
   // Settings toggles — all backed by localStorage
@@ -565,18 +581,35 @@ export function UserProfilePanel({
       .catch(() => {});
   }, [t]);
 
-  function saveAppearancePreference(prefs: {
-    theme?: ThemeId;
-    fontSize?: FontSizeId;
-    accentColor?: string;
-    language?: string;
-  }) {
+  function saveToCloud(prefs: Parameters<typeof saveUserPreferences>[0]) {
     void saveUserPreferences(prefs).catch(() => {});
+  }
+
+  function handleStorageModeChange(mode: "local" | "cloud") {
+    setStorageMode(mode);
+    if (mode === "cloud") {
+      const hidden = [...hiddenRailTabs];
+      saveToCloud({
+        storageMode: "cloud",
+        commandAutocomplete,
+        commandPaletteEnabled,
+        showHostTags,
+        hostTrayOnClick,
+        pinAppRail,
+        foldersCollapsed,
+        confirmSnippetExecution,
+        disableUpdateCheck,
+        confirmTabClose,
+        hiddenRailTabs: JSON.stringify(hidden),
+      });
+    } else {
+      saveToCloud({ storageMode: "local" });
+    }
   }
 
   function handleThemeChange(id: ThemeId) {
     setTheme(id);
-    saveAppearancePreference({ theme: id });
+    saveToCloud({ theme: id });
   }
 
   function handleAccentChange(value: string) {
@@ -584,20 +617,20 @@ export function UserProfilePanel({
     setCustomColorInput(value);
     localStorage.setItem("termix-accent", value);
     applyAccentColor(value);
-    saveAppearancePreference({ accentColor: value });
+    saveToCloud({ accentColor: value });
   }
 
   function handleFontSizeChange(id: FontSizeId) {
     setFontSize(id);
     applyFontSize(id);
-    saveAppearancePreference({ fontSize: id });
+    saveToCloud({ fontSize: id });
   }
 
   function handleLanguageChange(code: string) {
     setLanguage(code);
     localStorage.setItem("i18nextLng", code);
     i18n.changeLanguage(code);
-    saveAppearancePreference({ language: code });
+    saveToCloud({ language: code });
   }
 
   function toggle(id: UserProfileSection) {
@@ -699,6 +732,40 @@ export function UserProfilePanel({
         onAdd={(key) => setApiKeys((prev) => [key, ...prev])}
         userId={userId}
       />
+
+      {/* Storage mode toggle */}
+      <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("newUi.sidebar.userProfile.storageModeSwitch")}
+          </span>
+          <div className="flex border border-border overflow-hidden">
+            <button
+              onClick={() => handleStorageModeChange("local")}
+              className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                storageMode === "local"
+                  ? "bg-accent-brand text-white"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              {t("newUi.sidebar.userProfile.storageModeLocal")}
+            </button>
+            <button
+              onClick={() => handleStorageModeChange("cloud")}
+              className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                storageMode === "cloud"
+                  ? "bg-accent-brand text-white"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              {t("newUi.sidebar.userProfile.storageModeCloud")}
+            </button>
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          {t("newUi.sidebar.userProfile.storageModeDescription")}
+        </p>
+      </div>
 
       {/* Account */}
       <AccordionSection
@@ -975,6 +1042,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setCommandAutocomplete(v);
                   localStorage.setItem("commandAutocomplete", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ commandAutocomplete: v });
                 }}
               />
             </SettingRow>
@@ -993,6 +1062,8 @@ export function UserProfilePanel({
                   window.dispatchEvent(
                     new Event("commandPaletteShortcutEnabledChanged"),
                   );
+                  if (storageMode === "cloud")
+                    saveToCloud({ commandPaletteEnabled: v });
                 }}
               />
             </SettingRow>
@@ -1021,6 +1092,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setConfirmTabClose(v);
                   localStorage.setItem("confirmTabClose", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ confirmTabClose: v });
                 }}
               />
             </SettingRow>
@@ -1040,6 +1113,7 @@ export function UserProfilePanel({
                   setShowHostTags(v);
                   localStorage.setItem("showHostTags", v.toString());
                   window.dispatchEvent(new Event("showHostTagsChanged"));
+                  if (storageMode === "cloud") saveToCloud({ showHostTags: v });
                 }}
               />
             </SettingRow>
@@ -1053,6 +1127,8 @@ export function UserProfilePanel({
                   setHostTrayOnClick(v);
                   localStorage.setItem("hostTrayOnClick", v.toString());
                   window.dispatchEvent(new Event("hostTrayOnClickChanged"));
+                  if (storageMode === "cloud")
+                    saveToCloud({ hostTrayOnClick: v });
                 }}
               />
             </SettingRow>
@@ -1066,6 +1142,7 @@ export function UserProfilePanel({
                   setPinAppRail(v);
                   localStorage.setItem("pinAppRail", v.toString());
                   window.dispatchEvent(new Event("pinAppRailChanged"));
+                  if (storageMode === "cloud") saveToCloud({ pinAppRail: v });
                 }}
               />
             </SettingRow>
@@ -1147,11 +1224,11 @@ export function UserProfilePanel({
                     if (visible) next.delete(tab.id);
                     else next.add(tab.id);
                     setHiddenRailTabs(next);
-                    localStorage.setItem(
-                      "hiddenRailTabs",
-                      JSON.stringify([...next]),
-                    );
+                    const serialized = JSON.stringify([...next]);
+                    localStorage.setItem("hiddenRailTabs", serialized);
                     window.dispatchEvent(new Event("hiddenRailTabsChanged"));
+                    if (storageMode === "cloud")
+                      saveToCloud({ hiddenRailTabs: serialized });
                   }}
                 />
               </div>
@@ -1177,6 +1254,8 @@ export function UserProfilePanel({
                   window.dispatchEvent(
                     new Event("defaultSnippetFoldersCollapsedChanged"),
                   );
+                  if (storageMode === "cloud")
+                    saveToCloud({ foldersCollapsed: v });
                 }}
               />
             </SettingRow>
@@ -1189,6 +1268,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setConfirmSnippetExecution(v);
                   localStorage.setItem("confirmSnippetExecution", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ confirmSnippetExecution: v });
                 }}
               />
             </SettingRow>
@@ -1209,6 +1290,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setDisableUpdateCheck(v);
                   localStorage.setItem("disableUpdateCheck", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ disableUpdateCheck: v });
                 }}
               />
             </SettingRow>
