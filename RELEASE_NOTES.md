@@ -15,7 +15,7 @@ https://youtu.be/At8iDk6-Q_s
 - Improved terminal syntax highlighting with more customizability and reliability (toggle setting moved from user profile to host editor)
 - Tmux session monitor/management
 - Tailscale SSH authentication and device listing support
-- SSO redesign (multiple OIDC providers, LDAP, Google, GitHub support)
+- SSO/OIDC redesign (multiple OIDC providers, LDAP, Google, GitHub support)
 - Terminal session logging
 - Customize side rail tab visibility
 - Admin audit log
