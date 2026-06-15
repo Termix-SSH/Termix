@@ -96,7 +96,7 @@ export function isOIDCUserAllowed(
 ): boolean {
   if (!allowedUsers || !allowedUsers.trim()) return true;
   const patterns = allowedUsers
-    .split(",")
+    .split(/[\n,]/)
     .map((p) => p.trim())
     .filter(Boolean);
   if (patterns.length === 0) return true;

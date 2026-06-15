@@ -15,6 +15,7 @@ import {
   getVersionInfo,
   getUserRoles,
   saveUserPreferences,
+  getUserPreferences,
 } from "@/main-axios";
 import type { UserRole } from "@/main-axios";
 import type React from "react";
@@ -47,6 +48,7 @@ import {
   Play,
   Plug,
   Plus,
+  RotateCcw,
   ScrollText,
   Server,
   Shield,
@@ -483,6 +485,7 @@ export function UserProfilePanel({
   const [newKeyOpen, setNewKeyOpen] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
+  const localSnapshot = useRef<Record<string, string | null>>({});
 
   // Appearance state — initialized from localStorage
   const [accentColor, setAccentColor] = useState(
@@ -585,31 +588,231 @@ export function UserProfilePanel({
     void saveUserPreferences(prefs).catch(() => {});
   }
 
-  function handleStorageModeChange(mode: "local" | "cloud") {
+  async function handleStorageModeChange(mode: "local" | "cloud") {
     setStorageMode(mode);
     if (mode === "cloud") {
-      const hidden = [...hiddenRailTabs];
-      saveToCloud({
-        storageMode: "cloud",
-        commandAutocomplete,
-        commandPaletteEnabled,
-        showHostTags,
-        hostTrayOnClick,
-        pinAppRail,
-        foldersCollapsed,
-        confirmSnippetExecution,
-        disableUpdateCheck,
-        confirmTabClose,
-        hiddenRailTabs: JSON.stringify(hidden),
-      });
+      // Snapshot current browser localStorage values so any tab can restore them later
+      const SNAPSHOT_KEYS = [
+        "termix-accent", "termix-font-size", "i18nextLng",
+        "commandAutocomplete", "commandPaletteShortcutEnabled", "showHostTags",
+        "hostTrayOnClick", "pinAppRail", "defaultSnippetFoldersCollapsed",
+        "confirmSnippetExecution", "disableUpdateCheck", "confirmTabClose", "hiddenRailTabs",
+      ];
+      const snap: Record<string, string | null> = { __theme: theme };
+      for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
+      localSnapshot.current = snap;
+      localStorage.setItem("termix-local-snapshot", JSON.stringify(snap));
+
+      try {
+        const prefs = await getUserPreferences();
+        if (prefs.theme) setTheme(prefs.theme as ThemeId);
+        if (prefs.fontSize) {
+          setFontSize(prefs.fontSize as FontSizeId);
+          applyFontSize(prefs.fontSize as FontSizeId);
+        }
+        if (prefs.accentColor) {
+          setAccentColor(prefs.accentColor);
+          setCustomColorInput(prefs.accentColor);
+          localStorage.setItem("termix-accent", prefs.accentColor);
+          applyAccentColor(prefs.accentColor);
+        }
+        if (prefs.language) {
+          setLanguage(prefs.language);
+          localStorage.setItem("i18nextLng", prefs.language);
+          void i18n.changeLanguage(prefs.language);
+        }
+        if (prefs.commandAutocomplete != null) {
+          setCommandAutocomplete(prefs.commandAutocomplete);
+          localStorage.setItem("commandAutocomplete", String(prefs.commandAutocomplete));
+        }
+        if (prefs.commandPaletteEnabled != null) {
+          setCommandPaletteEnabled(prefs.commandPaletteEnabled);
+          localStorage.setItem("commandPaletteShortcutEnabled", String(prefs.commandPaletteEnabled));
+        }
+        if (prefs.showHostTags != null) {
+          setShowHostTags(prefs.showHostTags);
+          localStorage.setItem("showHostTags", String(prefs.showHostTags));
+          window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+        }
+        if (prefs.hostTrayOnClick != null) {
+          setHostTrayOnClick(prefs.hostTrayOnClick);
+          localStorage.setItem("hostTrayOnClick", String(prefs.hostTrayOnClick));
+        }
+        if (prefs.pinAppRail != null) {
+          setPinAppRail(prefs.pinAppRail);
+          localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+        }
+        if (prefs.foldersCollapsed != null) {
+          setFoldersCollapsed(prefs.foldersCollapsed);
+          localStorage.setItem("defaultSnippetFoldersCollapsed", String(prefs.foldersCollapsed));
+        }
+        if (prefs.confirmSnippetExecution != null) {
+          setConfirmSnippetExecution(prefs.confirmSnippetExecution);
+          localStorage.setItem("confirmSnippetExecution", String(prefs.confirmSnippetExecution));
+        }
+        if (prefs.disableUpdateCheck != null) {
+          setDisableUpdateCheck(prefs.disableUpdateCheck);
+          localStorage.setItem("disableUpdateCheck", String(prefs.disableUpdateCheck));
+        }
+        if (prefs.confirmTabClose != null) {
+          setConfirmTabClose(prefs.confirmTabClose);
+          localStorage.setItem("confirmTabClose", String(prefs.confirmTabClose));
+        }
+        if (prefs.hiddenRailTabs != null) {
+          const s = new Set<string>(JSON.parse(prefs.hiddenRailTabs));
+          setHiddenRailTabs(s);
+          localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
+          window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+        }
+      } catch {
+        // leave UI as-is on error
+      }
+      saveToCloud({ storageMode: "cloud" });
     } else {
+      restoreLocalSnapshot();
       saveToCloud({ storageMode: "local" });
     }
   }
 
+  function resetToDefaults() {
+    const DEFAULT_ACCENT = "#f59145";
+    setTheme("system");
+    setFontSize("md");
+    applyFontSize("md");
+    setAccentColor(DEFAULT_ACCENT);
+    setCustomColorInput(DEFAULT_ACCENT);
+    localStorage.setItem("termix-accent", DEFAULT_ACCENT);
+    applyAccentColor(DEFAULT_ACCENT);
+    setLanguage("en");
+    localStorage.setItem("i18nextLng", "en");
+    void i18n.changeLanguage("en");
+    setCommandAutocomplete(false);
+    localStorage.setItem("commandAutocomplete", "false");
+    setCommandPaletteEnabled(true);
+    localStorage.setItem("commandPaletteShortcutEnabled", "true");
+    setShowHostTags(true);
+    localStorage.setItem("showHostTags", "true");
+    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+    setHostTrayOnClick(false);
+    localStorage.setItem("hostTrayOnClick", "false");
+    setPinAppRail(false);
+    localStorage.setItem("pinAppRail", "false");
+    setFoldersCollapsed(true);
+    localStorage.removeItem("defaultSnippetFoldersCollapsed");
+    setConfirmSnippetExecution(false);
+    localStorage.setItem("confirmSnippetExecution", "false");
+    setDisableUpdateCheck(false);
+    localStorage.setItem("disableUpdateCheck", "false");
+    setConfirmTabClose(false);
+    localStorage.setItem("confirmTabClose", "false");
+    setHiddenRailTabs(new Set());
+    localStorage.removeItem("hiddenRailTabs");
+    window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+    if (storageMode === "cloud") {
+      saveToCloud({
+        theme: "system", fontSize: "md", accentColor: DEFAULT_ACCENT, language: "en",
+        commandAutocomplete: false, commandPaletteEnabled: true, showHostTags: true,
+        hostTrayOnClick: false, pinAppRail: false, foldersCollapsed: true,
+        confirmSnippetExecution: false, disableUpdateCheck: false, confirmTabClose: false,
+        hiddenRailTabs: "[]",
+      });
+    }
+    localSnapshot.current = {};
+    localStorage.removeItem("termix-local-snapshot");
+    toast.success(t("newUi.sidebar.userProfile.resetToDefaultsSuccess"));
+  }
+
+  function restoreLocalSnapshot() {
+    // Prefer the persisted snapshot (survives new tabs/reloads), fall back to in-memory ref.
+    // If neither exists there were never any browser values to restore, so use current localStorage.
+    const persisted = localStorage.getItem("termix-local-snapshot");
+    const snap: Record<string, string | null> = persisted
+      ? (JSON.parse(persisted) as Record<string, string | null>)
+      : localSnapshot.current;
+    const hasSnap = Object.keys(snap).length > 0;
+    const restore = (key: string, fallback: string | null = null) =>
+      hasSnap ? (snap[key] !== undefined ? snap[key] : fallback) : localStorage.getItem(key) ?? fallback;
+
+    const restoredTheme = (hasSnap ? snap["__theme"] : theme) as ThemeId ?? "system";
+    setTheme(restoredTheme);
+
+    const restoredFontSize = (restore("termix-font-size", "md") as FontSizeId) ?? "md";
+    setFontSize(restoredFontSize);
+    applyFontSize(restoredFontSize);
+
+    const restoredAccent = restore("termix-accent", "#f59145") ?? "#f59145";
+    setAccentColor(restoredAccent);
+    setCustomColorInput(restoredAccent);
+    localStorage.setItem("termix-accent", restoredAccent);
+    applyAccentColor(restoredAccent);
+
+    const restoredLang = restore("i18nextLng", "en") ?? "en";
+    setLanguage(restoredLang);
+    localStorage.setItem("i18nextLng", restoredLang);
+    void i18n.changeLanguage(restoredLang);
+
+    const restoredAutocomplete = restore("commandAutocomplete", "false") === "true";
+    setCommandAutocomplete(restoredAutocomplete);
+    localStorage.setItem("commandAutocomplete", String(restoredAutocomplete));
+
+    const restoredPalette = restore("commandPaletteShortcutEnabled", "true") !== "false";
+    setCommandPaletteEnabled(restoredPalette);
+    localStorage.setItem("commandPaletteShortcutEnabled", String(restoredPalette));
+
+    const restoredHostTags = restore("showHostTags", "true") !== "false";
+    setShowHostTags(restoredHostTags);
+    localStorage.setItem("showHostTags", String(restoredHostTags));
+    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+
+    const restoredTrayOnClick = restore("hostTrayOnClick", "false") === "true";
+    setHostTrayOnClick(restoredTrayOnClick);
+    localStorage.setItem("hostTrayOnClick", String(restoredTrayOnClick));
+
+    const restoredPinRail = restore("pinAppRail", "false") === "true";
+    setPinAppRail(restoredPinRail);
+    localStorage.setItem("pinAppRail", String(restoredPinRail));
+
+    const restoredFolders = restore("defaultSnippetFoldersCollapsed", null) !== "false";
+    setFoldersCollapsed(restoredFolders);
+    const snapFolders = hasSnap ? snap["defaultSnippetFoldersCollapsed"] : localStorage.getItem("defaultSnippetFoldersCollapsed");
+    if (snapFolders == null) {
+      localStorage.removeItem("defaultSnippetFoldersCollapsed");
+    } else {
+      localStorage.setItem("defaultSnippetFoldersCollapsed", snapFolders);
+    }
+
+    const restoredConfirmSnippet = restore("confirmSnippetExecution", "false") === "true";
+    setConfirmSnippetExecution(restoredConfirmSnippet);
+    localStorage.setItem("confirmSnippetExecution", String(restoredConfirmSnippet));
+
+    const restoredUpdateCheck = restore("disableUpdateCheck", "false") === "true";
+    setDisableUpdateCheck(restoredUpdateCheck);
+    localStorage.setItem("disableUpdateCheck", String(restoredUpdateCheck));
+
+    const restoredConfirmTab = restore("confirmTabClose", "false") === "true";
+    setConfirmTabClose(restoredConfirmTab);
+    localStorage.setItem("confirmTabClose", String(restoredConfirmTab));
+
+    const restoredHiddenRaw = hasSnap ? snap["hiddenRailTabs"] : localStorage.getItem("hiddenRailTabs");
+    if (restoredHiddenRaw == null) {
+      setHiddenRailTabs(new Set());
+      localStorage.removeItem("hiddenRailTabs");
+    } else {
+      try {
+        setHiddenRailTabs(new Set(JSON.parse(restoredHiddenRaw)));
+      } catch {
+        setHiddenRailTabs(new Set());
+      }
+      localStorage.setItem("hiddenRailTabs", restoredHiddenRaw);
+    }
+    window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+    localStorage.removeItem("termix-local-snapshot");
+    localSnapshot.current = {};
+  }
+
   function handleThemeChange(id: ThemeId) {
     setTheme(id);
-    saveToCloud({ theme: id });
+    if (storageMode === "cloud") saveToCloud({ theme: id });
   }
 
   function handleAccentChange(value: string) {
@@ -617,20 +820,20 @@ export function UserProfilePanel({
     setCustomColorInput(value);
     localStorage.setItem("termix-accent", value);
     applyAccentColor(value);
-    saveToCloud({ accentColor: value });
+    if (storageMode === "cloud") saveToCloud({ accentColor: value });
   }
 
   function handleFontSizeChange(id: FontSizeId) {
     setFontSize(id);
     applyFontSize(id);
-    saveToCloud({ fontSize: id });
+    if (storageMode === "cloud") saveToCloud({ fontSize: id });
   }
 
   function handleLanguageChange(code: string) {
     setLanguage(code);
     localStorage.setItem("i18nextLng", code);
     i18n.changeLanguage(code);
-    saveToCloud({ language: code });
+    if (storageMode === "cloud") saveToCloud({ language: code });
   }
 
   function toggle(id: UserProfileSection) {
@@ -735,36 +938,41 @@ export function UserProfilePanel({
 
       {/* Storage mode toggle */}
       <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {t("newUi.sidebar.userProfile.storageModeSwitch")}
-          </span>
-          <div className="flex border border-border overflow-hidden">
-            <button
-              onClick={() => handleStorageModeChange("local")}
-              className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                storageMode === "local"
-                  ? "bg-accent-brand text-white"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-              }`}
-            >
-              {t("newUi.sidebar.userProfile.storageModeLocal")}
-            </button>
-            <button
-              onClick={() => handleStorageModeChange("cloud")}
-              className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-                storageMode === "cloud"
-                  ? "bg-accent-brand text-white"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-              }`}
-            >
-              {t("newUi.sidebar.userProfile.storageModeCloud")}
-            </button>
-          </div>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {t("newUi.sidebar.userProfile.storageModeSwitch")}
+        </span>
+        <div className="flex border border-border overflow-hidden w-full">
+          <button
+            onClick={() => handleStorageModeChange("local")}
+            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              storageMode === "local"
+                ? "bg-accent-brand text-white"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            }`}
+          >
+            {t("newUi.sidebar.userProfile.storageModeLocal")}
+          </button>
+          <button
+            onClick={() => handleStorageModeChange("cloud")}
+            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              storageMode === "cloud"
+                ? "bg-accent-brand text-white"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            }`}
+          >
+            {t("newUi.sidebar.userProfile.storageModeCloud")}
+          </button>
         </div>
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           {t("newUi.sidebar.userProfile.storageModeDescription")}
         </p>
+        <button
+          onClick={resetToDefaults}
+          className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RotateCcw className="size-3" />
+          {t("newUi.sidebar.userProfile.resetToDefaults")}
+        </button>
       </div>
 
       {/* Account */}

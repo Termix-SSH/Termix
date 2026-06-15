@@ -207,7 +207,7 @@ export function AppShell({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
-    return saved ? parseInt(saved, 10) : 290;
+    return saved ? parseInt(saved, 10) : 291;
   });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
@@ -391,17 +391,29 @@ export function AppShell({
     getUserPreferences()
       .then((prefs) => {
         setUserPrefs(prefs);
-        if (prefs.theme) setTheme(prefs.theme as ThemeId);
-        if (prefs.fontSize) applyFontSize(prefs.fontSize as FontSizeId);
-        if (prefs.accentColor) {
-          localStorage.setItem("termix-accent", prefs.accentColor);
-          applyAccentColor(prefs.accentColor);
-        }
-        if (prefs.language && prefs.language !== i18n.language) {
-          localStorage.setItem("i18nextLng", prefs.language);
-          void i18n.changeLanguage(prefs.language);
-        }
         if (prefs.storageMode === "cloud") {
+          // Persist the current browser values before overwriting, so any tab can restore them
+          if (!localStorage.getItem("termix-local-snapshot")) {
+            const SNAPSHOT_KEYS = [
+              "termix-accent", "termix-font-size", "i18nextLng",
+              "commandAutocomplete", "commandPaletteShortcutEnabled", "showHostTags",
+              "hostTrayOnClick", "pinAppRail", "defaultSnippetFoldersCollapsed",
+              "confirmSnippetExecution", "disableUpdateCheck", "confirmTabClose", "hiddenRailTabs",
+            ];
+            const snap: Record<string, string | null> = { __theme: localStorage.getItem("termix-theme") };
+            for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
+            localStorage.setItem("termix-local-snapshot", JSON.stringify(snap));
+          }
+          if (prefs.theme) setTheme(prefs.theme as ThemeId);
+          if (prefs.fontSize) applyFontSize(prefs.fontSize as FontSizeId);
+          if (prefs.accentColor) {
+            localStorage.setItem("termix-accent", prefs.accentColor);
+            applyAccentColor(prefs.accentColor);
+          }
+          if (prefs.language && prefs.language !== i18n.language) {
+            localStorage.setItem("i18nextLng", prefs.language);
+            void i18n.changeLanguage(prefs.language);
+          }
           if (
             prefs.commandAutocomplete !== null &&
             prefs.commandAutocomplete !== undefined
@@ -1212,7 +1224,7 @@ export function AppShell({
             size="icon"
             className="h-full w-12.5 border-y-0 border-border rounded-none text-muted-foreground hover:text-foreground"
             title="Reset width"
-            onClick={() => setSidebarWidth(290)}
+            onClick={() => setSidebarWidth(291)}
           >
             <Maximize2 className="size-3.5" />
           </Button>

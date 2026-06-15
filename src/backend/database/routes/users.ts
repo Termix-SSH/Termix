@@ -817,7 +817,7 @@ router.get("/oidc/callback", async (req, res) => {
         if (primary) ghUserInfo.email = primary.email;
       }
 
-      const ghIdentifier = String(ghUserInfo.id || ghUserInfo.login);
+      const ghIdentifier = `github:${callbackProviderDbId}:${String(ghUserInfo.id ?? ghUserInfo.login)}`;
       const ghName = (ghUserInfo.name ||
         ghUserInfo.login ||
         ghIdentifier) as string;
@@ -1230,25 +1230,9 @@ router.get("/oidc/callback", async (req, res) => {
         const first = (countResult?.count || 0) === 0;
         db.$client
           .prepare(
-            "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
           )
-          .run(
-            id,
-            name,
-            "",
-            first ? 1 : 0,
-            1,
-            identifier,
-            callbackProviderDbId,
-            String(config.client_id),
-            String(config.client_secret),
-            String(config.issuer_url),
-            String(config.authorization_url),
-            String(config.token_url),
-            String(config.identifier_path),
-            String(config.name_path),
-            String(config.scopes),
-          );
+          .run(id, name, "", first ? 1 : 0, 1, identifier, callbackProviderDbId);
         return first;
       })();
 

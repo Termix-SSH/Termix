@@ -394,14 +394,9 @@ export function registerSSOProviderRoutes(router: Router): void {
 
       let encryptedConfig = existing[0].config;
       if (rawConfig !== undefined) {
+        const existingDecrypted = decryptProviderConfig(existing[0].config, userId);
         const mergedConfig = {
-          ...JSON.parse(
-            decryptProviderConfig(existing[0].config, userId)
-              ? JSON.stringify(
-                  decryptProviderConfig(existing[0].config, userId),
-                )
-              : "{}",
-          ),
+          ...JSON.parse(existingDecrypted ? JSON.stringify(existingDecrypted) : "{}"),
           ...rawConfig,
         };
         encryptedConfig = encryptProviderConfig(

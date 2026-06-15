@@ -2342,6 +2342,8 @@
         "storageModeLocal": "Browser",
         "storageModeCloud": "Database",
         "storageModeDescription": "Browser stores settings in this browser only. Database syncs to the server and loads on any device.",
+        "resetToDefaults": "Reset to Defaults",
+        "resetToDefaultsSuccess": "Settings reset to defaults.",
         "storageModeSwitch": "Preference Storage",
         "sectionAccount": "Account",
         "sectionAppearance": "Appearance",

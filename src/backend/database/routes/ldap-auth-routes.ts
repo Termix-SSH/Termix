@@ -7,8 +7,7 @@ import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
-import { isOIDCUserAllowed } from "./user-oidc-utils.js";
-import { decryptProviderConfig } from "./sso-provider-routes.js";
+import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
 
 const authManager = AuthManager.getInstance();
@@ -120,7 +119,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
         .json({ error: "providerId, username, and password are required" });
     }
 
-    let providerRow;
+    let config: LDAPProviderConfig;
     try {
       const rows = await db
         .select()
@@ -130,14 +129,16 @@ export function registerLDAPAuthRoutes(router: Router): void {
       if (rows.length === 0 || rows[0].type !== "ldap" || !rows[0].enabled) {
         return res.status(404).json({ error: "LDAP provider not found" });
       }
-      providerRow = rows[0];
     } catch (err) {
       authLogger.error("Failed to load LDAP provider", err);
       return res.status(500).json({ error: "Failed to load LDAP provider" });
     }
 
-    const decrypted = decryptProviderConfig(providerRow.config, "");
-    const config = decrypted as unknown as LDAPProviderConfig;
+    const providerResult = await loadProviderConfig(providerId);
+    if (!providerResult) {
+      return res.status(404).json({ error: "LDAP provider not found" });
+    }
+    config = providerResult.config as unknown as LDAPProviderConfig;
 
     if (
       !config.host ||
