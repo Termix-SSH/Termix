@@ -328,6 +328,7 @@
     "tailscaleNoApiKey": "No Tailscale API key configured. Add one in Admin Settings to enable device discovery.",
     "tailscaleLoadingDevices": "Loading devices...",
     "tailscaleNoDevices": "No devices found in your tailnet.",
+    "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address.",
     "forceKeyboardInteractiveLabel": "Force Keyboard Interactive",
     "forceKeyboardInteractiveShortDesc": "Force manual password entry even if keys are present",
     "terminalAppearance": "Terminal Appearance",

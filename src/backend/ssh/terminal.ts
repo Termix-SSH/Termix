@@ -1741,6 +1741,31 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       if (
+        resolvedCredentials.authType === "tailscale" &&
+        (authMethodNotAvailable ||
+          err.message.includes("All configured authentication methods failed"))
+      ) {
+        sendLog(
+          "auth",
+          "error",
+          "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
+        );
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
+          }),
+        );
+        return;
+      }
+
+      if (
         authMethodNotAvailable &&
         resolvedCredentials.authType === "none" &&
         !isKeyboardInteractive
