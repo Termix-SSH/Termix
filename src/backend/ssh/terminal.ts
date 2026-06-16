@@ -812,6 +812,110 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
+      case "vault_start_auth": {
+        const vaultData = data as { hostId: number };
+        try {
+          const { loadVaultProfileForHost, startVaultAuth } =
+            await import("./vault-oidc-auth.js");
+          const { getRequestOrigin } =
+            await import("../utils/request-origin.js");
+          const profile = await loadVaultProfileForHost(vaultData.hostId);
+          if (!profile) {
+            ws.send(
+              JSON.stringify({
+                type: "vault_error",
+                hostId: vaultData.hostId,
+                error: "No Vault signer profile configured for this host",
+              }),
+            );
+            break;
+          }
+          const requestOrigin = getRequestOrigin(req);
+          await startVaultAuth(
+            userId,
+            vaultData.hostId,
+            profile,
+            ws,
+            requestOrigin,
+          );
+        } catch (error) {
+          sshLogger.error("Failed to start Vault auth", error, {
+            operation: "vault_start_auth_error",
+            userId,
+            hostId: vaultData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "vault_error",
+              hostId: vaultData.hostId,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to start Vault authentication",
+            }),
+          );
+        }
+        break;
+      }
+
+      case "vault_cancel": {
+        const cancelData = data as { hostId: number };
+        try {
+          const { cancelVaultAuthByHost } =
+            await import("./vault-oidc-auth.js");
+          cancelVaultAuthByHost(userId, cancelData.hostId);
+          resetConnectionState();
+        } catch (error) {
+          sshLogger.error("Failed to cancel Vault auth", error, {
+            operation: "vault_cancel_error",
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "vault_auth_completed": {
+        const completedData = data as {
+          hostId: number;
+          cols?: number;
+          rows?: number;
+          hostConfig?: ConnectToHostData["hostConfig"];
+        };
+
+        resetConnectionState();
+
+        const reconnectConfig: ConnectToHostData = {
+          cols: completedData.cols || 80,
+          rows: completedData.rows || 24,
+          hostConfig:
+            completedData.hostConfig ||
+            ({
+              id: completedData.hostId,
+              ip: "",
+              port: 22,
+              username: "",
+              userId,
+            } as ConnectToHostData["hostConfig"]),
+        };
+
+        handleConnectToHost(reconnectConfig).catch((error) => {
+          sshLogger.error("Failed to reconnect after Vault auth", error, {
+            operation: "vault_reconnect_error",
+            userId,
+            hostId: completedData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to connect after authentication: " +
+                (error instanceof Error ? error.message : "Unknown error"),
+            }),
+          );
+        });
+        break;
+      }
+
       default:
         sshLogger.warn("Unknown message type received", {
           operation: "websocket_message_unknown_type",
@@ -1675,6 +1779,60 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
 
       if (
+        resolvedCredentials.authType === "vault" &&
+        err.message.includes("All configured authentication methods failed")
+      ) {
+        sshLogger.warn("Vault certificate authentication failed", {
+          operation: "vault_auth_failed",
+          hostId: id,
+          userId,
+          error: err.message,
+        });
+
+        (async () => {
+          try {
+            const profileId = (
+              resolvedHostData?.vaultProfile as { id?: number } | undefined
+            )?.id;
+            if (profileId) {
+              const { deleteVaultCert } =
+                await import("./vault-signer-auth.js");
+              await deleteVaultCert(userId, profileId);
+            }
+          } catch (invalidateError) {
+            sshLogger.error("Failed to invalidate Vault certificate", {
+              operation: "vault_cert_invalidation_error",
+              userId,
+              hostId: id,
+              error: invalidateError,
+            });
+          }
+        })();
+
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+
+        sendLog(
+          "auth",
+          "error",
+          "Vault certificate authentication failed. Please authenticate again.",
+        );
+
+        ws.send(
+          JSON.stringify({
+            type: "vault_auth_required",
+            hostId: id,
+            message:
+              "Vault authentication failed or expired. Please authenticate again.",
+          }),
+        );
+        return;
+      }
+
+      if (
         err.message.includes("Cannot parse privateKey") &&
         err.message.includes("no passphrase")
       ) {
@@ -2166,6 +2324,61 @@ wss.on("connection", async (ws: WebSocket, req) => {
               "OPKSSH authentication failed: " +
               (opksshError instanceof Error
                 ? opksshError.message
+                : "Unknown error"),
+          }),
+        );
+        return;
+      }
+    } else if (resolvedCredentials.authType === "vault") {
+      sendLog("auth", "info", "Using Vault SSH signer authentication");
+      try {
+        const vaultProfile = resolvedHostData?.vaultProfile as
+          | { id: number }
+          | undefined;
+        if (!vaultProfile?.id) {
+          throw new Error("Host has no Vault signer profile configured");
+        }
+
+        const { getVaultCert } = await import("./vault-signer-auth.js");
+        const cert = await getVaultCert(userId, vaultProfile.id);
+
+        if (!cert) {
+          sendLog(
+            "auth",
+            "info",
+            "No valid Vault certificate found, requesting authentication",
+          );
+          ws.send(
+            JSON.stringify({
+              type: "vault_auth_required",
+              hostId: id,
+            }),
+          );
+          return;
+        }
+
+        sendLog("auth", "info", "Using cached Vault-signed certificate");
+
+        const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+        await setupOPKSSHCertAuth(
+          connectConfig,
+          sshConn,
+          { privateKey: cert.privateKey, sshCert: cert.sshCert },
+          username,
+        );
+      } catch (vaultError) {
+        sshLogger.error("Vault SSH signer authentication error", vaultError, {
+          operation: "vault_auth_error",
+          userId,
+          hostId: id,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Vault SSH signer authentication failed: " +
+              (vaultError instanceof Error
+                ? vaultError.message
                 : "Unknown error"),
           }),
         );

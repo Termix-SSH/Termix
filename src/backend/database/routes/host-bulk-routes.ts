@@ -244,13 +244,18 @@ export function registerHostBulkRoutes(
           if (
             effectiveConnectionType === "ssh" &&
             hostData.authType &&
-            !["password", "key", "credential", "none", "opkssh"].includes(
-              hostData.authType,
-            )
+            ![
+              "password",
+              "key",
+              "credential",
+              "none",
+              "opkssh",
+              "vault",
+            ].includes(hostData.authType)
           ) {
             results.failed++;
             results.errors.push(
-              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', or 'opkssh'`,
+              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', or 'vault'`,
             );
             continue;
           }

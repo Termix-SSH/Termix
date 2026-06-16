@@ -31,8 +31,9 @@ import {
   subscribeTunnelStatuses,
   connectTunnel,
   disconnectTunnel,
+  getVaultProfiles,
 } from "@/main-axios";
-import type { Host } from "@/types/ui-types";
+import type { Host, VaultProfile } from "@/types/ui-types";
 import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 import {
@@ -54,6 +55,7 @@ import {
   HostEditorVncTab,
 } from "./HostEditorGuacamoleTabs";
 import { HostStatsTab } from "./HostEditorStatsTab";
+import { VaultProfileManager } from "./VaultProfileManager";
 
 export function HostEditor({
   host,
@@ -92,11 +94,20 @@ export function HostEditor({
     Record<string, TunnelStatus>
   >({});
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
+  const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
+  const [showVaultManager, setShowVaultManager] = useState(false);
+
+  const reloadVaultProfiles = () => {
+    getVaultProfiles()
+      .then((res) => setVaultProfiles(res as unknown as VaultProfile[]))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     getSnippets()
       .then((res) => setSnippets(mapSnippetResponse(res)))
       .catch(() => {});
+    reloadVaultProfiles();
   }, []);
 
   useEffect(() => {
@@ -189,19 +200,24 @@ export function HostEditor({
                     {t("hosts.authMethod")}
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {["password", "key", "credential", "none", "opkssh"].map(
-                      (m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setField("authType", m as HostAuthType);
-                          }}
-                          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                        >
-                          {m}
-                        </button>
-                      ),
-                    )}
+                    {[
+                      "password",
+                      "key",
+                      "credential",
+                      "vault",
+                      "none",
+                      "opkssh",
+                    ].map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setField("authType", m as HostAuthType);
+                        }}
+                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4 mt-1">
@@ -365,6 +381,48 @@ export function HostEditor({
                         </select>
                       </div>
                     </>
+                  )}
+                  {authMethod === "vault" && (
+                    <div className="flex flex-col gap-1.5 col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.vaultProfile")}
+                      </label>
+                      <select
+                        value={form.vaultProfileId}
+                        onChange={(e) =>
+                          setField("vaultProfileId", e.target.value)
+                        }
+                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <option value="">
+                          {t("hosts.selectAVaultProfile")}
+                        </option>
+                        {vaultProfiles.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.shared ? `${p.name} (shared)` : p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.vaultProfileHint")}
+                        </p>
+                        <button
+                          type="button"
+                          className="text-[10px] text-accent-brand hover:text-accent-brand/80 shrink-0"
+                          onClick={() => setShowVaultManager((v) => !v)}
+                        >
+                          {t("hosts.vaultManageProfiles")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {authMethod === "vault" && showVaultManager && (
+                    <VaultProfileManager
+                      profiles={vaultProfiles}
+                      onChanged={reloadVaultProfiles}
+                      onClose={() => setShowVaultManager(false)}
+                    />
                   )}
                   {authMethod === "credential" && (
                     <>

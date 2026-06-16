@@ -94,6 +94,13 @@ export const hosts = sqliteTable("ssh_data", {
   overrideCredentialUsername: integer("override_credential_username", {
     mode: "boolean",
   }),
+  // When authType is "vault", the host authenticates via a Vault SSH signer
+  // profile (shared settings, no secrets). The signing certificate is obtained
+  // per-user at connect time via an interactive Vault OIDC flow.
+  vaultProfileId: integer("vault_profile_id").references(
+    () => vaultProfiles.id,
+    { onDelete: "set null" },
+  ),
   enableTerminal: integer("enable_terminal", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -629,6 +636,63 @@ export const opksshTokens = sqliteTable("opkssh_tokens", {
   sub: text("sub"),
   issuer: text("issuer"),
   audience: text("audience"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  lastUsed: text("last_used"),
+});
+
+// Vault SSH signer profiles. These hold ONLY non-secret connection settings and
+// are intended to be shared across users (shared === true makes a profile
+// visible to every user on the server). Each user authenticates to Vault via an
+// interactive OIDC flow at connect time; no tokens or keys are stored here.
+export const vaultProfiles = sqliteTable("vault_profiles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  folder: text("folder"),
+  tags: text("tags"),
+  // Vault server connection (non-secret)
+  vaultAddr: text("vault_addr").notNull(),
+  vaultNamespace: text("vault_namespace"),
+  // OIDC auth method mount + role used to obtain a Vault token interactively
+  oidcMount: text("oidc_mount"),
+  oidcRole: text("oidc_role"),
+  // SSH secrets engine mount + signer role used to sign the ephemeral key
+  sshMount: text("ssh_mount"),
+  sshRole: text("ssh_role").notNull(),
+  validPrincipals: text("valid_principals"),
+  // Ephemeral keypair algorithm to generate per connection
+  keyType: text("key_type"),
+  // When true the profile is visible/usable by all users on the server
+  shared: integer("shared", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Per-user cache of the ephemeral SSH private key + Vault-signed certificate.
+// Transient: rows live only until the certificate expires. Secret fields are
+// encrypted under the user's data-encryption key (see field-crypto.ts).
+export const vaultTokens = sqliteTable("vault_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  profileId: integer("profile_id")
+    .notNull()
+    .references(() => vaultProfiles.id, { onDelete: "cascade" }),
+
+  sshCert: text("ssh_cert", { length: 8192 }).notNull(),
+  privateKey: text("private_key", { length: 8192 }).notNull(),
 
   createdAt: text("created_at")
     .notNull()
