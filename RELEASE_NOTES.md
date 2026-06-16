@@ -1,12 +1,12 @@
 <!-- SUMMARY -->
 
-Bug fixes and new features including host-to-host file transfer, OIDC improvements, UI/UX updates, and numerous stability and security patches.
+Bug fixes and new features, including Proxmox integration, SSO/OIDC redesign, revamped host metrics, tmux session management, and numerous UI and stability improvements.
 
 <!-- /SUMMARY -->
 
 <!-- YOUTUBE -->
 
-https://youtu.be/At8iDk6-Q_s
+https://youtu.be/ImwAbm4hW-k
 
 <!-- /YOUTUBE -->
 
