@@ -386,8 +386,10 @@ jobs:
 
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
-          git pull --rebase origin main
           git add Casks/termix.rb
+          git stash
+          git pull --rebase origin main
+          git stash pop
           git commit -m "chore: bump Homebrew cask to $VERSION"
           git push origin HEAD:main
 

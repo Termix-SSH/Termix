@@ -957,7 +957,7 @@ jobs:
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.2"
+          ruby-version: "3.3"
           bundler-cache: false
 
       - name: Install Fastlane
