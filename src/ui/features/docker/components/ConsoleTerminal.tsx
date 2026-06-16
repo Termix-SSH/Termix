@@ -22,10 +22,7 @@ import { isElectron } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
-import {
-  DEFAULT_TERMINAL_CONFIG,
-  TERMINAL_FONTS,
-} from "@/lib/terminal-themes";
+import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
 import { useTheme } from "@/components/theme-provider";
 
 interface ConsoleTerminalProps {

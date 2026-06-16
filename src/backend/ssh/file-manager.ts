@@ -1525,7 +1525,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         }
       : null;
 
-  const hasJumpHosts = resolvedJumpHosts && resolvedJumpHosts.length > 0 && userId;
+  const hasJumpHosts =
+    resolvedJumpHosts && resolvedJumpHosts.length > 0 && userId;
 
   if (hasJumpHosts) {
     try {
