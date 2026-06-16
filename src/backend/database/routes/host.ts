@@ -1641,7 +1641,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/hosts/export:
+ * /host/db/hosts/export:
  *   get:
  *     summary: Export all SSH hosts
  *     description: Exports all SSH hosts for the current user with decrypted credentials.
@@ -1788,7 +1788,7 @@ router.get(
 
 /**
  * @openapi
- * /ssh/db/host/{id}:
+ * /host/db/host/{id}:
  *   delete:
  *     summary: Delete SSH host
  *     description: Deletes an SSH host by its ID.

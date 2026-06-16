@@ -27,6 +27,7 @@ https://youtu.be/At8iDk6-Q_s
 - Moved ssh host config outside of top tab bar and into new tab bar visible on SSH tab
 - Improved folder management (nested folders, folder icons, folder colors, better folder selection, etc.)
 - Storage preference to user profile settings (store/load toggles locally or in the DB)
+- Sort/filter functions to credential list (copy of host list)
 <!-- /UPDATE_LOG -->
 
 <!-- BUG_FIXES -->
@@ -48,4 +49,5 @@ https://youtu.be/At8iDk6-Q_s
 - 2FA failing to disable
 - Hostname fill entire column and truncate at proper spot in dashboard
 - Make credentials start collapsed
+- Incorrect JSDoc comments
 <!-- /BUG_FIXES -->

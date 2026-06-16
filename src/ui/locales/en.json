@@ -22,7 +22,19 @@
     "hasCaCert": "Has CA Certificate",
     "noCaCert": "No CA Certificate",
     "noPublicKeyAvailable": "No public key available. Open the credential editor first.",
-    "deployCommandCopied": "Deploy command copied"
+    "deployCommandCopied": "Deploy command copied",
+    "sortCredentials": "Sort Credentials",
+    "sortDefault": "Default Order",
+    "sortNameAsc": "Name (A → Z)",
+    "sortNameDesc": "Name (Z → A)",
+    "sortUsernameAsc": "Username (A → Z)",
+    "sortUsernameDesc": "Username (Z → A)",
+    "filterCredentials": "Filter Credentials",
+    "filterClearAll": "Clear Filters",
+    "filterTypeGroup": "Type",
+    "filterTypePassword": "Password",
+    "filterTypeKey": "SSH Key",
+    "filterTagsGroup": "Tags"
   },
   "homepage": {
     "failedToLoadAlerts": "Failed to load alerts",

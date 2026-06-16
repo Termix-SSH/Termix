@@ -23,6 +23,10 @@ import { CredentialEditorView } from "./CredentialEditorView";
 import { HostEditor } from "./HostEditor";
 import { mapCredentials, sshHostToHost } from "./HostManagerData";
 import { HostCredentialList } from "./HostCredentialList";
+import type {
+  CredentialFilterState,
+  CredentialSortKey,
+} from "./CredentialsPanel";
 import {
   makeCredentialTabs,
   makeHostTabs,
@@ -31,12 +35,52 @@ import {
   TabStrip,
 } from "./HostManagerTabs";
 
+function sortCredentials(
+  creds: Credential[],
+  key: CredentialSortKey,
+): Credential[] {
+  if (key === "default") return creds;
+  const sorted = [...creds];
+  switch (key) {
+    case "name-asc":
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case "name-desc":
+      sorted.sort((a, b) => b.name.localeCompare(a.name));
+      break;
+    case "username-asc":
+      sorted.sort((a, b) => a.username.localeCompare(b.username));
+      break;
+    case "username-desc":
+      sorted.sort((a, b) => b.username.localeCompare(a.username));
+      break;
+  }
+  return sorted;
+}
+
+function credentialPassesFilters(
+  cred: Credential,
+  filters: CredentialFilterState,
+): boolean {
+  if (filters.type.length > 0 && !filters.type.includes(cred.type))
+    return false;
+  if (
+    filters.tags.length > 0 &&
+    !filters.tags.some((tag) => cred.tags?.includes(tag))
+  )
+    return false;
+  return true;
+}
+
 export function HostManager({
   pendingEditId,
   pendingAction,
   onEditingChange,
   hideListHeader,
   externalSearch,
+  externalSort,
+  externalFilter,
+  onTagsChange,
   active = true,
 }: {
   pendingEditId?: MutableRefObject<string | null>;
@@ -44,6 +88,9 @@ export function HostManager({
   onEditingChange?: (editing: boolean) => void;
   hideListHeader?: boolean;
   externalSearch?: string;
+  externalSort?: CredentialSortKey;
+  externalFilter?: CredentialFilterState;
+  onTagsChange?: (tags: string[]) => void;
   active?: boolean;
 } = {}) {
   const { t } = useTranslation();
@@ -81,6 +128,10 @@ export function HostManager({
     string | null
   >(null);
   const [editingCredFolderValue, setEditingCredFolderValue] = useState("");
+
+  useEffect(() => {
+    onTagsChange?.([...new Set(credentials.flatMap((c) => c.tags ?? []))]);
+  }, [credentials]);
 
   const applyPendingEdit = (hostList: Host[]) => {
     if (pendingEditId?.current) {
@@ -204,14 +255,22 @@ export function HostManager({
   }, [active]);
 
   const allHosts = hosts;
-  const filteredCredentials = credentials.filter(
+  const searchedCredentials = credentials.filter(
     (c) =>
       c.name.toLowerCase().includes(effectiveSearch.toLowerCase()) ||
       c.username.toLowerCase().includes(effectiveSearch.toLowerCase()),
   );
+  const filteredCredentials = sortCredentials(
+    externalFilter
+      ? searchedCredentials.filter((c) =>
+          credentialPassesFilters(c, externalFilter),
+        )
+      : searchedCredentials,
+    externalSort ?? "default",
+  );
 
   const credentialFolders = Array.from(
-    new Set(credentials.map((c) => c.folder || "Uncategorized")),
+    new Set(filteredCredentials.map((c) => c.folder || "Uncategorized")),
   ).sort();
 
   const handleRenameCredentialFolder = async (
