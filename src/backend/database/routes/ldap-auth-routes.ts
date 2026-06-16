@@ -119,7 +119,6 @@ export function registerLDAPAuthRoutes(router: Router): void {
         .json({ error: "providerId, username, and password are required" });
     }
 
-    let config: LDAPProviderConfig;
     try {
       const rows = await db
         .select()
@@ -138,7 +137,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
     if (!providerResult) {
       return res.status(404).json({ error: "LDAP provider not found" });
     }
-    config = providerResult.config as unknown as LDAPProviderConfig;
+    const config = providerResult.config as unknown as LDAPProviderConfig;
 
     if (
       !config.host ||

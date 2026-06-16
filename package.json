@@ -15,7 +15,7 @@
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
+    "lint:fix": "eslint --fix --max-warnings -1 .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
