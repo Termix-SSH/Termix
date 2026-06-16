@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { deleteApiKey } from "@/main-axios";
 import type { ApiKey } from "@/main-axios";
 import { Button } from "@/components/button";
@@ -62,7 +63,15 @@ export function AdminApiKeysSection({
       <div className="flex flex-col pt-2">
         <div className="flex items-center justify-between py-2 border-b border-border">
           <span className="text-[10px] text-muted-foreground">
-            {t("admin.apiKeysCount", { count: apiKeys.length })}
+            {t("admin.apiKeysCount", { count: apiKeys.length })}{" "}
+            <a
+              href="https://docs.termix.site/features/api/api-keys"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent-brand hover:underline"
+            >
+              {t("admin.apiKeysDocsLink")}
+            </a>
           </span>
           <div className="flex items-center gap-1">
             <Button
@@ -103,7 +112,7 @@ export function AdminApiKeysSection({
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(createdKeyToken);
+                      copyToClipboard(createdKeyToken);
                       toast.info(t("admin.copiedToClipboard"));
                     }}
                     className="text-muted-foreground hover:text-accent-brand shrink-0"

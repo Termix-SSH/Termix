@@ -69,7 +69,7 @@ async function createTemplateConfig(): Promise<void> {
   const template = `
 # OPKSSH Configuration
 # OPKSSH Documentation: https://github.com/openpubkey/opkssh/blob/main/docs/config.md
-# Termix Documentation: https://docs.termix.site/opkssh
+# Termix Documentation: https://docs.termix.site/features/authentication/opkssh
 `;
 
   try {
@@ -227,7 +227,7 @@ function validateRedirectUrisAreLocalhost(
         `you do not put it here. Register the PUBLIC Termix URL with your OAuth provider instead ` +
         `(e.g. https://your-domain${OPKSSH_CALLBACK_PATH}).\n\n` +
         `Fix: remove the non-localhost entries above, or delete the whole 'redirect_uris' block to use defaults.\n\n` +
-        `Docs: https://docs.termix.site/opkssh`,
+        `Docs: https://docs.termix.site/features/authentication/opkssh`,
     };
   }
 
@@ -410,7 +410,8 @@ export async function startOPKSSHAuth(
               `Remove any non-localhost entries from redirect_uris (or delete the whole block to use OPKSSH's ` +
               `defaults of :3000, :10001, :11110). Register the public Termix callback URL with your OAuth ` +
               `provider instead, Termix passes it to OPKSSH automatically via --remote-redirect-uri.`,
-            instructions: "See documentation: https://docs.termix.site/opkssh",
+            instructions:
+              "See documentation: https://docs.termix.site/features/authentication/opkssh",
           }),
         );
         await cleanup();
@@ -448,7 +449,8 @@ export async function startOPKSSHAuth(
               `Register '${remoteRedirectUri}' as an authorized redirect URI with your OAuth provider ` +
               `(e.g. in Google Cloud Console → OAuth client). ` +
               `Also confirm any 'redirect_uris' in your OPKSSH config contain ONLY localhost URLs.`,
-            instructions: "See documentation: https://docs.termix.site/opkssh",
+            instructions:
+              "See documentation: https://docs.termix.site/features/authentication/opkssh",
           }),
         );
         await cleanup();

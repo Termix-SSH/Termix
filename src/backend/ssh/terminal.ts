@@ -11,6 +11,7 @@ import { getDb } from "../database/db/index.js";
 import { hosts } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { sshLogger, authLogger } from "../utils/logger.js";
+import { logAudit } from "../utils/audit-logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
@@ -64,9 +65,13 @@ interface ConnectToHostData {
       keepaliveCountMax?: number;
       [key: string]: unknown;
     };
+    enableSessionLogging?: boolean;
   };
   initialPath?: string;
   executeCommand?: string;
+  /** Attach straight to this tmux session once the shell is ready
+   * (tmux monitor opens its panes through a real PTY this way). */
+  tmuxAttachSession?: string;
 }
 
 interface ResizeData {
@@ -822,7 +827,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   });
 
   async function handleConnectToHost(data: ConnectToHostData) {
-    const { hostConfig, initialPath, executeCommand } = data;
+    const { hostConfig, initialPath, executeCommand, tmuxAttachSession } = data;
     const {
       id,
       ip: rawIp,
@@ -959,6 +964,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           socks5Password?: string;
           socks5ProxyChain?: unknown;
           terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
+          enableSessionLogging?: boolean;
         })
       | null = null;
 
@@ -1081,6 +1087,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
         hostId: id,
         ip,
       });
+
+      logAudit({
+        userId,
+        username: userId,
+        action: "ssh_connect",
+        resourceType: "host",
+        resourceId: String(id),
+        resourceName: `${username}@${ip}:${port}`,
+        success: true,
+      });
       if (totpPromptSent) {
         authLogger.success("TOTP verification successful for SSH session", {
           operation: "terminal_totp_success",
@@ -1095,6 +1111,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
       const hostDisplayName = `${username}@${ip}:${port}`;
       const tabInstanceId = hostConfig.instanceId;
+      const sessionLoggingEnabled =
+        resolvedHostData?.enableSessionLogging ??
+        hostConfig.enableSessionLogging ??
+        true;
       currentSessionId = sessionManager.createSession(
         userId,
         id,
@@ -1102,6 +1122,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         data.cols,
         data.rows,
         tabInstanceId,
+        sessionLoggingEnabled,
       );
 
       // If createSession returned an existing live session (duplicate tabInstanceId),
@@ -1465,7 +1486,27 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }, delay);
           };
 
-          if (autoTmux && conn) {
+          if (tmuxAttachSession && conn) {
+            // Direct attach (tmux monitor): the session is known to exist, so
+            // skip detection and reuse the same path as the manual
+            // "tmux_attach" websocket message.
+            attachOrCreateTmuxSession(stream, tmuxAttachSession);
+            {
+              const session = sessionManager.getSession(boundSessionId);
+              if (session) session.tmuxSessionName = tmuxAttachSession;
+            }
+            sshLogger.info("Attached to requested tmux session", {
+              operation: "tmux_direct_attach",
+              sessionName: tmuxAttachSession,
+              hostId: id,
+            });
+            ws.send(
+              JSON.stringify({
+                type: "tmux_session_attached",
+                sessionName: tmuxAttachSession,
+              }),
+            );
+          } else if (autoTmux && conn) {
             (async () => {
               try {
                 const detection = await detectTmux(conn);
@@ -1694,6 +1735,31 @@ wss.on("connection", async (ws: WebSocket, req) => {
             type: "passphrase_required",
             message:
               "The SSH key is encrypted. Please enter the passphrase to unlock it.",
+          }),
+        );
+        return;
+      }
+
+      if (
+        resolvedCredentials.authType === "tailscale" &&
+        (authMethodNotAvailable ||
+          err.message.includes("All configured authentication methods failed"))
+      ) {
+        sendLog(
+          "auth",
+          "error",
+          "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
+        );
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
           }),
         );
         return;
@@ -1946,7 +2012,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
       host: ip,
       port,
       username,
-      tryKeyboard: resolvedCredentials.authType !== "none",
+      tryKeyboard:
+        resolvedCredentials.authType !== "none" &&
+        resolvedCredentials.authType !== "tailscale",
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
           ? hostKeepaliveInterval * 1000
@@ -2017,8 +2085,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
       },
     };
 
-    if (resolvedCredentials.authType === "none") {
-      // no credentials needed
+    if (
+      resolvedCredentials.authType === "none" ||
+      resolvedCredentials.authType === "tailscale"
+    ) {
+      // Tailscale SSH and "none" auth: daemon handles authorization, no credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

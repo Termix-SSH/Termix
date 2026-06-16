@@ -43,6 +43,7 @@ import {
   RotateCw,
   AlertCircle,
   Download,
+  ExternalLink,
   Upload,
   Link2,
   FolderPlus,
@@ -806,11 +807,11 @@ export function NetworkGraphCard({
             </button>
           )}
           <button
-            onClick={() => handleConnectAction("stats")}
+            onClick={() => handleConnectAction("host-metrics")}
             className="flex items-center gap-2 px-3 py-2 text-xs w-full text-left hover:bg-muted transition-colors"
           >
             <Server className="size-3 shrink-0" />
-            {t("networkGraph.serverStats")}
+            {t("networkGraph.hostMetrics")}
           </button>
           {!embedded && (
             <>
@@ -1303,6 +1304,16 @@ export function NetworkGraphCard({
               <Upload className="size-3.5" />
             </button>
           </div>
+          <div className="w-px h-5 bg-border mx-1" />
+          <a
+            href="https://docs.termix.site/features/dashboard/network-graph"
+            target="_blank"
+            rel="noreferrer"
+            title={t("hosts.docsLink")}
+            className={btnCls}
+          >
+            <ExternalLink className="size-3.5" />
+          </a>
         </div>
         {cytoscapeEl}
         {dialogs}
@@ -1355,6 +1366,15 @@ export function NetworkGraphCard({
           >
             <ArrowUp className="size-3" />
           </button>
+          <a
+            href="https://docs.termix.site/features/dashboard/network-graph"
+            target="_blank"
+            rel="noreferrer"
+            title={t("hosts.docsLink")}
+            className={btnCls}
+          >
+            <ExternalLink className="size-3" />
+          </a>
         </div>
       </div>
       {cytoscapeEl}

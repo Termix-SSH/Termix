@@ -1,4 +1,9 @@
 import { authLogger } from "../../utils/logger.js";
+import type { SSOProviderType } from "../../../types/index.js";
+import { db } from "../db/index.js";
+import { ssoProviders } from "../db/schema.js";
+import { eq } from "drizzle-orm";
+import { DataCrypto } from "../../utils/data-crypto.js";
 
 export type OIDCConfig = {
   client_id: string;
@@ -12,6 +17,7 @@ export type OIDCConfig = {
   scopes: string;
   allowed_users: string;
   admin_group: string;
+  group_claim?: string;
 };
 
 export function getOIDCConfigFromEnv(): OIDCConfig | null {
@@ -43,7 +49,44 @@ export function getOIDCConfigFromEnv(): OIDCConfig | null {
     scopes: process.env.OIDC_SCOPES || "openid email profile",
     allowed_users: process.env.OIDC_ALLOWED_USERS || "",
     admin_group: process.env.OIDC_ADMIN_GROUP || "",
+    group_claim: process.env.OIDC_GROUP_CLAIM || "",
   };
+}
+
+/**
+ * Extracts the list of group/role names from an OIDC userInfo payload.
+ *
+ * When `groupClaim` is set, that claim is read first (useful for providers like
+ * Zitadel that nest roles under a custom path such as
+ * `urn:zitadel:iam:org:project:roles`). Otherwise the common `groups`, `roles`
+ * and `group` claims are tried. Values may be an array, a comma-separated
+ * string, or an object whose keys are the group names.
+ */
+export function extractOidcGroups(
+  userInfo: Record<string, unknown>,
+  groupClaim?: string,
+): string[] {
+  let raw: unknown;
+  if (groupClaim && groupClaim.trim()) {
+    raw = userInfo[groupClaim.trim()];
+  }
+  if (raw === undefined || raw === null) {
+    raw = userInfo.groups ?? userInfo.roles ?? userInfo.group;
+  }
+
+  if (Array.isArray(raw)) {
+    return raw.map(String);
+  }
+  if (typeof raw === "string") {
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  if (raw && typeof raw === "object") {
+    return Object.keys(raw as Record<string, unknown>);
+  }
+  return [];
 }
 
 export function isOIDCUserAllowed(
@@ -53,7 +96,7 @@ export function isOIDCUserAllowed(
 ): boolean {
   if (!allowedUsers || !allowedUsers.trim()) return true;
   const patterns = allowedUsers
-    .split(",")
+    .split(/[\n,]/)
     .map((p) => p.trim())
     .filter(Boolean);
   if (patterns.length === 0) return true;
@@ -169,4 +212,139 @@ export async function verifyOIDCToken(
   });
 
   return payload;
+}
+
+function decryptConfigSecret(
+  config: Record<string, unknown>,
+): Record<string, unknown> {
+  const out = { ...config };
+  for (const field of ["client_secret", "bindPassword"] as const) {
+    const val = out[field] as string | undefined;
+    if (val?.startsWith("encoded:")) {
+      try {
+        out[field] = Buffer.from(val.substring(8), "base64").toString("utf8");
+      } catch {
+        // leave as-is
+      }
+    } else if (val?.startsWith("encrypted:")) {
+      // encrypted: prefix means it was encrypted with DataCrypto; without a
+      // userId/dataKey here we cannot decrypt it. The caller should use the
+      // full admin decrypt path when possible. Fall back to stripping prefix.
+      try {
+        out[field] = Buffer.from(val.substring(10), "base64").toString("utf8");
+      } catch {
+        // leave as-is
+      }
+    }
+  }
+  return out;
+}
+
+export async function loadProviderConfig(
+  providerId: number | null | undefined,
+  adminUserId?: string,
+): Promise<{
+  config: OIDCConfig;
+  providerType: SSOProviderType;
+  providerDbId: number | null;
+} | null> {
+  if (providerId != null) {
+    try {
+      const rows = await db
+        .select()
+        .from(ssoProviders)
+        .where(eq(ssoProviders.id, providerId))
+        .limit(1);
+      if (rows.length > 0) {
+        const row = rows[0];
+        let parsed: Record<string, unknown>;
+        try {
+          parsed = JSON.parse(row.config);
+        } catch {
+          parsed = {};
+        }
+        if (adminUserId) {
+          try {
+            const adminDataKey = DataCrypto.getUserDataKey(adminUserId);
+            if (adminDataKey) {
+              parsed = DataCrypto.decryptRecord(
+                "settings",
+                parsed,
+                adminUserId,
+                adminDataKey,
+              );
+            }
+          } catch {
+            parsed = decryptConfigSecret(parsed);
+          }
+        } else {
+          parsed = decryptConfigSecret(parsed);
+        }
+        const config = parsed as unknown as OIDCConfig;
+        return {
+          config,
+          providerType: row.type as SSOProviderType,
+          providerDbId: row.id,
+        };
+      }
+    } catch (err) {
+      authLogger.error("Failed to load SSO provider config by id", err, {
+        providerId,
+      });
+    }
+  }
+
+  // Fallback: env vars
+  const envConfig = getOIDCConfigFromEnv();
+  if (envConfig) {
+    return { config: envConfig, providerType: "oidc", providerDbId: null };
+  }
+
+  // Fallback: first enabled OIDC-type provider in ssoProviders table
+  try {
+    const rows = await db
+      .select()
+      .from(ssoProviders)
+      .where(eq(ssoProviders.enabled, true))
+      .orderBy();
+    const oidcRow = rows.find(
+      (r) => r.type === "oidc" || r.type === "github" || r.type === "google",
+    );
+    if (oidcRow) {
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(oidcRow.config);
+      } catch {
+        parsed = {};
+      }
+      parsed = decryptConfigSecret(parsed);
+      return {
+        config: parsed as unknown as OIDCConfig,
+        providerType: oidcRow.type as SSOProviderType,
+        providerDbId: oidcRow.id,
+      };
+    }
+  } catch {
+    // fall through to legacy
+  }
+
+  // Fallback: legacy settings blob
+  try {
+    const legacyRow = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
+      .get() as { value: string } | undefined;
+    if (legacyRow) {
+      let config = JSON.parse(legacyRow.value) as Record<string, unknown>;
+      config = decryptConfigSecret(config);
+      return {
+        config: config as unknown as OIDCConfig,
+        providerType: "oidc",
+        providerDbId: null,
+      };
+    }
+  } catch {
+    // no legacy config
+  }
+
+  return null;
 }

@@ -71,6 +71,54 @@ export async function updateSessionTimeout(
 }
 
 // ============================================================================
+// TAILSCALE SETTINGS
+// ============================================================================
+
+export async function getTailscaleSettings(): Promise<{
+  apiKey: string;
+  hasApiKey: boolean;
+}> {
+  try {
+    const response = await authApi.get("/users/tailscale-settings");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch Tailscale settings");
+  }
+}
+
+export async function updateTailscaleSettings(
+  apiKey: string,
+): Promise<{ hasApiKey: boolean }> {
+  try {
+    const response = await authApi.patch("/users/tailscale-settings", {
+      apiKey,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update Tailscale settings");
+  }
+}
+
+export async function getTailscaleDevices(): Promise<{
+  devices: Array<{
+    id: string;
+    name: string;
+    hostname: string;
+    addresses: string[];
+    os: string;
+    lastSeen: string;
+  }>;
+  hasApiKey: boolean;
+}> {
+  try {
+    const response = await authApi.get("/tailscale/devices");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch Tailscale devices");
+  }
+}
+
+// ============================================================================
 // GUACAMOLE SETTINGS
 // ============================================================================
 

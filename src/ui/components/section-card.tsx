@@ -34,7 +34,7 @@ export function SettingRow({
 }: {
   label: string;
   badge?: string;
-  description?: string;
+  description?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (

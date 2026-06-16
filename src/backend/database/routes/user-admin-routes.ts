@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
@@ -37,10 +38,19 @@ export function registerUserAdminRoutes(
           username: users.username,
           isAdmin: users.isAdmin,
           isOidc: users.isOidc,
+          passwordHash: users.passwordHash,
         })
         .from(users);
 
-      res.json({ users: allUsers });
+      res.json({
+        users: allUsers.map((u) => ({
+          userId: u.id,
+          username: u.username,
+          is_admin: u.isAdmin,
+          is_oidc: u.isOidc,
+          password_hash: u.passwordHash ? "set" : null,
+        })),
+      });
     } catch (err) {
       authLogger.error("Failed to list users", err);
       res.status(500).json({ error: "Failed to list users" });
@@ -150,6 +160,25 @@ export function registerUserAdminRoutes(
         targetUserId: targetUser[0].id,
         targetUsername: targetUser[0].username,
       });
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const adminUserRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: adminUserRecord[0]?.username ?? userId,
+        action: "make_admin",
+        resourceType: "user",
+        resourceId: targetUser[0].id,
+        resourceName: targetUser[0].username,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
       res.json({ message: `User ${targetUser[0].username} is now an admin` });
     } catch (err) {
       authLogger.error("Failed to make user admin", err);
@@ -265,6 +294,25 @@ export function registerUserAdminRoutes(
         targetUserId: targetUser[0].id,
         targetUsername: targetUser[0].username,
       });
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const adminUserRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: adminUserRecord[0]?.username ?? userId,
+        action: "remove_admin",
+        resourceType: "user",
+        resourceId: targetUser[0].id,
+        resourceName: targetUser[0].username,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
       res.json({
         message: `Admin status removed from ${targetUser[0].username}`,
       });

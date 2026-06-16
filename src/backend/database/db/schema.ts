@@ -9,6 +9,7 @@ export const users = sqliteTable("users", {
 
   isOidc: integer("is_oidc", { mode: "boolean" }).notNull().default(false),
   oidcIdentifier: text("oidc_identifier"),
+  ssoProviderId: integer("sso_provider_id"),
   clientId: text("client_id"),
   clientSecret: text("client_secret"),
   issuerUrl: text("issuer_url"),
@@ -28,6 +29,21 @@ export const users = sqliteTable("users", {
 export const settings = sqliteTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
+});
+
+export const ssoProviders = sqliteTable("sso_providers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
+  config: text("config").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const sessions = sqliteTable("sessions", {
@@ -97,6 +113,12 @@ export const hosts = sqliteTable("ssh_data", {
   enableTerminal: integer("enable_terminal", { mode: "boolean" })
     .notNull()
     .default(true),
+  enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  enableCommandHistory: integer("enable_command_history", { mode: "boolean" })
+    .notNull()
+    .default(true),
   enableTunnel: integer("enable_tunnel", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -106,6 +128,9 @@ export const hosts = sqliteTable("ssh_data", {
     .notNull()
     .default(true),
   enableDocker: integer("enable_docker", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
     .notNull()
     .default(false),
   showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
@@ -126,6 +151,10 @@ export const hosts = sqliteTable("ssh_data", {
   defaultPath: text("default_path"),
   statsConfig: text("stats_config"),
   dockerConfig: text("docker_config"),
+  enableProxmox: integer("enable_proxmox", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  proxmoxConfig: text("proxmox_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
@@ -441,21 +470,6 @@ export const networkTopology = sqliteTable("network_topology", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const dashboardPreferences = sqliteTable("dashboard_preferences", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .unique()
-    .references(() => users.id, { onDelete: "cascade" }),
-  layout: text("layout").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
-
 export const hostAccess = sqliteTable("host_access", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   hostId: integer("host_id")
@@ -680,7 +694,88 @@ export const userPreferences = sqliteTable("user_preferences", {
   fontSize: text("font_size"),
   accentColor: text("accent_color"),
   language: text("language"),
+  storageMode: text("storage_mode"),
+  commandAutocomplete: integer("command_autocomplete", { mode: "boolean" }),
+  commandPaletteEnabled: integer("command_palette_enabled", { mode: "boolean" }),
+  showHostTags: integer("show_host_tags", { mode: "boolean" }),
+  hostTrayOnClick: integer("host_tray_on_click", { mode: "boolean" }),
+  pinAppRail: integer("pin_app_rail", { mode: "boolean" }),
+  foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
+  confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
+  disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
+  confirmTabClose: integer("confirm_tab_close", { mode: "boolean" }),
+  hiddenRailTabs: text("hidden_rail_tabs"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const hostMetricsPreferences = sqliteTable("host_metrics_preferences", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  // JSON-encoded HostMetricsLayout. Layout has no secrets, so it is stored as
+  // plain JSON (no field-level encryption).
+  layout: text("layout").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const hostHealthChecks = sqliteTable("host_health_checks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  // JSON array of { id, name, type: "tcp"|"http", target, port, path }
+  checks: text("checks").notNull(),
+  intervalSeconds: integer("interval_seconds").notNull().default(300),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const hostHealthHistory = sqliteTable("host_health_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  checkId: text("check_id").notNull(),
+  ts: text("ts").notNull().default(sql`CURRENT_TIMESTAMP`),
+  ok: integer("ok", { mode: "boolean" }).notNull(),
+  latencyMs: integer("latency_ms"),
+  detail: text("detail"),
+});
+
+// --- tmux-monitor begin ---
+export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  sessionName: text("session_name").notNull(),
+  tag: text("tag").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- tmux-monitor end ---

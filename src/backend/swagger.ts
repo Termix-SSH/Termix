@@ -108,8 +108,8 @@ const swaggerOptions: SwaggerJSDocOptions = {
         description: "SSH tunnel connection management",
       },
       {
-        name: "Server Stats",
-        description: "Server status monitoring and metrics collection",
+        name: "Host Metrics",
+        description: "Host status monitoring, metrics collection, and managers",
       },
       {
         name: "File Manager",

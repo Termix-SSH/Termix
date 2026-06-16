@@ -1,55 +1,53 @@
 <!-- SUMMARY -->
 
-Bug fixes and new features including host-to-host file transfer, OIDC improvements, UI/UX updates, and numerous stability and security patches.
+Bug fixes and new features, including Proxmox integration, SSO/OIDC redesign, revamped host metrics, tmux session management, and numerous UI and stability improvements.
 
 <!-- /SUMMARY -->
 
 <!-- YOUTUBE -->
 
-https://youtu.be/At8iDk6-Q_s
+https://youtu.be/ImwAbm4hW-k
 
 <!-- /YOUTUBE -->
 
 <!-- UPDATE_LOG -->
 
-- Added in-line buttons on host name row when using click to expand hosts in hosts list
-- Expose admin_group via OIDC_ADMIN_GROUP env var
-- Sync appearance preferences
-- Support native OIDC callbacks
-- Add portal Desktop DBUS permission for Flatpak URL opening
-- Restore host password copy
-- Support for single-host direct tunnels (ssh -L)
-- Host to host file transfer in file manager
-- Show ip/username without having to hover over hosts
-- Updated credential list UI to match UI/UX of host list
-- Restore rename host folder UI
+- Improved terminal syntax highlighting with more customizability and reliability (toggle setting moved from user profile to host editor)
+- Tmux session monitor/management
+- Tailscale SSH authentication and device listing support
+- SSO/OIDC redesign (multiple OIDC providers, LDAP, Google, GitHub support)
+- Terminal session logging
+- Customize side rail tab visibility
+- Admin audit log
+- Added `x.x.x` version tag alongside `release-x.x.x` for Docker
+- OIDC custom group claim support
+- Renamed server stats to host metrics
+- Fully revamped host metrics page with new cards and dashboard like organizing system (services, process inspector, log viewer, cron jobs, packages, ssl cert management, firewall, user/permissions, health checks, disk breakdown, timers, and top by memory)
+- Proxmox guest discovery and import integration
+- Moved ssh host config outside of top tab bar and into new tab bar visible on SSH tab
+- Improved folder management (nested folders, folder icons, folder colors, better folder selection, etc.)
+- Storage preference to user profile settings (store/load toggles locally or in the DB)
+- Sort/filter functions to credential list (copy of host list)
 <!-- /UPDATE_LOG -->
 
 <!-- BUG_FIXES -->
 
-- Several security vulnerabilities
-- Allow navigating away from split-view to non-pane tabs
-- Restore SSH keepalive internal to use 30s to prevent random disconnects
-- Apply guacamole-lite protocol patch in Docker builds
-- Show correct icons for network interface types
-- Resolve sudo password for shared host users
-- Use jump hosts for online status check and metric collection
-- Broaden sudo prompt detection for newer distros
-- Recalculate terminal layout after web fonts load
-- Improve terminal cwd detection and initial directory command
-- Decode base64 file content as UTF-8 in file manager
-- Normalize lazy import default export for iOS compatibility
-- Prevent RDP display from snapping back after container resize
-- Removed unused code and fixed PR checks and lint warnings
-- Send name instruction for protocol >= 1.3.0 (guacd 1.5.0/1.1.0 errors)
-- Wire up OIDC to password link dialog with submit/visibility
-- Pass through command completion
-- Resolve terminal jump hosts server-side
-- Auto allow SSL certs for private network hosts
-- Removed deprecated host management button from command palette
-- Command palette opening wrong protocol
-- Export/import failing for ssh key hosts
-- Docker ssh2 native crypto not compiling in Docker
-- Persisted terminal tabs attempt SSH on RDP hosts afater migration
-- Credentials not appearing in host manager until refresh
+- SFTP jump-host fallback from host data
+- Guacd password incorrectly passed for app view
+- Admin page failing to load admin information
+- Disabled hardware acceleration on Windows to prevent startup crash
+- Dashboard total credentials stuck at 0
+- Host username ignored when credential attached
+- Clone host cannot switch auth method
+- File manager context menu off-screen
+- File delete affecting inactive tabs
+- Silent delete failure on Windows hosts
+- iPad host tab does nothing
+- Docker console terminal background using incorrect colors
+- Reliable OIDC group syncing for admin roles
+- Guacd connections using incorrect screen height
+- 2FA failing to disable
+- Hostname fill entire column and truncate at proper spot in dashboard
+- Make credentials start collapsed
+- Incorrect JSDoc comments
 <!-- /BUG_FIXES -->

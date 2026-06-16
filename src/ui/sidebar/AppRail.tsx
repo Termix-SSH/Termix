@@ -8,6 +8,7 @@ import {
   Network,
   Play,
   Plug,
+  ScrollText,
   Server,
   Settings,
   User,
@@ -27,8 +28,13 @@ export type RailView =
   | "quick-connect"
   | ToolsTab
   | "connections"
+  | "session-logs"
   | "user-profile"
   | "admin-settings";
+
+export type HideableRailView =
+  | Exclude<RailView, "user-profile" | "admin-settings">
+  | "network_graph";
 
 type RailItem =
   | {
@@ -44,8 +50,9 @@ type RailItem =
 function buildRailButtons(
   splitMode: SplitMode,
   t: (key: string) => string,
+  hidden: Set<string>,
 ): RailItem[] {
-  return [
+  const all: RailItem[] = [
     { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
     {
       view: "credentials",
@@ -72,6 +79,12 @@ function buildRailButtons(
     { view: "history", icon: <Clock size={16} />, title: t("nav.history") },
     { kind: "separator" },
     {
+      view: "session-logs",
+      icon: <ScrollText size={16} />,
+      title: t("nav.sessionLogs"),
+    },
+    { kind: "separator" },
+    {
       view: "split-screen",
       icon: <LayoutPanelLeft size={16} />,
       title: t("nav.splitScreen"),
@@ -86,6 +99,26 @@ function buildRailButtons(
     },
     { kind: "separator" },
   ];
+
+  // Filter out hidden items, then collapse consecutive/leading/trailing separators
+  const filtered = all.filter((item) => {
+    if (item.kind === "separator") return true;
+    if (item.kind === "tab") return !hidden.has(item.tabType);
+    return !hidden.has(item.view);
+  });
+
+  const result: RailItem[] = [];
+  for (const item of filtered) {
+    if (item.kind === "separator") {
+      if (result.length === 0 || result[result.length - 1].kind === "separator")
+        continue;
+      result.push(item);
+    } else {
+      result.push(item);
+    }
+  }
+  if (result[result.length - 1]?.kind === "separator") result.pop();
+  return result;
 }
 
 const btnBase =
@@ -120,6 +153,14 @@ export function AppRail({
   const [pinned, setPinned] = useState(
     () => localStorage.getItem("pinAppRail") === "true",
   );
+  const [hiddenTabs, setHiddenTabs] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("hiddenRailTabs");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   useEffect(() => {
     const handler = () =>
@@ -128,17 +169,30 @@ export function AppRail({
     return () => window.removeEventListener("pinAppRailChanged", handler);
   }, []);
 
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const stored = localStorage.getItem("hiddenRailTabs");
+        setHiddenTabs(stored ? new Set(JSON.parse(stored)) : new Set());
+      } catch {
+        setHiddenTabs(new Set());
+      }
+    };
+    window.addEventListener("hiddenRailTabsChanged", handler);
+    return () => window.removeEventListener("hiddenRailTabsChanged", handler);
+  }, []);
+
   const railExpanded = pinned || hovered || profileDropdownOpen;
-  const railButtons = buildRailButtons(splitMode, t);
+  const railButtons = buildRailButtons(splitMode, t, hiddenTabs);
 
   return (
     <div
-      className="hidden md:flex flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200"
+      className="hidden md:flex flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0"
       style={{ width: railExpanded ? 160 : 40 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div className="flex flex-col flex-1 gap-1">
+      <div className="flex flex-col flex-1 gap-1 overflow-y-auto scrollbar-none min-h-0">
         {railButtons.map((item, i) =>
           item.kind === "separator" ? (
             <div

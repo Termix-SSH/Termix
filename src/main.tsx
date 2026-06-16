@@ -32,8 +32,8 @@ const FileManagerApp = lazy(() =>
 const TunnelApp = lazy(() =>
   import("@/features/tunnel/TunnelApp").then((m) => ({ default: m.default })),
 );
-const ServerStatsApp = lazy(() =>
-  import("@/features/server-stats/ServerStatsApp").then((m) => ({
+const HostMetricsApp = lazy(() =>
+  import("@/features/host-metrics/HostMetricsApp").then((m) => ({
     default: m.default,
   })),
 );
@@ -42,6 +42,12 @@ const DockerApp = lazy(() =>
 );
 const GuacamoleApp = lazy(() =>
   import("@/features/guacamole/GuacamoleApp").then((m) => ({
+    default: m.default,
+  })),
+);
+// --- tmux-monitor ---
+const TmuxMonitorApp = lazy(() =>
+  import("@/features/tmux-monitor/TmuxMonitorApp").then((m) => ({
     default: m.default,
   })),
 );
@@ -63,22 +69,37 @@ function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
   const view = searchParams.get("view");
   const hostId = searchParams.get("hostId");
+  const tmuxSession = searchParams.get("tmuxSession");
 
   switch (view) {
     case "terminal":
-      return <TerminalApp hostId={hostId || undefined} />;
+      return (
+        <TerminalApp
+          hostId={hostId || undefined}
+          tmuxSession={tmuxSession || undefined}
+        />
+      );
     case "file-manager":
       return <FileManagerApp hostId={hostId || undefined} />;
     case "tunnel":
       return <TunnelApp hostId={hostId || undefined} />;
+    case "host-metrics":
     case "server-stats":
-      return <ServerStatsApp hostId={hostId || undefined} />;
+      return <HostMetricsApp hostId={hostId || undefined} />;
     case "docker":
       return <DockerApp hostId={hostId || undefined} />;
     case "rdp":
     case "vnc":
     case "telnet":
-      return <GuacamoleApp hostId={hostId || undefined} />;
+      return (
+        <GuacamoleApp
+          hostId={hostId || undefined}
+          protocol={view as "rdp" | "vnc" | "telnet"}
+        />
+      );
+    case "tmux-monitor": // --- tmux-monitor ---
+    case "tmux_monitor": // tab type spelling, so copied links also resolve
+      return <TmuxMonitorApp hostId={hostId || undefined} />;
     default:
       return null;
   }

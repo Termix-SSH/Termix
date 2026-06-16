@@ -100,7 +100,12 @@ export function registerHostBulkRoutes(
 
       try {
         const ownedHosts = await db
-          .select({ id: hosts.id, statsConfig: hosts.statsConfig })
+          .select({
+            id: hosts.id,
+            statsConfig: hosts.statsConfig,
+            credentialId: hosts.credentialId,
+            proxmoxConfig: hosts.proxmoxConfig,
+          })
           .from(hosts)
           .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)));
 
@@ -132,6 +137,12 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableFileManager = updates.enableFileManager;
         if (typeof updates.enableDocker === "boolean")
           simpleUpdates.enableDocker = updates.enableDocker;
+        if (typeof updates.enableTmuxMonitor === "boolean")
+          simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
+        // Disabling Proxmox is a plain flag flip; enabling is handled per-host
+        // below so each host can default to its own stored credential.
+        if (updates.enableProxmox === false)
+          simpleUpdates.enableProxmox = false;
 
         if (Object.keys(simpleUpdates).length > 0) {
           await db
@@ -153,6 +164,37 @@ export function registerHostBulkRoutes(
                 .where(and(eq(hosts.id, host.id), eq(hosts.userId, userId)));
             } catch {
               errors.push(`Failed to update statsConfig for host ${host.id}`);
+            }
+          }
+        }
+
+        // Enabling Proxmox needs per-host handling: each host defaults its
+        // Proxmox credential to the credential already stored on that host, so
+        // discovery works right away without picking one by hand. Existing
+        // proxmoxConfig values are preserved.
+        if (updates.enableProxmox === true) {
+          for (const host of ownedHosts) {
+            try {
+              const existing = host.proxmoxConfig
+                ? JSON.parse(host.proxmoxConfig as string)
+                : {};
+              const merged = {
+                defaultCredentialId:
+                  existing.defaultCredentialId ?? host.credentialId ?? null,
+                windowsPatterns: existing.windowsPatterns ?? "win, windows",
+                dockerPatterns: existing.dockerPatterns ?? "docker",
+                preferredPrefixes:
+                  existing.preferredPrefixes ?? "10., 192.168.",
+              };
+              await db
+                .update(hosts)
+                .set({
+                  enableProxmox: true,
+                  proxmoxConfig: JSON.stringify(merged),
+                })
+                .where(and(eq(hosts.id, host.id), eq(hosts.userId, userId)));
+            } catch {
+              errors.push(`Failed to enable Proxmox for host ${host.id}`);
             }
           }
         }
@@ -244,13 +286,18 @@ export function registerHostBulkRoutes(
           if (
             effectiveConnectionType === "ssh" &&
             hostData.authType &&
-            !["password", "key", "credential", "none", "opkssh"].includes(
-              hostData.authType,
-            )
+            ![
+              "password",
+              "key",
+              "credential",
+              "none",
+              "opkssh",
+              "tailscale",
+            ].includes(hostData.authType)
           ) {
             results.failed++;
             results.errors.push(
-              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', or 'opkssh'`,
+              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', or 'tailscale'`,
             );
             continue;
           }
@@ -340,6 +387,8 @@ export function registerHostBulkRoutes(
             enableTunnel: hostData.enableTunnel !== false,
             enableFileManager: hostData.enableFileManager !== false,
             enableDocker: hostData.enableDocker || false,
+            enableProxmox: hostData.enableProxmox || false,
+            enableTmuxMonitor: hostData.enableTmuxMonitor || false,
             showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
             showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
             showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,
@@ -361,6 +410,9 @@ export function registerHostBulkRoutes(
               : null,
             dockerConfig: hostData.dockerConfig
               ? JSON.stringify(hostData.dockerConfig)
+              : null,
+            proxmoxConfig: hostData.proxmoxConfig
+              ? JSON.stringify(hostData.proxmoxConfig)
               : null,
             terminalConfig: hostData.terminalConfig
               ? JSON.stringify(hostData.terminalConfig)

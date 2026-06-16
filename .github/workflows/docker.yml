@@ -24,13 +24,18 @@ on:
         description: "Build type (Development or Production)"
         required: true
         type: string
+      dry_run:
+        description: "Build the image but do not push to any registry"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -52,7 +57,7 @@ jobs:
           ALL_TAGS=()
 
           if [ "$BUILD_TYPE" = "Production" ]; then
-            TAGS+=("release-$VERSION" "latest")
+            TAGS+=("release-$VERSION" "$VERSION" "latest")
             for tag in "${TAGS[@]}"; do
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
               ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
@@ -67,6 +72,7 @@ jobs:
           echo "ALL_TAGS=$(IFS=,; echo "${ALL_TAGS[*]}")" >> $GITHUB_ENV
 
       - name: Login to GHCR
+        if: ${{ !inputs.dry_run }}
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -74,7 +80,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Login to Docker Hub (prod only)
-        if: ${{ inputs.build_type == 'Production' }}
+        if: ${{ inputs.build_type == 'Production' && !inputs.dry_run }}
         uses: docker/login-action@v4
         with:
           username: bugattiguy527
@@ -85,7 +91,7 @@ jobs:
         with:
           context: .
           file: ./docker/Dockerfile
-          push: true
+          push: ${{ !inputs.dry_run }}
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.ALL_TAGS }}
           build-args: |
@@ -96,7 +102,7 @@ jobs:
             org.opencontainers.image.created=${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=registry,compression=zstd
+          outputs: ${{ inputs.dry_run && 'type=cacheonly' || 'type=registry,compression=zstd' }}
 
       - name: Cleanup Docker
         if: always()

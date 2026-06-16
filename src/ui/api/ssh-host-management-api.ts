@@ -1,7 +1,13 @@
 import { AxiosError } from "axios";
-import { getAllServerStatuses, handleApiError, sshHostApi } from "@/main-axios";
+import {
+  authApi,
+  getAllServerStatuses,
+  handleApiError,
+  sshHostApi,
+} from "@/main-axios";
 import type { SSHHost, SSHHostData, ProxyNode } from "@/types/index";
 import type { ServerStatus, SSHHostWithStatus } from "@/main-axios";
+import type { ProxmoxDiscoverResult } from "@/types/proxmox";
 
 // SSH HOST MANAGEMENT
 // ============================================================================
@@ -98,6 +104,21 @@ export async function bulkImportSSHHosts(
     return response.data;
   } catch (error) {
     handleApiError(error, "bulk import SSH hosts");
+  }
+}
+
+export async function discoverProxmoxGuests(
+  hostId: number,
+): Promise<ProxmoxDiscoverResult> {
+  try {
+    const response = await authApi.post(
+      "/proxmox/discover",
+      { hostId },
+      { timeout: 120000 },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "discover Proxmox guests");
   }
 }
 

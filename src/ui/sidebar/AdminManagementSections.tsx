@@ -65,7 +65,7 @@ type UsersSectionProps = {
   setEditUserTarget: Dispatch<SetStateAction<AdminUser | null>>;
   setEditUserOpen: Dispatch<SetStateAction<boolean>>;
   setLinkAccountTarget: Dispatch<
-    SetStateAction<{ id: string; username: string } | null>
+    SetStateAction<{ id: string; username: string; isOidc: boolean } | null>
   >;
   setLinkAccountOpen: Dispatch<SetStateAction<boolean>>;
 };
@@ -160,7 +160,7 @@ export function AdminUsersSection({
                 >
                   <Pencil className="size-3" />
                 </Button>
-                {user.isOidc && (
+                {!(user.isOidc && user.passwordHash) && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -169,6 +169,7 @@ export function AdminUsersSection({
                       setLinkAccountTarget({
                         id: user.id,
                         username: user.username,
+                        isOidc: user.isOidc,
                       });
                       setLinkAccountOpen(true);
                     }}

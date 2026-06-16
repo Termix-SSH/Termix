@@ -275,9 +275,27 @@ export const GuacamoleDisplay = forwardRef<
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
 
-    const rect = containerRef.current?.getBoundingClientRect();
-    let containerWidth = rect?.width || 0;
-    let containerHeight = rect?.height || 0;
+    // The tab's DOM node can still be display:none (and report 0x0) when this
+    // tab is restored in the background. Measuring then would force the
+    // window-size fallback, which ignores the tab bar and makes the remote
+    // resolution too tall (the bottom gets cut off). Poll briefly for a real
+    // size before connecting so we capture the actual visible viewport.
+    const measureContainer = () => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      return { width: rect?.width || 0, height: rect?.height || 0 };
+    };
+
+    let { width: containerWidth, height: containerHeight } = measureContainer();
+    for (
+      let attempt = 0;
+      (containerWidth < 100 || containerHeight < 100) && attempt < 40;
+      attempt++
+    ) {
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      ({ width: containerWidth, height: containerHeight } = measureContainer());
+    }
 
     if (containerWidth < 100 || containerHeight < 100) {
       containerWidth = window.innerWidth || 1280;

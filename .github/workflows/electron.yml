@@ -52,12 +52,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -77,7 +77,7 @@ jobs:
         run: npm run build && npx electron-builder --win --x64 --ia32
 
       - name: Upload Windows x64 NSIS Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_windows_x64_nsis.exe') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_x64_nsis
@@ -85,7 +85,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows ia32 NSIS Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_windows_ia32_nsis.exe') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_ia32_nsis
@@ -93,7 +93,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows x64 MSI Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_windows_x64_msi.msi') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_x64_msi
@@ -101,7 +101,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows ia32 MSI Installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_windows_ia32_msi.msi') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_ia32_msi
@@ -119,7 +119,7 @@ jobs:
           Compress-Archive -Path "release\win-ia32-unpacked\*" -DestinationPath "termix_windows_ia32_portable.zip"
 
       - name: Upload Windows x64 Portable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('termix_windows_x64_portable.zip') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_x64_portable
@@ -127,7 +127,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Windows ia32 Portable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('termix_windows_ia32_portable.zip') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_windows_ia32_portable
@@ -142,12 +142,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -190,7 +190,7 @@ jobs:
           cd ..
 
       - name: Upload Linux x64 AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_x64_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_x64_appimage
@@ -198,7 +198,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux arm64 AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_arm64_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_arm64_appimage
@@ -206,7 +206,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux armv7l AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_armv7l_appimage.AppImage') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_armv7l_appimage
@@ -214,7 +214,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux x64 DEB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_x64_deb.deb') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_x64_deb
@@ -222,7 +222,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux arm64 DEB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_arm64_deb.deb') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_arm64_deb
@@ -230,7 +230,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux armv7l DEB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_armv7l_deb.deb') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_armv7l_deb
@@ -238,7 +238,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux x64 tar.gz
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_x64_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_x64_portable
@@ -246,7 +246,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux arm64 tar.gz
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_arm64_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_arm64_portable
@@ -254,7 +254,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Linux armv7l tar.gz
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_armv7l_portable.tar.gz') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_armv7l_portable
@@ -326,7 +326,7 @@ jobs:
           sed -i "s|VERSION_PLACEHOLDER|release-${VERSION}-tag|g" release/com.karmaa.termix.flatpakref
 
       - name: Upload Flatpak bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_linux_flatpak.flatpak') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_flatpak
@@ -334,7 +334,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Flatpakref
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/com.karmaa.termix.flatpakref') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_linux_flatpakref
@@ -352,12 +352,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -480,7 +480,7 @@ jobs:
 
       - name: Upload macOS MAS PKG
         if: steps.check_certs.outputs.has_certs == 'true' && hashFiles('release/termix_macos_universal_mas.pkg') != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release' || inputs.artifact_destination == 'submit')
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: termix_macos_universal_mas
           path: release/termix_macos_universal_mas.pkg
@@ -488,7 +488,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload macOS Universal DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_universal_dmg
@@ -496,7 +496,7 @@ jobs:
           retention-days: 30
 
       - name: Upload macOS x64 DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_macos_x64_dmg.dmg') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_x64_dmg
@@ -504,7 +504,7 @@ jobs:
           retention-days: 30
 
       - name: Upload macOS arm64 DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('release/termix_macos_arm64_dmg.dmg') != '' && inputs.artifact_destination != 'none'
         with:
           name: termix_macos_arm64_dmg
@@ -542,7 +542,7 @@ jobs:
           sed -i '' "s|release-[0-9.]*-tag|release-$VERSION-tag|g" homebrew-generated/termix.rb
 
       - name: Upload Homebrew Cask as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.artifact_destination == 'file'
         with:
           name: termix_macos_homebrew_cask
@@ -578,7 +578,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -669,7 +669,7 @@ jobs:
           }
 
       - name: Upload Chocolatey package as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chocolatey-package
           path: choco-build/*.nupkg
@@ -684,7 +684,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -756,7 +756,7 @@ jobs:
           sed -i "s/DATE_PLACEHOLDER/$RELEASE_DATE/g" flatpak-submission/com.karmaa.termix.metainfo.xml
 
       - name: Upload Flatpak submission as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flatpak-submission
           path: flatpak-submission/*
@@ -771,7 +771,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -825,7 +825,7 @@ jobs:
           ruby -c homebrew-submission/Casks/t/termix.rb
 
       - name: Upload Homebrew submission as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: homebrew-submission
           path: homebrew-submission/*
@@ -840,7 +840,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
@@ -872,7 +872,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  submit-to-testflight:
+  submit-to-app-store:
     runs-on: blacksmith-6vcpu-macos-latest
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'macos')
     needs: []
@@ -881,12 +881,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -943,9 +943,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
           BUILD_VERSION="${{ github.run_number }}"
-
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
 
       - name: Check for App Store Connect API credentials
@@ -956,36 +954,56 @@ jobs:
           fi
 
       - name: Setup Ruby for Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
           bundler-cache: false
 
       - name: Install Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
-        run: |
-          gem install fastlane -N
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: gem install fastlane -N
 
-      - name: Deploy to App Store Connect (TestFlight)
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+      - name: Upload and submit to Mac App Store
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        env:
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
         run: |
           PKG_FILE=$(find release -name "termix_macos_universal_mas.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
-            echo "PKG file not found, exiting."
+            echo "PKG file not found in release/; aborting."
             exit 1
           fi
 
-          mkdir -p ~/private_keys
-          echo "${{ secrets.APPLE_KEY_CONTENT }}" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8
+          VERSION=$(node -p "require('./package.json').version")
 
-          xcrun altool --upload-app -f "$PKG_FILE" \
-            --type macos \
-            --apiKey "${{ secrets.APPLE_KEY_ID }}" \
-            --apiIssuer "${{ secrets.APPLE_ISSUER_ID }}"
-        continue-on-error: true
+          # Write API key JSON that Fastlane deliver expects
+          mkdir -p /tmp/asc_keys
+          KEY_P8_PATH="/tmp/asc_keys/AuthKey_${APPLE_KEY_ID}.p8"
+          API_KEY_JSON="/tmp/asc_keys/api_key.json"
+
+          echo "$APPLE_KEY_CONTENT" | base64 --decode > "$KEY_P8_PATH"
+
+          printf '{\n  "key_id": "%s",\n  "issuer_id": "%s",\n  "key": "%s",\n  "in_house": false\n}\n' \
+            "$APPLE_KEY_ID" \
+            "$APPLE_ISSUER_ID" \
+            "$(tr -d '\n' < "$KEY_P8_PATH")" \
+            > "$API_KEY_JSON"
+
+          fastlane deliver \
+            --pkg "$PKG_FILE" \
+            --api_key_path "$API_KEY_JSON" \
+            --app_version "$VERSION" \
+            --skip_metadata true \
+            --skip_screenshots true \
+            --submit_for_review true \
+            --automatic_release true \
+            --force true
 
       - name: Clean up keychains
         if: always()
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          rm -rf /tmp/asc_keys

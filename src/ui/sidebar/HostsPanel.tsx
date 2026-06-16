@@ -3,12 +3,18 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowUpDown,
   Check,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Download,
   Filter,
+  FolderPlus,
+  Group,
   ListChecks,
+  MoreHorizontal,
   Plus,
   RefreshCw,
   Search,
+  Server,
   Upload,
   X,
 } from "lucide-react";
@@ -16,6 +22,7 @@ import { toast } from "sonner";
 import { SidebarTree, isFolder } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
+import { ProxmoxDiscoverDialog } from "@/components/proxmox/ProxmoxDiscoverDialog";
 import { Button } from "@/components/button";
 import {
   DropdownMenu,
@@ -24,6 +31,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/dropdown-menu";
 import {
@@ -59,6 +69,62 @@ const DEFAULT_FILTERS: FilterState = {
   features: [],
   tags: [],
 };
+
+type GroupKey = "folder" | "tag" | "status" | "protocol" | "auth";
+
+function flattenHosts(folder: HostFolder): Host[] {
+  const out: Host[] = [];
+  for (const child of folder.children) {
+    if (isFolder(child)) out.push(...flattenHosts(child));
+    else out.push(child);
+  }
+  return out;
+}
+
+function hostGroupNames(host: Host, key: GroupKey): string[] {
+  switch (key) {
+    case "tag":
+      return host.tags && host.tags.length > 0 ? host.tags : ["__none__"];
+    case "status":
+      return [host.online ? "online" : "offline"];
+    case "protocol": {
+      const protos: string[] = [];
+      if (host.enableSsh) protos.push("ssh");
+      if (host.enableRdp) protos.push("rdp");
+      if (host.enableVnc) protos.push("vnc");
+      if (host.enableTelnet) protos.push("telnet");
+      return protos.length > 0 ? protos : ["__none__"];
+    }
+    case "auth":
+      return [host.authType || "none"];
+    default:
+      return ["__none__"];
+  }
+}
+
+function groupHosts(
+  tree: HostFolder,
+  key: GroupKey,
+  labelFor: (key: GroupKey, group: string) => string,
+): HostFolder {
+  if (key === "folder") return tree;
+  const hosts = flattenHosts(tree);
+  const groups = new Map<string, Host[]>();
+  for (const host of hosts) {
+    for (const name of hostGroupNames(host, key)) {
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name)!.push(host);
+    }
+  }
+  const children: (Host | HostFolder)[] = [...groups.entries()]
+    .sort((a, b) => labelFor(key, a[0]).localeCompare(labelFor(key, b[0])))
+    .map(([group, members]) => ({
+      name: labelFor(key, group),
+      path: `__group__:${key}:${group}`,
+      children: members,
+    }));
+  return { name: "root", children };
+}
 
 function sortHostTree(folder: HostFolder, key: SortKey): HostFolder {
   if (key === "default") return folder;
@@ -175,8 +241,21 @@ export function HostsPanel({
   const [refreshing, setRefreshing] = useState(false);
   const [rawHosts, setRawHosts] = useState<SSHHostWithStatus[]>([]);
   const [shareModalHost, setShareModalHost] = useState<Host | null>(null);
+  const [proxmoxDialogOpen, setProxmoxDialogOpen] = useState(false);
+  const [proxmoxHostId, setProxmoxHostId] = useState<number | undefined>(
+    undefined,
+  );
+  const [proxmoxDefaultCredentialId, setProxmoxDefaultCredentialId] = useState<
+    number | null
+  >(null);
+  const [proxmoxDefaultUsername, setProxmoxDefaultUsername] = useState<
+    string | undefined
+  >(undefined);
   const [sortKey, setSortKey] = useState<SortKey>(
     () => (localStorage.getItem("hostSortKey") as SortKey) ?? "default",
+  );
+  const [groupKey, setGroupKey] = useState<GroupKey>(
+    () => (localStorage.getItem("hostGroupKey") as GroupKey) ?? "folder",
   );
   const [filterState, setFilterState] = useState<FilterState>(() => {
     try {
@@ -194,6 +273,25 @@ export function HostsPanel({
   function handleSortChange(key: SortKey) {
     setSortKey(key);
     localStorage.setItem("hostSortKey", key);
+  }
+
+  function handleGroupChange(key: GroupKey) {
+    setGroupKey(key);
+    localStorage.setItem("hostGroupKey", key);
+  }
+
+  function groupLabel(key: GroupKey, group: string): string {
+    if (group === "__none__") return t("hosts.groupUngrouped");
+    if (key === "status")
+      return group === "online"
+        ? t("hosts.filterOnline")
+        : t("hosts.filterOffline");
+    if (key === "protocol") return group.toUpperCase();
+    if (key === "auth")
+      return t(
+        `hosts.filterAuth${group.charAt(0).toUpperCase() + group.slice(1)}`,
+      );
+    return group;
   }
 
   function handleFilterToggle<K extends keyof FilterState>(
@@ -404,101 +502,148 @@ export function HostsPanel({
           />
 
           <div className="flex flex-wrap items-center gap-1">
-            <div className="flex items-center gap-0.5 shrink-0 flex-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 text-muted-foreground hover:text-foreground"
-                title={t("hosts.refreshBtn2")}
-                onClick={handleRefresh}
-                disabled={refreshing}
-              >
-                <RefreshCw
-                  className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
-                />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 text-muted-foreground hover:text-foreground"
-                    title={t("hosts.importExportBtn")}
-                  >
-                    <Upload className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="text-xs">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      importOverwriteRef.current = false;
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    <Upload className="size-3.5 mr-2" />
-                    {t("hosts.importSkipExisting")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      importOverwriteRef.current = true;
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    <Upload className="size-3.5 mr-2" />
-                    {t("hosts.importOverwrite")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleExportHosts}
-                    disabled={rawHosts.length === 0}
-                  >
-                    <Download className="size-3.5 mr-2" />
-                    {t("hosts.exportAll")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadSample}>
-                    <Download className="size-3.5 mr-2" />
-                    {t("hosts.downloadSample")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <button
-                title={
-                  selectionMode
-                    ? t("hosts.exitSelectionTitle")
-                    : t("hosts.selectHosts")
-                }
-                onClick={toggleSelectionMode}
-                className={`flex items-center justify-center size-7 rounded-sm shrink-0 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/10 border border-accent-brand/30" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 border border-transparent"}`}
-              >
-                <ListChecks className="size-3.5" />
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`size-7 ${sortKey !== "default" ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
-                    title={t("hosts.sortHosts")}
-                  >
-                    <ArrowUpDown className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="text-xs min-w-[160px]"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7 text-muted-foreground hover:text-foreground"
+              title={t("hosts.refreshBtn2")}
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw
+                className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
+              />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-foreground"
+                  title={t("hosts.importExportBtn")}
                 >
+                  <Upload className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-xs">
+                <DropdownMenuItem
+                  onClick={() => {
+                    importOverwriteRef.current = false;
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  <Upload className="size-3.5 mr-2" />
+                  {t("hosts.importSkipExisting")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    importOverwriteRef.current = true;
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  <Upload className="size-3.5 mr-2" />
+                  {t("hosts.importOverwrite")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setProxmoxHostId(undefined);
+                    setProxmoxDialogOpen(true);
+                  }}
+                  disabled={
+                    !rawHosts.some(
+                      (h) => !isFolder(h) && (h as any).enableProxmox,
+                    )
+                  }
+                >
+                  <Server className="size-3.5 mr-2" />
+                  {t("hosts.proxmoxImportTitle")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleExportHosts}
+                  disabled={rawHosts.length === 0}
+                >
+                  <Download className="size-3.5 mr-2" />
+                  {t("hosts.exportAll")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadSample}>
+                  <Download className="size-3.5 mr-2" />
+                  {t("hosts.downloadSample")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button
+              title={
+                selectionMode
+                  ? t("hosts.exitSelectionTitle")
+                  : t("hosts.selectHosts")
+              }
+              onClick={toggleSelectionMode}
+              className={`flex items-center justify-center size-7 rounded-sm shrink-0 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/10 border border-accent-brand/30" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 border border-transparent"}`}
+            >
+              <ListChecks className="size-3.5" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`size-7 ${sortKey !== "default" ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                  title={t("hosts.sortHosts")}
+                >
+                  <ArrowUpDown className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="text-xs min-w-[160px]"
+              >
+                <DropdownMenuItem
+                  onClick={() => handleSortChange("default")}
+                  className="flex items-center gap-1.5"
+                >
+                  {sortKey === "default" ? (
+                    <Check className="size-3 shrink-0 text-accent-brand" />
+                  ) : (
+                    <span className="size-3 shrink-0 inline-block" />
+                  )}
+                  {t("hosts.sortDefault")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {(["name-asc", "name-desc"] as const).map((key) => (
                   <DropdownMenuItem
-                    onClick={() => handleSortChange("default")}
+                    key={key}
+                    onClick={() => handleSortChange(key)}
                     className="flex items-center gap-1.5"
                   >
-                    {sortKey === "default" ? (
+                    {sortKey === key ? (
                       <Check className="size-3 shrink-0 text-accent-brand" />
                     ) : (
                       <span className="size-3 shrink-0 inline-block" />
                     )}
-                    {t("hosts.sortDefault")}
+                    {t(
+                      `hosts.sort${key === "name-asc" ? "NameAsc" : "NameDesc"}`,
+                    )}
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {(["name-asc", "name-desc"] as const).map((key) => (
+                ))}
+                <DropdownMenuSeparator />
+                {(["ip-asc", "ip-desc"] as const).map((key) => (
+                  <DropdownMenuItem
+                    key={key}
+                    onClick={() => handleSortChange(key)}
+                    className="flex items-center gap-1.5"
+                  >
+                    {sortKey === key ? (
+                      <Check className="size-3 shrink-0 text-accent-brand" />
+                    ) : (
+                      <span className="size-3 shrink-0 inline-block" />
+                    )}
+                    {t(`hosts.sort${key === "ip-asc" ? "IpAsc" : "IpDesc"}`)}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                {(["status-online", "status-offline", "pinned"] as const).map(
+                  (key) => (
                     <DropdownMenuItem
                       key={key}
                       onClick={() => handleSortChange(key)}
@@ -510,181 +655,265 @@ export function HostsPanel({
                         <span className="size-3 shrink-0 inline-block" />
                       )}
                       {t(
-                        `hosts.sort${key === "name-asc" ? "NameAsc" : "NameDesc"}`,
+                        key === "status-online"
+                          ? "hosts.sortOnlineFirst"
+                          : key === "status-offline"
+                            ? "hosts.sortOfflineFirst"
+                            : "hosts.sortPinnedFirst",
                       )}
                     </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  {(["ip-asc", "ip-desc"] as const).map((key) => (
+                  ),
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`size-7 ${filterActive ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                  title={t("hosts.filterHosts")}
+                >
+                  <Filter className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="text-xs min-w-[180px]"
+              >
+                {filterActive && (
+                  <>
                     <DropdownMenuItem
-                      key={key}
-                      onClick={() => handleSortChange(key)}
-                      className="flex items-center gap-1.5"
+                      onClick={handleFilterClear}
+                      className="flex items-center gap-1.5 text-accent-brand"
                     >
-                      {sortKey === key ? (
-                        <Check className="size-3 shrink-0 text-accent-brand" />
-                      ) : (
-                        <span className="size-3 shrink-0 inline-block" />
-                      )}
-                      {t(`hosts.sort${key === "ip-asc" ? "IpAsc" : "IpDesc"}`)}
+                      <X className="size-3 shrink-0" />
+                      {t("hosts.filterClearAll")}
                     </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  {(["status-online", "status-offline", "pinned"] as const).map(
-                    (key) => (
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuLabel>
+                  {t("hosts.filterStatusGroup")}
+                </DropdownMenuLabel>
+                {(["online", "offline", "pinned"] as const).map((val) => (
+                  <DropdownMenuCheckboxItem
+                    key={val}
+                    checked={filterState.status.includes(val)}
+                    onCheckedChange={() => handleFilterToggle("status", val)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {t(
+                      `hosts.filter${val.charAt(0).toUpperCase() + val.slice(1)}`,
+                    )}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>
+                  {t("hosts.filterAuthGroup")}
+                </DropdownMenuLabel>
+                {(
+                  ["password", "key", "credential", "none", "opkssh"] as const
+                ).map((val) => (
+                  <DropdownMenuCheckboxItem
+                    key={val}
+                    checked={filterState.authType.includes(val)}
+                    onCheckedChange={() => handleFilterToggle("authType", val)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {t(
+                      `hosts.filterAuth${val.charAt(0).toUpperCase() + val.slice(1)}`,
+                    )}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>
+                  {t("hosts.filterProtocolGroup")}
+                </DropdownMenuLabel>
+                {(
+                  [
+                    ["ssh", "Ssh"],
+                    ["rdp", "Rdp"],
+                    ["vnc", "Vnc"],
+                    ["telnet", "Telnet"],
+                  ] as const
+                ).map(([val, key]) => (
+                  <DropdownMenuCheckboxItem
+                    key={val}
+                    checked={filterState.protocol.includes(val)}
+                    onCheckedChange={() => handleFilterToggle("protocol", val)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {t(`hosts.filterProtocol${key}`)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>
+                  {t("hosts.filterFeaturesGroup")}
+                </DropdownMenuLabel>
+                {(
+                  [
+                    ["terminal", "Terminal"],
+                    ["fileManager", "FileManager"],
+                    ["tunnel", "Tunnel"],
+                    ["docker", "Docker"],
+                  ] as const
+                ).map(([val, key]) => (
+                  <DropdownMenuCheckboxItem
+                    key={val}
+                    checked={filterState.features.includes(val)}
+                    onCheckedChange={() => handleFilterToggle("features", val)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {t(`hosts.filterFeature${key}`)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                {allTags.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>
+                      {t("hosts.filterTagsGroup")}
+                    </DropdownMenuLabel>
+                    {allTags.map((tag) => (
+                      <DropdownMenuCheckboxItem
+                        key={tag}
+                        checked={filterState.tags.includes(tag)}
+                        onCheckedChange={() => handleFilterToggle("tags", tag)}
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        {tag}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`size-7 ${groupKey !== "folder" || selectionMode ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                  title={t("hosts.moreActions")}
+                >
+                  <MoreHorizontal className="size-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="text-xs min-w-[180px]"
+              >
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <Group className="size-3.5 shrink-0" />
+                    {t("hosts.groupBy")}
+                    {groupKey !== "folder" && (
+                      <span className="ml-auto text-accent-brand">
+                        {t(
+                          `hosts.GroupBy${groupKey.charAt(0).toUpperCase() + groupKey.slice(1)}`,
+                        )}
+                      </span>
+                    )}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="text-xs min-w-[150px]">
+                    {(
+                      [
+                        ["folder", "GroupByFolder"],
+                        ["tag", "GroupByTag"],
+                        ["status", "GroupByStatus"],
+                        ["protocol", "GroupByProtocol"],
+                        ["auth", "GroupByAuth"],
+                      ] as const
+                    ).map(([key, label]) => (
                       <DropdownMenuItem
                         key={key}
-                        onClick={() => handleSortChange(key)}
+                        onClick={() => handleGroupChange(key)}
                         className="flex items-center gap-1.5"
                       >
-                        {sortKey === key ? (
+                        {groupKey === key ? (
                           <Check className="size-3 shrink-0 text-accent-brand" />
                         ) : (
                           <span className="size-3 shrink-0 inline-block" />
                         )}
-                        {t(
-                          key === "status-online"
-                            ? "hosts.sortOnlineFirst"
-                            : key === "status-offline"
-                              ? "hosts.sortOfflineFirst"
-                              : "hosts.sortPinnedFirst",
-                        )}
+                        {t(`hosts.${label}`)}
                       </DropdownMenuItem>
-                    ),
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`size-7 ${filterActive ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
-                    title={t("hosts.filterHosts")}
-                  >
-                    <Filter className="size-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="text-xs min-w-[180px]"
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent("hosts:create-folder"))
+                  }
                 >
-                  {filterActive && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={handleFilterClear}
-                        className="flex items-center gap-1.5 text-accent-brand"
-                      >
-                        <X className="size-3 shrink-0" />
-                        {t("hosts.filterClearAll")}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuLabel>
-                    {t("hosts.filterStatusGroup")}
-                  </DropdownMenuLabel>
-                  {(["online", "offline", "pinned"] as const).map((val) => (
-                    <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.status.includes(val)}
-                      onCheckedChange={() => handleFilterToggle("status", val)}
-                      onSelect={(e) => e.preventDefault()}
+                  <FolderPlus className="size-3.5 mr-2" />
+                  {t("hosts.newFolder")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent("hosts:expand-all"))
+                  }
+                >
+                  <ChevronsUpDown className="size-3.5 mr-2" />
+                  {t("hosts.expandAll")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.dispatchEvent(new CustomEvent("hosts:collapse-all"))
+                  }
+                >
+                  <ChevronsDownUp className="size-3.5 mr-2" />
+                  {t("hosts.collapseAll")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={toggleSelectionMode}
+                  className={selectionMode ? "text-accent-brand" : ""}
+                >
+                  <ListChecks className="size-3.5 mr-2" />
+                  {selectionMode
+                    ? t("hosts.exitSelectionTitle")
+                    : t("hosts.selectHosts")}
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger className="flex items-center gap-2">
+                    <Upload className="size-3.5 shrink-0" />
+                    {t("hosts.importExportBtn")}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="text-xs min-w-[170px]">
+                    <DropdownMenuItem
+                      onClick={() => {
+                        importOverwriteRef.current = false;
+                        fileInputRef.current?.click();
+                      }}
                     >
-                      {t(
-                        `hosts.filter${val.charAt(0).toUpperCase() + val.slice(1)}`,
-                      )}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>
-                    {t("hosts.filterAuthGroup")}
-                  </DropdownMenuLabel>
-                  {(
-                    ["password", "key", "credential", "none", "opkssh"] as const
-                  ).map((val) => (
-                    <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.authType.includes(val)}
-                      onCheckedChange={() =>
-                        handleFilterToggle("authType", val)
-                      }
-                      onSelect={(e) => e.preventDefault()}
+                      <Upload className="size-3.5 mr-2" />
+                      {t("hosts.importSkipExisting")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        importOverwriteRef.current = true;
+                        fileInputRef.current?.click();
+                      }}
                     >
-                      {t(
-                        `hosts.filterAuth${val.charAt(0).toUpperCase() + val.slice(1)}`,
-                      )}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>
-                    {t("hosts.filterProtocolGroup")}
-                  </DropdownMenuLabel>
-                  {(
-                    [
-                      ["ssh", "Ssh"],
-                      ["rdp", "Rdp"],
-                      ["vnc", "Vnc"],
-                      ["telnet", "Telnet"],
-                    ] as const
-                  ).map(([val, key]) => (
-                    <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.protocol.includes(val)}
-                      onCheckedChange={() =>
-                        handleFilterToggle("protocol", val)
-                      }
-                      onSelect={(e) => e.preventDefault()}
+                      <Upload className="size-3.5 mr-2" />
+                      {t("hosts.importOverwrite")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleExportHosts}
+                      disabled={rawHosts.length === 0}
                     >
-                      {t(`hosts.filterProtocol${key}`)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>
-                    {t("hosts.filterFeaturesGroup")}
-                  </DropdownMenuLabel>
-                  {(
-                    [
-                      ["terminal", "Terminal"],
-                      ["fileManager", "FileManager"],
-                      ["tunnel", "Tunnel"],
-                      ["docker", "Docker"],
-                    ] as const
-                  ).map(([val, key]) => (
-                    <DropdownMenuCheckboxItem
-                      key={val}
-                      checked={filterState.features.includes(val)}
-                      onCheckedChange={() =>
-                        handleFilterToggle("features", val)
-                      }
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      {t(`hosts.filterFeature${key}`)}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  {allTags.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>
-                        {t("hosts.filterTagsGroup")}
-                      </DropdownMenuLabel>
-                      {allTags.map((tag) => (
-                        <DropdownMenuCheckboxItem
-                          key={tag}
-                          checked={filterState.tags.includes(tag)}
-                          onCheckedChange={() =>
-                            handleFilterToggle("tags", tag)
-                          }
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          {tag}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                      <Download className="size-3.5 mr-2" />
+                      {t("hosts.exportAll")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadSample}>
+                      <Download className="size-3.5 mr-2" />
+                      {t("hosts.downloadSample")}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
               onClick={() =>
                 window.dispatchEvent(new CustomEvent("host-manager:add-host"))
@@ -705,13 +934,23 @@ export function HostsPanel({
         <SidebarTree
           children={
             hostTree
-              ? applyFilters(sortHostTree(hostTree, sortKey), filterState)
-                  .children
+              ? groupHosts(
+                  applyFilters(sortHostTree(hostTree, sortKey), filterState),
+                  groupKey,
+                  groupLabel,
+                ).children
               : []
           }
           onOpenTab={onOpenTab}
           onEditHost={onEditHost}
           onShareHost={(host) => setShareModalHost(host)}
+          onProxmoxDiscover={(host) => {
+            const cfg = host.proxmoxConfig;
+            setProxmoxHostId(Number(host.id));
+            setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
+            setProxmoxDefaultUsername(undefined);
+            setProxmoxDialogOpen(true);
+          }}
           query={hostSearch.trim().toLowerCase()}
           selectionMode={selectionMode}
           onToggleSelectionMode={toggleSelectionMode}
@@ -729,6 +968,19 @@ export function HostsPanel({
         open={shareModalHost !== null}
         onClose={() => setShareModalHost(null)}
         host={shareModalHost}
+      />
+
+      <ProxmoxDiscoverDialog
+        open={proxmoxDialogOpen}
+        onClose={() => {
+          setProxmoxDialogOpen(false);
+          setProxmoxHostId(undefined);
+        }}
+        hosts={rawHosts}
+        onHostsChanged={setRawHosts}
+        preselectedHostId={proxmoxHostId}
+        defaultCredentialId={proxmoxDefaultCredentialId}
+        defaultUsername={proxmoxDefaultUsername}
       />
     </div>
   );

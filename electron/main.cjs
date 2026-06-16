@@ -478,6 +478,10 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
 }
 
+if (process.platform === "win32") {
+  app.disableHardwareAcceleration();
+}
+
 if (isInsecureModeEnabled()) {
   logToFile(
     "[security] ENABLE_INSECURE_MODE is enabled; TLS certificate validation is disabled.",

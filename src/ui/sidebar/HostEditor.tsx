@@ -13,6 +13,7 @@ import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
   Globe,
+  Layers, // --- tmux-monitor ---
   Network,
   Palette,
   Plus,
@@ -32,6 +33,7 @@ import {
   connectTunnel,
   disconnectTunnel,
 } from "@/main-axios";
+import { getTailscaleDevices } from "@/api/settings-api";
 import type { Host } from "@/types/ui-types";
 import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
@@ -46,7 +48,11 @@ import {
   type HostFastScrollModifier,
   type HostProtocols,
 } from "./HostEditorData";
-import { HostDockerTab, HostFilesTab } from "./HostEditorFeatureTabs";
+import {
+  HostDockerTab,
+  HostProxmoxTab,
+  HostFilesTab,
+} from "./HostEditorFeatureTabs";
 import { HostEditorGeneralTab } from "./HostEditorGeneralTab";
 import {
   HostEditorRdpTab,
@@ -91,6 +97,18 @@ export function HostEditor({
   const [tunnelStatuses, setTunnelStatuses] = useState<
     Record<string, TunnelStatus>
   >({});
+  const [tailscaleDevices, setTailscaleDevices] = useState<
+    Array<{
+      id: string;
+      name: string;
+      hostname: string;
+      addresses: string[];
+      os: string;
+      lastSeen: string;
+    }>
+  >([]);
+  const [tailscaleHasApiKey, setTailscaleHasApiKey] = useState(false);
+  const [tailscaleLoading, setTailscaleLoading] = useState(false);
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
 
   useEffect(() => {
@@ -104,6 +122,18 @@ export function HostEditor({
     const unsub = subscribeTunnelStatuses((s) => setTunnelStatuses(s));
     return unsub;
   }, [activeTab]);
+
+  useEffect(() => {
+    if (form.authType !== "tailscale") return;
+    setTailscaleLoading(true);
+    getTailscaleDevices()
+      .then((res) => {
+        setTailscaleDevices(res?.devices ?? []);
+        setTailscaleHasApiKey(res?.hasApiKey ?? false);
+      })
+      .catch(() => {})
+      .finally(() => setTailscaleLoading(false));
+  }, [form.authType]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -138,7 +168,21 @@ export function HostEditor({
       enableVnc: "vnc",
       enableTelnet: "telnet",
     };
-    if (!value && activeTab === tabForProto[proto]) onTabChange("general");
+    const sshGroupTabs = [
+      "ssh",
+      "terminal",
+      "tunnels",
+      "docker",
+      "files",
+      "host-metrics",
+    ];
+    if (!value) {
+      if (proto === "enableSsh" && sshGroupTabs.includes(activeTab)) {
+        onTabChange("general");
+      } else if (activeTab === tabForProto[proto]) {
+        onTabChange("general");
+      }
+    }
     if (value && tabForProto[proto]) onTabChange(tabForProto[proto]);
   };
 
@@ -189,19 +233,24 @@ export function HostEditor({
                     {t("hosts.authMethod")}
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {["password", "key", "credential", "none", "opkssh"].map(
-                      (m) => (
-                        <button
-                          key={m}
-                          onClick={() => {
-                            setField("authType", m as HostAuthType);
-                          }}
-                          className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                        >
-                          {m}
-                        </button>
-                      ),
-                    )}
+                    {[
+                      "password",
+                      "key",
+                      "credential",
+                      "none",
+                      "opkssh",
+                      "tailscale",
+                    ].map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setField("authType", m as HostAuthType);
+                        }}
+                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${authMethod === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {m}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4 mt-1">
@@ -426,6 +475,97 @@ export function HostEditor({
                     </>
                   )}
                 </div>
+                {authMethod === "opkssh" && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.opksshLabel")}
+                      </span>
+                      <a
+                        href="https://docs.termix.site/features/authentication/opkssh"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.opksshDesc")}
+                    </p>
+                  </div>
+                )}
+                {authMethod === "tailscale" && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.tailscaleDeviceSelect")}
+                      </label>
+                      <a
+                        href="https://docs.termix.site/features/networking/tailscale"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-accent-brand hover:underline"
+                      >
+                        {t("hosts.tailscaleDocsLink")}
+                      </a>
+                    </div>
+                    {!tailscaleHasApiKey && !tailscaleLoading ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.tailscaleNoApiKey")}
+                      </p>
+                    ) : tailscaleLoading ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.tailscaleLoadingDevices")}
+                      </p>
+                    ) : tailscaleDevices.length === 0 ? (
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.tailscaleNoDevices")}
+                      </p>
+                    ) : (
+                      <>
+                        <select
+                          className="w-full border border-border bg-background text-foreground text-xs px-2 py-1.5 focus:outline-none focus:border-accent-brand/50"
+                          value={
+                            tailscaleDevices.find((d) =>
+                              d.addresses.includes(form.ip),
+                            )?.id ?? ""
+                          }
+                          onChange={(e) => {
+                            const device = tailscaleDevices.find(
+                              (d) => d.id === e.target.value,
+                            );
+                            if (device) {
+                              const tailscaleIp =
+                                device.addresses.find((a) =>
+                                  a.startsWith("100."),
+                                ) ??
+                                device.addresses[0] ??
+                                "";
+                              setField("ip", tailscaleIp);
+                            }
+                          }}
+                        >
+                          <option value="" disabled>
+                            {t("hosts.tailscaleDeviceSelectPlaceholder")}
+                          </option>
+                          {tailscaleDevices.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.hostname} (
+                              {d.addresses.find((a) => a.startsWith("100.")) ??
+                                d.addresses[0] ??
+                                ""}
+                              )
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.tailscaleDeviceAutoFill")}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
                 <SettingRow
                   label={t("hosts.forceKeyboardInteractiveLabel")}
                   description={t("hosts.forceKeyboardInteractiveShortDesc")}
@@ -435,9 +575,35 @@ export function HostEditor({
                     onChange={(v) => setField("forceKeyboardInteractive", v)}
                   />
                 </SettingRow>
+                <SettingRow
+                  label={t("hosts.sudoPasswordAutoFillLabel")}
+                  description={t("hosts.sudoPasswordAutoFillDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.sudoPasswordAutoFill}
+                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
+                  />
+                </SettingRow>
+                {form.sudoPasswordAutoFill && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.sudoPasswordLabel")}
+                    </label>
+                    <PasswordInput
+                      className="h-8 text-xs pr-8"
+                      placeholder="••••••••"
+                      value={form.sudoPassword}
+                      onChange={(e) => setField("sudoPassword", e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             </SectionCard>
+          </>
+        )}
 
+        {activeTab === "terminal" && (
+          <>
             <SectionCard
               title={t("hosts.terminalAppearance")}
               icon={<Palette className="size-3.5" />}
@@ -625,6 +791,71 @@ export function HostEditor({
                     onChange={(v) => setField("rightClickSelectsWord", v)}
                   />
                 </SettingRow>
+                <SettingRow
+                  label={t("hosts.syntaxHighlightingLabel")}
+                  description={t("hosts.syntaxHighlightingDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.syntaxHighlighting}
+                    onChange={(v) => setField("syntaxHighlighting", v)}
+                  />
+                </SettingRow>
+                {form.syntaxHighlighting && (
+                  <div className="flex flex-col ml-4">
+                    {(
+                      [
+                        [
+                          "logLevels",
+                          "syntaxCategoryLogLevels",
+                          "syntaxCategoryLogLevelsDesc",
+                        ],
+                        [
+                          "paths",
+                          "syntaxCategoryPaths",
+                          "syntaxCategoryPathsDesc",
+                        ],
+                        [
+                          "timestamps",
+                          "syntaxCategoryTimestamps",
+                          "syntaxCategoryTimestampsDesc",
+                        ],
+                        [
+                          "ipAddresses",
+                          "syntaxCategoryIpAddresses",
+                          "syntaxCategoryIpAddressesDesc",
+                        ],
+                        [
+                          "urls",
+                          "syntaxCategoryUrls",
+                          "syntaxCategoryUrlsDesc",
+                        ],
+                        [
+                          "numbers",
+                          "syntaxCategoryNumbers",
+                          "syntaxCategoryNumbersDesc",
+                        ],
+                      ] as const
+                    ).map(([key, labelKey, descKey]) => (
+                      <SettingRow
+                        key={key}
+                        label={t(`hosts.${labelKey}`)}
+                        description={t(`hosts.${descKey}`)}
+                      >
+                        <FakeSwitch
+                          checked={
+                            form.syntaxHighlightingOptions?.[key] ?? true
+                          }
+                          onChange={(v) =>
+                            setField("syntaxHighlightingOptions", {
+                              ...form.syntaxHighlightingOptions,
+                              [key]: v,
+                            })
+                          }
+                        />
+                      </SettingRow>
+                    ))}
+                  </div>
+                )}
               </div>
             </SectionCard>
 
@@ -671,7 +902,19 @@ export function HostEditor({
                 </SettingRow>
                 <SettingRow
                   label={t("hosts.enableAutoTmux")}
-                  description={t("hosts.enableAutoTmuxDesc")}
+                  description={
+                    <>
+                      {t("hosts.enableAutoTmuxDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/tmux"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
                     checked={form.autoTmux}
@@ -679,27 +922,47 @@ export function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
-                  label={t("hosts.sudoPasswordAutoFillLabel")}
-                  description={t("hosts.sudoPasswordAutoFillShortDesc")}
+                  label={t("hosts.enableSessionLogging")}
+                  description={
+                    <>
+                      {t("hosts.enableSessionLoggingDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/session-recording"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
-                    checked={form.sudoPasswordAutoFill}
-                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
+                    checked={form.enableSessionLogging}
+                    onChange={(v) => setField("enableSessionLogging", v)}
                   />
                 </SettingRow>
-                {form.sudoPasswordAutoFill && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.sudoPasswordLabel")}
-                    </label>
-                    <PasswordInput
-                      className="h-8 text-xs pr-8"
-                      placeholder="••••••••"
-                      value={form.sudoPassword}
-                      onChange={(e) => setField("sudoPassword", e.target.value)}
-                    />
-                  </div>
-                )}
+                <SettingRow
+                  label={t("hosts.enableCommandHistory")}
+                  description={
+                    <>
+                      {t("hosts.enableCommandHistoryDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/command-history"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
+                >
+                  <FakeSwitch
+                    checked={form.enableCommandHistory}
+                    onChange={(v) => setField("enableCommandHistory", v)}
+                  />
+                </SettingRow>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -876,6 +1139,35 @@ export function HostEditor({
                 </div>
               </div>
             </SectionCard>
+            {/* --- tmux-monitor --- */}
+            <SectionCard
+              title={t("tmuxMonitor.title")}
+              icon={<Layers className="size-3.5" />}
+            >
+              <div className="flex flex-col gap-4 py-3">
+                <SettingRow
+                  label={t("hosts.enableTmuxMonitor")}
+                  description={
+                    <>
+                      {t("hosts.enableTmuxMonitorDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/tmux"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
+                >
+                  <FakeSwitch
+                    checked={form.enableTmuxMonitor}
+                    onChange={(v) => setField("enableTmuxMonitor", v)}
+                  />
+                </SettingRow>
+              </div>
+            </SectionCard>
           </>
         )}
 
@@ -888,7 +1180,19 @@ export function HostEditor({
               <div className="flex flex-col gap-4 py-3">
                 <SettingRow
                   label={t("hosts.enableTunneling")}
-                  description={t("hosts.enableTunnelingDesc")}
+                  description={
+                    <>
+                      {t("hosts.enableTunnelingDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/networking/tunnels"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
                     checked={form.enableTunnel}
@@ -1218,11 +1522,15 @@ export function HostEditor({
           <HostDockerTab form={form} setField={setField} />
         )}
 
+        {activeTab === "proxmox" && (
+          <HostProxmoxTab form={form} setField={setField} />
+        )}
+
         {activeTab === "files" && (
           <HostFilesTab form={form} setField={setField} />
         )}
 
-        {activeTab === "stats" && (
+        {activeTab === "host-metrics" && (
           <HostStatsTab form={form} setField={setField} snippets={snippets} />
         )}
 

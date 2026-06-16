@@ -18,6 +18,7 @@ import { QuickConnectPanel } from "@/sidebar/QuickConnectPanel";
 import { SshToolsPanel } from "@/sidebar/SshToolsPanel";
 import { SnippetsPanel } from "@/sidebar/SnippetsPanel";
 import { HistoryPanel } from "@/sidebar/HistoryPanel";
+import { SessionLogsPanel } from "@/sidebar/SessionLogsPanel";
 import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
@@ -38,6 +39,7 @@ import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
+  getSSHFolders,
   getUserInfo,
   getOpenTabs,
   addOpenTab,
@@ -80,6 +82,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
+    enableProxmox: h.enableProxmox ?? false,
+    enableTmuxMonitor: h.enableTmuxMonitor ?? false, // --- tmux-monitor ---
+    proxmoxConfig: (h.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
     enableRdp: h.enableRdp ?? h.connectionType === "rdp",
     enableVnc: h.enableVnc ?? h.connectionType === "vnc",
     enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
@@ -106,7 +111,10 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
   };
 }
 
-function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
+function buildHostTree(
+  hosts: SSHHostWithStatus[],
+  folderMeta?: Map<string, { color?: string; icon?: string }>,
+): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
   const folderMap = new Map<string, HostFolder>();
   const getOrCreateFolder = (path: string): HostFolder => {
@@ -117,7 +125,14 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
     for (const part of parts) {
       accumulated = accumulated ? `${accumulated} / ${part}` : part;
       if (!folderMap.has(accumulated)) {
-        const folder: HostFolder = { name: part, children: [] };
+        const meta = folderMeta?.get(accumulated);
+        const folder: HostFolder = {
+          name: part,
+          path: accumulated,
+          color: meta?.color,
+          icon: meta?.icon,
+          children: [],
+        };
         folderMap.set(accumulated, folder);
         current.children.push(folder);
       }
@@ -125,6 +140,10 @@ function buildHostTree(hosts: SSHHostWithStatus[]): HostFolder {
     }
     return current;
   };
+  // Surface empty folders (created but with no hosts yet) so they stay visible.
+  if (folderMeta) {
+    for (const path of folderMeta.keys()) getOrCreateFolder(path);
+  }
   for (const h of hosts) {
     const host = sshHostToHost(h);
     if (h.folder) {
@@ -188,7 +207,7 @@ export function AppShell({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
-    return saved ? parseInt(saved, 10) : 266;
+    return saved ? parseInt(saved, 10) : 291;
   });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
@@ -274,6 +293,7 @@ export function AppShell({
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
     history: "History",
+    "session-logs": t("nav.sessionLogs"),
     "split-screen": "Split Screen",
     connections: t("nav.connections"),
     "user-profile": "User Profile",
@@ -371,15 +391,110 @@ export function AppShell({
     getUserPreferences()
       .then((prefs) => {
         setUserPrefs(prefs);
-        if (prefs.theme) setTheme(prefs.theme as ThemeId);
-        if (prefs.fontSize) applyFontSize(prefs.fontSize as FontSizeId);
-        if (prefs.accentColor) {
-          localStorage.setItem("termix-accent", prefs.accentColor);
-          applyAccentColor(prefs.accentColor);
-        }
-        if (prefs.language && prefs.language !== i18n.language) {
-          localStorage.setItem("i18nextLng", prefs.language);
-          void i18n.changeLanguage(prefs.language);
+        if (prefs.storageMode === "cloud") {
+          // Persist the current browser values before overwriting, so any tab can restore them
+          if (!localStorage.getItem("termix-local-snapshot")) {
+            const SNAPSHOT_KEYS = [
+              "termix-accent",
+              "termix-font-size",
+              "i18nextLng",
+              "commandAutocomplete",
+              "commandPaletteShortcutEnabled",
+              "showHostTags",
+              "hostTrayOnClick",
+              "pinAppRail",
+              "defaultSnippetFoldersCollapsed",
+              "confirmSnippetExecution",
+              "disableUpdateCheck",
+              "confirmTabClose",
+              "hiddenRailTabs",
+            ];
+            const snap: Record<string, string | null> = {
+              __theme: localStorage.getItem("termix-theme"),
+            };
+            for (const key of SNAPSHOT_KEYS)
+              snap[key] = localStorage.getItem(key);
+            localStorage.setItem("termix-local-snapshot", JSON.stringify(snap));
+          }
+          if (prefs.theme) setTheme(prefs.theme as ThemeId);
+          if (prefs.fontSize) applyFontSize(prefs.fontSize as FontSizeId);
+          if (prefs.accentColor) {
+            localStorage.setItem("termix-accent", prefs.accentColor);
+            applyAccentColor(prefs.accentColor);
+          }
+          if (prefs.language && prefs.language !== i18n.language) {
+            localStorage.setItem("i18nextLng", prefs.language);
+            void i18n.changeLanguage(prefs.language);
+          }
+          if (
+            prefs.commandAutocomplete !== null &&
+            prefs.commandAutocomplete !== undefined
+          )
+            localStorage.setItem(
+              "commandAutocomplete",
+              String(prefs.commandAutocomplete),
+            );
+          if (
+            prefs.commandPaletteEnabled !== null &&
+            prefs.commandPaletteEnabled !== undefined
+          )
+            localStorage.setItem(
+              "commandPaletteShortcutEnabled",
+              String(prefs.commandPaletteEnabled),
+            );
+          if (prefs.showHostTags !== null && prefs.showHostTags !== undefined) {
+            localStorage.setItem("showHostTags", String(prefs.showHostTags));
+            window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+          }
+          if (
+            prefs.hostTrayOnClick !== null &&
+            prefs.hostTrayOnClick !== undefined
+          )
+            localStorage.setItem(
+              "hostTrayOnClick",
+              String(prefs.hostTrayOnClick),
+            );
+          if (prefs.pinAppRail !== null && prefs.pinAppRail !== undefined)
+            localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+          if (
+            prefs.foldersCollapsed !== null &&
+            prefs.foldersCollapsed !== undefined
+          )
+            localStorage.setItem(
+              "defaultSnippetFoldersCollapsed",
+              String(prefs.foldersCollapsed),
+            );
+          if (
+            prefs.confirmSnippetExecution !== null &&
+            prefs.confirmSnippetExecution !== undefined
+          )
+            localStorage.setItem(
+              "confirmSnippetExecution",
+              String(prefs.confirmSnippetExecution),
+            );
+          if (
+            prefs.disableUpdateCheck !== null &&
+            prefs.disableUpdateCheck !== undefined
+          )
+            localStorage.setItem(
+              "disableUpdateCheck",
+              String(prefs.disableUpdateCheck),
+            );
+          if (
+            prefs.confirmTabClose !== null &&
+            prefs.confirmTabClose !== undefined
+          )
+            localStorage.setItem(
+              "confirmTabClose",
+              String(prefs.confirmTabClose),
+            );
+          if (
+            prefs.hiddenRailTabs !== null &&
+            prefs.hiddenRailTabs !== undefined
+          ) {
+            localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
+            window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+          }
         }
       })
       .catch(() => {})
@@ -389,10 +504,20 @@ export function AppShell({
   // Load real hosts from API
   const loadHosts = useCallback(async () => {
     try {
-      const raw = await getSSHHosts();
+      const [raw, folders] = await Promise.all([
+        getSSHHosts(),
+        getSSHFolders().catch(() => []),
+      ]);
       const converted = raw.map(sshHostToHost);
       setAllHosts(converted);
-      setRealHostTree(buildHostTree(raw));
+      const folderMeta = new Map<string, { color?: string; icon?: string }>();
+      for (const f of folders) {
+        folderMeta.set(f.name, {
+          color: f.color ?? undefined,
+          icon: f.icon ?? undefined,
+        });
+      }
+      setRealHostTree(buildHostTree(raw, folderMeta));
     } catch {
       // Keep empty state on error
     } finally {
@@ -442,7 +567,7 @@ export function AppShell({
     "telnet",
     "files",
     "docker",
-    "stats",
+    "host-metrics",
     "tunnel",
   ];
 
@@ -637,11 +762,22 @@ export function AppShell({
             : host.enableTelnet
               ? "telnet"
               : "terminal");
+    // --- tmux-monitor --- singleton tab, not a per-host tab
+    if (type === "tmux_monitor") {
+      openSingletonTab(type, undefined, host);
+      return;
+    }
     openTab(host, type);
   }
 
   const openSingletonTab = useCallback(
-    function openSingletonTab(type: TabType, pendingEvent?: string) {
+    // --- tmux-monitor --- (added optional `host` so tmux_monitor can open
+    // with a preselected host; existing callers are unaffected)
+    function openSingletonTab(
+      type: TabType,
+      pendingEvent?: string,
+      host?: Host,
+    ) {
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
           setSidebarOpen(true);
@@ -677,9 +813,15 @@ export function AppShell({
         docker: t("nav.docker"),
         tunnel: t("nav.tunnels"),
         network_graph: t("nav.networkGraph"),
+        tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
       };
       setTabs((prev) => {
-        if (prev.find((t) => t.id === id)) return prev;
+        const existing = prev.find((t) => t.id === id);
+        if (existing) {
+          // --- tmux-monitor --- refocusing with a host preselects it
+          if (!host) return prev;
+          return prev.map((t) => (t.id === id ? { ...t, host } : t));
+        }
         return [
           ...prev,
           {
@@ -688,6 +830,7 @@ export function AppShell({
             type,
             label: singletonLabels[type] ?? type,
             openedAt: Date.now(),
+            ...(host ? { host } : {}), // --- tmux-monitor ---
           },
         ];
       });
@@ -709,6 +852,9 @@ export function AppShell({
 
   function doCloseTab(id: string) {
     const tabToClose = tabs.find((t) => t.id === id);
+    if (tabToClose?.terminalRef?.current?.disconnect) {
+      tabToClose.terminalRef.current.disconnect();
+    }
     if (
       tabToClose?.instanceId &&
       PERSISTENT_TAB_TYPES.includes(tabToClose.type)
@@ -1051,6 +1197,12 @@ export function AppShell({
         </div>
       )}
 
+      {railView === "session-logs" && (
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <SessionLogsPanel />
+        </div>
+      )}
+
       {railView === "user-profile" && (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <UserProfilePanel
@@ -1084,7 +1236,7 @@ export function AppShell({
             size="icon"
             className="h-full w-12.5 border-y-0 border-border rounded-none text-muted-foreground hover:text-foreground"
             title="Reset width"
-            onClick={() => setSidebarWidth(266)}
+            onClick={() => setSidebarWidth(291)}
           >
             <Maximize2 className="size-3.5" />
           </Button>
@@ -1269,6 +1421,13 @@ export function AppShell({
             ].includes(type)
           ) {
             openSingletonTab(type, pendingEvent);
+          } else if (type === "tmux_monitor") {
+            // --- tmux-monitor --- singleton tab, optionally preselecting a host
+            openSingletonTab(
+              type,
+              undefined,
+              label ? allHosts.find((h) => h.name === label) : undefined,
+            );
           } else if (label) {
             const host = allHosts.find((h) => h.name === label);
             if (host) openTab(host, type);

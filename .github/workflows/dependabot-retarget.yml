@@ -1,0 +1,157 @@
+name: Retarget and Merge Dependabot PRs
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  retarget-and-merge:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Resolve newest dev branch
+        id: dev
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
+          # The helper exits non-zero when no dev-X.Y.Z branch exists; treat that
+          # as "nothing to do" rather than a workflow failure.
+          if DEV_BRANCH=$(printf '%s\n' "$REFS" | node scripts/latest-dev-branch.cjs 2>/dev/null); then
+            echo "Newest dev branch: $DEV_BRANCH"
+            echo "branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
+          else
+            echo "No dev-X.Y.Z branch open; nothing to retarget."
+            echo "branch=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Retarget and merge Dependabot PRs
+        if: ${{ steps.dev.outputs.branch != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          DEV_BRANCH: ${{ steps.dev.outputs.branch }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+
+          CONFLICT_LABEL="dependabot-rebase-requested"
+
+          # Ensure the bookkeeping label exists (no-op if it already does).
+          gh label create "$CONFLICT_LABEL" --repo "$REPO" \
+            --color "D93F0B" --description "Retarget workflow asked Dependabot to rebase a conflicting PR" \
+            2>/dev/null || true
+
+          # True if the PR already carries the conflict label.
+          has_conflict_label() {
+            gh pr view "$1" --repo "$REPO" --json labels \
+              -q '.labels[].name' | grep -qx "$CONFLICT_LABEL"
+          }
+
+          # Wait until GitHub has a definite mergeable verdict for a PR (it
+          # returns UNKNOWN while recomputing after a base change or a push).
+          # Echoes "<mergeable> <mergeStateStatus>".
+          wait_for_verdict() {
+            local pr="$1" mergeable state
+            for _ in $(seq 1 30); do
+              read -r mergeable state < <(gh pr view "$pr" --repo "$REPO" \
+                --json mergeable,mergeStateStatus \
+                -q '.mergeable + " " + .mergeStateStatus')
+              if [ "$mergeable" != "UNKNOWN" ] && [ "$state" != "UNKNOWN" ]; then
+                echo "$mergeable $state"
+                return 0
+              fi
+              sleep 20
+            done
+            echo "$mergeable $state"
+          }
+
+          # Phase 1: retarget every open Dependabot PR from main onto the dev
+          # branch. This kicks off a Dependabot rebase for each.
+          PR_NUMBERS=$(gh pr list --repo "$REPO" \
+            --author "app/dependabot" \
+            --base main \
+            --state open \
+            --json number -q '.[].number')
+
+          # Pick up PRs already sitting on the dev branch from a previous run too.
+          PR_NUMBERS="$PR_NUMBERS $(gh pr list --repo "$REPO" \
+            --author "app/dependabot" \
+            --base "$DEV_BRANCH" \
+            --state open \
+            --json number -q '.[].number')"
+
+          PR_NUMBERS=$(printf '%s\n' $PR_NUMBERS | sort -un)
+
+          if [ -z "$PR_NUMBERS" ]; then
+            echo "No open Dependabot PRs to process."
+            exit 0
+          fi
+
+          for PR in $PR_NUMBERS; do
+            BASE=$(gh pr view "$PR" --repo "$REPO" --json baseRefName -q .baseRefName)
+            if [ "$BASE" != "$DEV_BRANCH" ]; then
+              echo "Retargeting PR #$PR ($BASE -> $DEV_BRANCH)"
+              gh pr edit "$PR" --repo "$REPO" --base "$DEV_BRANCH"
+            fi
+          done
+
+          # Phase 2: merge one at a time. Each merge can make the remaining npm
+          # PRs stale, so re-check immediately before merging and rebase stragglers.
+          for PR in $PR_NUMBERS; do
+            echo "::group::PR #$PR"
+
+            read -r MERGEABLE STATE < <(wait_for_verdict "$PR")
+            echo "  mergeable=$MERGEABLE mergeStateStatus=$STATE"
+
+            # BEHIND = clean but needs the latest base; ask Dependabot to rebase
+            # and skip for now (next run merges it once it is up to date).
+            if [ "$STATE" = "BEHIND" ]; then
+              echo "  PR #$PR is behind $DEV_BRANCH; asking Dependabot to rebase."
+              gh pr comment "$PR" --repo "$REPO" --body "@dependabot rebase"
+              echo "::endgroup::"
+              continue
+            fi
+
+            # DIRTY / CONFLICTING = a real conflict. Try a rebase once (label it so
+            # we can tell next time); if it is STILL conflicting on a later run
+            # despite already being labelled, the rebase failed for good - close it
+            # so Dependabot reopens a fresh PR against the current dev branch.
+            if [ "$MERGEABLE" = "CONFLICTING" ] || [ "$STATE" = "DIRTY" ]; then
+              if has_conflict_label "$PR"; then
+                echo "  PR #$PR still conflicts after a prior rebase request; closing so Dependabot reopens it fresh."
+                gh pr close "$PR" --repo "$REPO" --delete-branch \
+                  --comment "Closing: this PR still conflicts with $DEV_BRANCH after a rebase attempt (its changes are likely already merged). Dependabot will reopen a fresh PR computed against the current $DEV_BRANCH."
+              else
+                echo "  PR #$PR conflicts with $DEV_BRANCH; requesting a rebase and labelling it."
+                gh pr edit "$PR" --repo "$REPO" --add-label "$CONFLICT_LABEL"
+                gh pr comment "$PR" --repo "$REPO" --body "@dependabot rebase"
+              fi
+              echo "::endgroup::"
+              continue
+            fi
+
+            # A clean PR that was previously flagged has recovered - drop the label.
+            if has_conflict_label "$PR"; then
+              gh pr edit "$PR" --repo "$REPO" --remove-label "$CONFLICT_LABEL" || true
+            fi
+
+            echo "  Squash-merging PR #$PR"
+            if gh pr merge "$PR" --repo "$REPO" --squash --admin; then
+              echo "  Merged PR #$PR"
+              # Give GitHub a moment to mark the now-stale siblings BEHIND.
+              sleep 15
+            else
+              echo "  Could not merge PR #$PR now; it will be retried next run."
+            fi
+
+            echo "::endgroup::"
+          done

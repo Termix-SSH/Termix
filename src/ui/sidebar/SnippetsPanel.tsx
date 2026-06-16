@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   getSnippets,
@@ -751,7 +752,7 @@ function SnippetCard({
   }
 
   function handleCopy() {
-    navigator.clipboard.writeText(snippet.content);
+    copyToClipboard(snippet.content);
     toast.success(
       t("newUi.sidebar.snippets.copySuccess", { name: snippet.name }),
     );
@@ -1151,6 +1152,19 @@ export function SnippetsPanel({
   return (
     <>
       <div className="flex flex-col gap-3 p-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold">
+            {t("newUi.sidebar.snippets.title")}
+          </span>
+          <a
+            href="https://docs.termix.site/features/terminal/snippets"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[10px] text-accent-brand hover:underline"
+          >
+            {t("hosts.docsLink")}
+          </a>
+        </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold">

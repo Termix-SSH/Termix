@@ -94,21 +94,21 @@ Inicie, detenga, pause, elimine contenedores. Vea estadisticas de contenedores. 
 <td width="50%" valign="top">
 
 **Gestor de Hosts SSH:**
-Guarde, organice y gestione sus conexiones SSH con etiquetas y carpetas, y guarde facilmente informacion de inicio de sesion reutilizable con la capacidad de automatizar el despliegue de claves SSH.
+Guarde, organice y gestione sus conexiones SSH con etiquetas y carpetas (con personalizacion de carpetas y soporte de carpetas anidadas), y guarde facilmente informacion de inicio de sesion reutilizable con la capacidad de automatizar el despliegue de claves SSH.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Estadisticas del Servidor:**
-Vea el uso de CPU, memoria y disco junto con red, tiempo de actividad, informacion del sistema, firewall, monitor de puertos en la mayoria de los servidores basados en Linux.
+**Metricas del Host:**
+Vea el uso de CPU, memoria y disco, red, tiempo de actividad, informacion del sistema, firewall, monitor de puertos, visor de registros, usuarios/permisos, certificados y muchos mas en la mayoria de los servidores basados en Linux.
 
 </td>
 <td width="50%" valign="top">
 
 **Autenticacion de Usuarios:**
-Gestion segura de usuarios con controles de administrador y soporte para OIDC (con control de acceso) y 2FA (TOTP). Vea sesiones activas de usuarios en todas las plataformas y revoque permisos. Vincule sus cuentas OIDC/Locales entre si.
+Gestion segura de usuarios con controles de administrador y soporte para OIDC/LDAP/SSO (con control de acceso) y 2FA (TOTP). Vea sesiones activas de usuarios en todas las plataformas y revoque permisos. Vincule sus cuentas OIDC/Locales entre si. Vea el registro de auditoria de las acciones de todos los usuarios.
 
 </td>
 </tr>
@@ -170,7 +170,8 @@ Soporte integrado para aproximadamente 30 idiomas (gestionado por [Crowdin](http
 - **Historial de Comandos** - Autocompletado y visualizacion de comandos SSH ejecutados anteriormente
 - **Conexion Rapida** - Conectese a un servidor sin necesidad de guardar los datos de conexion
 - **Paleta de Comandos** - Pulse dos veces la tecla Shift izquierda para acceder rapidamente a las conexiones SSH con su teclado
-- **SSH Rico en Funciones** - Soporta jump hosts, Warpgate, conexiones basadas en TOTP, SOCKS5, verificacion de clave de host, autocompletado de contrasenas, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, etc.
+- **Integracion con Proxmox** - Agregue automaticamente hosts a Termix desde su instancia de Proxmox
+- **SSH Rico en Funciones** - Soporta jump hosts, Warpgate, conexiones basadas en TOTP, SOCKS5, verificacion de clave de host, autocompletado de contrasenas, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, registro de terminal, etc.
 
 </details>
 

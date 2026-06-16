@@ -16,6 +16,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/button";
 import { getCredentialDetails } from "@/main-axios";
+import { copyToClipboard } from "@/lib/clipboard";
 import type { Host, Credential } from "@/types/ui-types";
 
 type CredentialWithCertificate = Credential & { certPublicKey?: string };
@@ -107,17 +108,16 @@ function CredentialItem({
                 </button>
                 <button
                   title="Copy deploy command"
-                  onClick={() => {
+                  onClick={async () => {
                     const pubKey = cred.publicKey;
                     if (!pubKey) {
-                      toast.error(
-                        "No public key available — open the credential editor first",
-                      );
+                      toast.error(t("credentials.noPublicKeyAvailable"));
                       return;
                     }
                     const cmd = `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${pubKey}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
-                    navigator.clipboard.writeText(cmd);
-                    toast.success("Deploy command copied");
+                    const ok = await copyToClipboard(cmd);
+                    if (ok) toast.success(t("credentials.deployCommandCopied"));
+                    else toast.error(t("common.copyFailed"));
                   }}
                   className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                 >
@@ -173,7 +173,7 @@ function CredentialFolderItem({
   onEdit: (cred: Credential) => void;
   onDelete: (cred: Credential) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div>

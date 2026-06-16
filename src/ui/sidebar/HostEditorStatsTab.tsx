@@ -143,74 +143,10 @@ export function HostStatsTab({
         title={t("hosts.visibleWidgets")}
         icon={<LayoutDashboard className="size-3.5" />}
       >
-        <div className="flex flex-col gap-0 py-1">
-          {[
-            {
-              id: "cpu",
-              label: t("hosts.cpuUsageLabel"),
-              desc: t("hosts.cpuUsageDesc"),
-            },
-            {
-              id: "memory",
-              label: t("hosts.memoryLabel"),
-              desc: t("hosts.memoryDesc"),
-            },
-            {
-              id: "disk",
-              label: t("hosts.storageLabel"),
-              desc: t("hosts.storageDesc"),
-            },
-            {
-              id: "network",
-              label: t("hosts.networkLabel"),
-              desc: t("hosts.networkDesc"),
-            },
-            {
-              id: "uptime",
-              label: t("hosts.uptimeLabel"),
-              desc: t("hosts.uptimeDesc"),
-            },
-            {
-              id: "system",
-              label: t("hosts.systemInfoLabel"),
-              desc: t("hosts.systemInfoDesc"),
-            },
-            {
-              id: "login_stats",
-              label: t("hosts.recentLoginsLabel"),
-              desc: t("hosts.recentLoginsDesc"),
-            },
-            {
-              id: "processes",
-              label: t("hosts.topProcessesLabel"),
-              desc: t("hosts.topProcessesDesc"),
-            },
-            {
-              id: "ports",
-              label: t("hosts.listeningPortsLabel"),
-              desc: t("hosts.listeningPortsDesc"),
-            },
-            {
-              id: "firewall",
-              label: t("hosts.firewallLabel"),
-              desc: t("hosts.firewallDesc"),
-            },
-          ].map((w) => (
-            <SettingRow key={w.id} label={w.label} description={w.desc}>
-              <FakeSwitch
-                checked={form.statsConfig.enabledWidgets.includes(w.id)}
-                onChange={(v) => {
-                  const widgets = v
-                    ? [...form.statsConfig.enabledWidgets, w.id]
-                    : form.statsConfig.enabledWidgets.filter((x) => x !== w.id);
-                  setField("statsConfig", {
-                    ...form.statsConfig,
-                    enabledWidgets: widgets,
-                  });
-                }}
-              />
-            </SettingRow>
-          ))}
+        <div className="flex flex-col gap-2 py-3">
+          <p className="text-xs text-muted-foreground">
+            {t("hosts.widgetsMovedToHostMetrics")}
+          </p>
         </div>
       </SectionCard>
       <SectionCard

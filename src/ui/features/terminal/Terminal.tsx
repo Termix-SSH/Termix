@@ -11,6 +11,7 @@ import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
@@ -71,6 +72,8 @@ interface SSHTerminalProps {
   onTitleChange?: (title: string) => void;
   initialPath?: string;
   executeCommand?: string;
+  /** Attach to this tmux session right after connecting (tmux monitor). */
+  tmuxAttachSession?: string;
   onOpenFileManager?: (path?: string) => void;
   previewTheme?: string | null;
 }
@@ -84,6 +87,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onClose,
       initialPath,
       executeCommand,
+      tmuxAttachSession,
       onOpenFileManager,
       previewTheme,
     },
@@ -212,30 +216,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const totpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const activityLoggedRef = useRef(false);
-    const [commandHistoryTrackingEnabled, setCommandHistoryTrackingEnabled] =
-      useState<boolean>(
-        () => localStorage.getItem("commandHistoryTracking") === "true",
-      );
-
-    useEffect(() => {
-      const handleCommandHistoryTrackingChanged = () => {
-        setCommandHistoryTrackingEnabled(
-          localStorage.getItem("commandHistoryTracking") === "true",
-        );
-      };
-
-      window.addEventListener(
-        "commandHistoryTrackingChanged",
-        handleCommandHistoryTrackingChanged,
-      );
-
-      return () => {
-        window.removeEventListener(
-          "commandHistoryTrackingChanged",
-          handleCommandHistoryTrackingChanged,
-        );
-      };
-    }, []);
+    const commandHistoryTrackingEnabled =
+      hostConfig.enableCommandHistory !== false;
 
     const { trackInput, getCurrentCommand, updateCurrentCommand } =
       useCommandTracker({
@@ -947,7 +929,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           ws.send(
             JSON.stringify({
               type: "connectToHost",
-              data: { cols, rows, hostConfig, initialPath, executeCommand },
+              data: {
+                cols,
+                rows,
+                hostConfig,
+                initialPath,
+                executeCommand,
+                tmuxAttachSession,
+              },
             }),
           );
         }
@@ -982,10 +971,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
               const syntaxHighlightingEnabled =
-                localStorage.getItem("terminalSyntaxHighlighting") === "true";
+                hostConfig.terminalConfig?.syntaxHighlighting !== false;
 
               const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(msg.data)
+                ? highlightTerminalOutput(
+                    msg.data,
+                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
+                  )
                 : msg.data;
 
               terminal.write(outputData);
@@ -1045,11 +1037,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             } else {
               const syntaxHighlightingEnabled =
-                localStorage.getItem("terminalSyntaxHighlighting") === "true";
+                hostConfig.terminalConfig?.syntaxHighlighting !== false;
 
               const stringData = String(msg.data);
               const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(stringData)
+                ? highlightTerminalOutput(
+                    stringData,
+                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
+                  )
                 : stringData;
 
               terminal.write(outputData);
@@ -1666,33 +1661,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     async function writeTextToClipboard(text: string): Promise<boolean> {
-      try {
-        if (window.electronClipboard) {
-          await window.electronClipboard.writeText(text);
-          return true;
-        }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        }
-      } catch {
-        // fall through to legacy method
-      }
-      try {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.left = "-9999px";
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-        return true;
-      } catch {
-        toast.error(t("terminal.clipboardWriteFailed"));
-        return false;
-      }
+      const ok = await copyToClipboard(text);
+      if (!ok) toast.error(t("terminal.clipboardWriteFailed"));
+      return ok;
     }
 
     async function readTextFromClipboard(): Promise<string> {

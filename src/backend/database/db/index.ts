@@ -488,6 +488,62 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS host_metrics_preferences (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        layout TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_host_metrics_prefs_user_host
+        ON host_metrics_preferences (user_id, host_id);
+
+    CREATE TABLE IF NOT EXISTS host_health_checks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        checks TEXT NOT NULL,
+        interval_seconds INTEGER NOT NULL DEFAULT 300,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_host_health_checks_user_host
+        ON host_health_checks (user_id, host_id);
+
+    CREATE TABLE IF NOT EXISTS host_health_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        host_id INTEGER NOT NULL,
+        check_id TEXT NOT NULL,
+        ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ok INTEGER NOT NULL,
+        latency_ms INTEGER,
+        detail TEXT,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_host_health_history_lookup
+        ON host_health_history (user_id, host_id, check_id, ts);
+
+    CREATE TABLE IF NOT EXISTS sso_providers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        display_order INTEGER NOT NULL DEFAULT 0,
+        config TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
 `);
 
   try {
@@ -627,6 +683,17 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
   addColumnIfNotExists("user_preferences", "language", "TEXT");
+  addColumnIfNotExists("user_preferences", "storage_mode", "TEXT");
+  addColumnIfNotExists("user_preferences", "command_autocomplete", "INTEGER");
+  addColumnIfNotExists("user_preferences", "command_palette_enabled", "INTEGER");
+  addColumnIfNotExists("user_preferences", "show_host_tags", "INTEGER");
+  addColumnIfNotExists("user_preferences", "host_tray_on_click", "INTEGER");
+  addColumnIfNotExists("user_preferences", "pin_app_rail", "INTEGER");
+  addColumnIfNotExists("user_preferences", "folders_collapsed", "INTEGER");
+  addColumnIfNotExists("user_preferences", "confirm_snippet_execution", "INTEGER");
+  addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");
+  addColumnIfNotExists("user_preferences", "confirm_tab_close", "INTEGER");
+  addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
 
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
@@ -662,6 +729,16 @@ const migrateSchema = () => {
   addColumnIfNotExists(
     "ssh_data",
     "enable_terminal",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_session_logging",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_command_history",
     "INTEGER NOT NULL DEFAULT 1",
   );
   addColumnIfNotExists(
@@ -714,6 +791,17 @@ const migrateSchema = () => {
     "INTEGER NOT NULL DEFAULT 0",
   );
   addColumnIfNotExists("ssh_data", "docker_config", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_proxmox",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_data", "proxmox_config", "TEXT");
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_tmux_monitor",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
   addColumnIfNotExists("ssh_data", "domain", "TEXT");
@@ -1000,30 +1088,6 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite
-      .prepare("SELECT id FROM dashboard_preferences LIMIT 1")
-      .get();
-  } catch {
-    try {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS dashboard_preferences (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL UNIQUE,
-          layout TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
-      `);
-    } catch (createError) {
-      databaseLogger.warn("Failed to create dashboard_preferences table", {
-        operation: "schema_migration",
-        error: createError,
-      });
-    }
-  }
-
-  try {
     sqlite.prepare("SELECT id FROM host_access LIMIT 1").get();
   } catch {
     try {
@@ -1181,6 +1245,25 @@ const migrateSchema = () => {
         error: e,
       });
     }
+  }
+
+  // Rename the legacy "stats" tab type to "host-metrics" so previously saved
+  // open tabs restore correctly after the Server Stats -> Host Metrics rename.
+  try {
+    sqlite.prepare("SELECT id FROM user_open_tabs LIMIT 1").get();
+    const result = sqlite
+      .prepare(
+        "UPDATE user_open_tabs SET tab_type = 'host-metrics' WHERE tab_type = 'stats'",
+      )
+      .run();
+    if (result.changes > 0) {
+      databaseLogger.info(
+        `Migrated ${result.changes} open tab(s) from 'stats' to 'host-metrics'`,
+        { operation: "open_tabs_tab_type_migration" },
+      );
+    }
+  } catch {
+    // user_open_tabs table not present yet; nothing to migrate.
   }
 
   try {
@@ -1382,6 +1465,79 @@ const migrateSchema = () => {
     }
   }
 
+  // --- tmux-monitor begin ---
+  try {
+    sqlite.prepare("SELECT id FROM tmux_session_tags LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS tmux_session_tags (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          session_name TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create tmux_session_tags table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  // Rebuild pre-release tables created without the host FK so deleting a
+  // host cascades to its tags (SQLite cannot add a FK via ALTER TABLE).
+  try {
+    const tagFks = sqlite
+      .prepare("PRAGMA foreign_key_list(tmux_session_tags)")
+      .all() as Array<{ table: string; from: string }>;
+    const hasHostFk = tagFks.some(
+      (fk) => fk.from === "host_id" && fk.table === "ssh_data",
+    );
+    if (!hasHostFk) {
+      sqlite.exec(`
+        BEGIN;
+        CREATE TABLE tmux_session_tags_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          host_id INTEGER NOT NULL,
+          session_name TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE
+        );
+        INSERT INTO tmux_session_tags_new (id, user_id, host_id, session_name, tag, created_at)
+          SELECT id, user_id, host_id, session_name, tag, created_at
+          FROM tmux_session_tags
+          WHERE user_id IN (SELECT id FROM users)
+            AND host_id IN (SELECT id FROM ssh_data);
+        DROP TABLE tmux_session_tags;
+        ALTER TABLE tmux_session_tags_new RENAME TO tmux_session_tags;
+        COMMIT;
+      `);
+      databaseLogger.info("Rebuilt tmux_session_tags with host FK", {
+        operation: "schema_migration",
+      });
+    }
+  } catch (rebuildError) {
+    try {
+      sqlite.exec("ROLLBACK;");
+    } catch {
+      // no transaction open
+    }
+    databaseLogger.warn("Failed to add host FK to tmux_session_tags", {
+      operation: "schema_migration",
+      error: rebuildError,
+    });
+  }
+  // --- tmux-monitor end ---
+
   try {
     const existingRoles = sqlite.prepare("SELECT name, is_system FROM roles").all() as Array<{ name: string; is_system: number }>;
 
@@ -1484,6 +1640,43 @@ const migrateSchema = () => {
     databaseLogger.warn("Failed to seed system roles", {
       operation: "schema_migration",
       error: seedError,
+    });
+  }
+
+  addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
+
+  // Migrate legacy single oidc_config settings blob into sso_providers table
+  try {
+    const migrationDone = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'sso_migration_v1'")
+      .get();
+    if (!migrationDone) {
+      const providerCount = (
+        sqlite.prepare("SELECT COUNT(*) as c FROM sso_providers").get() as { c: number }
+      ).c;
+      if (providerCount === 0) {
+        const legacyRow = sqlite
+          .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
+          .get() as { value: string } | undefined;
+        if (legacyRow) {
+          sqlite
+            .prepare(
+              "INSERT INTO sso_providers (name, type, enabled, display_order, config) VALUES (?, 'oidc', 1, 0, ?)",
+            )
+            .run("OIDC", legacyRow.value);
+          databaseLogger.info("Migrated legacy oidc_config into sso_providers table", {
+            operation: "sso_migration_v1",
+          });
+        }
+      }
+      sqlite
+        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('sso_migration_v1', 'true')")
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Failed to run SSO migration v1", {
+      operation: "sso_migration_v1",
+      error: e,
     });
   }
 

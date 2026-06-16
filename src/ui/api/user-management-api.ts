@@ -231,6 +231,30 @@ export async function updatePasswordResetAllowed(
   }
 }
 
+export async function getCommandHistoryEnabled(): Promise<{
+  enabled: boolean;
+}> {
+  try {
+    const response = await authApi.get("/users/command-history-enabled");
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "get command history enabled");
+  }
+}
+
+export async function updateCommandHistoryEnabled(
+  enabled: boolean,
+): Promise<{ enabled: boolean }> {
+  try {
+    const response = await authApi.patch("/users/command-history-enabled", {
+      enabled,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update command history enabled");
+  }
+}
+
 export async function updateOIDCConfig(
   config: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {

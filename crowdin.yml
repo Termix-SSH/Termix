@@ -1,3 +1,6 @@
+project_id: "858252"
+api_token: "env:CROWDIN_API_TOKEN"
+
 files:
   - source: /src/ui/locales/en.json
     translation: /src/ui/locales/translated/%locale_with_underscore%.json

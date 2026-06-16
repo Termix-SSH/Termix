@@ -3,18 +3,82 @@ import type { Request } from "express";
 import type { RefObject } from "react";
 
 // ============================================================================
+// SSO / AUTHENTICATION PROVIDER TYPES
+// ============================================================================
+
+export type SSOProviderType = "oidc" | "ldap" | "github" | "google";
+
+export interface SSOProviderPublic {
+  id: number;
+  name: string;
+  type: SSOProviderType;
+  displayOrder: number;
+}
+
+export interface SSOProvider extends SSOProviderPublic {
+  enabled: boolean;
+  config: string | Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OIDCProviderConfig {
+  client_id: string;
+  client_secret: string;
+  issuer_url: string;
+  authorization_url: string;
+  token_url: string;
+  userinfo_url?: string;
+  identifier_path: string;
+  name_path: string;
+  scopes: string;
+  allowed_users?: string;
+  admin_group?: string;
+  group_claim?: string;
+}
+
+export interface LDAPProviderConfig {
+  host: string;
+  port: number;
+  useTLS: boolean;
+  bindDN: string;
+  bindPassword: string;
+  userSearchBase: string;
+  userSearchFilter: string;
+  usernameAttribute: string;
+  displayNameAttribute: string;
+  groupSearchBase?: string;
+  adminGroup?: string;
+  allowedUsers?: string;
+}
+
+// ============================================================================
 // HOST TYPES (SSH, RDP, VNC, Telnet)
 // ============================================================================
 
 export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
-export type SSHAuthType = "password" | "key" | "credential" | "none" | "opkssh";
+export type SSHAuthType =
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "tailscale";
 export type GuacamoleAuthType = "password" | "credential";
+
+export interface ProxmoxConfig {
+  defaultCredentialId: number | null;
+  windowsPatterns: string;
+  dockerPatterns: string;
+  preferredPrefixes: string;
+}
 
 export interface HostFeatureFlags {
   enableTerminal: boolean; // SSH, Telnet only
   enableTunnel: boolean; // SSH only
   enableFileManager: boolean; // SSH only
   enableDocker: boolean; // SSH only
+  enableTmuxMonitor: boolean; // SSH only
   enableRemoteDesktop: boolean; // RDP, VNC only
 }
 
@@ -36,7 +100,7 @@ export interface Host {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -52,9 +116,14 @@ export interface Host {
   overrideCredentialUsername?: boolean;
   userId?: string;
   enableTerminal: boolean;
+  enableSessionLogging: boolean;
+  enableCommandHistory: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
   enableDocker: boolean;
+  enableProxmox: boolean;
+  enableTmuxMonitor: boolean;
+  proxmoxConfig?: ProxmoxConfig | null;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
   showTunnelInSidebar: boolean;
@@ -141,7 +210,7 @@ export interface HostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -150,9 +219,14 @@ export interface HostData {
   credentialId?: number | null;
   overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;
+  enableSessionLogging?: boolean;
+  enableCommandHistory?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
   enableDocker?: boolean;
+  enableProxmox?: boolean;
+  enableTmuxMonitor?: boolean;
+  proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   showTerminalInSidebar?: boolean;
   showFileManagerInSidebar?: boolean;
   showTunnelInSidebar?: boolean;
@@ -514,6 +588,15 @@ export interface TerminalConfig {
   keepaliveInterval?: number;
   keepaliveCountMax?: number;
   autoTmux: boolean;
+  syntaxHighlighting: boolean;
+  syntaxHighlightingOptions?: {
+    logLevels: boolean;
+    paths: boolean;
+    timestamps: boolean;
+    ipAddresses: boolean;
+    urls: boolean;
+    numbers: boolean;
+  };
 }
 
 // ============================================================================
@@ -533,6 +616,7 @@ export interface TabContextTab {
     | "user_profile"
     | "docker"
     | "network_graph"
+    | "tmux_monitor" // --- tmux-monitor ---
     | "rdp"
     | "vnc"
     | "telnet";
@@ -599,7 +683,13 @@ export type ErrorType =
 // AUTHENTICATION TYPES
 // ============================================================================
 
-export type AuthType = "password" | "key" | "credential" | "none" | "opkssh";
+export type AuthType =
+  | "password"
+  | "key"
+  | "credential"
+  | "none"
+  | "opkssh"
+  | "tailscale";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 

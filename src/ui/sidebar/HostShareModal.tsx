@@ -124,6 +124,16 @@ export function HostShareModal({
             <SectionCard
               title={t("hosts.guac.shareHostSection")}
               icon={<Users className="size-3.5" />}
+              action={
+                <a
+                  href="https://docs.termix.site/features/authentication/rbac"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] text-accent-brand hover:underline normal-case tracking-normal font-normal"
+                >
+                  {t("hosts.docsLink")}
+                </a>
+              }
             >
               <div className="flex flex-col gap-4 py-3">
                 <div className="flex gap-2">

@@ -94,21 +94,21 @@ Demarrez, arretez, mettez en pause, supprimez des conteneurs. Consultez les stat
 <td width="50%" valign="top">
 
 **Gestionnaire d'hotes SSH:**
-Enregistrez, organisez et gerez vos connexions SSH avec des tags et des dossiers, et sauvegardez facilement les informations de connexion reutilisables tout en automatisant le deploiement des cles SSH.
+Enregistrez, organisez et gerez vos connexions SSH avec des tags et des dossiers (personnalisation des dossiers et prise en charge des dossiers imbriques), et sauvegardez facilement les informations de connexion reutilisables tout en automatisant le deploiement des cles SSH.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Statistiques serveur:**
-Visualisez l'utilisation du CPU, de la memoire et du disque ainsi que le reseau, le temps de fonctionnement, les informations systeme, le pare-feu et le moniteur de ports sur la plupart des serveurs Linux.
+**Metriques d'hote:**
+Visualisez l'utilisation du CPU, de la memoire, du disque, le reseau, le temps de fonctionnement, les informations systeme, le pare-feu, le moniteur de ports, le visualiseur de journaux, les utilisateurs/permissions, les certificats et bien plus encore sur la plupart des serveurs Linux.
 
 </td>
 <td width="50%" valign="top">
 
 **Authentification des utilisateurs:**
-Gestion securisee des utilisateurs avec controles administrateur et support OIDC (avec controle d'acces) et 2FA (TOTP). Visualisez les sessions utilisateur actives sur toutes les plateformes et revoquez les permissions. Liez vos comptes OIDC/locaux ensemble.
+Gestion securisee des utilisateurs avec controles administrateur et support OIDC/LDAP/SSO (avec controle d'acces) et 2FA (TOTP). Visualisez les sessions utilisateur actives sur toutes les plateformes et revoquez les permissions. Liez vos comptes OIDC/locaux ensemble. Consultez le journal d'audit des actions de tous les utilisateurs.
 
 </td>
 </tr>
@@ -170,7 +170,8 @@ Support integre d'environ 30 langues (gere par [Crowdin](https://docs.termix.sit
 - **Historique des commandes** - Auto-completion et consultation des commandes SSH precedemment executees
 - **Connexion rapide** - Connectez-vous a un serveur sans avoir a sauvegarder les donnees de connexion
 - **Palette de commandes** - Appuyez deux fois sur Shift gauche pour acceder rapidement aux connexions SSH avec votre clavier
-- **SSH riche en fonctionnalites** - Support des hotes de rebond, Warpgate, connexions basees sur TOTP, SOCKS5, verification des cles d'hote, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, etc.
+- **Integration Proxmox** - Ajoutez automatiquement des hotes dans Termix depuis votre instance Proxmox
+- **SSH riche en fonctionnalites** - Support des hotes de rebond, Warpgate, connexions basees sur TOTP, SOCKS5, verification des cles d'hote, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, journalisation du terminal, etc.
 
 </details>
 

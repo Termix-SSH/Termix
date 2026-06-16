@@ -94,59 +94,67 @@ Start, stop, pause, remove containers. View container stats. Control container u
 <td width="50%" valign="top">
 
 **SSH Host Manager:**
-Save, organize, and manage your SSH connections with tags and folders, and easily save reusable login info while being able to automate the deployment of SSH keys.
+Save, organize, and manage your SSH connections with tags and folders (folder customization and nested folder support), and easily save reusable login info while being able to automate the deployment of SSH keys.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Server Stats:**
-View CPU, memory, and disk usage along with network, uptime, system information, firewall, port monitor, on most Linux based servers.
+**Host Metrics:**
+View CPU, memory, disk usage, network, uptime, system information, firewall, port monitor, log viewer, users/permissions, certificates, and many more which work on most Linux based servers.
 
 </td>
 <td width="50%" valign="top">
 
 **User Authentication:**
-Secure user management with admin controls and OIDC (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together.
+Secure user management with admin controls and OIDC/LDAP/SSO (with access control) and 2FA (TOTP) support. View active user sessions across all platforms and revoke permissions. Link your OIDC/Local accounts together. View audit log of all users actions.
 
 </td>
 </tr>
 <tr>
+<td width="50%" valign="top">
+
+**Tailscale Integration:**
+List devices from your tailnet to quickly add them as hosts, and connect using Tailscale SSH as an authentication method, letting your tailnet ACLs handle authorization without storing credentials.
+
+</td>
 <td width="50%" valign="top">
 
 **RBAC:**
 Create roles and share hosts across users/roles.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Database Encryption:**
 Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Network Graph:**
 Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **SSH Tools:**
 Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Persistent Tabs:**
 SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Languages:**
@@ -170,7 +178,8 @@ Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/tr
 - **Command History** - Auto-complete and view previously ran SSH commands
 - **Quick Connect** - Connect to a server without having to save the connection data
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
-- **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, host key verification, password autofill, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, etc.
+- **Proxmox Integration** - Auto-add hosts into Termix from your Proxmox instance
+- **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, host key verification, password autofill, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal logging, etc.
 
 </details>
 

@@ -123,7 +123,7 @@ export function registerUserPasswordResetRoutes(
         );
 
       authLogger.info(
-        `Password reset code generated for user ${username} (expires at ${expiresAt.toLocaleString()}). Check admin panel or database settings table for code.`,
+        `Password reset code generated for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`,
       );
 
       res.json({

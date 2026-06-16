@@ -83,6 +83,17 @@ export interface UserPreferences {
   fontSize?: string | null;
   accentColor?: string | null;
   language?: string | null;
+  storageMode?: string | null;
+  commandAutocomplete?: boolean | null;
+  commandPaletteEnabled?: boolean | null;
+  showHostTags?: boolean | null;
+  hostTrayOnClick?: boolean | null;
+  pinAppRail?: boolean | null;
+  foldersCollapsed?: boolean | null;
+  confirmSnippetExecution?: boolean | null;
+  disableUpdateCheck?: boolean | null;
+  confirmTabClose?: boolean | null;
+  hiddenRailTabs?: string | null;
 }
 
 export async function getUserPreferences(): Promise<UserPreferences> {

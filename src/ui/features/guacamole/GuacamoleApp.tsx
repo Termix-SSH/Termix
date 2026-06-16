@@ -3,8 +3,11 @@ import {
   GuacamoleDisplay,
   type GuacamoleDisplayHandle,
 } from "@/features/guacamole/GuacamoleDisplay.tsx";
-import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
-import { getGuacamoleTokenFromHost, getGuacdStatus } from "@/main-axios.ts";
+import {
+  getGuacamoleTokenFromHost,
+  getGuacdStatus,
+  getSSHHosts,
+} from "@/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
@@ -24,68 +27,58 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({
   protocol,
 }) => {
   const { t } = useTranslation();
+  const [hostConfig, setHostConfig] = useState<SSHHost | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!hostId) {
+      setLoading(false);
+      return;
+    }
+    getSSHHosts()
+      .then((hosts) => {
+        const host = hosts.find((h) => h.id === parseInt(hostId, 10));
+        setHostConfig(host ?? null);
+      })
+      .catch(() => setHostConfig(null))
+      .finally(() => setLoading(false));
+  }, [hostId]);
+
+  if (loading) {
+    return (
+      <div className="relative w-full h-full">
+        <SimpleLoader visible={true} message={t("common.loading")} />
+      </div>
+    );
+  }
+
+  if (!hostConfig || !hostId) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center h-full gap-4"
+        style={{ backgroundColor: "var(--bg-base)" }}
+      >
+        <AlertCircle
+          className="size-10"
+          style={{ color: "var(--foreground)" }}
+        />
+        <span
+          className="text-sm font-semibold"
+          style={{ color: "var(--foreground)" }}
+        >
+          {t("guacamole.hostNotFound")}
+        </span>
+      </div>
+    );
+  }
 
   return (
-    <FullScreenAppWrapper hostId={hostId}>
-      {(hostConfig, loading) => {
-        if (loading) {
-          return (
-            <div className="relative w-full h-full">
-              <SimpleLoader visible={true} message={t("common.loading")} />
-            </div>
-          );
-        }
-
-        if (!hostConfig) {
-          return (
-            <div
-              className="flex flex-col items-center justify-center h-full gap-4"
-              style={{ backgroundColor: "var(--bg-base)" }}
-            >
-              <AlertCircle
-                className="size-10"
-                style={{ color: "var(--foreground)" }}
-              />
-              <span
-                className="text-sm font-semibold"
-                style={{ color: "var(--foreground)" }}
-              >
-                {t("guacamole.hostNotFound")}
-              </span>
-            </div>
-          );
-        }
-
-        if (!hostId) {
-          return (
-            <div
-              className="flex flex-col items-center justify-center h-full gap-4"
-              style={{ backgroundColor: "var(--bg-base)" }}
-            >
-              <AlertCircle
-                className="size-10"
-                style={{ color: "var(--foreground)" }}
-              />
-              <span
-                className="text-sm font-semibold"
-                style={{ color: "var(--foreground)" }}
-              >
-                {t("guacamole.hostNotFound")}
-              </span>
-            </div>
-          );
-        }
-
-        return (
-          <GuacamoleAppInner
-            hostId={parseInt(hostId, 10)}
-            hostConfig={hostConfig}
-            tabId={tabId}
-            protocol={protocol}
-          />
-        );
-      }}
-    </FullScreenAppWrapper>
+    <GuacamoleAppInner
+      hostId={parseInt(hostId, 10)}
+      hostConfig={hostConfig}
+      tabId={tabId}
+      protocol={protocol}
+    />
   );
 };
 

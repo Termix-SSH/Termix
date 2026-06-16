@@ -2,6 +2,17 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Release mode"
+        required: true
+        default: Everything
+        type: choice
+        options:
+          - Everything
+          - Overwrite release
+          - Dry run
+          - Skip submit
 
 permissions:
   contents: write
@@ -13,20 +24,27 @@ jobs:
       version: ${{ steps.info.outputs.version }}
       release_tag: ${{ steps.info.outputs.release_tag }}
       mobile_version: ${{ steps.info.outputs.mobile_version }}
+      dev_branch: ${{ steps.info.outputs.dev_branch }}
     steps:
-      - name: Guard branch
-        if: github.ref != 'refs/heads/main'
+      - name: Guard branch (release modes)
+        if: ${{ inputs.mode != 'Overwrite release' && !startsWith(github.ref, 'refs/heads/dev-') }}
         run: |
-          echo "Releases must be run from main (got ${{ github.ref }})."
+          echo "This mode must be run from a dev branch (got ${{ github.ref }})."
+          exit 1
+
+      - name: Guard branch (overwrite mode)
+        if: ${{ inputs.mode == 'Overwrite release' && github.ref != 'refs/heads/main' }}
+        run: |
+          echo "Overwrite release must be run from main (got ${{ github.ref }})."
           exit 1
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: ".nvmrc"
 
@@ -35,7 +53,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          if [ "${{ inputs.mode }}" = "Overwrite release" ]; then
+            DEV_BRANCH=""
+            VERSION=$(node -p "require('./package.json').version")
+          else
+            DEV_BRANCH="${GITHUB_REF#refs/heads/}"
+            VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
+          fi
+          echo "dev_branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "release_tag=release-$VERSION-tag" >> "$GITHUB_OUTPUT"
 
@@ -54,21 +79,217 @@ jobs:
             --mobile-version "${{ steps.info.outputs.mobile_version }}" \
             --notes RELEASE_NOTES.md > /dev/null
 
-  docker:
+  normalize:
     needs: [prep]
+    if: ${{ inputs.mode != 'Overwrite release' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prep.outputs.dev_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and format
+        run: |
+          npm run lint:fix || true
+          npm run format
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Sync version
+        run: node scripts/sync-version.cjs --version "${{ needs.prep.outputs.version }}"
+
+      - name: Commit changes to dev branch
+        run: |
+          git config user.name "LukeGus"
+          git config user.email "bugattiguy527@gmail.com"
+
+          if git diff --quiet; then
+            echo "No lint/format/version changes to commit."
+            exit 0
+          fi
+
+          if [ "${{ inputs.mode }}" = "Dry run" ]; then
+            echo "DRY RUN: would commit and push the following changes to ${{ needs.prep.outputs.dev_branch }}:"
+            git --no-pager diff --stat
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "chore: lint, format, and bump version to ${{ needs.prep.outputs.version }}"
+          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+
+  crowdin:
+    needs: [prep, normalize]
+    if: ${{ inputs.mode != 'Dry run' && inputs.mode != 'Overwrite release' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prep.outputs.dev_branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Clean up stale Crowdin git integration branch
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --head i18n_translate --state open --json number -q '.[0].number' || true)
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr close "$PR_NUMBER" --repo ${{ github.repository }} --delete-branch || true
+          fi
+          git push origin --delete i18n_translate || true
+
+      - name: Upload sources to Crowdin
+        uses: crowdin/github-action@v2
+        with:
+          upload_sources: true
+          upload_translations: false
+          download_translations: false
+          create_pull_request: false
+          push_translations: false
+          token: ${{ secrets.CROWDIN_API_KEY }}
+          project_id: "858252"
+        env:
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
+
+      - name: Machine pre-translate untranslated strings
+        env:
+          CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
+        run: node scripts/crowdin-pretranslate.cjs
+
+      - name: Download translations from Crowdin
+        uses: crowdin/github-action@v2
+        with:
+          upload_sources: false
+          upload_translations: false
+          download_translations: true
+          create_pull_request: false
+          push_translations: false
+          token: ${{ secrets.CROWDIN_API_KEY }}
+          project_id: "858252"
+        env:
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
+
+      - name: Commit translations to dev branch
+        run: |
+          git config user.name "LukeGus"
+          git config user.email "bugattiguy527@gmail.com"
+
+          git add src/ui/locales/translated
+          if git diff --cached --quiet; then
+            echo "No translation changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: sync Crowdin translations for ${{ needs.prep.outputs.version }}"
+          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}"
+
+  merge-to-main:
+    needs: [prep, normalize, crowdin]
+    if: ${{ always() && needs.prep.result == 'success' && (needs.normalize.result == 'success' || needs.normalize.result == 'skipped') && (needs.crowdin.result == 'success' || needs.crowdin.result == 'skipped') }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    outputs:
+      main_sha: ${{ steps.merge.outputs.main_sha }}
+      build_ref: ${{ steps.merge.outputs.build_ref }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Generate PR body
+        id: body
+        run: |
+          node scripts/generate-release-body.cjs \
+            --version "${{ needs.prep.outputs.version }}" \
+            --mobile-version "${{ needs.prep.outputs.mobile_version }}" \
+            --notes RELEASE_NOTES.md > PR_BODY.md
+
+      - name: Open and squash-merge PR to main
+        id: merge
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          DEV_BRANCH="${{ needs.prep.outputs.dev_branch }}"
+          TITLE="release-${{ needs.prep.outputs.version }}"
+
+          if [ "${{ inputs.mode }}" = "Overwrite release" ]; then
+            echo "OVERWRITE: no merge; building from main as-is."
+            echo "build_ref=main" >> "$GITHUB_OUTPUT"
+            echo "main_sha=$(gh api repos/${{ github.repository }}/commits/main -q .sha)" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ inputs.mode }}" = "Dry run" ]; then
+            echo "DRY RUN: would open and squash-merge a PR from $DEV_BRANCH into main."
+            echo "DRY RUN: downstream jobs will build from $DEV_BRANCH instead of main."
+            echo "build_ref=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
+            echo "main_sha=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PR_NUMBER=$(gh pr list --repo ${{ github.repository }} --head "$DEV_BRANCH" --base main --state open --json number -q '.[0].number' || true)
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh pr create --repo ${{ github.repository }} \
+              --base main --head "$DEV_BRANCH" \
+              --title "$TITLE" --body-file PR_BODY.md \
+              | grep -oE '[0-9]+$')
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo ${{ github.repository }} --squash --admin
+
+          STATE=$(gh pr view "$PR_NUMBER" --repo ${{ github.repository }} --json state -q .state)
+          if [ "$STATE" != "MERGED" ]; then
+            echo "PR #$PR_NUMBER did not merge (state: $STATE)."
+            exit 1
+          fi
+
+          MAIN_SHA=$(gh api repos/${{ github.repository }}/commits/main -q .sha)
+          echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
+          echo "build_ref=main" >> "$GITHUB_OUTPUT"
+
+  docker:
+    needs: [prep, merge-to-main]
     uses: ./.github/workflows/docker.yml
     with:
       version: ${{ needs.prep.outputs.version }}
       build_type: Production
+      dry_run: ${{ inputs.mode == 'Dry run' }}
     secrets: inherit
 
   create-release:
-    needs: [prep, docker]
+    needs: [prep, merge-to-main, docker]
+    if: ${{ inputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
-      - name: Checkout repository
+      - name: Checkout main
         uses: actions/checkout@v5
         with:
+          ref: main
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -76,7 +297,23 @@ jobs:
         with:
           node-version-file: ".nvmrc"
 
+      - name: Clear existing release artifacts (overwrite mode)
+        if: ${{ inputs.mode == 'Overwrite release' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ needs.prep.outputs.release_tag }}"
+          if ! gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
+            echo "Overwrite release: no existing release $TAG to overwrite."
+            exit 1
+          fi
+          echo "Clearing existing assets from $TAG..."
+          gh release view "$TAG" --repo ${{ github.repository }} --json assets -q '.assets[].name' | while read -r ASSET; do
+            [ -n "$ASSET" ] && gh release delete-asset "$TAG" "$ASSET" --repo ${{ github.repository }} --yes || true
+          done
+
       - name: Generate release body
+        if: ${{ inputs.mode != 'Overwrite release' }}
         run: |
           node scripts/generate-release-body.cjs \
             --version "${{ needs.prep.outputs.version }}" \
@@ -84,6 +321,7 @@ jobs:
             --notes RELEASE_NOTES.md > RELEASE_BODY.md
 
       - name: Create or update GitHub release
+        if: ${{ inputs.mode != 'Overwrite release' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -92,20 +330,22 @@ jobs:
           if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
             gh release edit "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md
           else
-            gh release create "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md --target "${{ github.sha }}"
+            gh release create "$TAG" --repo ${{ github.repository }} --title "$TITLE" --notes-file RELEASE_BODY.md --target "${{ needs.merge-to-main.outputs.main_sha }}"
           fi
 
   electron-release:
-    needs: [prep, create-release]
+    needs: [prep, merge-to-main, create-release]
+    if: ${{ always() && needs.merge-to-main.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
-      artifact_destination: release
+      artifact_destination: ${{ inputs.mode == 'Dry run' && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
     secrets: inherit
 
   electron-submit:
-    needs: [electron-release]
+    needs: [prep, electron-release]
+    if: ${{ inputs.mode != 'Dry run' && inputs.mode != 'Skip submit' }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
@@ -114,12 +354,13 @@ jobs:
 
   cask-commit-back:
     needs: [prep, electron-release]
+    if: ${{ inputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: write
     steps:
       - name: Checkout main
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 1
@@ -145,6 +386,146 @@ jobs:
 
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
+          git pull --rebase origin main
           git add Casks/termix.rb
           git commit -m "chore: bump Homebrew cask to $VERSION"
           git push origin HEAD:main
+
+  docs:
+    needs: [prep, merge-to-main]
+    if: ${{ always() && needs.merge-to-main.result == 'success' && inputs.mode != 'Overwrite release' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout Termix
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.merge-to-main.outputs.build_ref }}
+          fetch-depth: 1
+          path: termix
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "termix/.nvmrc"
+          cache: "npm"
+          cache-dependency-path: termix/package-lock.json
+
+      - name: Generate OpenAPI spec
+        working-directory: termix
+        run: |
+          npm ci
+          npm run generate:openapi
+
+      - name: Checkout Docs repository
+        uses: actions/checkout@v5
+        with:
+          repository: Termix-SSH/Docs
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GHCR_TOKEN }}
+          path: docs-repo
+
+      - name: Create docs release branch
+        working-directory: docs-repo
+        run: git checkout -B "dev-${{ needs.prep.outputs.version }}"
+
+      - name: Overwrite OpenAPI spec and regenerate API docs
+        working-directory: docs-repo
+        run: |
+          cp ../termix/openapi.json static/openapi.json
+          npm ci
+          npm run docusaurus gen-api-docs termix
+
+      - name: Commit and push docs branch
+        working-directory: docs-repo
+        run: |
+          git config user.name "LukeGus"
+          git config user.email "bugattiguy527@gmail.com"
+
+          if git diff --quiet; then
+            echo "No docs changes to commit."
+            exit 0
+          fi
+
+          if [ "${{ inputs.mode }}" = "Dry run" ]; then
+            echo "DRY RUN: would commit and push the following docs changes to dev-${{ needs.prep.outputs.version }}:"
+            git --no-pager diff --stat
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "feat: update API docs for ${{ needs.prep.outputs.version }}"
+          git push origin "dev-${{ needs.prep.outputs.version }}"
+
+      - name: Open and squash-merge docs PR
+        if: ${{ inputs.mode != 'Dry run' }}
+        working-directory: docs-repo
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          BRANCH="dev-${{ needs.prep.outputs.version }}"
+          if ! git ls-remote --exit-code origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
+            echo "No docs branch pushed (nothing changed); skipping PR."
+            exit 0
+          fi
+
+          PR_NUMBER=$(gh pr list --repo Termix-SSH/Docs --head "$BRANCH" --base main --state open --json number -q '.[0].number' || true)
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh pr create --repo Termix-SSH/Docs \
+              --base main --head "$BRANCH" \
+              --title "release-${{ needs.prep.outputs.version }}" \
+              --body "API docs for ${{ needs.prep.outputs.version }}" \
+              | grep -oE '[0-9]+$')
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo Termix-SSH/Docs --squash --admin
+
+  publish-youtube:
+    needs: [prep, electron-release]
+    if: ${{ always() && inputs.mode != 'Dry run' && inputs.mode != 'Overwrite release' && needs.electron-release.result == 'success' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Set release video to public
+        env:
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node scripts/publish-youtube.cjs
+
+  cleanup:
+    needs:
+      [
+        prep,
+        merge-to-main,
+        electron-release,
+        cask-commit-back,
+        docs,
+        publish-youtube,
+      ]
+    if: ${{ always() && (inputs.mode == 'Everything' || inputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' && needs.electron-release.result == 'success' && needs.cask-commit-back.result == 'success' && needs.docs.result == 'success' && needs.publish-youtube.result == 'success' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Delete dev branch in Termix
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          git push https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/${{ github.repository }}.git \
+            --delete "${{ needs.prep.outputs.dev_branch }}" || true
+
+      - name: Delete dev branch in Docs
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          git push https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/Termix-SSH/Docs.git \
+            --delete "dev-${{ needs.prep.outputs.version }}" || true

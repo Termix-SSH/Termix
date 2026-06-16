@@ -14,6 +14,7 @@ import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
+import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 const router = express.Router();
 
@@ -1158,6 +1159,24 @@ router.post(
         name,
       });
 
+      const { ipAddress: scIp, userAgent: scUa } = getRequestMeta(req);
+      const scActor = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: scActor[0]?.username ?? userId,
+        action: "create_snippet",
+        resourceType: "snippet",
+        resourceId: String(result[0].id),
+        resourceName: name,
+        ipAddress: scIp,
+        userAgent: scUa,
+        success: true,
+      });
+
       res.status(201).json(result[0]);
     } catch (err) {
       authLogger.error("Failed to create snippet", err);
@@ -1274,6 +1293,24 @@ router.put(
         snippetId: parseInt(id),
       });
 
+      const { ipAddress: suIp, userAgent: suUa } = getRequestMeta(req);
+      const suActor = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: suActor[0]?.username ?? userId,
+        action: "update_snippet",
+        resourceType: "snippet",
+        resourceId: id,
+        resourceName: existing[0].name,
+        ipAddress: suIp,
+        userAgent: suUa,
+        success: true,
+      });
+
       res.json(updated[0]);
     } catch (err) {
       authLogger.error("Failed to update snippet", err);
@@ -1338,6 +1375,24 @@ router.delete(
         operation: "snippet_delete",
         userId,
         snippetId: parseInt(id),
+      });
+
+      const { ipAddress: sdIp, userAgent: sdUa } = getRequestMeta(req);
+      const sdActor = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: sdActor[0]?.username ?? userId,
+        action: "delete_snippet",
+        resourceType: "snippet",
+        resourceId: id,
+        resourceName: existing[0].name,
+        ipAddress: sdIp,
+        userAgent: sdUa,
+        success: true,
       });
 
       res.json({ success: true });

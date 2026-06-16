@@ -24,6 +24,19 @@ type HostEditorSetField = <K extends keyof HostEditorForm>(
 
 type GuacFieldSetter = (key: string, value: unknown) => void;
 
+function DocsLinkAction({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="text-[10px] text-accent-brand hover:underline normal-case tracking-normal font-normal"
+    >
+      {label}
+    </a>
+  );
+}
+
 export function HostEditorRdpTab({
   form,
   setField,
@@ -42,6 +55,12 @@ export function HostEditorRdpTab({
       <SectionCard
         title={t("hosts.guac.connection")}
         icon={<Globe className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/setup/remote-desktop"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <div className="flex flex-col gap-1.5">
@@ -645,6 +664,12 @@ export function HostEditorRdpTab({
       <SectionCard
         title={t("hosts.guac.sessionRecording")}
         icon={<Activity className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/setup/remote-desktop#session-recording"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <div className="flex flex-col gap-1.5">
@@ -709,6 +734,12 @@ export function HostEditorRdpTab({
       <SectionCard
         title={t("hosts.guac.wakeOnLan")}
         icon={<Zap className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/features/networking/wake-on-lan"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <SettingRow
@@ -792,6 +823,12 @@ export function HostEditorVncTab({
       <SectionCard
         title={t("hosts.guac.connection")}
         icon={<Globe className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/setup/remote-desktop"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <div className="flex flex-col gap-1.5">
@@ -1011,6 +1048,12 @@ export function HostEditorVncTab({
       <SectionCard
         title={t("hosts.guac.sessionRecording")}
         icon={<Activity className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/setup/remote-desktop#session-recording"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <div className="flex flex-col gap-1.5">
@@ -1075,6 +1118,12 @@ export function HostEditorVncTab({
       <SectionCard
         title={t("hosts.guac.wakeOnLan")}
         icon={<Zap className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/features/networking/wake-on-lan"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <SettingRow
@@ -1157,6 +1206,12 @@ export function HostEditorTelnetTab({
       <SectionCard
         title={t("hosts.guac.connection")}
         icon={<Globe className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/setup/remote-desktop"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <div className="flex flex-col gap-1.5">
@@ -1313,6 +1368,12 @@ export function HostEditorTelnetTab({
       <SectionCard
         title={t("hosts.guac.sessionRecording")}
         icon={<Activity className="size-3.5" />}
+        action={
+          <DocsLinkAction
+            href="https://docs.termix.site/setup/remote-desktop#session-recording"
+            label={t("hosts.docsLink")}
+          />
+        }
       >
         <div className="flex flex-col gap-4 py-3">
           <div className="flex flex-col gap-1.5">

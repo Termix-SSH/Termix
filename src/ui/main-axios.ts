@@ -85,10 +85,91 @@ interface DiskMetrics {
   availableHuman?: string | null;
 }
 
+export interface NetworkInterface {
+  name: string;
+  ip: string;
+  state: string;
+  rx?: string | null;
+  tx?: string | null;
+  rxBytes?: string | null;
+  txBytes?: string | null;
+}
+
+export interface ProcessInfo {
+  pid: string;
+  user: string;
+  cpu: string;
+  mem: string;
+  command: string;
+}
+
+export interface LoginRecord {
+  user: string;
+  ip: string;
+  time: string;
+  status: "success" | "failed";
+}
+
+export interface ListeningPort {
+  protocol: "tcp" | "udp";
+  localAddress: string;
+  localPort: number;
+  state?: string;
+  pid?: number;
+  process?: string;
+}
+
+export interface FirewallRule {
+  chain: string;
+  target: string;
+  protocol: string;
+  source: string;
+  destination: string;
+  dport?: string;
+  sport?: string;
+  state?: string;
+  interface?: string;
+  extra?: string;
+}
+
+export interface FirewallChain {
+  name: string;
+  policy: string;
+  rules: FirewallRule[];
+}
+
 export type ServerMetrics = {
   cpu: CpuMetrics;
   memory: MemoryMetrics;
   disk: DiskMetrics;
+  network?: { interfaces?: NetworkInterface[] };
+  uptime?: { seconds?: number | null; formatted?: string | null };
+  system?: {
+    hostname?: string | null;
+    os?: string | null;
+    kernel?: string | null;
+    arch?: string | null;
+  };
+  processes?: {
+    total?: number | null;
+    running?: number | null;
+    top?: ProcessInfo[];
+  };
+  login_stats?: {
+    recentLogins?: LoginRecord[];
+    failedLogins?: LoginRecord[];
+    totalLogins?: number;
+    uniqueIPs?: number;
+  };
+  ports?: {
+    source?: "ss" | "netstat" | "none";
+    ports?: ListeningPort[];
+  };
+  firewall?: {
+    type?: "iptables" | "nftables" | "none";
+    status?: "active" | "inactive" | "unknown";
+    chains?: FirewallChain[];
+  };
   lastChecked: string;
 };
 
@@ -780,6 +861,12 @@ function initializeApiInstances() {
 
   // Docker Management API (port 30007)
   dockerApi = createApiInstance(getApiUrl("/docker", 30007), "DOCKER");
+
+  // Tmux Monitor API (port 30010) --- tmux-monitor ---
+  tmuxMonitorApi = createApiInstance(
+    getApiUrl("/tmux_monitor", 30010),
+    "TMUX_MONITOR",
+  );
 }
 
 // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
@@ -807,6 +894,9 @@ export let rbacApi: AxiosInstance;
 
 // Docker Management API (port 30007)
 export let dockerApi: AxiosInstance;
+
+// Tmux Monitor API (port 30010) --- tmux-monitor ---
+export let tmuxMonitorApi: AxiosInstance;
 
 // Pre-initialize with default values to avoid undefined errors during early mounting
 initializeApiInstances();
@@ -1411,6 +1501,7 @@ export {
   updateSSHHost,
   wakeOnLan,
   bulkImportSSHHosts,
+  discoverProxmoxGuests,
   bulkUpdateSSHHosts,
   deleteSSHHost,
   getSSHHostById,
@@ -1504,7 +1595,17 @@ export {
   submitMetricsTOTP,
   refreshServerPolling,
   notifyHostCreatedOrUpdated,
-} from "@/api/server-stats-api";
+} from "@/api/host-metrics-status-api";
+
+export {
+  getHostMetricsLayout,
+  saveHostMetricsLayout,
+  getHostPlatform,
+  managerGet,
+  managerGetSub,
+  managerPost,
+  type PlatformInfo,
+} from "@/api/host-metrics-api";
 
 export {
   getGlobalMonitoringSettings,
@@ -1784,10 +1885,12 @@ export async function changePassword(oldPassword: string, newPassword: string) {
 export async function getOIDCAuthorizeUrl(
   rememberMe = false,
   desktopCallbackPort?: number,
+  providerId?: number,
+  appCallbackUrl?: string,
 ): Promise<OIDCAuthorize> {
   try {
     const response = await authApi.get("/users/oidc/authorize", {
-      params: { rememberMe, desktopCallbackPort },
+      params: { rememberMe, desktopCallbackPort, providerId, appCallbackUrl },
     });
     return response.data;
   } catch (error) {
@@ -1816,6 +1919,8 @@ export {
   updatePasswordResetAllowed,
   updateOIDCConfig,
   disableOIDCConfig,
+  getCommandHistoryEnabled,
+  updateCommandHistoryEnabled,
   type ApiKey,
   type CreatedApiKey,
 } from "@/api/user-management-api";
@@ -1966,12 +2071,6 @@ export {
   downloadContainerLogs,
   getContainerStats,
 } from "@/api/docker-api";
-
-export {
-  getDashboardPreferences,
-  saveDashboardPreferences,
-  type DashboardLayout,
-} from "@/api/dashboard-preferences-api";
 
 export {
   getOpenTabs,

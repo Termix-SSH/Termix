@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Copy, Search, Terminal, Trash2 } from "lucide-react";
@@ -20,23 +21,11 @@ export function HistoryPanel({
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [commands, setCommands] = useState<string[]>([]);
-  const [trackingEnabled, setTrackingEnabled] = useState(
-    () => localStorage.getItem("commandHistoryTracking") === "true",
-  );
 
   const activeTab = terminalTabs.find((t) => t.id === activeTabId);
   const activeIsTerminal = !!activeTab;
   const hostId = activeTab?.host?.id ? parseInt(activeTab.host.id, 10) : null;
-
-  useEffect(() => {
-    const handler = () =>
-      setTrackingEnabled(
-        localStorage.getItem("commandHistoryTracking") === "true",
-      );
-    window.addEventListener("commandHistoryTrackingChanged", handler);
-    return () =>
-      window.removeEventListener("commandHistoryTrackingChanged", handler);
-  }, []);
+  const trackingEnabled = activeTab?.host?.enableCommandHistory !== false;
 
   useEffect(() => {
     if (!hostId || !trackingEnabled) {
@@ -154,7 +143,7 @@ export function HistoryPanel({
                   variant="ghost"
                   size="icon"
                   className="size-6 text-muted-foreground hover:text-foreground"
-                  onClick={() => navigator.clipboard.writeText(cmd)}
+                  onClick={() => copyToClipboard(cmd)}
                 >
                   <Copy className="size-3" />
                 </Button>

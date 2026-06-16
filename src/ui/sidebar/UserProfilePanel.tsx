@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   getUserInfo,
   getApiKeys,
@@ -14,6 +15,7 @@ import {
   getVersionInfo,
   getUserRoles,
   saveUserPreferences,
+  getUserPreferences,
 } from "@/main-axios";
 import type { UserRole } from "@/main-axios";
 import type React from "react";
@@ -34,19 +36,28 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
+  Clock,
   Copy,
   Eye,
   EyeOff,
+  Hammer,
   KeyRound,
+  LayoutPanelLeft,
   Network,
   Palette,
+  Play,
+  Plug,
   Plus,
+  RotateCcw,
+  ScrollText,
+  Server,
   Shield,
   ShieldCheck,
   Trash2,
   Type,
   User,
   X,
+  Zap,
 } from "lucide-react";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
 import {
@@ -407,7 +418,20 @@ export function UserProfilePanel({
 }: {
   username?: string;
   onLogout?: () => void;
-  userPrefs?: { reopenTabsOnLogin: boolean };
+  userPrefs?: {
+    reopenTabsOnLogin: boolean;
+    storageMode?: string | null;
+    commandAutocomplete?: boolean | null;
+    commandPaletteEnabled?: boolean | null;
+    showHostTags?: boolean | null;
+    hostTrayOnClick?: boolean | null;
+    pinAppRail?: boolean | null;
+    foldersCollapsed?: boolean | null;
+    confirmSnippetExecution?: boolean | null;
+    disableUpdateCheck?: boolean | null;
+    confirmTabClose?: boolean | null;
+    hiddenRailTabs?: string | null;
+  };
   onPrefsChange?: (prefs: { reopenTabsOnLogin: boolean }) => void;
 }) {
   const { t } = useTranslation();
@@ -461,6 +485,7 @@ export function UserProfilePanel({
   const [newKeyOpen, setNewKeyOpen] = useState(false);
   const colorInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
+  const localSnapshot = useRef<Record<string, string | null>>({});
 
   // Appearance state — initialized from localStorage
   const [accentColor, setAccentColor] = useState(
@@ -475,16 +500,13 @@ export function UserProfilePanel({
   const [language, setLanguage] = useState(
     () => localStorage.getItem("i18nextLng") ?? "en",
   );
+  const [storageMode, setStorageMode] = useState<"local" | "cloud">(() =>
+    userPrefs?.storageMode === "cloud" ? "cloud" : "local",
+  );
 
   // Settings toggles — all backed by localStorage
   const [commandAutocomplete, setCommandAutocomplete] = useState(
     () => localStorage.getItem("commandAutocomplete") === "true",
-  );
-  const [commandHistoryTracking, setCommandHistoryTracking] = useState(
-    () => localStorage.getItem("commandHistoryTracking") === "true",
-  );
-  const [terminalSyntaxHighlighting, setTerminalSyntaxHighlighting] = useState(
-    () => localStorage.getItem("terminalSyntaxHighlighting") === "true",
   );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
@@ -512,6 +534,14 @@ export function UserProfilePanel({
   const [confirmTabClose, setConfirmTabClose] = useState(
     () => localStorage.getItem("confirmTabClose") === "true",
   );
+  const [hiddenRailTabs, setHiddenRailTabs] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem("hiddenRailTabs");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   // API keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -554,18 +584,295 @@ export function UserProfilePanel({
       .catch(() => {});
   }, [t]);
 
-  function saveAppearancePreference(prefs: {
-    theme?: ThemeId;
-    fontSize?: FontSizeId;
-    accentColor?: string;
-    language?: string;
-  }) {
+  function saveToCloud(prefs: Parameters<typeof saveUserPreferences>[0]) {
     void saveUserPreferences(prefs).catch(() => {});
+  }
+
+  async function handleStorageModeChange(mode: "local" | "cloud") {
+    setStorageMode(mode);
+    if (mode === "cloud") {
+      // Snapshot current browser localStorage values so any tab can restore them later
+      const SNAPSHOT_KEYS = [
+        "termix-accent",
+        "termix-font-size",
+        "i18nextLng",
+        "commandAutocomplete",
+        "commandPaletteShortcutEnabled",
+        "showHostTags",
+        "hostTrayOnClick",
+        "pinAppRail",
+        "defaultSnippetFoldersCollapsed",
+        "confirmSnippetExecution",
+        "disableUpdateCheck",
+        "confirmTabClose",
+        "hiddenRailTabs",
+      ];
+      const snap: Record<string, string | null> = { __theme: theme };
+      for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
+      localSnapshot.current = snap;
+      localStorage.setItem("termix-local-snapshot", JSON.stringify(snap));
+
+      try {
+        const prefs = await getUserPreferences();
+        if (prefs.theme) setTheme(prefs.theme as ThemeId);
+        if (prefs.fontSize) {
+          setFontSize(prefs.fontSize as FontSizeId);
+          applyFontSize(prefs.fontSize as FontSizeId);
+        }
+        if (prefs.accentColor) {
+          setAccentColor(prefs.accentColor);
+          setCustomColorInput(prefs.accentColor);
+          localStorage.setItem("termix-accent", prefs.accentColor);
+          applyAccentColor(prefs.accentColor);
+        }
+        if (prefs.language) {
+          setLanguage(prefs.language);
+          localStorage.setItem("i18nextLng", prefs.language);
+          void i18n.changeLanguage(prefs.language);
+        }
+        if (prefs.commandAutocomplete != null) {
+          setCommandAutocomplete(prefs.commandAutocomplete);
+          localStorage.setItem(
+            "commandAutocomplete",
+            String(prefs.commandAutocomplete),
+          );
+        }
+        if (prefs.commandPaletteEnabled != null) {
+          setCommandPaletteEnabled(prefs.commandPaletteEnabled);
+          localStorage.setItem(
+            "commandPaletteShortcutEnabled",
+            String(prefs.commandPaletteEnabled),
+          );
+        }
+        if (prefs.showHostTags != null) {
+          setShowHostTags(prefs.showHostTags);
+          localStorage.setItem("showHostTags", String(prefs.showHostTags));
+          window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+        }
+        if (prefs.hostTrayOnClick != null) {
+          setHostTrayOnClick(prefs.hostTrayOnClick);
+          localStorage.setItem(
+            "hostTrayOnClick",
+            String(prefs.hostTrayOnClick),
+          );
+        }
+        if (prefs.pinAppRail != null) {
+          setPinAppRail(prefs.pinAppRail);
+          localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+        }
+        if (prefs.foldersCollapsed != null) {
+          setFoldersCollapsed(prefs.foldersCollapsed);
+          localStorage.setItem(
+            "defaultSnippetFoldersCollapsed",
+            String(prefs.foldersCollapsed),
+          );
+        }
+        if (prefs.confirmSnippetExecution != null) {
+          setConfirmSnippetExecution(prefs.confirmSnippetExecution);
+          localStorage.setItem(
+            "confirmSnippetExecution",
+            String(prefs.confirmSnippetExecution),
+          );
+        }
+        if (prefs.disableUpdateCheck != null) {
+          setDisableUpdateCheck(prefs.disableUpdateCheck);
+          localStorage.setItem(
+            "disableUpdateCheck",
+            String(prefs.disableUpdateCheck),
+          );
+        }
+        if (prefs.confirmTabClose != null) {
+          setConfirmTabClose(prefs.confirmTabClose);
+          localStorage.setItem(
+            "confirmTabClose",
+            String(prefs.confirmTabClose),
+          );
+        }
+        if (prefs.hiddenRailTabs != null) {
+          const s = new Set<string>(JSON.parse(prefs.hiddenRailTabs));
+          setHiddenRailTabs(s);
+          localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
+          window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+        }
+      } catch {
+        // leave UI as-is on error
+      }
+      saveToCloud({ storageMode: "cloud" });
+    } else {
+      restoreLocalSnapshot();
+      saveToCloud({ storageMode: "local" });
+    }
+  }
+
+  function resetToDefaults() {
+    const DEFAULT_ACCENT = "#f59145";
+    setTheme("system");
+    setFontSize("md");
+    applyFontSize("md");
+    setAccentColor(DEFAULT_ACCENT);
+    setCustomColorInput(DEFAULT_ACCENT);
+    localStorage.setItem("termix-accent", DEFAULT_ACCENT);
+    applyAccentColor(DEFAULT_ACCENT);
+    setLanguage("en");
+    localStorage.setItem("i18nextLng", "en");
+    void i18n.changeLanguage("en");
+    setCommandAutocomplete(false);
+    localStorage.setItem("commandAutocomplete", "false");
+    setCommandPaletteEnabled(true);
+    localStorage.setItem("commandPaletteShortcutEnabled", "true");
+    setShowHostTags(true);
+    localStorage.setItem("showHostTags", "true");
+    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+    setHostTrayOnClick(false);
+    localStorage.setItem("hostTrayOnClick", "false");
+    setPinAppRail(false);
+    localStorage.setItem("pinAppRail", "false");
+    setFoldersCollapsed(true);
+    localStorage.removeItem("defaultSnippetFoldersCollapsed");
+    setConfirmSnippetExecution(false);
+    localStorage.setItem("confirmSnippetExecution", "false");
+    setDisableUpdateCheck(false);
+    localStorage.setItem("disableUpdateCheck", "false");
+    setConfirmTabClose(false);
+    localStorage.setItem("confirmTabClose", "false");
+    setHiddenRailTabs(new Set());
+    localStorage.removeItem("hiddenRailTabs");
+    window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+    if (storageMode === "cloud") {
+      saveToCloud({
+        theme: "system",
+        fontSize: "md",
+        accentColor: DEFAULT_ACCENT,
+        language: "en",
+        commandAutocomplete: false,
+        commandPaletteEnabled: true,
+        showHostTags: true,
+        hostTrayOnClick: false,
+        pinAppRail: false,
+        foldersCollapsed: true,
+        confirmSnippetExecution: false,
+        disableUpdateCheck: false,
+        confirmTabClose: false,
+        hiddenRailTabs: "[]",
+      });
+    }
+    localSnapshot.current = {};
+    localStorage.removeItem("termix-local-snapshot");
+    toast.success(t("newUi.sidebar.userProfile.resetToDefaultsSuccess"));
+  }
+
+  function restoreLocalSnapshot() {
+    // Prefer the persisted snapshot (survives new tabs/reloads), fall back to in-memory ref.
+    // If neither exists there were never any browser values to restore, so use current localStorage.
+    const persisted = localStorage.getItem("termix-local-snapshot");
+    const snap: Record<string, string | null> = persisted
+      ? (JSON.parse(persisted) as Record<string, string | null>)
+      : localSnapshot.current;
+    const hasSnap = Object.keys(snap).length > 0;
+    const restore = (key: string, fallback: string | null = null) =>
+      hasSnap
+        ? snap[key] !== undefined
+          ? snap[key]
+          : fallback
+        : (localStorage.getItem(key) ?? fallback);
+
+    const restoredTheme =
+      ((hasSnap ? snap["__theme"] : theme) as ThemeId) ?? "system";
+    setTheme(restoredTheme);
+
+    const restoredFontSize =
+      (restore("termix-font-size", "md") as FontSizeId) ?? "md";
+    setFontSize(restoredFontSize);
+    applyFontSize(restoredFontSize);
+
+    const restoredAccent = restore("termix-accent", "#f59145") ?? "#f59145";
+    setAccentColor(restoredAccent);
+    setCustomColorInput(restoredAccent);
+    localStorage.setItem("termix-accent", restoredAccent);
+    applyAccentColor(restoredAccent);
+
+    const restoredLang = restore("i18nextLng", "en") ?? "en";
+    setLanguage(restoredLang);
+    localStorage.setItem("i18nextLng", restoredLang);
+    void i18n.changeLanguage(restoredLang);
+
+    const restoredAutocomplete =
+      restore("commandAutocomplete", "false") === "true";
+    setCommandAutocomplete(restoredAutocomplete);
+    localStorage.setItem("commandAutocomplete", String(restoredAutocomplete));
+
+    const restoredPalette =
+      restore("commandPaletteShortcutEnabled", "true") !== "false";
+    setCommandPaletteEnabled(restoredPalette);
+    localStorage.setItem(
+      "commandPaletteShortcutEnabled",
+      String(restoredPalette),
+    );
+
+    const restoredHostTags = restore("showHostTags", "true") !== "false";
+    setShowHostTags(restoredHostTags);
+    localStorage.setItem("showHostTags", String(restoredHostTags));
+    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
+
+    const restoredTrayOnClick = restore("hostTrayOnClick", "false") === "true";
+    setHostTrayOnClick(restoredTrayOnClick);
+    localStorage.setItem("hostTrayOnClick", String(restoredTrayOnClick));
+
+    const restoredPinRail = restore("pinAppRail", "false") === "true";
+    setPinAppRail(restoredPinRail);
+    localStorage.setItem("pinAppRail", String(restoredPinRail));
+
+    const restoredFolders =
+      restore("defaultSnippetFoldersCollapsed", null) !== "false";
+    setFoldersCollapsed(restoredFolders);
+    const snapFolders = hasSnap
+      ? snap["defaultSnippetFoldersCollapsed"]
+      : localStorage.getItem("defaultSnippetFoldersCollapsed");
+    if (snapFolders == null) {
+      localStorage.removeItem("defaultSnippetFoldersCollapsed");
+    } else {
+      localStorage.setItem("defaultSnippetFoldersCollapsed", snapFolders);
+    }
+
+    const restoredConfirmSnippet =
+      restore("confirmSnippetExecution", "false") === "true";
+    setConfirmSnippetExecution(restoredConfirmSnippet);
+    localStorage.setItem(
+      "confirmSnippetExecution",
+      String(restoredConfirmSnippet),
+    );
+
+    const restoredUpdateCheck =
+      restore("disableUpdateCheck", "false") === "true";
+    setDisableUpdateCheck(restoredUpdateCheck);
+    localStorage.setItem("disableUpdateCheck", String(restoredUpdateCheck));
+
+    const restoredConfirmTab = restore("confirmTabClose", "false") === "true";
+    setConfirmTabClose(restoredConfirmTab);
+    localStorage.setItem("confirmTabClose", String(restoredConfirmTab));
+
+    const restoredHiddenRaw = hasSnap
+      ? snap["hiddenRailTabs"]
+      : localStorage.getItem("hiddenRailTabs");
+    if (restoredHiddenRaw == null) {
+      setHiddenRailTabs(new Set());
+      localStorage.removeItem("hiddenRailTabs");
+    } else {
+      try {
+        setHiddenRailTabs(new Set(JSON.parse(restoredHiddenRaw)));
+      } catch {
+        setHiddenRailTabs(new Set());
+      }
+      localStorage.setItem("hiddenRailTabs", restoredHiddenRaw);
+    }
+    window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+    localStorage.removeItem("termix-local-snapshot");
+    localSnapshot.current = {};
   }
 
   function handleThemeChange(id: ThemeId) {
     setTheme(id);
-    saveAppearancePreference({ theme: id });
+    if (storageMode === "cloud") saveToCloud({ theme: id });
   }
 
   function handleAccentChange(value: string) {
@@ -573,20 +880,20 @@ export function UserProfilePanel({
     setCustomColorInput(value);
     localStorage.setItem("termix-accent", value);
     applyAccentColor(value);
-    saveAppearancePreference({ accentColor: value });
+    if (storageMode === "cloud") saveToCloud({ accentColor: value });
   }
 
   function handleFontSizeChange(id: FontSizeId) {
     setFontSize(id);
     applyFontSize(id);
-    saveAppearancePreference({ fontSize: id });
+    if (storageMode === "cloud") saveToCloud({ fontSize: id });
   }
 
   function handleLanguageChange(code: string) {
     setLanguage(code);
     localStorage.setItem("i18nextLng", code);
     i18n.changeLanguage(code);
-    saveAppearancePreference({ language: code });
+    if (storageMode === "cloud") saveToCloud({ language: code });
   }
 
   function toggle(id: UserProfileSection) {
@@ -688,6 +995,45 @@ export function UserProfilePanel({
         onAdd={(key) => setApiKeys((prev) => [key, ...prev])}
         userId={userId}
       />
+
+      {/* Storage mode toggle */}
+      <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {t("newUi.sidebar.userProfile.storageModeSwitch")}
+        </span>
+        <div className="flex border border-border overflow-hidden w-full">
+          <button
+            onClick={() => handleStorageModeChange("local")}
+            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              storageMode === "local"
+                ? "bg-accent-brand text-white"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            }`}
+          >
+            {t("newUi.sidebar.userProfile.storageModeLocal")}
+          </button>
+          <button
+            onClick={() => handleStorageModeChange("cloud")}
+            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+              storageMode === "cloud"
+                ? "bg-accent-brand text-white"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+            }`}
+          >
+            {t("newUi.sidebar.userProfile.storageModeCloud")}
+          </button>
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          {t("newUi.sidebar.userProfile.storageModeDescription")}
+        </p>
+        <button
+          onClick={resetToDefaults}
+          className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <RotateCcw className="size-3" />
+          {t("newUi.sidebar.userProfile.resetToDefaults")}
+        </button>
+      </div>
 
       {/* Account */}
       <AccordionSection
@@ -964,42 +1310,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setCommandAutocomplete(v);
                   localStorage.setItem("commandAutocomplete", v.toString());
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.historyTracking")}
-              description={t("newUi.sidebar.userProfile.historyTrackingDesc")}
-            >
-              <FakeSwitch
-                checked={commandHistoryTracking}
-                onChange={(v) => {
-                  setCommandHistoryTracking(v);
-                  localStorage.setItem("commandHistoryTracking", v.toString());
-                  window.dispatchEvent(
-                    new Event("commandHistoryTrackingChanged"),
-                  );
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.syntaxHighlighting")}
-              description={t(
-                "newUi.sidebar.userProfile.syntaxHighlightingDesc",
-              )}
-              badge="BETA"
-            >
-              <FakeSwitch
-                checked={terminalSyntaxHighlighting}
-                onChange={(v) => {
-                  setTerminalSyntaxHighlighting(v);
-                  localStorage.setItem(
-                    "terminalSyntaxHighlighting",
-                    v.toString(),
-                  );
-                  window.dispatchEvent(
-                    new Event("terminalSyntaxHighlightingChanged"),
-                  );
+                  if (storageMode === "cloud")
+                    saveToCloud({ commandAutocomplete: v });
                 }}
               />
             </SettingRow>
@@ -1018,6 +1330,8 @@ export function UserProfilePanel({
                   window.dispatchEvent(
                     new Event("commandPaletteShortcutEnabledChanged"),
                   );
+                  if (storageMode === "cloud")
+                    saveToCloud({ commandPaletteEnabled: v });
                 }}
               />
             </SettingRow>
@@ -1046,6 +1360,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setConfirmTabClose(v);
                   localStorage.setItem("confirmTabClose", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ confirmTabClose: v });
                 }}
               />
             </SettingRow>
@@ -1065,6 +1381,7 @@ export function UserProfilePanel({
                   setShowHostTags(v);
                   localStorage.setItem("showHostTags", v.toString());
                   window.dispatchEvent(new Event("showHostTagsChanged"));
+                  if (storageMode === "cloud") saveToCloud({ showHostTags: v });
                 }}
               />
             </SettingRow>
@@ -1078,6 +1395,8 @@ export function UserProfilePanel({
                   setHostTrayOnClick(v);
                   localStorage.setItem("hostTrayOnClick", v.toString());
                   window.dispatchEvent(new Event("hostTrayOnClickChanged"));
+                  if (storageMode === "cloud")
+                    saveToCloud({ hostTrayOnClick: v });
                 }}
               />
             </SettingRow>
@@ -1091,9 +1410,97 @@ export function UserProfilePanel({
                   setPinAppRail(v);
                   localStorage.setItem("pinAppRail", v.toString());
                   window.dispatchEvent(new Event("pinAppRailChanged"));
+                  if (storageMode === "cloud") saveToCloud({ pinAppRail: v });
                 }}
               />
             </SettingRow>
+          </div>
+
+          <div className="flex flex-col gap-1 border-t border-border pt-3">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
+              {t("newUi.sidebar.userProfile.settingsNavigation")}
+            </span>
+            <p className="text-[10px] text-muted-foreground mb-2">
+              {t("newUi.sidebar.userProfile.navigationTabsDesc")}
+            </p>
+            {(
+              [
+                {
+                  id: "hosts",
+                  icon: <Server size={12} />,
+                  label: t("nav.hosts"),
+                },
+                {
+                  id: "credentials",
+                  icon: <KeyRound size={12} />,
+                  label: t("nav.credentials"),
+                },
+                {
+                  id: "connections",
+                  icon: <Plug size={12} />,
+                  label: t("nav.connections"),
+                },
+                {
+                  id: "quick-connect",
+                  icon: <Zap size={12} />,
+                  label: t("nav.quickConnect"),
+                },
+                {
+                  id: "ssh-tools",
+                  icon: <Hammer size={12} />,
+                  label: t("nav.sshTools"),
+                },
+                {
+                  id: "snippets",
+                  icon: <Play size={12} />,
+                  label: t("nav.snippets"),
+                },
+                {
+                  id: "history",
+                  icon: <Clock size={12} />,
+                  label: t("nav.history"),
+                },
+                {
+                  id: "session-logs",
+                  icon: <ScrollText size={12} />,
+                  label: t("nav.sessionLogs"),
+                },
+                {
+                  id: "split-screen",
+                  icon: <LayoutPanelLeft size={12} />,
+                  label: t("nav.splitScreen"),
+                },
+                {
+                  id: "network_graph",
+                  icon: <Network size={12} />,
+                  label: t("nav.networkGraph"),
+                },
+              ] as { id: string; icon: React.ReactNode; label: string }[]
+            ).map((tab) => (
+              <div
+                key={tab.id}
+                className="flex items-center justify-between py-1.5"
+              >
+                <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                  <span className="text-muted-foreground">{tab.icon}</span>
+                  {tab.label}
+                </span>
+                <FakeSwitch
+                  checked={!hiddenRailTabs.has(tab.id)}
+                  onChange={(visible) => {
+                    const next = new Set(hiddenRailTabs);
+                    if (visible) next.delete(tab.id);
+                    else next.add(tab.id);
+                    setHiddenRailTabs(next);
+                    const serialized = JSON.stringify([...next]);
+                    localStorage.setItem("hiddenRailTabs", serialized);
+                    window.dispatchEvent(new Event("hiddenRailTabsChanged"));
+                    if (storageMode === "cloud")
+                      saveToCloud({ hiddenRailTabs: serialized });
+                  }}
+                />
+              </div>
+            ))}
           </div>
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
@@ -1115,6 +1522,8 @@ export function UserProfilePanel({
                   window.dispatchEvent(
                     new Event("defaultSnippetFoldersCollapsedChanged"),
                   );
+                  if (storageMode === "cloud")
+                    saveToCloud({ foldersCollapsed: v });
                 }}
               />
             </SettingRow>
@@ -1127,6 +1536,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setConfirmSnippetExecution(v);
                   localStorage.setItem("confirmSnippetExecution", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ confirmSnippetExecution: v });
                 }}
               />
             </SettingRow>
@@ -1147,6 +1558,8 @@ export function UserProfilePanel({
                 onChange={(v) => {
                   setDisableUpdateCheck(v);
                   localStorage.setItem("disableUpdateCheck", v.toString());
+                  if (storageMode === "cloud")
+                    saveToCloud({ disableUpdateCheck: v });
                 }}
               />
             </SettingRow>
@@ -1166,9 +1579,19 @@ export function UserProfilePanel({
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium">
-                  {t("newUi.sidebar.userProfile.totpAuthenticator")}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium">
+                    {t("newUi.sidebar.userProfile.totpAuthenticator")}
+                  </span>
+                  <a
+                    href="https://docs.termix.site/features/authentication/totp"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-accent-brand hover:underline"
+                  >
+                    {t("hosts.docsLink")}
+                  </a>
+                </div>
                 <span className="text-[10px] text-muted-foreground">
                   {totpEnabled
                     ? t("newUi.sidebar.userProfile.totpEnabled")
@@ -1271,7 +1694,7 @@ export function UserProfilePanel({
                   </span>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(totpSecret);
+                      copyToClipboard(totpSecret);
                       toast.info(t("newUi.sidebar.userProfile.secretCopied"));
                     }}
                     className="text-muted-foreground hover:text-accent-brand shrink-0"

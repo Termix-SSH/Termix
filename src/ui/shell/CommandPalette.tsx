@@ -25,6 +25,7 @@ import {
   Network,
   User,
   KeyRound,
+  Layers, // --- tmux-monitor ---
   Monitor,
   MousePointerClick,
   Clock,
@@ -55,7 +56,7 @@ const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
 const ACTIVITY_TAB_TYPE: Record<string, TabType> = {
   terminal: "terminal",
   file_manager: "files",
-  server_stats: "stats",
+  server_stats: "host-metrics",
   tunnel: "tunnel",
   docker: "docker",
   telnet: "telnet",
@@ -81,8 +82,19 @@ function getSshActions(host: Host): {
       label: "Files",
     },
     host.enableDocker && { type: "docker", icon: Box, label: "Docker" },
+    // --- tmux-monitor --- opt-in per host, off by default
+    host.enableTerminal !== false &&
+      host.enableTmuxMonitor && {
+        type: "tmux_monitor",
+        icon: Layers,
+        label: "Tmux Monitor",
+      },
     host.enableTunnel && { type: "tunnel", icon: Network, label: "Tunnels" },
-    metricsEnabled && { type: "stats", icon: Activity, label: "Stats" },
+    metricsEnabled && {
+      type: "host-metrics",
+      icon: Activity,
+      label: "Host Metrics",
+    },
   ].filter(Boolean) as {
     type: TabType;
     icon: React.ElementType;
@@ -245,6 +257,24 @@ export function CommandPalette({
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {t("commandPalette.userProfileDesc")}
+                  </span>
+                </div>
+              </CommandItem>
+
+              {/* --- tmux-monitor --- */}
+              <CommandItem
+                onSelect={() => handleAction(() => onOpenTab("tmux_monitor"))}
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+              >
+                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
+                  <Layers className="size-4 text-accent-brand" />
+                </div>
+                <div className="flex flex-col flex-1">
+                  <span className="text-sm font-semibold">
+                    {t("commandPalette.tmuxMonitor")}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("commandPalette.tmuxMonitorDesc")}
                   </span>
                 </div>
               </CommandItem>

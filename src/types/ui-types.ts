@@ -10,7 +10,7 @@ export type Host = {
   ram: number | null;
   lastAccess: string;
   tags?: string[];
-  authType: "password" | "key" | "credential" | "none" | "opkssh";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
   credentialId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
@@ -27,6 +27,7 @@ export type Host = {
   pin?: boolean;
 
   enableTerminal: boolean;
+  enableCommandHistory: boolean;
   terminalConfig?: {
     cursorBlink: boolean;
     cursorStyle: "block" | "underline" | "bar";
@@ -90,6 +91,14 @@ export type Host = {
   defaultPath?: string;
 
   enableDocker: boolean;
+  enableProxmox: boolean;
+  enableTmuxMonitor: boolean;
+  proxmoxConfig?: {
+    defaultCredentialId: number | null;
+    windowsPatterns: string;
+    dockerPatterns: string;
+    preferredPrefixes: string;
+  } | null;
 
   statsConfig?: {
     statusCheckEnabled: boolean;
@@ -144,6 +153,9 @@ export type Credential = {
 export type HostFolder = {
   name: string;
   children: (Host | HostFolder)[];
+  path?: string;
+  color?: string;
+  icon?: string;
 };
 
 export type TabType =
@@ -152,14 +164,15 @@ export type TabType =
   | "rdp"
   | "vnc"
   | "telnet"
-  | "stats"
+  | "host-metrics"
   | "files"
   | "host-manager"
   | "user-profile"
   | "admin-settings"
   | "docker"
   | "tunnel"
-  | "network_graph";
+  | "network_graph"
+  | "tmux_monitor"; // --- tmux-monitor ---
 
 export type TunnelStatusValue =
   | "CONNECTED"
@@ -258,12 +271,13 @@ export type UserProfileSection =
   | "api-keys";
 export type AdminSection =
   | "general"
-  | "oidc"
+  | "sso"
   | "users"
   | "sessions"
   | "roles"
   | "database"
-  | "api-keys";
+  | "api-keys"
+  | "audit-log";
 export type AccentColorId = string;
 export type ThemeId =
   | "dark"
