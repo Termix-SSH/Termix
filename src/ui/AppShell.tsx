@@ -395,13 +395,25 @@ export function AppShell({
           // Persist the current browser values before overwriting, so any tab can restore them
           if (!localStorage.getItem("termix-local-snapshot")) {
             const SNAPSHOT_KEYS = [
-              "termix-accent", "termix-font-size", "i18nextLng",
-              "commandAutocomplete", "commandPaletteShortcutEnabled", "showHostTags",
-              "hostTrayOnClick", "pinAppRail", "defaultSnippetFoldersCollapsed",
-              "confirmSnippetExecution", "disableUpdateCheck", "confirmTabClose", "hiddenRailTabs",
+              "termix-accent",
+              "termix-font-size",
+              "i18nextLng",
+              "commandAutocomplete",
+              "commandPaletteShortcutEnabled",
+              "showHostTags",
+              "hostTrayOnClick",
+              "pinAppRail",
+              "defaultSnippetFoldersCollapsed",
+              "confirmSnippetExecution",
+              "disableUpdateCheck",
+              "confirmTabClose",
+              "hiddenRailTabs",
             ];
-            const snap: Record<string, string | null> = { __theme: localStorage.getItem("termix-theme") };
-            for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
+            const snap: Record<string, string | null> = {
+              __theme: localStorage.getItem("termix-theme"),
+            };
+            for (const key of SNAPSHOT_KEYS)
+              snap[key] = localStorage.getItem(key);
             localStorage.setItem("termix-local-snapshot", JSON.stringify(snap));
           }
           if (prefs.theme) setTheme(prefs.theme as ThemeId);
