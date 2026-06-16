@@ -455,7 +455,7 @@ jobs:
 
           git add -A
           git commit -m "feat: update API docs for ${{ needs.prep.outputs.version }}"
-          git push origin "dev-${{ needs.prep.outputs.version }}"
+          git push --force origin "dev-${{ needs.prep.outputs.version }}"
 
       - name: Open and squash-merge docs PR
         if: ${{ inputs.mode != 'Dry run' }}
