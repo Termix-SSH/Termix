@@ -6,6 +6,7 @@ import {
   Plus,
   Trash2,
   Play,
+  Pencil,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -163,7 +164,7 @@ export function HealthCheckCard({ hostId }: { hostId: number | null }) {
               {t("hostMetrics.managers.healthRun")}
             </Button>
             <Button variant="ghost" size="xs" onClick={() => setEditing(true)}>
-              <Plus className="size-3" />
+              <Pencil className="size-3" />
               {t("common.edit")}
             </Button>
           </>

@@ -21,8 +21,7 @@ export type HostMetricManagerId =
   | "health_check"
   | "disk_breakdown"
   | "systemd_timers"
-  | "top_memory"
-  | "docker_glance";
+  | "top_memory";
 
 export type HostMetricsCardId = HostMetricCardId | HostMetricManagerId;
 
@@ -67,7 +66,6 @@ export const MANAGER_CARD_IDS: HostMetricManagerId[] = [
   "disk_breakdown",
   "systemd_timers",
   "top_memory",
-  "docker_glance",
 ];
 
 export function isMetricCardId(id: string): id is HostMetricCardId {

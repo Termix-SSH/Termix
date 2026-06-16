@@ -1513,6 +1513,8 @@
     "networkInterfaces": "Network Interfaces",
     "noInterfacesFound": "No network interfaces found",
     "noProcessesFound": "No processes found",
+    "processesTotal": "total",
+    "processesRunning": "running",
     "loginStats": "SSH Login Statistics",
     "noRecentLoginData": "No recent login data",
     "executingQuickAction": "Executing {{name}}...",
@@ -1540,7 +1542,8 @@
       "protocol": "Proto",
       "port": "Port",
       "source": "Source",
-      "anywhere": "Anywhere"
+      "anywhere": "Anywhere",
+      "chains": "chains"
     },
     "loadAvg": "Load Avg",
     "swap": "Swap",
