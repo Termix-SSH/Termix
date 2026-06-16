@@ -167,8 +167,10 @@ jobs:
           download_translations: false
           create_pull_request: false
           push_translations: false
+          token: ${{ secrets.CROWDIN_API_KEY }}
+          project_id: "858252"
         env:
-          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
 
       - name: Machine pre-translate untranslated strings
         env:
@@ -183,8 +185,10 @@ jobs:
           download_translations: true
           create_pull_request: false
           push_translations: false
+          token: ${{ secrets.CROWDIN_API_KEY }}
+          project_id: "858252"
         env:
-          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
 
       - name: Commit translations to dev branch
         run: |
