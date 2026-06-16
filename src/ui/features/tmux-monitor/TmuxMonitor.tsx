@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   ChevronsDownUp,
   ChevronsUpDown,
+  ExternalLink,
   Layers,
   MonitorPlay,
   Plus,
@@ -881,6 +882,16 @@ export function TmuxMonitor({
                 className={`size-3.5 ${overviewLoading || refreshing ? "animate-spin" : ""}`}
               />
             </button>
+            <a
+              href="https://docs.termix.site/features/terminal/tmux"
+              target="_blank"
+              rel="noreferrer"
+              className="text-muted-foreground hover:text-foreground"
+              title={t("hosts.docsLink")}
+              aria-label={t("hosts.docsLink")}
+            >
+              <ExternalLink className="size-3.5" />
+            </a>
           </span>
         </div>
         {/* Radix wraps the viewport content in a display:table div sized to

@@ -136,7 +136,7 @@ export function AdminGeneralSettingsSection({
           />
         </SettingRow>
 
-        <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
+        <div className="flex flex-col gap-2 pt-3 mt-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("admin.sessionTimeout")}
           </span>
@@ -215,7 +215,19 @@ export function AdminGeneralSettingsSection({
         <div className="flex flex-col gap-2 border-t border-border pt-3 mt-2">
           <SettingRow
             label={t("admin.enableGuacamole")}
-            description={t("admin.enableGuacamoleDesc")}
+            description={
+              <>
+                {t("admin.enableGuacamoleDesc")}{" "}
+                <a
+                  href="https://docs.termix.site/setup/remote-desktop"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent-brand hover:underline"
+                >
+                  {t("admin.enableGuacamoleDocsLink")}
+                </a>
+              </>
+            }
           >
             <AdminToggle on={guacEnabled} onToggle={handleToggleGuacamole} />
           </SettingRow>
@@ -250,7 +262,15 @@ export function AdminGeneralSettingsSection({
               {t("admin.tailscaleApiKey")}
             </span>
             <span className="text-[10px] text-muted-foreground">
-              {t("admin.tailscaleApiKeyDescription")}
+              {t("admin.tailscaleApiKeyDescription")}{" "}
+              <a
+                href="https://docs.termix.site/features/networking/tailscale"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent-brand hover:underline"
+              >
+                {t("admin.tailscaleApiKeyDocsLink")}
+              </a>
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -369,7 +389,15 @@ export function AdminOidcSettingsSection({
         <span className="text-[10px] text-muted-foreground">
           {t("admin.oidcDescription").split("*")[0]}
           <span className="text-accent-brand">*</span>
-          {t("admin.oidcDescription").split("*")[1]}
+          {t("admin.oidcDescription").split("*")[1]}{" "}
+          <a
+            href="https://docs.termix.site/features/authentication/oidc"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent-brand hover:underline"
+          >
+            {t("admin.oidcDocsLink")}
+          </a>
         </span>
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
@@ -674,6 +702,16 @@ export function AdminSSOSection({
       onToggle={onToggle}
     >
       <div className="flex flex-col gap-3 pt-3">
+        <span className="text-[10px] text-muted-foreground">
+          <a
+            href="https://docs.termix.site/features/authentication/sso-providers"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent-brand hover:underline"
+          >
+            {t("admin.ssoDocsLink")}
+          </a>
+        </span>
         {providers.length === 0 ? (
           <span className="text-[10px] text-muted-foreground">
             {t("admin.ssoNoProviders")}

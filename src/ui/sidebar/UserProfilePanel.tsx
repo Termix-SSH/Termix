@@ -593,10 +593,19 @@ export function UserProfilePanel({
     if (mode === "cloud") {
       // Snapshot current browser localStorage values so any tab can restore them later
       const SNAPSHOT_KEYS = [
-        "termix-accent", "termix-font-size", "i18nextLng",
-        "commandAutocomplete", "commandPaletteShortcutEnabled", "showHostTags",
-        "hostTrayOnClick", "pinAppRail", "defaultSnippetFoldersCollapsed",
-        "confirmSnippetExecution", "disableUpdateCheck", "confirmTabClose", "hiddenRailTabs",
+        "termix-accent",
+        "termix-font-size",
+        "i18nextLng",
+        "commandAutocomplete",
+        "commandPaletteShortcutEnabled",
+        "showHostTags",
+        "hostTrayOnClick",
+        "pinAppRail",
+        "defaultSnippetFoldersCollapsed",
+        "confirmSnippetExecution",
+        "disableUpdateCheck",
+        "confirmTabClose",
+        "hiddenRailTabs",
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
@@ -623,11 +632,17 @@ export function UserProfilePanel({
         }
         if (prefs.commandAutocomplete != null) {
           setCommandAutocomplete(prefs.commandAutocomplete);
-          localStorage.setItem("commandAutocomplete", String(prefs.commandAutocomplete));
+          localStorage.setItem(
+            "commandAutocomplete",
+            String(prefs.commandAutocomplete),
+          );
         }
         if (prefs.commandPaletteEnabled != null) {
           setCommandPaletteEnabled(prefs.commandPaletteEnabled);
-          localStorage.setItem("commandPaletteShortcutEnabled", String(prefs.commandPaletteEnabled));
+          localStorage.setItem(
+            "commandPaletteShortcutEnabled",
+            String(prefs.commandPaletteEnabled),
+          );
         }
         if (prefs.showHostTags != null) {
           setShowHostTags(prefs.showHostTags);
@@ -636,7 +651,10 @@ export function UserProfilePanel({
         }
         if (prefs.hostTrayOnClick != null) {
           setHostTrayOnClick(prefs.hostTrayOnClick);
-          localStorage.setItem("hostTrayOnClick", String(prefs.hostTrayOnClick));
+          localStorage.setItem(
+            "hostTrayOnClick",
+            String(prefs.hostTrayOnClick),
+          );
         }
         if (prefs.pinAppRail != null) {
           setPinAppRail(prefs.pinAppRail);
@@ -644,19 +662,31 @@ export function UserProfilePanel({
         }
         if (prefs.foldersCollapsed != null) {
           setFoldersCollapsed(prefs.foldersCollapsed);
-          localStorage.setItem("defaultSnippetFoldersCollapsed", String(prefs.foldersCollapsed));
+          localStorage.setItem(
+            "defaultSnippetFoldersCollapsed",
+            String(prefs.foldersCollapsed),
+          );
         }
         if (prefs.confirmSnippetExecution != null) {
           setConfirmSnippetExecution(prefs.confirmSnippetExecution);
-          localStorage.setItem("confirmSnippetExecution", String(prefs.confirmSnippetExecution));
+          localStorage.setItem(
+            "confirmSnippetExecution",
+            String(prefs.confirmSnippetExecution),
+          );
         }
         if (prefs.disableUpdateCheck != null) {
           setDisableUpdateCheck(prefs.disableUpdateCheck);
-          localStorage.setItem("disableUpdateCheck", String(prefs.disableUpdateCheck));
+          localStorage.setItem(
+            "disableUpdateCheck",
+            String(prefs.disableUpdateCheck),
+          );
         }
         if (prefs.confirmTabClose != null) {
           setConfirmTabClose(prefs.confirmTabClose);
-          localStorage.setItem("confirmTabClose", String(prefs.confirmTabClose));
+          localStorage.setItem(
+            "confirmTabClose",
+            String(prefs.confirmTabClose),
+          );
         }
         if (prefs.hiddenRailTabs != null) {
           const s = new Set<string>(JSON.parse(prefs.hiddenRailTabs));
@@ -710,10 +740,19 @@ export function UserProfilePanel({
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
     if (storageMode === "cloud") {
       saveToCloud({
-        theme: "system", fontSize: "md", accentColor: DEFAULT_ACCENT, language: "en",
-        commandAutocomplete: false, commandPaletteEnabled: true, showHostTags: true,
-        hostTrayOnClick: false, pinAppRail: false, foldersCollapsed: true,
-        confirmSnippetExecution: false, disableUpdateCheck: false, confirmTabClose: false,
+        theme: "system",
+        fontSize: "md",
+        accentColor: DEFAULT_ACCENT,
+        language: "en",
+        commandAutocomplete: false,
+        commandPaletteEnabled: true,
+        showHostTags: true,
+        hostTrayOnClick: false,
+        pinAppRail: false,
+        foldersCollapsed: true,
+        confirmSnippetExecution: false,
+        disableUpdateCheck: false,
+        confirmTabClose: false,
         hiddenRailTabs: "[]",
       });
     }
@@ -731,12 +770,18 @@ export function UserProfilePanel({
       : localSnapshot.current;
     const hasSnap = Object.keys(snap).length > 0;
     const restore = (key: string, fallback: string | null = null) =>
-      hasSnap ? (snap[key] !== undefined ? snap[key] : fallback) : localStorage.getItem(key) ?? fallback;
+      hasSnap
+        ? snap[key] !== undefined
+          ? snap[key]
+          : fallback
+        : (localStorage.getItem(key) ?? fallback);
 
-    const restoredTheme = (hasSnap ? snap["__theme"] : theme) as ThemeId ?? "system";
+    const restoredTheme =
+      ((hasSnap ? snap["__theme"] : theme) as ThemeId) ?? "system";
     setTheme(restoredTheme);
 
-    const restoredFontSize = (restore("termix-font-size", "md") as FontSizeId) ?? "md";
+    const restoredFontSize =
+      (restore("termix-font-size", "md") as FontSizeId) ?? "md";
     setFontSize(restoredFontSize);
     applyFontSize(restoredFontSize);
 
@@ -751,13 +796,18 @@ export function UserProfilePanel({
     localStorage.setItem("i18nextLng", restoredLang);
     void i18n.changeLanguage(restoredLang);
 
-    const restoredAutocomplete = restore("commandAutocomplete", "false") === "true";
+    const restoredAutocomplete =
+      restore("commandAutocomplete", "false") === "true";
     setCommandAutocomplete(restoredAutocomplete);
     localStorage.setItem("commandAutocomplete", String(restoredAutocomplete));
 
-    const restoredPalette = restore("commandPaletteShortcutEnabled", "true") !== "false";
+    const restoredPalette =
+      restore("commandPaletteShortcutEnabled", "true") !== "false";
     setCommandPaletteEnabled(restoredPalette);
-    localStorage.setItem("commandPaletteShortcutEnabled", String(restoredPalette));
+    localStorage.setItem(
+      "commandPaletteShortcutEnabled",
+      String(restoredPalette),
+    );
 
     const restoredHostTags = restore("showHostTags", "true") !== "false";
     setShowHostTags(restoredHostTags);
@@ -772,20 +822,28 @@ export function UserProfilePanel({
     setPinAppRail(restoredPinRail);
     localStorage.setItem("pinAppRail", String(restoredPinRail));
 
-    const restoredFolders = restore("defaultSnippetFoldersCollapsed", null) !== "false";
+    const restoredFolders =
+      restore("defaultSnippetFoldersCollapsed", null) !== "false";
     setFoldersCollapsed(restoredFolders);
-    const snapFolders = hasSnap ? snap["defaultSnippetFoldersCollapsed"] : localStorage.getItem("defaultSnippetFoldersCollapsed");
+    const snapFolders = hasSnap
+      ? snap["defaultSnippetFoldersCollapsed"]
+      : localStorage.getItem("defaultSnippetFoldersCollapsed");
     if (snapFolders == null) {
       localStorage.removeItem("defaultSnippetFoldersCollapsed");
     } else {
       localStorage.setItem("defaultSnippetFoldersCollapsed", snapFolders);
     }
 
-    const restoredConfirmSnippet = restore("confirmSnippetExecution", "false") === "true";
+    const restoredConfirmSnippet =
+      restore("confirmSnippetExecution", "false") === "true";
     setConfirmSnippetExecution(restoredConfirmSnippet);
-    localStorage.setItem("confirmSnippetExecution", String(restoredConfirmSnippet));
+    localStorage.setItem(
+      "confirmSnippetExecution",
+      String(restoredConfirmSnippet),
+    );
 
-    const restoredUpdateCheck = restore("disableUpdateCheck", "false") === "true";
+    const restoredUpdateCheck =
+      restore("disableUpdateCheck", "false") === "true";
     setDisableUpdateCheck(restoredUpdateCheck);
     localStorage.setItem("disableUpdateCheck", String(restoredUpdateCheck));
 
@@ -793,7 +851,9 @@ export function UserProfilePanel({
     setConfirmTabClose(restoredConfirmTab);
     localStorage.setItem("confirmTabClose", String(restoredConfirmTab));
 
-    const restoredHiddenRaw = hasSnap ? snap["hiddenRailTabs"] : localStorage.getItem("hiddenRailTabs");
+    const restoredHiddenRaw = hasSnap
+      ? snap["hiddenRailTabs"]
+      : localStorage.getItem("hiddenRailTabs");
     if (restoredHiddenRaw == null) {
       setHiddenRailTabs(new Set());
       localStorage.removeItem("hiddenRailTabs");
@@ -1519,9 +1579,19 @@ export function UserProfilePanel({
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium">
-                  {t("newUi.sidebar.userProfile.totpAuthenticator")}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium">
+                    {t("newUi.sidebar.userProfile.totpAuthenticator")}
+                  </span>
+                  <a
+                    href="https://docs.termix.site/features/authentication/totp"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-accent-brand hover:underline"
+                  >
+                    {t("hosts.docsLink")}
+                  </a>
+                </div>
                 <span className="text-[10px] text-muted-foreground">
                   {totpEnabled
                     ? t("newUi.sidebar.userProfile.totpEnabled")

@@ -475,11 +475,41 @@ export function HostEditor({
                     </>
                   )}
                 </div>
+                {authMethod === "opkssh" && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.opksshLabel")}
+                      </span>
+                      <a
+                        href="https://docs.termix.site/features/authentication/opkssh"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.opksshDesc")}
+                    </p>
+                  </div>
+                )}
                 {authMethod === "tailscale" && (
                   <div className="flex flex-col gap-2 border-t border-border pt-3">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.tailscaleDeviceSelect")}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.tailscaleDeviceSelect")}
+                      </label>
+                      <a
+                        href="https://docs.termix.site/features/networking/tailscale"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[10px] text-accent-brand hover:underline"
+                      >
+                        {t("hosts.tailscaleDocsLink")}
+                      </a>
+                    </div>
                     {!tailscaleHasApiKey && !tailscaleLoading ? (
                       <p className="text-[10px] text-muted-foreground">
                         {t("hosts.tailscaleNoApiKey")}
@@ -872,7 +902,19 @@ export function HostEditor({
                 </SettingRow>
                 <SettingRow
                   label={t("hosts.enableAutoTmux")}
-                  description={t("hosts.enableAutoTmuxDesc")}
+                  description={
+                    <>
+                      {t("hosts.enableAutoTmuxDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/tmux"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
                     checked={form.autoTmux}
@@ -881,7 +923,19 @@ export function HostEditor({
                 </SettingRow>
                 <SettingRow
                   label={t("hosts.enableSessionLogging")}
-                  description={t("hosts.enableSessionLoggingDesc")}
+                  description={
+                    <>
+                      {t("hosts.enableSessionLoggingDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/session-recording"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
                     checked={form.enableSessionLogging}
@@ -890,7 +944,19 @@ export function HostEditor({
                 </SettingRow>
                 <SettingRow
                   label={t("hosts.enableCommandHistory")}
-                  description={t("hosts.enableCommandHistoryDesc")}
+                  description={
+                    <>
+                      {t("hosts.enableCommandHistoryDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/command-history"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
                     checked={form.enableCommandHistory}
@@ -1081,7 +1147,19 @@ export function HostEditor({
               <div className="flex flex-col gap-4 py-3">
                 <SettingRow
                   label={t("hosts.enableTmuxMonitor")}
-                  description={t("hosts.enableTmuxMonitorDesc")}
+                  description={
+                    <>
+                      {t("hosts.enableTmuxMonitorDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/tmux"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
                     checked={form.enableTmuxMonitor}
@@ -1102,7 +1180,19 @@ export function HostEditor({
               <div className="flex flex-col gap-4 py-3">
                 <SettingRow
                   label={t("hosts.enableTunneling")}
-                  description={t("hosts.enableTunnelingDesc")}
+                  description={
+                    <>
+                      {t("hosts.enableTunnelingDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/networking/tunnels"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
+                    </>
+                  }
                 >
                   <FakeSwitch
                     checked={form.enableTunnel}

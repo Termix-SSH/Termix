@@ -115,38 +115,46 @@ Secure user management with admin controls and OIDC/LDAP/SSO (with access contro
 <tr>
 <td width="50%" valign="top">
 
+**Tailscale Integration:**
+List devices from your tailnet to quickly add them as hosts, and connect using Tailscale SSH as an authentication method, letting your tailnet ACLs handle authorization without storing credentials.
+
+</td>
+<td width="50%" valign="top">
+
 **RBAC:**
 Create roles and share hosts across users/roles.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Database Encryption:**
 Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Network Graph:**
 Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **SSH Tools:**
 Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Persistent Tabs:**
 SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Languages:**

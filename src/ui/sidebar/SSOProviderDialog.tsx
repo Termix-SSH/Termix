@@ -393,9 +393,22 @@ function OIDCConfigFields({
 }) {
   const githubAuthUrl = "https://github.com/login/oauth/authorize";
   const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+  const docsHref = simplified
+    ? "https://docs.termix.site/features/authentication/github-google"
+    : "https://docs.termix.site/features/authentication/oidc";
 
   return (
     <div className="flex flex-col gap-3">
+      <span className="text-[10px] text-muted-foreground">
+        <a
+          href={docsHref}
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent-brand hover:underline"
+        >
+          {t("admin.ssoProviderDocsLink")}
+        </a>
+      </span>
       <Field label={t("admin.oidcClientId")} required>
         <Input
           value={oidc.client_id}
@@ -529,6 +542,16 @@ function LDAPConfigFields({
 }) {
   return (
     <div className="flex flex-col gap-3">
+      <span className="text-[10px] text-muted-foreground">
+        <a
+          href="https://docs.termix.site/features/authentication/ldap"
+          target="_blank"
+          rel="noreferrer"
+          className="text-accent-brand hover:underline"
+        >
+          {t("admin.ssoProviderDocsLink")}
+        </a>
+      </span>
       <Field label={t("admin.ldapHost")} required>
         <Input
           value={ldap.host}

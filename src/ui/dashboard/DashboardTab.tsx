@@ -1358,6 +1358,20 @@ export function DashboardTab({
                   {t("dashboard.discord")}
                 </a>
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <a
+                  href="https://docs.termix.site/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("dashboard.docs")}
+                </a>
+              </Button>
             </div>
           </Card>
           {allSlots.map((slot) => (
@@ -1477,6 +1491,20 @@ export function DashboardTab({
               rel="noreferrer"
             >
               {t("dashboard.discord")}
+            </a>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground hover:text-foreground"
+            asChild
+          >
+            <a
+              href="https://docs.termix.site/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("dashboard.docs")}
             </a>
           </Button>
           <Separator orientation="vertical" className="mx-1 h-5" />

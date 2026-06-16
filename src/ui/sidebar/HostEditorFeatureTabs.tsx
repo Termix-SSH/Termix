@@ -85,7 +85,19 @@ export function HostProxmoxTab({
       <div className="flex flex-col gap-0 py-1">
         <SettingRow
           label={t("hosts.enableProxmox")}
-          description={t("hosts.enableProxmoxDesc")}
+          description={
+            <>
+              {t("hosts.enableProxmoxDesc")}{" "}
+              <a
+                href="https://docs.termix.site/features/files-and-hosts/proxmox-import"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent-brand hover:underline"
+              >
+                {t("hosts.docsLink")}
+              </a>
+            </>
+          }
         >
           <FakeSwitch
             checked={form.enableProxmox}

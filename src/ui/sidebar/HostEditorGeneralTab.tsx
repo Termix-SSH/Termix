@@ -179,9 +179,19 @@ export function HostEditorGeneralTab({
             </div>
             {protocols.enableSsh && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  MAC Address
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("hosts.macAddress")}
+                  </label>
+                  <a
+                    href="https://docs.termix.site/features/networking/wake-on-lan"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-accent-brand hover:underline"
+                  >
+                    {t("hosts.docsLink")}
+                  </a>
+                </div>
                 <Input
                   placeholder="AA:BB:CC:DD:EE:FF"
                   value={form.macAddress}
@@ -294,9 +304,19 @@ export function HostEditorGeneralTab({
         </div>
         <div className="flex flex-col gap-3 border-t border-border pt-4 pb-0">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              {t("hosts.portKnockingSequence")}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("hosts.portKnockingSequence")}
+              </span>
+              <a
+                href="https://docs.termix.site/features/networking/port-knocking"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[10px] text-accent-brand hover:underline"
+              >
+                {t("hosts.docsLink")}
+              </a>
+            </div>
             <Button
               variant="outline"
               size="sm"

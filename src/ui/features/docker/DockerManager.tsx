@@ -5,7 +5,13 @@ import { Alert, AlertDescription } from "@/components/alert.tsx";
 import { Button } from "@/components/button.tsx";
 import { Card } from "@/components/card.tsx";
 import { Input } from "@/components/input.tsx";
-import { AlertCircle, Box, RefreshCw, Search } from "lucide-react";
+import {
+  AlertCircle,
+  Box,
+  ExternalLink,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 
 import { useTranslation } from "react-i18next";
 import type { SSHHost, DockerContainer, DockerValidation } from "@/types";
@@ -731,6 +737,15 @@ function DockerManagerInner({
                     className={`size-4 text-accent-brand ${isLoadingContainers ? "animate-spin" : ""}`}
                   />
                 </Button>
+                <a
+                  href="https://docs.termix.site/features/networking/docker"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-center size-9 text-muted-foreground hover:text-foreground transition-colors"
+                  title={t("hosts.docsLink")}
+                >
+                  <ExternalLink className="size-4" />
+                </a>
               </div>
             </Card>
 

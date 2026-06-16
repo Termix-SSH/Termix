@@ -201,6 +201,14 @@ export function ProxmoxDiscoverDialog({
             <Server className="size-4" />
             {t("hosts.proxmoxImportTitle")}
           </DialogTitle>
+          <a
+            href="https://docs.termix.site/features/files-and-hosts/proxmox-import"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[10px] text-accent-brand hover:underline"
+          >
+            {t("hosts.docsLink")}
+          </a>
         </DialogHeader>
 
         <div className="space-y-3">

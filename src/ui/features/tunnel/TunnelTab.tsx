@@ -5,6 +5,7 @@ import { Card } from "@/components/card";
 import {
   AlertCircle,
   Clock,
+  ExternalLink,
   Network,
   Play,
   RefreshCw,
@@ -426,6 +427,15 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
               </div>
             </div>
           </div>
+          <a
+            href="https://docs.termix.site/features/networking/tunnels"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-center size-9 text-muted-foreground hover:text-foreground transition-colors"
+            title={t("hosts.docsLink")}
+          >
+            <ExternalLink className="size-4" />
+          </a>
         </Card>
 
         {tunnels.length > 0 ? (

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowUpDown, Check, Filter, Plus, Search, X } from "lucide-react";
+import {
+  ArrowUpDown,
+  Check,
+  ExternalLink,
+  Filter,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 import { HostManager } from "@/sidebar/HostManager";
 import { Button } from "@/components/button";
 import {
@@ -235,6 +243,15 @@ export function CredentialsPanel({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+            <a
+              href="https://docs.termix.site/features/files-and-hosts/credentials"
+              target="_blank"
+              rel="noreferrer"
+              title={t("hosts.docsLink")}
+              className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground shrink-0 transition-colors ml-auto"
+            >
+              <ExternalLink className="size-3.5" />
+            </a>
             <button
               onClick={() =>
                 window.dispatchEvent(
@@ -242,7 +259,7 @@ export function CredentialsPanel({
                 )
               }
               title={t("credentials.addCredential")}
-              className="flex items-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 border border-accent-brand/30 rounded-sm shrink-0 transition-colors ml-auto"
+              className="flex items-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 border border-accent-brand/30 rounded-sm shrink-0 transition-colors"
             >
               <Plus className="size-3 shrink-0" />
               {t("credentials.addCredential")}
