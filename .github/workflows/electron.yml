@@ -872,7 +872,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-  submit-to-testflight:
+  submit-to-app-store:
     runs-on: blacksmith-6vcpu-macos-latest
     if: inputs.artifact_destination == 'submit' && (inputs.build_type == 'all' || inputs.build_type == 'macos')
     needs: []
@@ -943,9 +943,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_OPTIONS: --max-old-space-size=4096
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
           BUILD_VERSION="${{ github.run_number }}"
-
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
 
       - name: Check for App Store Connect API credentials
@@ -956,36 +954,56 @@ jobs:
           fi
 
       - name: Setup Ruby for Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.2"
           bundler-cache: false
 
       - name: Install Fastlane
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
-        run: |
-          gem install fastlane -N
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: gem install fastlane -N
 
-      - name: Deploy to App Store Connect (TestFlight)
-        if: steps.check_asc_creds.outputs.has_credentials == 'true'
+      - name: Upload and submit to Mac App Store
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        env:
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
+          APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
         run: |
           PKG_FILE=$(find release -name "termix_macos_universal_mas.pkg" -type f | head -n 1)
           if [ -z "$PKG_FILE" ]; then
-            echo "PKG file not found, exiting."
+            echo "PKG file not found in release/; aborting."
             exit 1
           fi
 
-          mkdir -p ~/private_keys
-          echo "${{ secrets.APPLE_KEY_CONTENT }}" | base64 --decode > ~/private_keys/AuthKey_${{ secrets.APPLE_KEY_ID }}.p8
+          VERSION=$(node -p "require('./package.json').version")
 
-          xcrun altool --upload-app -f "$PKG_FILE" \
-            --type macos \
-            --apiKey "${{ secrets.APPLE_KEY_ID }}" \
-            --apiIssuer "${{ secrets.APPLE_ISSUER_ID }}"
-        continue-on-error: true
+          # Write API key JSON that Fastlane deliver expects
+          mkdir -p /tmp/asc_keys
+          KEY_P8_PATH="/tmp/asc_keys/AuthKey_${APPLE_KEY_ID}.p8"
+          API_KEY_JSON="/tmp/asc_keys/api_key.json"
+
+          echo "$APPLE_KEY_CONTENT" | base64 --decode > "$KEY_P8_PATH"
+
+          printf '{\n  "key_id": "%s",\n  "issuer_id": "%s",\n  "key": "%s",\n  "in_house": false\n}\n' \
+            "$APPLE_KEY_ID" \
+            "$APPLE_ISSUER_ID" \
+            "$(tr -d '\n' < "$KEY_P8_PATH")" \
+            > "$API_KEY_JSON"
+
+          fastlane deliver \
+            --pkg "$PKG_FILE" \
+            --api_key_path "$API_KEY_JSON" \
+            --app_version "$VERSION" \
+            --skip_metadata true \
+            --skip_screenshots true \
+            --submit_for_review true \
+            --automatic_release true \
+            --force true
 
       - name: Clean up keychains
         if: always()
         run: |
           security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          rm -rf /tmp/asc_keys
