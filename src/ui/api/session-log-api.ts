@@ -15,7 +15,7 @@ export type SessionLogRecord = {
 
 export async function getSessionLogs(): Promise<SessionLogRecord[]> {
   try {
-    const response = await authApi.get("/session_logs");
+    const response = await authApi.get("/session_logs/");
     return response.data.logs;
   } catch (error) {
     throw handleApiError(error, "fetch session logs");
