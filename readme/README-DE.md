@@ -94,21 +94,21 @@ Container starten, stoppen, pausieren, entfernen. Container-Statistiken anzeigen
 <td width="50%" valign="top">
 
 **SSH-Host-Manager:**
-Speichern, organisieren und verwalten Sie Ihre SSH-Verbindungen mit Tags und Ordnern und speichern Sie einfach wiederverwendbare Anmeldeinformationen mit der Moglichkeit, die Bereitstellung von SSH-Schlusseln zu automatisieren.
+Speichern, organisieren und verwalten Sie Ihre SSH-Verbindungen mit Tags und Ordnern (Ordneranpassung und verschachtelte Ordner werden unterstutzt) und speichern Sie einfach wiederverwendbare Anmeldeinformationen mit der Moglichkeit, die Bereitstellung von SSH-Schlusseln zu automatisieren.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Serverstatistiken:**
-CPU-, Arbeitsspeicher- und Festplattenauslastung sowie Netzwerk, Betriebszeit, Systeminformationen, Firewall, Port-Monitor auf den meisten Linux-basierten Servern anzeigen.
+**Host-Metriken:**
+CPU-, Arbeitsspeicher- und Festplattenauslastung, Netzwerk, Betriebszeit, Systeminformationen, Firewall, Port-Monitor, Log-Viewer, Benutzer/Berechtigungen, Zertifikate und vieles mehr auf den meisten Linux-basierten Servern anzeigen.
 
 </td>
 <td width="50%" valign="top">
 
 **Benutzerauthentifizierung:**
-Sichere Benutzerverwaltung mit Admin-Kontrollen und OIDC- (mit Zugriffskontrolle) sowie 2FA (TOTP)-Unterstutzung. Aktive Benutzersitzungen uber alle Plattformen anzeigen und Berechtigungen widerrufen. OIDC-/Lokale Konten miteinander verknupfen.
+Sichere Benutzerverwaltung mit Admin-Kontrollen und OIDC-/LDAP-/SSO-Unterstutzung (mit Zugriffskontrolle) sowie 2FA (TOTP)-Unterstutzung. Aktive Benutzersitzungen uber alle Plattformen anzeigen und Berechtigungen widerrufen. OIDC-/Lokale Konten miteinander verknupfen. Audit-Protokoll aller Benutzeraktionen anzeigen.
 
 </td>
 </tr>
@@ -170,7 +170,8 @@ Integrierte Unterstutzung fur ca. 30 Sprachen (verwaltet uber [Crowdin](https://
 - **Befehlsverlauf** - Autovervollstandigung und Anzeige zuvor ausgefuhrter SSH-Befehle
 - **Schnellverbindung** - Verbinden Sie sich mit einem Server, ohne die Verbindungsdaten speichern zu mussen
 - **Befehlspalette** - Doppeltippen Sie die linke Umschalttaste, um schnell auf SSH-Verbindungen mit Ihrer Tastatur zuzugreifen
-- **SSH-Funktionsreich** - Unterstutzt Jump-Hosts, Warpgate, TOTP-basierte Verbindungen, SOCKS5, Host-Key-Verifizierung, automatisches Ausfullen von Passwortern, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, Port Knocking usw.
+- **Proxmox-Integration** - Automatisches Hinzufugen von Hosts zu Termix aus Ihrer Proxmox-Instanz
+- **SSH-Funktionsreich** - Unterstutzt Jump-Hosts, Warpgate, TOTP-basierte Verbindungen, SOCKS5, Host-Key-Verifizierung, automatisches Ausfullen von Passwortern, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, Port Knocking, Terminal-Protokollierung usw.
 
 </details>
 

@@ -94,21 +94,21 @@ Konteynerleri baslatın, durdurun, duraklatın, kaldirin. Konteyner istatistikle
 <td width="50%" valign="top">
 
 **SSH Ana Bilgisayar Yoneticisi:**
-SSH baglantilarinizi etiketler ve klasorlerle kaydedin, duzenleyin ve yonetin; yeniden kullanilabilir giris bilgilerini kolayca kaydedin ve SSH anahtarlarinin dagitimini otomatiklestirin.
+SSH baglantilarinizi etiketler ve klasorlerle (klasor ozellestirme ve ic ice klasor destegi ile) kaydedin, duzenleyin ve yonetin; yeniden kullanilabilir giris bilgilerini kolayca kaydedin ve SSH anahtarlarinin dagitimini otomatiklestirin.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Sunucu Istatistikleri:**
-Cogu Linux tabanli sunucularda CPU, bellek ve disk kullanimini ag, calisma suresi, sistem bilgisi, guvenlik duvari, port izleme ile birlikte goruntuleyin.
+**Ana Bilgisayar Metrikleri:**
+Cogu Linux tabanli sunucularda CPU, bellek, disk kullanimi, ag, calisma suresi, sistem bilgisi, guvenlik duvari, port izleme, gunluk goruntuleyici, kullanicilar/izinler, sertifikalar ve daha fazlasini goruntuleyin.
 
 </td>
 <td width="50%" valign="top">
 
 **Kullanici Kimlik Dogrulama:**
-Yonetici kontrolleri, OIDC (erisim kontrollu) ve 2FA (TOTP) destegi ile guvenli kullanici yonetimi. Tum platformlardaki aktif kullanici oturumlarini goruntuleyin ve izinleri iptal edin. OIDC/Yerel hesaplarinizi birbirine baglayin.
+Yonetici kontrolleri, OIDC/LDAP/SSO (erisim kontrollu) ve 2FA (TOTP) destegi ile guvenli kullanici yonetimi. Tum platformlardaki aktif kullanici oturumlarini goruntuleyin ve izinleri iptal edin. OIDC/Yerel hesaplarinizi birbirine baglayin. Tum kullanicilarin islemlerinin denetim gunlugunu goruntuleyin.
 
 </td>
 </tr>
@@ -170,7 +170,8 @@ Yaklasik 30 dil icin yerlesik destek ([Crowdin](https://docs.termix.site/transla
 - **Komut Gecmisi** - Daha once calistirilan SSH komutlarini otomatik tamamlayin ve goruntuleyin
 - **Hizli Baglanti** - Baglanti verilerini kaydetmeden bir sunucuya baglanin
 - **Komut Paleti** - Sol shift tusuna iki kez basarak SSH baglantilariniza klavyenizle hizlica erisin
-- **SSH Zengin Ozellikler** - Atlama ana bilgisayarlari, Warpgate, TOTP tabanli baglantilar, SOCKS5, ana bilgisayar anahtar dogrulama, otomatik sifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking vb. destekler.
+- **Proxmox Entegrasyonu** - Proxmox ornekinizden Termix'e otomatik olarak ana bilgisayar ekleyin
+- **SSH Zengin Ozellikler** - Atlama ana bilgisayarlari, Warpgate, TOTP tabanli baglantilar, SOCKS5, ana bilgisayar anahtar dogrulama, otomatik sifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal gunlukleme vb. destekler.
 
 </details>
 

@@ -94,21 +94,21 @@ Khoi dong, dung, tam dung, xoa container. Xem thong ke container. Dieu khien con
 <td width="50%" valign="top">
 
 **Trinh Quan Ly May Chu SSH:**
-Luu, sap xep va quan ly cac ket noi SSH cua ban voi the va thu muc, de dang luu thong tin dang nhap co the tai su dung dong thoi co the tu dong hoa viec trien khai khoa SSH.
+Luu, sap xep va quan ly cac ket noi SSH cua ban voi the va thu muc (ho tro tuy chinh thu muc va thu muc long nhau), de dang luu thong tin dang nhap co the tai su dung dong thoi co the tu dong hoa viec trien khai khoa SSH.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Thong Ke May Chu:**
-Xem muc su dung CPU, bo nho va o dia cung voi mang, thoi gian hoat dong, thong tin he thong, tuong lua, giam sat cong tren hau het cac may chu chay Linux.
+**Chi So May Chu:**
+Xem muc su dung CPU, bo nho, o dia, mang, thoi gian hoat dong, thong tin he thong, tuong lua, giam sat cong, trinh xem nhat ky, nguoi dung/quyen, chung chi va nhieu hon nua tren hau het cac may chu chay Linux.
 
 </td>
 <td width="50%" valign="top">
 
 **Xac Thuc Nguoi Dung:**
-Quan ly nguoi dung an toan voi quyen quan tri va ho tro OIDC (co kiem soat truy cap) va 2FA (TOTP). Xem phien hoat dong cua nguoi dung tren tat ca cac nen tang va thu hoi quyen. Lien ket tai khoan OIDC/Noi bo cua ban voi nhau.
+Quan ly nguoi dung an toan voi quyen quan tri va ho tro OIDC/LDAP/SSO (co kiem soat truy cap) va 2FA (TOTP). Xem phien hoat dong cua nguoi dung tren tat ca cac nen tang va thu hoi quyen. Lien ket tai khoan OIDC/Noi bo cua ban voi nhau. Xem nhat ky kiem toan cac hanh dong cua tat ca nguoi dung.
 
 </td>
 </tr>
@@ -170,7 +170,8 @@ Ho tro tich hop khoang 30 ngon ngu (duoc quan ly boi [Crowdin](https://docs.term
 - **Lich Su Lenh** - Tu dong hoan thanh va xem cac lenh SSH da chay truoc do
 - **Ket Noi Nhanh** - Ket noi den may chu ma khong can luu du lieu ket noi
 - **Bang Lenh** - Nhan dup phim shift trai de truy cap nhanh cac ket noi SSH bang ban phim
-- **SSH Giau Tinh Nang** - Ho tro jump host, Warpgate, ket noi dua tren TOTP, SOCKS5, xac minh khoa may chu, tu dong dien mat khau, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, v.v.
+- **Tich Hop Proxmox** - Tu dong them may chu vao Termix tu instance Proxmox cua ban
+- **SSH Giau Tinh Nang** - Ho tro jump host, Warpgate, ket noi dua tren TOTP, SOCKS5, xac minh khoa may chu, tu dong dien mat khau, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, ghi nhat ky terminal, v.v.
 
 </details>
 
