@@ -903,13 +903,11 @@ router.get("/oidc/callback", async (req, res) => {
             .where(eq(roles.name, defaultRoleName))
             .limit(1);
           if (defaultRole.length > 0)
-            await db
-              .insert(userRoles)
-              .values({
-                userId: ghId,
-                roleId: defaultRole[0].id,
-                grantedBy: ghId,
-              });
+            await db.insert(userRoles).values({
+              userId: ghId,
+              roleId: defaultRole[0].id,
+              grantedBy: ghId,
+            });
         } catch {
           /* */
         }
@@ -922,11 +920,9 @@ router.get("/oidc/callback", async (req, res) => {
           await authManager.registerOIDCUser(ghId, sessionDurationMs);
         } catch (encryptionError) {
           await db.delete(users).where(eq(users.id, ghId));
-          return res
-            .status(500)
-            .json({
-              error: "Failed to setup user security - user creation cancelled",
-            });
+          return res.status(500).json({
+            error: "Failed to setup user security - user creation cancelled",
+          });
         }
 
         ghUser = await db.select().from(users).where(eq(users.id, ghId));
@@ -976,6 +972,7 @@ router.get("/oidc/callback", async (req, res) => {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
+        Authorization: `Basic ${Buffer.from(`${encodeURIComponent(config.client_id)}:${encodeURIComponent(config.client_secret)}`).toString("base64")}`,
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
@@ -1232,7 +1229,15 @@ router.get("/oidc/callback", async (req, res) => {
           .prepare(
             "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
           )
-          .run(id, name, "", first ? 1 : 0, 1, identifier, callbackProviderDbId);
+          .run(
+            id,
+            name,
+            "",
+            first ? 1 : 0,
+            1,
+            identifier,
+            callbackProviderDbId,
+          );
         return first;
       })();
 

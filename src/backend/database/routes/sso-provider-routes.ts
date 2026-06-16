@@ -7,7 +7,6 @@ import { db } from "../db/index.js";
 import { ssoProviders } from "../db/schema.js";
 import { eq, asc } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
-import { DataCrypto } from "../../utils/data-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { SSOProviderType } from "../../../types/index.js";
 
@@ -15,7 +14,7 @@ const authManager = AuthManager.getInstance();
 
 function decryptProviderConfig(
   configJson: string,
-  userId: string,
+  _userId: string,
 ): Record<string, unknown> {
   let config: Record<string, unknown>;
   try {
@@ -24,41 +23,16 @@ function decryptProviderConfig(
     return {};
   }
 
-  const secret = (config.client_secret || config.bindPassword) as
-    | string
-    | undefined;
-  if (secret?.startsWith("encrypted:")) {
-    try {
-      const adminDataKey = DataCrypto.getUserDataKey(userId);
-      if (adminDataKey) {
-        config = DataCrypto.decryptRecord(
-          "settings",
-          config,
-          userId,
-          adminDataKey,
+  for (const field of ["client_secret", "bindPassword"] as const) {
+    const val = config[field] as string | undefined;
+    if (val?.startsWith("encoded:")) {
+      try {
+        config[field] = Buffer.from(val.substring(8), "base64").toString(
+          "utf8",
         );
-      } else {
-        if (config.client_secret)
-          config.client_secret = "[ENCRYPTED - PASSWORD REQUIRED]";
-        if (config.bindPassword)
-          config.bindPassword = "[ENCRYPTED - PASSWORD REQUIRED]";
+      } catch {
+        config[field] = "[ENCODING ERROR]";
       }
-    } catch {
-      if (config.client_secret)
-        config.client_secret = "[ENCRYPTED - DECRYPTION FAILED]";
-      if (config.bindPassword)
-        config.bindPassword = "[ENCRYPTED - DECRYPTION FAILED]";
-    }
-  } else if (secret?.startsWith("encoded:")) {
-    try {
-      const decoded = Buffer.from(secret.substring(8), "base64").toString(
-        "utf8",
-      );
-      if (config.client_secret) config.client_secret = decoded;
-      if (config.bindPassword) config.bindPassword = decoded;
-    } catch {
-      if (config.client_secret) config.client_secret = "[ENCODING ERROR]";
-      if (config.bindPassword) config.bindPassword = "[ENCODING ERROR]";
     }
   }
   return config;
@@ -66,44 +40,23 @@ function decryptProviderConfig(
 
 function encryptProviderConfig(
   config: Record<string, unknown>,
-  userId: string,
-  providerId: string,
+  _userId: string,
+  _providerId: string,
 ): string {
-  const secretField = config.client_secret ?? config.bindPassword;
-  if (typeof secretField !== "string") {
-    return JSON.stringify(config);
+  const encoded: Record<string, unknown> = { ...config };
+  if (
+    typeof config.client_secret === "string" &&
+    !config.client_secret.startsWith("encoded:")
+  ) {
+    encoded.client_secret = `encoded:${Buffer.from(config.client_secret).toString("base64")}`;
   }
-
-  try {
-    const adminDataKey = DataCrypto.getUserDataKey(userId);
-    if (adminDataKey) {
-      const configWithId = { ...config, id: `sso-provider-${providerId}` };
-      const encrypted = DataCrypto.encryptRecord(
-        "settings",
-        configWithId,
-        userId,
-        adminDataKey,
-      );
-      return JSON.stringify(encrypted);
-    }
-    const encoded: Record<string, unknown> = { ...config };
-    if (config.client_secret) {
-      encoded.client_secret = `encoded:${Buffer.from(String(config.client_secret)).toString("base64")}`;
-    }
-    if (config.bindPassword) {
-      encoded.bindPassword = `encoded:${Buffer.from(String(config.bindPassword)).toString("base64")}`;
-    }
-    return JSON.stringify(encoded);
-  } catch {
-    const encoded: Record<string, unknown> = { ...config };
-    if (config.client_secret) {
-      encoded.client_secret = `encoded:${Buffer.from(String(config.client_secret)).toString("base64")}`;
-    }
-    if (config.bindPassword) {
-      encoded.bindPassword = `encoded:${Buffer.from(String(config.bindPassword)).toString("base64")}`;
-    }
-    return JSON.stringify(encoded);
+  if (
+    typeof config.bindPassword === "string" &&
+    !config.bindPassword.startsWith("encoded:")
+  ) {
+    encoded.bindPassword = `encoded:${Buffer.from(config.bindPassword).toString("base64")}`;
   }
+  return JSON.stringify(encoded);
 }
 
 function applyProviderDefaults(
@@ -270,11 +223,9 @@ export function registerSSOProviderRoutes(router: Router): void {
           "token_url",
         ].filter((f) => !c[f as keyof OIDCProviderConfig]);
         if (missing.length > 0 && type === "oidc") {
-          return res
-            .status(400)
-            .json({
-              error: `Missing required OIDC fields: ${missing.join(", ")}`,
-            });
+          return res.status(400).json({
+            error: `Missing required OIDC fields: ${missing.join(", ")}`,
+          });
         }
         if (
           (type === "github" || type === "google") &&
@@ -298,11 +249,9 @@ export function registerSSOProviderRoutes(router: Router): void {
           "usernameAttribute",
         ].filter((f) => !c[f]);
         if (missing.length > 0) {
-          return res
-            .status(400)
-            .json({
-              error: `Missing required LDAP fields: ${missing.join(", ")}`,
-            });
+          return res.status(400).json({
+            error: `Missing required LDAP fields: ${missing.join(", ")}`,
+          });
         }
       }
 
@@ -330,12 +279,10 @@ export function registerSSOProviderRoutes(router: Router): void {
         type,
         providerId: inserted.id,
       });
-      res
-        .status(201)
-        .json({
-          ...inserted,
-          config: decryptProviderConfig(inserted.config, userId),
-        });
+      res.status(201).json({
+        ...inserted,
+        config: decryptProviderConfig(inserted.config, userId),
+      });
     } catch (err) {
       authLogger.error("Failed to create SSO provider", err);
       res.status(500).json({ error: "Failed to create SSO provider" });
@@ -394,9 +341,14 @@ export function registerSSOProviderRoutes(router: Router): void {
 
       let encryptedConfig = existing[0].config;
       if (rawConfig !== undefined) {
-        const existingDecrypted = decryptProviderConfig(existing[0].config, userId);
+        const existingDecrypted = decryptProviderConfig(
+          existing[0].config,
+          userId,
+        );
         const mergedConfig = {
-          ...JSON.parse(existingDecrypted ? JSON.stringify(existingDecrypted) : "{}"),
+          ...JSON.parse(
+            existingDecrypted ? JSON.stringify(existingDecrypted) : "{}",
+          ),
           ...rawConfig,
         };
         encryptedConfig = encryptProviderConfig(

@@ -17,7 +17,7 @@ export interface SSOProviderPublic {
 
 export interface SSOProvider extends SSOProviderPublic {
   enabled: boolean;
-  config: string;
+  config: string | Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

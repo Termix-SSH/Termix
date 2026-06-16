@@ -130,10 +130,14 @@ export function SSOProviderDialog({
       setType(provider.type);
       setEnabled(provider.enabled);
       let config: Record<string, unknown> = {};
-      try {
-        config = JSON.parse(provider.config);
-      } catch {
-        /* */
+      if (typeof provider.config === "string") {
+        try {
+          config = JSON.parse(provider.config);
+        } catch {
+          /* */
+        }
+      } else if (provider.config && typeof provider.config === "object") {
+        config = provider.config as Record<string, unknown>;
       }
       if (provider.type === "ldap") {
         const d = emptyLdap();
