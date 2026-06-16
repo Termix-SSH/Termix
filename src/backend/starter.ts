@@ -104,7 +104,7 @@ import {
     await AutoSSLSetup.initialize();
     systemLogger.success("SSL setup completed", {
       operation: "backend_init_ssl",
-      sslEnabled: process.env.SSL_ENABLED === "true",
+      sslEnabled: process.env.ENABLE_SSL === "true",
     });
 
     const dbModule = await import("./database/db/index.js");
@@ -192,7 +192,7 @@ import {
     systemLogger.success("Termix backend started successfully", {
       operation: "backend_init_complete",
       port: process.env.PORT || 4090,
-      ssl: process.env.SSL_ENABLED === "true",
+      ssl: process.env.ENABLE_SSL === "true",
       duration: Date.now() - initStartTime,
     });
 
