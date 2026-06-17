@@ -67,6 +67,7 @@ import {
   AdminCreateUserDialog,
   AdminEditUserDialog,
   AdminLinkAccountDialog,
+  AdminUnlinkAccountDialog,
 } from "./AdminUserDialogs";
 
 type ApiErrorLike = {
@@ -125,6 +126,13 @@ export function AdminSettingsPanel() {
     id: string;
     username: string;
     isOidc: boolean;
+  } | null>(null);
+
+  // Unlink account dialog
+  const [unlinkAccountOpen, setUnlinkAccountOpen] = useState(false);
+  const [unlinkAccountTarget, setUnlinkAccountTarget] = useState<{
+    id: string;
+    username: string;
   } | null>(null);
 
   // Create role form
@@ -751,6 +759,8 @@ export function AdminSettingsPanel() {
         setEditUserOpen={setEditUserOpen}
         setLinkAccountTarget={setLinkAccountTarget}
         setLinkAccountOpen={setLinkAccountOpen}
+        setUnlinkAccountTarget={setUnlinkAccountTarget}
+        setUnlinkAccountOpen={setUnlinkAccountOpen}
       />
 
       <AdminSessionsSection
@@ -849,6 +859,21 @@ export function AdminSettingsPanel() {
         linkAccountTarget={linkAccountTarget}
         setUsers={setUsers}
         users={users}
+      />
+
+      <AdminUnlinkAccountDialog
+        open={unlinkAccountOpen}
+        onOpenChange={setUnlinkAccountOpen}
+        unlinkAccountTarget={unlinkAccountTarget}
+        onSuccess={(userId) =>
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === userId
+                ? { ...u, isOidc: false, passwordHash: undefined }
+                : u,
+            ),
+          )
+        }
       />
     </div>
   );
