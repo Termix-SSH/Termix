@@ -62,7 +62,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     enableSessionLogging: h.enableSessionLogging ?? true,
     enableCommandHistory: h.enableCommandHistory ?? true,
     enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? false,
+    enableFileManager: h.enableFileManager ?? true,
     enableDocker: h.enableDocker ?? false,
     enableProxmox: h.enableProxmox ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false,

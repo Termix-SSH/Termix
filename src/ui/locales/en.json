@@ -339,6 +339,8 @@
     "docsLink": "View docs",
     "opksshLabel": "OPKSSH",
     "opksshDesc": "Sign in to this host using your identity provider instead of a password or key. Requires OPKSSH set up on the server.",
+    "warpgateLabel": "Warpgate",
+    "warpgateDesc": "Connect through a Warpgate SSH proxy. Termix will handle the browser-based approval flow automatically.",
     "tailscaleDeviceSelect": "Select Tailscale device",
     "tailscaleDeviceSelectPlaceholder": "Select a device...",
     "tailscaleNoApiKey": "No Tailscale API key configured. Add one in Admin Settings to enable device discovery.",
@@ -522,6 +524,7 @@
     "credentialUpdated": "Credential updated",
     "credentialCreated": "Credential created",
     "failedToSaveCredential": "Failed to save credential",
+    "credentialNameRequired": "Please enter a name for the credential",
     "backToHosts": "Back to Hosts",
     "backToCredentials": "Back to Credentials",
     "pinned": "Pinned",
@@ -1248,6 +1251,7 @@
     "totpVerificationFailed": "TOTP verification failed",
     "warpgateVerificationFailed": "Warpgate authentication failed",
     "authenticationFailed": "Authentication failed",
+    "incorrectPassphrase": "Incorrect passphrase. Please try again.",
     "verificationCodePrompt": "Verification code:",
     "changePermissions": "Change Permissions",
     "currentPermissions": "Current Permissions",
@@ -1684,6 +1688,7 @@
     "dataLossWarning": "Resetting your password this way will delete all your saved SSH hosts, credentials, and other encrypted data. This action cannot be undone. Only use this if you have forgotten your password and are not logged in.",
     "authenticationDisabled": "Authentication Disabled",
     "authenticationDisabledDesc": "All authentication methods are currently disabled. Please contact your administrator.",
+    "passwordLoginDisabledDesc": "Password login is disabled. Please use an external authentication provider below.",
     "attemptsRemaining": "{{count}} attempts remaining"
   },
   "hostKey": {
@@ -2203,6 +2208,7 @@
     "saving": "Saving...",
     "updateRegistrationFailed": "Failed to update registration setting",
     "updatePasswordLoginFailed": "Failed to update password login setting",
+    "cannotDisablePasswordLoginWithTotp": "Cannot disable password login while 2FA is enabled for one or more users. Disable 2FA first.",
     "updateOidcAutoProvisionFailed": "Failed to update OIDC auto-provision setting",
     "updatePasswordResetFailed": "Failed to update password reset setting",
     "sessionTimeoutRange2": "Session timeout must be between 1 and 720 hours",
@@ -2588,5 +2594,16 @@
     "timeMinutes": "{{count}}m ago",
     "timeHours": "{{count}}h ago",
     "timeDays": "{{count}}d ago"
+  },
+  "mobileKeyboard": {
+    "shift": "Shift",
+    "ctrl": "Ctrl",
+    "tab": "Tab",
+    "shiftTab": "Shift+Tab",
+    "esc": "Esc",
+    "arrowUp": "^",
+    "arrowDown": "v",
+    "arrowLeft": "<",
+    "arrowRight": ">"
   }
 }

@@ -33,3 +33,5 @@ electron/build-info.cjs
 /.mcp.json
 /CLAUDE.md
 /old_db/
+/scripts/fix-bugs.mjs
+/scripts/fix-features.mjs

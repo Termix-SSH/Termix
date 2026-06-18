@@ -20,6 +20,8 @@ import type {
   TerminalHandle,
   TerminalHostConfig,
 } from "@/features/terminal/Terminal";
+import { MobileTerminalKeyboard } from "@/features/terminal/MobileTerminalKeyboard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { FileManager } from "@/features/file-manager/FileManager";
 import { DockerManager } from "@/features/docker/DockerManager";
 import { HostMetricsTab } from "@/features/host-metrics/HostMetricsTab";
@@ -135,25 +137,37 @@ function TerminalTabContent({
   onCloseTab?: (id: string) => void;
 }) {
   const { previewTerminalTheme } = useTabsSafe();
+  const isMobile = useIsMobile();
   return (
     <CommandHistoryProvider>
-      <TerminalFeature
-        ref={tab.terminalRef as React.Ref<TerminalHandle>}
-        hostConfig={
-          {
-            ...hostToSSHHost(host),
-            sshPort: host.sshPort ?? host.port,
-            instanceId: tab.instanceId ?? tab.id,
-            restoredSessionId: tab.restoredSessionId ?? null,
-          } as TerminalHostConfig
-        }
-        isVisible={isVisible}
-        title={label}
-        showTitle={false}
-        splitScreen={false}
-        onClose={() => onCloseTab?.(tab.id)}
-        previewTheme={previewTerminalTheme}
-      />
+      <div className="flex flex-col h-full w-full">
+        <div className="flex-1 min-h-0">
+          <TerminalFeature
+            ref={tab.terminalRef as React.Ref<TerminalHandle>}
+            hostConfig={
+              {
+                ...hostToSSHHost(host),
+                sshPort: host.sshPort ?? host.port,
+                instanceId: tab.instanceId ?? tab.id,
+                restoredSessionId: tab.restoredSessionId ?? null,
+              } as TerminalHostConfig
+            }
+            isVisible={isVisible}
+            title={label}
+            showTitle={false}
+            splitScreen={false}
+            onClose={() => onCloseTab?.(tab.id)}
+            previewTheme={previewTerminalTheme}
+          />
+        </div>
+        {isMobile && (
+          <MobileTerminalKeyboard
+            terminalRef={
+              tab.terminalRef as React.RefObject<TerminalHandle | null>
+            }
+          />
+        )}
+      </div>
     </CommandHistoryProvider>
   );
 }

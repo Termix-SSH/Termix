@@ -1028,7 +1028,11 @@ async function buildSshConfig(
         cause: keyError,
       });
     }
-  } else if (host.authType === "none" || host.authType === "tailscale") {
+  } else if (
+    host.authType === "none" ||
+    host.authType === "tailscale" ||
+    host.authType === "warpgate"
+  ) {
     // no credentials needed
   } else if (host.authType === "opkssh") {
     // cert auth setup happens in createSshFactory (needs client instance)

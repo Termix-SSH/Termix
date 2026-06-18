@@ -72,12 +72,22 @@ export function HostEditorGeneralTab({
 
   // Folders come from two sources: paths referenced by existing hosts, and
   // standalone folder records (including empty ones just created).
+  // Intermediate ancestor paths are expanded so "A" appears even when only
+  // "A / B" is directly stored on a host.
   const folderPaths = React.useMemo(() => {
     const set = new Set<string>();
+    const addWithAncestors = (path: string) => {
+      const parts = path.split(" / ");
+      let accumulated = "";
+      for (const part of parts) {
+        accumulated = accumulated ? `${accumulated} / ${part}` : part;
+        set.add(accumulated);
+      }
+    };
     for (const h of hosts) {
-      if (h.folder) set.add(h.folder);
+      if (h.folder) addWithAncestors(h.folder);
     }
-    for (const path of folderMeta.keys()) set.add(path);
+    for (const path of folderMeta.keys()) addWithAncestors(path);
     return [...set];
   }, [hosts, folderMeta]);
 

@@ -732,6 +732,29 @@ export function Auth({ onLogin }: AuthProps) {
       const loadingKey = providerId ?? -1;
       setProviderLoading((prev) => ({ ...prev, [loadingKey]: true }));
       try {
+        if (isInElectronWebView()) {
+          // Inside the Electron iframe: delegate OIDC to the parent window so
+          // the system browser opens instead of navigating the iframe (which
+          // would break captcha stages like Cloudflare Turnstile).
+          const callbackPort = 17832 + Math.floor(Math.random() * 100);
+          const authResponse = await getOIDCAuthorizeUrl(
+            rememberMe,
+            callbackPort,
+            providerId,
+          );
+          const { auth_url: authUrl } = authResponse;
+          if (!authUrl) throw new Error(t("errors.invalidAuthUrl"));
+          window.parent.postMessage(
+            {
+              type: "OIDC_SYSTEM_BROWSER_AUTH",
+              source: "oidc_request",
+              authUrl,
+              callbackPort,
+            },
+            "*",
+          );
+          return;
+        }
         if (isElectron()) {
           const electronAPI = (
             window as unknown as {

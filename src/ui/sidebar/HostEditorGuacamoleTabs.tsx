@@ -981,6 +981,28 @@ export function HostEditorVncTab({
               <option value="remote">Remote</option>
             </select>
           </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.serverLayout")}
+            </label>
+            <select
+              className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+              value={form.guacamoleConfig["server-layout"] ?? "auto"}
+              onChange={(e) => setGuacField("server-layout", e.target.value)}
+            >
+              <option value="auto">Auto</option>
+              <option>en-us-qwerty</option>
+              <option>en-gb-qwerty</option>
+              <option>de-de-qwertz</option>
+              <option>fr-fr-azerty</option>
+              <option>it-it-qwerty</option>
+              <option>sv-se-qwerty</option>
+              <option>ja-jp-qwerty</option>
+              <option>pt-br-qwerty</option>
+              <option>es-es-qwerty</option>
+              <option>failsafe</option>
+            </select>
+          </div>
           <SettingRow
             label={t("hosts.guac.swapRedBlue")}
             description={t("hosts.guac.swapRedBlueDesc")}

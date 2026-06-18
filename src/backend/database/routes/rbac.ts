@@ -487,6 +487,12 @@ router.get(
     try {
       const now = new Date().toISOString();
 
+      const userRoleIds = await db
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, userId));
+      const roleIds = userRoleIds.map((r) => r.roleId);
+
       const sharedHosts = await db
         .select({
           id: hosts.id,
@@ -506,7 +512,15 @@ router.get(
         .innerJoin(users, eq(hosts.userId, users.id))
         .where(
           and(
-            eq(hostAccess.userId, userId),
+            or(
+              eq(hostAccess.userId, userId),
+              roleIds.length > 0
+                ? sql`${hostAccess.roleId} IN (${sql.join(
+                    roleIds.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})`
+                : sql`false`,
+            ),
             or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
           ),
         )

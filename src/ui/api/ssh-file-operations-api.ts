@@ -51,10 +51,11 @@ export async function connectSSH(
   },
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/connect", {
-      sessionId,
-      ...config,
-    });
+    const response = await fileManagerApi.post(
+      "/ssh/connect",
+      { sessionId, ...config },
+      { timeout: 120000 },
+    );
     return response.data;
   } catch (error: unknown) {
     if (

@@ -66,7 +66,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     macAddress: h.macAddress,
     enableTerminal: h.enableTerminal ?? true,
     enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? false,
+    enableFileManager: h.enableFileManager ?? true,
     enableDocker: h.enableDocker ?? false,
     enableSsh: h.connectionType === "ssh" || !h.connectionType,
     enableRdp: h.connectionType === "rdp",

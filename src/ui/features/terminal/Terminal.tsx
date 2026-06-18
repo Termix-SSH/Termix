@@ -673,6 +673,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         },
         refresh: () => hardRefresh(),
+        getApplicationCursorKeysMode: () =>
+          terminal?.modes?.applicationCursorKeysMode ?? false,
         openFileManager: () => {
           if (webSocketRef.current?.readyState === WebSocket.OPEN) {
             webSocketRef.current.send(JSON.stringify({ type: "get_cwd" }));
@@ -970,6 +972,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
+              if (showAutocompleteRef.current) {
+                showAutocompleteRef.current = false;
+                setShowAutocomplete(false);
+                setAutocompleteSuggestions([]);
+                currentAutocompleteCommand.current = "";
+              }
+
               const syntaxHighlightingEnabled =
                 hostConfig.terminalConfig?.syntaxHighlighting !== false;
 
@@ -982,7 +991,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               terminal.write(outputData);
               const sudoPasswordPattern =
-                /(?:\[sudo\][^\n]*:\s*$|sudo:[^\n]*password[^\n]*required|password for [^\n]*:\s*$|Password:\s*$)/i;
+                /(?:\[sudo\][^\n\r]*:\s*$|sudo:[^\n\r]*password[^\n\r]*required|password for [^\n\r]*:\s*$|Password:\s*$)/im;
+              // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
+              // emit colored prompts with embedded escape sequences that break the regex.
+              const strippedData = msg.data.replace(
+                /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g,
+                "",
+              );
               const hasSudoPw =
                 hostConfig.terminalConfig?.sudoPassword ||
                 hostConfig.password ||
@@ -990,7 +1005,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 hostConfig.hasPassword;
               if (
                 config.sudoPasswordAutoFill &&
-                sudoPasswordPattern.test(msg.data) &&
+                sudoPasswordPattern.test(strippedData) &&
                 hasSudoPw &&
                 !sudoPromptShownRef.current
               ) {
@@ -1850,7 +1865,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
-        macOptionIsMeta: false,
+        macOptionIsMeta: true,
         macOptionClickForcesSelection: false,
         rightClickSelectsWord: config.rightClickSelectsWord,
         fastScrollSensitivity: config.fastScrollSensitivity,
@@ -2017,7 +2032,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         return false;
       };
 
+      // On macOS Electron, Tab key events can be swallowed by Chromium's focus
+      // traversal system before xterm.js sees them. Calling preventDefault() in
+      // the capture phase blocks that traversal while still allowing the event to
+      // reach xterm.js's internal handler (which fires our attachCustomKeyEventHandler).
+      const handleTabCapture = (e: KeyboardEvent) => {
+        if (e.key === "Tab") {
+          e.preventDefault();
+        }
+      };
+
       element?.addEventListener("keydown", handleBackspaceMode, true);
+      element?.addEventListener("keydown", handleTabCapture, true);
 
       const resizeObserver = new ResizeObserver(() => {
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
@@ -2041,6 +2067,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         element?.removeEventListener("mousemove", handleTmuxDragMove);
         element?.removeEventListener("mouseup", handleTmuxDragEnd);
         element?.removeEventListener("keydown", handleBackspaceMode, true);
+        element?.removeEventListener("keydown", handleTabCapture, true);
         if (notifyTimerRef.current) clearTimeout(notifyTimerRef.current);
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
       };

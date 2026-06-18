@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { copyToClipboard } from "@/lib/clipboard";
 import { Input } from "@/components/input";
 import {
   Tooltip,
@@ -247,12 +248,12 @@ export function SessionLogsPanel() {
 
   const handleCopy = async () => {
     if (!viewContent) return;
-    try {
-      await navigator.clipboard.writeText(viewContent);
+    const ok = await copyToClipboard(viewContent);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error("Failed to copy");
+    } else {
+      toast.error(t("common.copyFailed"));
     }
   };
 

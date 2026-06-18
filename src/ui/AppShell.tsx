@@ -80,7 +80,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableSsh: h.enableSsh ?? (h.connectionType === "ssh" || !h.connectionType),
     enableTerminal: h.enableTerminal ?? true,
     enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? false,
+    enableFileManager: h.enableFileManager ?? true,
     enableDocker: h.enableDocker ?? false,
     enableProxmox: h.enableProxmox ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false, // --- tmux-monitor ---

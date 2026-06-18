@@ -1309,11 +1309,14 @@ export function SidebarTree({
         pin: host.pin ?? false,
         notes: host.notes,
         macAddress: host.macAddress,
-        authType: host.authType,
-        password: host.password ?? null,
-        key: host.key ?? null,
-        keyPassword: host.keyPassword ?? null,
-        keyType: host.keyType ?? null,
+        // Key material is never sent to the frontend, so a cloned key-auth
+        // host would have authType "key" with no key — unusable. Reset to
+        // password so the clone is in a connectable (editable) state.
+        authType: host.authType === "key" ? "password" : host.authType,
+        password: host.authType === "key" ? null : (host.password ?? null),
+        key: null,
+        keyPassword: null,
+        keyType: null,
         credentialId: host.credentialId ? Number(host.credentialId) : null,
         overrideCredentialUsername: host.overrideCredentialUsername ?? false,
         enableSsh: host.enableSsh,

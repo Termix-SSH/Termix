@@ -154,7 +154,9 @@ router.post(
             error: keyInfo.error,
           });
           return res.status(400).json({
-            error: `Invalid SSH key: ${keyInfo.error}`,
+            error: keyInfo.error
+              ? `Invalid SSH key: ${keyInfo.error}`
+              : "Unrecognized SSH key format. Only OpenSSH and PEM formats are supported (not PuTTY .ppk).",
           });
         }
       }
@@ -525,7 +527,9 @@ router.put(
               error: keyInfo.error,
             });
             return res.status(400).json({
-              error: `Invalid SSH key: ${keyInfo.error}`,
+              error: keyInfo.error
+                ? `Invalid SSH key: ${keyInfo.error}`
+                : "Unrecognized SSH key format. Only OpenSSH and PEM formats are supported (not PuTTY .ppk).",
             });
           }
           updateFields.privateKey = keyInfo.privateKey;
@@ -986,7 +990,7 @@ function formatSSHHostOutput(
     tunnelConnections: host.tunnelConnections
       ? JSON.parse(host.tunnelConnections as string)
       : [],
-    enableFileManager: !!host.enableFileManager,
+    enableFileManager: host.enableFileManager !== false,
     defaultPath: host.defaultPath,
     createdAt: host.createdAt,
     updatedAt: host.updatedAt,

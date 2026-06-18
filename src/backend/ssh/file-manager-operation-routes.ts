@@ -6,6 +6,7 @@ import {
   execWithSudo,
   type SSHSession,
 } from "./file-manager-session.js";
+import { isWindowsSftpPath } from "./transfer-paths.js";
 
 type FileOperationRoutesDeps = {
   sshSessions: Record<string, SSHSession>;
@@ -373,11 +374,23 @@ export function registerFileOperationRoutes(
       type: isDirectory ? "directory" : "file",
     });
     sshConn.lastActive = Date.now();
-    const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
 
-    const deleteCommand = isDirectory
-      ? `rm -rf '${escapedPath}'`
-      : `rm -f '${escapedPath}'`;
+    const isWindowsPath = isWindowsSftpPath(itemPath);
+    let deleteCommand: string;
+    if (isWindowsPath) {
+      const winPath = itemPath
+        .replace(/\//g, "\\")
+        .replace(/^\\([A-Za-z]:\\)/, "$1");
+      const escapedWinPath = winPath.replace(/"/g, '""');
+      deleteCommand = isDirectory
+        ? `rd /s /q "${escapedWinPath}"`
+        : `del /f /q "${escapedWinPath}"`;
+    } else {
+      const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
+      deleteCommand = isDirectory
+        ? `rm -rf '${escapedPath}'`
+        : `rm -f '${escapedPath}'`;
+    }
 
     const executeDelete = (useSudo: boolean): Promise<void> => {
       return new Promise((resolve) => {
@@ -465,10 +478,6 @@ export function registerFileOperationRoutes(
                   },
                 });
               } else {
-                // The shell didn't echo our SUCCESS sentinel. This happens on
-                // non-POSIX shells (e.g. Windows PowerShell, where `rm -f` is
-                // not supported) and the command can exit 0 while doing nothing.
-                // Surface whatever the shell produced so the failure isn't silent.
                 const detail =
                   errorData.trim() ||
                   outputData.trim() ||

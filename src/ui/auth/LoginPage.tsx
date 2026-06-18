@@ -683,8 +683,19 @@ export function Auth({
       setLdapLoading(true);
       try {
         await ldapLogin(providerId, ldapUsername, ldapPassword, rememberMe);
-        const userInfo = await getUserInfo();
-        onLogin(userInfo);
+        const meRes = await getUserInfo();
+        setInternalLoggedIn(true);
+        setLoggedIn(true);
+        setIsAdmin(!!meRes.is_admin);
+        setUsername(meRes.username || null);
+        setUserId(meRes.userId || null);
+        setDbError(null);
+        onAuthSuccess({
+          isAdmin: !!meRes.is_admin,
+          username: meRes.username || null,
+          userId: meRes.userId || null,
+        });
+        toast.success(t("messages.loginSuccess"));
       } catch (err: unknown) {
         const error = err as {
           response?: { data?: { error?: string } };
@@ -699,7 +710,18 @@ export function Auth({
         setLdapLoading(false);
       }
     },
-    [ldapUsername, ldapPassword, rememberMe, onLogin, t],
+    [
+      ldapUsername,
+      ldapPassword,
+      rememberMe,
+      onAuthSuccess,
+      setLoggedIn,
+      setIsAdmin,
+      setUsername,
+      setUserId,
+      setDbError,
+      t,
+    ],
   );
 
   useEffect(() => {
@@ -1515,106 +1537,122 @@ export function Auth({
                             className="flex flex-col gap-5"
                             onSubmit={handleSubmit}
                           >
-                            <div className="flex flex-col gap-2">
-                              <Label htmlFor="username">
-                                {t("common.username")}
-                              </Label>
-                              <Input
-                                id="username"
-                                type="text"
-                                required
-                                className="h-11 text-base"
-                                value={localUsername}
-                                onChange={(e) =>
-                                  setLocalUsername(e.target.value)
-                                }
-                                disabled={loading || loggedIn}
-                              />
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              <Label htmlFor="password">
-                                {t("common.password")}
-                              </Label>
-                              <PasswordInput
-                                id="password"
-                                required
-                                className="h-11 text-base"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                disabled={loading || loggedIn}
-                              />
-                            </div>
-                            {tab === "login" && (
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  id="rememberMe"
-                                  checked={rememberMe}
-                                  onCheckedChange={(checked) =>
-                                    setRememberMe(checked === true)
-                                  }
-                                  disabled={loading || loggedIn}
-                                />
-                                <Label
-                                  htmlFor="rememberMe"
-                                  className="text-sm font-normal cursor-pointer"
+                            {!passwordLoginAllowed &&
+                            !firstUser &&
+                            tab === "login" ? (
+                              <p className="text-center text-muted-foreground text-sm">
+                                {t("auth.passwordLoginDisabledDesc")}
+                              </p>
+                            ) : (
+                              <>
+                                <div className="flex flex-col gap-2">
+                                  <Label htmlFor="username">
+                                    {t("common.username")}
+                                  </Label>
+                                  <Input
+                                    id="username"
+                                    type="text"
+                                    required
+                                    className="h-11 text-base"
+                                    value={localUsername}
+                                    onChange={(e) =>
+                                      setLocalUsername(e.target.value)
+                                    }
+                                    disabled={loading || loggedIn}
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <Label htmlFor="password">
+                                    {t("common.password")}
+                                  </Label>
+                                  <PasswordInput
+                                    id="password"
+                                    required
+                                    className="h-11 text-base"
+                                    value={password}
+                                    onChange={(e) =>
+                                      setPassword(e.target.value)
+                                    }
+                                    disabled={loading || loggedIn}
+                                  />
+                                </div>
+                                {tab === "login" && (
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      id="rememberMe"
+                                      checked={rememberMe}
+                                      onCheckedChange={(checked) =>
+                                        setRememberMe(checked === true)
+                                      }
+                                      disabled={loading || loggedIn}
+                                    />
+                                    <Label
+                                      htmlFor="rememberMe"
+                                      className="text-sm font-normal cursor-pointer"
+                                    >
+                                      {t("auth.rememberMe")}
+                                    </Label>
+                                  </div>
+                                )}
+                                {tab === "signup" && (
+                                  <div className="flex flex-col gap-2">
+                                    <Label htmlFor="signup-confirm-password">
+                                      {t("common.confirmPassword")}
+                                    </Label>
+                                    <PasswordInput
+                                      id="signup-confirm-password"
+                                      required
+                                      className="h-11 text-base"
+                                      value={signupConfirmPassword}
+                                      onChange={(e) =>
+                                        setSignupConfirmPassword(e.target.value)
+                                      }
+                                      disabled={loading || loggedIn}
+                                    />
+                                  </div>
+                                )}
+                                <Button
+                                  type="submit"
+                                  className="w-full h-11 mt-2 text-base font-semibold"
+                                  disabled={loading || internalLoggedIn}
                                 >
-                                  {t("auth.rememberMe")}
-                                </Label>
-                              </div>
-                            )}
-                            {tab === "signup" && (
-                              <div className="flex flex-col gap-2">
-                                <Label htmlFor="signup-confirm-password">
-                                  {t("common.confirmPassword")}
-                                </Label>
-                                <PasswordInput
-                                  id="signup-confirm-password"
-                                  required
-                                  className="h-11 text-base"
-                                  value={signupConfirmPassword}
-                                  onChange={(e) =>
-                                    setSignupConfirmPassword(e.target.value)
-                                  }
-                                  disabled={loading || loggedIn}
-                                />
-                              </div>
-                            )}
-                            <Button
-                              type="submit"
-                              className="w-full h-11 mt-2 text-base font-semibold"
-                              disabled={loading || internalLoggedIn}
-                            >
-                              {loading
-                                ? Spinner
-                                : tab === "login"
-                                  ? t("common.login")
-                                  : t("auth.signUp")}
-                            </Button>
-                            {tab === "login" && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full h-11 text-base font-semibold"
-                                disabled={loading || loggedIn}
-                                onClick={() => {
-                                  setTab("reset");
-                                  resetPasswordState();
-                                  clearFormFields();
-                                }}
-                              >
-                                {t("auth.resetPasswordButton")}
-                              </Button>
+                                  {loading
+                                    ? Spinner
+                                    : tab === "login"
+                                      ? t("common.login")
+                                      : t("auth.signUp")}
+                                </Button>
+                                {tab === "login" && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full h-11 text-base font-semibold"
+                                    disabled={loading || loggedIn}
+                                    onClick={() => {
+                                      setTab("reset");
+                                      resetPasswordState();
+                                      clearFormFields();
+                                    }}
+                                  >
+                                    {t("auth.resetPasswordButton")}
+                                  </Button>
+                                )}
+                              </>
                             )}
 
                             {ssoProviders.length > 0 && !isElectron() && (
                               <div className="flex flex-col gap-3 pt-2">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex-1 border-t border-border" />
-                                  <span className="text-xs text-muted-foreground px-1 whitespace-nowrap">
-                                    {t("auth.orContinueWith")}
-                                  </span>
-                                  <div className="flex-1 border-t border-border" />
-                                </div>
+                                {(passwordLoginAllowed ||
+                                  firstUser ||
+                                  tab === "signup") && (
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex-1 border-t border-border" />
+                                    <span className="text-xs text-muted-foreground px-1 whitespace-nowrap">
+                                      {t("auth.orContinueWith")}
+                                    </span>
+                                    <div className="flex-1 border-t border-border" />
+                                  </div>
+                                )}
                                 {ssoProviders.map((provider) => {
                                   if (provider.type === "ldap") {
                                     const isExpanded =

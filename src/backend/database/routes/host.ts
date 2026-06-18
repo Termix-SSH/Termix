@@ -952,10 +952,9 @@ router.put(
       sshDataObj.keyType = null;
     }
 
-    if (rdpPassword !== undefined) sshDataObj.rdpPassword = rdpPassword || null;
-    if (vncPassword !== undefined) sshDataObj.vncPassword = vncPassword || null;
-    if (telnetPassword !== undefined)
-      sshDataObj.telnetPassword = telnetPassword || null;
+    if (rdpPassword) sshDataObj.rdpPassword = rdpPassword;
+    if (vncPassword) sshDataObj.vncPassword = vncPassword;
+    if (telnetPassword) sshDataObj.telnetPassword = telnetPassword;
 
     try {
       const accessInfo = await permissionManager.canAccessHost(
@@ -1445,7 +1444,19 @@ router.get(
 
       const host = data[0];
       const resolved = (await resolveHostCredentials(host, userId)) || host;
-      const value = resolved[field];
+      let value = resolved[field];
+
+      if (!value && field === "sudoPassword" && resolved.terminalConfig) {
+        try {
+          const tc =
+            typeof resolved.terminalConfig === "string"
+              ? JSON.parse(resolved.terminalConfig)
+              : resolved.terminalConfig;
+          value = tc?.sudoPassword || null;
+        } catch {
+          // malformed JSON — leave value null
+        }
+      }
 
       if (!value) {
         return res.status(404).json({ error: "No password set" });
@@ -1574,7 +1585,7 @@ router.get(
               !!resolvedHost.overrideCredentialUsername,
             enableTerminal: !!resolvedHost.enableTerminal,
             enableTunnel: !!resolvedHost.enableTunnel,
-            enableFileManager: !!resolvedHost.enableFileManager,
+            enableFileManager: resolvedHost.enableFileManager !== false,
             enableDocker: !!resolvedHost.enableDocker,
             enableProxmox: !!resolvedHost.enableProxmox,
             enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
@@ -1722,7 +1733,7 @@ router.get(
                 !!resolvedHost.overrideCredentialUsername,
               enableTerminal: !!resolvedHost.enableTerminal,
               enableTunnel: !!resolvedHost.enableTunnel,
-              enableFileManager: !!resolvedHost.enableFileManager,
+              enableFileManager: resolvedHost.enableFileManager !== false,
               enableDocker: !!resolvedHost.enableDocker,
               enableProxmox: !!resolvedHost.enableProxmox,
               enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,

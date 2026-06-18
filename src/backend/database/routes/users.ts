@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { users, settings, roles, userRoles } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
@@ -972,7 +972,6 @@ router.get("/oidc/callback", async (req, res) => {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
-        Authorization: `Basic ${Buffer.from(`${encodeURIComponent(config.client_id)}:${encodeURIComponent(config.client_secret)}`).toString("base64")}`,
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
@@ -1367,6 +1366,39 @@ router.get("/oidc/callback", async (req, res) => {
           .set({ isAdmin: shouldBeAdmin })
           .where(eq(users.id, userRecord.id));
         userRecord.isAdmin = shouldBeAdmin;
+        try {
+          const newRoleName = shouldBeAdmin ? "admin" : "user";
+          const oldRoleName = shouldBeAdmin ? "user" : "admin";
+          const newRole = await db
+            .select({ id: roles.id })
+            .from(roles)
+            .where(eq(roles.name, newRoleName))
+            .limit(1);
+          const oldRole = await db
+            .select({ id: roles.id })
+            .from(roles)
+            .where(eq(roles.name, oldRoleName))
+            .limit(1);
+          if (oldRole.length > 0) {
+            await db
+              .delete(userRoles)
+              .where(
+                and(
+                  eq(userRoles.userId, userRecord.id),
+                  eq(userRoles.roleId, oldRole[0].id),
+                ),
+              );
+          }
+          if (newRole.length > 0) {
+            await db.insert(userRoles).values({
+              userId: userRecord.id,
+              roleId: newRole[0].id,
+              grantedBy: userRecord.id,
+            });
+          }
+        } catch {
+          /* non-fatal */
+        }
         authLogger.info("OIDC admin status synced", {
           operation: "oidc_admin_group_sync",
           userId: userRecord.id,
@@ -2094,6 +2126,17 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
     const { allowed } = req.body;
     if (typeof allowed !== "boolean") {
       return res.status(400).json({ error: "Invalid value for allowed" });
+    }
+    if (!allowed) {
+      const totpRow = db.$client
+        .prepare("SELECT COUNT(*) as count FROM users WHERE totp_enabled = 1")
+        .get() as { count?: number };
+      if ((totpRow?.count || 0) > 0) {
+        return res.status(409).json({
+          error:
+            "Cannot disable password login while 2FA is enabled for one or more users. Disable 2FA first.",
+        });
+      }
     }
     db.$client
       .prepare(

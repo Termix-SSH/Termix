@@ -63,13 +63,43 @@ export function ElectronLoginForm({
       try {
         if (event.source !== iframeRef.current?.contentWindow) return;
         if (!event.data || typeof event.data !== "object") return;
-        const { type, platform, source, token } = event.data;
+        const { type, platform, source, token, authUrl, callbackPort } =
+          event.data;
+
         if (
           type === "AUTH_SUCCESS" &&
           platform === "desktop" &&
           AUTH_MESSAGE_SOURCES.has(source)
         ) {
           await handleAuthSuccess(token ?? null);
+          return;
+        }
+
+        // OIDC login requested from inside the iframe — open the system browser
+        // so captcha stages (e.g. Cloudflare Turnstile) render correctly.
+        if (type === "OIDC_SYSTEM_BROWSER_AUTH" && authUrl && callbackPort) {
+          const electronAPI = (
+            window as unknown as {
+              electronAPI?: {
+                oidcSystemBrowserAuth?: (
+                  url: string,
+                  port: number,
+                ) => Promise<{
+                  success: boolean;
+                  token?: string;
+                  error?: string;
+                }>;
+              };
+            }
+          ).electronAPI;
+          if (!electronAPI?.oidcSystemBrowserAuth) return;
+          const result = await electronAPI.oidcSystemBrowserAuth(
+            authUrl,
+            callbackPort,
+          );
+          if (result.success && result.token) {
+            await handleAuthSuccess(result.token);
+          }
         }
       } catch {
         // ignore

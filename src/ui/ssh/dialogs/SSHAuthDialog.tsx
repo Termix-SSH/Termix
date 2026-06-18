@@ -210,7 +210,7 @@ export function SSHAuthDialog({
                     <input
                       id="key-upload"
                       type="file"
-                      accept="*,.pem,.key,.txt,.ppk"
+                      accept="*,.pem,.key,.txt"
                       onChange={handleKeyFileUpload}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />

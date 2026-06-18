@@ -1832,7 +1832,11 @@ if (frontendDist) {
   );
 
   app.use((req, res, next) => {
-    if (req.method === "GET" && req.accepts("html")) {
+    if (
+      req.method === "GET" &&
+      req.accepts("html") &&
+      !req.headers.authorization
+    ) {
       res.setHeader(
         "Cache-Control",
         "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",

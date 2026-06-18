@@ -283,6 +283,11 @@ export class SSHAuthManager {
     finish: (responses: string[]) => void,
     resolvedCredentials: ResolvedCredentials,
   ): void {
+    if (resolvedCredentials.authType === "warpgate") {
+      finish(prompts.map(() => ""));
+      return;
+    }
+
     const hasStoredPassword =
       resolvedCredentials.password && resolvedCredentials.authType !== "none";
 
@@ -290,18 +295,33 @@ export class SSHAuthManager {
       /password/i.test(p.prompt),
     );
 
-    if (!hasStoredPassword && passwordPromptIndex !== -1) {
+    // Find the first prompt we can't auto-answer. This handles DUO/PAM challenges
+    // that don't say "password" (e.g. "Passcode or option (1-N):").
+    const firstUnansweredIndex = prompts.findIndex((p) => {
+      if (/password/i.test(p.prompt) && hasStoredPassword) return false;
+      return true;
+    });
+
+    if (firstUnansweredIndex !== -1) {
       if (this.context.keyboardInteractiveResponded) {
         return;
       }
       this.context.keyboardInteractiveResponded = true;
 
+      const promptIndex =
+        passwordPromptIndex !== -1 && !hasStoredPassword
+          ? passwordPromptIndex
+          : firstUnansweredIndex;
+
       this.context.keyboardInteractiveFinish = (userResponses: string[]) => {
         const userInput = (userResponses[0] || "").trim();
 
         const responses = prompts.map((p, index) => {
-          if (index === passwordPromptIndex) {
+          if (index === promptIndex) {
             return userInput;
+          }
+          if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+            return resolvedCredentials.password;
           }
           return "";
         });
@@ -335,7 +355,7 @@ export class SSHAuthManager {
       this.context.ws.send(
         JSON.stringify({
           type: "password_required",
-          prompt: prompts[passwordPromptIndex].prompt,
+          prompt: prompts[promptIndex].prompt,
         }),
       );
       return;

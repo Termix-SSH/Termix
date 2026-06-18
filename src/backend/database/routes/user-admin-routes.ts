@@ -1,9 +1,9 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
+import { users, roles, userRoles } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 function isNonEmptyString(val: unknown): val is string {
@@ -138,6 +138,50 @@ export function registerUserAdminRoutes(
             ? eq(users.id, resolvedUserId)
             : eq(users.username, resolvedUsername!),
         );
+
+      try {
+        const targetId = targetUser[0].id;
+        const adminRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.name, "admin"))
+          .limit(1);
+        const userRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.name, "user"))
+          .limit(1);
+        if (adminRole.length > 0) {
+          await db
+            .delete(userRoles)
+            .where(
+              and(
+                eq(userRoles.userId, targetId),
+                eq(userRoles.roleId, adminRole[0].id),
+              ),
+            );
+          await db.insert(userRoles).values({
+            userId: targetId,
+            roleId: adminRole[0].id,
+            grantedBy: userId,
+          });
+        }
+        if (userRole.length > 0) {
+          await db
+            .delete(userRoles)
+            .where(
+              and(
+                eq(userRoles.userId, targetId),
+                eq(userRoles.roleId, userRole[0].id),
+              ),
+            );
+        }
+      } catch (roleError) {
+        authLogger.error("Failed to sync admin role on make-admin", roleError, {
+          operation: "make_admin_role_sync",
+          userId: targetUser[0].id,
+        });
+      }
 
       try {
         const { saveMemoryDatabaseToFile } = await import("../db/index.js");
@@ -276,6 +320,54 @@ export function registerUserAdminRoutes(
             ? eq(users.id, resolvedUserId)
             : eq(users.username, resolvedUsername!),
         );
+
+      try {
+        const targetId = targetUser[0].id;
+        const adminRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.name, "admin"))
+          .limit(1);
+        const userRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.name, "user"))
+          .limit(1);
+        if (adminRole.length > 0) {
+          await db
+            .delete(userRoles)
+            .where(
+              and(
+                eq(userRoles.userId, targetId),
+                eq(userRoles.roleId, adminRole[0].id),
+              ),
+            );
+        }
+        if (userRole.length > 0) {
+          await db
+            .delete(userRoles)
+            .where(
+              and(
+                eq(userRoles.userId, targetId),
+                eq(userRoles.roleId, userRole[0].id),
+              ),
+            );
+          await db.insert(userRoles).values({
+            userId: targetId,
+            roleId: userRole[0].id,
+            grantedBy: userId,
+          });
+        }
+      } catch (roleError) {
+        authLogger.error(
+          "Failed to sync user role on remove-admin",
+          roleError,
+          {
+            operation: "remove_admin_role_sync",
+            userId: targetUser[0].id,
+          },
+        );
+      }
 
       try {
         const { saveMemoryDatabaseToFile } = await import("../db/index.js");

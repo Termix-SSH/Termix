@@ -10,7 +10,14 @@ export type Host = {
   ram: number | null;
   lastAccess: string;
   tags?: string[];
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "warpgate";
   credentialId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
@@ -209,6 +216,7 @@ export type Tab = {
     reconnect?: () => void;
     fit?: () => void;
     notifyResize?: () => void;
+    getApplicationCursorKeysMode?: () => boolean;
   } | null>;
 };
 

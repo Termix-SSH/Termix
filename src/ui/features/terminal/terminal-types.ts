@@ -24,4 +24,5 @@ export interface TerminalHandle {
   sendInput: (data: string) => void;
   notifyResize: () => void;
   refresh: () => void;
+  getApplicationCursorKeysMode: () => boolean;
 }

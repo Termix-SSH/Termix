@@ -67,8 +67,14 @@ router.use(authManager.createAuthMiddleware());
  */
 router.post("/token", async (req, res) => {
   try {
-    const { type, hostname, port, username, password, domain, ...options } =
+    const { type, hostname, port, username, password, domain, ...rawOptions } =
       req.body;
+
+    // Strip "auto" sentinel values before forwarding to guacd
+    const options: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawOptions)) {
+      if (value !== "auto") options[key] = value;
+    }
 
     if (!type || !hostname) {
       return res
@@ -258,6 +264,14 @@ router.post(
             hostId,
             error: error instanceof Error ? error.message : "Unknown error",
           });
+        }
+      }
+
+      // Strip "auto" sentinel values — these mean "use guacd default" in the UI
+      // but guacd doesn't recognise "auto" as a valid parameter value.
+      for (const key of Object.keys(guacConfig)) {
+        if (guacConfig[key] === "auto") {
+          delete guacConfig[key];
         }
       }
 

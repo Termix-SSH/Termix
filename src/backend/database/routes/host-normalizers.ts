@@ -237,7 +237,7 @@ export function transformHostResponse(
     pin: !!host.pin,
     enableTerminal: !!host.enableTerminal,
     enableTunnel: !!host.enableTunnel,
-    enableFileManager: !!host.enableFileManager,
+    enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
     enableProxmox: !!host.enableProxmox,
     enableTmuxMonitor: !!host.enableTmuxMonitor,

@@ -85,6 +85,7 @@ interface FileViewerProps {
   savedContent?: string;
   isLoading?: boolean;
   isEditable?: boolean;
+  resetKey?: number;
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void;
   onRevert?: () => void;
@@ -265,6 +266,7 @@ export function FileViewer({
   savedContent = "",
   isLoading = false,
   isEditable = false,
+  resetKey,
   onContentChange,
   onSave,
   onRevert,
@@ -301,6 +303,9 @@ export function FileViewer({
     if (savedContent) {
       setOriginalContent(savedContent);
     }
+  }, [file.name, file.path, resetKey]);
+
+  useEffect(() => {
     setHasChanges(content !== savedContent);
 
     if (fileTypeInfo.type === "unknown" && isLargeFile && !forceShowAsText) {
@@ -308,14 +313,7 @@ export function FileViewer({
     } else {
       setShowLargeFileWarning(false);
     }
-  }, [
-    content,
-    savedContent,
-    fileTypeInfo.type,
-    isLargeFile,
-    forceShowAsText,
-    file.name,
-  ]);
+  }, [content, savedContent, fileTypeInfo.type, isLargeFile, forceShowAsText]);
 
   const handleContentChange = (newContent: string) => {
     setEditedContent(newContent);

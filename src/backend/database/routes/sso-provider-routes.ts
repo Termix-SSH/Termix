@@ -9,6 +9,7 @@ import { eq, asc } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { SSOProviderType } from "../../../types/index.js";
+import { getOIDCConfigFromEnv } from "./user-oidc-utils.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -117,6 +118,16 @@ export function registerSSOProviderRoutes(router: Router): void {
         .from(ssoProviders)
         .where(eq(ssoProviders.enabled, true))
         .orderBy(asc(ssoProviders.displayOrder), asc(ssoProviders.id));
+
+      // If no DB providers exist, synthesize one from env vars so SSO login
+      // remains available when configured purely via environment variables.
+      if (providers.length === 0) {
+        const envConfig = getOIDCConfigFromEnv();
+        if (envConfig) {
+          providers.push({ id: 0, name: "SSO", type: "oidc", displayOrder: 0 });
+        }
+      }
+
       res.json(providers);
     } catch (err) {
       authLogger.error("Failed to list SSO providers", err);

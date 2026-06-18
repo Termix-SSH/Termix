@@ -17,7 +17,7 @@ const pickPreferences = (row?: typeof userPreferences.$inferSelect) => ({
   fontSize: row?.fontSize ?? null,
   accentColor: row?.accentColor ?? null,
   language: row?.language ?? null,
-  storageMode: row?.storageMode ?? "local",
+  storageMode: row?.storageMode ?? "cloud",
   commandAutocomplete: row?.commandAutocomplete ?? null,
   commandPaletteEnabled: row?.commandPaletteEnabled ?? null,
   showHostTags: row?.showHostTags ?? null,

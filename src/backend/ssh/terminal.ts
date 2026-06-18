@@ -30,6 +30,7 @@ import {
   waitForTmuxSession,
 } from "./tmux-helper.js";
 import { MemoryAgent, performPortKnocking } from "./terminal-auth-helpers.js";
+import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -187,8 +188,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isConnecting = false;
   let isConnected = false;
   let isCleaningUp = false;
-  let cwdPending = false;
-  let cwdBuffer = "";
   let isShellInitializing = false;
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
@@ -446,15 +445,31 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
 
       case "get_cwd": {
-        const activeStream =
-          sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
-        if (!activeStream) {
+        const activeConn =
+          sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
+        if (!activeConn) {
           ws.send(JSON.stringify({ type: "cwd", path: "/" }));
           break;
         }
-        cwdPending = true;
-        cwdBuffer = "";
-        activeStream.write('\x15a=TERMIX_CWD; echo "$a:$(pwd)"\r');
+        activeConn.exec("pwd", (err, execStream) => {
+          if (err) {
+            ws.send(JSON.stringify({ type: "cwd", path: "/" }));
+            return;
+          }
+          let stdout = "";
+          execStream.on("data", (chunk: Buffer) => {
+            stdout += chunk.toString("utf-8");
+          });
+          execStream.stderr.on("data", () => {});
+          execStream.on("close", () => {
+            const cwd = stdout.trim() || "/";
+            const attachedWs =
+              sessionManager.getSession(currentSessionId)?.attachedWs ?? ws;
+            if (attachedWs.readyState === WebSocket.OPEN) {
+              attachedWs.send(JSON.stringify({ type: "cwd", path: cwd }));
+            }
+          });
+        });
         break;
       }
 
@@ -990,7 +1005,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
           }
 
-          if (!hostConfig.useSocks5 && resolvedHostData.useSocks5) {
+          if (resolvedHostData.useSocks5) {
             hostConfig.useSocks5 = resolvedHostData.useSocks5;
             hostConfig.socks5Host = resolvedHostData.socks5Host;
             hostConfig.socks5Port = resolvedHostData.socks5Port;
@@ -1134,15 +1149,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
         !existingSession.sshStream.destroyed &&
         existingSession.sshConn !== sshConn
       ) {
+        const reusedSessionId = currentSessionId;
         sshLogger.info(
           "Reusing existing live session after duplicate connectToHost, closing new SSH conn",
           {
             operation: "terminal_reuse_existing_session",
-            sessionId: currentSessionId,
+            sessionId: reusedSessionId,
             tabInstanceId,
             userId,
           },
         );
+        // Null out currentSessionId before ending the duplicate connection so
+        // the sshConn "close" handler does not destroy the reused session.
+        currentSessionId = null;
         try {
           sshConn?.end();
         } catch {
@@ -1154,7 +1173,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshConn = existingSession.sshConn;
         isConnecting = false;
         isConnected = true;
-        sessionManager.attachWs(currentSessionId, userId, ws, tabInstanceId);
+        sessionManager.attachWs(reusedSessionId, userId, ws, tabInstanceId);
 
         const buffered = sessionManager.getBuffer(existingSession);
         if (buffered) {
@@ -1163,13 +1182,13 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "sessionCreated",
-            sessionId: currentSessionId,
+            sessionId: reusedSessionId,
           }),
         );
         ws.send(
           JSON.stringify({
             type: "sessionAttached",
-            sessionId: currentSessionId,
+            sessionId: reusedSessionId,
           }),
         );
         ws.send(
@@ -1350,44 +1369,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           const boundSessionId = currentSessionId;
 
-          const CWD_SENTINEL = "TERMIX_CWD:";
-
           stream.on("data", (data: Buffer) => {
             try {
-              let utf8String = data.toString("utf-8");
-
-              if (cwdPending) {
-                cwdBuffer += utf8String;
-                const sentinelIdx = cwdBuffer.indexOf(CWD_SENTINEL);
-                if (sentinelIdx !== -1) {
-                  const afterSentinel = cwdBuffer.slice(
-                    sentinelIdx + CWD_SENTINEL.length,
-                  );
-                  const newlineIdx = afterSentinel.search(/[\r\n]/);
-                  if (newlineIdx !== -1) {
-                    const cwd =
-                      afterSentinel.slice(0, newlineIdx).trim() || "/";
-                    cwdPending = false;
-                    // Strip the sentinel line from output sent to terminal
-                    const beforeSentinel = cwdBuffer.slice(0, sentinelIdx);
-                    const afterNewline = afterSentinel.slice(newlineIdx);
-                    utf8String = beforeSentinel + afterNewline;
-                    cwdBuffer = "";
-                    const attachedWs =
-                      sessionManager.getSession(boundSessionId)?.attachedWs ??
-                      ws;
-                    if (attachedWs.readyState === WebSocket.OPEN) {
-                      attachedWs.send(
-                        JSON.stringify({ type: "cwd", path: cwd }),
-                      );
-                    }
-                  } else {
-                    return;
-                  }
-                } else {
-                  return;
-                }
-              }
+              const utf8String = data.toString("utf-8");
 
               if (!utf8String) return;
 
@@ -1475,7 +1459,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const runPostShellCommands = (delay: number) => {
             setTimeout(() => {
               if (initialPath && initialPath.trim() !== "") {
-                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}"\r`;
+                let cdCommand: string;
+                if (isWindowsSftpPath(initialPath)) {
+                  const winPath = sftpPathToLocalPath(initialPath);
+                  const escaped = winPath.replace(/"/g, '""');
+                  cdCommand = `cd "${escaped}"\r`;
+                } else {
+                  cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}"\r`;
+                }
                 stream.write(cdCommand);
               }
               if (executeCommand && executeCommand.trim() !== "") {
@@ -2008,19 +1999,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
     const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
 
+    // Pre-fetch the stored host key before connect so the verifier callback
+    // runs synchronously during SSH key exchange, avoiding LoginGraceTime
+    // expiry on slow connections (especially through jump host tunnels).
+    const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(id);
+
     const connectConfig: Record<string, unknown> = {
       host: ip,
       port,
       username,
-      tryKeyboard:
-        resolvedCredentials.authType !== "none" &&
-        resolvedCredentials.authType !== "tailscale",
+      tryKeyboard: resolvedCredentials.authType !== "tailscale",
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
-          ? hostKeepaliveInterval * 1000
+          ? Math.max(5000, hostKeepaliveInterval * 1000)
           : 30000,
       keepaliveCountMax:
-        typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 3,
+        typeof hostKeepaliveCountMax === "number"
+          ? Math.max(1, hostKeepaliveCountMax)
+          : 5,
       readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
@@ -2032,6 +2028,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws,
         userId,
         false,
+        preloadedHostData,
       ),
       env: {
         TERM: "xterm-256color",
@@ -2087,9 +2084,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     if (
       resolvedCredentials.authType === "none" ||
-      resolvedCredentials.authType === "tailscale"
+      resolvedCredentials.authType === "tailscale" ||
+      resolvedCredentials.authType === "warpgate"
     ) {
-      // Tailscale SSH and "none" auth: daemon handles authorization, no credentials needed
+      // Tailscale SSH, "none", and Warpgate auth: no static credentials; Warpgate handles auth via keyboard-interactive
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

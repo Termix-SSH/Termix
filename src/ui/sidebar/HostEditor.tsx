@@ -240,6 +240,7 @@ export function HostEditor({
                       "none",
                       "opkssh",
                       "tailscale",
+                      "warpgate",
                     ].map((m) => (
                       <button
                         key={m}
@@ -337,7 +338,7 @@ export function HostEditor({
                               </span>
                               <input
                                 type="file"
-                                accept=".pem,.key,.txt,.ppk"
+                                accept=".pem,.key,.txt"
                                 className="hidden"
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
@@ -564,6 +565,18 @@ export function HostEditor({
                         </p>
                       </>
                     )}
+                  </div>
+                )}
+                {authMethod === "warpgate" && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.warpgateLabel")}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.warpgateDesc")}
+                    </p>
                   </div>
                 )}
                 <SettingRow

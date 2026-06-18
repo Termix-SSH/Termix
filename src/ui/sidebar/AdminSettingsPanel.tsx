@@ -297,9 +297,10 @@ export function AdminSettingsPanel() {
     setAllowPasswordLogin(newVal);
     try {
       await updatePasswordLoginAllowed(newVal);
-    } catch {
+    } catch (e) {
       setAllowPasswordLogin(!newVal);
-      toast.error(t("admin.updatePasswordLoginFailed"));
+      const msg = (e as ApiErrorLike).response?.data?.error;
+      toast.error(msg || t("admin.updatePasswordLoginFailed"));
     }
   }
 

@@ -363,6 +363,12 @@ export function registerHostBulkRoutes(
 
               if (fallback.length > 0) {
                 hostData.credentialId = fallback[0].id;
+              } else if (isNonEmptyString(hostData.key)) {
+                hostData.authType = "key";
+                hostData.credentialId = undefined;
+              } else if (isNonEmptyString(hostData.password)) {
+                hostData.authType = "password";
+                hostData.credentialId = undefined;
               } else {
                 results.failed++;
                 results.errors.push(

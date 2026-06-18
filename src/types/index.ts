@@ -100,7 +100,14 @@ export interface Host {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "warpgate";
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -210,7 +217,14 @@ export interface HostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "warpgate";
   password?: string;
   key?: File | null;
   keyPassword?: string;

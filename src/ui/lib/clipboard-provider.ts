@@ -18,9 +18,13 @@ export class RobustClipboardProvider implements IClipboardProvider {
           });
           return;
         }
-        navigator.clipboard.writeText(text).catch(() => {
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(text).catch(() => {
+            this.pendingWrite = text;
+          });
+        } else {
           this.pendingWrite = text;
-        });
+        }
       }
     };
     window.addEventListener("focus", this.focusHandler);
@@ -47,7 +51,11 @@ export class RobustClipboardProvider implements IClipboardProvider {
         await window.electronClipboard.writeText(text);
         return;
       }
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        this.pendingWrite = text;
+      }
     } catch {
       this.pendingWrite = text;
     }

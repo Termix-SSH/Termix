@@ -476,6 +476,11 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("--ozone-platform-hint=auto");
 
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
+
+  // Fix click-coordinate misalignment with fractional display scaling on KDE/Wayland.
+  // Chromium's hit-testing uses unscaled coords while the compositor scales visually,
+  // so forcing scale factor 1 keeps them in sync. See: https://github.com/brave/brave-browser/issues/50028
+  app.commandLine.appendSwitch("--force-device-scale-factor", "1");
 }
 
 if (process.platform === "win32") {
