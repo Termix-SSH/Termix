@@ -345,23 +345,21 @@ export async function uploadSSHFile(
   sessionId: string,
   path: string,
   fileName: string,
-  content: string,
+  file: File,
   hostId?: number,
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post(
-      "/ssh/uploadFile",
-      {
-        sessionId,
-        path,
-        fileName,
-        content,
-        hostId,
-        userId,
-      },
-      { timeout: 0 },
-    );
+    const form = new FormData();
+    form.append("sessionId", sessionId);
+    form.append("path", path);
+    if (hostId !== undefined) form.append("hostId", String(hostId));
+    if (userId !== undefined) form.append("userId", userId);
+    form.append("file", file, fileName);
+
+    const response = await fileManagerApi.post("/ssh/uploadFileStream", form, {
+      timeout: 0,
+    });
     return response.data;
   } catch (error) {
     handleApiError(error, "upload SSH file");

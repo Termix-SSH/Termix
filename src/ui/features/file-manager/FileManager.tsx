@@ -906,24 +906,11 @@ function FileManagerContent({
             "/"
           : currentPath;
 
-        const fileContent = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onerror = () => reject(reader.error);
-          reader.onload = () => {
-            if (typeof reader.result === "string") {
-              resolve(reader.result.split(",")[1] || "");
-            } else {
-              reject(new Error("Failed to read file"));
-            }
-          };
-          reader.readAsDataURL(file);
-        });
-
         await uploadSSHFile(
           sshSessionId,
           uploadPath,
           file.name,
-          fileContent,
+          file,
           currentHost?.id,
         );
       }
@@ -963,26 +950,11 @@ function FileManagerContent({
     try {
       await ensureSSHConnection();
 
-      const fileContent = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => reject(reader.error);
-
-        reader.onload = () => {
-          if (typeof reader.result === "string") {
-            const base64 = reader.result.split(",")[1] || "";
-            resolve(base64);
-          } else {
-            reject(new Error("Failed to read file"));
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-
       await uploadSSHFile(
         sshSessionId,
         currentPath,
         file.name,
-        fileContent,
+        file,
         currentHost?.id,
         undefined,
       );
