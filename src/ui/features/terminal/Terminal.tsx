@@ -75,6 +75,7 @@ interface SSHTerminalProps {
   /** Attach to this tmux session right after connecting (tmux monitor). */
   tmuxAttachSession?: string;
   onOpenFileManager?: (path?: string) => void;
+  onOpenFileInEditor?: (filePath: string) => void;
   previewTheme?: string | null;
 }
 
@@ -85,10 +86,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       isVisible,
       splitScreen = false,
       onClose,
+      onTitleChange,
       initialPath,
       executeCommand,
       tmuxAttachSession,
       onOpenFileManager,
+      onOpenFileInEditor,
       previewTheme,
     },
     ref,
@@ -114,7 +117,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const activeTheme = previewTheme || config.theme;
     const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
-    const backgroundColor = themeColors.background;
+    const backgroundImage = config.backgroundImage || "";
+    const backgroundImageOpacity = config.backgroundImageOpacity ?? 0.15;
+    const backgroundColor = backgroundImage
+      ? "transparent"
+      : themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -176,6 +183,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const pendingRestoredSessionIdRef = useRef<string | null>(
       hostConfig.restoredSessionId ?? null,
     );
+    const [linkClickDialog, setLinkClickDialog] = useState<{
+      url: string;
+    } | null>(null);
+
     const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
       sessions: Array<{
         name: string;
@@ -943,6 +954,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           );
         }
         terminal.onData((data) => {
+          if (data === "\r" || data === "\n") {
+            const currentCmd = getCurrentCommand().trim();
+            const termixMatch = currentCmd.match(/^termix\s+(.+)$/);
+            if (termixMatch && onOpenFileInEditor) {
+              const filePath = termixMatch[1].trim();
+              trackInput(data);
+              terminal.write("\r\n");
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(
+                  JSON.stringify({
+                    type: "open_file_in_editor",
+                    path: filePath,
+                  }),
+                );
+              }
+              return;
+            }
+          }
           trackInput(data);
           ws.send(JSON.stringify({ type: "input", data }));
         });
@@ -1401,6 +1430,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           } else if (msg.type === "cwd") {
             onOpenFileManager?.(msg.path as string);
+          } else if (msg.type === "open_file_in_editor") {
+            onOpenFileInEditor?.(msg.path as string);
           } else if (msg.type === "passphrase_required") {
             setShowPassphraseDialog(true);
             setIsConnecting(false);
@@ -1807,7 +1838,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         | "both";
 
       terminal.options.theme = {
-        background: themeColors.background,
+        background: config.backgroundImage
+          ? "transparent"
+          : themeColors.background,
         foreground: themeColors.foreground,
         cursor: themeColors.cursor,
         cursorAccent: themeColors.cursorAccent,
@@ -1875,7 +1908,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         lineHeight: config.lineHeight,
         bellStyle: config.bellStyle as "none" | "sound" | "visual" | "both",
         theme: {
-          background: themeColors.background,
+          background: config.backgroundImage
+            ? "transparent"
+            : themeColors.background,
           foreground: themeColors.foreground,
           cursor: themeColors.cursor,
           cursorAccent: themeColors.cursorAccent,
@@ -1909,7 +1944,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           uri.startsWith("http://") || uri.startsWith("https://")
             ? uri
             : `https://${uri}`;
-        window.open(url, "_blank");
+
+        const hostBehavior = hostConfig.terminalConfig?.linkClickBehavior;
+        const globalBehavior =
+          localStorage.getItem("terminalLinkClickBehavior") ?? "confirm";
+        const behavior = hostBehavior ?? globalBehavior;
+
+        if (behavior === "direct") {
+          window.open(url, "_blank");
+        } else {
+          setLinkClickDialog({ url });
+        }
       });
 
       fitAddonRef.current = fitAddon;
@@ -1921,6 +1966,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.unicode.activeVersion = "11";
 
       terminal.open(xtermRef.current);
+      terminal.onTitleChange((title) => {
+        if (title) onTitleChange?.(title);
+      });
       document.fonts.ready.then(() => {
         terminal.refresh(0, terminal.rows - 1);
         fitAddon.fit();
@@ -2157,6 +2205,38 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             writeTextToClipboard(selection);
             return false;
           }
+        }
+
+        if (
+          e.ctrlKey &&
+          e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "c"
+        ) {
+          const selection = terminal.getSelection();
+          if (selection) {
+            e.preventDefault();
+            e.stopPropagation();
+            writeTextToClipboard(selection);
+            terminal.clearSelection();
+            return false;
+          }
+        }
+
+        if (
+          e.ctrlKey &&
+          e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "v"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          readTextFromClipboard().then((text) => {
+            if (text) terminal.paste(text);
+          });
+          return false;
         }
 
         if (
@@ -2453,10 +2533,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const hasConnectionError = !!connectionError;
 
     return (
-      <div className="h-full w-full relative" style={{ backgroundColor }}>
+      <div
+        className="h-full w-full relative"
+        style={{
+          backgroundColor: backgroundImage
+            ? themeColors.background
+            : backgroundColor,
+          ...(backgroundImage && {
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }),
+        }}
+      >
+        {backgroundImage && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundColor: themeColors.background,
+              opacity: 1 - backgroundImageOpacity,
+            }}
+          />
+        )}
         <div
           ref={xtermRef}
-          className="h-full w-full"
+          className="h-full w-full relative"
           style={{
             pointerEvents: isVisible ? "auto" : "none",
             visibility:
@@ -2707,6 +2809,57 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
+
+        {linkClickDialog && (
+          <div
+            className="absolute inset-0 flex items-center justify-center z-[150]"
+            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+          >
+            <div
+              className="flex flex-col gap-3 p-4 rounded shadow-lg max-w-sm w-full mx-4"
+              style={{ backgroundColor }}
+            >
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {t("terminal.linkDialogTitle")}
+              </p>
+              <p className="text-sm break-all text-foreground select-all">
+                {linkClickDialog.url}
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    writeTextToClipboard(linkClickDialog.url);
+                    setLinkClickDialog(null);
+                  }}
+                >
+                  {t("terminal.linkDialogCopy")}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    window.open(
+                      linkClickDialog.url,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
+                    setLinkClickDialog(null);
+                  }}
+                >
+                  {t("terminal.linkDialogOpen")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLinkClickDialog(null)}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   },

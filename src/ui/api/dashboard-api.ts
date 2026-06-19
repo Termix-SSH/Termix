@@ -81,3 +81,56 @@ export async function resetRecentActivity(): Promise<{ message: string }> {
     throw handleApiError(error, "reset recent activity");
   }
 }
+
+export interface ServiceLink {
+  id: number;
+  userId: string;
+  label: string;
+  url: string;
+  order: number;
+  createdAt: string;
+}
+
+export async function getServiceLinks(): Promise<ServiceLink[]> {
+  try {
+    const response = await dashboardApi.get("/service-links");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch service links");
+  }
+}
+
+export async function createServiceLink(
+  label: string,
+  url: string,
+): Promise<ServiceLink> {
+  try {
+    const response = await dashboardApi.post("/service-links", { label, url });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "create service link");
+  }
+}
+
+export async function deleteServiceLink(
+  id: number,
+): Promise<{ message: string }> {
+  try {
+    const response = await dashboardApi.delete(`/service-links/${id}`);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "delete service link");
+  }
+}
+
+export async function updateServiceLink(
+  id: number,
+  updates: { label?: string; url?: string },
+): Promise<ServiceLink> {
+  try {
+    const response = await dashboardApi.put(`/service-links/${id}`, updates);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update service link");
+  }
+}

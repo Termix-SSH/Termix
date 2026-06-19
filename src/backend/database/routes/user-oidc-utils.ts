@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { ssoProviders } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { Agent } from "undici";
 
 export type OIDCConfig = {
   client_id: string;
@@ -18,7 +19,13 @@ export type OIDCConfig = {
   allowed_users: string;
   admin_group: string;
   group_claim?: string;
+  ca_cert?: string;
 };
+
+export function buildFetchOptions(caCert?: string): Record<string, unknown> {
+  if (!caCert || !caCert.trim()) return {};
+  return { dispatcher: new Agent({ connect: { ca: caCert } }) };
+}
 
 export function getOIDCConfigFromEnv(): OIDCConfig | null {
   const client_id = process.env.OIDC_CLIENT_ID;
@@ -107,6 +114,15 @@ export function isOIDCUserAllowed(
   ];
   for (const pattern of patterns) {
     if (pattern === "*") return true;
+    if (pattern.includes("*")) {
+      const escaped = pattern
+        .toLowerCase()
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*/g, ".*");
+      const regex = new RegExp(`^${escaped}$`);
+      if (values.some((v) => v && regex.test(v.toLowerCase()))) return true;
+      continue;
+    }
     for (const value of values) {
       if (!value) continue;
       if (pattern.toLowerCase().startsWith("@")) {
@@ -123,7 +139,9 @@ export async function verifyOIDCToken(
   idToken: string,
   issuerUrl: string,
   clientId: string,
+  caCert?: string,
 ): Promise<Record<string, unknown>> {
+  const fetchOptions = buildFetchOptions(caCert);
   const normalizedIssuerUrl = issuerUrl.endsWith("/")
     ? issuerUrl.slice(0, -1)
     : issuerUrl;
@@ -142,7 +160,7 @@ export async function verifyOIDCToken(
 
   try {
     const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
-    const discoveryResponse = await fetch(discoveryUrl);
+    const discoveryResponse = await fetch(discoveryUrl, fetchOptions);
     if (discoveryResponse.ok) {
       const discovery = (await discoveryResponse.json()) as Record<
         string,
@@ -160,7 +178,7 @@ export async function verifyOIDCToken(
 
   for (const url of jwksUrls) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, fetchOptions);
       if (response.ok) {
         const jwksData = (await response.json()) as Record<string, unknown>;
         if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {

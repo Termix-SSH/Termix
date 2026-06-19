@@ -7,6 +7,7 @@ import {
   getGuacamoleTokenFromHost,
   getGuacdStatus,
   getSSHHosts,
+  logActivity,
 } from "@/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
@@ -76,6 +77,7 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({
     <GuacamoleAppInner
       hostId={parseInt(hostId, 10)}
       hostConfig={hostConfig}
+      hostName={hostConfig.name || hostConfig.ip || String(hostId)}
       tabId={tabId}
       protocol={protocol}
     />
@@ -85,6 +87,7 @@ const GuacamoleApp: React.FC<GuacamoleAppProps> = ({
 interface GuacamoleAppInnerProps {
   hostId: number;
   hostConfig: Pick<SSHHost, "connectionType">;
+  hostName: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
 }
@@ -92,6 +95,7 @@ interface GuacamoleAppInnerProps {
 const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
   hostId,
   hostConfig,
+  hostName,
   tabId,
   protocol,
 }) => {
@@ -114,7 +118,13 @@ const GuacamoleAppInner: React.FC<GuacamoleAppInnerProps> = ({
         return getGuacamoleTokenFromHost(hostId, protocol);
       })
       .then((result) => {
-        if (result) setToken(result.token);
+        if (result) {
+          setToken(result.token);
+          const resolvedProtocol = (protocol ??
+            hostConfig.connectionType ??
+            "rdp") as "rdp" | "vnc" | "telnet";
+          logActivity(resolvedProtocol, hostId, hostName).catch(() => {});
+        }
       })
       .catch((err) => setError(err?.message || t("guacamole.failedToConnect")));
   }, [hostId, protocol, retryCount, t]);

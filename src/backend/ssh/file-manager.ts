@@ -732,6 +732,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedPort = port;
   let resolvedUsername = username;
   let resolvedJumpHosts = jumpHosts;
+  let resolvedScpLegacy = false;
   let resolvedUseSocks5 = useSocks5;
   let resolvedSocks5Host = socks5Host;
   let resolvedSocks5Port = socks5Port;
@@ -755,6 +756,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
+        resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -810,6 +812,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
+        resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
         if (resolvedHost.useSocks5) {
           resolvedUseSocks5 = resolvedHost.useSocks5;
           resolvedSocks5Host = resolvedHost.socks5Host;
@@ -1142,6 +1145,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       hostId,
       username,
       sudoPassword: resolvedCredentials.sudoPassword,
+      scpLegacy: resolvedScpLegacy,
     };
     scheduleSessionCleanup(sessionId);
     res.json({

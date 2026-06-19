@@ -13,6 +13,7 @@ import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../types/index.js";
+import { dashboardServiceLinksRouter } from "./database/routes/dashboard-service-links-routes.js";
 
 const app = express();
 const authManager = AuthManager.getInstance();
@@ -372,6 +373,8 @@ app.delete("/activity/reset", async (req, res) => {
     res.status(500).json({ error: "Failed to reset activity" });
   }
 });
+
+app.use("/service-links", dashboardServiceLinksRouter);
 
 const PORT = 30006;
 app.listen(PORT, async () => {

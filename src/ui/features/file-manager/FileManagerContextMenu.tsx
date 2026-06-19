@@ -19,6 +19,7 @@ import {
   Bookmark,
   FileArchive,
   ArrowRightLeft,
+  Link,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Kbd, KbdKey, KbdSeparator } from "@/components/kbd.tsx";
@@ -67,6 +68,7 @@ interface ContextMenuProps {
   onExtractArchive?: (file: FileItem) => void;
   onCompress?: (files: FileItem[]) => void;
   onCopyPath?: (files: FileItem[]) => void;
+  onCopyFolderLink?: (path: string) => void;
   onTransferToHost?: (files: FileItem[], move: boolean) => void;
 }
 
@@ -110,6 +112,7 @@ export function FileManagerContextMenu({
   onExtractArchive,
   onCompress,
   onCopyPath,
+  onCopyFolderLink,
   onTransferToHost,
 }: ContextMenuProps) {
   const { t } = useTranslation();
@@ -350,12 +353,22 @@ export function FileManagerContextMenu({
       });
     }
 
+    if (isSingleFile && files[0].type === "directory" && onCopyFolderLink) {
+      menuItems.push({
+        icon: <Link className="size-3.5" />,
+        label: t("fileManager.copyFolderLink"),
+        action: () => onCopyFolderLink(files[0].path),
+      });
+    }
+
     if (
       (hasFiles && (onPreview || onDragToDesktop)) ||
       (isSingleFile &&
         files[0].type === "file" &&
         (onPinFile || onUnpinFile)) ||
-      (isSingleFile && files[0].type === "directory" && onAddShortcut)
+      (isSingleFile &&
+        files[0].type === "directory" &&
+        (onAddShortcut || onCopyFolderLink))
     ) {
       menuItems.push({ separator: true } as MenuItem);
     }
@@ -489,6 +502,15 @@ export function FileManagerContextMenu({
         label: t("fileManager.paste"),
         action: onPaste,
         shortcut: "Ctrl+V",
+      });
+    }
+
+    if (onCopyFolderLink && currentPath) {
+      menuItems.push({ separator: true } as MenuItem);
+      menuItems.push({
+        icon: <Link className="size-3.5" />,
+        label: t("fileManager.copyCurrentFolderLink"),
+        action: () => onCopyFolderLink(currentPath),
       });
     }
   }

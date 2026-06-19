@@ -56,7 +56,8 @@ function isDisplayableText(str: string): boolean {
       (code >= 32 && code <= 126) ||
       code === 9 ||
       code === 10 ||
-      code === 13
+      code === 13 ||
+      code >= 128
     ) {
       printable++;
     }

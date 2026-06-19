@@ -3,7 +3,10 @@ import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { logger } from "../utils/logger.js";
-import { pickResolvedUsername } from "./credential-username.js";
+import {
+  pickResolvedUsername,
+  expandOidcUsername,
+} from "./credential-username.js";
 import type { SSHHost } from "../../types/index.js";
 
 const sshLogger = logger;
@@ -120,6 +123,10 @@ export async function resolveHostById(
                 : cred.password
                   ? "password"
                   : "none";
+              host.username = await expandOidcUsername(
+                host.username as string | undefined,
+                userId,
+              );
               return host as unknown as SSHHost;
             }
           }
@@ -150,6 +157,10 @@ export async function resolveHostById(
               : sharedCred.password
                 ? "password"
                 : "none";
+            host.username = await expandOidcUsername(
+              host.username as string | undefined,
+              userId,
+            );
             return host as unknown as SSHHost;
           }
         } catch (e) {
@@ -202,6 +213,11 @@ export async function resolveHostById(
       });
     }
   }
+
+  host.username = await expandOidcUsername(
+    host.username as string | undefined,
+    userId,
+  );
 
   return host as unknown as SSHHost;
 }

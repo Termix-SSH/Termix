@@ -72,6 +72,7 @@ export function HostProxmoxTab({
 
   const cfg = form.proxmoxConfig ?? {
     defaultCredentialId: null,
+    defaultAuthType: "password",
     windowsPatterns: "win, windows",
     dockerPatterns: "docker",
     preferredPrefixes: "10., 192.168.",
@@ -106,6 +107,29 @@ export function HostProxmoxTab({
         </SettingRow>
         {form.enableProxmox && (
           <>
+            <SettingRow
+              label={t("hosts.proxmoxDefaultAuthType")}
+              description={t("hosts.proxmoxDefaultAuthTypeDesc")}
+            >
+              <select
+                value={cfg.defaultAuthType ?? "password"}
+                onChange={(e) =>
+                  setField("proxmoxConfig", {
+                    ...cfg,
+                    defaultAuthType: e.target.value,
+                  })
+                }
+                className="h-7 w-44 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="password">{t("hosts.authTypePassword")}</option>
+                <option value="key">{t("hosts.authTypeKey")}</option>
+                <option value="credential">
+                  {t("hosts.authTypeCredential")}
+                </option>
+                <option value="opkssh">{t("hosts.authTypeOpkssh")}</option>
+                <option value="none">{t("hosts.authTypeNone")}</option>
+              </select>
+            </SettingRow>
             <SettingRow
               label={t("hosts.proxmoxDefaultCredential")}
               description={t("hosts.proxmoxDefaultCredentialDesc")}
@@ -207,6 +231,15 @@ export function HostFilesTab({
           <FakeSwitch
             checked={form.enableFileManager}
             onChange={(v) => setField("enableFileManager", v)}
+          />
+        </SettingRow>
+        <SettingRow
+          label={t("hosts.scpLegacyLabel")}
+          description={t("hosts.scpLegacyDesc")}
+        >
+          <FakeSwitch
+            checked={form.scpLegacy}
+            onChange={(v) => setField("scpLegacy", v)}
           />
         </SettingRow>
         <div className="flex flex-col gap-1.5">

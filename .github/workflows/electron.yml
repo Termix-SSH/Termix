@@ -734,8 +734,6 @@ jobs:
           CHECKSUM_X64="${{ steps.appimage-info.outputs.checksum_x64 }}"
           CHECKSUM_ARM64="${{ steps.appimage-info.outputs.checksum_arm64 }}"
           RELEASE_DATE="${{ steps.package-version.outputs.release_date }}"
-          APPIMAGE_X64_NAME="${{ steps.appimage-info.outputs.appimage_x64_name }}"
-          APPIMAGE_ARM64_NAME="${{ steps.appimage-info.outputs.appimage_arm64_name }}"
 
           mkdir -p flatpak-submission
 
@@ -761,6 +759,58 @@ jobs:
           name: flatpak-submission
           path: flatpak-submission/*
           retention-days: 30
+
+      - name: Check for Flathub token
+        id: check_flathub_token
+        run: |
+          if [ -n "${{ secrets.FLATHUB_TOKEN }}" ]; then
+            echo "has_token=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Open PR on Flathub repo
+        if: steps.check_flathub_token.outputs.has_token == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.FLATHUB_TOKEN }}
+          VERSION: ${{ steps.package-version.outputs.version }}
+        run: |
+          FLATHUB_REPO="flathub/com.karmaa.termix"
+          BRANCH="release-$VERSION"
+
+          git config --global user.name "LukeGus"
+          git config --global user.email "bugattiguy527@gmail.com"
+
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${FLATHUB_REPO}.git" flathub-repo
+          cd flathub-repo
+
+          git checkout -b "$BRANCH"
+
+          cp ../flatpak-submission/com.karmaa.termix.yml ./
+          cp ../flatpak-submission/com.karmaa.termix.desktop ./
+          cp ../flatpak-submission/com.karmaa.termix.metainfo.xml ./
+          cp ../flatpak-submission/flathub.json ./
+          cp ../flatpak-submission/com.karmaa.termix.svg ./
+          cp ../flatpak-submission/icon-256.png ./
+          cp ../flatpak-submission/icon-128.png ./
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes to submit for $VERSION; Flathub repo already up to date."
+            exit 0
+          fi
+
+          git add -A
+          git commit -m "Update to $VERSION"
+          git push origin "$BRANCH"
+
+          EXISTING_PR=$(gh pr list --repo "$FLATHUB_REPO" --head "$BRANCH" --state open --json number -q '.[0].number' || true)
+          if [ -z "$EXISTING_PR" ]; then
+            gh pr create --repo "$FLATHUB_REPO" \
+              --base master \
+              --head "$BRANCH" \
+              --title "Update to $VERSION" \
+              --body "Automated release update to version $VERSION."
+          else
+            echo "PR #$EXISTING_PR already open for $BRANCH."
+          fi
 
   submit-to-homebrew:
     runs-on: blacksmith-6vcpu-macos-latest

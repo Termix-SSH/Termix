@@ -19,6 +19,14 @@ import {
   getRoles,
   reorderSnippets,
 } from "@/main-axios";
+import {
+  exportSnippets,
+  importSnippets,
+  type SnippetExportData,
+  executeSnippet as apiExecuteSnippet,
+} from "@/api/snippets-api";
+import { getSSHHosts } from "@/api/ssh-host-management-api";
+import type { SSHHost } from "@/types/index";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Separator } from "@/components/separator";
@@ -35,6 +43,7 @@ import {
   Copy,
   Cpu,
   Database,
+  Download,
   Folder,
   Globe,
   GripVertical,
@@ -48,9 +57,11 @@ import {
   Share2,
   Terminal,
   Trash2,
+  Upload,
   UserPlus,
   X,
   MoreHorizontal,
+  Zap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -121,18 +132,23 @@ function SnippetFormDialog({
   folders,
   snippet,
   onSave,
+  availableHosts,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   folders: SnippetFolder[];
   snippet: Snippet | null;
   onSave: (data: Omit<Snippet, "id" | "order">, id?: number) => void;
+  availableHosts: SSHHost[];
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [folder, setFolder] = useState<string | null>(null);
   const [content, setContent] = useState("");
+  const [selectedHostIds, setSelectedHostIds] = useState<Set<number>>(
+    new Set(),
+  );
 
   useEffect(() => {
     if (open) {
@@ -140,8 +156,21 @@ function SnippetFormDialog({
       setDescription(snippet?.description ?? "");
       setFolder(snippet?.folder ?? null);
       setContent(snippet?.content ?? "");
+      setSelectedHostIds(new Set(snippet?.hostIds ?? []));
     }
   }, [open, snippet]);
+
+  function toggleHost(id: number) {
+    setSelectedHostIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   function handleSave() {
     if (!name.trim() || !content.trim()) return;
@@ -151,6 +180,8 @@ function SnippetFormDialog({
         description: description.trim() || undefined,
         content: content.trim(),
         folder,
+        hostIds:
+          selectedHostIds.size > 0 ? Array.from(selectedHostIds) : undefined,
       },
       snippet?.id,
     );
@@ -233,6 +264,67 @@ function SnippetFormDialog({
               onChange={(e) => setContent(e.target.value)}
               className="w-full h-36 px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
             />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <Server className="size-3.5" />
+              {t("newUi.sidebar.snippets.targetHostsLabel")}{" "}
+              <span className="font-normal">
+                ({t("newUi.sidebar.snippets.optional")})
+              </span>
+            </label>
+            <p className="text-xs text-muted-foreground/70">
+              {t("newUi.sidebar.snippets.targetHostsHint")}
+            </p>
+            {availableHosts.length === 0 ? (
+              <span className="text-xs text-muted-foreground/50">
+                {t("newUi.sidebar.snippets.noHostsAvailable")}
+              </span>
+            ) : (
+              <div className="flex flex-col gap-1 max-h-32 overflow-y-auto border border-border p-1.5">
+                {availableHosts.map((host) => {
+                  const selected = selectedHostIds.has(host.id);
+                  return (
+                    <button
+                      key={host.id}
+                      type="button"
+                      onClick={() => toggleHost(host.id)}
+                      className={`flex items-center gap-2 px-2 py-1.5 text-left transition-colors ${
+                        selected
+                          ? "bg-accent-brand/10 text-accent-brand"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <div
+                        className={`size-3 border-2 flex items-center justify-center shrink-0 transition-colors ${
+                          selected
+                            ? "border-accent-brand bg-accent-brand"
+                            : "border-border/60"
+                        }`}
+                      >
+                        {selected && <div className="size-1.5 bg-background" />}
+                      </div>
+                      <Server className="size-3 shrink-0 opacity-60" />
+                      <span className="text-xs font-medium truncate flex-1">
+                        {host.name || host.ip}
+                      </span>
+                      <span className="text-xs text-muted-foreground/60 shrink-0">
+                        {host.ip}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {selectedHostIds.size > 0 && (
+              <button
+                type="button"
+                onClick={() => setSelectedHostIds(new Set())}
+                className="text-xs text-muted-foreground hover:text-foreground self-start"
+              >
+                {t("newUi.sidebar.snippets.clearTargetHosts")}
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 mt-2">
@@ -503,10 +595,36 @@ type AccessRecord = {
 };
 
 type SnippetPayload = Omit<Snippet, "id" | "order">;
-type RawSnippet = SnippetPayload & {
+type RawSnippet = Omit<SnippetPayload, "hostIds"> & {
   id: number;
   order?: number | null;
+  hostFilter?: string | null;
 };
+
+function parseHostFilter(raw: string | null | undefined): number[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.every((x) => typeof x === "number")) {
+      return parsed.length > 0 ? parsed : undefined;
+    }
+  } catch {
+    // ignore malformed values
+  }
+  return undefined;
+}
+
+function mapRawSnippet(s: RawSnippet): Snippet {
+  return {
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    content: s.content,
+    folder: s.folder ?? null,
+    order: s.order ?? 0,
+    hostIds: parseHostFilter(s.hostFilter),
+  };
+}
 type RawSnippetFolder = {
   id: number;
   name: string;
@@ -694,32 +812,44 @@ function SnippetCard({
   snippet,
   selectedTabIds,
   terminalTabs,
+  activeTabId,
   onDelete,
   onEdit,
   onShare,
   onConfirmRun,
+  onDirectExecute,
   onDragStart,
   onDragEnd,
   onDragOver,
   dropIndicator,
   isDragging,
+  availableHosts,
   t,
 }: {
   snippet: Snippet;
   selectedTabIds: Set<string>;
   terminalTabs: Tab[];
+  activeTabId: string;
   onDelete: (id: number) => void;
   onEdit: (snippet: Snippet) => void;
   onShare: (snippet: Snippet) => void;
   onConfirmRun: (snippet: Snippet, execute: () => void) => void;
+  onDirectExecute: (snippet: Snippet) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
   onDragOver: (e: React.DragEvent) => void;
   dropIndicator: "above" | "below" | null;
   isDragging: boolean;
+  availableHosts: SSHHost[];
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
+  const hasTargetHosts = (snippet.hostIds?.length ?? 0) > 0;
+
   function executeRun() {
+    if (hasTargetHosts) {
+      onDirectExecute(snippet);
+      return;
+    }
     const targets = terminalTabs.filter((tab) => selectedTabIds.has(tab.id));
     if (targets.length > 0) {
       targets.forEach((tab) => {
@@ -732,7 +862,9 @@ function SnippetCard({
         }),
       );
     } else if (terminalTabs.length > 0) {
-      terminalTabs[0].terminalRef?.current?.sendInput?.(snippet.content + "\r");
+      const activeTab =
+        terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0];
+      activeTab.terminalRef?.current?.sendInput?.(snippet.content + "\r");
       toast.success(
         t("newUi.sidebar.snippets.runSuccess", {
           name: snippet.name,
@@ -758,6 +890,10 @@ function SnippetCard({
     );
   }
 
+  const targetHosts = hasTargetHosts
+    ? availableHosts.filter((h) => snippet.hostIds!.includes(h.id))
+    : [];
+
   return (
     <div className="relative" onDragOver={onDragOver}>
       {dropIndicator === "above" && (
@@ -774,7 +910,7 @@ function SnippetCard({
       >
         <div className="flex items-start gap-2">
           <GripVertical className="size-3.5 mt-0.5 shrink-0 text-muted-foreground/30 group-hover/card:text-muted-foreground/60 cursor-grab active:cursor-grabbing transition-colors" />
-          <div className="flex flex-col min-w-0">
+          <div className="flex flex-col min-w-0 flex-1">
             <span className="text-xs font-semibold">{snippet.name}</span>
             {snippet.description && (
               <span className="text-xs text-muted-foreground">
@@ -782,19 +918,44 @@ function SnippetCard({
               </span>
             )}
           </div>
+          {hasTargetHosts && (
+            <Zap
+              className="size-3 shrink-0 mt-0.5 text-accent-brand/70"
+              title={t("newUi.sidebar.snippets.hasTargetHosts")}
+            />
+          )}
         </div>
         <span className="text-xs text-muted-foreground font-mono px-1">
           {snippet.content}
         </span>
+        {targetHosts.length > 0 && (
+          <div className="flex flex-wrap gap-1 px-1">
+            {targetHosts.map((host) => (
+              <span
+                key={host.id}
+                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-accent-brand/10 text-accent-brand border border-accent-brand/20"
+              >
+                <Server className="size-2.5" />
+                {host.name || host.ip}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 text-xs h-7 gap-1.5"
+            className={`flex-1 text-xs h-7 gap-1.5 ${hasTargetHosts ? "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand" : ""}`}
             onClick={handleRun}
           >
-            <Play className="size-3" />
-            {t("newUi.sidebar.snippets.run")}
+            {hasTargetHosts ? (
+              <Zap className="size-3" />
+            ) : (
+              <Play className="size-3" />
+            )}
+            {hasTargetHosts
+              ? t("newUi.sidebar.snippets.runOnTargets")
+              : t("newUi.sidebar.snippets.run")}
           </Button>
           <Button
             variant="ghost"
@@ -837,6 +998,207 @@ function SnippetCard({
   );
 }
 
+function ImportSnippetsDialog({
+  open,
+  onOpenChange,
+  onImportDone,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onImportDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const [file, setFile] = useState<File | null>(null);
+  const [overwrite, setOverwrite] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setFile(null);
+      setOverwrite(false);
+    }
+  }, [open]);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFile(e.target.files?.[0] ?? null);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped?.name.endsWith(".json")) setFile(dropped);
+  }
+
+  async function handleImport() {
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      let parsed: SnippetExportData;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        toast.error(t("newUi.sidebar.snippets.importInvalidFile"));
+        return;
+      }
+
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        (!Array.isArray(parsed.snippets) && !Array.isArray(parsed.folders))
+      ) {
+        toast.error(t("newUi.sidebar.snippets.importInvalidFile"));
+        return;
+      }
+
+      const result = await importSnippets(parsed, overwrite);
+      toast.success(
+        t("newUi.sidebar.snippets.importSuccess", {
+          snippets: result.snippetsImported,
+          updated: result.snippetsUpdated,
+          skipped: result.snippetsSkipped,
+          folders: result.foldersImported,
+        }),
+      );
+      onImportDone();
+      onOpenChange(false);
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.importFailed"));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">
+            {t("newUi.sidebar.snippets.importTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {t("newUi.sidebar.snippets.importDescription")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4 mt-1">
+          <div
+            className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border px-4 py-8 cursor-pointer hover:border-accent-brand/50 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+          >
+            <Upload className="size-6 text-muted-foreground" />
+            <span className="text-xs text-muted-foreground text-center">
+              {file
+                ? t("newUi.sidebar.snippets.importSelectedFile", {
+                    name: file.name,
+                  })
+                : t("newUi.sidebar.snippets.importDropOrClick")}
+            </span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={overwrite}
+              onChange={(e) => setOverwrite(e.target.checked)}
+              className="size-3.5"
+            />
+            {t("newUi.sidebar.snippets.importOverwrite")}
+          </label>
+        </div>
+        <div className="flex items-center justify-end gap-2 mt-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {t("newUi.sidebar.snippets.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={handleImport}
+            disabled={!file || importing}
+          >
+            {t("newUi.sidebar.snippets.importStartBtn")}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ExecutionResult {
+  hostLabel: string;
+  success: boolean;
+  output: string;
+  error?: string;
+}
+
+function ExecutionResultDialog({
+  open,
+  onOpenChange,
+  snippetName,
+  results,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  snippetName: string;
+  results: ExecutionResult[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">
+            {t("newUi.sidebar.snippets.executionResultTitle", {
+              name: snippetName,
+            })}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {t("newUi.sidebar.snippets.executionResultDescription")}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3 max-h-80 overflow-y-auto">
+          {results.map((r, i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-1 border border-border p-2.5"
+            >
+              <div className="flex items-center gap-2">
+                <Server className="size-3 shrink-0 text-muted-foreground" />
+                <span className="text-xs font-semibold">{r.hostLabel}</span>
+                <span
+                  className={`ml-auto text-[10px] px-1.5 py-0.5 ${r.success ? "bg-green-500/10 text-green-500" : "bg-destructive/10 text-destructive"}`}
+                >
+                  {r.success
+                    ? t("newUi.sidebar.snippets.executionSuccess")
+                    : t("newUi.sidebar.snippets.executionFailed")}
+                </span>
+              </div>
+              {(r.output || r.error) && (
+                <pre className="text-xs bg-muted/30 p-2 overflow-x-auto whitespace-pre-wrap font-mono text-muted-foreground max-h-40">
+                  {r.error ? r.error : r.output}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end mt-2">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {t("newUi.sidebar.snippets.close")}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function SnippetsPanel({
   terminalTabs,
   activeTabId,
@@ -856,6 +1218,13 @@ export function SnippetsPanel({
   const [editFolder, setEditFolder] = useState<SnippetFolder | null>(null);
   const [editFolderOpen, setEditFolderOpen] = useState(false);
   const [shareSnippet, setShareSnippet] = useState<Snippet | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [availableHosts, setAvailableHosts] = useState<SSHHost[]>([]);
+  const [executionResultOpen, setExecutionResultOpen] = useState(false);
+  const [executionResults, setExecutionResults] = useState<ExecutionResult[]>(
+    [],
+  );
+  const [executionSnippetName, setExecutionSnippetName] = useState("");
   const [selectedTabIds, setSelectedTabIds] = useState<Set<string>>(
     () =>
       new Set(
@@ -984,15 +1353,7 @@ export function SnippetsPanel({
     getSnippets()
       .then((data) => {
         const arr: RawSnippet[] = Array.isArray(data) ? data : [];
-        const mapped: Snippet[] = arr.map((s) => ({
-          id: s.id,
-          name: s.name,
-          description: s.description,
-          content: s.content,
-          folder: s.folder ?? null,
-          order: s.order ?? 0,
-        }));
-        updateSnippets(mapped);
+        updateSnippets(arr.map(mapRawSnippet));
       })
       .catch(() => {});
 
@@ -1008,6 +1369,10 @@ export function SnippetsPanel({
         }));
         setFolders(mapped);
       })
+      .catch(() => {});
+
+    getSSHHosts()
+      .then((hosts) => setAvailableHosts(hosts))
       .catch(() => {});
   }, []);
 
@@ -1027,21 +1392,28 @@ export function SnippetsPanel({
     data: Omit<Snippet, "id" | "order">,
     id?: number,
   ) {
+    const { hostIds, ...rest } = data;
+    const payload = {
+      ...rest,
+      hostFilter: hostIds && hostIds.length > 0 ? hostIds : null,
+    };
     try {
       if (id !== undefined) {
-        await apiUpdateSnippet(id, data);
+        await apiUpdateSnippet(id, payload);
         updateSnippets((prev) =>
           prev.map((s) => (s.id === id ? { ...s, ...data } : s)),
         );
         toast.success(t("newUi.sidebar.snippets.updateSuccess"));
       } else {
-        const created = await apiCreateSnippet(data);
+        const created = await apiCreateSnippet(payload);
         updateSnippets((prev) => [
           ...prev,
           {
             ...data,
-            id: created.id ?? Math.max(0, ...prev.map((x) => x.id)) + 1,
-            order: created.order ?? prev.length,
+            id:
+              (created.id as number) ??
+              Math.max(0, ...prev.map((x) => x.id)) + 1,
+            order: (created.order as number) ?? prev.length,
           },
         ]);
         toast.success(t("newUi.sidebar.snippets.createSuccess"));
@@ -1125,6 +1497,47 @@ export function SnippetsPanel({
     }
   }
 
+  async function handleExport() {
+    try {
+      const data = await exportSnippets();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "snippets-export.json";
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(t("newUi.sidebar.snippets.exportSuccess"));
+    } catch {
+      toast.error(t("newUi.sidebar.snippets.exportFailed"));
+    }
+  }
+
+  function reloadData() {
+    const collapsed = getFoldersCollapsed();
+    getSnippets()
+      .then((data) => {
+        const arr: RawSnippet[] = Array.isArray(data) ? data : [];
+        updateSnippets(arr.map(mapRawSnippet));
+      })
+      .catch(() => {});
+    getSnippetFolders()
+      .then((data) => {
+        const arr: RawSnippetFolder[] = Array.isArray(data) ? data : [];
+        const mapped: SnippetFolder[] = arr.map((f) => ({
+          id: f.id,
+          name: f.name,
+          color: f.color ?? FOLDER_COLORS[0],
+          icon: (f.icon as FolderIconId) ?? "folder",
+          open: !collapsed,
+        }));
+        setFolders(mapped);
+      })
+      .catch(() => {});
+  }
+
   async function handleDeleteSnippet(id: number) {
     try {
       await apiDeleteSnippet(id);
@@ -1137,6 +1550,56 @@ export function SnippetsPanel({
   function handleEditSnippet(snippet: Snippet) {
     setEditingSnippet(snippet);
     setSnippetFormOpen(true);
+  }
+
+  async function handleDirectExecute(snippet: Snippet) {
+    const hostIds = snippet.hostIds ?? [];
+    if (hostIds.length === 0) return;
+
+    setExecutionSnippetName(snippet.name);
+    setExecutionResults([]);
+    setExecutionResultOpen(true);
+
+    const results: ExecutionResult[] = await Promise.all(
+      hostIds.map(async (hostId) => {
+        const host = availableHosts.find((h) => h.id === hostId);
+        const hostLabel = host ? host.name || host.ip : String(hostId);
+        try {
+          const result = await apiExecuteSnippet(snippet.id, hostId);
+          return {
+            hostLabel,
+            success: result.success,
+            output: result.output,
+            error: result.error,
+          };
+        } catch (err) {
+          return {
+            hostLabel,
+            success: false,
+            output: "",
+            error: err instanceof Error ? err.message : String(err),
+          };
+        }
+      }),
+    );
+
+    setExecutionResults(results);
+
+    const allOk = results.every((r) => r.success);
+    if (allOk) {
+      toast.success(
+        t("newUi.sidebar.snippets.directRunSuccess", {
+          name: snippet.name,
+          count: results.length,
+        }),
+      );
+    } else {
+      toast.error(
+        t("newUi.sidebar.snippets.directRunPartialFail", {
+          name: snippet.name,
+        }),
+      );
+    }
   }
 
   const filtered = snippetSearch
@@ -1265,6 +1728,24 @@ export function SnippetsPanel({
             {t("newUi.sidebar.snippets.newFolder")}
           </Button>
         </div>
+        <div className="flex gap-2 min-w-0">
+          <Button
+            variant="ghost"
+            className="flex-1 text-xs min-w-0 overflow-hidden text-muted-foreground hover:text-foreground"
+            onClick={handleExport}
+          >
+            <Download className="size-3.5 shrink-0" />
+            {t("newUi.sidebar.snippets.exportBtn")}
+          </Button>
+          <Button
+            variant="ghost"
+            className="flex-1 text-xs min-w-0 overflow-hidden text-muted-foreground hover:text-foreground"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="size-3.5 shrink-0" />
+            {t("newUi.sidebar.snippets.importBtn")}
+          </Button>
+        </div>
         <div className="flex flex-col gap-4">
           {(!snippetSearch || uncategorizedSnippets.length > 0) && (
             <div className="flex flex-col gap-2">
@@ -1295,10 +1776,12 @@ export function SnippetsPanel({
                       snippet={snippet}
                       selectedTabIds={selectedTabIds}
                       terminalTabs={terminalTabs}
+                      activeTabId={activeTabId}
                       onDelete={handleDeleteSnippet}
                       onEdit={handleEditSnippet}
                       onShare={setShareSnippet}
                       onConfirmRun={handleConfirmRun}
+                      onDirectExecute={handleDirectExecute}
                       onDragStart={() => handleDragStart(snippet)}
                       onDragEnd={handleDragEnd}
                       onDragOver={(e) => handleDragOver(e, snippet.id)}
@@ -1308,6 +1791,7 @@ export function SnippetsPanel({
                           : null
                       }
                       isDragging={draggedSnippet?.id === snippet.id}
+                      availableHosts={availableHosts}
                       t={t}
                     />
                   ))}
@@ -1388,10 +1872,12 @@ export function SnippetsPanel({
                         snippet={snippet}
                         selectedTabIds={selectedTabIds}
                         terminalTabs={terminalTabs}
+                        activeTabId={activeTabId}
                         onDelete={handleDeleteSnippet}
                         onEdit={handleEditSnippet}
                         onShare={setShareSnippet}
                         onConfirmRun={handleConfirmRun}
+                        onDirectExecute={handleDirectExecute}
                         onDragStart={() => handleDragStart(snippet)}
                         onDragEnd={handleDragEnd}
                         onDragOver={(e) => handleDragOver(e, snippet.id)}
@@ -1401,6 +1887,7 @@ export function SnippetsPanel({
                             : null
                         }
                         isDragging={draggedSnippet?.id === snippet.id}
+                        availableHosts={availableHosts}
                         t={t}
                       />
                     ))}
@@ -1426,6 +1913,7 @@ export function SnippetsPanel({
         folders={folders}
         snippet={editingSnippet}
         onSave={handleSaveSnippet}
+        availableHosts={availableHosts}
       />
       <CreateFolderDialog
         open={createFolderOpen}
@@ -1444,6 +1932,17 @@ export function SnippetsPanel({
       <ShareSnippetDialog
         snippet={shareSnippet}
         onClose={() => setShareSnippet(null)}
+      />
+      <ImportSnippetsDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImportDone={reloadData}
+      />
+      <ExecutionResultDialog
+        open={executionResultOpen}
+        onOpenChange={setExecutionResultOpen}
+        snippetName={executionSnippetName}
+        results={executionResults}
       />
     </>
   );

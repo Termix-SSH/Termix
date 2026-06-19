@@ -29,6 +29,7 @@ import {
   isElectron,
   getEmbeddedServerStatus,
   getCurrentToken,
+  getOidcSilentLoginDefault,
 } from "@/main-axios";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
@@ -129,6 +130,9 @@ export function Auth({
   const [ldapPassword, setLdapPassword] = useState("");
   const [ldapLoading, setLdapLoading] = useState(false);
   const silentSigninHandledRef = useRef(false);
+  const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
+  const [oidcSilentLoginDefaultLoaded, setOidcSilentLoginDefaultLoaded] =
+    useState(false);
 
   const [resetStep, setResetStep] = useState<
     "initiate" | "verify" | "newPassword"
@@ -255,6 +259,17 @@ export function Auth({
       })
       .finally(() => {
         setSsoProvidersLoaded(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    getOidcSilentLoginDefault()
+      .then((res) => {
+        setOidcSilentLoginDefault(res.enabled);
+      })
+      .catch(() => {})
+      .finally(() => {
+        setOidcSilentLoginDefaultLoaded(true);
       });
   }, []);
 
@@ -726,14 +741,19 @@ export function Auth({
 
   useEffect(() => {
     if (!ssoProvidersLoaded || silentSigninHandledRef.current) return;
-    if (!shouldTriggerSilentSignin(window.location.search)) return;
+    if (!oidcSilentLoginDefaultLoaded) return;
 
-    const nextSearch = removeSilentSigninFromSearch(window.location.search);
-    window.history.replaceState(
-      {},
-      document.title,
-      `${window.location.pathname}${nextSearch}${window.location.hash}`,
-    );
+    const urlTriggered = shouldTriggerSilentSignin(window.location.search);
+    if (!urlTriggered && !oidcSilentLoginDefault) return;
+
+    if (urlTriggered) {
+      const nextSearch = removeSilentSigninFromSearch(window.location.search);
+      window.history.replaceState(
+        {},
+        document.title,
+        `${window.location.pathname}${nextSearch}${window.location.hash}`,
+      );
+    }
 
     silentSigninHandledRef.current = true;
     const oidcProvider = ssoProviders.find(
@@ -750,8 +770,17 @@ export function Auth({
       return;
     }
 
-    toast.info(t("errors.silentSigninOidcUnavailable"));
-  }, [handleOIDCLogin, ssoProvidersLoaded, ssoProviders, t]);
+    if (urlTriggered) {
+      toast.info(t("errors.silentSigninOidcUnavailable"));
+    }
+  }, [
+    handleOIDCLogin,
+    ssoProvidersLoaded,
+    ssoProviders,
+    t,
+    oidcSilentLoginDefault,
+    oidcSilentLoginDefaultLoaded,
+  ]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

@@ -129,7 +129,12 @@ router.post(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      if (!host[0].credentialId && host[0].authType !== "opkssh") {
+      if (
+        !host[0].credentialId &&
+        !host[0].rdpCredentialId &&
+        !host[0].vncCredentialId &&
+        host[0].authType !== "opkssh"
+      ) {
         return res.status(400).json({
           error:
             "Only hosts using credentials or OPKSSH can be shared. Please create a credential and assign it to this host before sharing.",
@@ -204,21 +209,25 @@ router.post(
           .delete(sharedCredentials)
           .where(eq(sharedCredentials.hostAccessId, existing[0].id));
 
-        if (host[0].credentialId) {
+        const activeCredentialId =
+          host[0].credentialId ??
+          host[0].rdpCredentialId ??
+          host[0].vncCredentialId;
+        if (activeCredentialId) {
           const { SharedCredentialManager } =
             await import("../../utils/shared-credential-manager.js");
           const sharedCredManager = SharedCredentialManager.getInstance();
           if (targetType === "user") {
             await sharedCredManager.createSharedCredentialForUser(
               existing[0].id,
-              host[0].credentialId,
+              activeCredentialId,
               targetUserId!,
               userId,
             );
           } else {
             await sharedCredManager.createSharedCredentialsForRole(
               existing[0].id,
-              host[0].credentialId,
+              activeCredentialId,
               targetRoleId!,
               userId,
             );
@@ -252,18 +261,22 @@ router.post(
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
 
-      if (host[0].credentialId) {
+      const activeCredentialId =
+        host[0].credentialId ??
+        host[0].rdpCredentialId ??
+        host[0].vncCredentialId;
+      if (activeCredentialId) {
         if (targetType === "user") {
           await sharedCredManager.createSharedCredentialForUser(
             result.lastInsertRowid as number,
-            host[0].credentialId,
+            activeCredentialId,
             targetUserId!,
             userId,
           );
         } else {
           await sharedCredManager.createSharedCredentialsForRole(
             result.lastInsertRowid as number,
-            host[0].credentialId,
+            activeCredentialId,
             targetRoleId!,
             userId,
           );

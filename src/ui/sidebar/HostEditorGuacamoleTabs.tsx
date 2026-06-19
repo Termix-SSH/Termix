@@ -14,6 +14,7 @@ import {
   Shield,
   Terminal,
   Zap,
+  Cpu,
 } from "lucide-react";
 import type { HostEditorForm } from "./HostEditorData";
 
@@ -42,11 +43,13 @@ export function HostEditorRdpTab({
   setField,
   setGuacField,
   host,
+  credentials,
 }: {
   form: HostEditorForm;
   setField: HostEditorSetField;
   setGuacField: GuacFieldSetter;
   host?: Host | null;
+  credentials?: { id: string; name: string; username: string }[];
 }) {
   const { t } = useTranslation();
 
@@ -78,10 +81,62 @@ export function HostEditorRdpTab({
         </div>
       </SectionCard>
       <SectionCard
+        title={t("hosts.guac.guacdProxy")}
+        icon={<Cpu className="size-3.5" />}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.guacdHostname")}
+            </label>
+            <Input
+              placeholder={t("hosts.guac.guacdHostnamePlaceholder")}
+              value={(form.guacamoleConfig["guacd-hostname"] as string) ?? ""}
+              onChange={(e) => setGuacField("guacd-hostname", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.guacdPort")}
+            </label>
+            <Input
+              type="number"
+              placeholder="4822"
+              value={(form.guacamoleConfig["guacd-port"] as string) ?? ""}
+              onChange={(e) => setGuacField("guacd-port", e.target.value)}
+              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+          <p className="col-span-full text-[10px] text-muted-foreground -mt-2">
+            {t("hosts.guac.guacdProxyDesc")}
+          </p>
+        </div>
+      </SectionCard>
+
+      <SectionCard
         title={t("hosts.guac.authentication")}
         icon={<Shield className="size-3.5" />}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+          {credentials && credentials.length > 0 && (
+            <div className="flex flex-col gap-1.5 col-span-full">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("hosts.guac.storedCredential")}
+              </label>
+              <select
+                value={form.rdpCredentialId}
+                onChange={(e) => setField("rdpCredentialId", e.target.value)}
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">{t("hosts.guac.noCredential")}</option>
+                {credentials.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.username ? `${c.name} (${c.username})` : c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("hosts.guac.username")}
@@ -147,6 +202,23 @@ export function HostEditorRdpTab({
               onChange={(v) => setField("ignoreCert", v)}
             />
           </SettingRow>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.loadBalanceInfo")}
+            </label>
+            <Input
+              placeholder="tsv://MS Terminal Services Plugin.1.CollectionName"
+              value={
+                (form.guacamoleConfig["load-balance-info"] as string) ?? ""
+              }
+              onChange={(e) =>
+                setGuacField("load-balance-info", e.target.value)
+              }
+            />
+            <p className="text-[10px] text-muted-foreground">
+              {t("hosts.guac.loadBalanceInfoDesc")}
+            </p>
+          </div>
         </div>
       </SectionCard>
 
@@ -810,11 +882,13 @@ export function HostEditorVncTab({
   setField,
   setGuacField,
   host,
+  credentials,
 }: {
   form: HostEditorForm;
   setField: HostEditorSetField;
   setGuacField: GuacFieldSetter;
   host?: Host | null;
+  credentials?: { id: string; name: string; username: string }[];
 }) {
   const { t } = useTranslation();
 
@@ -846,10 +920,62 @@ export function HostEditorVncTab({
         </div>
       </SectionCard>
       <SectionCard
+        title={t("hosts.guac.guacdProxy")}
+        icon={<Cpu className="size-3.5" />}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.guacdHostname")}
+            </label>
+            <Input
+              placeholder={t("hosts.guac.guacdHostnamePlaceholder")}
+              value={(form.guacamoleConfig["guacd-hostname"] as string) ?? ""}
+              onChange={(e) => setGuacField("guacd-hostname", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.guacdPort")}
+            </label>
+            <Input
+              type="number"
+              placeholder="4822"
+              value={(form.guacamoleConfig["guacd-port"] as string) ?? ""}
+              onChange={(e) => setGuacField("guacd-port", e.target.value)}
+              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+          <p className="col-span-full text-[10px] text-muted-foreground -mt-2">
+            {t("hosts.guac.guacdProxyDesc")}
+          </p>
+        </div>
+      </SectionCard>
+
+      <SectionCard
         title={t("hosts.guac.authentication")}
         icon={<Shield className="size-3.5" />}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+          {credentials && credentials.length > 0 && (
+            <div className="flex flex-col gap-1.5 col-span-full">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("hosts.guac.storedCredential")}
+              </label>
+              <select
+                value={form.vncCredentialId}
+                onChange={(e) => setField("vncCredentialId", e.target.value)}
+                className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">{t("hosts.guac.noCredential")}</option>
+                {credentials.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.username ? `${c.name} (${c.username})` : c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("hosts.guac.vncPassword")}
@@ -1248,6 +1374,38 @@ export function HostEditorTelnetTab({
               className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
+        </div>
+      </SectionCard>
+      <SectionCard
+        title={t("hosts.guac.guacdProxy")}
+        icon={<Cpu className="size-3.5" />}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.guacdHostname")}
+            </label>
+            <Input
+              placeholder={t("hosts.guac.guacdHostnamePlaceholder")}
+              value={(form.guacamoleConfig["guacd-hostname"] as string) ?? ""}
+              onChange={(e) => setGuacField("guacd-hostname", e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.guacdPort")}
+            </label>
+            <Input
+              type="number"
+              placeholder="4822"
+              value={(form.guacamoleConfig["guacd-port"] as string) ?? ""}
+              onChange={(e) => setGuacField("guacd-port", e.target.value)}
+              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+          </div>
+          <p className="col-span-full text-[10px] text-muted-foreground -mt-2">
+            {t("hosts.guac.guacdProxyDesc")}
+          </p>
         </div>
       </SectionCard>
       <SectionCard

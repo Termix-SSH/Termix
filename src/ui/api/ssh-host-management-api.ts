@@ -107,6 +107,28 @@ export async function bulkImportSSHHosts(
   }
 }
 
+export async function importSSHConfigHosts(
+  content: string,
+  overwrite = false,
+): Promise<{
+  message: string;
+  success: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}> {
+  try {
+    const response = await sshHostApi.post("/ssh-config-import", {
+      content,
+      overwrite,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "import SSH config hosts");
+  }
+}
+
 export async function discoverProxmoxGuests(
   hostId: number,
 ): Promise<ProxmoxDiscoverResult> {

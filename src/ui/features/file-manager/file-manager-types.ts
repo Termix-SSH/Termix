@@ -3,6 +3,8 @@ import type { LogEntry } from "@/types/connection-log.ts";
 
 export interface FileManagerProps {
   initialHost?: SSHHost | null;
+  initialFilePath?: string;
+  initialPath?: string;
   onClose?: () => void;
 }
 

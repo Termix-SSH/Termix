@@ -32,8 +32,9 @@ import {
   subscribeTunnelStatuses,
   connectTunnel,
   disconnectTunnel,
+  getUserInfo,
 } from "@/main-axios";
-import { getTailscaleDevices } from "@/api/settings-api";
+import { getTailscaleDevices, getHostDefaults } from "@/api/settings-api";
 import type { Host } from "@/types/ui-types";
 import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
@@ -110,12 +111,26 @@ export function HostEditor({
   const [tailscaleHasApiKey, setTailscaleHasApiKey] = useState(false);
   const [tailscaleLoading, setTailscaleLoading] = useState(false);
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
+  const [isOidcUser, setIsOidcUser] = useState(false);
+
+  useEffect(() => {
+    getUserInfo()
+      .then((info) => setIsOidcUser(info.is_oidc))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     getSnippets()
       .then((res) => setSnippets(mapSnippetResponse(res)))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (host) return;
+    getHostDefaults()
+      .then((d) => setForm(createHostEditorForm(null, d)))
+      .catch(() => {});
+  }, [host]);
 
   useEffect(() => {
     if (activeTab !== "tunnels") return;
@@ -267,8 +282,19 @@ export function HostEditor({
                         !!selectedCredential?.username &&
                         !form.overrideCredentialUsername
                       }
+                      onFocus={() => {
+                        if (form.username === "root") setField("username", "");
+                      }}
+                      onBlur={() => {
+                        if (form.username === "") setField("username", "root");
+                      }}
                       onChange={(e) => setField("username", e.target.value)}
                     />
+                    {isOidcUser && (
+                      <p className="text-[10px] text-muted-foreground/60">
+                        {t("hosts.oidcUsernameHint")}
+                      </p>
+                    )}
                   </div>
                   {authMethod === "password" && (
                     <div className="flex flex-col gap-1.5">
@@ -589,6 +615,18 @@ export function HostEditor({
                   />
                 </SettingRow>
                 <SettingRow
+                  label={t("hosts.allowLegacyAlgorithmsLabel")}
+                  badge={
+                    form.allowLegacyAlgorithms ? t("hosts.insecure") : undefined
+                  }
+                  description={t("hosts.allowLegacyAlgorithmsDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.allowLegacyAlgorithms}
+                    onChange={(v) => setField("allowLegacyAlgorithms", v)}
+                  />
+                </SettingRow>
+                <SettingRow
                   label={t("hosts.sudoPasswordAutoFillLabel")}
                   description={t("hosts.sudoPasswordAutoFillDesc")}
                 >
@@ -869,6 +907,44 @@ export function HostEditor({
                     ))}
                   </div>
                 )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("hosts.backgroundImageLabel")}
+                  </label>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t("hosts.backgroundImageDesc")}
+                  </p>
+                  <input
+                    type="url"
+                    value={form.backgroundImage}
+                    onChange={(e) =>
+                      setField("backgroundImage", e.target.value)
+                    }
+                    placeholder="https://example.com/image.jpg"
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring font-mono"
+                  />
+                </div>
+                {form.backgroundImage && (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.backgroundImageOpacityLabel")}
+                      </label>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {Math.round(form.backgroundImageOpacity * 100)}%
+                      </span>
+                    </div>
+                    <Slider
+                      min={0.05}
+                      max={1}
+                      step={0.05}
+                      value={[form.backgroundImageOpacity]}
+                      onValueChange={([v]) =>
+                        setField("backgroundImageOpacity", v)
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </SectionCard>
 
@@ -976,6 +1052,34 @@ export function HostEditor({
                     onChange={(v) => setField("enableCommandHistory", v)}
                   />
                 </SettingRow>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("hosts.linkClickBehaviorLabel")}
+                  </label>
+                  <select
+                    value={form.linkClickBehavior}
+                    onChange={(e) =>
+                      setField(
+                        "linkClickBehavior",
+                        e.target.value as "default" | "confirm" | "direct",
+                      )
+                    }
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                  >
+                    <option value="default">
+                      {t("hosts.linkClickBehaviorDefault")}
+                    </option>
+                    <option value="confirm">
+                      {t("hosts.linkClickBehaviorConfirm")}
+                    </option>
+                    <option value="direct">
+                      {t("hosts.linkClickBehaviorDirect")}
+                    </option>
+                  </select>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t("hosts.linkClickBehaviorDesc")}
+                  </p>
+                </div>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1553,6 +1657,7 @@ export function HostEditor({
             setField={setField}
             setGuacField={setGuacField}
             host={host}
+            credentials={credentials}
           />
         )}
 
@@ -1562,6 +1667,7 @@ export function HostEditor({
             setField={setField}
             setGuacField={setGuacField}
             host={host}
+            credentials={credentials}
           />
         )}
 

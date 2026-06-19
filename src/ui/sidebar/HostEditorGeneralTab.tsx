@@ -209,6 +209,23 @@ export function HostEditorGeneralTab({
                 />
               </div>
             )}
+            {protocols.enableSsh && form.macAddress && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("hosts.wolBroadcastAddress")}
+                </label>
+                <Input
+                  placeholder="192.168.1.255"
+                  value={form.wolBroadcastAddress}
+                  onChange={(e) =>
+                    setField("wolBroadcastAddress", e.target.value)
+                  }
+                />
+                <p className="text-[10px] text-muted-foreground/60">
+                  {t("hosts.wolBroadcastAddressDesc")}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </SectionCard>

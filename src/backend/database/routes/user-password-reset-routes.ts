@@ -63,12 +63,19 @@ export function registerUserPasswordResetRoutes(
    */
   router.post("/initiate-reset", async (req, res) => {
     try {
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'allow_password_reset'",
-        )
-        .get();
-      if (row && (row as { value: string }).value !== "true") {
+      const envVal = process.env.ALLOW_PASSWORD_RESET;
+      const allowed =
+        envVal !== undefined
+          ? envVal.trim().toLowerCase() === "true"
+          : (() => {
+              const row = db.$client
+                .prepare(
+                  "SELECT value FROM settings WHERE key = 'allow_password_reset'",
+                )
+                .get();
+              return row ? (row as { value: string }).value === "true" : true;
+            })();
+      if (!allowed) {
         return res
           .status(403)
           .json({ error: "Password reset is currently disabled" });

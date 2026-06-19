@@ -128,11 +128,17 @@ function buildNodeSvg(
 ): string {
   const isOnline = status === "online";
   const isOffline = status === "offline";
-  const statusColor = isOnline
-    ? "rgb(16,185,129)"
-    : isOffline
-      ? "rgb(239,68,68)"
-      : "rgb(100,116,139)";
+  const useRealColors = localStorage.getItem("statusColorScheme") === "status";
+  let statusColor: string;
+  if (isOnline) {
+    statusColor = useRealColors
+      ? "rgb(16,185,129)"
+      : resolveCssVar("--accent-brand", "rgb(16,185,129)");
+  } else if (isOffline) {
+    statusColor = useRealColors ? "rgb(239,68,68)" : "rgba(16,185,129,0.2)";
+  } else {
+    statusColor = "rgb(100,116,139)";
+  }
 
   const bg = resolveCssVar("--card", "#1e1e20");
   const border = resolveCssVar("--border", "#2a2a2c");

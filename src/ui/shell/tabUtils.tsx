@@ -129,12 +129,18 @@ function TerminalTabContent({
   label,
   isVisible,
   onCloseTab,
+  onRenameTab,
+  onOpenFileInEditor,
+  onOpenFileManager,
 }: {
   tab: Tab;
   host: Host;
   label: string;
   isVisible: boolean;
   onCloseTab?: (id: string) => void;
+  onRenameTab?: (tabId: string, newLabel: string) => void;
+  onOpenFileInEditor?: (filePath: string) => void;
+  onOpenFileManager?: (path?: string) => void;
 }) {
   const { previewTerminalTheme } = useTabsSafe();
   const isMobile = useIsMobile();
@@ -157,7 +163,12 @@ function TerminalTabContent({
             showTitle={false}
             splitScreen={false}
             onClose={() => onCloseTab?.(tab.id)}
+            onTitleChange={
+              onRenameTab ? (title) => onRenameTab(tab.id, title) : undefined
+            }
             previewTheme={previewTerminalTheme}
+            onOpenFileInEditor={onOpenFileInEditor}
+            onOpenFileManager={onOpenFileManager}
           />
         </div>
         {isMobile && (
@@ -178,6 +189,9 @@ export function renderTabContent(
   onOpenTab?: (host: Host, type: TabType) => void,
   onCloseTab?: (id: string) => void,
   isVisible = true,
+  onOpenFileInEditor?: (host: Host, filePath: string) => void,
+  onOpenFileManager?: (host: Host, path?: string) => void,
+  onRenameTab?: (tabId: string, newLabel: string) => void,
 ) {
   const { host, label } = tab;
 
@@ -205,6 +219,15 @@ export function renderTabContent(
           label={label}
           isVisible={isVisible}
           onCloseTab={onCloseTab}
+          onRenameTab={onRenameTab}
+          onOpenFileInEditor={
+            onOpenFileInEditor
+              ? (fp) => onOpenFileInEditor(host, fp)
+              : undefined
+          }
+          onOpenFileManager={
+            onOpenFileManager ? (p) => onOpenFileManager(host, p) : undefined
+          }
         />
       );
 
@@ -216,7 +239,12 @@ export function renderTabContent(
             messageKey="fileManager.noHostSelected"
           />
         );
-      return <FileManager initialHost={hostToSSHHost(host)} />;
+      return (
+        <FileManager
+          initialHost={hostToSSHHost(host)}
+          initialFilePath={tab.initialFilePath}
+        />
+      );
 
     case "docker":
       if (!host)

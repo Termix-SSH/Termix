@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/select.tsx";
 import { Globe } from "lucide-react";
+import { saveUserPreferences } from "@/main-axios";
 
 const languages = [
   { code: "en", name: "English", nativeName: "English" },
@@ -61,6 +62,7 @@ export function LanguageSwitcher() {
   const handleLanguageChange = (value: string) => {
     i18n.changeLanguage(value);
     localStorage.setItem("i18nextLng", value);
+    saveUserPreferences({ language: value }).catch(() => {});
   };
 
   return (

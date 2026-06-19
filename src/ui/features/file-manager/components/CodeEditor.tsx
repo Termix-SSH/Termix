@@ -23,6 +23,7 @@ interface CodeEditorProps {
   onChange: (value: string) => void;
   onFocus: () => void;
   onBlur: () => void;
+  fontSize?: number;
 }
 
 function getLanguageExtension(filename: string) {
@@ -73,7 +74,7 @@ function getLanguageExtension(filename: string) {
 
 export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
   function CodeEditor(
-    { fileName, value, placeholder, onChange, onFocus, onBlur },
+    { fileName, value, placeholder, onChange, onFocus, onBlur, fontSize = 14 },
     ref,
   ) {
     const editorRef = useRef<{ view?: EditorView } | null>(null);
@@ -105,6 +106,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         EditorView.theme({
           "&": {
             height: "100%",
+            fontSize: `${fontSize}px`,
           },
           ".cm-scroller": {
             overflow: "auto",
@@ -116,7 +118,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
           },
         }),
       ];
-    }, [fileName]);
+    }, [fileName, fontSize]);
 
     useImperativeHandle(
       ref,

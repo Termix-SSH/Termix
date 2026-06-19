@@ -5,9 +5,13 @@ import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
 
 interface FileManagerAppProps {
   hostId?: string;
+  initialPath?: string;
 }
 
-const FileManagerApp: React.FC<FileManagerAppProps> = ({ hostId }) => {
+const FileManagerApp: React.FC<FileManagerAppProps> = ({
+  hostId,
+  initialPath,
+}) => {
   const { t } = useTranslation();
   return (
     <FullScreenAppWrapper hostId={hostId}>
@@ -39,6 +43,7 @@ const FileManagerApp: React.FC<FileManagerAppProps> = ({ hostId }) => {
           <FileManager
             embedded={true}
             initialHost={hostConfig}
+            initialPath={initialPath}
             onClose={() => {}}
           />
         );

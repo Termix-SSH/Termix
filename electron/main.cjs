@@ -20,6 +20,32 @@ const { URL } = require("url");
 const { fork } = require("child_process");
 const WebSocket = require("ws");
 
+// Portable mode: if a `.portable` marker exists next to the executable,
+// store all data in a `data` folder beside the exe instead of %APPDATA%.
+(function setupPortableDataDir() {
+  const exeDir = path.dirname(process.execPath);
+  const markerPath = path.join(exeDir, ".portable");
+  const envOverride = process.env.TERMIX_DATA_DIR;
+
+  let portableDataDir = null;
+  if (envOverride) {
+    portableDataDir = envOverride;
+  } else if (app.isPackaged && fs.existsSync(markerPath)) {
+    portableDataDir = path.join(exeDir, "data");
+  }
+
+  if (portableDataDir) {
+    try {
+      if (!fs.existsSync(portableDataDir)) {
+        fs.mkdirSync(portableDataDir, { recursive: true });
+      }
+      app.setPath("userData", portableDataDir);
+    } catch {
+      // Fall back to default userData if we can't create the directory.
+    }
+  }
+})();
+
 const logFile = path.join(app.getPath("userData"), "termix-main.log");
 const electronAuthCookiesPath = path.join(
   app.getPath("userData"),

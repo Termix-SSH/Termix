@@ -79,7 +79,12 @@ import type {
 } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
 
-function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
+function FileManagerContent({
+  initialHost,
+  initialFilePath,
+  initialPath,
+  onClose,
+}: FileManagerProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
   const formatTransferMetrics = useMemo(
@@ -95,10 +100,10 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
 
   const [currentHost] = useState<SSHHost | null>(initialHost || null);
   const [currentPath, setCurrentPath] = useState(
-    initialHost?.defaultPath || "/",
+    initialPath || initialHost?.defaultPath || "/",
   );
   const [navHistory, setNavHistory] = useState<string[]>([
-    initialHost?.defaultPath || "/",
+    initialPath || initialHost?.defaultPath || "/",
   ]);
   const [navIndex, setNavIndex] = useState(0);
   const [files, setFiles] = useState<FileItem[]>([]);
@@ -268,6 +273,60 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
       stopKeepalive();
     };
   }, [sshSessionId, startKeepalive, stopKeepalive]);
+
+  const initialFileOpenedRef = useRef(false);
+  useEffect(() => {
+    if (!sshSessionId || !initialFilePath || initialFileOpenedRef.current)
+      return;
+    initialFileOpenedRef.current = true;
+
+    const fileName = initialFilePath.split("/").pop() || initialFilePath;
+    const fileDir =
+      initialFilePath.lastIndexOf("/") > 0
+        ? initialFilePath.substring(0, initialFilePath.lastIndexOf("/"))
+        : "/";
+
+    setCurrentPath(fileDir);
+
+    const file: FileItem = {
+      name: fileName,
+      path: initialFilePath,
+      type: "file",
+    };
+
+    const windowCount = Date.now() % 10;
+    const offsetX = Math.min(
+      120 + windowCount * 30,
+      Math.max(0, window.innerWidth - 820),
+    );
+    const offsetY = Math.min(
+      120 + windowCount * 30,
+      Math.max(0, window.innerHeight - 620),
+    );
+
+    const createWindowComponent = (windowId: string) => (
+      <FileWindow
+        windowId={windowId}
+        file={file}
+        sshSessionId={sshSessionId}
+        sshHost={currentHost}
+        initialX={offsetX}
+        initialY={offsetY}
+        onFileNotFound={handleFileNotFound}
+      />
+    );
+
+    openWindow({
+      title: fileName,
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 600,
+      isMaximized: false,
+      isMinimized: false,
+      component: createWindowComponent,
+    });
+  }, [sshSessionId, initialFilePath]);
 
   const initialLoadDoneRef = useRef(false);
   const lastPathChangeRef = useRef<string>("");
@@ -1361,6 +1420,23 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
         );
       } else {
         toast.error(t("fileManager.failedToCopyPath"));
+      }
+    });
+  }
+
+  function handleCopyFolderLink(path: string) {
+    if (!currentHost?.id) return;
+    const params = new URLSearchParams({
+      view: "file-manager",
+      hostId: String(currentHost.id),
+      path,
+    });
+    const url = `${window.location.origin}?${params.toString()}`;
+    copyToClipboard(url).then((ok) => {
+      if (ok) {
+        toast.success(t("fileManager.folderLinkCopied"));
+      } else {
+        toast.error(t("fileManager.failedToCopyFolderLink"));
       }
     });
   }
@@ -2836,6 +2912,7 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
                 onExtractArchive={handleExtractArchive}
                 onCompress={handleOpenCompressDialog}
                 onCopyPath={handleCopyPath}
+                onCopyFolderLink={handleCopyFolderLink}
                 onTransferToHost={handleOpenTransferDialog}
               />
             </div>
@@ -2907,10 +2984,20 @@ function FileManagerContent({ initialHost, onClose }: FileManagerProps) {
   );
 }
 
-function FileManagerInner({ initialHost, onClose }: FileManagerProps) {
+function FileManagerInner({
+  initialHost,
+  initialFilePath,
+  initialPath,
+  onClose,
+}: FileManagerProps) {
   return (
     <WindowManager>
-      <FileManagerContent initialHost={initialHost} onClose={onClose} />
+      <FileManagerContent
+        initialHost={initialHost}
+        initialFilePath={initialFilePath}
+        initialPath={initialPath}
+        onClose={onClose}
+      />
     </WindowManager>
   );
 }

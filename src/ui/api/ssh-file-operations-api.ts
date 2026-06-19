@@ -350,14 +350,18 @@ export async function uploadSSHFile(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/uploadFile", {
-      sessionId,
-      path,
-      fileName,
-      content,
-      hostId,
-      userId,
-    });
+    const response = await fileManagerApi.post(
+      "/ssh/uploadFile",
+      {
+        sessionId,
+        path,
+        fileName,
+        content,
+        hostId,
+        userId,
+      },
+      { timeout: 0 },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "upload SSH file");
@@ -371,12 +375,16 @@ export async function downloadSSHFile(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/downloadFile", {
-      sessionId,
-      path: filePath,
-      hostId,
-      userId,
-    });
+    const response = await fileManagerApi.post(
+      "/ssh/downloadFile",
+      {
+        sessionId,
+        path: filePath,
+        hostId,
+        userId,
+      },
+      { timeout: 0 },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "download SSH file");
@@ -390,7 +398,7 @@ export async function downloadSSHFileStream(
   const response = await fileManagerApi.post(
     "/ssh/downloadFileStream",
     { sessionId, path: filePath },
-    { responseType: "blob" },
+    { responseType: "blob", timeout: 0 },
   );
   const blob = response.data as Blob;
   const fileName = filePath.split("/").pop() || "download";

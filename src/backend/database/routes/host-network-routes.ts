@@ -101,7 +101,10 @@ export function registerHostNetworkRoutes(
 
       try {
         const host = await db
-          .select({ macAddress: hosts.macAddress })
+          .select({
+            macAddress: hosts.macAddress,
+            wolBroadcastAddress: hosts.wolBroadcastAddress,
+          })
           .from(hosts)
           .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
           .then((rows) => rows[0]);
@@ -116,7 +119,10 @@ export function registerHostNetworkRoutes(
             .json({ error: "No valid MAC address configured" });
         }
 
-        await sendWakeOnLan(host.macAddress);
+        await sendWakeOnLan(
+          host.macAddress,
+          host.wolBroadcastAddress ?? undefined,
+        );
 
         sshLogger.info("Wake-on-LAN packet sent", {
           operation: "wake_on_lan",

@@ -1,6 +1,7 @@
 import { TERMINAL_THEMES } from "@/lib/terminal-themes";
 import type { Host } from "@/types/ui-types";
 import type { SSHHostData } from "@/types";
+import type { HostDefaults } from "@/api/settings-api";
 
 type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
 
@@ -42,8 +43,12 @@ export function mapSnippetResponse(
   }));
 }
 
-export function createHostEditorForm(host: Host | null) {
-  const rawTheme = host?.terminalConfig?.theme;
+export function createHostEditorForm(
+  host: Host | null,
+  defaults?: HostDefaults,
+) {
+  const d = host ? undefined : defaults;
+  const rawTheme = host?.terminalConfig?.theme ?? d?.theme;
   const normalizedTheme =
     !rawTheme ||
     ["Termix Dark", "Termix Light", "termixDark", "termixLight"].includes(
@@ -57,7 +62,7 @@ export function createHostEditorForm(host: Host | null) {
   return {
     name: host?.name ?? "",
     ip: host?.ip ?? "",
-    username: host?.username ?? "",
+    username: host?.username ?? (host ? "" : "root"),
     sshPort: host?.sshPort ?? host?.port ?? 22,
     rdpPort: host?.rdpPort ?? 3389,
     vncPort: host?.vncPort ?? 5900,
@@ -70,7 +75,9 @@ export function createHostEditorForm(host: Host | null) {
       : (host?.keyPassword ?? ""),
     keyType: host?.keyType ?? "auto",
     keySubTab: "paste" as "paste" | "upload",
-    credentialId: host?.credentialId ?? "",
+    credentialId:
+      host?.credentialId ??
+      (d?.credentialId != null ? String(d.credentialId) : ""),
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
     tags: host?.tags ?? ([] as string[]),
@@ -78,24 +85,29 @@ export function createHostEditorForm(host: Host | null) {
     notes: host?.notes ?? "",
     pin: host?.pin ?? false,
     macAddress: host?.macAddress ?? "",
-    useSocks5: host?.useSocks5 ?? false,
-    socks5Host: host?.socks5Host ?? "",
-    socks5Port: host?.socks5Port ?? 1080,
-    socks5Username: host?.socks5Username ?? "",
-    socks5Password: host?.socks5Password ?? "",
+    wolBroadcastAddress: host?.wolBroadcastAddress ?? "",
+    useSocks5: host?.useSocks5 ?? d?.useSocks5 ?? false,
+    socks5Host: host?.socks5Host ?? d?.socks5Host ?? "",
+    socks5Port: host?.socks5Port ?? d?.socks5Port ?? 1080,
+    socks5Username: host?.socks5Username ?? d?.socks5Username ?? "",
+    socks5Password: host?.socks5Password ?? d?.socks5Password ?? "",
     socks5ProxyMode: ((host?.socks5ProxyChain ?? []).length > 0
       ? "chain"
       : "single") as "single" | "chain",
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
     enableTerminal: host?.enableTerminal ?? true,
-    enableSessionLogging: host?.enableSessionLogging ?? true,
-    enableCommandHistory: host?.enableCommandHistory ?? true,
+    enableSessionLogging:
+      host?.enableSessionLogging ?? d?.enableSessionLogging ?? true,
+    enableCommandHistory:
+      host?.enableCommandHistory ?? d?.enableCommandHistory ?? true,
     enableFileManager: host?.enableFileManager ?? false,
+    scpLegacy: host?.scpLegacy ?? false,
     enableDocker: host?.enableDocker ?? false,
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
       defaultCredentialId: null as number | null,
+      defaultAuthType: "password" as string,
       windowsPatterns: "win, windows",
       dockerPatterns: "docker",
       preferredPrefixes: "10., 192.168.",
@@ -103,15 +115,16 @@ export function createHostEditorForm(host: Host | null) {
     enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
-    fontSize: host?.terminalConfig?.fontSize ?? 14,
+    fontSize: host?.terminalConfig?.fontSize ?? d?.fontSize ?? 14,
     fontFamily:
-      host?.terminalConfig?.fontFamily ?? "Caskaydia Cove Nerd Font Mono",
+      host?.terminalConfig?.fontFamily ??
+      d?.fontFamily ??
+      "Caskaydia Cove Nerd Font Mono",
     theme: normalizedTheme,
-    cursorStyle: (host?.terminalConfig?.cursorStyle ?? "bar") as
-      | "block"
-      | "underline"
-      | "bar",
-    cursorBlink: host?.terminalConfig?.cursorBlink ?? true,
+    cursorStyle: (host?.terminalConfig?.cursorStyle ??
+      d?.cursorStyle ??
+      "bar") as "block" | "underline" | "bar",
+    cursorBlink: host?.terminalConfig?.cursorBlink ?? d?.cursorBlink ?? true,
     scrollback: host?.terminalConfig?.scrollback ?? 10000,
     letterSpacing: host?.terminalConfig?.letterSpacing ?? 0,
     lineHeight: host?.terminalConfig?.lineHeight ?? 1.0,
@@ -139,6 +152,12 @@ export function createHostEditorForm(host: Host | null) {
     sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
     keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
     keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
+    backgroundImage: host?.terminalConfig?.backgroundImage ?? "",
+    backgroundImageOpacity:
+      host?.terminalConfig?.backgroundImageOpacity ?? 0.15,
+    allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
+    linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
+      "default") as "default" | "confirm" | "direct",
     syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     syntaxHighlightingOptions: {
       logLevels:
@@ -161,21 +180,23 @@ export function createHostEditorForm(host: Host | null) {
       ([] as { port: number; protocol: "tcp" | "udp"; delay: number }[]),
     quickActions:
       host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
+    rdpCredentialId: host?.rdpCredentialId ?? "",
     rdpUser: host?.rdpUser ?? "",
     rdpPassword: host?.rdpPassword ?? "",
     domain: host?.domain ?? "",
     security: host?.security ?? "",
     ignoreCert: host?.ignoreCert ?? false,
+    vncCredentialId: host?.vncCredentialId ?? "",
     vncPassword: host?.vncPassword ?? "",
     vncUser: host?.vncUser ?? "",
     telnetUser: host?.telnetUser ?? "",
     telnetPassword: host?.telnetPassword ?? "",
     guacamoleConfig: host?.guacamoleConfig ?? {},
     statsConfig: host?.statsConfig ?? {
-      statusCheckEnabled: true,
+      statusCheckEnabled: d?.statusCheckEnabled ?? true,
       statusCheckInterval: 60,
       useGlobalStatusInterval: true,
-      metricsEnabled: true,
+      metricsEnabled: d?.metricsEnabled ?? true,
       metricsInterval: 30,
       useGlobalMetricsInterval: true,
       enabledWidgets: [
@@ -246,11 +267,13 @@ export function buildHostEditorPayload(
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
     macAddress: form.macAddress || null,
+    wolBroadcastAddress: form.wolBroadcastAddress || null,
     enableTerminal: form.enableTerminal,
     enableSessionLogging: form.enableSessionLogging,
     enableCommandHistory: form.enableCommandHistory,
     enableTunnel: form.enableTunnel,
     enableFileManager: form.enableFileManager,
+    scpLegacy: form.scpLegacy,
     enableDocker: form.enableDocker,
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableProxmox: form.enableProxmox,
@@ -276,11 +299,19 @@ export function buildHostEditorPayload(
     vncPort: Number(form.vncPort),
     telnetPort: Number(form.telnetPort),
     forceKeyboardInteractive: form.forceKeyboardInteractive,
+    rdpCredentialId:
+      protocols.enableRdp && form.rdpCredentialId
+        ? Number(form.rdpCredentialId)
+        : null,
     rdpUser: form.rdpUser || null,
     rdpPassword: form.rdpPassword || null,
     rdpDomain: form.domain || null,
     rdpSecurity: form.security || null,
     rdpIgnoreCert: form.ignoreCert,
+    vncCredentialId:
+      protocols.enableVnc && form.vncCredentialId
+        ? Number(form.vncCredentialId)
+        : null,
     vncPassword: form.vncPassword || null,
     vncUser: form.vncUser || null,
     telnetUser: form.telnetUser || null,
@@ -326,6 +357,13 @@ export function buildHostEditorPayload(
           environmentVariables: form.environmentVariables,
           syntaxHighlighting: form.syntaxHighlighting,
           syntaxHighlightingOptions: form.syntaxHighlightingOptions,
+          backgroundImage: form.backgroundImage || null,
+          backgroundImageOpacity: Number(form.backgroundImageOpacity),
+          allowLegacyAlgorithms: form.allowLegacyAlgorithms,
+          linkClickBehavior:
+            form.linkClickBehavior !== "default"
+              ? form.linkClickBehavior
+              : undefined,
         }
       : null,
   };

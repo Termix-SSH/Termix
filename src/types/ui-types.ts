@@ -31,6 +31,7 @@ export type Host = {
   keyType?: string;
   notes?: string;
   macAddress?: string;
+  wolBroadcastAddress?: string;
   pin?: boolean;
 
   enableTerminal: boolean;
@@ -60,6 +61,7 @@ export type Host = {
     keepaliveCountMax?: number;
     environmentVariables: { key: string; value: string }[];
     startupSnippetId?: number | null;
+    linkClickBehavior?: "confirm" | "direct";
   };
 
   useSocks5?: boolean;
@@ -95,6 +97,7 @@ export type Host = {
   }[];
 
   enableFileManager: boolean;
+  scpLegacy?: boolean;
   defaultPath?: string;
 
   enableDocker: boolean;
@@ -102,6 +105,7 @@ export type Host = {
   enableTmuxMonitor: boolean;
   proxmoxConfig?: {
     defaultCredentialId: number | null;
+    defaultAuthType?: string;
     windowsPatterns: string;
     dockerPatterns: string;
     preferredPrefixes: string;
@@ -128,12 +132,14 @@ export type Host = {
   vncPort: number;
   telnetPort: number;
 
+  rdpCredentialId?: string;
   rdpUser?: string;
   rdpPassword?: string;
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
 
+  vncCredentialId?: string;
   vncPassword?: string;
   vncUser?: string;
 
@@ -208,9 +214,11 @@ export type Tab = {
   instanceId: string;
   type: TabType;
   label: string;
+  customLabel?: string;
   host?: Host;
   openedAt: number;
   restoredSessionId?: string | null;
+  initialFilePath?: string;
   terminalRef?: import("react").RefObject<{
     sendInput?: (data: string) => void;
     reconnect?: () => void;
@@ -244,7 +252,8 @@ export type DashboardCardId =
   | "quick_actions"
   | "host_status"
   | "recent_activity"
-  | "network_graph";
+  | "network_graph"
+  | "service_links";
 
 export type DashboardCardConfig = {
   id: DashboardCardId;
@@ -283,9 +292,11 @@ export type AdminSection =
   | "users"
   | "sessions"
   | "roles"
+  | "host-defaults"
   | "database"
   | "api-keys"
-  | "audit-log";
+  | "audit-log"
+  | "ssl";
 export type AccentColorId = string;
 export type ThemeId =
   | "dark"
@@ -317,6 +328,7 @@ export type Snippet = {
   content: string;
   folder: string | null;
   order: number;
+  hostIds?: number[];
 };
 
 export const FOLDER_ICONS = [

@@ -57,6 +57,10 @@ import type { SSHHostData } from "@/types/index";
 import { FolderIconEl } from "@/components/folder-style";
 import { copyToClipboard } from "@/lib/clipboard";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
+import {
+  useStatusColorScheme,
+  getStatusClasses,
+} from "@/hooks/use-status-color-scheme";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
@@ -273,6 +277,10 @@ export function HostItem({
     const v = localStorage.getItem("showHostTags");
     return v !== null ? v === "true" : true;
   });
+  const [compactHostView, setCompactHostView] = useState(
+    () => localStorage.getItem("compactHostView") === "true",
+  );
+  const statusScheme = useStatusColorScheme();
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const shouldUseClickTray = trayOnClick || isTouchOnly;
@@ -322,7 +330,71 @@ export function HostItem({
     };
   }, []);
 
+  useEffect(() => {
+    const handler = () =>
+      setCompactHostView(localStorage.getItem("compactHostView") === "true");
+    window.addEventListener("storage", handler);
+    window.addEventListener("compactHostViewChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("compactHostViewChanged", handler);
+    };
+  }, []);
+
   if (query && !hostMatchesQuery(host, query)) return null;
+
+  if (compactHostView) {
+    return (
+      <div
+        draggable={!selectionMode && !isTouchOnly}
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          onDragStart?.();
+        }}
+        onDragEnd={() => onDragEnd?.()}
+        className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/40 ${
+          selected
+            ? "bg-accent-brand/5"
+            : stripeIndex % 2 === 1
+              ? "bg-muted/20"
+              : ""
+        } ${isMenuOpen ? "bg-muted/40" : ""}`}
+        onClick={() => {
+          if (selectionMode) {
+            onToggleSelect?.();
+            return;
+          }
+          if (host.enableSsh) onOpenTab("terminal");
+          else if (host.enableRdp) onOpenTab("rdp");
+          else if (host.enableVnc) onOpenTab("vnc");
+          else if (host.enableTelnet) onOpenTab("telnet");
+          else onOpenTab("terminal");
+        }}
+      >
+        <div
+          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe")}`}
+        />
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 px-2.5 py-1">
+          {selectionMode && (
+            <div
+              className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+            >
+              {selected && <Check className="size-2 text-background" />}
+            </div>
+          )}
+          <span
+            className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+          />
+          <span className="text-[13px] font-medium truncate text-foreground leading-none">
+            {host.name}
+          </span>
+          <span className="text-[11px] text-muted-foreground/45 truncate leading-none ml-auto shrink-0">
+            {host.username}@{host.ip}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -373,7 +445,7 @@ export function HostItem({
     >
       {/* Status stripe */}
       <div
-        className={`w-[3px] shrink-0 transition-colors ${host.online ? "bg-accent-brand" : "bg-transparent"}`}
+        className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe")}`}
       />
 
       <div className="flex flex-col flex-1 min-w-0 px-2.5 pt-2 pb-1.5 gap-1">
@@ -387,7 +459,7 @@ export function HostItem({
             </div>
           )}
           <span
-            className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/25"}`}
+            className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
           />
           <span className="text-[13px] font-medium truncate text-foreground leading-none">
             {host.name}
@@ -1657,6 +1729,26 @@ export function SidebarTree({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <button
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+              disabled={selectedHostIds.size === 0}
+              onClick={() => {
+                const selectedHosts = allHosts.filter((h) =>
+                  selectedHostIds.has(String(h.id)),
+                );
+                for (const host of selectedHosts) {
+                  if (host.enableSsh) onOpenTab(host, "terminal");
+                  else if (host.enableRdp) onOpenTab(host, "rdp");
+                  else if (host.enableVnc) onOpenTab(host, "vnc");
+                  else if (host.enableTelnet) onOpenTab(host, "telnet");
+                }
+                setSelectedHostIds(new Set());
+                onToggleSelectionMode();
+              }}
+            >
+              <Terminal className="size-3" />
+              {t("hosts.connectSelected")}
+            </button>
             <button
               className="text-[10px] text-destructive hover:text-destructive px-1.5 py-1 hover:bg-destructive/10 rounded transition-colors disabled:opacity-40"
               disabled={selectedHostIds.size === 0}

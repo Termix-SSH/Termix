@@ -61,6 +61,23 @@ describe("isOIDCUserAllowed", () => {
   it("does not match the email against an identifier-only pattern when email differs", () => {
     expect(isOIDCUserAllowed("alice", "sub-123", "alice@x.com")).toBe(false);
   });
+
+  it("matches *@domain.com wildcard pattern against emails", () => {
+    expect(
+      isOIDCUserAllowed("*@company.com", "sub-1", "john@company.com"),
+    ).toBe(true);
+    expect(
+      isOIDCUserAllowed("*@company.com", "sub-1", "jane@COMPANY.COM"),
+    ).toBe(true);
+    expect(isOIDCUserAllowed("*@company.com", "sub-1", "user@other.com")).toBe(
+      false,
+    );
+  });
+
+  it("matches glob patterns with multiple wildcards", () => {
+    expect(isOIDCUserAllowed("admin*", "admin_user")).toBe(true);
+    expect(isOIDCUserAllowed("admin*", "user_admin")).toBe(false);
+  });
 });
 
 describe("getOIDCConfigFromEnv", () => {

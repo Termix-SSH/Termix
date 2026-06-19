@@ -3,6 +3,8 @@ import { guacLogger } from "../utils/logger.js";
 
 export interface GuacamoleConnectionSettings {
   type: "rdp" | "vnc" | "telnet";
+  guacdHost?: string;
+  guacdPort?: number;
   settings: {
     hostname: string;
     port?: number;
@@ -120,18 +122,24 @@ export class GuacamoleTokenService {
     hostname: string,
     username: string,
     password: string,
-    options: Partial<GuacamoleConnectionSettings["settings"]> = {},
+    options: Partial<GuacamoleConnectionSettings["settings"]> & {
+      guacdHost?: string;
+      guacdPort?: number;
+    } = {},
   ): string {
+    const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
       connection: {
         type: "rdp",
+        ...(guacdHost ? { guacdHost } : {}),
+        ...(guacdPort ? { guacdPort } : {}),
         settings: {
           hostname,
-          username,
-          password,
+          ...(username ? { username } : {}),
+          ...(password ? { password } : {}),
           port: 3389,
           "ignore-cert": true,
-          ...options,
+          ...settingsOptions,
         },
       },
     };
@@ -142,17 +150,23 @@ export class GuacamoleTokenService {
     hostname: string,
     username?: string,
     password?: string,
-    options: Partial<GuacamoleConnectionSettings["settings"]> = {},
+    options: Partial<GuacamoleConnectionSettings["settings"]> & {
+      guacdHost?: string;
+      guacdPort?: number;
+    } = {},
   ): string {
+    const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
       connection: {
         type: "vnc",
+        ...(guacdHost ? { guacdHost } : {}),
+        ...(guacdPort ? { guacdPort } : {}),
         settings: {
           hostname,
           ...(username ? { username } : {}),
           password,
           port: 5900,
-          ...options,
+          ...settingsOptions,
         },
       },
     };
@@ -163,17 +177,23 @@ export class GuacamoleTokenService {
     hostname: string,
     username?: string,
     password?: string,
-    options: Partial<GuacamoleConnectionSettings["settings"]> = {},
+    options: Partial<GuacamoleConnectionSettings["settings"]> & {
+      guacdHost?: string;
+      guacdPort?: number;
+    } = {},
   ): string {
+    const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
       connection: {
         type: "telnet",
+        ...(guacdHost ? { guacdHost } : {}),
+        ...(guacdPort ? { guacdPort } : {}),
         settings: {
           hostname,
           username,
           password,
           port: 23,
-          ...options,
+          ...settingsOptions,
         },
       },
     };

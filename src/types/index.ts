@@ -35,6 +35,7 @@ export interface OIDCProviderConfig {
   allowed_users?: string;
   admin_group?: string;
   group_claim?: string;
+  ca_cert?: string;
 }
 
 export interface LDAPProviderConfig {
@@ -127,6 +128,7 @@ export interface Host {
   enableCommandHistory: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
+  scpLegacy?: boolean;
   enableDocker: boolean;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
@@ -152,6 +154,7 @@ export interface Host {
   socks5ProxyChain?: ProxyNode[];
 
   macAddress?: string;
+  wolBroadcastAddress?: string;
   portKnockSequence?: Array<{
     port: number;
     protocol?: "tcp" | "udp";
@@ -172,11 +175,13 @@ export interface Host {
   rdpPort?: number;
   vncPort?: number;
   telnetPort?: number;
+  rdpCredentialId?: number | null;
   rdpUser?: string;
   rdpPassword?: string;
   rdpDomain?: string;
   rdpSecurity?: string;
   rdpIgnoreCert?: boolean;
+  vncCredentialId?: number | null;
   vncPassword?: string;
   vncUser?: string;
   telnetUser?: string;
@@ -237,6 +242,7 @@ export interface HostData {
   enableCommandHistory?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
+  scpLegacy?: boolean;
   enableDocker?: boolean;
   enableProxmox?: boolean;
   enableTmuxMonitor?: boolean;
@@ -263,6 +269,7 @@ export interface HostData {
   socks5ProxyChain?: ProxyNode[];
 
   macAddress?: string;
+  wolBroadcastAddress?: string;
   portKnockSequence?: Array<{
     port: number;
     protocol?: "tcp" | "udp";
@@ -284,11 +291,13 @@ export interface HostData {
   rdpPort?: number;
   vncPort?: number;
   telnetPort?: number;
+  rdpCredentialId?: number | null;
   rdpUser?: string;
   rdpPassword?: string;
   rdpDomain?: string;
   rdpSecurity?: string;
   rdpIgnoreCert?: boolean;
+  vncCredentialId?: number | null;
   vncPassword?: string;
   vncUser?: string;
   telnetUser?: string;
@@ -611,6 +620,10 @@ export interface TerminalConfig {
     urls: boolean;
     numbers: boolean;
   };
+  backgroundImage?: string;
+  backgroundImageOpacity?: number;
+  allowLegacyAlgorithms?: boolean;
+  linkClickBehavior?: "confirm" | "direct";
 }
 
 // ============================================================================

@@ -51,6 +51,7 @@ function emptyOidc(): OIDCProviderConfig {
     allowed_users: "",
     admin_group: "",
     group_claim: "",
+    ca_cert: "",
   };
 }
 
@@ -84,6 +85,7 @@ type OIDCFields = {
   allowed_users: string;
   admin_group: string;
   group_claim: string;
+  ca_cert: string;
 };
 
 type LDAPFields = {
@@ -175,6 +177,7 @@ export function SSOProviderDialog({
           allowed_users: (config.allowed_users as string) ?? d.allowed_users,
           admin_group: (config.admin_group as string) ?? d.admin_group,
           group_claim: (config.group_claim as string) ?? "",
+          ca_cert: (config.ca_cert as string) ?? "",
         });
       }
     } else {
@@ -231,6 +234,7 @@ export function SSOProviderDialog({
       allowed_users: oidc.allowed_users || undefined,
       admin_group: oidc.admin_group || undefined,
       group_claim: oidc.group_claim || undefined,
+      ca_cert: oidc.ca_cert || undefined,
     };
   }
 
@@ -529,6 +533,20 @@ function OIDCConfigFields({
           onChange={(e) => setOidcField("admin_group", e.target.value)}
           placeholder="admin"
           className="text-xs"
+        />
+      </Field>
+      <Field label={t("admin.oidcCaCert")}>
+        <span className="text-[10px] text-muted-foreground">
+          {t("admin.oidcCaCertDesc")}
+        </span>
+        <textarea
+          value={oidc.ca_cert}
+          onChange={(e) => setOidcField("ca_cert", e.target.value)}
+          placeholder={
+            "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
+          }
+          rows={4}
+          className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
         />
       </Field>
     </div>

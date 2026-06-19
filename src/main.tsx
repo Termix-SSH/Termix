@@ -70,6 +70,7 @@ function FullscreenApp() {
   const view = searchParams.get("view");
   const hostId = searchParams.get("hostId");
   const tmuxSession = searchParams.get("tmuxSession");
+  const path = searchParams.get("path");
 
   switch (view) {
     case "terminal":
@@ -80,7 +81,12 @@ function FullscreenApp() {
         />
       );
     case "file-manager":
-      return <FileManagerApp hostId={hostId || undefined} />;
+      return (
+        <FileManagerApp
+          hostId={hostId || undefined}
+          initialPath={path || undefined}
+        />
+      );
     case "tunnel":
       return <TunnelApp hostId={hostId || undefined} />;
     case "host-metrics":
@@ -168,6 +174,11 @@ function App() {
     }, 450);
   }
 
+  function handleChangeServer() {
+    localStorage.setItem("termix_show_server_config", "true");
+    handleLogout();
+  }
+
   const showApp =
     phase === "idle-app" || phase === "fading-in" || phase === "fading-out";
   const showAuth =
@@ -211,7 +222,11 @@ function App() {
           }}
         >
           <Suspense fallback={null}>
-            <AppShell username={authUsername} onLogout={handleLogout} />
+            <AppShell
+              username={authUsername}
+              onLogout={handleLogout}
+              onChangeServer={handleChangeServer}
+            />
           </Suspense>
         </div>
       )}

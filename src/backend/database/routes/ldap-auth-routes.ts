@@ -298,14 +298,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
         const isFirst = (countRow?.count || 0) === 0;
 
         if (!isFirst && !autoProvision) {
-          const regRow = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'allow_registration'",
-            )
-            .get() as { value: string } | undefined;
-          if (regRow && regRow.value !== "true") {
-            return res.status(403).json({ error: "Registration is disabled" });
-          }
+          return res.status(403).json({ error: "Registration is disabled" });
         }
 
         userId = nanoid();

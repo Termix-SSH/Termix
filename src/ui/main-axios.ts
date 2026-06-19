@@ -1501,6 +1501,7 @@ export {
   updateSSHHost,
   wakeOnLan,
   bulkImportSSHHosts,
+  importSSHConfigHosts,
   discoverProxmoxGuests,
   bulkUpdateSSHHosts,
   deleteSSHHost,
@@ -1634,6 +1635,21 @@ export async function registerUser(
     return response.data;
   } catch (error) {
     handleApiError(error, "register user");
+  }
+}
+
+export async function adminCreateUser(
+  username: string,
+  password: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.post("/users/admin-create", {
+      username,
+      password,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "admin create user");
   }
 }
 
@@ -1914,6 +1930,8 @@ export {
   updateRegistrationAllowed,
   getOidcAutoProvision,
   updateOidcAutoProvision,
+  getOidcSilentLoginDefault,
+  updateOidcSilentLoginDefault,
   updatePasswordLoginAllowed,
   getPasswordResetAllowed,
   updatePasswordResetAllowed,
@@ -1994,12 +2012,20 @@ export {
 } from "@/api/snippets-api";
 
 // ============================================================================
-export type { UptimeInfo, RecentActivityItem } from "@/api/dashboard-api";
+export type {
+  UptimeInfo,
+  RecentActivityItem,
+  ServiceLink,
+} from "@/api/dashboard-api";
 export {
   getUptime,
   getRecentActivity,
   logActivity,
   resetRecentActivity,
+  getServiceLinks,
+  createServiceLink,
+  deleteServiceLink,
+  updateServiceLink,
 } from "@/api/dashboard-api";
 
 // ============================================================================

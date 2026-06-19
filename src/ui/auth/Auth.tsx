@@ -34,6 +34,7 @@ import {
   isElectron,
   getEmbeddedServerStatus,
   getCurrentToken,
+  getOidcSilentLoginDefault,
 } from "@/main-axios";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
@@ -256,6 +257,9 @@ export function Auth({ onLogin }: AuthProps) {
   const [ldapUsername, setLdapUsername] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
   const silentSigninHandledRef = useRef(false);
+  const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
+  const [oidcSilentLoginDefaultLoaded, setOidcSilentLoginDefaultLoaded] =
+    useState(false);
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(true);
@@ -288,6 +292,10 @@ export function Auth({ onLogin }: AuthProps) {
       .then((providers) => setSsoProviders(providers || []))
       .catch(() => setSsoProviders([]))
       .finally(() => setSsoProvidersLoaded(true));
+    getOidcSilentLoginDefault()
+      .then((res) => setOidcSilentLoginDefault(res.enabled))
+      .catch(() => {})
+      .finally(() => setOidcSilentLoginDefaultLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -312,6 +320,18 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       if (isElectron()) {
+        const forceShow = localStorage.getItem("termix_show_server_config");
+        if (forceShow === "true") {
+          localStorage.removeItem("termix_show_server_config");
+          try {
+            const config = await getServerConfig();
+            setCurrentServerUrl(config?.serverUrl || "");
+          } catch {
+            // ignore
+          }
+          setShowServerConfig(true);
+          return;
+        }
         try {
           const [config, status] = await Promise.all([
             getServerConfig(),
@@ -857,14 +877,19 @@ export function Auth({ onLogin }: AuthProps) {
 
   useEffect(() => {
     if (!ssoProvidersLoaded || silentSigninHandledRef.current) return;
-    if (!shouldTriggerSilentSignin(window.location.search)) return;
+    if (!oidcSilentLoginDefaultLoaded) return;
 
-    const nextSearch = removeSilentSigninFromSearch(window.location.search);
-    window.history.replaceState(
-      {},
-      document.title,
-      `${window.location.pathname}${nextSearch}${window.location.hash}`,
-    );
+    const urlTriggered = shouldTriggerSilentSignin(window.location.search);
+    if (!urlTriggered && !oidcSilentLoginDefault) return;
+
+    if (urlTriggered) {
+      const nextSearch = removeSilentSigninFromSearch(window.location.search);
+      window.history.replaceState(
+        {},
+        document.title,
+        `${window.location.pathname}${nextSearch}${window.location.hash}`,
+      );
+    }
 
     silentSigninHandledRef.current = true;
 
@@ -876,8 +901,17 @@ export function Auth({ onLogin }: AuthProps) {
       return;
     }
 
-    toast.info(t("errors.silentSigninOidcUnavailable"));
-  }, [handleOIDCLogin, ssoProvidersLoaded, ssoProviders, t]);
+    if (urlTriggered) {
+      toast.info(t("errors.silentSigninOidcUnavailable"));
+    }
+  }, [
+    handleOIDCLogin,
+    ssoProvidersLoaded,
+    ssoProviders,
+    t,
+    oidcSilentLoginDefault,
+    oidcSilentLoginDefaultLoaded,
+  ]);
 
   // Electron server config / webview auth success screens
   if (isElectron() && !isInElectronWebView()) {

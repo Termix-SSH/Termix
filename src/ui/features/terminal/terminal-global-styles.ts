@@ -1,9 +1,5 @@
 const style = document.createElement("style");
 style.innerHTML = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-
 @font-face {
   font-family: 'Caskaydia Cove Nerd Font Mono';
   src: url('./fonts/CaskaydiaCoveNerdFontMono-Regular.ttf') format('truetype');

@@ -5,6 +5,9 @@ import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { users, roles, userRoles } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import bcrypt from "bcryptjs";
+import { nanoid } from "nanoid";
+import { AuthManager } from "../../utils/auth-manager.js";
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
@@ -411,6 +414,187 @@ export function registerUserAdminRoutes(
     } catch (err) {
       authLogger.error("Failed to remove admin status", err);
       res.status(500).json({ error: "Failed to remove admin status" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/admin-create:
+   *   post:
+   *     summary: Admin create user
+   *     description: Allows an admin to create a new user regardless of whether public registration is enabled.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               username:
+   *                 type: string
+   *               password:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: User created successfully.
+   *       400:
+   *         description: Username and password are required.
+   *       403:
+   *         description: Not authorized.
+   *       409:
+   *         description: Username already exists.
+   *       500:
+   *         description: Failed to create user.
+   */
+  router.post("/admin-create", authenticateJWT, async (req, res) => {
+    const adminId = (req as AuthenticatedRequest).userId;
+
+    try {
+      const adminUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, adminId));
+      if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+    } catch (err) {
+      authLogger.error("Failed to verify admin status", err);
+      return res.status(500).json({ error: "Failed to verify admin status" });
+    }
+
+    const { username, password } = req.body;
+
+    if (!isNonEmptyString(username) || !isNonEmptyString(password)) {
+      return res
+        .status(400)
+        .json({ error: "Username and password are required" });
+    }
+
+    try {
+      const existing = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
+      if (existing && existing.length > 0) {
+        return res.status(409).json({ error: "Username already exists" });
+      }
+
+      const saltRounds = parseInt(process.env.SALT || "10", 10);
+      const password_hash = await bcrypt.hash(password, saltRounds);
+      const id = nanoid();
+
+      db.$client.transaction(() => {
+        db.$client
+          .prepare(
+            "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          )
+          .run(
+            id,
+            username,
+            password_hash,
+            0,
+            0,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "openid email profile",
+            null,
+            0,
+            null,
+          );
+      })();
+
+      try {
+        const userRole = await db
+          .select({ id: roles.id })
+          .from(roles)
+          .where(eq(roles.name, "user"))
+          .limit(1);
+        if (userRole.length > 0) {
+          await db.insert(userRoles).values({
+            userId: id,
+            roleId: userRole[0].id,
+            grantedBy: adminId,
+          });
+        }
+      } catch (roleError) {
+        authLogger.error(
+          "Failed to assign default role during admin create",
+          roleError,
+          {
+            operation: "admin_create_user_role",
+            userId: id,
+          },
+        );
+      }
+
+      const authManager = AuthManager.getInstance();
+      try {
+        await authManager.registerUser(id, password);
+      } catch (encryptionError) {
+        await db.delete(users).where(eq(users.id, id));
+        authLogger.error(
+          "Failed to setup user encryption during admin create, rolled back",
+          encryptionError,
+          { operation: "admin_create_user_encryption_failed", userId: id },
+        );
+        return res.status(500).json({
+          error: "Failed to setup user security - user creation cancelled",
+        });
+      }
+
+      try {
+        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+        await saveMemoryDatabaseToFile();
+      } catch (saveError) {
+        authLogger.error(
+          "Failed to persist admin-created user to disk",
+          saveError,
+          {
+            operation: "admin_create_user_save_failed",
+            userId: id,
+          },
+        );
+      }
+
+      authLogger.success("User created by admin", {
+        operation: "admin_create_user_success",
+        adminId,
+        userId: id,
+        username,
+      });
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const adminRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, adminId))
+        .limit(1);
+      await logAudit({
+        userId: adminId,
+        username: adminRecord[0]?.username ?? adminId,
+        action: "create_user",
+        resourceType: "user",
+        resourceId: id,
+        resourceName: username,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({
+        message: "User created",
+        toast: { type: "success", message: `User created: ${username}` },
+      });
+    } catch (err) {
+      authLogger.error("Failed to admin-create user", err);
+      res.status(500).json({ error: "Failed to create user" });
     }
   });
 }

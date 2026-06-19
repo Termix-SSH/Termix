@@ -90,7 +90,8 @@ export function HostShareModal({
 
   if (!open) return null;
 
-  const hasCredential = !!host?.credentialId;
+  const hasCredential =
+    !!host?.credentialId || !!host?.rdpCredentialId || !!host?.vncCredentialId;
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-sidebar">

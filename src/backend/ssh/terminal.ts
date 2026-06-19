@@ -5,7 +5,7 @@ import ssh2Pkg, {
   type PseudoTtyOptions,
 } from "ssh2";
 const { Client, utils: ssh2Utils } = ssh2Pkg;
-import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
+import { buildSSHAlgorithms } from "../utils/ssh-algorithms.js";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { hosts } from "../database/db/schema.js";
@@ -470,6 +470,55 @@ wss.on("connection", async (ws: WebSocket, req) => {
             }
           });
         });
+        break;
+      }
+
+      case "open_file_in_editor": {
+        const { path: requestedPath } = data as { path: string };
+        const activeConn =
+          sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
+        if (!activeConn || !requestedPath) {
+          ws.send(
+            JSON.stringify({
+              type: "open_file_in_editor",
+              path: requestedPath || "/",
+            }),
+          );
+          break;
+        }
+        const escapedPath = requestedPath.replace(/'/g, "'\\''");
+        activeConn.exec(
+          `realpath '${escapedPath}' 2>/dev/null || echo '${escapedPath}'`,
+          (err, execStream) => {
+            if (err) {
+              ws.send(
+                JSON.stringify({
+                  type: "open_file_in_editor",
+                  path: requestedPath,
+                }),
+              );
+              return;
+            }
+            let stdout = "";
+            execStream.on("data", (chunk: Buffer) => {
+              stdout += chunk.toString("utf-8");
+            });
+            execStream.stderr.on("data", () => {});
+            execStream.on("close", () => {
+              const resolvedPath = stdout.trim() || requestedPath;
+              const attachedWs =
+                sessionManager.getSession(currentSessionId)?.attachedWs ?? ws;
+              if (attachedWs.readyState === WebSocket.OPEN) {
+                attachedWs.send(
+                  JSON.stringify({
+                    type: "open_file_in_editor",
+                    path: resolvedPath,
+                  }),
+                );
+              }
+            });
+          },
+        );
         break;
       }
 
@@ -1534,27 +1583,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
                     }),
                   );
                   runPostShellCommands(0);
-                } else if (detection.sessions.length === 1) {
-                  attachOrCreateTmuxSession(stream, detection.sessions[0].name);
-                  const sessionName = detection.sessions[0].name;
-                  const session = sessionManager.getSession(boundSessionId);
-                  if (session) {
-                    session.tmuxSessionName = sessionName;
-                  }
-                  sshLogger.info("Auto-attached to existing tmux session", {
-                    operation: "tmux_auto_attach",
-                    sessionName,
-                    hostId: id,
-                  });
-                  ws.send(
-                    JSON.stringify({
-                      type: "tmux_session_attached",
-                      sessionName,
-                    }),
-                  );
-                  // Reattaching to existing session -- don't re-run
-                  // initialPath/executeCommand since the session already
-                  // has its own state
                 } else {
                   sshLogger.info(
                     "Multiple tmux sessions found, sending list to frontend",
@@ -2042,44 +2070,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         LC_COLLATE: "en_US.UTF-8",
         COLORTERM: "truecolor",
       },
-      algorithms: {
-        kex: [
-          "curve25519-sha256",
-          "curve25519-sha256@libssh.org",
-          "ecdh-sha2-nistp521",
-          "ecdh-sha2-nistp384",
-          "ecdh-sha2-nistp256",
-          "diffie-hellman-group-exchange-sha256",
-          "diffie-hellman-group18-sha512",
-          "diffie-hellman-group17-sha512",
-          "diffie-hellman-group16-sha512",
-          "diffie-hellman-group15-sha512",
-          "diffie-hellman-group14-sha256",
-          "diffie-hellman-group14-sha1",
-          "diffie-hellman-group-exchange-sha1",
-          "diffie-hellman-group1-sha1",
-        ],
-        serverHostKey: [
-          "ssh-ed25519",
-          "ecdsa-sha2-nistp521",
-          "ecdsa-sha2-nistp384",
-          "ecdsa-sha2-nistp256",
-          "rsa-sha2-512",
-          "rsa-sha2-256",
-          "ssh-rsa",
-          "ssh-dss",
-        ],
-        cipher: SSH_ALGORITHMS.cipher,
-        hmac: [
-          "hmac-sha2-512-etm@openssh.com",
-          "hmac-sha2-256-etm@openssh.com",
-          "hmac-sha2-512",
-          "hmac-sha2-256",
-          "hmac-sha1",
-          "hmac-md5",
-        ],
-        compress: ["none", "zlib@openssh.com", "zlib"],
-      },
+      algorithms: buildSSHAlgorithms(
+        hostConfig.terminalConfig?.allowLegacyAlgorithms !== false,
+      ),
     };
 
     if (
