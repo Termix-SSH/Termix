@@ -56,6 +56,22 @@ const MAX_LINE_LENGTH = 2000;
 // If a chunk contains these, we skip highlighting entirely.
 const TUI_SEQUENCE = /\x1b\[[\d;]*[ABCDEFGHJKST]/;
 
+// A bare \r (not immediately followed by \n) means the terminal is overwriting
+// the current line (shell prompts, progress bars). Highlighting mid-rewrite
+// chunks corrupts the cursor state, so we skip the whole chunk.
+const MID_LINE_CR = /\r(?!\n)/;
+
+// Detects shell prompt lines (user@host:/path$ or similar) after stripping ANSI.
+// These should not be highlighted — the server already colored them, and injecting
+// additional ANSI codes into the prompt fragments causes display corruption.
+const STRIP_ANSI_RE = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
+
+function isShellPromptLine(bare: string): boolean {
+  const plain = bare.replace(STRIP_ANSI_RE, "");
+  // Typical prompts: "user@host:~$ ", "root@pi:/home/pi# ", "[user@host dir]$ "
+  return /(?:[\w.-]+@[\w.-]+|[\w.-]+).*?[$#%>]\s*$/.test(plain);
+}
+
 // Matches any complete ANSI escape sequence
 const ANSI_REGEX = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
 
@@ -313,6 +329,7 @@ function highlightLine(
   const bare = cr ? line.slice(0, -1) : line;
 
   if (!bare.trim()) return line;
+  if (isShellPromptLine(bare)) return line;
 
   const segments = parseAnsiSegments(bare);
   const result = segments
@@ -334,6 +351,7 @@ export function highlightTerminalOutput(
   if (hasIncompleteAnsiSequence(text)) return text;
 
   if (TUI_SEQUENCE.test(text)) return text;
+  if (MID_LINE_CR.test(text)) return text;
 
   const activePatterns = buildActivePatterns(options);
   if (activePatterns.length === 0) return text;

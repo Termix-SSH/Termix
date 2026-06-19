@@ -198,4 +198,38 @@ describe("highlightTerminalOutput", () => {
     });
     expect(out).not.toContain(ESC + "[96m");
   });
+
+  it("skips highlighting when chunk contains a mid-line carriage return", () => {
+    // Progress bars and shell prompt redraws use \r to overwrite the current line
+    const chunk = "downloading...\rdownloading [====] 100%";
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
+  it("still processes CRLF line endings (\\r\\n is fine)", () => {
+    const out = highlightTerminalOutput("ERROR occurred\r\n");
+    expect(out).toContain(ESC + "[91m");
+  });
+
+  it("does not highlight shell prompt lines (user@host:path$)", () => {
+    const prompt = `${ESC}[01;32mpi@raspberrypi${ESC}[00m:${ESC}[01;34m/home/pi${ESC}[00m$ `;
+    const out = highlightTerminalOutput(prompt);
+    expect(out).toBe(prompt);
+  });
+
+  it("does not highlight plain-text shell prompt line", () => {
+    const prompt = "pi@raspberrypi:/home/pi$ ";
+    const out = highlightTerminalOutput(prompt);
+    expect(out).toBe(prompt);
+  });
+
+  it("highlights output lines but not the prompt in a mixed chunk", () => {
+    const chunk = `ERROR: disk full\npi@raspberrypi:~$ `;
+    const out = highlightTerminalOutput(chunk);
+    // The error line should be highlighted
+    expect(out).toContain(ESC + "[91m");
+    // The prompt line should be unchanged
+    expect(out).toContain("pi@raspberrypi:~$ ");
+    const promptLine = out.split("\n")[1];
+    expect(promptLine).toBe("pi@raspberrypi:~$ ");
+  });
 });
