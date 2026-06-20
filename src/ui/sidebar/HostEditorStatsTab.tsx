@@ -50,20 +50,22 @@ export function HostStatsTab({
               }
             />
           </SettingRow>
-          <SettingRow
-            label={t("hosts.useGlobalInterval")}
-            description={t("hosts.useGlobalIntervalDesc")}
-          >
-            <FakeSwitch
-              checked={form.statsConfig.useGlobalStatusInterval}
-              onChange={(v) =>
-                setField("statsConfig", {
-                  ...form.statsConfig,
-                  useGlobalStatusInterval: v,
-                })
-              }
-            />
-          </SettingRow>
+          {form.statsConfig.statusCheckEnabled && (
+            <SettingRow
+              label={t("hosts.useGlobalInterval")}
+              description={t("hosts.useGlobalIntervalDesc")}
+            >
+              <FakeSwitch
+                checked={form.statsConfig.useGlobalStatusInterval}
+                onChange={(v) =>
+                  setField("statsConfig", {
+                    ...form.statsConfig,
+                    useGlobalStatusInterval: v,
+                  })
+                }
+              />
+            </SettingRow>
+          )}
           {form.statsConfig.statusCheckEnabled &&
             !form.statsConfig.useGlobalStatusInterval && (
               <SettingRow
@@ -104,20 +106,22 @@ export function HostStatsTab({
               }
             />
           </SettingRow>
-          <SettingRow
-            label={t("hosts.useGlobalMetrics")}
-            description={t("hosts.useGlobalMetricsDesc")}
-          >
-            <FakeSwitch
-              checked={form.statsConfig.useGlobalMetricsInterval}
-              onChange={(v) =>
-                setField("statsConfig", {
-                  ...form.statsConfig,
-                  useGlobalMetricsInterval: v,
-                })
-              }
-            />
-          </SettingRow>
+          {form.statsConfig.metricsEnabled && (
+            <SettingRow
+              label={t("hosts.useGlobalMetrics")}
+              description={t("hosts.useGlobalMetricsDesc")}
+            >
+              <FakeSwitch
+                checked={form.statsConfig.useGlobalMetricsInterval}
+                onChange={(v) =>
+                  setField("statsConfig", {
+                    ...form.statsConfig,
+                    useGlobalMetricsInterval: v,
+                  })
+                }
+              />
+            </SettingRow>
+          )}
           {form.statsConfig.metricsEnabled &&
             !form.statsConfig.useGlobalMetricsInterval && (
               <SettingRow

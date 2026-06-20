@@ -222,11 +222,7 @@ async function buildDedicatedTransferConnectConfig(
       token,
       username,
     );
-  } else if (
-    authType !== "none" &&
-    authType !== "tailscale" &&
-    authType !== "warpgate"
-  ) {
+  } else if (authType !== "none" && authType !== "tailscale") {
     throw new Error(`Unsupported auth type for transfer: ${authType}`);
   }
 

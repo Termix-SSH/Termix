@@ -94,6 +94,7 @@ export const hosts = sqliteTable("ssh_data", {
   tags: text("tags"),
   pin: integer("pin", { mode: "boolean" }).notNull().default(false),
   authType: text("auth_type").notNull(),
+  useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
   forceKeyboardInteractive: text("force_keyboard_interactive"),
 
   password: text("password"),

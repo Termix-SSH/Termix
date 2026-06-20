@@ -61,9 +61,31 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
+}
+
+function statusCheckEnabled(host: Host): boolean {
+  return host.statsConfig?.statusCheckEnabled !== false;
+}
+
+function buildStatusTooltip(host: Host, online: boolean): string {
+  const statusLabel = online ? "Online" : "Offline";
+  if (!statusCheckEnabled(host)) return "Monitoring disabled";
+  const protocols: string[] = [];
+  if (host.enableSsh) protocols.push("SSH");
+  if (host.enableRdp) protocols.push("RDP");
+  if (host.enableVnc) protocols.push("VNC");
+  if (host.enableTelnet) protocols.push("Telnet");
+  if (protocols.length === 0) return statusLabel;
+  return `${protocols.join(", ")}: ${statusLabel}`;
 }
 
 function getSshActions(
@@ -382,9 +404,18 @@ export function HostItem({
               {selected && <Check className="size-2 text-background" />}
             </div>
           )}
-          <span
-            className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
-          />
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger className="flex items-center">
+                <span
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {buildStatusTooltip(host, host.online)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <span className="text-[13px] font-medium truncate text-foreground leading-none">
             {host.name}
           </span>
@@ -458,9 +489,18 @@ export function HostItem({
               {selected && <Check className="size-2 text-background" />}
             </div>
           )}
-          <span
-            className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
-          />
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger className="flex items-center">
+                <span
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {buildStatusTooltip(host, host.online)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <span className="text-[13px] font-medium truncate text-foreground leading-none">
             {host.name}
           </span>

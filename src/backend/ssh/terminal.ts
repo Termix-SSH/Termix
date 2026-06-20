@@ -189,6 +189,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isConnected = false;
   let isCleaningUp = false;
   let isShellInitializing = false;
+  let isDuplicateConnDiscarded = false;
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
   let isAwaitingAuthCredentials = false;
@@ -236,7 +237,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (currentSessionId) {
       const session = sessionManager.getSession(currentSessionId);
       if (session?.isConnected) {
-        sessionManager.detachWs(currentSessionId);
+        // Only detach if this WS is still the one attached to the session.
+        // If a refresh reconnected and reattached a new WS before this close
+        // event fired, we must not clobber that new attachment.
+        if (session.attachedWs === ws || session.attachedWs === null) {
+          sessionManager.detachWs(currentSessionId);
+        }
       } else {
         sessionManager.destroySession(currentSessionId);
         currentSessionId = null;
@@ -1210,14 +1216,26 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         // Null out currentSessionId before ending the duplicate connection so
         // the sshConn "close" handler does not destroy the reused session.
+        // Set isDuplicateConnDiscarded so the close handler does not send a
+        // "disconnected" message to the new WS that is now attached to the live session.
+        // Null out currentSessionId before ending the duplicate connection so
+        // the sshConn "close" handler does not destroy the reused session.
+        // Set isDuplicateConnDiscarded so the close handler exits without
+        // sending a "disconnected" message to the new WS.
         currentSessionId = null;
+        isDuplicateConnDiscarded = true;
+        clearTimeout(connectionTimeout);
         try {
           sshConn?.end();
         } catch {
           /* ignore */
         }
         sshConn = null;
+        sshStream = null;
 
+        // Point this WS handler's closure at the live session so the input
+        // handler can forward keystrokes via currentSessionId.
+        currentSessionId = reusedSessionId;
         sshStream = existingSession.sshStream;
         sshConn = existingSession.sshConn;
         isConnecting = false;
@@ -1243,8 +1261,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({ type: "connected", message: "Session reattached" }),
         );
-
-        cleanupAuthState(connectionTimeout);
         return;
       }
 
@@ -1929,6 +1945,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
         hostId: id,
       });
 
+      if (isDuplicateConnDiscarded) {
+        cleanupAuthState(connectionTimeout);
+        return;
+      }
+
       if (isAwaitingAuthCredentials) {
         if (currentSessionId) {
           sessionManager.destroySession(currentSessionId);
@@ -2010,6 +2031,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           resolvedCredentials as unknown as Parameters<
             typeof sshAuthManager.handleKeyboardInteractive
           >[5],
+          hostConfig,
         );
 
         isKeyboardInteractive = sshAuthManager.context.isKeyboardInteractive;
@@ -2077,10 +2099,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     if (
       resolvedCredentials.authType === "none" ||
-      resolvedCredentials.authType === "tailscale" ||
-      resolvedCredentials.authType === "warpgate"
+      resolvedCredentials.authType === "tailscale"
     ) {
-      // Tailscale SSH, "none", and Warpgate auth: no static credentials; Warpgate handles auth via keyboard-interactive
+      // Tailscale SSH and "none": no static credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

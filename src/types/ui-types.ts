@@ -10,14 +10,8 @@ export type Host = {
   ram: number | null;
   lastAccess: string;
   tags?: string[];
-  authType:
-    | "password"
-    | "key"
-    | "credential"
-    | "none"
-    | "opkssh"
-    | "tailscale"
-    | "warpgate";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  useWarpgate?: boolean;
   credentialId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;

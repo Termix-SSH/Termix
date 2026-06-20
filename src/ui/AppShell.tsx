@@ -108,6 +108,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Username: h.socks5Username,
     socks5Password: h.socks5Password,
     socks5ProxyChain: h.socks5ProxyChain ?? [],
+    statsConfig: (typeof h.statsConfig === "string"
+      ? JSON.parse(h.statsConfig)
+      : h.statsConfig) as Host["statsConfig"],
   };
 }
 

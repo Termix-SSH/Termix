@@ -41,11 +41,11 @@ export function getStatusClasses(
   }
   // accent scheme
   if (variant === "dot")
-    return online ? "bg-accent-brand" : "bg-accent-brand/20";
+    return online ? "bg-accent-brand" : "bg-muted-foreground/25";
   if (variant === "stripe")
-    return online ? "bg-accent-brand" : "bg-accent-brand/20";
+    return online ? "bg-accent-brand" : "bg-transparent";
   // badge
   return online
     ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10"
-    : "border-accent-brand/20 text-accent-brand/40 bg-accent-brand/5";
+    : "border-border/50 text-muted-foreground/60 bg-muted/30";
 }

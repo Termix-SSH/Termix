@@ -164,7 +164,9 @@ function TerminalTabContent({
             splitScreen={false}
             onClose={() => onCloseTab?.(tab.id)}
             onTitleChange={
-              onRenameTab ? (title) => onRenameTab(tab.id, title) : undefined
+              onRenameTab && host.terminalConfig?.useSSHTitle
+                ? (title) => onRenameTab(tab.id, title)
+                : undefined
             }
             previewTheme={previewTerminalTheme}
             onOpenFileInEditor={onOpenFileInEditor}

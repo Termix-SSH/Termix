@@ -81,6 +81,62 @@ export function HostEditorRdpTab({
         </div>
       </SectionCard>
       <SectionCard
+        title={t("hosts.statusChecksLabel")}
+        icon={<Activity className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-0 py-1">
+          <SettingRow
+            label={t("hosts.enableStatusChecks")}
+            description={t("hosts.enableStatusChecksDesc")}
+          >
+            <FakeSwitch
+              checked={form.statsConfig.statusCheckEnabled}
+              onChange={(v) =>
+                setField("statsConfig", {
+                  ...form.statsConfig,
+                  statusCheckEnabled: v,
+                })
+              }
+            />
+          </SettingRow>
+          {form.statsConfig.statusCheckEnabled && (
+            <SettingRow
+              label={t("hosts.useGlobalInterval")}
+              description={t("hosts.useGlobalIntervalDesc")}
+            >
+              <FakeSwitch
+                checked={form.statsConfig.useGlobalStatusInterval}
+                onChange={(v) =>
+                  setField("statsConfig", {
+                    ...form.statsConfig,
+                    useGlobalStatusInterval: v,
+                  })
+                }
+              />
+            </SettingRow>
+          )}
+          {form.statsConfig.statusCheckEnabled &&
+            !form.statsConfig.useGlobalStatusInterval && (
+              <SettingRow
+                label={t("hosts.checkIntervalS")}
+                description={t("hosts.checkIntervalDesc")}
+              >
+                <Input
+                  type="number"
+                  value={form.statsConfig.statusCheckInterval}
+                  onChange={(e) =>
+                    setField("statsConfig", {
+                      ...form.statsConfig,
+                      statusCheckInterval: Number(e.target.value),
+                    })
+                  }
+                  className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </SettingRow>
+            )}
+        </div>
+      </SectionCard>
+      <SectionCard
         title={t("hosts.guac.guacdProxy")}
         icon={<Cpu className="size-3.5" />}
       >
@@ -920,6 +976,62 @@ export function HostEditorVncTab({
         </div>
       </SectionCard>
       <SectionCard
+        title={t("hosts.statusChecksLabel")}
+        icon={<Activity className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-0 py-1">
+          <SettingRow
+            label={t("hosts.enableStatusChecks")}
+            description={t("hosts.enableStatusChecksDesc")}
+          >
+            <FakeSwitch
+              checked={form.statsConfig.statusCheckEnabled}
+              onChange={(v) =>
+                setField("statsConfig", {
+                  ...form.statsConfig,
+                  statusCheckEnabled: v,
+                })
+              }
+            />
+          </SettingRow>
+          {form.statsConfig.statusCheckEnabled && (
+            <SettingRow
+              label={t("hosts.useGlobalInterval")}
+              description={t("hosts.useGlobalIntervalDesc")}
+            >
+              <FakeSwitch
+                checked={form.statsConfig.useGlobalStatusInterval}
+                onChange={(v) =>
+                  setField("statsConfig", {
+                    ...form.statsConfig,
+                    useGlobalStatusInterval: v,
+                  })
+                }
+              />
+            </SettingRow>
+          )}
+          {form.statsConfig.statusCheckEnabled &&
+            !form.statsConfig.useGlobalStatusInterval && (
+              <SettingRow
+                label={t("hosts.checkIntervalS")}
+                description={t("hosts.checkIntervalDesc")}
+              >
+                <Input
+                  type="number"
+                  value={form.statsConfig.statusCheckInterval}
+                  onChange={(e) =>
+                    setField("statsConfig", {
+                      ...form.statsConfig,
+                      statusCheckInterval: Number(e.target.value),
+                    })
+                  }
+                  className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </SettingRow>
+            )}
+        </div>
+      </SectionCard>
+      <SectionCard
         title={t("hosts.guac.guacdProxy")}
         icon={<Cpu className="size-3.5" />}
       >
@@ -1374,6 +1486,62 @@ export function HostEditorTelnetTab({
               className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
+        </div>
+      </SectionCard>
+      <SectionCard
+        title={t("hosts.statusChecksLabel")}
+        icon={<Activity className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-0 py-1">
+          <SettingRow
+            label={t("hosts.enableStatusChecks")}
+            description={t("hosts.enableStatusChecksDesc")}
+          >
+            <FakeSwitch
+              checked={form.statsConfig.statusCheckEnabled}
+              onChange={(v) =>
+                setField("statsConfig", {
+                  ...form.statsConfig,
+                  statusCheckEnabled: v,
+                })
+              }
+            />
+          </SettingRow>
+          {form.statsConfig.statusCheckEnabled && (
+            <SettingRow
+              label={t("hosts.useGlobalInterval")}
+              description={t("hosts.useGlobalIntervalDesc")}
+            >
+              <FakeSwitch
+                checked={form.statsConfig.useGlobalStatusInterval}
+                onChange={(v) =>
+                  setField("statsConfig", {
+                    ...form.statsConfig,
+                    useGlobalStatusInterval: v,
+                  })
+                }
+              />
+            </SettingRow>
+          )}
+          {form.statsConfig.statusCheckEnabled &&
+            !form.statsConfig.useGlobalStatusInterval && (
+              <SettingRow
+                label={t("hosts.checkIntervalS")}
+                description={t("hosts.checkIntervalDesc")}
+              >
+                <Input
+                  type="number"
+                  value={form.statsConfig.statusCheckInterval}
+                  onChange={(e) =>
+                    setField("statsConfig", {
+                      ...form.statsConfig,
+                      statusCheckInterval: Number(e.target.value),
+                    })
+                  }
+                  className="w-20 h-7 text-xs text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+              </SettingRow>
+            )}
         </div>
       </SectionCard>
       <SectionCard

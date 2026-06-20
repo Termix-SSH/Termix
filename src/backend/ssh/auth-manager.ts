@@ -23,6 +23,7 @@ interface HostConfig {
   keyPassword?: string;
   keyType?: string;
   authType?: string;
+  useWarpgate?: boolean;
   credentialId?: number;
   userId?: string;
   forceKeyboardInteractive?: boolean;
@@ -112,6 +113,7 @@ export class SSHAuthManager {
     prompts: Array<{ prompt: string; echo: boolean }>,
     finish: (responses: string[]) => void,
     resolvedCredentials: ResolvedCredentials,
+    hostConfig?: HostConfig,
   ): void {
     this.context.isKeyboardInteractive = true;
     const promptTexts = prompts.map((p) => p.prompt);
@@ -143,7 +145,7 @@ export class SSHAuthManager {
       return;
     }
 
-    this.handlePasswordAuth(prompts, finish, resolvedCredentials);
+    this.handlePasswordAuth(prompts, finish, resolvedCredentials, hostConfig);
   }
 
   private handleWarpgateAuth(
@@ -282,9 +284,19 @@ export class SSHAuthManager {
     prompts: Array<{ prompt: string; echo: boolean }>,
     finish: (responses: string[]) => void,
     resolvedCredentials: ResolvedCredentials,
+    hostConfig?: HostConfig,
   ): void {
-    if (resolvedCredentials.authType === "warpgate") {
-      finish(prompts.map(() => ""));
+    // For Warpgate hosts: auto-answer password prompts silently using stored credentials.
+    // Warpgate sends a password prompt before its browser-verification round; we must
+    // not show a UI prompt here -- the WarpgateDialog handles user interaction later.
+    if (hostConfig?.useWarpgate) {
+      const responses = prompts.map((p) => {
+        if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+          return resolvedCredentials.password as string;
+        }
+        return "";
+      });
+      finish(responses);
       return;
     }
 

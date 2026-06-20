@@ -68,6 +68,7 @@ export function createHostEditorForm(
     vncPort: host?.vncPort ?? 5900,
     telnetPort: host?.telnetPort ?? 23,
     authType: host?.authType ?? "password",
+    useWarpgate: host?.useWarpgate ?? false,
     password: host?.password ?? "",
     key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
     keyPassword: host?.hasKeyPassword
@@ -158,6 +159,7 @@ export function createHostEditorForm(
     allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
     linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
       "default") as "default" | "confirm" | "direct",
+    useSSHTitle: host?.terminalConfig?.useSSHTitle ?? false,
     syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     syntaxHighlightingOptions: {
       logLevels:
@@ -250,6 +252,7 @@ export function buildHostEditorPayload(
     tags: form.tags,
     pin: form.pin,
     authType: form.authType,
+    useWarpgate: form.useWarpgate,
     password: usesPassword ? form.password || null : null,
     key: usesKey
       ? form.key === "existing_key"
@@ -355,6 +358,7 @@ export function buildHostEditorPayload(
           keepaliveInterval: Number(form.keepaliveInterval),
           keepaliveCountMax: Number(form.keepaliveCountMax),
           environmentVariables: form.environmentVariables,
+          useSSHTitle: form.useSSHTitle,
           syntaxHighlighting: form.syntaxHighlighting,
           syntaxHighlightingOptions: form.syntaxHighlightingOptions,
           backgroundImage: form.backgroundImage || null,

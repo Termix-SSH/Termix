@@ -2536,9 +2536,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       <div
         className="h-full w-full relative"
         style={{
-          backgroundColor: backgroundImage
-            ? themeColors.background
-            : backgroundColor,
+          backgroundColor: backgroundImage ? "transparent" : backgroundColor,
           ...(backgroundImage && {
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: "cover",

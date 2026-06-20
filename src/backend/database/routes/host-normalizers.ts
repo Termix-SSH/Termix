@@ -293,6 +293,7 @@ export function transformHostResponse(
       ? JSON.parse(host.proxmoxConfig as string)
       : undefined,
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
+    useWarpgate: !!host.useWarpgate,
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],

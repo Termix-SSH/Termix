@@ -255,7 +255,6 @@ export function HostEditor({
                       "none",
                       "opkssh",
                       "tailscale",
-                      "warpgate",
                     ].map((m) => (
                       <button
                         key={m}
@@ -978,6 +977,15 @@ export function HostEditor({
                   <FakeSwitch
                     checked={form.agentForwarding}
                     onChange={(v) => setField("agentForwarding", v)}
+                  />
+                </SettingRow>
+                <SettingRow
+                  label={t("hosts.useSSHTitleLabel")}
+                  description={t("hosts.useSSHTitleDesc")}
+                >
+                  <FakeSwitch
+                    checked={form.useSSHTitle}
+                    onChange={(v) => setField("useSSHTitle", v)}
                   />
                 </SettingRow>
                 <SettingRow

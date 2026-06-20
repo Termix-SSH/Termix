@@ -65,6 +65,7 @@ export type SSHAuthType =
   | "none"
   | "opkssh"
   | "tailscale";
+
 export type GuacamoleAuthType = "password" | "credential";
 
 export interface ProxmoxConfig {
@@ -101,14 +102,8 @@ export interface Host {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType:
-    | "password"
-    | "key"
-    | "credential"
-    | "none"
-    | "opkssh"
-    | "tailscale"
-    | "warpgate";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  useWarpgate?: boolean;
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -222,14 +217,8 @@ export interface HostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType:
-    | "password"
-    | "key"
-    | "credential"
-    | "none"
-    | "opkssh"
-    | "tailscale"
-    | "warpgate";
+  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  useWarpgate?: boolean;
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -624,6 +613,7 @@ export interface TerminalConfig {
   backgroundImageOpacity?: number;
   allowLegacyAlgorithms?: boolean;
   linkClickBehavior?: "confirm" | "direct";
+  useSSHTitle?: boolean;
 }
 
 // ============================================================================
