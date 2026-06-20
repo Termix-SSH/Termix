@@ -17,6 +17,7 @@ import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
 import userPreferencesRoutes from "./routes/user-preferences.js";
 import proxmoxRoutes from "./routes/proxmox.js";
+import sshIdRoutes from "./routes/ssh-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
@@ -1788,6 +1789,7 @@ app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
 app.use("/user-preferences", userPreferencesRoutes);
 app.use("/proxmox", proxmoxRoutes);
+app.use("/sshid", sshIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
 
