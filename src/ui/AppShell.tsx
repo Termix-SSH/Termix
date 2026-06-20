@@ -23,6 +23,7 @@ import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
 import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
+import { SshIdPanel } from "@/sidebar/SshIdPanel";
 import { SplitView } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
@@ -320,6 +321,7 @@ export function AppShell({
   const sidebarTitle: Record<RailView, string> = {
     hosts: "Hosts",
     credentials: "Credentials",
+    "ssh-id": t("nav.sshId"),
     "quick-connect": "Quick Connect",
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
@@ -1360,6 +1362,12 @@ export function AppShell({
           active={railView === "credentials"}
         />
       </div>
+
+      {railView === "ssh-id" && (
+        <div className="flex flex-col flex-1 min-h-0">
+          <SshIdPanel />
+        </div>
+      )}
 
       {railView === "quick-connect" && (
         <QuickConnectPanel

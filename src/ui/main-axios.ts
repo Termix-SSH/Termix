@@ -2113,3 +2113,30 @@ export {
   type ActiveSessionInfo,
   type UserPreferences,
 } from "@/api/open-tabs-api";
+
+// ============================================================================
+// SSH ID API
+// ============================================================================
+
+export {
+  getMySshId,
+  checkSshIdHandle,
+  createSshId,
+  updateSshId,
+  deleteSshId,
+  addSshIdKey,
+  generateSshIdKey,
+  setSshIdKeyEnabled,
+  deleteSshIdKey,
+  getMyCa,
+  createCa,
+  rotateCa,
+  deleteCa,
+  issueCertificate,
+  type SshIdentity,
+  type SshIdentityKey,
+  type SshIdMe,
+  type GeneratedKey,
+  type SshIdCa,
+  type IssuedCertificate,
+} from "@/api/ssh-id-api";
