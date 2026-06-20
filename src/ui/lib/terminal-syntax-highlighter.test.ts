@@ -222,6 +222,17 @@ describe("highlightTerminalOutput", () => {
     expect(out).toBe(prompt);
   });
 
+  it("does not highlight 'success' when immediately followed by a path (cd output)", () => {
+    // Some shells print "success~/new/dir" or "success/path" after a cd command
+    const out = highlightTerminalOutput("success~/home/user/projects");
+    expect(out).not.toContain(ESC + "[92m");
+  });
+
+  it("still highlights 'success' when not followed by a path separator", () => {
+    const out = highlightTerminalOutput("Build success: all tests passed");
+    expect(out).toContain(ESC + "[92m");
+  });
+
   it("highlights output lines but not the prompt in a mixed chunk", () => {
     const chunk = `ERROR: disk full\npi@raspberrypi:~$ `;
     const out = highlightTerminalOutput(chunk);

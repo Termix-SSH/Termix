@@ -130,10 +130,13 @@ const ALL_PATTERNS: HighlightPattern[] = [
     category: "logLevels",
   },
 
-  // Success keywords — kept conservative to avoid noise
+  // Success keywords — kept conservative to avoid noise.
+  // Negative lookahead prevents matching when directly followed by a path separator
+  // (e.g. shell `cd` output that prints "success~/new/dir").
   {
     name: "log-success",
-    regex: /\b(?:success(?:ful(?:ly)?)?|pass(?:ed)?|complete(?:d)?|ok\b)\b/gi,
+    regex:
+      /\b(?:success(?:ful(?:ly)?)?|pass(?:ed)?|complete(?:d)?|ok\b)\b(?![\\/~])/gi,
     ansiCode: ANSI.brightGreen,
     priority: 8,
     category: "logLevels",
