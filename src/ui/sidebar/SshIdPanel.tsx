@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Check,
@@ -16,10 +16,8 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import { Label } from "@/components/label";
 import { Textarea } from "@/components/textarea";
-import { Switch } from "@/components/switch";
-import { Badge } from "@/components/badge";
+import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import {
   getMySshId,
   checkSshIdHandle,
@@ -40,12 +38,53 @@ import {
   type SshIdCa,
 } from "@/main-axios";
 
+const accentBtn =
+  "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand";
+
 function resolverUrl(handle: string): string {
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
       : "https://your-termix";
   return `${origin}/sshid/u/${handle}`;
+}
+
+function FieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+      {children}
+    </span>
+  );
+}
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Copy failed");
+    }
+  }
+  return (
+    <div className="flex flex-col gap-1.5 py-2.5 border-b border-border last:border-0">
+      <FieldLabel>{label}</FieldLabel>
+      <div className="flex items-stretch gap-2">
+        <code className="flex-1 min-w-0 text-[11px] font-mono bg-muted/30 border border-border/50 px-2 py-1.5 overflow-x-auto whitespace-nowrap text-muted-foreground">
+          {value}
+        </code>
+        <Button variant="outline" size="icon-sm" onClick={copy}>
+          {copied ? (
+            <Check className="size-3.5 text-accent-brand" />
+          ) : (
+            <Copy className="size-3.5" />
+          )}
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 export function SshIdPanel() {
@@ -84,168 +123,30 @@ export function SshIdPanel() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-40 text-muted-foreground">
-        <Loader2 className="animate-spin" size={18} />
+        <Loader2 className="animate-spin size-4" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 p-3 overflow-y-auto">
-      {!identity ? (
-        <ClaimHandle onCreated={refresh} />
-      ) : (
-        <>
-          <IdentityCard identity={identity} onChanged={refresh} />
-          <AddKey handle={identity.handle} onAdded={refresh} />
-          <KeyList
-            keys={keys}
-            handle={identity.handle}
-            caEnabled={!!ca}
-            onChanged={refresh}
-          />
-          <CaCard handle={identity.handle} ca={ca} onChanged={refresh} />
-        </>
-      )}
-    </div>
-  );
-}
-
-function CaCard({
-  handle,
-  ca,
-  onChanged,
-}: {
-  handle: string;
-  ca: SshIdCa | null;
-  onChanged: () => void;
-}) {
-  const { t } = useTranslation();
-  const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const caUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/sshid/u/${handle}/ca`
-      : `/sshid/u/${handle}/ca`;
-  const trustCmd = `curl -fsSL ${caUrl} | sudo tee /etc/ssh/${handle}-ca.pub && echo "TrustedUserCAKeys /etc/ssh/${handle}-ca.pub" | sudo tee -a /etc/ssh/sshd_config && sudo systemctl reload sshd`;
-
-  async function enable() {
-    setBusy(true);
-    try {
-      await createCa();
-      toast.success(t("sshId.caEnabled"));
-      onChanged();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("sshId.caCreateFailed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function rotate() {
-    if (!window.confirm(t("sshId.caRotateConfirm"))) return;
-    setBusy(true);
-    try {
-      await rotateCa();
-      toast.success(t("sshId.caRotated"));
-      onChanged();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("sshId.caRotateFailed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove() {
-    if (!window.confirm(t("sshId.caDeleteConfirm"))) return;
-    setBusy(true);
-    try {
-      await deleteCa();
-      toast.success(t("sshId.caDeleted"));
-      onChanged();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("sshId.caDeleteFailed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function copyTrust() {
-    try {
-      await navigator.clipboard.writeText(trustCmd);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error(t("sshId.copyFailed"));
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ShieldCheck size={18} className="text-accent-brand" />
-          <h3 className="text-sm font-semibold">{t("sshId.caTitle")}</h3>
-        </div>
-        {!ca ? (
-          <Button size="sm" onClick={enable} disabled={busy}>
-            {busy ? (
-              <Loader2 className="animate-spin" size={14} />
-            ) : (
-              t("sshId.caEnable")
-            )}
-          </Button>
+    <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex flex-col gap-3 p-3">
+        {!identity ? (
+          <ClaimHandle onCreated={refresh} />
         ) : (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={rotate}
-              disabled={busy}
-            >
-              <RefreshCw size={13} className="mr-1" />
-              {t("sshId.caRotate")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={remove} disabled={busy}>
-              <Trash2 size={14} className="text-red-500" />
-            </Button>
-          </div>
+          <>
+            <IdentityCard identity={identity} onChanged={refresh} />
+            <AddKey handle={identity.handle} onAdded={refresh} />
+            <KeyList
+              keys={keys}
+              handle={identity.handle}
+              caEnabled={!!ca}
+              onChanged={refresh}
+            />
+            <CaCard handle={identity.handle} ca={ca} onChanged={refresh} />
+          </>
         )}
       </div>
-
-      <p className="text-[11px] text-muted-foreground -mt-1">
-        {t("sshId.caIntro")}
-      </p>
-
-      {ca && (
-        <>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("sshId.caTrustLabel")}
-            </Label>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-[11px] bg-muted/60 rounded px-2 py-1.5 overflow-x-auto whitespace-nowrap">
-                {trustCmd}
-              </code>
-              <Button variant="outline" size="sm" onClick={copyTrust}>
-                {copied ? (
-                  <Check size={14} className="text-green-500" />
-                ) : (
-                  <Copy size={14} />
-                )}
-              </Button>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground">
-              {t("sshId.caPublicKeyLabel")}
-            </Label>
-            <code className="text-[11px] bg-muted/60 rounded px-2 py-1.5 overflow-x-auto whitespace-nowrap text-muted-foreground">
-              {ca.publicKey}
-            </code>
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -306,58 +207,67 @@ function ClaimHandle({ onCreated }: { onCreated: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <Fingerprint size={18} className="text-accent-brand" />
-        <h2 className="text-sm font-semibold">{t("sshId.claimTitle")}</h2>
-      </div>
-      <p className="text-xs text-muted-foreground">{t("sshId.claimIntro")}</p>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="sshid-handle">{t("sshId.handleLabel")}</Label>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-sm">@</span>
+    <SectionCard
+      title={t("sshId.title")}
+      icon={<Fingerprint className="size-3.5" />}
+    >
+      <div className="flex flex-col gap-3 py-3">
+        <p className="text-xs text-muted-foreground leading-snug">
+          {t("sshId.claimIntro")}
+        </p>
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel>{t("sshId.handleLabel")}</FieldLabel>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-sm">@</span>
+            <Input
+              value={handle}
+              placeholder={t("sshId.handlePlaceholder")}
+              autoCapitalize="none"
+              spellCheck={false}
+              className="h-8 text-xs"
+              onChange={(e) => setHandle(e.target.value)}
+            />
+          </div>
+          <span className="text-[11px] h-4 leading-4">
+            {checking ? (
+              <span className="text-muted-foreground">
+                {t("sshId.checking")}
+              </span>
+            ) : status === "available" ? (
+              <span className="text-accent-brand">{t("sshId.available")}</span>
+            ) : status === "taken" ? (
+              <span className="text-destructive">{t("sshId.taken")}</span>
+            ) : status === "invalid" ? (
+              <span className="text-destructive">
+                {t("sshId.invalidHandle")}
+              </span>
+            ) : null}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <FieldLabel>{t("sshId.descriptionLabel")}</FieldLabel>
           <Input
-            id="sshid-handle"
-            value={handle}
-            placeholder={t("sshId.handlePlaceholder")}
-            autoCapitalize="none"
-            spellCheck={false}
-            onChange={(e) => setHandle(e.target.value)}
+            value={description}
+            placeholder={t("sshId.descriptionPlaceholder")}
+            className="h-8 text-xs"
+            onChange={(e) => setDescription(e.target.value)}
           />
         </div>
-        <span className="text-xs h-4">
-          {checking ? (
-            <span className="text-muted-foreground">{t("sshId.checking")}</span>
-          ) : status === "available" ? (
-            <span className="text-green-500">{t("sshId.available")}</span>
-          ) : status === "taken" ? (
-            <span className="text-red-500">{t("sshId.taken")}</span>
-          ) : status === "invalid" ? (
-            <span className="text-red-500">{t("sshId.invalidHandle")}</span>
-          ) : null}
-        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`self-start ${accentBtn}`}
+          disabled={status !== "available" || submitting}
+          onClick={submit}
+        >
+          {submitting ? (
+            <Loader2 className="animate-spin size-3.5" />
+          ) : (
+            t("sshId.create")
+          )}
+        </Button>
       </div>
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="sshid-desc">{t("sshId.descriptionLabel")}</Label>
-        <Input
-          id="sshid-desc"
-          value={description}
-          placeholder={t("sshId.descriptionPlaceholder")}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-      </div>
-      <Button
-        disabled={status !== "available" || submitting}
-        onClick={submit}
-        className="self-start"
-      >
-        {submitting ? (
-          <Loader2 className="animate-spin" size={16} />
-        ) : (
-          t("sshId.create")
-        )}
-      </Button>
-    </div>
+    </SectionCard>
   );
 }
 
@@ -369,19 +279,8 @@ function IdentityCard({
   onChanged: () => void;
 }) {
   const { t } = useTranslation();
-  const [copiedTarget, setCopiedTarget] = useState<"url" | "curl" | null>(null);
   const url = resolverUrl(identity.handle);
   const curl = `curl -fsSL ${url} >> ~/.ssh/authorized_keys`;
-
-  async function copy(text: string, target: "url" | "curl") {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedTarget(target);
-      setTimeout(() => setCopiedTarget((c) => (c === target ? null : c)), 1500);
-    } catch {
-      toast.error(t("sshId.copyFailed"));
-    }
-  }
 
   async function remove() {
     if (!window.confirm(t("sshId.deleteConfirm"))) return;
@@ -395,57 +294,23 @@ function IdentityCard({
   }
 
   return (
-    <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Fingerprint size={18} className="text-accent-brand" />
-          <span className="text-sm font-semibold">@{identity.handle}</span>
-        </div>
-        <Button variant="ghost" size="sm" onClick={remove}>
-          <Trash2 size={14} className="text-red-500" />
+    <SectionCard
+      title={t("sshId.title")}
+      icon={<Fingerprint className="size-3.5" />}
+      action={
+        <Button variant="ghost" size="icon-sm" onClick={remove}>
+          <Trash2 className="size-3.5 text-destructive" />
         </Button>
+      }
+    >
+      <div className="flex items-center gap-2 py-2.5 border-b border-border">
+        <span className="text-sm font-semibold text-accent-brand">
+          @{identity.handle}
+        </span>
       </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">
-          {t("sshId.resolverUrlLabel")}
-        </Label>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 text-xs bg-muted/60 rounded px-2 py-1.5 overflow-x-auto whitespace-nowrap">
-            {url}
-          </code>
-          <Button variant="outline" size="sm" onClick={() => copy(url, "url")}>
-            {copiedTarget === "url" ? (
-              <Check size={14} className="text-green-500" />
-            ) : (
-              <Copy size={14} />
-            )}
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label className="text-xs text-muted-foreground">
-          {t("sshId.provisionLabel")}
-        </Label>
-        <div className="flex items-center gap-2">
-          <code className="flex-1 text-xs bg-muted/60 rounded px-2 py-1.5 overflow-x-auto whitespace-nowrap">
-            {curl}
-          </code>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => copy(curl, "curl")}
-          >
-            {copiedTarget === "curl" ? (
-              <Check size={14} className="text-green-500" />
-            ) : (
-              <Copy size={14} />
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
+      <CopyRow label={t("sshId.resolverUrlLabel")} value={url} />
+      <CopyRow label={t("sshId.provisionLabel")} value={curl} />
+    </SectionCard>
   );
 }
 
@@ -518,12 +383,10 @@ function AddKey({ handle, onAdded }: { handle: string; onAdded: () => void }) {
     setGenerating(true);
     try {
       const result = await generateSshIdKey("ed25519", saveToVault);
-      const fname = `termix-${handle}-ed25519.key`;
-      downloadText(fname, result.privateKey);
+      downloadText(`termix-${handle}-ed25519.key`, result.privateKey);
       toast.success(
         saveToVault ? t("sshId.generatedSaved") : t("sshId.generatedOnly"),
       );
-      // A vault-saved key becomes a new import option — refresh the dropdown.
       if (saveToVault) loadCredentials();
       onAdded();
     } catch (e) {
@@ -547,85 +410,85 @@ function AddKey({ handle, onAdded }: { handle: string; onAdded: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Plus size={16} />
-          <h3 className="text-sm font-semibold">{t("sshId.publishTitle")}</h3>
-        </div>
+    <SectionCard
+      title={t("sshId.publishTitle")}
+      icon={<Plus className="size-3.5" />}
+      action={
         <Button
-          variant="default"
+          variant="outline"
           size="sm"
+          className={accentBtn}
           onClick={generate}
           disabled={generating}
           title={t("sshId.generateTooltip")}
         >
           {generating ? (
-            <Loader2 className="animate-spin" size={14} />
+            <Loader2 className="animate-spin size-3.5" />
           ) : (
             <>
-              <Sparkles size={13} className="mr-1" />
+              <Sparkles className="size-3.5" />
               {t("sshId.generate")}
             </>
           )}
         </Button>
-      </div>
+      }
+    >
+      <div className="flex flex-col gap-3 py-3">
+        <SettingRow label={t("sshId.saveToVault")}>
+          <FakeSwitch checked={saveToVault} onChange={setSaveToVault} />
+        </SettingRow>
 
-      <p className="text-[11px] text-muted-foreground -mt-1">
-        {t("sshId.generateIntro")}
-      </p>
-
-      <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
-        <Switch checked={saveToVault} onCheckedChange={setSaveToVault} />
-        {t("sshId.saveToVault")}
-      </label>
-
-      <Textarea
-        value={publicKey}
-        onChange={(e) => setPublicKey(e.target.value)}
-        placeholder={t("sshId.keyPlaceholder")}
-        rows={3}
-        className="font-mono text-xs"
-        spellCheck={false}
-      />
-      <div className="flex items-center gap-2">
-        <Input
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder={t("sshId.labelPlaceholder")}
-          className="flex-1"
+        <Textarea
+          value={publicKey}
+          onChange={(e) => setPublicKey(e.target.value)}
+          placeholder={t("sshId.keyPlaceholder")}
+          rows={3}
+          className="font-mono text-[11px]"
+          spellCheck={false}
         />
-        <Button onClick={addManual} disabled={!publicKey.trim() || submitting}>
-          {submitting ? (
-            <Loader2 className="animate-spin" size={16} />
-          ) : (
-            t("sshId.add")
-          )}
-        </Button>
-      </div>
-
-      {credentials.length > 0 && (
-        <div className="flex flex-col gap-1.5 border-t border-border pt-3">
-          <Label className="text-xs text-muted-foreground">
-            {t("sshId.importFromCredential")}
-          </Label>
-          <div className="flex flex-wrap gap-2">
-            {credentials.map((c) => (
-              <Button
-                key={c.id}
-                variant="outline"
-                size="sm"
-                disabled={submitting}
-                onClick={() => importCredential(c.id)}
-              >
-                <KeyRound size={13} className="mr-1" />
-                {c.name}
-              </Button>
-            ))}
-          </div>
+        <div className="flex items-center gap-2">
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder={t("sshId.labelPlaceholder")}
+            className="h-8 text-xs flex-1"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className={accentBtn}
+            onClick={addManual}
+            disabled={!publicKey.trim() || submitting}
+          >
+            {submitting ? (
+              <Loader2 className="animate-spin size-3.5" />
+            ) : (
+              t("sshId.add")
+            )}
+          </Button>
         </div>
-      )}
-    </div>
+
+        {credentials.length > 0 && (
+          <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+            <FieldLabel>{t("sshId.importFromCredential")}</FieldLabel>
+            <div className="flex flex-wrap gap-1.5">
+              {credentials.map((c) => (
+                <Button
+                  key={c.id}
+                  variant="outline"
+                  size="sm"
+                  disabled={submitting}
+                  onClick={() => importCredential(c.id)}
+                >
+                  <KeyRound className="size-3.5" />
+                  {c.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </SectionCard>
   );
 }
 
@@ -675,58 +538,178 @@ function KeyList({
     }
   }
 
-  if (keys.length === 0) {
-    return (
-      <p className="text-xs text-muted-foreground px-1">{t("sshId.noKeys")}</p>
-    );
+  return (
+    <SectionCard
+      title={t("sshId.keysTitle")}
+      icon={<KeyRound className="size-3.5" />}
+    >
+      {keys.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-3">
+          {t("sshId.noKeys")}
+        </p>
+      ) : (
+        keys.map((k) => {
+          const canCert = caEnabled && k.algorithm.toUpperCase() === "ED25519";
+          return (
+            <div
+              key={k.id}
+              className="flex items-center gap-2 py-2.5 border-b border-border last:border-0"
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wide text-accent-brand border border-accent-brand/40 px-1 py-px shrink-0 leading-none">
+                {k.algorithm}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium truncate">
+                  {k.label || k.comment || k.keyType}
+                </div>
+                <code className="text-[10px] font-mono text-muted-foreground truncate block">
+                  {k.publicKey}
+                </code>
+              </div>
+              {canCert && (
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => issueCert(k)}
+                  disabled={issuingId === k.id}
+                  title={t("sshId.issueCertTooltip")}
+                >
+                  {issuingId === k.id ? (
+                    <Loader2 className="animate-spin size-3.5" />
+                  ) : (
+                    <ScrollText className="size-3.5" />
+                  )}
+                </Button>
+              )}
+              <FakeSwitch checked={k.enabled} onChange={() => toggle(k)} />
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => remove(k)}
+                title={t("sshId.published")}
+              >
+                <Trash2 className="size-3.5 text-destructive" />
+              </Button>
+            </div>
+          );
+        })
+      )}
+    </SectionCard>
+  );
+}
+
+function CaCard({
+  handle,
+  ca,
+  onChanged,
+}: {
+  handle: string;
+  ca: SshIdCa | null;
+  onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const [busy, setBusy] = useState(false);
+
+  const caUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/sshid/u/${handle}/ca`
+      : `/sshid/u/${handle}/ca`;
+  const trustCmd = `curl -fsSL ${caUrl} | sudo tee /etc/ssh/${handle}-ca.pub && echo "TrustedUserCAKeys /etc/ssh/${handle}-ca.pub" | sudo tee -a /etc/ssh/sshd_config && sudo systemctl reload sshd`;
+
+  async function enable() {
+    setBusy(true);
+    try {
+      await createCa();
+      toast.success(t("sshId.caEnabled"));
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("sshId.caCreateFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function rotate() {
+    if (!window.confirm(t("sshId.caRotateConfirm"))) return;
+    setBusy(true);
+    try {
+      await rotateCa();
+      toast.success(t("sshId.caRotated"));
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("sshId.caRotateFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm(t("sshId.caDeleteConfirm"))) return;
+    setBusy(true);
+    try {
+      await deleteCa();
+      toast.success(t("sshId.caDeleted"));
+      onChanged();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t("sshId.caDeleteFailed"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {keys.map((k) => {
-        const canCert = caEnabled && k.algorithm.toUpperCase() === "ED25519";
-        return (
-          <div
-            key={k.id}
-            className="rounded-lg border border-border p-3 flex items-center gap-3"
+    <SectionCard
+      title={t("sshId.caTitle")}
+      icon={<ShieldCheck className="size-3.5" />}
+      action={
+        !ca ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className={accentBtn}
+            onClick={enable}
+            disabled={busy}
           >
-            <Badge variant="secondary" className="shrink-0">
-              {k.algorithm}
-            </Badge>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium truncate">
-                {k.label || k.comment || k.keyType}
-              </div>
-              <code className="text-[11px] text-muted-foreground truncate block">
-                {k.publicKey}
-              </code>
-            </div>
-            {canCert && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => issueCert(k)}
-                disabled={issuingId === k.id}
-                title={t("sshId.issueCertTooltip")}
-              >
-                {issuingId === k.id ? (
-                  <Loader2 className="animate-spin" size={13} />
-                ) : (
-                  <ScrollText size={13} />
-                )}
-              </Button>
+            {busy ? (
+              <Loader2 className="animate-spin size-3.5" />
+            ) : (
+              t("sshId.caEnable")
             )}
-            <Switch
-              checked={k.enabled}
-              onCheckedChange={() => toggle(k)}
-              title={k.enabled ? t("sshId.published") : t("sshId.hidden")}
-            />
-            <Button variant="ghost" size="sm" onClick={() => remove(k)}>
-              <Trash2 size={14} className="text-red-500" />
+          </Button>
+        ) : (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={rotate}
+              disabled={busy}
+            >
+              <RefreshCw className="size-3.5" />
+              {t("sshId.caRotate")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={remove}
+              disabled={busy}
+            >
+              <Trash2 className="size-3.5 text-destructive" />
             </Button>
           </div>
-        );
-      })}
-    </div>
+        )
+      }
+    >
+      <div className="py-2.5 border-b border-border last:border-0">
+        <p className="text-xs text-muted-foreground leading-snug">
+          {t("sshId.caIntro")}
+        </p>
+      </div>
+      {ca && (
+        <>
+          <CopyRow label={t("sshId.caTrustLabel")} value={trustCmd} />
+          <CopyRow label={t("sshId.caPublicKeyLabel")} value={ca.publicKey} />
+        </>
+      )}
+    </SectionCard>
   );
 }

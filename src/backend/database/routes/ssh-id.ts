@@ -204,45 +204,73 @@ function renderHtml(
         .join("")
     : `<p class="empty">No public keys published yet.</p>`;
 
+  // Standalone page (not the React app), so the Termix dark theme is inlined:
+  // square corners, #18181b background, #303032 borders, #f59145 accent.
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
+<meta name="color-scheme" content="dark" />
 <title>SSH ID — @${escapeHtml(handle)}</title>
 <style>
-  :root { color-scheme: dark light; }
-  body { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; max-width: 820px;
-         margin: 40px auto; padding: 0 16px; line-height: 1.5; }
-  h1 { font-size: 1.4rem; }
-  .handle { color: #6ea8fe; }
-  .key { background: rgba(127,127,127,.12); border-radius: 8px; padding: 10px 12px; margin: 8px 0;
-         overflow-x: auto; }
-  .algo { display: inline-block; font-weight: 700; margin-right: 8px; color: #7ee787; }
-  code { white-space: pre; word-break: break-all; }
-  pre.cmd { background: rgba(127,127,127,.18); padding: 12px; border-radius: 8px; overflow-x: auto; }
-  .empty { color: #999; }
-  footer { margin-top: 32px; color: #888; font-size: .85rem; }
+  :root {
+    --bg: #0e0e10; --panel: #18181b; --panel-2: #1b1b1e; --border: #303032;
+    --fg: #e7e7e9; --muted: #8b8b90; --accent: #f59145;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); line-height: 1.5;
+         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 32px 16px 48px; }
+  .card { background: var(--panel); border: 1px solid var(--border); }
+  header.card { padding: 16px 18px; display: flex; align-items: center; gap: 10px; }
+  .dot { width: 8px; height: 8px; background: var(--accent); flex: 0 0 auto; }
+  h1 { font-size: 1.05rem; font-weight: 700; margin: 0; letter-spacing: .02em; }
+  h1 .handle { color: var(--accent); }
+  .label { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+           color: var(--muted); margin: 22px 0 8px; }
+  pre.cmd { margin: 0; background: var(--panel-2); border: 1px solid var(--border); color: var(--fg);
+            padding: 12px 14px; overflow-x: auto; font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .keys { display: flex; flex-direction: column; gap: 8px; }
+  .key { background: var(--panel); border: 1px solid var(--border); padding: 10px 12px;
+         display: flex; align-items: center; gap: 10px; overflow-x: auto; }
+  .algo { flex: 0 0 auto; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+          color: var(--accent); border: 1px solid rgba(245,145,69,.4); padding: 1px 5px; line-height: 1.4; }
+  code { white-space: pre; word-break: break-all; font-size: 12px; color: var(--muted);
+         font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .empty { color: var(--muted); font-size: 13px; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 11px; letter-spacing: .04em; }
+  footer .handle { color: var(--accent); }
 </style>
 </head>
 <body>
-  <h1>SSH ID <span class="handle">@${escapeHtml(handle)}</span></h1>
-  <p>Provision a server with these public keys:</p>
-  <pre class="cmd">curl -fsSL https://your-termix-host/sshid/u/${escapeHtml(
-    handle,
-  )} >> ~/.ssh/authorized_keys</pre>
-  <script>
-    (function () {
-      var el = document.querySelector("pre.cmd");
-      if (el) el.textContent =
-        "curl -fsSL " + location.origin + "/sshid/u/${escapeHtml(
-          handle,
-        )} >> ~/.ssh/authorized_keys";
-    })();
-  </script>
-  ${keyRows}
-  <footer>Served by Termix · self-hosted SSH ID</footer>
+  <div class="wrap">
+    <header class="card">
+      <span class="dot"></span>
+      <h1>SSH ID <span class="handle">@${escapeHtml(handle)}</span></h1>
+    </header>
+
+    <div class="label">Provision a server</div>
+    <pre class="cmd">curl -fsSL https://your-termix-host/sshid/u/${escapeHtml(
+      handle,
+    )} >> ~/.ssh/authorized_keys</pre>
+    <script>
+      (function () {
+        var el = document.querySelector("pre.cmd");
+        if (el) el.textContent =
+          "curl -fsSL " + location.origin + "/sshid/u/${escapeHtml(
+            handle,
+          )} >> ~/.ssh/authorized_keys";
+      })();
+    </script>
+
+    <div class="label">Published keys</div>
+    <div class="keys">${keyRows}</div>
+
+    <footer>Served by Termix · self-hosted SSH ID</footer>
+  </div>
 </body>
 </html>`;
 }
