@@ -113,4 +113,5 @@ https://youtu.be/ImwAbm4hW-k
 - RBAC role assignment failing for OIDC users
 - SSO configuration broken when supplied via environment variables
 - RDP requiring credentials even when none are needed
+- Terminal outputting success right after folder path
 <!-- /BUG_FIXES -->
