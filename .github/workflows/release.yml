@@ -293,6 +293,8 @@ jobs:
     needs: [prep, merge-to-main, docker]
     if: ${{ inputs.mode != 'Dry run' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: write
     steps:
       - name: Checkout main
         uses: actions/checkout@v6
@@ -308,7 +310,7 @@ jobs:
       - name: Clear existing release artifacts (overwrite mode)
         if: ${{ inputs.mode == 'Overwrite release' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
           TAG="${{ needs.prep.outputs.release_tag }}"
           if ! gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
@@ -331,7 +333,7 @@ jobs:
       - name: Create or update GitHub release
         if: ${{ inputs.mode != 'Overwrite release' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
           TAG="${{ needs.prep.outputs.release_tag }}"
           TITLE="release-${{ needs.prep.outputs.version }}"
