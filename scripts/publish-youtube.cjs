@@ -45,7 +45,22 @@ async function getAccessToken({ clientId, clientSecret, refreshToken }) {
   return json.access_token;
 }
 
+async function getVideoStatus(accessToken, videoId) {
+  const res = await fetch(
+    `https://www.googleapis.com/youtube/v3/videos?part=status&id=${videoId}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) throw new Error(`videos.list failed (${res.status}): ${await res.text()}`);
+  const json = await res.json();
+  return json.items?.[0]?.status?.privacyStatus ?? null;
+}
+
 async function setVideoPublic(accessToken, videoId) {
+  const status = await getVideoStatus(accessToken, videoId);
+  if (status === "public") {
+    console.log(`Video ${videoId} is already public, skipping.`);
+    return;
+  }
   const res = await fetch(
     "https://www.googleapis.com/youtube/v3/videos?part=status",
     {
