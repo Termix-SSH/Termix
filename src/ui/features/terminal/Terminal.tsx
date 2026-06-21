@@ -40,6 +40,7 @@ import {
 } from "@/lib/terminal-themes.ts";
 import "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
+import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
@@ -666,6 +667,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             isFittingRef.current = false;
           }
         },
+        focus: () => terminal?.focus(),
         sendInput: (data: string) => {
           if (webSocketRef.current?.readyState === 1) {
             webSocketRef.current.send(JSON.stringify({ type: "input", data }));
@@ -2171,6 +2173,37 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
+        // Forward global app shortcuts to AppShell directly — xterm swallows
+        // all keydown events and synthetic re-dispatch is unreliable.
+        // stopPropagation prevents the same event from also firing the window listener.
+        if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
+          const globalCodes = [
+            "BracketRight",
+            "BracketLeft",
+            "Backslash",
+            "Minus",
+          ];
+          if (globalCodes.includes(e.code)) {
+            e.stopPropagation();
+            globalShortcutHandler.current?.(e);
+            return false;
+          }
+        }
+
+        if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+          const arrowCodes = [
+            "ArrowLeft",
+            "ArrowRight",
+            "ArrowUp",
+            "ArrowDown",
+          ];
+          if (arrowCodes.includes(e.code)) {
+            e.stopPropagation();
+            globalShortcutHandler.current?.(e);
+            return false;
+          }
+        }
+
         if (
           e.ctrlKey &&
           !e.shiftKey &&
@@ -2783,6 +2816,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   }),
                 );
               }
+              setTimeout(() => terminal?.focus(), 50);
             }}
             onCreateNew={() => {
               setTmuxSessionPicker(null);
@@ -2794,6 +2828,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                   }),
                 );
               }
+              setTimeout(() => terminal?.focus(), 50);
             }}
             onCancel={() => setTmuxSessionPicker(null)}
             backgroundColor={backgroundColor}

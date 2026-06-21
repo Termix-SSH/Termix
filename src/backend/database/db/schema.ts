@@ -183,6 +183,11 @@ export const hosts = sqliteTable("ssh_data", {
 
   telnetUser: text("telnet_user"),
   telnetPassword: text("telnet_password"),
+  telnetCredentialId: integer("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+
+  rdpAuthType: text("rdp_auth_type"),
+  vncAuthType: text("vnc_auth_type"),
+  telnetAuthType: text("telnet_auth_type"),
 
   domain: text("domain"),
   security: text("security"),

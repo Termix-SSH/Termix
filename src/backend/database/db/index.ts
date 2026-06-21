@@ -1207,6 +1207,10 @@ const migrateSchema = () => {
     { column: "vnc_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
     { column: "wol_broadcast_address", sql: "ALTER TABLE ssh_data ADD COLUMN wol_broadcast_address TEXT" },
     { column: "use_warpgate", sql: "ALTER TABLE ssh_data ADD COLUMN use_warpgate INTEGER NOT NULL DEFAULT 0" },
+    { column: "telnet_credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL" },
+    { column: "rdp_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_auth_type TEXT" },
+    { column: "vnc_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_auth_type TEXT" },
+    { column: "telnet_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_auth_type TEXT" },
   ];
 
   for (const migration of sshDataMigrations) {

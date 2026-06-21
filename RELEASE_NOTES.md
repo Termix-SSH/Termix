@@ -12,7 +12,7 @@ https://youtu.be/ImwAbm4hW-k
 
 <!-- UPDATE_LOG -->
 
-- VNC and RDP credential sharing support
+- VNC, RDP, and Telnet credential sharing support
 - Default host settings (SOCKS5, credentials, terminal settings, and more)
 - Custom terminal background image per host
 - Silent OIDC login configurable as default (no URL parameter required)
@@ -53,6 +53,7 @@ https://youtu.be/ImwAbm4hW-k
 - Proxmox login options including OPKSSH
 - UI suggestions and general interface improvements
 - Per-protocol host metrics (online/offline detection) configuration
+- Increase file manager max upload size by splicing files and reassembling them (~5GB)
 <!-- /UPDATE_LOG -->
 
 <!-- BUG_FIXES -->
@@ -114,4 +115,9 @@ https://youtu.be/ImwAbm4hW-k
 - SSO configuration broken when supplied via environment variables
 - RDP requiring credentials even when none are needed
 - Terminal outputting success right after folder path
+- GitHub/Google SSO provider giving ERR_INVALID_URL
+- Keyboard focus not on main screen when selecting tmux session
+- Remove all references to SALT variable
+- Syntax highlighter duplicating path, visual corruptions, cursor jumps, etc.
+- RDP session screen clips/spills over on viewport resize
 <!-- /BUG_FIXES -->

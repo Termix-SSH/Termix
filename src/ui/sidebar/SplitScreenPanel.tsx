@@ -369,11 +369,11 @@ export function SplitScreenPanel({
               label: t("newUi.sidebar.splitScreen.hotkeysNavigatePane"),
             },
             {
-              keys: ["Ctrl", "Tab"],
+              keys: ["Ctrl", "Shift", "]"],
               label: t("newUi.sidebar.splitScreen.hotkeysNextTab"),
             },
             {
-              keys: ["Ctrl", "Shift", "Tab"],
+              keys: ["Ctrl", "Shift", "["],
               label: t("newUi.sidebar.splitScreen.hotkeysPrevTab"),
             },
           ].map(({ keys, label }) => (

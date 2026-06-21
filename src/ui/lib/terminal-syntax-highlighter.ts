@@ -68,8 +68,14 @@ const STRIP_ANSI_RE = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
 
 function isShellPromptLine(bare: string): boolean {
   const plain = bare.replace(STRIP_ANSI_RE, "");
-  // Typical prompts: "user@host:~$ ", "root@pi:/home/pi# ", "[user@host dir]$ "
-  return /(?:[\w.-]+@[\w.-]+|[\w.-]+).*?[$#%>]\s*$/.test(plain);
+  // Matches a trailing prompt: "user@host:~$ ", "root@pi:/home/pi# ", "[user@host dir]$ "
+  if (/(?:[\w.-]+@[\w.-]+|[\w.-]+).*?[$#%>]\s*$/.test(plain)) return true;
+  // Matches a leading prompt followed by a command: "user@host:/path$ cmd arg"
+  // This is the echoed command line — the shell colors the prompt prefix itself,
+  // so injecting extra ANSI codes into it causes visual corruption / doubled paths.
+  if (/^(?:\[?[\w.-]+@[\w.-]+[\w./ ~-]*\]?|[\w.-]+).*?[$#%>]\s+\S/.test(plain))
+    return true;
+  return false;
 }
 
 // Matches any complete ANSI escape sequence
@@ -359,8 +365,24 @@ export function highlightTerminalOutput(
   const activePatterns = buildActivePatterns(options);
   if (activePatterns.length === 0) return text;
 
-  return text
-    .split("\n")
-    .map((line) => highlightLine(line, activePatterns))
+  const lines = text.split("\n");
+  const endsWithNewline = text.endsWith("\n");
+  const hasMultipleLines = lines.length > 1;
+
+  // When a multi-line chunk has a trailing fragment without \n, that fragment
+  // could be a live readline input line that bash will redraw with \r +
+  // cursor-positioning sequences. Injecting ANSI bytes into it adds invisible
+  // chars that bash doesn't count, so bash's cursor arithmetic diverges from
+  // xterm's actual column position — causing the cursor to jump and text to
+  // shift when the user types or navigates with arrow keys.
+  // Only skip the last fragment when the chunk already has complete lines
+  // before it (single-line chunks with no \n are plain output, not input).
+  const highlightCount =
+    hasMultipleLines && !endsWithNewline ? lines.length - 1 : lines.length;
+
+  return lines
+    .map((line, i) =>
+      i < highlightCount ? highlightLine(line, activePatterns) : line,
+    )
     .join("\n");
 }

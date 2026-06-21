@@ -221,16 +221,25 @@ export function SSOProviderDialog({
         allowedUsers: ldap.allowedUsers || undefined,
       };
     }
+    const providerDefaults =
+      type === "google"
+        ? googleDefaults
+        : type === "github"
+          ? githubDefaults
+          : null;
     return {
       client_id: oidc.client_id,
       client_secret: oidc.client_secret,
-      issuer_url: oidc.issuer_url,
-      authorization_url: oidc.authorization_url,
-      token_url: oidc.token_url,
-      userinfo_url: oidc.userinfo_url || undefined,
-      identifier_path: oidc.identifier_path,
-      name_path: oidc.name_path,
-      scopes: oidc.scopes,
+      issuer_url: oidc.issuer_url || providerDefaults?.issuer_url || "",
+      authorization_url:
+        oidc.authorization_url || providerDefaults?.authorization_url || "",
+      token_url: oidc.token_url || providerDefaults?.token_url || "",
+      userinfo_url:
+        oidc.userinfo_url || providerDefaults?.userinfo_url || undefined,
+      identifier_path:
+        oidc.identifier_path || providerDefaults?.identifier_path || "sub",
+      name_path: oidc.name_path || providerDefaults?.name_path || "name",
+      scopes: oidc.scopes || providerDefaults?.scopes || "openid email profile",
       allowed_users: oidc.allowed_users || undefined,
       admin_group: oidc.admin_group || undefined,
       group_claim: oidc.group_claim || undefined,
@@ -399,8 +408,24 @@ function OIDCConfigFields({
   simplified: boolean;
   t: (key: string) => string;
 }) {
-  const githubAuthUrl = "https://github.com/login/oauth/authorize";
-  const googleAuthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+  const githubDefaults = {
+    authorization_url: "https://github.com/login/oauth/authorize",
+    token_url: "https://github.com/login/oauth/access_token",
+    issuer_url: "https://token.actions.githubusercontent.com",
+    userinfo_url: "https://api.github.com/user",
+    scopes: "read:user user:email",
+    identifier_path: "id",
+    name_path: "name",
+  };
+  const googleDefaults = {
+    authorization_url: "https://accounts.google.com/o/oauth2/v2/auth",
+    token_url: "https://oauth2.googleapis.com/token",
+    issuer_url: "https://accounts.google.com",
+    userinfo_url: "https://openidconnect.googleapis.com/v1/userinfo",
+    scopes: "openid email profile",
+    identifier_path: "sub",
+    name_path: "name",
+  };
   const docsHref = simplified
     ? "https://docs.termix.site/features/authentication/github-google"
     : "https://docs.termix.site/features/authentication/oidc";
@@ -438,8 +463,8 @@ function OIDCConfigFields({
         <div className="flex flex-col gap-1">
           <span className="text-[10px] text-muted-foreground">
             {type === "github"
-              ? `Authorization URL: ${githubAuthUrl}`
-              : `Authorization URL: ${googleAuthUrl}`}
+              ? `Authorization URL: ${githubDefaults.authorization_url}`
+              : `Authorization URL: ${googleDefaults.authorization_url}`}
           </span>
         </div>
       ) : (

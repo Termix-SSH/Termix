@@ -292,8 +292,20 @@ router.post(
           Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
       }
 
-      // Resolve RDP/VNC shared credentials if set
-      if (host.rdpCredentialId) {
+      const hostRecord = host as Record<string, unknown>;
+
+      // Backward compat: if authType is not stored but a credentialId is, treat as credential mode
+      const rdpEffectiveAuthType =
+        (host.rdpAuthType as string) ||
+        (host.rdpCredentialId ? "credential" : "direct");
+      const vncEffectiveAuthType =
+        (host.vncAuthType as string) ||
+        (host.vncCredentialId ? "credential" : "direct");
+      const telnetEffectiveAuthType =
+        (host.telnetAuthType as string) ||
+        (hostRecord.telnetCredentialId ? "credential" : "direct");
+
+      if (rdpEffectiveAuthType === "credential" && host.rdpCredentialId) {
         try {
           const rdpCreds = await SimpleDBOps.select(
             getDb()
@@ -310,9 +322,9 @@ router.post(
           );
           if (rdpCreds.length > 0) {
             const cred = rdpCreds[0] as Record<string, unknown>;
-            if (!host.rdpUser && cred.username) host.rdpUser = cred.username;
-            if (!host.rdpPassword && cred.password)
-              host.rdpPassword = cred.password;
+            if (cred.username) host.rdpUser = cred.username;
+            if (cred.password) host.rdpPassword = cred.password;
+            // domain is never sourced from credential
           }
         } catch (e) {
           guacLogger.warn("Failed to resolve RDP credential", {
@@ -323,7 +335,7 @@ router.post(
         }
       }
 
-      if (host.vncCredentialId) {
+      if (vncEffectiveAuthType === "credential" && host.vncCredentialId) {
         try {
           const vncCreds = await SimpleDBOps.select(
             getDb()
@@ -340,13 +352,47 @@ router.post(
           );
           if (vncCreds.length > 0) {
             const cred = vncCreds[0] as Record<string, unknown>;
-            if (!host.vncUser && cred.username) host.vncUser = cred.username;
-            if (!host.vncPassword && cred.password)
-              host.vncPassword = cred.password;
+            if (cred.password) host.vncPassword = cred.password;
+            if (cred.username) host.vncUser = cred.username;
           }
         } catch (e) {
           guacLogger.warn("Failed to resolve VNC credential", {
             operation: "guac_vnc_credential_resolve",
+            hostId,
+            error: e instanceof Error ? e.message : "Unknown",
+          });
+        }
+      }
+
+      if (
+        telnetEffectiveAuthType === "credential" &&
+        hostRecord.telnetCredentialId
+      ) {
+        try {
+          const telnetCreds = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshCredentials)
+              .where(
+                and(
+                  eq(
+                    sshCredentials.id,
+                    hostRecord.telnetCredentialId as number,
+                  ),
+                  eq(sshCredentials.userId, host.userId as string),
+                ),
+              ),
+            "ssh_credentials",
+            userId,
+          );
+          if (telnetCreds.length > 0) {
+            const cred = telnetCreds[0] as Record<string, unknown>;
+            if (cred.username) host.telnetUser = cred.username;
+            if (cred.password) host.telnetPassword = cred.password;
+          }
+        } catch (e) {
+          guacLogger.warn("Failed to resolve Telnet credential", {
+            operation: "guac_telnet_credential_resolve",
             hostId,
             error: e instanceof Error ? e.message : "Unknown",
           });

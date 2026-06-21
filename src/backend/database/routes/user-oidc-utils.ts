@@ -232,6 +232,49 @@ export async function verifyOIDCToken(
   return payload;
 }
 
+const GOOGLE_DEFAULTS = {
+  issuer_url: "https://accounts.google.com",
+  authorization_url: "https://accounts.google.com/o/oauth2/v2/auth",
+  token_url: "https://oauth2.googleapis.com/token",
+  userinfo_url: "https://openidconnect.googleapis.com/v1/userinfo",
+  identifier_path: "sub",
+  name_path: "name",
+  scopes: "openid email profile",
+};
+
+const GITHUB_DEFAULTS = {
+  issuer_url: "https://token.actions.githubusercontent.com",
+  authorization_url: "https://github.com/login/oauth/authorize",
+  token_url: "https://github.com/login/oauth/access_token",
+  userinfo_url: "https://api.github.com/user",
+  identifier_path: "id",
+  name_path: "name",
+  scopes: "read:user user:email",
+};
+
+function applyProviderDefaults(
+  config: OIDCConfig,
+  providerType: string,
+): OIDCConfig {
+  const defaults =
+    providerType === "google"
+      ? GOOGLE_DEFAULTS
+      : providerType === "github"
+        ? GITHUB_DEFAULTS
+        : null;
+  if (!defaults) return config;
+  return {
+    ...config,
+    issuer_url: config.issuer_url || defaults.issuer_url,
+    authorization_url: config.authorization_url || defaults.authorization_url,
+    token_url: config.token_url || defaults.token_url,
+    userinfo_url: config.userinfo_url || defaults.userinfo_url,
+    identifier_path: config.identifier_path || defaults.identifier_path,
+    name_path: config.name_path || defaults.name_path,
+    scopes: config.scopes || defaults.scopes,
+  };
+}
+
 function decryptConfigSecret(
   config: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -298,10 +341,14 @@ export async function loadProviderConfig(
         } else {
           parsed = decryptConfigSecret(parsed);
         }
-        const config = parsed as unknown as OIDCConfig;
+        const providerType = row.type as SSOProviderType;
+        const config = applyProviderDefaults(
+          parsed as unknown as OIDCConfig,
+          providerType,
+        );
         return {
           config,
-          providerType: row.type as SSOProviderType,
+          providerType,
           providerDbId: row.id,
         };
       }
@@ -336,9 +383,13 @@ export async function loadProviderConfig(
         parsed = {};
       }
       parsed = decryptConfigSecret(parsed);
+      const oidcProviderType = oidcRow.type as SSOProviderType;
       return {
-        config: parsed as unknown as OIDCConfig,
-        providerType: oidcRow.type as SSOProviderType,
+        config: applyProviderDefaults(
+          parsed as unknown as OIDCConfig,
+          oidcProviderType,
+        ),
+        providerType: oidcProviderType,
         providerDbId: oidcRow.id,
       };
     }

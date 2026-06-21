@@ -541,6 +541,7 @@ export const GuacamoleDisplay = forwardRef<
           const h = Math.round(rect.height);
           if (w > 0 && h > 0) {
             clientRef.current.sendSize(w, h);
+            rescaleDisplay(true);
           }
         }
       }, 150);

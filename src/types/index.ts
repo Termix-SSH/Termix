@@ -181,6 +181,10 @@ export interface Host {
   vncUser?: string;
   telnetUser?: string;
   telnetPassword?: string;
+  telnetCredentialId?: number | null;
+  rdpAuthType?: "direct" | "credential" | null;
+  vncAuthType?: "direct" | "credential" | null;
+  telnetAuthType?: "direct" | "credential" | null;
   createdAt: string;
   updatedAt: string;
 
@@ -291,6 +295,10 @@ export interface HostData {
   vncUser?: string;
   telnetUser?: string;
   telnetPassword?: string;
+  telnetCredentialId?: number | null;
+  rdpAuthType?: "direct" | "credential" | null;
+  vncAuthType?: "direct" | "credential" | null;
+  telnetAuthType?: "direct" | "credential" | null;
 }
 
 export type SSHHost = Host;

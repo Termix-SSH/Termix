@@ -783,6 +783,10 @@
       "authentication": "Authentication",
       "storedCredential": "Stored Credential",
       "noCredential": "No credential (direct credentials below)",
+      "authMethod": "Auth Method",
+      "authTypeDirect": "Direct",
+      "authTypeCredential": "Credential",
+      "selectCredential": "Select a credential...",
       "connectionSettings": "Connection Settings",
       "displaySettings": "Display Settings",
       "audioSettings": "Audio Settings",
@@ -1091,7 +1095,12 @@
     "connectionLogCopyFailed": "Failed to copy logs to clipboard",
     "connectionRejected": "Connection rejected by server. Please check your authentication and network configuration.",
     "hostKeyRejected": "SSH host key verification rejected. Connection cancelled.",
-    "sessionTakenOver": "Session was opened in another tab. Reconnecting..."
+    "sessionTakenOver": "Session was opened in another tab. Reconnecting...",
+    "split": {
+      "splitTab": "Split Tab",
+      "addToSplit": "Add to Split",
+      "removeFromSplit": "Remove from Split"
+    }
   },
   "fileManager": {
     "noHostSelected": "No host selected",

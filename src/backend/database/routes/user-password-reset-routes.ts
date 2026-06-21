@@ -353,8 +353,7 @@ export function registerUserPasswordResetRoutes(
       }
       const userId = user[0].id;
 
-      const saltRounds = parseInt(process.env.SALT || "10", 10);
-      const password_hash = await bcrypt.hash(newPassword, saltRounds);
+      const password_hash = await bcrypt.hash(newPassword, 10);
 
       let userIdFromJwt: string | null = null;
       const cookie = req.cookies?.jwt;

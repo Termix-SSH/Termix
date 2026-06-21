@@ -166,8 +166,7 @@ router.post("/create", async (req, res) => {
       return res.status(409).json({ error: "Username already exists" });
     }
 
-    const saltRounds = parseInt(process.env.SALT || "10", 10);
-    const password_hash = await bcrypt.hash(password, saltRounds);
+    const password_hash = await bcrypt.hash(password, 10);
     const id = nanoid();
 
     const isFirstUser = db.$client.transaction(() => {
@@ -2481,8 +2480,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
       .json({ error: "Failed to update password and re-encrypt data." });
   }
 
-  const saltRounds = parseInt(process.env.SALT || "10", 10);
-  const password_hash = await bcrypt.hash(newPassword, saltRounds);
+  const password_hash = await bcrypt.hash(newPassword, 10);
   await db
     .update(users)
     .set({ passwordHash: password_hash })

@@ -193,6 +193,20 @@ export function createHostEditorForm(
     vncUser: host?.vncUser ?? "",
     telnetUser: host?.telnetUser ?? "",
     telnetPassword: host?.telnetPassword ?? "",
+    telnetCredentialId:
+      host?.telnetCredentialId != null ? String(host.telnetCredentialId) : "",
+    rdpAuthType: (host?.rdpAuthType ??
+      (host?.rdpCredentialId ? "credential" : "direct")) as
+      | "direct"
+      | "credential",
+    vncAuthType: (host?.vncAuthType ??
+      (host?.vncCredentialId ? "credential" : "direct")) as
+      | "direct"
+      | "credential",
+    telnetAuthType: (host?.telnetAuthType ??
+      (host?.telnetCredentialId ? "credential" : "direct")) as
+      | "direct"
+      | "credential",
     guacamoleConfig: host?.guacamoleConfig ?? {},
     statsConfig: host?.statsConfig ?? {
       statusCheckEnabled: d?.statusCheckEnabled ?? true,
@@ -302,23 +316,54 @@ export function buildHostEditorPayload(
     vncPort: Number(form.vncPort),
     telnetPort: Number(form.telnetPort),
     forceKeyboardInteractive: form.forceKeyboardInteractive,
+    rdpAuthType: protocols.enableRdp ? form.rdpAuthType : null,
     rdpCredentialId:
-      protocols.enableRdp && form.rdpCredentialId
+      protocols.enableRdp &&
+      form.rdpAuthType === "credential" &&
+      form.rdpCredentialId
         ? Number(form.rdpCredentialId)
         : null,
-    rdpUser: form.rdpUser || null,
-    rdpPassword: form.rdpPassword || null,
+    rdpUser:
+      protocols.enableRdp && form.rdpAuthType === "direct"
+        ? form.rdpUser || null
+        : null,
+    rdpPassword:
+      protocols.enableRdp && form.rdpAuthType === "direct"
+        ? form.rdpPassword || null
+        : null,
     rdpDomain: form.domain || null,
     rdpSecurity: form.security || null,
     rdpIgnoreCert: form.ignoreCert,
+    vncAuthType: protocols.enableVnc ? form.vncAuthType : null,
     vncCredentialId:
-      protocols.enableVnc && form.vncCredentialId
+      protocols.enableVnc &&
+      form.vncAuthType === "credential" &&
+      form.vncCredentialId
         ? Number(form.vncCredentialId)
         : null,
-    vncPassword: form.vncPassword || null,
-    vncUser: form.vncUser || null,
-    telnetUser: form.telnetUser || null,
-    telnetPassword: form.telnetPassword || null,
+    vncPassword:
+      protocols.enableVnc && form.vncAuthType === "direct"
+        ? form.vncPassword || null
+        : null,
+    vncUser:
+      protocols.enableVnc && form.vncAuthType === "direct"
+        ? form.vncUser || null
+        : null,
+    telnetAuthType: protocols.enableTelnet ? form.telnetAuthType : null,
+    telnetCredentialId:
+      protocols.enableTelnet &&
+      form.telnetAuthType === "credential" &&
+      form.telnetCredentialId
+        ? Number(form.telnetCredentialId)
+        : null,
+    telnetUser:
+      protocols.enableTelnet && form.telnetAuthType === "direct"
+        ? form.telnetUser || null
+        : null,
+    telnetPassword:
+      protocols.enableTelnet && form.telnetAuthType === "direct"
+        ? form.telnetPassword || null
+        : null,
     jumpHosts: form.jumpHosts,
     portKnockSequence: form.portKnockSequence,
     tunnelConnections: form.serverTunnels,

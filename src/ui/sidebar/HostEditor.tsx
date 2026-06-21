@@ -1684,6 +1684,8 @@ export function HostEditor({
             form={form}
             setField={setField}
             setGuacField={setGuacField}
+            host={host}
+            credentials={credentials}
           />
         )}
       </div>
