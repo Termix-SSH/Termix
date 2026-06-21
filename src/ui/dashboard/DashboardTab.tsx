@@ -6,10 +6,12 @@ import { Separator } from "@/components/separator";
 import {
   Activity,
   Database,
+  ExternalLink,
   GripHorizontal,
   GripVertical,
   KeyRound,
   LayoutDashboard,
+  Link,
   MessagesSquare,
   Network,
   Plus,
@@ -37,10 +39,21 @@ import {
   registerMetricsViewer,
   sendMetricsHeartbeat,
   getUserInfo,
+  getServiceLinks,
+  createServiceLink,
+  deleteServiceLink,
 } from "@/main-axios";
-import type { RecentActivityItem, SSHHostWithStatus } from "@/main-axios";
+import type {
+  RecentActivityItem,
+  SSHHostWithStatus,
+  ServiceLink,
+} from "@/main-axios";
 import { useTranslation } from "react-i18next";
 import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
+import {
+  useStatusColorScheme,
+  getStatusClasses,
+} from "@/hooks/use-status-color-scheme";
 
 function sshHostToHost(h: SSHHostWithStatus): Host {
   return {
@@ -66,7 +79,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     macAddress: h.macAddress,
     enableTerminal: h.enableTerminal ?? true,
     enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? false,
+    enableFileManager: h.enableFileManager ?? true,
     enableDocker: h.enableDocker ?? false,
     enableSsh: h.connectionType === "ssh" || !h.connectionType,
     enableRdp: h.connectionType === "rdp",
@@ -205,35 +218,48 @@ function CountersBarCard({
   hosts,
   credentialCount,
   activeTunnelCount,
+  onOpenSingletonTab,
 }: {
   hosts: Host[];
   credentialCount: number;
   activeTunnelCount: number;
+  onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
 }) {
   const { t } = useTranslation();
   return (
     <Card className="grid grid-cols-3 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
-      <div className="flex items-center gap-2.5 px-4 py-2.5">
+      <button
+        onClick={() => onOpenSingletonTab("host-manager")}
+        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
+      >
         <Server className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{hosts.length}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
           {t("dashboard.totalHosts")}
         </span>
-      </div>
-      <div className="flex items-center gap-2.5 px-4 py-2.5">
+      </button>
+      <button
+        onClick={() =>
+          onOpenSingletonTab("host-manager", "host-manager:show-credentials")
+        }
+        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
+      >
         <KeyRound className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{credentialCount}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
           {t("dashboard.totalCredentials")}
         </span>
-      </div>
-      <div className="flex items-center gap-2.5 px-4 py-2.5">
+      </button>
+      <button
+        onClick={() => onOpenSingletonTab("tunnel")}
+        className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-muted transition-colors cursor-pointer text-left"
+      >
         <Network className="size-3.5 text-muted-foreground shrink-0" />
         <span className="text-base font-bold">{activeTunnelCount}</span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
           {t("dashboardTab.activeTunnels")}
         </span>
-      </div>
+      </button>
     </Card>
   );
 }
@@ -365,16 +391,48 @@ function QuickActionsCard({
   );
 }
 
+function MetricBar({ label, value }: { label: string; value: number }) {
+  const color =
+    value >= 90
+      ? "bg-red-500"
+      : value >= 70
+        ? "bg-yellow-500"
+        : "bg-accent-brand";
+  const textColor =
+    value >= 90
+      ? "text-red-400"
+      : value >= 70
+        ? "text-yellow-400"
+        : "text-accent-brand";
+  return (
+    <div className="flex flex-col gap-0.5 w-16">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-muted-foreground">{label}</span>
+        <span className={`text-[10px] font-bold ${textColor}`}>
+          {value.toFixed(0)}%
+        </span>
+      </div>
+      <div className="h-0.5 bg-muted w-full">
+        <div className={`h-full ${color}`} style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function HostStatusCard({
   hosts,
   hostMetrics,
   onOpenTab,
 }: {
   hosts: Host[];
-  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
+  hostMetrics: Map<
+    string,
+    { cpu: number | null; ram: number | null; disk: number | null }
+  >;
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
   const { t } = useTranslation();
+  const statusScheme = useStatusColorScheme();
   const online = hosts.filter((h) => h.online).length;
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
@@ -399,19 +457,23 @@ function HostStatusCard({
           const metrics = hostMetrics.get(host.id);
           const cpu = metrics?.cpu ?? null;
           const ram = metrics?.ram ?? null;
-          const hasMetrics = cpu !== null || ram !== null;
+          const disk = metrics?.disk ?? null;
+          const hasMetrics = cpu !== null || ram !== null || disk !== null;
           return (
             <div
               key={i}
               onClick={() => onOpenTab(host, "host-metrics")}
-              className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer"
+              className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
             >
               <div className="flex items-center gap-2.5">
                 <span
-                  className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
                 />
                 <div className="flex flex-col">
-                  <span className="text-xs font-semibold">{host.name}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-semibold">{host.name}</span>
+                    <ExternalLink className="size-2.5 text-muted-foreground/0 group-hover/row:text-muted-foreground/60 transition-colors shrink-0" />
+                  </div>
                   <span className="text-[10px] text-muted-foreground font-mono">
                     {host.ip}
                   </span>
@@ -421,40 +483,13 @@ function HostStatusCard({
                 {host.online && hasMetrics ? (
                   <div className="flex items-center gap-3">
                     {cpu !== null && (
-                      <div className="flex flex-col gap-0.5 w-16">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground">
-                            {t("dashboard.cpu")}
-                          </span>
-                          <span className="text-[10px] font-bold text-accent-brand">
-                            {cpu.toFixed(0)}%
-                          </span>
-                        </div>
-                        <div className="h-0.5 bg-muted w-full">
-                          <div
-                            className="h-full bg-accent-brand"
-                            style={{ width: `${cpu}%` }}
-                          />
-                        </div>
-                      </div>
+                      <MetricBar label={t("dashboard.cpu")} value={cpu} />
                     )}
                     {ram !== null && (
-                      <div className="flex flex-col gap-0.5 w-16">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground">
-                            {t("dashboard.ram")}
-                          </span>
-                          <span className="text-[10px] font-bold text-accent-brand">
-                            {ram.toFixed(0)}%
-                          </span>
-                        </div>
-                        <div className="h-0.5 bg-muted w-full">
-                          <div
-                            className="h-full bg-accent-brand"
-                            style={{ width: `${ram}%` }}
-                          />
-                        </div>
-                      </div>
+                      <MetricBar label={t("dashboard.ram")} value={ram} />
+                    )}
+                    {disk !== null && (
+                      <MetricBar label={t("dashboardTab.disk")} value={disk} />
                     )}
                   </div>
                 ) : (
@@ -465,10 +500,13 @@ function HostStatusCard({
                     <span className="text-[10px] text-muted-foreground w-16 text-center">
                       —
                     </span>
+                    <span className="text-[10px] text-muted-foreground w-16 text-center">
+                      —
+                    </span>
                   </div>
                 )}
                 <span
-                  className={`text-[10px] px-2 py-0.5 font-semibold border ${host.online ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10" : "border-border text-muted-foreground"}`}
+                  className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(host.online, statusScheme, "badge")}`}
                 >
                   {host.online
                     ? t("dashboardTab.online")
@@ -495,6 +533,7 @@ function RecentActivityCard({
   onClear: () => void;
 }) {
   const { t } = useTranslation();
+  const statusScheme = useStatusColorScheme();
   const typeIcon: Record<RecentActivityItem["type"], React.ReactNode> = {
     terminal: <Terminal className="size-2.5" />,
     file_manager: <Server className="size-2.5" />,
@@ -570,7 +609,7 @@ function RecentActivityCard({
             >
               <div className="flex items-center gap-2">
                 <span
-                  className={`size-1.5 rounded-full shrink-0 ${host?.online ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.online ?? false, statusScheme, "dot")}`}
                 />
                 <div className="flex flex-col">
                   <span className="text-xs font-semibold truncate max-w-24">
@@ -589,6 +628,124 @@ function RecentActivityCard({
           );
         })}
       </div>
+    </Card>
+  );
+}
+
+function ServiceLinksCard({
+  links,
+  onAdd,
+  onDelete,
+}: {
+  links: ServiceLink[];
+  onAdd: (label: string, url: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [label, setLabel] = useState("");
+  const [url, setUrl] = useState("");
+  const [urlError, setUrlError] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const handleAdd = async () => {
+    let valid = true;
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        valid = false;
+      }
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      setUrlError(true);
+      return;
+    }
+    setUrlError(false);
+    setAdding(true);
+    try {
+      await onAdd(label.trim(), url.trim());
+      setLabel("");
+      setUrl("");
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return (
+    <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
+        <Link className="size-3.5 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
+          {t("dashboardTab.serviceLinksTitle")}
+        </span>
+      </div>
+      <div className="flex flex-col overflow-auto flex-1">
+        {links.length === 0 && (
+          <div className="flex-1 flex items-center justify-center text-xs text-muted-foreground/40 py-4">
+            {t("dashboardTab.serviceLinksEmpty")}
+          </div>
+        )}
+        {links.map((link) => (
+          <div
+            key={link.id}
+            className="flex items-center justify-between px-4 py-2 border-b border-border last:border-0 group/link"
+          >
+            <a
+              href={link.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="flex items-center gap-2 min-w-0 flex-1 hover:text-accent-brand transition-colors"
+            >
+              <ExternalLink className="size-3 text-muted-foreground shrink-0" />
+              <span className="text-xs font-semibold truncate">
+                {link.label}
+              </span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                {link.url}
+              </span>
+            </a>
+            <button
+              onClick={() => onDelete(link.id)}
+              className="ml-2 opacity-0 group-hover/link:opacity-100 transition-opacity size-5 flex items-center justify-center hover:text-destructive"
+            >
+              <Trash2 className="size-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 px-4 py-2 border-t border-border shrink-0">
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder={t("dashboardTab.serviceLinksLabelPlaceholder")}
+          className="flex-1 min-w-0 text-xs bg-transparent border border-border px-2 py-1 focus:outline-none focus:border-accent-brand/60"
+        />
+        <input
+          type="text"
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setUrlError(false);
+          }}
+          placeholder={t("dashboardTab.serviceLinksUrlPlaceholder")}
+          className={`flex-[2] min-w-0 text-xs bg-transparent border px-2 py-1 focus:outline-none ${urlError ? "border-destructive" : "border-border focus:border-accent-brand/60"}`}
+        />
+        <Button
+          size="sm"
+          className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white h-6 px-2 shrink-0"
+          onClick={handleAdd}
+          disabled={!label.trim() || !url.trim() || adding}
+        >
+          {t("dashboardTab.serviceLinksAdd")}
+        </Button>
+      </div>
+      {urlError && (
+        <div className="px-4 pb-2 text-[10px] text-destructive shrink-0">
+          {t("dashboardTab.serviceLinksInvalidUrl")}
+        </div>
+      )}
     </Card>
   );
 }
@@ -617,6 +774,9 @@ function CardItem({
   activity,
   onClearActivity,
   isAdmin,
+  serviceLinks,
+  onAddServiceLink,
+  onDeleteServiceLink,
 }: {
   slot: CardSlot;
   editMode: boolean;
@@ -629,7 +789,10 @@ function CardItem({
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
-  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
+  hostMetrics: Map<
+    string,
+    { cpu: number | null; ram: number | null; disk: number | null }
+  >;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta";
@@ -639,6 +802,9 @@ function CardItem({
   activity: RecentActivityItem[];
   onClearActivity: () => void;
   isAdmin: boolean;
+  serviceLinks: ServiceLink[];
+  onAddServiceLink: (label: string, url: string) => Promise<void>;
+  onDeleteServiceLink: (id: number) => Promise<void>;
 }) {
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -704,6 +870,7 @@ function CardItem({
             hosts={hosts}
             credentialCount={credentialCount}
             activeTunnelCount={activeTunnelCount}
+            onOpenSingletonTab={onOpenSingletonTab}
           />
         )}
         {slot.id === "quick_actions" && (
@@ -733,6 +900,13 @@ function CardItem({
           <NetworkGraphCard
             embedded={true}
             onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+          />
+        )}
+        {slot.id === "service_links" && (
+          <ServiceLinksCard
+            links={serviceLinks}
+            onAdd={onAddServiceLink}
+            onDelete={onDeleteServiceLink}
           />
         )}
       </div>
@@ -831,7 +1005,10 @@ type PanelColumnProps = {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
-  hostMetrics: Map<string, { cpu: number | null; ram: number | null }>;
+  hostMetrics: Map<
+    string,
+    { cpu: number | null; ram: number | null; disk: number | null }
+  >;
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta";
@@ -842,6 +1019,9 @@ type PanelColumnProps = {
   onClearActivity: () => void;
   cardLabels: Record<DashboardCardId, string>;
   isAdmin: boolean;
+  serviceLinks: ServiceLink[];
+  onAddServiceLink: (label: string, url: string) => Promise<void>;
+  onDeleteServiceLink: (id: number) => Promise<void>;
 };
 
 function PanelColumn({
@@ -869,6 +1049,9 @@ function PanelColumn({
   onClearActivity,
   cardLabels,
   isAdmin,
+  serviceLinks,
+  onAddServiceLink,
+  onDeleteServiceLink,
 }: PanelColumnProps) {
   const { t } = useTranslation();
   const sorted = [...slots].sort((a, b) => a.order - b.order);
@@ -921,6 +1104,9 @@ function PanelColumn({
             activity={activity}
             onClearActivity={onClearActivity}
             isAdmin={isAdmin}
+            serviceLinks={serviceLinks}
+            onAddServiceLink={onAddServiceLink}
+            onDeleteServiceLink={onDeleteServiceLink}
           />
         </div>
       ))}
@@ -1028,7 +1214,7 @@ export function DashboardTab({
   const [activeTunnelCount, setActiveTunnelCount] = useState(0);
   const [activity, setActivity] = useState<RecentActivityItem[]>([]);
   const [hostMetrics, setHostMetrics] = useState<
-    Map<string, { cpu: number | null; ram: number | null }>
+    Map<string, { cpu: number | null; ram: number | null; disk: number | null }>
   >(new Map());
   const viewerSessionsRef = useRef<Map<number, string>>(new Map());
 
@@ -1066,6 +1252,7 @@ export function DashboardTab({
             id: host.id,
             cpu: metrics.cpu?.percent ?? null,
             ram: metrics.memory?.percent ?? null,
+            disk: metrics.disk?.percent ?? null,
           };
         } catch {
           return null;
@@ -1074,9 +1261,12 @@ export function DashboardTab({
     );
 
     viewerSessionsRef.current = newSessions;
-    const map = new Map<string, { cpu: number | null; ram: number | null }>();
+    const map = new Map<
+      string,
+      { cpu: number | null; ram: number | null; disk: number | null }
+    >();
     for (const r of results) {
-      if (r) map.set(r.id, { cpu: r.cpu, ram: r.ram });
+      if (r) map.set(r.id, { cpu: r.cpu, ram: r.ram, disk: r.disk });
     }
     setHostMetrics(map);
   }, []);
@@ -1169,6 +1359,24 @@ export function DashboardTab({
     }
   };
 
+  const [serviceLinks, setServiceLinks] = useState<ServiceLink[]>([]);
+
+  useEffect(() => {
+    getServiceLinks()
+      .then(setServiceLinks)
+      .catch(() => {});
+  }, []);
+
+  const handleAddServiceLink = async (label: string, url: string) => {
+    const created = await createServiceLink(label, url);
+    setServiceLinks((prev) => [...prev, created]);
+  };
+
+  const handleDeleteServiceLink = async (id: number) => {
+    await deleteServiceLink(id);
+    setServiceLinks((prev) => prev.filter((l) => l.id !== id));
+  };
+
   const todayLabel = new Date().toLocaleDateString(i18n.language, {
     weekday: "long",
     month: "long",
@@ -1192,6 +1400,7 @@ export function DashboardTab({
     host_status: t("dashboardTab.hostStatus"),
     recent_activity: t("dashboard.recentActivity"),
     network_graph: t("dashboard.networkGraph"),
+    service_links: t("dashboard.serviceLinks"),
   };
 
   const onColumnDividerMouseDown = useCallback(
@@ -1264,7 +1473,9 @@ export function DashboardTab({
           ? 350
           : id === "host_status" || id === "recent_activity"
             ? null
-            : 150;
+            : id === "service_links"
+              ? 200
+              : 150;
       return [...prev, { id, panel, order: maxOrder, height: defaultHeight }];
     });
   };
@@ -1299,6 +1510,9 @@ export function DashboardTab({
     onOpenTab,
     cardLabels,
     isAdmin,
+    serviceLinks,
+    onAddServiceLink: handleAddServiceLink,
+    onDeleteServiceLink: handleDeleteServiceLink,
   };
 
   const isMobile = useIsMobile();
@@ -1393,6 +1607,7 @@ export function DashboardTab({
                   hosts={hosts}
                   credentialCount={credentialCount}
                   activeTunnelCount={activeTunnelCount}
+                  onOpenSingletonTab={onOpenSingletonTab}
                 />
               )}
               {slot.id === "quick_actions" && (
@@ -1422,6 +1637,13 @@ export function DashboardTab({
                 <NetworkGraphCard
                   embedded={true}
                   onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
+                />
+              )}
+              {slot.id === "service_links" && (
+                <ServiceLinksCard
+                  links={serviceLinks}
+                  onAdd={handleAddServiceLink}
+                  onDelete={handleDeleteServiceLink}
                 />
               )}
             </div>

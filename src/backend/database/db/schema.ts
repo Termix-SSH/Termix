@@ -94,6 +94,7 @@ export const hosts = sqliteTable("ssh_data", {
   tags: text("tags"),
   pin: integer("pin", { mode: "boolean" }).notNull().default(false),
   authType: text("auth_type").notNull(),
+  useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
   forceKeyboardInteractive: text("force_keyboard_interactive"),
 
   password: text("password"),
@@ -127,6 +128,7 @@ export const hosts = sqliteTable("ssh_data", {
   enableFileManager: integer("enable_file_manager", { mode: "boolean" })
     .notNull()
     .default(true),
+  scpLegacy: integer("scp_legacy", { mode: "boolean" }).notNull().default(false),
   enableDocker: integer("enable_docker", { mode: "boolean" })
     .notNull()
     .default(false),
@@ -168,17 +170,24 @@ export const hosts = sqliteTable("ssh_data", {
   vncPort: integer("vnc_port").default(5900),
   telnetPort: integer("telnet_port").default(23),
 
+  rdpCredentialId: integer("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
   rdpUser: text("rdp_user"),
   rdpPassword: text("rdp_password"),
   rdpDomain: text("rdp_domain"),
   rdpSecurity: text("rdp_security"),
   rdpIgnoreCert: integer("rdp_ignore_cert", { mode: "boolean" }).default(false),
 
+  vncCredentialId: integer("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
   vncPassword: text("vnc_password"),
   vncUser: text("vnc_user"),
 
   telnetUser: text("telnet_user"),
   telnetPassword: text("telnet_password"),
+  telnetCredentialId: integer("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+
+  rdpAuthType: text("rdp_auth_type"),
+  vncAuthType: text("vnc_auth_type"),
+  telnetAuthType: text("telnet_auth_type"),
 
   domain: text("domain"),
   security: text("security"),
@@ -193,6 +202,7 @@ export const hosts = sqliteTable("ssh_data", {
   socks5ProxyChain: text("socks5_proxy_chain"),
 
   macAddress: text("mac_address"),
+  wolBroadcastAddress: text("wol_broadcast_address"),
   portKnockSequence: text("port_knock_sequence"),
 
   hostKeyFingerprint: text("host_key_fingerprint"),
@@ -705,6 +715,8 @@ export const userPreferences = sqliteTable("user_preferences", {
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
   confirmTabClose: integer("confirm_tab_close", { mode: "boolean" }),
   hiddenRailTabs: text("hidden_rail_tabs"),
+  compactHostView: integer("compact_host_view", { mode: "boolean" }),
+  statusColorScheme: text("status_color_scheme"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -761,6 +773,19 @@ export const hostHealthHistory = sqliteTable("host_health_history", {
   ok: integer("ok", { mode: "boolean" }).notNull(),
   latencyMs: integer("latency_ms"),
   detail: text("detail"),
+});
+
+export const dashboardServiceLinks = sqliteTable("dashboard_service_links", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  url: text("url").notNull(),
+  order: integer("order").notNull().default(0),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });
 
 // --- tmux-monitor begin ---

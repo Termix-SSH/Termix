@@ -56,6 +56,10 @@ export function CredentialEditorView({
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
+    if (!credForm.name.trim()) {
+      toast.error(t("hosts.credentialNameRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const data = {
@@ -92,8 +96,9 @@ export function CredentialEditorView({
       );
       window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
       onSave(saved);
-    } catch {
-      toast.error(t("hosts.failedToSaveCredential"));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : null;
+      toast.error(msg || t("hosts.failedToSaveCredential"));
     } finally {
       setSaving(false);
     }
@@ -327,7 +332,7 @@ export function CredentialEditorView({
                   <input
                     ref={credFileInputRef}
                     type="file"
-                    accept=".pem,.key,.txt,.ppk"
+                    accept=".pem,.key,.txt"
                     className="hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];

@@ -56,6 +56,28 @@ const MAX_LINE_LENGTH = 2000;
 // If a chunk contains these, we skip highlighting entirely.
 const TUI_SEQUENCE = /\x1b\[[\d;]*[ABCDEFGHJKST]/;
 
+// A bare \r (not immediately followed by \n) means the terminal is overwriting
+// the current line (shell prompts, progress bars). Highlighting mid-rewrite
+// chunks corrupts the cursor state, so we skip the whole chunk.
+const MID_LINE_CR = /\r(?!\n)/;
+
+// Detects shell prompt lines (user@host:/path$ or similar) after stripping ANSI.
+// These should not be highlighted — the server already colored them, and injecting
+// additional ANSI codes into the prompt fragments causes display corruption.
+const STRIP_ANSI_RE = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
+
+function isShellPromptLine(bare: string): boolean {
+  const plain = bare.replace(STRIP_ANSI_RE, "");
+  // Matches a trailing prompt: "user@host:~$ ", "root@pi:/home/pi# ", "[user@host dir]$ "
+  if (/(?:[\w.-]+@[\w.-]+|[\w.-]+).*?[$#%>]\s*$/.test(plain)) return true;
+  // Matches a leading prompt followed by a command: "user@host:/path$ cmd arg"
+  // This is the echoed command line — the shell colors the prompt prefix itself,
+  // so injecting extra ANSI codes into it causes visual corruption / doubled paths.
+  if (/^(?:\[?[\w.-]+@[\w.-]+[\w./ ~-]*\]?|[\w.-]+).*?[$#%>]\s+\S/.test(plain))
+    return true;
+  return false;
+}
+
 // Matches any complete ANSI escape sequence
 const ANSI_REGEX = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
 
@@ -114,10 +136,13 @@ const ALL_PATTERNS: HighlightPattern[] = [
     category: "logLevels",
   },
 
-  // Success keywords — kept conservative to avoid noise
+  // Success keywords — kept conservative to avoid noise.
+  // Negative lookahead prevents matching when directly followed by a path separator
+  // (e.g. shell `cd` output that prints "success~/new/dir").
   {
     name: "log-success",
-    regex: /\b(?:success(?:ful(?:ly)?)?|pass(?:ed)?|complete(?:d)?|ok\b)\b/gi,
+    regex:
+      /\b(?:success(?:ful(?:ly)?)?|pass(?:ed)?|complete(?:d)?|ok\b)\b(?![\\/~])/gi,
     ansiCode: ANSI.brightGreen,
     priority: 8,
     category: "logLevels",
@@ -313,6 +338,7 @@ function highlightLine(
   const bare = cr ? line.slice(0, -1) : line;
 
   if (!bare.trim()) return line;
+  if (isShellPromptLine(bare)) return line;
 
   const segments = parseAnsiSegments(bare);
   const result = segments
@@ -334,12 +360,29 @@ export function highlightTerminalOutput(
   if (hasIncompleteAnsiSequence(text)) return text;
 
   if (TUI_SEQUENCE.test(text)) return text;
+  if (MID_LINE_CR.test(text)) return text;
 
   const activePatterns = buildActivePatterns(options);
   if (activePatterns.length === 0) return text;
 
-  return text
-    .split("\n")
-    .map((line) => highlightLine(line, activePatterns))
+  const lines = text.split("\n");
+  const endsWithNewline = text.endsWith("\n");
+  const hasMultipleLines = lines.length > 1;
+
+  // When a multi-line chunk has a trailing fragment without \n, that fragment
+  // could be a live readline input line that bash will redraw with \r +
+  // cursor-positioning sequences. Injecting ANSI bytes into it adds invisible
+  // chars that bash doesn't count, so bash's cursor arithmetic diverges from
+  // xterm's actual column position — causing the cursor to jump and text to
+  // shift when the user types or navigates with arrow keys.
+  // Only skip the last fragment when the chunk already has complete lines
+  // before it (single-line chunks with no \n are plain output, not input).
+  const highlightCount =
+    hasMultipleLines && !endsWithNewline ? lines.length - 1 : lines.length;
+
+  return lines
+    .map((line, i) =>
+      i < highlightCount ? highlightLine(line, activePatterns) : line,
+    )
     .join("\n");
 }

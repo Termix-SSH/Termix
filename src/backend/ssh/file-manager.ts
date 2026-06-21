@@ -132,6 +132,7 @@ async function buildDedicatedTransferConnectConfig(
   client: SSHClient,
 ): Promise<Record<string, unknown>> {
   const { ip, port, username } = host;
+  const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(host.id);
   const config: Record<string, unknown> = {
     host: ip?.replace(/^\[|\]$/g, "") || ip,
     port,
@@ -149,6 +150,7 @@ async function buildDedicatedTransferConnectConfig(
       null,
       userId,
       false,
+      preloadedHostData,
     ),
     env: {
       TERM: "xterm-256color",
@@ -726,6 +728,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedPort = port;
   let resolvedUsername = username;
   let resolvedJumpHosts = jumpHosts;
+  let resolvedScpLegacy = false;
+  let resolvedUseSocks5 = useSocks5;
+  let resolvedSocks5Host = socks5Host;
+  let resolvedSocks5Port = socks5Port;
+  let resolvedSocks5Username = socks5Username;
+  let resolvedSocks5Password = socks5Password;
+  let resolvedSocks5ProxyChain = socks5ProxyChain;
   if (hostId && userId && !password && !sshKey) {
     try {
       const { resolveHostById } = await import("./host-resolver.js");
@@ -743,6 +752,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
+        resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
+        if (resolvedHost.useSocks5) {
+          resolvedUseSocks5 = resolvedHost.useSocks5;
+          resolvedSocks5Host = resolvedHost.socks5Host;
+          resolvedSocks5Port = resolvedHost.socks5Port;
+          resolvedSocks5Username = resolvedHost.socks5Username;
+          resolvedSocks5Password = resolvedHost.socks5Password;
+          resolvedSocks5ProxyChain = resolvedHost.socks5ProxyChain;
+        }
         if (
           (!resolvedJumpHosts || resolvedJumpHosts.length === 0) &&
           resolvedHost.jumpHosts &&
@@ -790,6 +808,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         };
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
+        resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
+        if (resolvedHost.useSocks5) {
+          resolvedUseSocks5 = resolvedHost.useSocks5;
+          resolvedSocks5Host = resolvedHost.socks5Host;
+          resolvedSocks5Port = resolvedHost.socks5Port;
+          resolvedSocks5Username = resolvedHost.socks5Username;
+          resolvedSocks5Password = resolvedHost.socks5Password;
+          resolvedSocks5ProxyChain = resolvedHost.socks5ProxyChain;
+        }
         if (
           (!resolvedJumpHosts || resolvedJumpHosts.length === 0) &&
           resolvedHost.jumpHosts &&
@@ -822,6 +849,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
   }
 
+  const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(hostId);
   const config: Record<string, unknown> = {
     host: resolvedIp?.replace(/^\[|\]$/g, "") || resolvedIp,
     port: resolvedPort,
@@ -829,10 +857,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     tryKeyboard: true,
     keepaliveInterval:
       typeof hostKeepaliveInterval === "number"
-        ? hostKeepaliveInterval * 1000
+        ? Math.max(5000, hostKeepaliveInterval * 1000)
         : 60000,
     keepaliveCountMax:
-      typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 5,
+      typeof hostKeepaliveCountMax === "number"
+        ? Math.max(1, hostKeepaliveCountMax)
+        : 5,
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
@@ -843,6 +873,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       null,
       userId,
       false,
+      preloadedHostData,
     ),
     env: {
       TERM: "xterm-256color",
@@ -1015,7 +1046,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
   } else if (
     resolvedCredentials.authType === "none" ||
-    resolvedCredentials.authType === "tailscale"
+    resolvedCredentials.authType === "tailscale" ||
+    resolvedCredentials.authType === "warpgate"
   ) {
     connectionLogs.push(
       createConnectionLog(
@@ -1109,6 +1141,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       hostId,
       username,
       sudoPassword: resolvedCredentials.sudoPassword,
+      scpLegacy: resolvedScpLegacy,
     };
     scheduleSessionCleanup(sessionId);
     res.json({
@@ -1266,6 +1299,14 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     }
 
     if (
+      err.message.includes("Cannot parse privateKey") &&
+      err.message.includes("no passphrase")
+    ) {
+      res.json({
+        status: "passphrase_required",
+        connectionLogs,
+      });
+    } else if (
       (resolvedCredentials.authType === "none" ||
         resolvedCredentials.authType === "tailscale") &&
       (err.message.includes("authentication") ||
@@ -1426,11 +1467,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         const hasStoredPassword =
           resolvedCredentials.password &&
           resolvedCredentials.authType !== "none" &&
-          resolvedCredentials.authType !== "tailscale";
+          resolvedCredentials.authType !== "tailscale" &&
+          resolvedCredentials.authType !== "warpgate";
 
         const passwordPromptIndex = prompts.findIndex((p) =>
           /password/i.test(p.prompt),
         );
+
+        if (resolvedCredentials.authType === "warpgate") {
+          finish(prompts.map(() => ""));
+          return;
+        }
 
         if (
           (resolvedCredentials.authType === "none" ||
@@ -1512,16 +1559,17 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   );
 
   const proxyConfig: SOCKS5Config | null =
-    useSocks5 &&
-    (socks5Host ||
-      (socks5ProxyChain && (socks5ProxyChain as ProxyNode[]).length > 0))
+    resolvedUseSocks5 &&
+    (resolvedSocks5Host ||
+      (resolvedSocks5ProxyChain &&
+        (resolvedSocks5ProxyChain as ProxyNode[]).length > 0))
       ? {
-          useSocks5,
-          socks5Host,
-          socks5Port,
-          socks5Username,
-          socks5Password,
-          socks5ProxyChain: socks5ProxyChain as ProxyNode[],
+          useSocks5: resolvedUseSocks5,
+          socks5Host: resolvedSocks5Host,
+          socks5Port: resolvedSocks5Port,
+          socks5Username: resolvedSocks5Username,
+          socks5Password: resolvedSocks5Password,
+          socks5ProxyChain: resolvedSocks5ProxyChain as ProxyNode[],
         }
       : null;
 
@@ -1571,7 +1619,37 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         });
       }
 
+      let forwardOutDone = false;
+      const forwardOutTimeout = setTimeout(() => {
+        if (!forwardOutDone) {
+          forwardOutDone = true;
+          fileLogger.error("Timeout waiting for jump host forwardOut", {
+            operation: "file_jump_forward_timeout",
+            sessionId,
+            hostId,
+            ip,
+            port,
+          });
+          connectionLogs.push(
+            createConnectionLog(
+              "error",
+              "jump",
+              "Timed out waiting for jump host tunnel to target host",
+            ),
+          );
+          jumpClient.end();
+          res.status(500).json({
+            error: "Jump host tunnel timed out",
+            connectionLogs,
+          });
+        }
+      }, 30000);
+
       jumpClient.forwardOut("127.0.0.1", 0, ip, port, (err, stream) => {
+        if (forwardOutDone) return;
+        forwardOutDone = true;
+        clearTimeout(forwardOutTimeout);
+
         if (err) {
           fileLogger.error("Failed to forward through jump host", err, {
             operation: "file_jump_forward",

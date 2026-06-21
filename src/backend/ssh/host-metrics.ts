@@ -96,6 +96,9 @@ interface SSHHostWithCredentials {
   socks5Password?: string;
   socks5ProxyChain?: ProxyNode[];
   connectionType?: "ssh" | "rdp" | "vnc" | "telnet";
+  rdpPort?: number;
+  vncPort?: number;
+  telnetPort?: number;
 }
 
 type StatusEntry = {
@@ -348,7 +351,12 @@ class PollingManager {
 
     try {
       let pingHost = refreshedHost.ip;
-      let pingPort = refreshedHost.port;
+      const ct = refreshedHost.connectionType || "ssh";
+      let pingPort: number;
+      if (ct === "rdp") pingPort = refreshedHost.rdpPort ?? 3389;
+      else if (ct === "vnc") pingPort = refreshedHost.vncPort ?? 5900;
+      else if (ct === "telnet") pingPort = refreshedHost.telnetPort ?? 23;
+      else pingPort = refreshedHost.port;
       if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
         const firstJump = await fetchHostById(
           refreshedHost.jumpHosts[0].hostId,
@@ -792,6 +800,12 @@ async function resolveHostCredentials(
       socks5ProxyChain: host.socks5ProxyChain
         ? JSON.parse(host.socks5ProxyChain as string)
         : undefined,
+      connectionType:
+        (host.connectionType as SSHHostWithCredentials["connectionType"]) ||
+        "ssh",
+      rdpPort: (host.rdpPort as number | undefined) ?? undefined,
+      vncPort: (host.vncPort as number | undefined) ?? undefined,
+      telnetPort: (host.telnetPort as number | undefined) ?? undefined,
     };
 
     if (host.credentialId) {
@@ -1028,7 +1042,11 @@ async function buildSshConfig(
         cause: keyError,
       });
     }
-  } else if (host.authType === "none" || host.authType === "tailscale") {
+  } else if (
+    host.authType === "none" ||
+    host.authType === "tailscale" ||
+    host.authType === "warpgate"
+  ) {
     // no credentials needed
   } else if (host.authType === "opkssh") {
     // cert auth setup happens in createSshFactory (needs client instance)

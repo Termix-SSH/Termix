@@ -413,11 +413,13 @@ function PasswordChangeSection({
 export function UserProfilePanel({
   username,
   onLogout,
+  onChangeServer,
   userPrefs,
   onPrefsChange,
 }: {
   username?: string;
   onLogout?: () => void;
+  onChangeServer?: () => void;
   userPrefs?: {
     reopenTabsOnLogin: boolean;
     storageMode?: string | null;
@@ -425,12 +427,14 @@ export function UserProfilePanel({
     commandPaletteEnabled?: boolean | null;
     showHostTags?: boolean | null;
     hostTrayOnClick?: boolean | null;
+    compactHostView?: boolean | null;
     pinAppRail?: boolean | null;
     foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
+    statusColorScheme?: string | null;
   };
   onPrefsChange?: (prefs: { reopenTabsOnLogin: boolean }) => void;
 }) {
@@ -508,6 +512,9 @@ export function UserProfilePanel({
   const [commandAutocomplete, setCommandAutocomplete] = useState(
     () => localStorage.getItem("commandAutocomplete") === "true",
   );
+  const [terminalLinkClickBehavior, setTerminalLinkClickBehavior] = useState(
+    () => localStorage.getItem("terminalLinkClickBehavior") ?? "confirm",
+  );
   const [commandPaletteEnabled, setCommandPaletteEnabled] = useState(() => {
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
@@ -518,6 +525,12 @@ export function UserProfilePanel({
   });
   const [hostTrayOnClick, setHostTrayOnClick] = useState(
     () => localStorage.getItem("hostTrayOnClick") === "true",
+  );
+  const [compactHostView, setCompactHostView] = useState(
+    () => localStorage.getItem("compactHostView") === "true",
+  );
+  const [statusColorScheme, setStatusColorScheme] = useState(
+    () => localStorage.getItem("statusColorScheme") ?? "accent",
   );
   const [pinAppRail, setPinAppRail] = useState(
     () => localStorage.getItem("pinAppRail") === "true",
@@ -600,12 +613,14 @@ export function UserProfilePanel({
         "commandPaletteShortcutEnabled",
         "showHostTags",
         "hostTrayOnClick",
+        "compactHostView",
         "pinAppRail",
         "defaultSnippetFoldersCollapsed",
         "confirmSnippetExecution",
         "disableUpdateCheck",
         "confirmTabClose",
         "hiddenRailTabs",
+        "statusColorScheme",
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
@@ -656,6 +671,14 @@ export function UserProfilePanel({
             String(prefs.hostTrayOnClick),
           );
         }
+        if (prefs.compactHostView != null) {
+          setCompactHostView(prefs.compactHostView);
+          localStorage.setItem(
+            "compactHostView",
+            String(prefs.compactHostView),
+          );
+          window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
+        }
         if (prefs.pinAppRail != null) {
           setPinAppRail(prefs.pinAppRail);
           localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
@@ -694,6 +717,11 @@ export function UserProfilePanel({
           localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
           window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
         }
+        if (prefs.statusColorScheme != null) {
+          setStatusColorScheme(prefs.statusColorScheme);
+          localStorage.setItem("statusColorScheme", prefs.statusColorScheme);
+          window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
+        }
       } catch {
         // leave UI as-is on error
       }
@@ -725,6 +753,9 @@ export function UserProfilePanel({
     window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
     setHostTrayOnClick(false);
     localStorage.setItem("hostTrayOnClick", "false");
+    setCompactHostView(false);
+    localStorage.setItem("compactHostView", "false");
+    window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
     setPinAppRail(false);
     localStorage.setItem("pinAppRail", "false");
     setFoldersCollapsed(true);
@@ -738,6 +769,9 @@ export function UserProfilePanel({
     setHiddenRailTabs(new Set());
     localStorage.removeItem("hiddenRailTabs");
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+    setStatusColorScheme("accent");
+    localStorage.setItem("statusColorScheme", "accent");
+    window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
     if (storageMode === "cloud") {
       saveToCloud({
         theme: "system",
@@ -748,12 +782,14 @@ export function UserProfilePanel({
         commandPaletteEnabled: true,
         showHostTags: true,
         hostTrayOnClick: false,
+        compactHostView: false,
         pinAppRail: false,
         foldersCollapsed: true,
         confirmSnippetExecution: false,
         disableUpdateCheck: false,
         confirmTabClose: false,
         hiddenRailTabs: "[]",
+        statusColorScheme: "accent",
       });
     }
     localSnapshot.current = {};
@@ -818,6 +854,12 @@ export function UserProfilePanel({
     setHostTrayOnClick(restoredTrayOnClick);
     localStorage.setItem("hostTrayOnClick", String(restoredTrayOnClick));
 
+    const restoredCompactHostView =
+      restore("compactHostView", "false") === "true";
+    setCompactHostView(restoredCompactHostView);
+    localStorage.setItem("compactHostView", String(restoredCompactHostView));
+    window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
+
     const restoredPinRail = restore("pinAppRail", "false") === "true";
     setPinAppRail(restoredPinRail);
     localStorage.setItem("pinAppRail", String(restoredPinRail));
@@ -866,6 +908,13 @@ export function UserProfilePanel({
       localStorage.setItem("hiddenRailTabs", restoredHiddenRaw);
     }
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+
+    const restoredStatusScheme =
+      restore("statusColorScheme", "accent") ?? "accent";
+    setStatusColorScheme(restoredStatusScheme);
+    localStorage.setItem("statusColorScheme", restoredStatusScheme);
+    window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
+
     localStorage.removeItem("termix-local-snapshot");
     localSnapshot.current = {};
   }
@@ -1126,6 +1175,30 @@ export function UserProfilePanel({
             </div>
           </div>
 
+          {isElectron() && onChangeServer && (
+            <div className="border-t border-border pt-3 mt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium">
+                    {t("serverConfig.changeServer")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("newUi.sidebar.userProfile.changeServerDescription")}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 ml-3 text-[10px] h-7"
+                  onClick={onChangeServer}
+                >
+                  <Server className="size-3" />
+                  {t("serverConfig.changeServer")}
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="border-t border-border pt-3 mt-3">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-0.5">
@@ -1315,6 +1388,34 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
+            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium leading-snug">
+                  {t("newUi.sidebar.userProfile.terminalLinkBehavior")}
+                </span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  {t("newUi.sidebar.userProfile.terminalLinkBehaviorDesc")}
+                </span>
+              </div>
+              <select
+                value={terminalLinkClickBehavior}
+                onChange={(e) => {
+                  setTerminalLinkClickBehavior(e.target.value);
+                  localStorage.setItem(
+                    "terminalLinkClickBehavior",
+                    e.target.value,
+                  );
+                }}
+                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="confirm">
+                  {t("hosts.linkClickBehaviorConfirm")}
+                </option>
+                <option value="direct">
+                  {t("hosts.linkClickBehaviorDirect")}
+                </option>
+              </select>
+            </div>
             <SettingRow
               label={t("newUi.sidebar.userProfile.commandPalette")}
               description={t("newUi.sidebar.userProfile.commandPaletteDesc")}
@@ -1397,6 +1498,37 @@ export function UserProfilePanel({
                   window.dispatchEvent(new Event("hostTrayOnClickChanged"));
                   if (storageMode === "cloud")
                     saveToCloud({ hostTrayOnClick: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.compactHostView")}
+              description={t("newUi.sidebar.userProfile.compactHostViewDesc")}
+            >
+              <FakeSwitch
+                checked={compactHostView}
+                onChange={(v) => {
+                  setCompactHostView(v);
+                  localStorage.setItem("compactHostView", v.toString());
+                  window.dispatchEvent(new Event("compactHostViewChanged"));
+                  if (storageMode === "cloud")
+                    saveToCloud({ compactHostView: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.statusColors")}
+              description={t("newUi.sidebar.userProfile.statusColorsDesc")}
+            >
+              <FakeSwitch
+                checked={statusColorScheme === "status"}
+                onChange={(v) => {
+                  const scheme = v ? "status" : "accent";
+                  setStatusColorScheme(scheme);
+                  localStorage.setItem("statusColorScheme", scheme);
+                  window.dispatchEvent(new Event("statusColorSchemeChanged"));
+                  if (storageMode === "cloud")
+                    saveToCloud({ statusColorScheme: scheme });
                 }}
               />
             </SettingRow>

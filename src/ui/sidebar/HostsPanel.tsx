@@ -39,6 +39,7 @@ import {
 import {
   getSSHHosts,
   bulkImportSSHHosts,
+  importSSHConfigHosts,
   exportAllSSHHosts,
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
@@ -248,6 +249,9 @@ export function HostsPanel({
   const [proxmoxDefaultCredentialId, setProxmoxDefaultCredentialId] = useState<
     number | null
   >(null);
+  const [proxmoxDefaultAuthType, setProxmoxDefaultAuthType] = useState<
+    string | undefined
+  >(undefined);
   const [proxmoxDefaultUsername, setProxmoxDefaultUsername] = useState<
     string | undefined
   >(undefined);
@@ -267,6 +271,7 @@ export function HostsPanel({
   });
   const filterActive = Object.values(filterState).some((arr) => arr.length > 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sshConfigInputRef = useRef<HTMLInputElement>(null);
   const importOverwriteRef = useRef(false);
   const allTags = [...new Set(rawHosts.flatMap((h) => h.tags ?? []))];
 
@@ -501,6 +506,42 @@ export function HostsPanel({
             }}
           />
 
+          <input
+            ref={sshConfigInputRef}
+            type="file"
+            accept=".conf,.config,*"
+            className="hidden"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              e.target.value = "";
+              try {
+                const text = await file.text();
+                const result = await importSSHConfigHosts(
+                  text,
+                  importOverwriteRef.current,
+                );
+                const hosts = await getSSHHosts();
+                setRawHosts(hosts);
+                window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+                const msg = [
+                  result.success ? `${result.success} imported` : null,
+                  result.updated ? `${result.updated} updated` : null,
+                  result.failed ? `${result.failed} failed` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ");
+                toast.success(`${t("hosts.importSSHConfig")}: ${msg}`);
+              } catch (err: unknown) {
+                toast.error(
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to import SSH config",
+                );
+              }
+            }}
+          />
+
           <div className="flex flex-wrap items-center gap-1">
             <Button
               variant="ghost"
@@ -543,6 +584,15 @@ export function HostsPanel({
                 >
                   <Upload className="size-3.5 mr-2" />
                   {t("hosts.importOverwrite")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    importOverwriteRef.current = false;
+                    sshConfigInputRef.current?.click();
+                  }}
+                >
+                  <Upload className="size-3.5 mr-2" />
+                  {t("hosts.importSSHConfig")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
@@ -900,6 +950,15 @@ export function HostsPanel({
                       {t("hosts.importOverwrite")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      onClick={() => {
+                        importOverwriteRef.current = false;
+                        sshConfigInputRef.current?.click();
+                      }}
+                    >
+                      <Upload className="size-3.5 mr-2" />
+                      {t("hosts.importSSHConfig")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
                       onClick={handleExportHosts}
                       disabled={rawHosts.length === 0}
                     >
@@ -948,6 +1007,7 @@ export function HostsPanel({
             const cfg = host.proxmoxConfig;
             setProxmoxHostId(Number(host.id));
             setProxmoxDefaultCredentialId(cfg?.defaultCredentialId ?? null);
+            setProxmoxDefaultAuthType(cfg?.defaultAuthType ?? undefined);
             setProxmoxDefaultUsername(undefined);
             setProxmoxDialogOpen(true);
           }}
@@ -980,6 +1040,7 @@ export function HostsPanel({
         onHostsChanged={setRawHosts}
         preselectedHostId={proxmoxHostId}
         defaultCredentialId={proxmoxDefaultCredentialId}
+        defaultAuthType={proxmoxDefaultAuthType}
         defaultUsername={proxmoxDefaultUsername}
       />
     </div>

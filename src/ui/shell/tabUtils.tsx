@@ -20,6 +20,8 @@ import type {
   TerminalHandle,
   TerminalHostConfig,
 } from "@/features/terminal/Terminal";
+import { MobileTerminalKeyboard } from "@/features/terminal/MobileTerminalKeyboard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { FileManager } from "@/features/file-manager/FileManager";
 import { DockerManager } from "@/features/docker/DockerManager";
 import { HostMetricsTab } from "@/features/host-metrics/HostMetricsTab";
@@ -127,33 +129,58 @@ function TerminalTabContent({
   label,
   isVisible,
   onCloseTab,
+  onRenameTab,
+  onOpenFileInEditor,
+  onOpenFileManager,
 }: {
   tab: Tab;
   host: Host;
   label: string;
   isVisible: boolean;
   onCloseTab?: (id: string) => void;
+  onRenameTab?: (tabId: string, newLabel: string) => void;
+  onOpenFileInEditor?: (filePath: string) => void;
+  onOpenFileManager?: (path?: string) => void;
 }) {
   const { previewTerminalTheme } = useTabsSafe();
+  const isMobile = useIsMobile();
   return (
     <CommandHistoryProvider>
-      <TerminalFeature
-        ref={tab.terminalRef as React.Ref<TerminalHandle>}
-        hostConfig={
-          {
-            ...hostToSSHHost(host),
-            sshPort: host.sshPort ?? host.port,
-            instanceId: tab.instanceId ?? tab.id,
-            restoredSessionId: tab.restoredSessionId ?? null,
-          } as TerminalHostConfig
-        }
-        isVisible={isVisible}
-        title={label}
-        showTitle={false}
-        splitScreen={false}
-        onClose={() => onCloseTab?.(tab.id)}
-        previewTheme={previewTerminalTheme}
-      />
+      <div className="flex flex-col h-full w-full">
+        <div className="flex-1 min-h-0">
+          <TerminalFeature
+            ref={tab.terminalRef as React.Ref<TerminalHandle>}
+            hostConfig={
+              {
+                ...hostToSSHHost(host),
+                sshPort: host.sshPort ?? host.port,
+                instanceId: tab.instanceId ?? tab.id,
+                restoredSessionId: tab.restoredSessionId ?? null,
+              } as TerminalHostConfig
+            }
+            isVisible={isVisible}
+            title={label}
+            showTitle={false}
+            splitScreen={false}
+            onClose={() => onCloseTab?.(tab.id)}
+            onTitleChange={
+              onRenameTab && host.terminalConfig?.useSSHTitle
+                ? (title) => onRenameTab(tab.id, title)
+                : undefined
+            }
+            previewTheme={previewTerminalTheme}
+            onOpenFileInEditor={onOpenFileInEditor}
+            onOpenFileManager={onOpenFileManager}
+          />
+        </div>
+        {isMobile && (
+          <MobileTerminalKeyboard
+            terminalRef={
+              tab.terminalRef as React.RefObject<TerminalHandle | null>
+            }
+          />
+        )}
+      </div>
     </CommandHistoryProvider>
   );
 }
@@ -164,6 +191,9 @@ export function renderTabContent(
   onOpenTab?: (host: Host, type: TabType) => void,
   onCloseTab?: (id: string) => void,
   isVisible = true,
+  onOpenFileInEditor?: (host: Host, filePath: string) => void,
+  onOpenFileManager?: (host: Host, path?: string) => void,
+  onRenameTab?: (tabId: string, newLabel: string) => void,
 ) {
   const { host, label } = tab;
 
@@ -191,6 +221,15 @@ export function renderTabContent(
           label={label}
           isVisible={isVisible}
           onCloseTab={onCloseTab}
+          onRenameTab={onRenameTab}
+          onOpenFileInEditor={
+            onOpenFileInEditor
+              ? (fp) => onOpenFileInEditor(host, fp)
+              : undefined
+          }
+          onOpenFileManager={
+            onOpenFileManager ? (p) => onOpenFileManager(host, p) : undefined
+          }
         />
       );
 
@@ -202,7 +241,12 @@ export function renderTabContent(
             messageKey="fileManager.noHostSelected"
           />
         );
-      return <FileManager initialHost={hostToSSHHost(host)} />;
+      return (
+        <FileManager
+          initialHost={hostToSSHHost(host)}
+          initialFilePath={tab.initialFilePath}
+        />
+      );
 
     case "docker":
       if (!host)

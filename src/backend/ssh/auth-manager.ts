@@ -23,6 +23,7 @@ interface HostConfig {
   keyPassword?: string;
   keyType?: string;
   authType?: string;
+  useWarpgate?: boolean;
   credentialId?: number;
   userId?: string;
   forceKeyboardInteractive?: boolean;
@@ -112,6 +113,7 @@ export class SSHAuthManager {
     prompts: Array<{ prompt: string; echo: boolean }>,
     finish: (responses: string[]) => void,
     resolvedCredentials: ResolvedCredentials,
+    hostConfig?: HostConfig,
   ): void {
     this.context.isKeyboardInteractive = true;
     const promptTexts = prompts.map((p) => p.prompt);
@@ -143,7 +145,7 @@ export class SSHAuthManager {
       return;
     }
 
-    this.handlePasswordAuth(prompts, finish, resolvedCredentials);
+    this.handlePasswordAuth(prompts, finish, resolvedCredentials, hostConfig);
   }
 
   private handleWarpgateAuth(
@@ -282,7 +284,22 @@ export class SSHAuthManager {
     prompts: Array<{ prompt: string; echo: boolean }>,
     finish: (responses: string[]) => void,
     resolvedCredentials: ResolvedCredentials,
+    hostConfig?: HostConfig,
   ): void {
+    // For Warpgate hosts: auto-answer password prompts silently using stored credentials.
+    // Warpgate sends a password prompt before its browser-verification round; we must
+    // not show a UI prompt here -- the WarpgateDialog handles user interaction later.
+    if (hostConfig?.useWarpgate) {
+      const responses = prompts.map((p) => {
+        if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+          return resolvedCredentials.password as string;
+        }
+        return "";
+      });
+      finish(responses);
+      return;
+    }
+
     const hasStoredPassword =
       resolvedCredentials.password && resolvedCredentials.authType !== "none";
 
@@ -290,18 +307,33 @@ export class SSHAuthManager {
       /password/i.test(p.prompt),
     );
 
-    if (!hasStoredPassword && passwordPromptIndex !== -1) {
+    // Find the first prompt we can't auto-answer. This handles DUO/PAM challenges
+    // that don't say "password" (e.g. "Passcode or option (1-N):").
+    const firstUnansweredIndex = prompts.findIndex((p) => {
+      if (/password/i.test(p.prompt) && hasStoredPassword) return false;
+      return true;
+    });
+
+    if (firstUnansweredIndex !== -1) {
       if (this.context.keyboardInteractiveResponded) {
         return;
       }
       this.context.keyboardInteractiveResponded = true;
 
+      const promptIndex =
+        passwordPromptIndex !== -1 && !hasStoredPassword
+          ? passwordPromptIndex
+          : firstUnansweredIndex;
+
       this.context.keyboardInteractiveFinish = (userResponses: string[]) => {
         const userInput = (userResponses[0] || "").trim();
 
         const responses = prompts.map((p, index) => {
-          if (index === passwordPromptIndex) {
+          if (index === promptIndex) {
             return userInput;
+          }
+          if (/password/i.test(p.prompt) && resolvedCredentials.password) {
+            return resolvedCredentials.password;
           }
           return "";
         });
@@ -335,7 +367,7 @@ export class SSHAuthManager {
       this.context.ws.send(
         JSON.stringify({
           type: "password_required",
-          prompt: prompts[passwordPromptIndex].prompt,
+          prompt: prompts[promptIndex].prompt,
         }),
       );
       return;

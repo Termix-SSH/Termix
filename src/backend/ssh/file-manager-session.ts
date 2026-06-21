@@ -39,6 +39,7 @@ export interface SSHSession {
   transferDedicated?: boolean;
   transferId?: string;
   browseSessionId?: string;
+  scpLegacy?: boolean;
 }
 
 export interface PendingTOTPSession {

@@ -21,6 +21,37 @@ interface VerificationResponse {
 }
 
 export class SSHHostKeyVerifier {
+  /**
+   * Pre-fetches the host record from the database so the verifier callback
+   * during SSH key exchange doesn't need to do an async DB query. This keeps
+   * the key exchange critical path fast, avoiding LoginGraceTime expiry on
+   * the remote server (especially important for jump-host tunneled connections).
+   */
+  static async preloadHostData(hostId: number | null): Promise<{
+    hostKeyFingerprint: string | null;
+    hostKeyType: string | null;
+    hostKeyAlgorithm: string | null;
+    hostKeyChangedCount: number | null;
+    name: string | null;
+  } | null> {
+    if (!hostId) return null;
+    try {
+      const host = await db.query.hosts.findFirst({
+        where: eq(hosts.id, hostId),
+        columns: {
+          hostKeyFingerprint: true,
+          hostKeyType: true,
+          hostKeyAlgorithm: true,
+          hostKeyChangedCount: true,
+          name: true,
+        },
+      });
+      return host ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   static async createHostVerifier(
     hostId: number | null,
     ip: string,
@@ -28,6 +59,9 @@ export class SSHHostKeyVerifier {
     ws: WebSocket | null,
     userId: string,
     isJumpHost: boolean = false,
+    preloadedHost?: Awaited<
+      ReturnType<typeof SSHHostKeyVerifier.preloadHostData>
+    >,
   ): Promise<(hostkey: Buffer, verify: (valid: boolean) => void) => void> {
     return (hostkey: Buffer, verify: (valid: boolean) => void): void => {
       (async () => {
@@ -52,9 +86,10 @@ export class SSHHostKeyVerifier {
             return;
           }
 
-          const host = await db.query.hosts.findFirst({
-            where: eq(hosts.id, hostId),
-          });
+          const host =
+            preloadedHost !== undefined
+              ? preloadedHost
+              : await db.query.hosts.findFirst({ where: eq(hosts.id, hostId) });
 
           if (!host) {
             sshLogger.warn(
@@ -141,13 +176,6 @@ export class SSHHostKeyVerifier {
           }
 
           if (host.hostKeyFingerprint === fingerprint) {
-            await db
-              .update(hosts)
-              .set({
-                hostKeyLastVerified: new Date().toISOString(),
-              })
-              .where(eq(hosts.id, hostId));
-
             sshLogger.info("Host key verified successfully", {
               operation: "host_key_verified",
               hostId,
@@ -158,7 +186,18 @@ export class SSHHostKeyVerifier {
               userId,
             });
 
+            // Verify first, then update the timestamp asynchronously so the
+            // DB write doesn't delay the SSH key exchange critical path.
             verify(true);
+            db.update(hosts)
+              .set({ hostKeyLastVerified: new Date().toISOString() })
+              .where(eq(hosts.id, hostId))
+              .catch((err) => {
+                sshLogger.error("Failed to update hostKeyLastVerified", err, {
+                  operation: "host_key_update_timestamp",
+                  hostId,
+                });
+              });
             return;
           }
 

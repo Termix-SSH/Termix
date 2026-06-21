@@ -926,6 +926,268 @@ router.post(
 
 /**
  * @openapi
+ * /snippets/export:
+ *   get:
+ *     summary: Export all snippets and folders as JSON
+ *     description: Returns all snippets and snippet folders for the authenticated user as a JSON export.
+ *     tags:
+ *       - Snippets
+ *     responses:
+ *       200:
+ *         description: Export object containing snippets and folders arrays.
+ *       400:
+ *         description: Invalid userId.
+ *       500:
+ *         description: Failed to export snippets.
+ */
+router.get(
+  "/export",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId)) {
+      authLogger.warn("Invalid userId for snippet export");
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    try {
+      const allSnippets = await db
+        .select()
+        .from(snippets)
+        .where(eq(snippets.userId, userId))
+        .orderBy(asc(snippets.folder), asc(snippets.order));
+
+      const allFolders = await db
+        .select()
+        .from(snippetFolders)
+        .where(eq(snippetFolders.userId, userId))
+        .orderBy(asc(snippetFolders.name));
+
+      const exportedSnippets = allSnippets.map((s) => ({
+        name: s.name,
+        content: s.content,
+        description: s.description,
+        folder: s.folder,
+        order: s.order,
+        hostFilter: s.hostFilter,
+      }));
+
+      const exportedFolders = allFolders.map((f) => ({
+        name: f.name,
+        color: f.color,
+        icon: f.icon,
+      }));
+
+      authLogger.success(`Snippets exported by user ${userId}`, {
+        operation: "snippet_export",
+        userId,
+        snippetCount: exportedSnippets.length,
+        folderCount: exportedFolders.length,
+      });
+
+      res.json({ snippets: exportedSnippets, folders: exportedFolders });
+    } catch (err) {
+      authLogger.error("Failed to export snippets", err);
+      res.status(500).json({ error: "Failed to export snippets" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /snippets/bulk-import:
+ *   post:
+ *     summary: Bulk import snippets and folders from JSON
+ *     description: Imports snippets and folders. Existing folders are skipped; existing snippets (matched by name+folder) can be skipped or overwritten.
+ *     tags:
+ *       - Snippets
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               snippets:
+ *                 type: array
+ *               folders:
+ *                 type: array
+ *               overwrite:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Import results with counts.
+ *       400:
+ *         description: Invalid request body.
+ *       500:
+ *         description: Failed to import snippets.
+ */
+router.post(
+  "/bulk-import",
+  authenticateJWT,
+  requireDataAccess,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const {
+      snippets: snippetsToImport,
+      folders: foldersToImport,
+      overwrite,
+    } = req.body;
+
+    if (!isNonEmptyString(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    if (!Array.isArray(snippetsToImport) && !Array.isArray(foldersToImport)) {
+      return res
+        .status(400)
+        .json({ error: "snippets or folders array is required" });
+    }
+
+    const results = {
+      snippetsImported: 0,
+      snippetsSkipped: 0,
+      snippetsUpdated: 0,
+      foldersImported: 0,
+      foldersSkipped: 0,
+      failed: 0,
+      errors: [] as string[],
+    };
+
+    try {
+      if (Array.isArray(foldersToImport)) {
+        for (const folder of foldersToImport) {
+          if (!isNonEmptyString(folder.name)) {
+            results.failed++;
+            results.errors.push(`Folder missing name`);
+            continue;
+          }
+
+          const existing = await db
+            .select()
+            .from(snippetFolders)
+            .where(
+              and(
+                eq(snippetFolders.userId, userId),
+                eq(snippetFolders.name, folder.name.trim()),
+              ),
+            )
+            .limit(1);
+
+          if (existing.length > 0) {
+            results.foldersSkipped++;
+            continue;
+          }
+
+          await db.insert(snippetFolders).values({
+            userId,
+            name: folder.name.trim(),
+            color: folder.color?.trim() || null,
+            icon: folder.icon?.trim() || null,
+          });
+          results.foldersImported++;
+        }
+      }
+
+      if (Array.isArray(snippetsToImport)) {
+        for (let i = 0; i < snippetsToImport.length; i++) {
+          const s = snippetsToImport[i];
+
+          if (!isNonEmptyString(s.name) || !isNonEmptyString(s.content)) {
+            results.failed++;
+            results.errors.push(
+              `Snippet ${i + 1}: name and content are required`,
+            );
+            continue;
+          }
+
+          const folderVal = s.folder?.trim() || null;
+
+          const existing = await db
+            .select()
+            .from(snippets)
+            .where(
+              and(
+                eq(snippets.userId, userId),
+                eq(snippets.name, s.name.trim()),
+                folderVal
+                  ? eq(snippets.folder, folderVal)
+                  : sql`(${snippets.folder} IS NULL OR ${snippets.folder} = '')`,
+              ),
+            )
+            .limit(1);
+
+          if (existing.length > 0) {
+            if (!overwrite) {
+              results.snippetsSkipped++;
+              continue;
+            }
+
+            await db
+              .update(snippets)
+              .set({
+                content: s.content.trim(),
+                description: s.description?.trim() || null,
+                folder: folderVal,
+                order:
+                  typeof s.order === "number" ? s.order : existing[0].order,
+                hostFilter: s.hostFilter || null,
+                updatedAt: sql`CURRENT_TIMESTAMP`,
+              })
+              .where(
+                and(
+                  eq(snippets.id, existing[0].id),
+                  eq(snippets.userId, userId),
+                ),
+              );
+            results.snippetsUpdated++;
+            continue;
+          }
+
+          const maxOrderResult = await db
+            .select({ maxOrder: sql<number>`MAX(${snippets.order})` })
+            .from(snippets)
+            .where(
+              and(
+                eq(snippets.userId, userId),
+                folderVal
+                  ? eq(snippets.folder, folderVal)
+                  : sql`(${snippets.folder} IS NULL OR ${snippets.folder} = '')`,
+              ),
+            );
+          const maxOrder = maxOrderResult[0]?.maxOrder ?? -1;
+
+          await db.insert(snippets).values({
+            userId,
+            name: s.name.trim(),
+            content: s.content.trim(),
+            description: s.description?.trim() || null,
+            folder: folderVal,
+            order: typeof s.order === "number" ? s.order : maxOrder + 1,
+            hostFilter: s.hostFilter || null,
+          });
+          results.snippetsImported++;
+        }
+      }
+
+      authLogger.success(`Snippets bulk-imported by user ${userId}`, {
+        operation: "snippet_bulk_import",
+        userId,
+        ...results,
+      });
+
+      res.json({ success: true, ...results });
+    } catch (err) {
+      authLogger.error("Failed to bulk import snippets", err);
+      res.status(500).json({ error: "Failed to import snippets" });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /snippets:
  *   get:
  *     summary: Get all snippets

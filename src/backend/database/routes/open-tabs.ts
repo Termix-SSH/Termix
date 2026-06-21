@@ -23,7 +23,24 @@ const authenticateJWT = authManager.createAuthMiddleware();
  *       200:
  *         description: List of open tabs ordered by tab_order.
  */
-const TAB_TTL_MS = 30 * 60 * 1000;
+const DEFAULT_TAB_TTL_MINUTES = 30;
+
+function getTabTtlMs(): number {
+  try {
+    const row = db.$client
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
+      )
+      .get() as { value: string } | undefined;
+    if (row) {
+      const minutes = parseInt(row.value, 10);
+      if (!isNaN(minutes) && minutes > 0) return minutes * 60_000;
+    }
+  } catch {
+    // DB not available, use default
+  }
+  return DEFAULT_TAB_TTL_MINUTES * 60_000;
+}
 
 // Legacy tab types that were renamed. Normalize on read so previously saved
 // tabs still restore to the correct (renamed) tab type.
@@ -38,7 +55,7 @@ function normalizeTabType(tabType: string): string {
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const cutoff = new Date(Date.now() - TAB_TTL_MS).toISOString();
+    const cutoff = new Date(Date.now() - getTabTtlMs()).toISOString();
     const tabs = db
       .select()
       .from(userOpenTabs)

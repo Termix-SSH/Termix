@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { users, settings, roles, userRoles } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
@@ -22,9 +22,11 @@ import {
   verifyOIDCToken,
   extractOidcGroups,
   loadProviderConfig,
+  buildFetchOptions,
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
+import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
 import { registerUserTotpRoutes } from "./user-totp-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
 import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
@@ -41,6 +43,45 @@ const router = express.Router();
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
+}
+
+function isRegistrationAllowed(): boolean {
+  const envVal = process.env.ALLOW_REGISTRATION;
+  if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
+      .get() as { value: string } | undefined;
+    return row ? row.value === "true" : true;
+  } catch {
+    return true;
+  }
+}
+
+function isPasswordLoginAllowed(): boolean {
+  const envVal = process.env.ALLOW_PASSWORD_LOGIN;
+  if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
+      .get() as { value: string } | undefined;
+    return row ? row.value === "true" : true;
+  } catch {
+    return true;
+  }
+}
+
+function isPasswordResetAllowed(): boolean {
+  const envVal = process.env.ALLOW_PASSWORD_RESET;
+  if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
+  try {
+    const row = db.$client
+      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
+      .get() as { value: string } | undefined;
+    return row ? row.value === "true" : true;
+  } catch {
+    return true;
+  }
 }
 
 function isNativeAppRequest(req: Request): boolean {
@@ -85,20 +126,10 @@ const requireAdmin = authManager.createAdminMiddleware();
  *         description: Failed to create user.
  */
 router.post("/create", async (req, res) => {
-  try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get();
-    if (row && (row as Record<string, unknown>).value !== "true") {
-      return res
-        .status(403)
-        .json({ error: "Registration is currently disabled" });
-    }
-  } catch (e) {
-    authLogger.warn("Failed to check registration status", {
-      operation: "registration_check",
-      error: e,
-    });
+  if (!isRegistrationAllowed()) {
+    return res
+      .status(403)
+      .json({ error: "Registration is currently disabled" });
   }
 
   const { username, password } = req.body;
@@ -135,8 +166,7 @@ router.post("/create", async (req, res) => {
       return res.status(409).json({ error: "Username already exists" });
     }
 
-    const saltRounds = parseInt(process.env.SALT || "10", 10);
-    const password_hash = await bcrypt.hash(password, saltRounds);
+    const password_hash = await bcrypt.hash(password, 10);
     const id = nanoid();
 
     const isFirstUser = db.$client.transaction(() => {
@@ -737,6 +767,9 @@ router.get("/oidc/callback", async (req, res) => {
         .run(`oidc_provider_${state}`);
     }
 
+    const caCert = config.ca_cert;
+    const fetchOptions = buildFetchOptions(caCert);
+
     // GitHub does not issue OIDC id_tokens; handle its token exchange separately
     if (callbackProviderType === "github") {
       const ghTokenResponse = await fetch(config.token_url, {
@@ -752,6 +785,7 @@ router.get("/oidc/callback", async (req, res) => {
           code: code,
           redirect_uri: backendCallbackUri,
         }),
+        ...fetchOptions,
       });
 
       if (!ghTokenResponse.ok) {
@@ -789,6 +823,7 @@ router.get("/oidc/callback", async (req, res) => {
           Accept: "application/json",
           "User-Agent": "Termix",
         },
+        ...fetchOptions,
       });
       if (!ghUserInfoResponse.ok) {
         return res
@@ -859,16 +894,9 @@ router.get("/oidc/callback", async (req, res) => {
             "true";
 
         if (!isFirstUser && !ghAutoProvision) {
-          const regRow = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'allow_registration'",
-            )
-            .get() as { value: string } | undefined;
-          if (regRow && regRow.value !== "true") {
-            const redirectUrl = new URL(frontendOrigin);
-            redirectUrl.searchParams.set("error", "registration_disabled");
-            return res.redirect(redirectUrl.toString());
-          }
+          const redirectUrl = new URL(frontendOrigin);
+          redirectUrl.searchParams.set("error", "registration_disabled");
+          return res.redirect(redirectUrl.toString());
         }
 
         const ghId = nanoid();
@@ -972,7 +1000,6 @@ router.get("/oidc/callback", async (req, res) => {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
-        Authorization: `Basic ${Buffer.from(`${encodeURIComponent(config.client_id)}:${encodeURIComponent(config.client_secret)}`).toString("base64")}`,
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
@@ -981,6 +1008,7 @@ router.get("/oidc/callback", async (req, res) => {
         code: code,
         redirect_uri: backendCallbackUri,
       }),
+      ...fetchOptions,
     });
 
     if (!tokenResponse.ok) {
@@ -1023,7 +1051,7 @@ router.get("/oidc/callback", async (req, res) => {
 
     try {
       const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
-      const discoveryResponse = await fetch(discoveryUrl);
+      const discoveryResponse = await fetch(discoveryUrl, fetchOptions);
       if (discoveryResponse.ok) {
         const discovery = (await discoveryResponse.json()) as Record<
           string,
@@ -1058,6 +1086,7 @@ router.get("/oidc/callback", async (req, res) => {
           tokenData.id_token as string,
           config.issuer_url,
           config.client_id,
+          caCert,
         );
       } catch {
         try {
@@ -1081,6 +1110,7 @@ router.get("/oidc/callback", async (req, res) => {
             headers: {
               Authorization: `Bearer ${tokenData.access_token}`,
             },
+            ...fetchOptions,
           });
 
           if (userInfoResponse.ok) {
@@ -1190,33 +1220,17 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       if (!isFirstUser && !oidcAutoProvision) {
-        try {
-          const regRow = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'allow_registration'",
-            )
-            .get();
-          if (regRow && (regRow as Record<string, unknown>).value !== "true") {
-            authLogger.warn(
-              "OIDC user attempted to register when registration is disabled",
-              {
-                operation: "oidc_registration_disabled",
-                identifier,
-                name,
-              },
-            );
-
-            const redirectUrl = new URL(frontendOrigin);
-            redirectUrl.searchParams.set("error", "registration_disabled");
-
-            return res.redirect(redirectUrl.toString());
-          }
-        } catch (e) {
-          authLogger.warn("Failed to check registration status during OIDC", {
-            operation: "oidc_registration_check",
-            error: e,
-          });
-        }
+        authLogger.warn(
+          "OIDC user attempted to register but auto-provisioning is disabled",
+          {
+            operation: "oidc_registration_disabled",
+            identifier,
+            name,
+          },
+        );
+        const redirectUrl = new URL(frontendOrigin);
+        redirectUrl.searchParams.set("error", "registration_disabled");
+        return res.redirect(redirectUrl.toString());
       }
 
       const id = nanoid();
@@ -1367,6 +1381,39 @@ router.get("/oidc/callback", async (req, res) => {
           .set({ isAdmin: shouldBeAdmin })
           .where(eq(users.id, userRecord.id));
         userRecord.isAdmin = shouldBeAdmin;
+        try {
+          const newRoleName = shouldBeAdmin ? "admin" : "user";
+          const oldRoleName = shouldBeAdmin ? "user" : "admin";
+          const newRole = await db
+            .select({ id: roles.id })
+            .from(roles)
+            .where(eq(roles.name, newRoleName))
+            .limit(1);
+          const oldRole = await db
+            .select({ id: roles.id })
+            .from(roles)
+            .where(eq(roles.name, oldRoleName))
+            .limit(1);
+          if (oldRole.length > 0) {
+            await db
+              .delete(userRoles)
+              .where(
+                and(
+                  eq(userRoles.userId, userRecord.id),
+                  eq(userRoles.roleId, oldRole[0].id),
+                ),
+              );
+          }
+          if (newRole.length > 0) {
+            await db.insert(userRoles).values({
+              userId: userRecord.id,
+              roleId: newRole[0].id,
+              grantedBy: userRecord.id,
+            });
+          }
+        } catch {
+          /* non-fatal */
+        }
         authLogger.info("OIDC admin status synced", {
           operation: "oidc_admin_group_sync",
           userId: userRecord.id,
@@ -1504,21 +1551,10 @@ router.post("/login", async (req, res) => {
     });
   }
 
-  try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
-      .get();
-    if (row && (row as { value: string }).value !== "true") {
-      return res
-        .status(403)
-        .json({ error: "Password authentication is currently disabled" });
-    }
-  } catch (e) {
-    authLogger.error("Failed to check password login status", {
-      operation: "login_check",
-      error: e,
-    });
-    return res.status(500).json({ error: "Failed to check login status" });
+  if (!isPasswordLoginAllowed()) {
+    return res
+      .status(403)
+      .json({ error: "Password authentication is currently disabled" });
   }
 
   try {
@@ -1919,12 +1955,7 @@ router.get("/db-health", requireAdmin, async (req, res) => {
  */
 router.get("/registration-allowed", async (req, res) => {
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get();
-    res.json({
-      allowed: row ? (row as Record<string, unknown>).value === "true" : true,
-    });
+    res.json({ allowed: isRegistrationAllowed() });
   } catch (err) {
     authLogger.error("Failed to get registration allowed", err);
     res.status(500).json({ error: "Failed to get registration allowed" });
@@ -2031,6 +2062,107 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
 
 /**
  * @openapi
+ * /users/oidc-silent-login-default:
+ *   get:
+ *     summary: Get OIDC silent login default setting
+ *     description: Returns whether silent OIDC login is enabled as the default behavior.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Silent login default setting.
+ *       500:
+ *         description: Failed to get setting.
+ */
+router.get("/oidc-silent-login-default", async (_req, res) => {
+  try {
+    const row = db.$client
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'oidc_silent_login_default'",
+      )
+      .get();
+    res.json({
+      enabled: row ? (row as Record<string, unknown>).value === "true" : false,
+    });
+  } catch (err) {
+    authLogger.error("Failed to get OIDC silent login default", err);
+    res.status(500).json({ error: "Failed to get OIDC silent login default" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/oidc-silent-login-default:
+ *   patch:
+ *     summary: Set OIDC silent login default setting
+ *     description: Enables or disables silent OIDC login as the default behavior on the login page.
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               enabled:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Setting updated.
+ *       400:
+ *         description: Invalid value.
+ *       403:
+ *         description: Not authorized.
+ *       500:
+ *         description: Failed to update setting.
+ */
+router.patch(
+  "/oidc-silent-login-default",
+  authenticateJWT,
+  async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const user = await db.select().from(users).where(eq(users.id, userId));
+      if (!user || user.length === 0 || !user[0].isAdmin) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const { enabled } = req.body;
+      if (typeof enabled !== "boolean") {
+        return res.status(400).json({ error: "Invalid value for enabled" });
+      }
+      const existing = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'oidc_silent_login_default'",
+        )
+        .get();
+      if (existing) {
+        db.$client
+          .prepare(
+            "UPDATE settings SET value = ? WHERE key = 'oidc_silent_login_default'",
+          )
+          .run(enabled ? "true" : "false");
+      } else {
+        db.$client
+          .prepare(
+            "INSERT INTO settings (key, value) VALUES ('oidc_silent_login_default', ?)",
+          )
+          .run(enabled ? "true" : "false");
+      }
+      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
+      await saveMemoryDatabaseToFile();
+      res.json({ enabled });
+    } catch (err) {
+      authLogger.error("Failed to set OIDC silent login default", err);
+      res
+        .status(500)
+        .json({ error: "Failed to set OIDC silent login default" });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /users/password-login-allowed:
  *   get:
  *     summary: Get password login status
@@ -2045,12 +2177,7 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
  */
 router.get("/password-login-allowed", async (req, res) => {
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
-      .get();
-    res.json({
-      allowed: row ? (row as { value: string }).value === "true" : true,
-    });
+    res.json({ allowed: isPasswordLoginAllowed() });
   } catch (err) {
     authLogger.error("Failed to get password login allowed", err);
     res.status(500).json({ error: "Failed to get password login allowed" });
@@ -2095,6 +2222,17 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
     if (typeof allowed !== "boolean") {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
+    if (!allowed) {
+      const totpRow = db.$client
+        .prepare("SELECT COUNT(*) as count FROM users WHERE totp_enabled = 1")
+        .get() as { count?: number };
+      if ((totpRow?.count || 0) > 0) {
+        return res.status(409).json({
+          error:
+            "Cannot disable password login while 2FA is enabled for one or more users. Disable 2FA first.",
+        });
+      }
+    }
     db.$client
       .prepare(
         "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_login', ?)",
@@ -2125,12 +2263,7 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
  */
 router.get("/password-reset-allowed", async (req, res) => {
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
-      .get();
-    res.json({
-      allowed: row ? (row as { value: string }).value === "true" : true,
-    });
+    res.json({ allowed: isPasswordResetAllowed() });
   } catch (err) {
     authLogger.error("Failed to get password reset allowed", err);
     res.status(500).json({ error: "Failed to get password reset allowed" });
@@ -2347,8 +2480,7 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
       .json({ error: "Failed to update password and re-encrypt data." });
   }
 
-  const saltRounds = parseInt(process.env.SALT || "10", 10);
-  const password_hash = await bcrypt.hash(newPassword, saltRounds);
+  const password_hash = await bcrypt.hash(newPassword, 10);
   await db
     .update(users)
     .set({ passwordHash: password_hash })
@@ -2518,6 +2650,7 @@ registerUserOidcAccountRoutes(router, {
 });
 
 registerUserSettingsRoutes(router, authenticateJWT);
+registerAcmeSSLRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);
 

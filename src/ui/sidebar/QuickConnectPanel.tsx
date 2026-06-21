@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, FolderSearch, Terminal } from "lucide-react";
 import { Input } from "@/components/input";
 import type { Host } from "@/types/ui-types";
+import { getCredentials } from "@/api/credentials-api";
+import { mapCredentials } from "./HostManagerData";
 
 interface QuickConnectPanelProps {
   onConnect: (host: Host, type: "terminal" | "files") => void;
@@ -12,13 +14,23 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
   const { t } = useTranslation();
   const [host, setHost] = useState("");
   const [port, setPort] = useState("22");
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("root");
   const [authType, setAuthType] = useState<"password" | "key" | "credential">(
     "password",
   );
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [credentialId, setCredentialId] = useState("");
+  const [credentials, setCredentials] = useState<
+    { id: string; name: string; username: string }[]
+  >([]);
+
+  useEffect(() => {
+    getCredentials()
+      .then((res) => setCredentials(mapCredentials(res)))
+      .catch(() => {});
+  }, []);
 
   const connect = (type: "terminal" | "files") => {
     if (!host || !username) return;
@@ -31,6 +43,7 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
       authType,
       password: authType === "password" ? password : undefined,
       key: authType === "key" ? privateKey : undefined,
+      credentialId: authType === "credential" ? credentialId : undefined,
       folder: "",
       online: false,
       cpu: null,
@@ -94,6 +107,12 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
           <Input
             placeholder={t("newUi.sidebar.quickConnect.usernamePlaceholder")}
             value={username}
+            onFocus={() => {
+              if (username === "root") setUsername("");
+            }}
+            onBlur={() => {
+              if (username === "") setUsername("root");
+            }}
             onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") connect("terminal");
@@ -172,12 +191,25 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
             <label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {t("newUi.sidebar.quickConnect.credentialLabel")}
             </label>
-            <Input
-              placeholder={t(
-                "newUi.sidebar.quickConnect.credentialPlaceholder",
-              )}
-              className="h-7 text-xs"
-            />
+            <select
+              value={credentialId}
+              onChange={(e) => {
+                const newId = e.target.value;
+                setCredentialId(newId);
+                const cred = credentials.find((c) => c.id === newId);
+                if (cred?.username) setUsername(cred.username);
+              }}
+              className="flex h-7 w-full border border-border bg-background px-2.5 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">
+                {t("newUi.sidebar.quickConnect.credentialPlaceholder")}
+              </option>
+              {credentials.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.username ? `${c.name} (${c.username})` : c.name}
+                </option>
+              ))}
+            </select>
           </div>
         )}
         <div className="flex flex-col gap-1.5 pt-1">

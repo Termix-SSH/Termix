@@ -5,6 +5,7 @@ import {
   Hammer,
   KeyRound,
   LayoutPanelLeft,
+  LogOut,
   Network,
   Play,
   Plug,
@@ -14,12 +15,6 @@ import {
   User,
   Zap,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 
 export type RailView =
@@ -131,8 +126,6 @@ export function AppRail({
   splitMode,
   username,
   isAdmin,
-  profileDropdownOpen,
-  onProfileDropdownChange,
   onRailClick,
   onOpenTab,
   onLogout,
@@ -142,8 +135,6 @@ export function AppRail({
   splitMode: SplitMode;
   username: string;
   isAdmin: boolean;
-  profileDropdownOpen: boolean;
-  onProfileDropdownChange: (open: boolean) => void;
   onRailClick: (view: RailView) => void;
   onOpenTab?: (type: TabType) => void;
   onLogout: () => void;
@@ -182,7 +173,7 @@ export function AppRail({
     return () => window.removeEventListener("hiddenRailTabsChanged", handler);
   }, []);
 
-  const railExpanded = pinned || hovered || profileDropdownOpen;
+  const railExpanded = pinned || hovered;
   const railButtons = buildRailButtons(splitMode, t, hiddenTabs);
 
   return (
@@ -293,50 +284,50 @@ export function AppRail({
             </span>
           </button>
         ))}
+        <div className="mx-2 my-1 border-t border-border" />
+        <button
+          onClick={onLogout}
+          style={btnStyle}
+          className={`${btnBase} text-muted-foreground hover:text-destructive hover:bg-destructive/10`}
+        >
+          <span
+            className="shrink-0 flex items-center justify-center"
+            style={{ width: 16, height: 16 }}
+          >
+            <LogOut size={16} />
+          </span>
+          <span
+            className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0"}`}
+          >
+            {t("common.logout")}
+          </span>
+        </button>
       </div>
 
       <div className="shrink-0 border-t border-border">
-        <DropdownMenu
-          open={profileDropdownOpen}
-          onOpenChange={onProfileDropdownChange}
+        <button
+          className="flex items-center gap-2.5 w-full h-10 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+          style={{ padding: "0 6px" }}
         >
-          <DropdownMenuTrigger asChild>
-            <button
-              className="flex items-center gap-2.5 w-full h-10 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-              style={{ padding: "0 6px" }}
-            >
-              <div
-                className="rounded-full bg-accent-brand/20 border border-accent-brand/30 flex items-center justify-center font-bold text-accent-brand shrink-0"
-                style={{ width: 24, height: 24, fontSize: 11 }}
-              >
-                {username.charAt(0).toUpperCase() || "U"}
-              </div>
-              <div
-                className={`flex flex-col items-start overflow-hidden transition-opacity duration-150 ${
-                  railExpanded ? "opacity-100 delay-75" : "opacity-0"
-                }`}
-              >
-                <span className="text-xs font-semibold leading-tight whitespace-nowrap">
-                  {username || "User"}
-                </span>
-                <span className="text-[10px] text-muted-foreground leading-tight whitespace-nowrap">
-                  {isAdmin ? t("nav.roleAdministrator") : t("nav.roleUser")}
-                </span>
-              </div>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="right"
-            align="end"
-            sideOffset={1}
-            className="!w-auto min-w-max [clip-path:inset(-4px_-4px_-4px_0px)]"
+          <div
+            className="rounded-full bg-accent-brand/20 border border-accent-brand/30 flex items-center justify-center font-bold text-accent-brand shrink-0"
+            style={{ width: 24, height: 24, fontSize: 11 }}
           >
-            <DropdownMenuItem variant="destructive" onClick={onLogout}>
-              <KeyRound size={14} />
-              Logout
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            {username.charAt(0).toUpperCase() || "U"}
+          </div>
+          <div
+            className={`flex flex-col items-start overflow-hidden transition-opacity duration-150 ${
+              railExpanded ? "opacity-100 delay-75" : "opacity-0"
+            }`}
+          >
+            <span className="text-xs font-semibold leading-tight whitespace-nowrap">
+              {username || "User"}
+            </span>
+            <span className="text-[10px] text-muted-foreground leading-tight whitespace-nowrap">
+              {isAdmin ? t("nav.roleAdministrator") : t("nav.roleUser")}
+            </span>
+          </div>
+        </button>
       </div>
     </div>
   );

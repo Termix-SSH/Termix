@@ -347,6 +347,57 @@ export function SplitScreenPanel({
           </Button>
         </>
       )}
+
+      <Separator />
+
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+          {t("newUi.sidebar.splitScreen.hotkeysTitle")}
+        </span>
+        <div className="flex flex-col gap-1">
+          {[
+            {
+              keys: ["Ctrl", "Shift", "\\"],
+              label: t("newUi.sidebar.splitScreen.hotkeysSplitRight"),
+            },
+            {
+              keys: ["Ctrl", "Shift", "-"],
+              label: t("newUi.sidebar.splitScreen.hotkeysSplitBelow"),
+            },
+            {
+              keys: ["Alt", "↑↓←→"],
+              label: t("newUi.sidebar.splitScreen.hotkeysNavigatePane"),
+            },
+            {
+              keys: ["Ctrl", "Shift", "]"],
+              label: t("newUi.sidebar.splitScreen.hotkeysNextTab"),
+            },
+            {
+              keys: ["Ctrl", "Shift", "["],
+              label: t("newUi.sidebar.splitScreen.hotkeysPrevTab"),
+            },
+          ].map(({ keys, label }) => (
+            <div
+              key={label}
+              className="flex items-center justify-between gap-2"
+            >
+              <span className="text-xs text-muted-foreground/70 flex-1 min-w-0 truncate">
+                {label}
+              </span>
+              <div className="flex items-center gap-0.5 shrink-0">
+                {keys.map((k, i) => (
+                  <kbd
+                    key={i}
+                    className="inline-flex items-center px-1 py-0.5 text-[10px] font-mono bg-muted border border-border/60 text-muted-foreground leading-none"
+                  >
+                    {k}
+                  </kbd>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

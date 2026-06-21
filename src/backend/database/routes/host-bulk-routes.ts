@@ -11,6 +11,68 @@ import {
   normalizeImportedHost,
 } from "./host-normalizers.js";
 
+type SSHConfigHost = {
+  name: string;
+  hostname?: string;
+  user?: string;
+  port?: number;
+  identityFile?: string;
+  proxyJump?: string;
+};
+
+export function parseSSHConfig(content: string): SSHConfigHost[] {
+  const results: SSHConfigHost[] = [];
+  let current: SSHConfigHost | null = null;
+
+  for (const rawLine of content.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+
+    const spaceIdx = line.indexOf(" ");
+    if (spaceIdx === -1) continue;
+
+    const key = line.slice(0, spaceIdx).toLowerCase();
+    const value = line.slice(spaceIdx + 1).trim();
+
+    if (key === "host") {
+      if (current && current.hostname) results.push(current);
+      // Skip wildcard patterns
+      if (value === "*" || value.includes("*") || value.includes("?")) {
+        current = null;
+      } else {
+        current = { name: value };
+      }
+      continue;
+    }
+
+    if (!current) continue;
+
+    switch (key) {
+      case "hostname":
+        current.hostname = value;
+        break;
+      case "user":
+        current.user = value;
+        break;
+      case "port": {
+        const p = Number.parseInt(value, 10);
+        if (p > 0 && p <= 65535) current.port = p;
+        break;
+      }
+      case "identityfile":
+        if (!current.identityFile) current.identityFile = value;
+        break;
+      case "proxyjump":
+        current.proxyJump = value;
+        break;
+    }
+  }
+
+  if (current && current.hostname) results.push(current);
+
+  return results;
+}
+
 export function registerHostBulkRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
@@ -363,6 +425,12 @@ export function registerHostBulkRoutes(
 
               if (fallback.length > 0) {
                 hostData.credentialId = fallback[0].id;
+              } else if (isNonEmptyString(hostData.key)) {
+                hostData.authType = "key";
+                hostData.credentialId = undefined;
+              } else if (isNonEmptyString(hostData.password)) {
+                hostData.authType = "password";
+                hostData.credentialId = undefined;
               } else {
                 results.failed++;
                 results.errors.push(
@@ -505,6 +573,214 @@ export function registerHostBulkRoutes(
           results.failed++;
           results.errors.push(
             `Host ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+        }
+      }
+
+      res.json({
+        message: `Import completed: ${results.success} created, ${results.updated} updated, ${results.failed} failed`,
+        success: results.success,
+        updated: results.updated,
+        skipped: results.skipped,
+        failed: results.failed,
+        errors: results.errors,
+      });
+    },
+  );
+
+  /**
+   * @openapi
+   * /host/ssh-config-import:
+   *   post:
+   *     summary: Import hosts from an OpenSSH config file
+   *     description: Parses an OpenSSH ~/.ssh/config file and imports the defined hosts.
+   *     tags:
+   *       - SSH
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - content
+   *             properties:
+   *               content:
+   *                 type: string
+   *                 description: Raw text content of the SSH config file.
+   *               overwrite:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Import completed.
+   *       400:
+   *         description: Invalid request body.
+   */
+  router.post(
+    "/ssh-config-import",
+    authenticateJWT,
+    async (req: Request, res: Response) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      const { content, overwrite } = req.body;
+
+      if (!isNonEmptyString(content)) {
+        return res.status(400).json({
+          error: "content is required and must be a non-empty string",
+        });
+      }
+
+      let parsed: SSHConfigHost[];
+      try {
+        parsed = parseSSHConfig(content);
+      } catch (err) {
+        return res
+          .status(400)
+          .json({ error: "Failed to parse SSH config file" });
+      }
+
+      if (parsed.length === 0) {
+        return res.status(400).json({
+          error: "No valid Host entries found in the SSH config file",
+        });
+      }
+
+      if (parsed.length > 100) {
+        return res
+          .status(400)
+          .json({ error: "Maximum 100 hosts allowed per import" });
+      }
+
+      const hostsToImport = parsed.map((h) => ({
+        name: h.name,
+        ip: h.hostname,
+        port: h.port ?? 22,
+        username: h.user,
+        authType: h.identityFile ? "key" : undefined,
+        connectionType: "ssh",
+        enableSsh: true,
+        ...(h.proxyJump
+          ? {
+              jumpHosts: [{ host: h.proxyJump, port: 22 }],
+            }
+          : {}),
+      }));
+
+      const results = {
+        success: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+        errors: [] as string[],
+      };
+
+      let existingHostMap: Map<string, { id: number }> | undefined;
+      if (overwrite) {
+        try {
+          const allHosts = await SimpleDBOps.select<Record<string, unknown>>(
+            db.select().from(hosts).where(eq(hosts.userId, userId)),
+            "ssh_data",
+            userId,
+          );
+          existingHostMap = new Map();
+          for (const h of allHosts) {
+            const key = `${h.ip}:${h.port}:${h.username}`;
+            existingHostMap.set(key, { id: h.id as number });
+          }
+        } catch {
+          existingHostMap = undefined;
+        }
+      }
+
+      for (let i = 0; i < hostsToImport.length; i++) {
+        const hostData = normalizeImportedHost(
+          hostsToImport[i] as Record<string, unknown>,
+        );
+
+        try {
+          if (!isNonEmptyString(hostData.ip) || !isValidPort(hostData.port)) {
+            results.failed++;
+            results.errors.push(
+              `Host "${parsed[i].name}": Missing required fields (HostName, Port)`,
+            );
+            continue;
+          }
+
+          const sshDataObj: Record<string, unknown> = {
+            userId,
+            connectionType: "ssh",
+            name: hostData.name || hostData.ip,
+            folder: "Default",
+            tags: "",
+            ip: hostData.ip,
+            port: hostData.port,
+            username: hostData.username || null,
+            authType: hostData.authType || "none",
+            password: null,
+            key: null,
+            keyPassword: null,
+            keyType: null,
+            credentialId: null,
+            pin: false,
+            enableTerminal: true,
+            enableTunnel: true,
+            enableFileManager: true,
+            enableDocker: false,
+            enableProxmox: false,
+            enableTmuxMonitor: false,
+            showTerminalInSidebar: 0,
+            showFileManagerInSidebar: 0,
+            showTunnelInSidebar: 0,
+            showDockerInSidebar: 0,
+            showServerStatsInSidebar: 0,
+            defaultPath: "/",
+            sudoPassword: null,
+            tunnelConnections: "[]",
+            jumpHosts: hostData.jumpHosts
+              ? JSON.stringify(hostData.jumpHosts)
+              : null,
+            quickActions: null,
+            statsConfig: null,
+            dockerConfig: null,
+            proxmoxConfig: null,
+            terminalConfig: null,
+            forceKeyboardInteractive: "false",
+            notes: null,
+            useSocks5: 0,
+            socks5Host: null,
+            socks5Port: null,
+            socks5Username: null,
+            socks5Password: null,
+            socks5ProxyChain: null,
+            portKnockSequence: null,
+            overrideCredentialUsername: 0,
+            enableSsh: true,
+            enableRdp: false,
+            enableVnc: false,
+            enableTelnet: false,
+            updatedAt: new Date().toISOString(),
+          };
+
+          const lookupKey = `${hostData.ip}:${hostData.port}:${hostData.username}`;
+          const existing = existingHostMap?.get(lookupKey);
+
+          if (existing) {
+            await SimpleDBOps.update(
+              hosts,
+              "ssh_data",
+              eq(hosts.id, existing.id),
+              sshDataObj,
+              userId,
+            );
+            results.updated++;
+          } else {
+            sshDataObj.createdAt = new Date().toISOString();
+            await SimpleDBOps.insert(hosts, "ssh_data", sshDataObj, userId);
+            results.success++;
+          }
+        } catch (error) {
+          results.failed++;
+          results.errors.push(
+            `Host "${parsed[i].name}": ${error instanceof Error ? error.message : "Unknown error"}`,
           );
         }
       }

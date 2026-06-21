@@ -1,4 +1,5 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
+import Busboy from "busboy";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { fileLogger } from "../utils/logger.js";
 import {
@@ -1302,4 +1303,208 @@ export function registerFileContentRoutes(
 
     trySFTP();
   });
+
+  /**
+   * @openapi
+   * /ssh/file_manager/ssh/uploadFileStream:
+   *   post:
+   *     summary: Stream-upload a file via multipart form
+   *     description: Uploads a file to the remote host by streaming multipart form data directly into an SFTP write stream, avoiding full in-memory buffering.
+   *     tags:
+   *       - File Manager
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - sessionId
+   *               - path
+   *               - file
+   *             properties:
+   *               sessionId:
+   *                 type: string
+   *               path:
+   *                 type: string
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: File uploaded successfully.
+   *       400:
+   *         description: Missing required parameters or SSH connection not established.
+   *       500:
+   *         description: Failed to upload file.
+   */
+  app.post(
+    "/ssh/file_manager/ssh/uploadFileStream",
+    (req: Request, res: Response) => {
+      const userId = (req as AuthenticatedRequest).userId;
+
+      const contentType = req.headers["content-type"] || "";
+      if (!contentType.includes("multipart/form-data")) {
+        return res
+          .status(400)
+          .json({ error: "Expected multipart/form-data request" });
+      }
+
+      let sessionId: string | undefined;
+      let remotePath: string | undefined;
+      let fileName: string | undefined;
+      let uploadStartTime: number;
+      let resolved = false;
+
+      const bb = Busboy({ headers: req.headers });
+
+      bb.on("field", (name: string, value: string) => {
+        if (name === "sessionId") sessionId = value;
+        if (name === "path") remotePath = value;
+      });
+
+      bb.on(
+        "file",
+        (
+          fieldname: string,
+          fileStream: NodeJS.ReadableStream,
+          info: { filename: string; encoding: string; mimeType: string },
+        ) => {
+          fileName = info.filename;
+
+          if (!sessionId || !remotePath || !fileName) {
+            fileStream.resume();
+            if (!resolved) {
+              resolved = true;
+              res
+                .status(400)
+                .json({ error: "Missing sessionId or path field" });
+            }
+            return;
+          }
+
+          const sshConn = sshSessions[sessionId];
+          if (!sshConn?.isConnected) {
+            fileStream.resume();
+            if (!resolved) {
+              resolved = true;
+              res.status(400).json({ error: "SSH connection not established" });
+            }
+            return;
+          }
+
+          if (!verifySessionOwnership(sshConn, userId)) {
+            fileStream.resume();
+            if (!resolved) {
+              resolved = true;
+              res.status(403).json({ error: "Session access denied" });
+            }
+            return;
+          }
+
+          sshConn.lastActive = Date.now();
+          uploadStartTime = Date.now();
+
+          const fullPath = remotePath.endsWith("/")
+            ? remotePath + fileName
+            : remotePath + "/" + fileName;
+
+          fileLogger.info("Streaming file upload started", {
+            operation: "file_upload_stream_start",
+            sessionId,
+            userId,
+            path: fullPath,
+          });
+
+          getSessionSftp(sshConn)
+            .then((sftp) => {
+              const writeStream = sftp.createWriteStream(fullPath);
+
+              writeStream.on("error", (err) => {
+                fileLogger.error("SFTP write stream error during upload:", err);
+                if (!resolved) {
+                  resolved = true;
+                  res
+                    .status(500)
+                    .json({ error: `Upload failed: ${err.message}` });
+                }
+              });
+
+              writeStream.on("finish", () => {
+                if (resolved) return;
+                resolved = true;
+                fileLogger.success("Streaming file upload completed", {
+                  operation: "file_upload_stream_complete",
+                  sessionId,
+                  userId,
+                  path: fullPath,
+                  duration: Date.now() - uploadStartTime,
+                });
+                res.json({
+                  message: "File uploaded successfully",
+                  path: fullPath,
+                  toast: {
+                    type: "success",
+                    message: `File uploaded: ${fullPath}`,
+                  },
+                });
+              });
+
+              writeStream.on("close", () => {
+                if (resolved) return;
+                resolved = true;
+                fileLogger.success("Streaming file upload completed", {
+                  operation: "file_upload_stream_complete",
+                  sessionId,
+                  userId,
+                  path: fullPath,
+                  duration: Date.now() - uploadStartTime,
+                });
+                res.json({
+                  message: "File uploaded successfully",
+                  path: fullPath,
+                  toast: {
+                    type: "success",
+                    message: `File uploaded: ${fullPath}`,
+                  },
+                });
+              });
+
+              fileStream.on("error", (err) => {
+                fileLogger.error("File read stream error during upload:", err);
+                writeStream.destroy();
+                if (!resolved) {
+                  resolved = true;
+                  res
+                    .status(500)
+                    .json({ error: `Upload stream error: ${err.message}` });
+                }
+              });
+
+              (fileStream as NodeJS.ReadableStream).pipe(
+                writeStream as unknown as NodeJS.WritableStream,
+              );
+            })
+            .catch((err: Error) => {
+              fileStream.resume();
+              fileLogger.error("SFTP session error during stream upload:", err);
+              if (!resolved) {
+                resolved = true;
+                res.status(500).json({ error: `SFTP error: ${err.message}` });
+              }
+            });
+        },
+      );
+
+      bb.on("error", (err: Error) => {
+        fileLogger.error("Busboy parse error during stream upload:", err);
+        if (!resolved) {
+          resolved = true;
+          res.status(500).json({ error: `Upload parse error: ${err.message}` });
+        }
+      });
+
+      req.pipe(bb);
+    },
+  );
 }

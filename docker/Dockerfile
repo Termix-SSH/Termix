@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:24-slim AS deps
+FROM node:26-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -36,7 +36,7 @@ RUN npm rebuild better-sqlite3
 RUN npm run build:backend
 
 # Stage 4: Production dependencies only
-FROM node:24-slim AS production-deps
+FROM node:26-slim AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -53,14 +53,14 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 5: Final optimized image
-FROM node:24-slim
+FROM node:26-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
     PORT=8080 \
     NODE_ENV=production
 
-RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget && \
+RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
     update-ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
     mkdir -p /app/data /app/uploads /app/data/.opk /app/nginx /tmp/nginx && \

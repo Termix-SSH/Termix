@@ -5,8 +5,8 @@ import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { getDb } from "../database/db/index.js";
-import { hosts } from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
+import { hosts, sshCredentials } from "../database/db/schema.js";
+import { eq, and } from "drizzle-orm";
 import { Client } from "ssh2";
 import net from "net";
 import type { AuthenticatedRequest } from "../../types/index.js";
@@ -67,8 +67,14 @@ router.use(authManager.createAuthMiddleware());
  */
 router.post("/token", async (req, res) => {
   try {
-    const { type, hostname, port, username, password, domain, ...options } =
+    const { type, hostname, port, username, password, domain, ...rawOptions } =
       req.body;
+
+    // Strip "auto" sentinel values before forwarding to guacd
+    const options: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(rawOptions)) {
+      if (value !== "auto") options[key] = value;
+    }
 
     if (!type || !hostname) {
       return res
@@ -261,10 +267,136 @@ router.post(
         }
       }
 
+      // Strip "auto" sentinel values — these mean "use guacd default" in the UI
+      // but guacd doesn't recognise "auto" as a valid parameter value.
+      for (const key of Object.keys(guacConfig)) {
+        if (guacConfig[key] === "auto") {
+          delete guacConfig[key];
+        }
+      }
+
+      // Extract per-connection guacd proxy settings before passing the rest as connection settings
+      const perConnectionGuacdHost = guacConfig["guacd-hostname"] as
+        | string
+        | undefined;
+      const perConnectionGuacdPortRaw = guacConfig["guacd-port"];
+      const perConnectionGuacdPort = perConnectionGuacdPortRaw
+        ? parseInt(String(perConnectionGuacdPortRaw), 10) || undefined
+        : undefined;
+      delete guacConfig["guacd-hostname"];
+      delete guacConfig["guacd-port"];
+
       if (guacConfig.dpi != null) {
         const parsed = parseInt(String(guacConfig.dpi), 10);
         guacConfig.dpi =
           Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+      }
+
+      const hostRecord = host as Record<string, unknown>;
+
+      // Backward compat: if authType is not stored but a credentialId is, treat as credential mode
+      const rdpEffectiveAuthType =
+        (host.rdpAuthType as string) ||
+        (host.rdpCredentialId ? "credential" : "direct");
+      const vncEffectiveAuthType =
+        (host.vncAuthType as string) ||
+        (host.vncCredentialId ? "credential" : "direct");
+      const telnetEffectiveAuthType =
+        (host.telnetAuthType as string) ||
+        (hostRecord.telnetCredentialId ? "credential" : "direct");
+
+      if (rdpEffectiveAuthType === "credential" && host.rdpCredentialId) {
+        try {
+          const rdpCreds = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshCredentials)
+              .where(
+                and(
+                  eq(sshCredentials.id, host.rdpCredentialId as number),
+                  eq(sshCredentials.userId, host.userId as string),
+                ),
+              ),
+            "ssh_credentials",
+            userId,
+          );
+          if (rdpCreds.length > 0) {
+            const cred = rdpCreds[0] as Record<string, unknown>;
+            if (cred.username) host.rdpUser = cred.username;
+            if (cred.password) host.rdpPassword = cred.password;
+            // domain is never sourced from credential
+          }
+        } catch (e) {
+          guacLogger.warn("Failed to resolve RDP credential", {
+            operation: "guac_rdp_credential_resolve",
+            hostId,
+            error: e instanceof Error ? e.message : "Unknown",
+          });
+        }
+      }
+
+      if (vncEffectiveAuthType === "credential" && host.vncCredentialId) {
+        try {
+          const vncCreds = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshCredentials)
+              .where(
+                and(
+                  eq(sshCredentials.id, host.vncCredentialId as number),
+                  eq(sshCredentials.userId, host.userId as string),
+                ),
+              ),
+            "ssh_credentials",
+            userId,
+          );
+          if (vncCreds.length > 0) {
+            const cred = vncCreds[0] as Record<string, unknown>;
+            if (cred.password) host.vncPassword = cred.password;
+            if (cred.username) host.vncUser = cred.username;
+          }
+        } catch (e) {
+          guacLogger.warn("Failed to resolve VNC credential", {
+            operation: "guac_vnc_credential_resolve",
+            hostId,
+            error: e instanceof Error ? e.message : "Unknown",
+          });
+        }
+      }
+
+      if (
+        telnetEffectiveAuthType === "credential" &&
+        hostRecord.telnetCredentialId
+      ) {
+        try {
+          const telnetCreds = await SimpleDBOps.select(
+            getDb()
+              .select()
+              .from(sshCredentials)
+              .where(
+                and(
+                  eq(
+                    sshCredentials.id,
+                    hostRecord.telnetCredentialId as number,
+                  ),
+                  eq(sshCredentials.userId, host.userId as string),
+                ),
+              ),
+            "ssh_credentials",
+            userId,
+          );
+          if (telnetCreds.length > 0) {
+            const cred = telnetCreds[0] as Record<string, unknown>;
+            if (cred.username) host.telnetUser = cred.username;
+            if (cred.password) host.telnetPassword = cred.password;
+          }
+        } catch (e) {
+          guacLogger.warn("Failed to resolve Telnet credential", {
+            operation: "guac_telnet_credential_resolve",
+            hostId,
+            error: e instanceof Error ? e.message : "Unknown",
+          });
+        }
       }
 
       let token: string;
@@ -385,6 +517,15 @@ router.post(
         }
       }
 
+      const guacdOverrides = {
+        ...(perConnectionGuacdHost
+          ? { guacdHost: perConnectionGuacdHost }
+          : {}),
+        ...(perConnectionGuacdPort
+          ? { guacdPort: perConnectionGuacdPort }
+          : {}),
+      };
+
       switch (connectionType) {
         case "rdp":
           if (guacConfig["enable-drive"] && !guacConfig["drive-path"]) {
@@ -405,6 +546,7 @@ router.post(
                   ? !!host.ignoreCert
                   : true,
             ...guacConfig,
+            ...guacdOverrides,
           });
           break;
         case "vnc":
@@ -416,6 +558,7 @@ router.post(
               port,
               security: "any",
               ...guacConfig,
+              ...guacdOverrides,
             },
           );
           break;
@@ -423,6 +566,7 @@ router.post(
           token = tokenService.createTelnetToken(hostname, username, password, {
             port,
             ...guacConfig,
+            ...guacdOverrides,
           });
           break;
         default:

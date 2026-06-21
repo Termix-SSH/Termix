@@ -56,7 +56,8 @@ function isDisplayableText(str: string): boolean {
       (code >= 32 && code <= 126) ||
       code === 9 ||
       code === 10 ||
-      code === 13
+      code === 13 ||
+      code >= 128
     ) {
       printable++;
     }
@@ -82,6 +83,7 @@ export function FileWindow({
   const [isLoading, setIsLoading] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
   const [pendingContent, setPendingContent] = useState<string>("");
+  const [resetKey, setResetKey] = useState(0);
   const [mediaDimensions, setMediaDimensions] = useState<
     { width: number; height: number } | undefined
   >();
@@ -141,6 +143,7 @@ export function FileWindow({
 
         setContent(fileContent);
         setPendingContent(fileContent);
+        setResetKey((k) => k + 1);
 
         if (!file.size) {
           const contentSize = new Blob([fileContent]).size;
@@ -268,6 +271,7 @@ export function FileWindow({
         const fileContent = response.content || "";
         setContent(fileContent);
         setPendingContent("");
+        setResetKey((k) => k + 1);
 
         if (!file.size) {
           const contentSize = new Blob([fileContent]).size;
@@ -444,6 +448,7 @@ export function FileWindow({
         content={pendingContent || content}
         savedContent={content}
         isLoading={isLoading}
+        resetKey={resetKey}
         onRevert={handleRevert}
         isEditable={isEditable}
         onContentChange={handleContentChange}

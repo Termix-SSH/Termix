@@ -237,7 +237,7 @@ export function transformHostResponse(
     pin: !!host.pin,
     enableTerminal: !!host.enableTerminal,
     enableTunnel: !!host.enableTunnel,
-    enableFileManager: !!host.enableFileManager,
+    enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
     enableProxmox: !!host.enableProxmox,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
@@ -293,6 +293,7 @@ export function transformHostResponse(
       ? JSON.parse(host.proxmoxConfig as string)
       : undefined,
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
+    useWarpgate: !!host.useWarpgate,
     socks5ProxyChain: host.socks5ProxyChain
       ? JSON.parse(host.socks5ProxyChain as string)
       : [],

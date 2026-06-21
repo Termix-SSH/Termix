@@ -72,12 +72,22 @@ export function HostEditorGeneralTab({
 
   // Folders come from two sources: paths referenced by existing hosts, and
   // standalone folder records (including empty ones just created).
+  // Intermediate ancestor paths are expanded so "A" appears even when only
+  // "A / B" is directly stored on a host.
   const folderPaths = React.useMemo(() => {
     const set = new Set<string>();
+    const addWithAncestors = (path: string) => {
+      const parts = path.split(" / ");
+      let accumulated = "";
+      for (const part of parts) {
+        accumulated = accumulated ? `${accumulated} / ${part}` : part;
+        set.add(accumulated);
+      }
+    };
     for (const h of hosts) {
-      if (h.folder) set.add(h.folder);
+      if (h.folder) addWithAncestors(h.folder);
     }
-    for (const path of folderMeta.keys()) set.add(path);
+    for (const path of folderMeta.keys()) addWithAncestors(path);
     return [...set];
   }, [hosts, folderMeta]);
 
@@ -197,6 +207,23 @@ export function HostEditorGeneralTab({
                   value={form.macAddress}
                   onChange={(e) => setField("macAddress", e.target.value)}
                 />
+              </div>
+            )}
+            {protocols.enableSsh && form.macAddress && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("hosts.wolBroadcastAddress")}
+                </label>
+                <Input
+                  placeholder="192.168.1.255"
+                  value={form.wolBroadcastAddress}
+                  onChange={(e) =>
+                    setField("wolBroadcastAddress", e.target.value)
+                  }
+                />
+                <p className="text-[10px] text-muted-foreground/60">
+                  {t("hosts.wolBroadcastAddressDesc")}
+                </p>
               </div>
             )}
           </div>

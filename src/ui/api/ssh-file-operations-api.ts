@@ -51,10 +51,11 @@ export async function connectSSH(
   },
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/connect", {
-      sessionId,
-      ...config,
-    });
+    const response = await fileManagerApi.post(
+      "/ssh/connect",
+      { sessionId, ...config },
+      { timeout: 120000 },
+    );
     return response.data;
   } catch (error: unknown) {
     if (
@@ -344,18 +345,20 @@ export async function uploadSSHFile(
   sessionId: string,
   path: string,
   fileName: string,
-  content: string,
+  file: File,
   hostId?: number,
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/uploadFile", {
-      sessionId,
-      path,
-      fileName,
-      content,
-      hostId,
-      userId,
+    const form = new FormData();
+    form.append("sessionId", sessionId);
+    form.append("path", path);
+    if (hostId !== undefined) form.append("hostId", String(hostId));
+    if (userId !== undefined) form.append("userId", userId);
+    form.append("file", file, fileName);
+
+    const response = await fileManagerApi.post("/ssh/uploadFileStream", form, {
+      timeout: 0,
     });
     return response.data;
   } catch (error) {
@@ -370,12 +373,16 @@ export async function downloadSSHFile(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/downloadFile", {
-      sessionId,
-      path: filePath,
-      hostId,
-      userId,
-    });
+    const response = await fileManagerApi.post(
+      "/ssh/downloadFile",
+      {
+        sessionId,
+        path: filePath,
+        hostId,
+        userId,
+      },
+      { timeout: 0 },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "download SSH file");
@@ -389,7 +396,7 @@ export async function downloadSSHFileStream(
   const response = await fileManagerApi.post(
     "/ssh/downloadFileStream",
     { sessionId, path: filePath },
-    { responseType: "blob" },
+    { responseType: "blob", timeout: 0 },
   );
   const blob = response.data as Blob;
   const fileName = filePath.split("/").pop() || "download";

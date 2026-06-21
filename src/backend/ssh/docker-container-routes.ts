@@ -8,6 +8,7 @@ type DockerSession = {
   lastActive: number;
   activeOperations: number;
   hostId?: number;
+  isWindows?: boolean;
 };
 
 type PendingDockerTotpSession = unknown;
@@ -93,7 +94,10 @@ export function registerDockerContainerRoutes(
 
     try {
       const allFlag = all ? "-a " : "";
-      const command = `docker ps ${allFlag}--format '{"id":"{{.ID}}","name":"{{.Names}}","image":"{{.Image}}","status":"{{.Status}}","state":"{{.State}}","ports":"{{.Ports}}","created":"{{.CreatedAt}}"}'`;
+      const formatStr = session.isWindows
+        ? `"{\\"id\\":\\"{{.ID}}\\",\\"name\\":\\"{{.Names}}\\",\\"image\\":\\"{{.Image}}\\",\\"status\\":\\"{{.Status}}\\",\\"state\\":\\"{{.State}}\\",\\"ports\\":\\"{{.Ports}}\\",\\"created\\":\\"{{.CreatedAt}}\\"}"`
+        : `'{"id":"{{.ID}}","name":"{{.Names}}","image":"{{.Image}}","status":"{{.Status}}","state":"{{.State}}","ports":"{{.Ports}}","created":"{{.CreatedAt}}"}' `;
+      const command = `docker ps ${allFlag}--format ${formatStr}`;
 
       const output = await executeDockerCommand(
         session,
@@ -916,7 +920,7 @@ export function registerDockerContainerRoutes(
       session.activeOperations++;
 
       try {
-        let command = `docker logs ${containerId} 2>&1`;
+        let command = `docker logs ${containerId}`;
 
         if (tail && tail > 0) {
           command += ` --tail ${Math.floor(tail)}`;
@@ -933,6 +937,8 @@ export function registerDockerContainerRoutes(
         if (until && DOCKER_TIMESTAMP_RE.test(until)) {
           command += ` --until ${until}`;
         }
+
+        command += " 2>&1";
 
         const logs = await executeDockerCommand(
           session,
@@ -1026,7 +1032,10 @@ export function registerDockerContainerRoutes(
       session.activeOperations++;
 
       try {
-        const command = `docker stats ${containerId} --no-stream --format '{"cpu":"{{.CPUPerc}}","memory":"{{.MemUsage}}","memoryPercent":"{{.MemPerc}}","netIO":"{{.NetIO}}","blockIO":"{{.BlockIO}}","pids":"{{.PIDs}}"}'`;
+        const statsFormatStr = session.isWindows
+          ? `"{\\"cpu\\":\\"{{.CPUPerc}}\\",\\"memory\\":\\"{{.MemUsage}}\\",\\"memoryPercent\\":\\"{{.MemPerc}}\\",\\"netIO\\":\\"{{.NetIO}}\\",\\"blockIO\\":\\"{{.BlockIO}}\\",\\"pids\\":\\"{{.PIDs}}\\"}"`
+          : `'{"cpu":"{{.CPUPerc}}","memory":"{{.MemUsage}}","memoryPercent":"{{.MemPerc}}","netIO":"{{.NetIO}}","blockIO":"{{.BlockIO}}","pids":"{{.PIDs}}"}' `;
+        const command = `docker stats ${containerId} --no-stream --format ${statsFormatStr}`;
 
         const output = await executeDockerCommand(
           session,

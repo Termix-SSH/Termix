@@ -2,12 +2,18 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { createCorsMiddleware } from "./utils/cors-config.js";
 import { getDb } from "./database/db/index.js";
-import { recentActivity, hosts, hostAccess } from "./database/db/schema.js";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import {
+  recentActivity,
+  hosts,
+  hostAccess,
+  userRoles,
+} from "./database/db/schema.js";
+import { eq, and, desc, inArray, or, isNull, gte, sql } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
 import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../types/index.js";
+import { dashboardServiceLinksRouter } from "./database/routes/dashboard-service-links-routes.js";
 
 const app = express();
 const authManager = AuthManager.getInstance();
@@ -227,11 +233,30 @@ app.post("/activity/log", async (req, res) => {
     );
 
     if (ownedHosts.length === 0) {
+      const userRoleIds = await getDb()
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, userId));
+      const roleIds = userRoleIds.map((r) => r.roleId);
+
+      const now = new Date().toISOString();
       const sharedHosts = await getDb()
         .select()
         .from(hostAccess)
         .where(
-          and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
+          and(
+            eq(hostAccess.hostId, hostId),
+            or(
+              eq(hostAccess.userId, userId),
+              roleIds.length > 0
+                ? sql`${hostAccess.roleId} IN (${sql.join(
+                    roleIds.map((id) => sql`${id}`),
+                    sql`, `,
+                  )})`
+                : sql`false`,
+            ),
+            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
+          ),
         );
 
       if (sharedHosts.length === 0) {
@@ -348,6 +373,8 @@ app.delete("/activity/reset", async (req, res) => {
     res.status(500).json({ error: "Failed to reset activity" });
   }
 });
+
+app.use("/service-links", dashboardServiceLinksRouter);
 
 const PORT = 30006;
 app.listen(PORT, async () => {

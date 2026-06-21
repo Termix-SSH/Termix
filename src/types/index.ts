@@ -35,6 +35,7 @@ export interface OIDCProviderConfig {
   allowed_users?: string;
   admin_group?: string;
   group_claim?: string;
+  ca_cert?: string;
 }
 
 export interface LDAPProviderConfig {
@@ -64,6 +65,7 @@ export type SSHAuthType =
   | "none"
   | "opkssh"
   | "tailscale";
+
 export type GuacamoleAuthType = "password" | "credential";
 
 export interface ProxmoxConfig {
@@ -101,6 +103,7 @@ export interface Host {
   tags: string[];
   pin: boolean;
   authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  useWarpgate?: boolean;
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -120,6 +123,7 @@ export interface Host {
   enableCommandHistory: boolean;
   enableTunnel: boolean;
   enableFileManager: boolean;
+  scpLegacy?: boolean;
   enableDocker: boolean;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
@@ -145,6 +149,7 @@ export interface Host {
   socks5ProxyChain?: ProxyNode[];
 
   macAddress?: string;
+  wolBroadcastAddress?: string;
   portKnockSequence?: Array<{
     port: number;
     protocol?: "tcp" | "udp";
@@ -165,15 +170,21 @@ export interface Host {
   rdpPort?: number;
   vncPort?: number;
   telnetPort?: number;
+  rdpCredentialId?: number | null;
   rdpUser?: string;
   rdpPassword?: string;
   rdpDomain?: string;
   rdpSecurity?: string;
   rdpIgnoreCert?: boolean;
+  vncCredentialId?: number | null;
   vncPassword?: string;
   vncUser?: string;
   telnetUser?: string;
   telnetPassword?: string;
+  telnetCredentialId?: number | null;
+  rdpAuthType?: "direct" | "credential" | null;
+  vncAuthType?: "direct" | "credential" | null;
+  telnetAuthType?: "direct" | "credential" | null;
   createdAt: string;
   updatedAt: string;
 
@@ -211,6 +222,7 @@ export interface HostData {
   tags?: string[];
   pin?: boolean;
   authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  useWarpgate?: boolean;
   password?: string;
   key?: File | null;
   keyPassword?: string;
@@ -223,6 +235,7 @@ export interface HostData {
   enableCommandHistory?: boolean;
   enableTunnel?: boolean;
   enableFileManager?: boolean;
+  scpLegacy?: boolean;
   enableDocker?: boolean;
   enableProxmox?: boolean;
   enableTmuxMonitor?: boolean;
@@ -249,6 +262,7 @@ export interface HostData {
   socks5ProxyChain?: ProxyNode[];
 
   macAddress?: string;
+  wolBroadcastAddress?: string;
   portKnockSequence?: Array<{
     port: number;
     protocol?: "tcp" | "udp";
@@ -270,15 +284,21 @@ export interface HostData {
   rdpPort?: number;
   vncPort?: number;
   telnetPort?: number;
+  rdpCredentialId?: number | null;
   rdpUser?: string;
   rdpPassword?: string;
   rdpDomain?: string;
   rdpSecurity?: string;
   rdpIgnoreCert?: boolean;
+  vncCredentialId?: number | null;
   vncPassword?: string;
   vncUser?: string;
   telnetUser?: string;
   telnetPassword?: string;
+  telnetCredentialId?: number | null;
+  rdpAuthType?: "direct" | "credential" | null;
+  vncAuthType?: "direct" | "credential" | null;
+  telnetAuthType?: "direct" | "credential" | null;
 }
 
 export type SSHHost = Host;
@@ -597,6 +617,11 @@ export interface TerminalConfig {
     urls: boolean;
     numbers: boolean;
   };
+  backgroundImage?: string;
+  backgroundImageOpacity?: number;
+  allowLegacyAlgorithms?: boolean;
+  linkClickBehavior?: "confirm" | "direct";
+  useSSHTitle?: boolean;
 }
 
 // ============================================================================

@@ -2,18 +2,30 @@ import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { PasswordInput } from "@/components/password-input";
 import { SettingRow } from "@/components/section-card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/select";
+import {
   Database,
+  Lock,
   Pencil,
   Plus,
   RefreshCw,
+  Server,
   Settings,
   Shield,
   Trash2,
 } from "lucide-react";
 import { AccordionSection, AdminToggle } from "./AdminSettingsShared";
 import type { SSOProvider, SSOProviderType } from "@/types/index";
+import type { HostDefaults } from "@/api/settings-api";
+import type { AcmeSettings, AcmeChallengeType } from "@/api/acme-ssl-api";
 
 type GeneralSettingsSectionProps = {
   open: boolean;
@@ -24,6 +36,8 @@ type GeneralSettingsSectionProps = {
   handleTogglePasswordLogin: () => void;
   oidcAutoProvision: boolean;
   handleToggleOidcAutoProvision: () => void;
+  oidcSilentLoginDefault: boolean;
+  handleToggleOidcSilentLoginDefault: () => void;
   allowPasswordReset: boolean;
   handleTogglePasswordReset: () => void;
   commandHistoryEnabled: boolean;
@@ -57,6 +71,8 @@ export function AdminGeneralSettingsSection({
   handleTogglePasswordLogin,
   oidcAutoProvision,
   handleToggleOidcAutoProvision,
+  oidcSilentLoginDefault,
+  handleToggleOidcSilentLoginDefault,
   allowPasswordReset,
   handleTogglePasswordReset,
   commandHistoryEnabled,
@@ -115,6 +131,15 @@ export function AdminGeneralSettingsSection({
           <AdminToggle
             on={oidcAutoProvision}
             onToggle={handleToggleOidcAutoProvision}
+          />
+        </SettingRow>
+        <SettingRow
+          label={t("admin.oidcSilentLoginDefault")}
+          description={t("admin.oidcSilentLoginDefaultDesc")}
+        >
+          <AdminToggle
+            on={oidcSilentLoginDefault}
+            onToggle={handleToggleOidcSilentLoginDefault}
           />
         </SettingRow>
         <SettingRow
@@ -770,6 +795,391 @@ export function AdminSSOSection({
           <Plus className="size-3" />
           {t("admin.ssoAddProvider")}
         </Button>
+      </div>
+    </AccordionSection>
+  );
+}
+
+type AdminHostDefaultsSectionProps = {
+  open: boolean;
+  onToggle: () => void;
+  defaults: HostDefaults;
+  setDefaults: Dispatch<SetStateAction<HostDefaults>>;
+  handleSaveDefaults: () => void;
+};
+
+export function AdminHostDefaultsSection({
+  open,
+  onToggle,
+  defaults,
+  setDefaults,
+  handleSaveDefaults,
+}: AdminHostDefaultsSectionProps) {
+  const { t } = useTranslation();
+
+  return (
+    <AccordionSection
+      label={t("admin.sectionHostDefaults")}
+      icon={<Server className="size-3.5" />}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div className="flex flex-col gap-4 pt-3">
+        <span className="text-[10px] text-muted-foreground">
+          {t("admin.hostDefaultsDesc")}
+        </span>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("admin.hostDefaultsSocks5")}
+          </span>
+          <SettingRow
+            label={t("admin.hostDefaultsUseSocks5")}
+            description={t("admin.hostDefaultsUseSocks5Desc")}
+          >
+            <AdminToggle
+              on={defaults.useSocks5 ?? false}
+              onToggle={() =>
+                setDefaults((p) => ({ ...p, useSocks5: !p.useSocks5 }))
+              }
+            />
+          </SettingRow>
+          {defaults.useSocks5 && (
+            <div className="flex flex-col gap-3 ml-4">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  {t("admin.hostDefaultsSocks5Host")}
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    value={defaults.socks5Host ?? ""}
+                    onChange={(e) =>
+                      setDefaults((p) => ({ ...p, socks5Host: e.target.value }))
+                    }
+                    placeholder="127.0.0.1"
+                    className="text-xs"
+                  />
+                  <Input
+                    type="number"
+                    value={defaults.socks5Port ?? 1080}
+                    onChange={(e) =>
+                      setDefaults((p) => ({
+                        ...p,
+                        socks5Port: Number(e.target.value),
+                      }))
+                    }
+                    placeholder="1080"
+                    className="text-xs w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  {t("admin.hostDefaultsSocks5Username")}
+                </label>
+                <Input
+                  value={defaults.socks5Username ?? ""}
+                  onChange={(e) =>
+                    setDefaults((p) => ({
+                      ...p,
+                      socks5Username: e.target.value,
+                    }))
+                  }
+                  className="text-xs"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                  {t("admin.hostDefaultsSocks5Password")}
+                </label>
+                <PasswordInput
+                  value={defaults.socks5Password ?? ""}
+                  onChange={(e) =>
+                    setDefaults((p) => ({
+                      ...p,
+                      socks5Password: e.target.value,
+                    }))
+                  }
+                  className="h-8 text-xs pr-8"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("admin.hostDefaultsMetrics")}
+          </span>
+          <SettingRow
+            label={t("admin.hostDefaultsMetricsEnabled")}
+            description={t("admin.hostDefaultsMetricsEnabledDesc")}
+          >
+            <AdminToggle
+              on={defaults.metricsEnabled ?? true}
+              onToggle={() =>
+                setDefaults((p) => ({
+                  ...p,
+                  metricsEnabled: !(p.metricsEnabled ?? true),
+                }))
+              }
+            />
+          </SettingRow>
+          <SettingRow
+            label={t("admin.hostDefaultsStatusCheckEnabled")}
+            description={t("admin.hostDefaultsStatusCheckEnabledDesc")}
+          >
+            <AdminToggle
+              on={defaults.statusCheckEnabled ?? true}
+              onToggle={() =>
+                setDefaults((p) => ({
+                  ...p,
+                  statusCheckEnabled: !(p.statusCheckEnabled ?? true),
+                }))
+              }
+            />
+          </SettingRow>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("admin.hostDefaultsTerminal")}
+          </span>
+          <SettingRow
+            label={t("admin.hostDefaultsSessionLogging")}
+            description={t("admin.hostDefaultsSessionLoggingDesc")}
+          >
+            <AdminToggle
+              on={defaults.enableSessionLogging ?? true}
+              onToggle={() =>
+                setDefaults((p) => ({
+                  ...p,
+                  enableSessionLogging: !(p.enableSessionLogging ?? true),
+                }))
+              }
+            />
+          </SettingRow>
+          <SettingRow
+            label={t("admin.hostDefaultsCommandHistory")}
+            description={t("admin.hostDefaultsCommandHistoryDesc")}
+          >
+            <AdminToggle
+              on={defaults.enableCommandHistory ?? true}
+              onToggle={() =>
+                setDefaults((p) => ({
+                  ...p,
+                  enableCommandHistory: !(p.enableCommandHistory ?? true),
+                }))
+              }
+            />
+          </SettingRow>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+          onClick={handleSaveDefaults}
+        >
+          {t("common.save")}
+        </Button>
+      </div>
+    </AccordionSection>
+  );
+}
+
+const CERT_STATUS_STYLES: Record<AcmeSettings["certStatus"], string> = {
+  none: "text-muted-foreground",
+  valid: "text-green-500",
+  expiring: "text-yellow-500",
+  expired: "text-destructive",
+};
+
+type AdminSSLSectionProps = {
+  open: boolean;
+  onToggle: () => void;
+  settings: AcmeSettings;
+  setSettings: Dispatch<SetStateAction<AcmeSettings>>;
+  cloudflareTokenDraft: string;
+  setCloudflareTokenDraft: Dispatch<SetStateAction<string>>;
+  requesting: boolean;
+  handleSave: () => void;
+  handleRequest: () => void;
+};
+
+export function AdminSSLSection({
+  open,
+  onToggle,
+  settings,
+  setSettings,
+  cloudflareTokenDraft,
+  setCloudflareTokenDraft,
+  requesting,
+  handleSave,
+  handleRequest,
+}: AdminSSLSectionProps) {
+  const { t } = useTranslation();
+
+  const certStatusLabel: Record<AcmeSettings["certStatus"], string> = {
+    none: t("admin.sslCertStatusNone"),
+    valid: t("admin.sslCertStatusValid"),
+    expiring: t("admin.sslCertStatusExpiring"),
+    expired: t("admin.sslCertStatusExpired"),
+  };
+
+  return (
+    <AccordionSection
+      label={t("admin.sectionSsl")}
+      icon={<Lock className="size-3.5" />}
+      open={open}
+      onToggle={onToggle}
+    >
+      <div className="flex flex-col gap-3 pt-3">
+        <span className="text-[10px] text-muted-foreground">
+          {t("admin.sslDescription")}{" "}
+          <a
+            href="https://docs.termix.site/features/networking/ssl"
+            target="_blank"
+            rel="noreferrer"
+            className="text-accent-brand hover:underline"
+          >
+            {t("admin.sslDocsLink")}
+          </a>
+        </span>
+
+        <div className="flex flex-col gap-0.5 p-2 border border-border bg-background/50">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              {t("admin.sslCertStatus")}
+            </span>
+            <span
+              className={`text-xs font-medium ${CERT_STATUS_STYLES[settings.certStatus]}`}
+            >
+              {certStatusLabel[settings.certStatus]}
+            </span>
+          </div>
+          {settings.certExpiresAt && (
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.sslCertExpiresAt", {
+                date: new Date(settings.certExpiresAt).toLocaleDateString(),
+              })}
+            </span>
+          )}
+          {settings.lastIssuedAt && (
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.sslLastIssued", {
+                date: new Date(settings.lastIssuedAt).toLocaleString(),
+              })}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {t("admin.sslDomain")}
+          </label>
+          <Input
+            value={settings.domain}
+            onChange={(e) =>
+              setSettings((p) => ({ ...p, domain: e.target.value }))
+            }
+            placeholder={t("admin.sslDomainPlaceholder")}
+            className="text-xs"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {t("admin.sslEmail")}
+          </label>
+          <Input
+            value={settings.email}
+            onChange={(e) =>
+              setSettings((p) => ({ ...p, email: e.target.value }))
+            }
+            placeholder={t("admin.sslEmailPlaceholder")}
+            className="text-xs"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+            {t("admin.sslChallengeType")}
+          </label>
+          <Select
+            value={settings.challengeType}
+            onValueChange={(v) =>
+              setSettings((p) => ({
+                ...p,
+                challengeType: v as AcmeChallengeType,
+              }))
+            }
+          >
+            <SelectTrigger size="sm" className="w-full text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="http-webroot" className="text-xs">
+                HTTP (webroot)
+              </SelectItem>
+              <SelectItem value="dns-cloudflare" className="text-xs">
+                DNS (Cloudflare)
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-[10px] text-muted-foreground">
+            {t("admin.sslChallengeTypeDesc")}
+          </span>
+        </div>
+
+        {settings.challengeType === "dns-cloudflare" && (
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              {t("admin.sslCloudflareToken")}
+            </label>
+            <PasswordInput
+              value={cloudflareTokenDraft}
+              onChange={(e) => setCloudflareTokenDraft(e.target.value)}
+              placeholder={
+                settings.cloudflareToken ||
+                t("admin.sslCloudflareTokenPlaceholder")
+              }
+              className="text-xs h-8 pr-8"
+            />
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.sslCloudflareTokenDesc")}
+            </span>
+          </div>
+        )}
+
+        <span className="text-[10px] text-muted-foreground border-t border-border pt-2">
+          {t("admin.sslInfoNote")}
+        </span>
+
+        <div className="flex flex-col gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+            onClick={handleSave}
+          >
+            {t("admin.sslSave")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+            onClick={handleRequest}
+            disabled={requesting}
+          >
+            <RefreshCw
+              className={`size-3 ${requesting ? "animate-spin" : ""}`}
+            />
+            {requesting
+              ? t("admin.sslRequestCertLoading")
+              : t("admin.sslRequestCert")}
+          </Button>
+        </div>
       </div>
     </AccordionSection>
   );

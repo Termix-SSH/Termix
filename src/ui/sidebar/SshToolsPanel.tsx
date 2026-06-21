@@ -59,6 +59,16 @@ export function SshToolsPanel({
     }
   }
 
+  function broadcastArrow(normalSeq: string, appSeq: string) {
+    for (const tabId of selectedTabIds) {
+      const tab = terminalTabs.find((t) => t.id === tabId);
+      const ref = tab?.terminalRef?.current;
+      if (!ref) continue;
+      const appMode = ref.getApplicationCursorKeysMode?.() ?? false;
+      ref.sendInput?.(appMode ? appSeq : normalSeq);
+    }
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     e.preventDefault();
     e.stopPropagation();
@@ -86,16 +96,29 @@ export function SshToolsPanel({
       }
     }
 
+    if (key === "ArrowUp") {
+      broadcastArrow("\x1B[A", "\x1BOA");
+      return;
+    }
+    if (key === "ArrowDown") {
+      broadcastArrow("\x1B[B", "\x1BOB");
+      return;
+    }
+    if (key === "ArrowRight") {
+      broadcastArrow("\x1B[C", "\x1BOC");
+      return;
+    }
+    if (key === "ArrowLeft") {
+      broadcastArrow("\x1B[D", "\x1BOD");
+      return;
+    }
+
     const specialMap: Record<string, string> = {
       Enter: "\r",
       Backspace: "\x7F",
       Delete: "\x1B[3~",
       Tab: "\t",
       Escape: "\x1B",
-      ArrowUp: "\x1B[A",
-      ArrowDown: "\x1B[B",
-      ArrowRight: "\x1B[C",
-      ArrowLeft: "\x1B[D",
       Home: "\x1B[H",
       End: "\x1B[F",
       PageUp: "\x1B[5~",

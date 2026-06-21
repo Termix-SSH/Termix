@@ -17,7 +17,7 @@ const pickPreferences = (row?: typeof userPreferences.$inferSelect) => ({
   fontSize: row?.fontSize ?? null,
   accentColor: row?.accentColor ?? null,
   language: row?.language ?? null,
-  storageMode: row?.storageMode ?? "local",
+  storageMode: row?.storageMode ?? "cloud",
   commandAutocomplete: row?.commandAutocomplete ?? null,
   commandPaletteEnabled: row?.commandPaletteEnabled ?? null,
   showHostTags: row?.showHostTags ?? null,
@@ -28,6 +28,8 @@ const pickPreferences = (row?: typeof userPreferences.$inferSelect) => ({
   disableUpdateCheck: row?.disableUpdateCheck ?? null,
   confirmTabClose: row?.confirmTabClose ?? null,
   hiddenRailTabs: row?.hiddenRailTabs ?? null,
+  compactHostView: row?.compactHostView ?? null,
+  statusColorScheme: row?.statusColorScheme ?? null,
 });
 
 /**
@@ -90,6 +92,12 @@ const pickPreferences = (row?: typeof userPreferences.$inferSelect) => ({
  *                   type: boolean
  *                   nullable: true
  *                 hiddenRailTabs:
+ *                   type: string
+ *                   nullable: true
+ *                 compactHostView:
+ *                   type: boolean
+ *                   nullable: true
+ *                 statusColorScheme:
  *                   type: string
  *                   nullable: true
  */
@@ -158,6 +166,10 @@ router.get("/", authenticateJWT, (req: Request, res: Response) => {
  *                 type: boolean
  *               hiddenRailTabs:
  *                 type: string
+ *               compactHostView:
+ *                 type: boolean
+ *               statusColorScheme:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Preferences updated successfully.
@@ -181,6 +193,8 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
     disableUpdateCheck,
     confirmTabClose,
     hiddenRailTabs,
+    compactHostView,
+    statusColorScheme,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
     theme?: string | null;
@@ -198,6 +212,8 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
+    compactHostView?: boolean | null;
+    statusColorScheme?: string | null;
   };
 
   const updates: Partial<typeof userPreferences.$inferInsert> = {
@@ -220,6 +236,7 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
     language,
     storageMode,
     hiddenRailTabs,
+    statusColorScheme,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
       return res.status(400).json({ error: `${key} must be a string` });
@@ -236,6 +253,7 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
     confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
+    compactHostView,
   };
   for (const [key, value] of Object.entries(boolFields)) {
     if (value !== undefined && value !== null && typeof value !== "boolean") {
@@ -263,6 +281,9 @@ router.put("/", authenticateJWT, (req: Request, res: Response) => {
   if (disableUpdateCheck !== undefined)
     updates.disableUpdateCheck = disableUpdateCheck;
   if (confirmTabClose !== undefined) updates.confirmTabClose = confirmTabClose;
+  if (compactHostView !== undefined) updates.compactHostView = compactHostView;
+  if (statusColorScheme !== undefined)
+    updates.statusColorScheme = statusColorScheme;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

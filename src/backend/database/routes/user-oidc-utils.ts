@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { ssoProviders } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { Agent } from "undici";
 
 export type OIDCConfig = {
   client_id: string;
@@ -18,7 +19,13 @@ export type OIDCConfig = {
   allowed_users: string;
   admin_group: string;
   group_claim?: string;
+  ca_cert?: string;
 };
+
+export function buildFetchOptions(caCert?: string): Record<string, unknown> {
+  if (!caCert || !caCert.trim()) return {};
+  return { dispatcher: new Agent({ connect: { ca: caCert } }) };
+}
 
 export function getOIDCConfigFromEnv(): OIDCConfig | null {
   const client_id = process.env.OIDC_CLIENT_ID;
@@ -107,6 +114,15 @@ export function isOIDCUserAllowed(
   ];
   for (const pattern of patterns) {
     if (pattern === "*") return true;
+    if (pattern.includes("*")) {
+      const escaped = pattern
+        .toLowerCase()
+        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/\*/g, ".*");
+      const regex = new RegExp(`^${escaped}$`);
+      if (values.some((v) => v && regex.test(v.toLowerCase()))) return true;
+      continue;
+    }
     for (const value of values) {
       if (!value) continue;
       if (pattern.toLowerCase().startsWith("@")) {
@@ -123,7 +139,9 @@ export async function verifyOIDCToken(
   idToken: string,
   issuerUrl: string,
   clientId: string,
+  caCert?: string,
 ): Promise<Record<string, unknown>> {
+  const fetchOptions = buildFetchOptions(caCert);
   const normalizedIssuerUrl = issuerUrl.endsWith("/")
     ? issuerUrl.slice(0, -1)
     : issuerUrl;
@@ -142,7 +160,7 @@ export async function verifyOIDCToken(
 
   try {
     const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
-    const discoveryResponse = await fetch(discoveryUrl);
+    const discoveryResponse = await fetch(discoveryUrl, fetchOptions);
     if (discoveryResponse.ok) {
       const discovery = (await discoveryResponse.json()) as Record<
         string,
@@ -160,7 +178,7 @@ export async function verifyOIDCToken(
 
   for (const url of jwksUrls) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(url, fetchOptions);
       if (response.ok) {
         const jwksData = (await response.json()) as Record<string, unknown>;
         if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
@@ -212,6 +230,49 @@ export async function verifyOIDCToken(
   });
 
   return payload;
+}
+
+const GOOGLE_DEFAULTS = {
+  issuer_url: "https://accounts.google.com",
+  authorization_url: "https://accounts.google.com/o/oauth2/v2/auth",
+  token_url: "https://oauth2.googleapis.com/token",
+  userinfo_url: "https://openidconnect.googleapis.com/v1/userinfo",
+  identifier_path: "sub",
+  name_path: "name",
+  scopes: "openid email profile",
+};
+
+const GITHUB_DEFAULTS = {
+  issuer_url: "https://token.actions.githubusercontent.com",
+  authorization_url: "https://github.com/login/oauth/authorize",
+  token_url: "https://github.com/login/oauth/access_token",
+  userinfo_url: "https://api.github.com/user",
+  identifier_path: "id",
+  name_path: "name",
+  scopes: "read:user user:email",
+};
+
+function applyProviderDefaults(
+  config: OIDCConfig,
+  providerType: string,
+): OIDCConfig {
+  const defaults =
+    providerType === "google"
+      ? GOOGLE_DEFAULTS
+      : providerType === "github"
+        ? GITHUB_DEFAULTS
+        : null;
+  if (!defaults) return config;
+  return {
+    ...config,
+    issuer_url: config.issuer_url || defaults.issuer_url,
+    authorization_url: config.authorization_url || defaults.authorization_url,
+    token_url: config.token_url || defaults.token_url,
+    userinfo_url: config.userinfo_url || defaults.userinfo_url,
+    identifier_path: config.identifier_path || defaults.identifier_path,
+    name_path: config.name_path || defaults.name_path,
+    scopes: config.scopes || defaults.scopes,
+  };
 }
 
 function decryptConfigSecret(
@@ -280,10 +341,14 @@ export async function loadProviderConfig(
         } else {
           parsed = decryptConfigSecret(parsed);
         }
-        const config = parsed as unknown as OIDCConfig;
+        const providerType = row.type as SSOProviderType;
+        const config = applyProviderDefaults(
+          parsed as unknown as OIDCConfig,
+          providerType,
+        );
         return {
           config,
-          providerType: row.type as SSOProviderType,
+          providerType,
           providerDbId: row.id,
         };
       }
@@ -318,9 +383,13 @@ export async function loadProviderConfig(
         parsed = {};
       }
       parsed = decryptConfigSecret(parsed);
+      const oidcProviderType = oidcRow.type as SSOProviderType;
       return {
-        config: parsed as unknown as OIDCConfig,
-        providerType: oidcRow.type as SSOProviderType,
+        config: applyProviderDefaults(
+          parsed as unknown as OIDCConfig,
+          oidcProviderType,
+        ),
+        providerType: oidcProviderType,
         providerDbId: oidcRow.id,
       };
     }

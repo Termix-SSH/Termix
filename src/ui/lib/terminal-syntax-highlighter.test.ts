@@ -154,7 +154,7 @@ describe("highlightTerminalOutput", () => {
   });
 
   it("processes multi-line text line by line", () => {
-    const text = "some output\nERROR: failed";
+    const text = "some output\nERROR: failed\n";
     const out = highlightTerminalOutput(text);
     expect(out).toContain(ESC + "[91m");
   });
@@ -197,5 +197,92 @@ describe("highlightTerminalOutput", () => {
       numbers: false,
     });
     expect(out).not.toContain(ESC + "[96m");
+  });
+
+  it("skips highlighting when chunk contains a mid-line carriage return", () => {
+    // Progress bars and shell prompt redraws use \r to overwrite the current line
+    const chunk = "downloading...\rdownloading [====] 100%";
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
+  it("still processes CRLF line endings (\\r\\n is fine)", () => {
+    const out = highlightTerminalOutput("ERROR occurred\r\n");
+    expect(out).toContain(ESC + "[91m");
+  });
+
+  it("does not highlight shell prompt lines (user@host:path$)", () => {
+    const prompt = `${ESC}[01;32mpi@raspberrypi${ESC}[00m:${ESC}[01;34m/home/pi${ESC}[00m$ `;
+    const out = highlightTerminalOutput(prompt);
+    expect(out).toBe(prompt);
+  });
+
+  it("does not highlight plain-text shell prompt line", () => {
+    const prompt = "pi@raspberrypi:/home/pi$ ";
+    const out = highlightTerminalOutput(prompt);
+    expect(out).toBe(prompt);
+  });
+
+  it("does not highlight 'success' when immediately followed by a path (cd output)", () => {
+    // Some shells print "success~/new/dir" or "success/path" after a cd command
+    const out = highlightTerminalOutput("success~/home/user/projects");
+    expect(out).not.toContain(ESC + "[92m");
+  });
+
+  it("still highlights 'success' when not followed by a path separator", () => {
+    const out = highlightTerminalOutput("Build success: all tests passed");
+    expect(out).toContain(ESC + "[92m");
+  });
+
+  it("highlights output lines but not the prompt in a mixed chunk", () => {
+    const chunk = `ERROR: disk full\npi@raspberrypi:~$ `;
+    const out = highlightTerminalOutput(chunk);
+    // The error line should be highlighted
+    expect(out).toContain(ESC + "[91m");
+    // The prompt line should be unchanged
+    expect(out).toContain("pi@raspberrypi:~$ ");
+    const promptLine = out.split("\n")[1];
+    expect(promptLine).toBe("pi@raspberrypi:~$ ");
+  });
+
+  it("does not highlight paths inside a command-echo line (prompt + command)", () => {
+    // When the shell echoes the user's command, it prefixes the prompt.
+    // The path in the prompt portion (/home/user) must not be highlighted —
+    // the shell already colored it, and re-coloring it causes the doubled-path bug.
+    const echo = "user@host:/home/user$ cd /opt/app/bin/files";
+    const out = highlightTerminalOutput(echo);
+    expect(out).toBe(echo);
+  });
+
+  it("does not highlight paths in colored command-echo lines (root prompt)", () => {
+    const echo = `${ESC}[01;32mroot@host${ESC}[00m:${ESC}[01;34m/home/user${ESC}[00m# cd /opt/app/bin/files`;
+    const out = highlightTerminalOutput(echo);
+    expect(out).toBe(echo);
+  });
+
+  it("does not highlight the last line of a multi-line chunk with no trailing newline", () => {
+    // In a multi-line chunk, the trailing fragment without \n could be a live
+    // readline input line. Injecting ANSI bytes there breaks bash's cursor
+    // arithmetic (causes cursor jump / text shift when using arrow keys).
+    const chunk = "ERROR: disk full\nuser@host:/path$ cd /var/log";
+    const out = highlightTerminalOutput(chunk);
+    // First line (terminated by \n) gets highlighted
+    expect(out.split("\n")[0]).toContain(ESC + "[91m");
+    // Last unterminated fragment is left verbatim
+    expect(out.split("\n")[1]).toBe("user@host:/path$ cd /var/log");
+  });
+
+  it("still highlights a single-line chunk with no trailing newline", () => {
+    // A single-line chunk with no \n is plain command output, not a readline
+    // input fragment — highlight it normally.
+    const out = highlightTerminalOutput("ERROR: something failed");
+    expect(out).toContain(ESC + "[91m");
+  });
+
+  it("highlights all lines when the chunk ends with a newline", () => {
+    // When a chunk ends with \n every line is complete output — highlight them all.
+    const chunk = "ERROR: disk full\nconnect to /var/run/app.sock\n";
+    const out = highlightTerminalOutput(chunk);
+    expect(out.split("\n")[0]).toContain(ESC + "[91m");
+    expect(out.split("\n")[1]).toContain(ESC + "[36m");
   });
 });

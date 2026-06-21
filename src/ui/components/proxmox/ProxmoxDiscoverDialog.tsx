@@ -34,6 +34,8 @@ interface ProxmoxDiscoverDialogProps {
   preselectedHostId?: number;
   /** Credential to use for imported hosts */
   defaultCredentialId?: number | null;
+  /** Auth type to use for imported hosts */
+  defaultAuthType?: string;
   /** Username from the default credential */
   defaultUsername?: string;
 }
@@ -45,6 +47,7 @@ export function ProxmoxDiscoverDialog({
   onHostsChanged,
   preselectedHostId,
   defaultCredentialId,
+  defaultAuthType,
   defaultUsername,
 }: ProxmoxDiscoverDialogProps) {
   const { t } = useTranslation();
@@ -115,6 +118,8 @@ export function ProxmoxDiscoverDialog({
     try {
       // Prefer explicitly configured credential, then fall back to the host's own credential
       const credId = defaultCredentialId ?? discoveredCredentialId;
+      const resolvedAuthType =
+        defaultAuthType ?? (credId != null ? "credential" : "password");
 
       const toImport = guests
         .filter((g) => selected.has(g.vmid))
@@ -124,13 +129,13 @@ export function ProxmoxDiscoverDialog({
           port: g.connectionType === "rdp" ? 3389 : 22,
           username: defaultUsername ?? "root",
           folder: importFolder,
-          ...(credId != null
+          authType: resolvedAuthType,
+          ...(resolvedAuthType === "credential" && credId != null
             ? {
-                authType: "credential" as const,
                 credentialId: credId,
                 overrideCredentialUsername: true,
               }
-            : { authType: "password" as const }),
+            : {}),
           enableTerminal: g.connectionType !== "rdp",
           enableFileManager: g.connectionType !== "rdp",
           enableTunnel: g.connectionType !== "rdp",

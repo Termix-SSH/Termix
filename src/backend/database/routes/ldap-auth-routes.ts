@@ -2,7 +2,7 @@ import type { Router } from "express";
 import type { LDAPProviderConfig } from "../../../types/index.js";
 import { db } from "../db/index.js";
 import { ssoProviders, users, roles, userRoles } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -298,14 +298,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
         const isFirst = (countRow?.count || 0) === 0;
 
         if (!isFirst && !autoProvision) {
-          const regRow = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'allow_registration'",
-            )
-            .get() as { value: string } | undefined;
-          if (regRow && regRow.value !== "true") {
-            return res.status(403).json({ error: "Registration is disabled" });
-          }
+          return res.status(403).json({ error: "Registration is disabled" });
         }
 
         userId = nanoid();
@@ -375,6 +368,39 @@ export function registerLDAPAuthRoutes(router: Router): void {
         if (config.adminGroup && !!existingUsers[0].isAdmin !== isAdmin) {
           await db.update(users).set({ isAdmin }).where(eq(users.id, userId));
           existingUsers[0].isAdmin = isAdmin;
+          try {
+            const newRoleName = isAdmin ? "admin" : "user";
+            const oldRoleName = isAdmin ? "user" : "admin";
+            const newRole = await db
+              .select({ id: roles.id })
+              .from(roles)
+              .where(eq(roles.name, newRoleName))
+              .limit(1);
+            const oldRole = await db
+              .select({ id: roles.id })
+              .from(roles)
+              .where(eq(roles.name, oldRoleName))
+              .limit(1);
+            if (oldRole.length > 0) {
+              await db
+                .delete(userRoles)
+                .where(
+                  and(
+                    eq(userRoles.userId, userId),
+                    eq(userRoles.roleId, oldRole[0].id),
+                  ),
+                );
+            }
+            if (newRole.length > 0) {
+              await db.insert(userRoles).values({
+                userId,
+                roleId: newRole[0].id,
+                grantedBy: userId,
+              });
+            }
+          } catch {
+            /* non-fatal */
+          }
         }
 
         // Update display name if not dual-auth

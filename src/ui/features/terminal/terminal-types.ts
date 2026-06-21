@@ -21,7 +21,9 @@ export interface TerminalHandle {
   disconnect: () => void;
   reconnect: () => void;
   fit: () => void;
+  focus: () => void;
   sendInput: (data: string) => void;
   notifyResize: () => void;
   refresh: () => void;
+  getApplicationCursorKeysMode: () => boolean;
 }

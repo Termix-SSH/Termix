@@ -44,6 +44,7 @@ interface SSHSession {
   activeOperations: number;
   hostId?: number;
   userId?: string;
+  isWindows?: boolean;
 }
 
 interface PendingTOTPSession {
@@ -852,9 +853,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
 
     if (
       resolvedCredentials.authType === "none" ||
-      resolvedCredentials.authType === "tailscale"
+      resolvedCredentials.authType === "tailscale" ||
+      resolvedCredentials.authType === "warpgate"
     ) {
-      // Tailscale SSH and "none" auth: no credentials needed
+      // Tailscale SSH, "none", and Warpgate auth: no static credentials
     } else if (resolvedCredentials.authType === "password") {
       if (resolvedCredentials.password) {
         config.password = resolvedCredentials.password;
@@ -1038,7 +1040,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         ),
       );
 
-      sshSessions[sessionId] = {
+      const session: SSHSession = {
         client,
         isConnected: true,
         lastActive: Date.now(),
@@ -1047,7 +1049,23 @@ app.post("/docker/ssh/connect", async (req, res) => {
         userId,
       };
 
+      sshSessions[sessionId] = session;
       scheduleSessionCleanup(sessionId);
+
+      client.exec("ver", (err, stream) => {
+        if (!err && stream) {
+          let output = "";
+          stream.on("data", (d: Buffer) => {
+            output += d.toString();
+          });
+          stream.on("close", () => {
+            if (output.toLowerCase().includes("windows")) {
+              session.isWindows = true;
+            }
+          });
+          stream.stderr.on("data", () => {});
+        }
+      });
 
       res.json({
         success: true,
@@ -1312,6 +1330,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
           const passwordPromptIndex = prompts.findIndex((p) =>
             /password/i.test(p.prompt),
           );
+
+          if (resolvedCredentials.authType === "warpgate") {
+            finish(prompts.map(() => ""));
+            return;
+          }
 
           if (
             (resolvedCredentials.authType === "none" ||
@@ -2144,7 +2167,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
       try {
         await executeDockerCommand(
           session,
-          "docker ps >/dev/null 2>&1",
+          "docker ps",
           sessionId,
           userId,
           session.hostId,

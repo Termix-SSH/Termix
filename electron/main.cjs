@@ -20,6 +20,32 @@ const { URL } = require("url");
 const { fork } = require("child_process");
 const WebSocket = require("ws");
 
+// Portable mode: if a `.portable` marker exists next to the executable,
+// store all data in a `data` folder beside the exe instead of %APPDATA%.
+(function setupPortableDataDir() {
+  const exeDir = path.dirname(process.execPath);
+  const markerPath = path.join(exeDir, ".portable");
+  const envOverride = process.env.TERMIX_DATA_DIR;
+
+  let portableDataDir = null;
+  if (envOverride) {
+    portableDataDir = envOverride;
+  } else if (app.isPackaged && fs.existsSync(markerPath)) {
+    portableDataDir = path.join(exeDir, "data");
+  }
+
+  if (portableDataDir) {
+    try {
+      if (!fs.existsSync(portableDataDir)) {
+        fs.mkdirSync(portableDataDir, { recursive: true });
+      }
+      app.setPath("userData", portableDataDir);
+    } catch {
+      // Fall back to default userData if we can't create the directory.
+    }
+  }
+})();
+
 const logFile = path.join(app.getPath("userData"), "termix-main.log");
 const electronAuthCookiesPath = path.join(
   app.getPath("userData"),
@@ -476,6 +502,11 @@ if (process.platform === "linux") {
   app.commandLine.appendSwitch("--ozone-platform-hint=auto");
 
   app.commandLine.appendSwitch("--enable-features=VaapiVideoDecoder");
+
+  // Fix click-coordinate misalignment with fractional display scaling on KDE/Wayland.
+  // Chromium's hit-testing uses unscaled coords while the compositor scales visually,
+  // so forcing scale factor 1 keeps them in sync. See: https://github.com/brave/brave-browser/issues/50028
+  app.commandLine.appendSwitch("--force-device-scale-factor", "1");
 }
 
 if (process.platform === "win32") {

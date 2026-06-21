@@ -57,9 +57,35 @@ import type { SSHHostData } from "@/types/index";
 import { FolderIconEl } from "@/components/folder-style";
 import { copyToClipboard } from "@/lib/clipboard";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
+import {
+  useStatusColorScheme,
+  getStatusClasses,
+} from "@/hooks/use-status-color-scheme";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
 
 export function isFolder(item: Host | HostFolder): item is HostFolder {
   return "children" in item;
+}
+
+function statusCheckEnabled(host: Host): boolean {
+  return host.statsConfig?.statusCheckEnabled !== false;
+}
+
+function buildStatusTooltip(host: Host, online: boolean): string {
+  const statusLabel = online ? "Online" : "Offline";
+  if (!statusCheckEnabled(host)) return "Monitoring disabled";
+  const protocols: string[] = [];
+  if (host.enableSsh) protocols.push("SSH");
+  if (host.enableRdp) protocols.push("RDP");
+  if (host.enableVnc) protocols.push("VNC");
+  if (host.enableTelnet) protocols.push("Telnet");
+  if (protocols.length === 0) return statusLabel;
+  return `${protocols.join(", ")}: ${statusLabel}`;
 }
 
 function getSshActions(
@@ -273,6 +299,10 @@ export function HostItem({
     const v = localStorage.getItem("showHostTags");
     return v !== null ? v === "true" : true;
   });
+  const [compactHostView, setCompactHostView] = useState(
+    () => localStorage.getItem("compactHostView") === "true",
+  );
+  const statusScheme = useStatusColorScheme();
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const shouldUseClickTray = trayOnClick || isTouchOnly;
@@ -322,7 +352,520 @@ export function HostItem({
     };
   }, []);
 
+  useEffect(() => {
+    const handler = () =>
+      setCompactHostView(localStorage.getItem("compactHostView") === "true");
+    window.addEventListener("storage", handler);
+    window.addEventListener("compactHostViewChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("compactHostViewChanged", handler);
+    };
+  }, []);
+
   if (query && !hostMatchesQuery(host, query)) return null;
+
+  if (compactHostView) {
+    return (
+      <div
+        draggable={!selectionMode && !isTouchOnly}
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          onDragStart?.();
+        }}
+        onDragEnd={() => onDragEnd?.()}
+        className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/40 ${
+          selected
+            ? "bg-accent-brand/5"
+            : stripeIndex % 2 === 1
+              ? "bg-muted/20"
+              : ""
+        } ${isMenuOpen ? "bg-muted/40" : ""}`}
+        onClick={(e) => {
+          if (selectionMode) {
+            onToggleSelect?.();
+            return;
+          }
+          if (isTouchOnly) {
+            e.stopPropagation();
+            const actionCount = getSshActions(host).length;
+            const otherProtocols = [
+              host.enableRdp,
+              host.enableVnc,
+              host.enableTelnet,
+            ].filter(Boolean).length;
+            if (actionCount + otherProtocols <= 1) {
+              if (host.enableSsh) onOpenTab("terminal");
+              else if (host.enableRdp) onOpenTab("rdp");
+              else if (host.enableVnc) onOpenTab("vnc");
+              else if (host.enableTelnet) onOpenTab("telnet");
+              else onOpenTab("terminal");
+            } else {
+              onTrayOpenChange?.(!isTrayOpen);
+            }
+            return;
+          }
+          if (host.enableSsh) onOpenTab("terminal");
+          else if (host.enableRdp) onOpenTab("rdp");
+          else if (host.enableVnc) onOpenTab("vnc");
+          else if (host.enableTelnet) onOpenTab("telnet");
+          else onOpenTab("terminal");
+        }}
+      >
+        <div
+          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe")}`}
+        />
+        <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 min-w-0 px-2.5 py-1">
+            {selectionMode && (
+              <div
+                className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+              >
+                {selected && <Check className="size-2 text-background" />}
+              </div>
+            )}
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger className="flex items-center">
+                  <span
+                    className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+                  />
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {buildStatusTooltip(host, host.online)}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <span className="text-[13px] font-medium truncate text-foreground leading-none">
+              {host.name}
+            </span>
+            {!selectionMode && shouldUseClickTray && (
+              <button
+                title={
+                  isTrayOpen
+                    ? t("hosts.collapseActions")
+                    : t("hosts.expandActions")
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTrayOpenChange?.(!isTrayOpen);
+                }}
+                className="ml-auto flex items-center justify-center size-5 rounded text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted-foreground/10 transition-colors shrink-0"
+              >
+                <ChevronRight
+                  className={`size-3 transition-transform duration-150 ${isTrayOpen ? "rotate-90" : ""}`}
+                />
+              </button>
+            )}
+            {!selectionMode && !shouldUseClickTray && (
+              <span className="text-[11px] text-muted-foreground/45 truncate leading-none ml-auto shrink-0 group-hover:hidden">
+                {host.ip}
+              </span>
+            )}
+            {selectionMode && (
+              <span className="text-[11px] text-muted-foreground/45 truncate leading-none ml-auto shrink-0">
+                {host.ip}
+              </span>
+            )}
+          </div>
+
+          {/* Click-tray mode: always-visible action buttons */}
+          {shouldUseClickTray && !selectionMode && (
+            <div
+              className={`overflow-hidden transition-all duration-150 ease-out ${isTrayOpen || isMenuOpen ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"}`}
+            >
+              <div className="flex items-center flex-wrap gap-1 px-2 pb-1">
+                {getSshActions(host).map(({ type, icon: Icon, label }) => (
+                  <button
+                    key={type}
+                    title={label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab(type);
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Icon className="size-3.5" />
+                  </button>
+                ))}
+                {host.enableSsh &&
+                  (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+                  getSshActions(host).length > 0 && (
+                    <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                  )}
+                {host.enableRdp && (
+                  <button
+                    title="RDP"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("rdp");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Monitor className="size-3.5" />
+                  </button>
+                )}
+                {host.enableVnc && (
+                  <button
+                    title="VNC"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("vnc");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MousePointerClick className="size-3.5" />
+                  </button>
+                )}
+                {host.enableTelnet && (
+                  <button
+                    title="Telnet"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("telnet");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MessagesSquare className="size-3.5" />
+                  </button>
+                )}
+                {host.macAddress && (
+                  <button
+                    title={t("hosts.wakeOnLanAction")}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await wakeOnLan(host.id);
+                        toast.success(
+                          t("hosts.wakeOnLanSuccess", { name: host.name }),
+                        );
+                      } catch {
+                        toast.error(t("hosts.wakeOnLanError"));
+                      }
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Zap className="size-3.5" />
+                  </button>
+                )}
+                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                {showPasswordCopy && (
+                  <button
+                    title={t("nav.copyPassword")}
+                    onClick={(e) => handleCopyPassword(e, "password")}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Key className="size-3.5" />
+                  </button>
+                )}
+                {showSudoPasswordCopy && (
+                  <button
+                    title={t("nav.copySudoPassword")}
+                    onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <KeyRound className="size-3.5" />
+                  </button>
+                )}
+                {onEditHost && (
+                  <button
+                    title="Edit Host"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditHost();
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                )}
+                {onShareHost && (
+                  <button
+                    title={t("hosts.shareHost")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShareHost();
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Share2 className="size-3.5" />
+                  </button>
+                )}
+                {host.enableProxmox && onProxmoxDiscover && (
+                  <button
+                    title={t("hosts.proxmoxDiscoverAction")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onProxmoxDiscover();
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Boxes className="size-3.5" />
+                  </button>
+                )}
+                <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      title="More options"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                    >
+                      <MoreHorizontal className="size-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="text-xs">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        writeClipboardText(`${host.username}@${host.ip}`);
+                        toast.success(t("hosts.copiedToClipboard"));
+                      }}
+                    >
+                      <Copy className="size-3.5 mr-2" />
+                      {t("hosts.copyAddress")}
+                    </DropdownMenuItem>
+                    {showPasswordCopy && (
+                      <DropdownMenuItem
+                        onClick={(e) => handleCopyPassword(e, "password")}
+                      >
+                        <Key className="size-3.5 mr-2" />
+                        {t("nav.copyPassword")}
+                      </DropdownMenuItem>
+                    )}
+                    {showSudoPasswordCopy && (
+                      <DropdownMenuItem
+                        onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                      >
+                        <KeyRound className="size-3.5 mr-2" />
+                        {t("nav.copySudoPassword")}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDuplicate();
+                      }}
+                    >
+                      <CopyPlus className="size-3.5 mr-2" />
+                      {t("hosts.cloneHostAction")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                    >
+                      <Trash2 className="size-3.5 mr-2" />
+                      {t("common.delete")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          )}
+
+          {/* Hover tray (non-click-tray mode) */}
+          {!shouldUseClickTray && !selectionMode && (
+            <div className="max-h-0 opacity-0 overflow-hidden transition-all duration-150 ease-out group-hover:max-h-[200px] group-hover:opacity-100">
+              <div className="flex items-center flex-wrap gap-1 px-2 pb-1">
+                {getSshActions(host).map(({ type, icon: Icon, label }) => (
+                  <button
+                    key={type}
+                    title={label}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab(type);
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Icon className="size-3.5" />
+                  </button>
+                ))}
+                {host.enableSsh &&
+                  (host.enableRdp || host.enableVnc || host.enableTelnet) &&
+                  getSshActions(host).length > 0 && (
+                    <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                  )}
+                {host.enableRdp && (
+                  <button
+                    title="RDP"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("rdp");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Monitor className="size-3.5" />
+                  </button>
+                )}
+                {host.enableVnc && (
+                  <button
+                    title="VNC"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("vnc");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MousePointerClick className="size-3.5" />
+                  </button>
+                )}
+                {host.enableTelnet && (
+                  <button
+                    title="Telnet"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenTab("telnet");
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <MessagesSquare className="size-3.5" />
+                  </button>
+                )}
+                {host.macAddress && (
+                  <button
+                    title={t("hosts.wakeOnLanAction")}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      try {
+                        await wakeOnLan(host.id);
+                        toast.success(
+                          t("hosts.wakeOnLanSuccess", { name: host.name }),
+                        );
+                      } catch {
+                        toast.error(t("hosts.wakeOnLanError"));
+                      }
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Zap className="size-3.5" />
+                  </button>
+                )}
+                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                {showPasswordCopy && (
+                  <button
+                    title={t("nav.copyPassword")}
+                    onClick={(e) => handleCopyPassword(e, "password")}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Key className="size-3.5" />
+                  </button>
+                )}
+                {showSudoPasswordCopy && (
+                  <button
+                    title={t("nav.copySudoPassword")}
+                    onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <KeyRound className="size-3.5" />
+                  </button>
+                )}
+                {onEditHost && (
+                  <button
+                    title="Edit Host"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditHost();
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Pencil className="size-3.5" />
+                  </button>
+                )}
+                {onShareHost && (
+                  <button
+                    title={t("hosts.shareHost")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShareHost();
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Share2 className="size-3.5" />
+                  </button>
+                )}
+                {host.enableProxmox && onProxmoxDiscover && (
+                  <button
+                    title={t("hosts.proxmoxDiscoverAction")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onProxmoxDiscover();
+                    }}
+                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Boxes className="size-3.5" />
+                  </button>
+                )}
+                <DropdownMenu open={isMenuOpen} onOpenChange={onMenuOpenChange}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      title="More options"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                    >
+                      <MoreHorizontal className="size-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="text-xs">
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        writeClipboardText(`${host.username}@${host.ip}`);
+                        toast.success(t("hosts.copiedToClipboard"));
+                      }}
+                    >
+                      <Copy className="size-3.5 mr-2" />
+                      {t("hosts.copyAddress")}
+                    </DropdownMenuItem>
+                    {showPasswordCopy && (
+                      <DropdownMenuItem
+                        onClick={(e) => handleCopyPassword(e, "password")}
+                      >
+                        <Key className="size-3.5 mr-2" />
+                        {t("nav.copyPassword")}
+                      </DropdownMenuItem>
+                    )}
+                    {showSudoPasswordCopy && (
+                      <DropdownMenuItem
+                        onClick={(e) => handleCopyPassword(e, "sudoPassword")}
+                      >
+                        <KeyRound className="size-3.5 mr-2" />
+                        {t("nav.copySudoPassword")}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDuplicate();
+                      }}
+                    >
+                      <CopyPlus className="size-3.5 mr-2" />
+                      {t("hosts.cloneHostAction")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                    >
+                      <Trash2 className="size-3.5 mr-2" />
+                      {t("common.delete")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -373,7 +916,7 @@ export function HostItem({
     >
       {/* Status stripe */}
       <div
-        className={`w-[3px] shrink-0 transition-colors ${host.online ? "bg-accent-brand" : "bg-transparent"}`}
+        className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe")}`}
       />
 
       <div className="flex flex-col flex-1 min-w-0 px-2.5 pt-2 pb-1.5 gap-1">
@@ -386,9 +929,18 @@ export function HostItem({
               {selected && <Check className="size-2 text-background" />}
             </div>
           )}
-          <span
-            className={`size-1.5 rounded-full shrink-0 ${host.online ? "bg-accent-brand" : "bg-muted-foreground/25"}`}
-          />
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger className="flex items-center">
+                <span
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+                />
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {buildStatusTooltip(host, host.online)}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <span className="text-[13px] font-medium truncate text-foreground leading-none">
             {host.name}
           </span>
@@ -1309,11 +1861,14 @@ export function SidebarTree({
         pin: host.pin ?? false,
         notes: host.notes,
         macAddress: host.macAddress,
-        authType: host.authType,
-        password: host.password ?? null,
-        key: host.key ?? null,
-        keyPassword: host.keyPassword ?? null,
-        keyType: host.keyType ?? null,
+        // Key material is never sent to the frontend, so a cloned key-auth
+        // host would have authType "key" with no key — unusable. Reset to
+        // password so the clone is in a connectable (editable) state.
+        authType: host.authType === "key" ? "password" : host.authType,
+        password: host.authType === "key" ? null : (host.password ?? null),
+        key: null,
+        keyPassword: null,
+        keyType: null,
         credentialId: host.credentialId ? Number(host.credentialId) : null,
         overrideCredentialUsername: host.overrideCredentialUsername ?? false,
         enableSsh: host.enableSsh,
@@ -1654,6 +2209,26 @@ export function SidebarTree({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <button
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+              disabled={selectedHostIds.size === 0}
+              onClick={() => {
+                const selectedHosts = allHosts.filter((h) =>
+                  selectedHostIds.has(String(h.id)),
+                );
+                for (const host of selectedHosts) {
+                  if (host.enableSsh) onOpenTab(host, "terminal");
+                  else if (host.enableRdp) onOpenTab(host, "rdp");
+                  else if (host.enableVnc) onOpenTab(host, "vnc");
+                  else if (host.enableTelnet) onOpenTab(host, "telnet");
+                }
+                setSelectedHostIds(new Set());
+                onToggleSelectionMode();
+              }}
+            >
+              <Terminal className="size-3" />
+              {t("hosts.connectSelected")}
+            </button>
             <button
               className="text-[10px] text-destructive hover:text-destructive px-1.5 py-1 hover:bg-destructive/10 rounded transition-colors disabled:opacity-40"
               disabled={selectedHostIds.size === 0}

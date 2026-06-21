@@ -20,7 +20,10 @@ export function isValidMac(mac: string): boolean {
   return MAC_REGEX.test(mac);
 }
 
-export function sendWakeOnLan(mac: string): Promise<void> {
+export function sendWakeOnLan(
+  mac: string,
+  broadcastAddress = "255.255.255.255",
+): Promise<void> {
   return new Promise((resolve, reject) => {
     if (!isValidMac(mac)) {
       return reject(new Error("Invalid MAC address"));
@@ -36,7 +39,7 @@ export function sendWakeOnLan(mac: string): Promise<void> {
 
     socket.bind(() => {
       socket.setBroadcast(true);
-      socket.send(packet, 0, packet.length, 9, "255.255.255.255", (err) => {
+      socket.send(packet, 0, packet.length, 9, broadcastAddress, (err) => {
         socket.close();
         if (err) reject(err);
         else resolve();

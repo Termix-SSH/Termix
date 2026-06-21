@@ -4,6 +4,7 @@ import {
   assignRoleToUser,
   linkOIDCToPasswordAccount,
   removeRoleFromUser,
+  unlinkOIDCFromPasswordAccount,
 } from "@/main-axios";
 import type { Role, UserRole } from "@/main-axios";
 import { Button } from "@/components/button";
@@ -386,6 +387,80 @@ export function AdminEditUserDialog({
             </div>
           </div>
         )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type UnlinkAccountDialogProps = {
+  open: boolean;
+  onOpenChange: Dispatch<SetStateAction<boolean>>;
+  unlinkAccountTarget: { id: string; username: string } | null;
+  onSuccess: (userId: string) => void;
+};
+
+export function AdminUnlinkAccountDialog({
+  open,
+  onOpenChange,
+  unlinkAccountTarget,
+  onSuccess,
+}: UnlinkAccountDialogProps) {
+  const { t } = useTranslation();
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!unlinkAccountTarget) return;
+    setSubmitting(true);
+    try {
+      await unlinkOIDCFromPasswordAccount(unlinkAccountTarget.id);
+      toast.success(t("admin.unlinkAccountSuccess"));
+      onSuccess(unlinkAccountTarget.id);
+      onOpenChange(false);
+    } catch (error: unknown) {
+      toast.error(apiErrorMessage(error, t("admin.unlinkAccountFailed")));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-bold">
+            {t("admin.unlinkAccountTitle")}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            {t("admin.unlinkAccountDesc", {
+              username: unlinkAccountTarget?.username,
+            })}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-start gap-2.5 border border-destructive/30 bg-destructive/5 px-3 py-2.5">
+          <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
+          <span className="text-xs text-destructive">
+            {t("admin.unlinkAccountWarning")}
+          </span>
+        </div>
+        <div className="flex justify-end gap-2 mt-2">
+          <Button
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="outline"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={submitting || !unlinkAccountTarget}
+            onClick={handleSubmit}
+          >
+            {submitting
+              ? t("admin.unlinkAccountInProgress")
+              : t("admin.unlinkAccount")}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

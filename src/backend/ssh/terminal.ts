@@ -5,7 +5,7 @@ import ssh2Pkg, {
   type PseudoTtyOptions,
 } from "ssh2";
 const { Client, utils: ssh2Utils } = ssh2Pkg;
-import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
+import { buildSSHAlgorithms } from "../utils/ssh-algorithms.js";
 import axios from "axios";
 import { getDb } from "../database/db/index.js";
 import { hosts } from "../database/db/schema.js";
@@ -30,6 +30,7 @@ import {
   waitForTmuxSession,
 } from "./tmux-helper.js";
 import { MemoryAgent, performPortKnocking } from "./terminal-auth-helpers.js";
+import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -187,9 +188,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
   let isConnecting = false;
   let isConnected = false;
   let isCleaningUp = false;
-  let cwdPending = false;
-  let cwdBuffer = "";
   let isShellInitializing = false;
+  let isDuplicateConnDiscarded = false;
   let warpgateAuthPromptSent = false;
   let warpgateAuthTimeout: NodeJS.Timeout | null = null;
   let isAwaitingAuthCredentials = false;
@@ -237,7 +237,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (currentSessionId) {
       const session = sessionManager.getSession(currentSessionId);
       if (session?.isConnected) {
-        sessionManager.detachWs(currentSessionId);
+        // Only detach if this WS is still the one attached to the session.
+        // If a refresh reconnected and reattached a new WS before this close
+        // event fired, we must not clobber that new attachment.
+        if (session.attachedWs === ws || session.attachedWs === null) {
+          sessionManager.detachWs(currentSessionId);
+        }
       } else {
         sessionManager.destroySession(currentSessionId);
         currentSessionId = null;
@@ -446,15 +451,80 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
 
       case "get_cwd": {
-        const activeStream =
-          sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
-        if (!activeStream) {
+        const activeConn =
+          sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
+        if (!activeConn) {
           ws.send(JSON.stringify({ type: "cwd", path: "/" }));
           break;
         }
-        cwdPending = true;
-        cwdBuffer = "";
-        activeStream.write('\x15a=TERMIX_CWD; echo "$a:$(pwd)"\r');
+        activeConn.exec("pwd", (err, execStream) => {
+          if (err) {
+            ws.send(JSON.stringify({ type: "cwd", path: "/" }));
+            return;
+          }
+          let stdout = "";
+          execStream.on("data", (chunk: Buffer) => {
+            stdout += chunk.toString("utf-8");
+          });
+          execStream.stderr.on("data", () => {});
+          execStream.on("close", () => {
+            const cwd = stdout.trim() || "/";
+            const attachedWs =
+              sessionManager.getSession(currentSessionId)?.attachedWs ?? ws;
+            if (attachedWs.readyState === WebSocket.OPEN) {
+              attachedWs.send(JSON.stringify({ type: "cwd", path: cwd }));
+            }
+          });
+        });
+        break;
+      }
+
+      case "open_file_in_editor": {
+        const { path: requestedPath } = data as { path: string };
+        const activeConn =
+          sessionManager.getSession(currentSessionId)?.sshConn ?? sshConn;
+        if (!activeConn || !requestedPath) {
+          ws.send(
+            JSON.stringify({
+              type: "open_file_in_editor",
+              path: requestedPath || "/",
+            }),
+          );
+          break;
+        }
+        const escapedPath = requestedPath.replace(/'/g, "'\\''");
+        activeConn.exec(
+          `realpath '${escapedPath}' 2>/dev/null || echo '${escapedPath}'`,
+          (err, execStream) => {
+            if (err) {
+              ws.send(
+                JSON.stringify({
+                  type: "open_file_in_editor",
+                  path: requestedPath,
+                }),
+              );
+              return;
+            }
+            let stdout = "";
+            execStream.on("data", (chunk: Buffer) => {
+              stdout += chunk.toString("utf-8");
+            });
+            execStream.stderr.on("data", () => {});
+            execStream.on("close", () => {
+              const resolvedPath = stdout.trim() || requestedPath;
+              const attachedWs =
+                sessionManager.getSession(currentSessionId)?.attachedWs ?? ws;
+              if (attachedWs.readyState === WebSocket.OPEN) {
+                attachedWs.send(
+                  JSON.stringify({
+                    type: "open_file_in_editor",
+                    path: resolvedPath,
+                  }),
+                );
+              }
+            });
+          },
+        );
         break;
       }
 
@@ -990,7 +1060,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
           }
 
-          if (!hostConfig.useSocks5 && resolvedHostData.useSocks5) {
+          if (resolvedHostData.useSocks5) {
             hostConfig.useSocks5 = resolvedHostData.useSocks5;
             hostConfig.socks5Host = resolvedHostData.socks5Host;
             hostConfig.socks5Port = resolvedHostData.socks5Port;
@@ -1134,27 +1204,43 @@ wss.on("connection", async (ws: WebSocket, req) => {
         !existingSession.sshStream.destroyed &&
         existingSession.sshConn !== sshConn
       ) {
+        const reusedSessionId = currentSessionId;
         sshLogger.info(
           "Reusing existing live session after duplicate connectToHost, closing new SSH conn",
           {
             operation: "terminal_reuse_existing_session",
-            sessionId: currentSessionId,
+            sessionId: reusedSessionId,
             tabInstanceId,
             userId,
           },
         );
+        // Null out currentSessionId before ending the duplicate connection so
+        // the sshConn "close" handler does not destroy the reused session.
+        // Set isDuplicateConnDiscarded so the close handler does not send a
+        // "disconnected" message to the new WS that is now attached to the live session.
+        // Null out currentSessionId before ending the duplicate connection so
+        // the sshConn "close" handler does not destroy the reused session.
+        // Set isDuplicateConnDiscarded so the close handler exits without
+        // sending a "disconnected" message to the new WS.
+        currentSessionId = null;
+        isDuplicateConnDiscarded = true;
+        clearTimeout(connectionTimeout);
         try {
           sshConn?.end();
         } catch {
           /* ignore */
         }
         sshConn = null;
+        sshStream = null;
 
+        // Point this WS handler's closure at the live session so the input
+        // handler can forward keystrokes via currentSessionId.
+        currentSessionId = reusedSessionId;
         sshStream = existingSession.sshStream;
         sshConn = existingSession.sshConn;
         isConnecting = false;
         isConnected = true;
-        sessionManager.attachWs(currentSessionId, userId, ws, tabInstanceId);
+        sessionManager.attachWs(reusedSessionId, userId, ws, tabInstanceId);
 
         const buffered = sessionManager.getBuffer(existingSession);
         if (buffered) {
@@ -1163,20 +1249,18 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "sessionCreated",
-            sessionId: currentSessionId,
+            sessionId: reusedSessionId,
           }),
         );
         ws.send(
           JSON.stringify({
             type: "sessionAttached",
-            sessionId: currentSessionId,
+            sessionId: reusedSessionId,
           }),
         );
         ws.send(
           JSON.stringify({ type: "connected", message: "Session reattached" }),
         );
-
-        cleanupAuthState(connectionTimeout);
         return;
       }
 
@@ -1350,44 +1434,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           const boundSessionId = currentSessionId;
 
-          const CWD_SENTINEL = "TERMIX_CWD:";
-
           stream.on("data", (data: Buffer) => {
             try {
-              let utf8String = data.toString("utf-8");
-
-              if (cwdPending) {
-                cwdBuffer += utf8String;
-                const sentinelIdx = cwdBuffer.indexOf(CWD_SENTINEL);
-                if (sentinelIdx !== -1) {
-                  const afterSentinel = cwdBuffer.slice(
-                    sentinelIdx + CWD_SENTINEL.length,
-                  );
-                  const newlineIdx = afterSentinel.search(/[\r\n]/);
-                  if (newlineIdx !== -1) {
-                    const cwd =
-                      afterSentinel.slice(0, newlineIdx).trim() || "/";
-                    cwdPending = false;
-                    // Strip the sentinel line from output sent to terminal
-                    const beforeSentinel = cwdBuffer.slice(0, sentinelIdx);
-                    const afterNewline = afterSentinel.slice(newlineIdx);
-                    utf8String = beforeSentinel + afterNewline;
-                    cwdBuffer = "";
-                    const attachedWs =
-                      sessionManager.getSession(boundSessionId)?.attachedWs ??
-                      ws;
-                    if (attachedWs.readyState === WebSocket.OPEN) {
-                      attachedWs.send(
-                        JSON.stringify({ type: "cwd", path: cwd }),
-                      );
-                    }
-                  } else {
-                    return;
-                  }
-                } else {
-                  return;
-                }
-              }
+              const utf8String = data.toString("utf-8");
 
               if (!utf8String) return;
 
@@ -1475,7 +1524,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const runPostShellCommands = (delay: number) => {
             setTimeout(() => {
               if (initialPath && initialPath.trim() !== "") {
-                const cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}"\r`;
+                let cdCommand: string;
+                if (isWindowsSftpPath(initialPath)) {
+                  const winPath = sftpPathToLocalPath(initialPath);
+                  const escaped = winPath.replace(/"/g, '""');
+                  cdCommand = `cd "${escaped}"\r`;
+                } else {
+                  cdCommand = `cd "${initialPath.replace(/"/g, '\\"')}"\r`;
+                }
                 stream.write(cdCommand);
               }
               if (executeCommand && executeCommand.trim() !== "") {
@@ -1543,27 +1599,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
                     }),
                   );
                   runPostShellCommands(0);
-                } else if (detection.sessions.length === 1) {
-                  attachOrCreateTmuxSession(stream, detection.sessions[0].name);
-                  const sessionName = detection.sessions[0].name;
-                  const session = sessionManager.getSession(boundSessionId);
-                  if (session) {
-                    session.tmuxSessionName = sessionName;
-                  }
-                  sshLogger.info("Auto-attached to existing tmux session", {
-                    operation: "tmux_auto_attach",
-                    sessionName,
-                    hostId: id,
-                  });
-                  ws.send(
-                    JSON.stringify({
-                      type: "tmux_session_attached",
-                      sessionName,
-                    }),
-                  );
-                  // Reattaching to existing session -- don't re-run
-                  // initialPath/executeCommand since the session already
-                  // has its own state
                 } else {
                   sshLogger.info(
                     "Multiple tmux sessions found, sending list to frontend",
@@ -1910,6 +1945,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
         hostId: id,
       });
 
+      if (isDuplicateConnDiscarded) {
+        cleanupAuthState(connectionTimeout);
+        return;
+      }
+
       if (isAwaitingAuthCredentials) {
         if (currentSessionId) {
           sessionManager.destroySession(currentSessionId);
@@ -1991,6 +2031,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           resolvedCredentials as unknown as Parameters<
             typeof sshAuthManager.handleKeyboardInteractive
           >[5],
+          hostConfig,
         );
 
         isKeyboardInteractive = sshAuthManager.context.isKeyboardInteractive;
@@ -2008,19 +2049,24 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
     const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
 
+    // Pre-fetch the stored host key before connect so the verifier callback
+    // runs synchronously during SSH key exchange, avoiding LoginGraceTime
+    // expiry on slow connections (especially through jump host tunnels).
+    const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(id);
+
     const connectConfig: Record<string, unknown> = {
       host: ip,
       port,
       username,
-      tryKeyboard:
-        resolvedCredentials.authType !== "none" &&
-        resolvedCredentials.authType !== "tailscale",
+      tryKeyboard: resolvedCredentials.authType !== "tailscale",
       keepaliveInterval:
         typeof hostKeepaliveInterval === "number"
-          ? hostKeepaliveInterval * 1000
+          ? Math.max(5000, hostKeepaliveInterval * 1000)
           : 30000,
       keepaliveCountMax:
-        typeof hostKeepaliveCountMax === "number" ? hostKeepaliveCountMax : 3,
+        typeof hostKeepaliveCountMax === "number"
+          ? Math.max(1, hostKeepaliveCountMax)
+          : 5,
       readyTimeout: 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
@@ -2032,6 +2078,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws,
         userId,
         false,
+        preloadedHostData,
       ),
       env: {
         TERM: "xterm-256color",
@@ -2045,51 +2092,16 @@ wss.on("connection", async (ws: WebSocket, req) => {
         LC_COLLATE: "en_US.UTF-8",
         COLORTERM: "truecolor",
       },
-      algorithms: {
-        kex: [
-          "curve25519-sha256",
-          "curve25519-sha256@libssh.org",
-          "ecdh-sha2-nistp521",
-          "ecdh-sha2-nistp384",
-          "ecdh-sha2-nistp256",
-          "diffie-hellman-group-exchange-sha256",
-          "diffie-hellman-group18-sha512",
-          "diffie-hellman-group17-sha512",
-          "diffie-hellman-group16-sha512",
-          "diffie-hellman-group15-sha512",
-          "diffie-hellman-group14-sha256",
-          "diffie-hellman-group14-sha1",
-          "diffie-hellman-group-exchange-sha1",
-          "diffie-hellman-group1-sha1",
-        ],
-        serverHostKey: [
-          "ssh-ed25519",
-          "ecdsa-sha2-nistp521",
-          "ecdsa-sha2-nistp384",
-          "ecdsa-sha2-nistp256",
-          "rsa-sha2-512",
-          "rsa-sha2-256",
-          "ssh-rsa",
-          "ssh-dss",
-        ],
-        cipher: SSH_ALGORITHMS.cipher,
-        hmac: [
-          "hmac-sha2-512-etm@openssh.com",
-          "hmac-sha2-256-etm@openssh.com",
-          "hmac-sha2-512",
-          "hmac-sha2-256",
-          "hmac-sha1",
-          "hmac-md5",
-        ],
-        compress: ["none", "zlib@openssh.com", "zlib"],
-      },
+      algorithms: buildSSHAlgorithms(
+        hostConfig.terminalConfig?.allowLegacyAlgorithms !== false,
+      ),
     };
 
     if (
       resolvedCredentials.authType === "none" ||
       resolvedCredentials.authType === "tailscale"
     ) {
-      // Tailscale SSH and "none" auth: daemon handles authorization, no credentials needed
+      // Tailscale SSH and "none": no static credentials needed
     } else if (resolvedCredentials.authType === "password") {
       if (!resolvedCredentials.password) {
         sshLogger.error(

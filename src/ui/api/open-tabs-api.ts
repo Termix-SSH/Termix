@@ -94,6 +94,8 @@ export interface UserPreferences {
   disableUpdateCheck?: boolean | null;
   confirmTabClose?: boolean | null;
   hiddenRailTabs?: string | null;
+  compactHostView?: boolean | null;
+  statusColorScheme?: string | null;
 }
 
 export async function getUserPreferences(): Promise<UserPreferences> {

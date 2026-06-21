@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/400-italic.css";
+@import "@fontsource/jetbrains-mono/700.css";
+@import "@fontsource/jetbrains-mono/700-italic.css";
+@import "@fontsource/fira-code/400.css";
+@import "@fontsource/fira-code/700.css";
+@import "@fontsource/source-code-pro/400.css";
+@import "@fontsource/source-code-pro/400-italic.css";
+@import "@fontsource/source-code-pro/700.css";
+@import "@fontsource/source-code-pro/700-italic.css";
 
 @font-face {
   font-family: "Caskaydia Cove Nerd Font Mono";
@@ -242,38 +252,38 @@
 .nord {
   --background: #2e3440;
   --foreground: #eceff4;
-  --card: #272c36;
+  --card: #303642;
   --card-foreground: #eceff4;
-  --popover: #272c36;
+  --popover: #303642;
   --popover-foreground: #eceff4;
   --primary: #eceff4;
   --primary-foreground: #2e3440;
   --secondary: #3b4252;
   --secondary-foreground: #eceff4;
-  --surface: #272c36;
-  --surface-dim: #22262e;
+  --surface: #303642;
+  --surface-dim: #262b35;
   --muted: #3b4252;
-  --muted-foreground: #4c566a;
+  --muted-foreground: #8899b0;
   --accent: #3b4252;
   --accent-foreground: #eceff4;
   --destructive: #bf616a;
-  --border: rgba(76, 86, 106, 0.35);
-  --input: rgba(76, 86, 106, 0.3);
-  --ring: #4c566a;
+  --border: rgba(136, 192, 208, 0.2);
+  --input: rgba(136, 192, 208, 0.15);
+  --ring: #88c0d0;
   --chart-1: #bf616a;
   --chart-2: #88c0d0;
   --chart-3: #a3be8c;
   --chart-4: #ebcb8b;
   --chart-5: #b48ead;
   --radius: 0.625rem;
-  --sidebar: #272c36;
+  --sidebar: #282d39;
   --sidebar-foreground: #eceff4;
   --sidebar-primary: #88c0d0;
   --sidebar-primary-foreground: #2e3440;
   --sidebar-accent: #3b4252;
   --sidebar-accent-foreground: #eceff4;
-  --sidebar-border: rgba(76, 86, 106, 0.35);
-  --sidebar-ring: #4c566a;
+  --sidebar-border: rgba(136, 192, 208, 0.2);
+  --sidebar-ring: #88c0d0;
 }
 
 /* ── Solarized Dark ─────────────────────────────────────────── */

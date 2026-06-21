@@ -181,3 +181,52 @@ export async function reorderSnippets(
     throw handleApiError(error, "reorder snippets");
   }
 }
+
+export interface SnippetExportData {
+  snippets: Array<{
+    name: string;
+    content: string;
+    description?: string | null;
+    folder?: string | null;
+    order?: number;
+    hostFilter?: string | null;
+  }>;
+  folders: Array<{
+    name: string;
+    color?: string | null;
+    icon?: string | null;
+  }>;
+}
+
+export async function exportSnippets(): Promise<SnippetExportData> {
+  try {
+    const response = await authApi.get("/snippets/export");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "export snippets");
+  }
+}
+
+export async function importSnippets(
+  data: SnippetExportData,
+  overwrite: boolean,
+): Promise<{
+  success: boolean;
+  snippetsImported: number;
+  snippetsSkipped: number;
+  snippetsUpdated: number;
+  foldersImported: number;
+  foldersSkipped: number;
+  failed: number;
+  errors: string[];
+}> {
+  try {
+    const response = await authApi.post("/snippets/bulk-import", {
+      ...data,
+      overwrite,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "import snippets");
+  }
+}

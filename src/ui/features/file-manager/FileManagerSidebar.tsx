@@ -173,9 +173,11 @@ export function FileManagerSidebar({
       try {
         const response = await listSSHFiles(sshSessionId, "/");
         const rootFiles = (response.files || []) as DirectoryItemData[];
-        const rootFolders = rootFiles.filter(
-          (item: DirectoryItemData) => item.type === "directory",
-        );
+        const rootFolders = rootFiles
+          .filter((item: DirectoryItemData) => item.type === "directory")
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          );
 
         const rootTreeItems = rootFolders.map((folder: DirectoryItemData) => ({
           id: `folder-${folder.name}`,
@@ -232,9 +234,11 @@ export function FileManagerSidebar({
       try {
         const subResponse = await listSSHFiles(sshSessionId, folderPath);
         const subFiles = (subResponse.files || []) as DirectoryItemData[];
-        const subFolders = subFiles.filter(
-          (item: DirectoryItemData) => item.type === "directory",
-        );
+        const subFolders = subFiles
+          .filter((item: DirectoryItemData) => item.type === "directory")
+          .sort((a, b) =>
+            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+          );
 
         const subTreeItems = subFolders.map((folder: DirectoryItemData) => ({
           id: `folder-${folder.path.replace(/\//g, "-")}`,

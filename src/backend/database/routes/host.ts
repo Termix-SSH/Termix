@@ -144,6 +144,7 @@ router.post(
       password,
       authMethod,
       authType,
+      useWarpgate,
       credentialId,
       key,
       keyPassword,
@@ -153,6 +154,7 @@ router.post(
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      scpLegacy,
       enableDocker,
       enableProxmox,
       enableTmuxMonitor,
@@ -184,6 +186,7 @@ router.post(
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
+      wolBroadcastAddress,
       enableSsh,
       enableRdp,
       enableVnc,
@@ -243,6 +246,7 @@ router.post(
       port,
       username: effectiveUsername,
       authType: effectiveAuthType,
+      useWarpgate: useWarpgate ? 1 : 0,
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
@@ -256,6 +260,7 @@ router.post(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      scpLegacy: scpLegacy ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
       enableProxmox: enableProxmox ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
@@ -301,6 +306,7 @@ router.post(
         ? JSON.stringify(socks5ProxyChain)
         : null,
       macAddress: macAddress || null,
+      wolBroadcastAddress: wolBroadcastAddress || null,
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
@@ -713,6 +719,7 @@ router.put(
       password,
       authMethod,
       authType,
+      useWarpgate,
       credentialId,
       key,
       keyPassword,
@@ -722,6 +729,7 @@ router.put(
       enableTerminal,
       enableTunnel,
       enableFileManager,
+      scpLegacy,
       enableDocker,
       enableProxmox,
       enableTmuxMonitor,
@@ -753,6 +761,7 @@ router.put(
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
+      wolBroadcastAddress,
       enableSsh,
       enableRdp,
       enableVnc,
@@ -809,6 +818,7 @@ router.put(
       port,
       username: effectiveUsername,
       authType: effectiveAuthType,
+      useWarpgate: useWarpgate ? 1 : 0,
       credentialId: credentialId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
@@ -822,6 +832,7 @@ router.put(
         ? JSON.stringify(quickActions)
         : null,
       enableFileManager: enableFileManager ? 1 : 0,
+      scpLegacy: scpLegacy ? 1 : 0,
       enableDocker: enableDocker ? 1 : 0,
       enableProxmox: enableProxmox ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
@@ -867,6 +878,7 @@ router.put(
         ? JSON.stringify(socks5ProxyChain)
         : null,
       macAddress: macAddress || null,
+      wolBroadcastAddress: wolBroadcastAddress || null,
       portKnockSequence: portKnockSequence
         ? JSON.stringify(portKnockSequence)
         : null,
@@ -952,10 +964,9 @@ router.put(
       sshDataObj.keyType = null;
     }
 
-    if (rdpPassword !== undefined) sshDataObj.rdpPassword = rdpPassword || null;
-    if (vncPassword !== undefined) sshDataObj.vncPassword = vncPassword || null;
-    if (telnetPassword !== undefined)
-      sshDataObj.telnetPassword = telnetPassword || null;
+    if (rdpPassword) sshDataObj.rdpPassword = rdpPassword;
+    if (vncPassword) sshDataObj.vncPassword = vncPassword;
+    if (telnetPassword) sshDataObj.telnetPassword = telnetPassword;
 
     try {
       const accessInfo = await permissionManager.canAccessHost(
@@ -988,6 +999,8 @@ router.put(
         .select({
           userId: hosts.userId,
           credentialId: hosts.credentialId,
+          rdpCredentialId: hosts.rdpCredentialId,
+          vncCredentialId: hosts.vncCredentialId,
           authType: hosts.authType,
         })
         .from(hosts)
@@ -1025,11 +1038,26 @@ router.put(
         });
       }
 
-      if (sshDataObj.credentialId !== undefined) {
-        if (
-          hostRecord[0].credentialId !== null &&
-          sshDataObj.credentialId === null
-        ) {
+      {
+        const newCredId =
+          sshDataObj.credentialId !== undefined
+            ? sshDataObj.credentialId
+            : hostRecord[0].credentialId;
+        const newRdpCredId =
+          sshDataObj.rdpCredentialId !== undefined
+            ? sshDataObj.rdpCredentialId
+            : hostRecord[0].rdpCredentialId;
+        const newVncCredId =
+          sshDataObj.vncCredentialId !== undefined
+            ? sshDataObj.vncCredentialId
+            : hostRecord[0].vncCredentialId;
+        const hadCredential =
+          hostRecord[0].credentialId !== null ||
+          hostRecord[0].rdpCredentialId !== null ||
+          hostRecord[0].vncCredentialId !== null;
+        const willHaveCredential =
+          newCredId !== null || newRdpCredId !== null || newVncCredId !== null;
+        if (hadCredential && !willHaveCredential) {
           await db
             .delete(hostAccess)
             .where(eq(hostAccess.hostId, Number(hostId)));
@@ -1169,6 +1197,7 @@ router.get(
           tunnelConnections: hosts.tunnelConnections,
           jumpHosts: hosts.jumpHosts,
           enableFileManager: hosts.enableFileManager,
+          scpLegacy: hosts.scpLegacy,
           defaultPath: hosts.defaultPath,
           autostartPassword: hosts.autostartPassword,
           autostartKey: hosts.autostartKey,
@@ -1203,6 +1232,7 @@ router.get(
           ignoreCert: hosts.ignoreCert,
           guacamoleConfig: hosts.guacamoleConfig,
           macAddress: hosts.macAddress,
+          wolBroadcastAddress: hosts.wolBroadcastAddress,
           dockerConfig: hosts.dockerConfig,
           proxmoxConfig: hosts.proxmoxConfig,
           enableSsh: hosts.enableSsh,
@@ -1213,11 +1243,13 @@ router.get(
           rdpPort: hosts.rdpPort,
           vncPort: hosts.vncPort,
           telnetPort: hosts.telnetPort,
+          rdpCredentialId: hosts.rdpCredentialId,
           rdpUser: hosts.rdpUser,
           rdpPassword: hosts.rdpPassword,
           rdpDomain: hosts.rdpDomain,
           rdpSecurity: hosts.rdpSecurity,
           rdpIgnoreCert: hosts.rdpIgnoreCert,
+          vncCredentialId: hosts.vncCredentialId,
           vncUser: hosts.vncUser,
           vncPassword: hosts.vncPassword,
           telnetUser: hosts.telnetUser,
@@ -1445,7 +1477,19 @@ router.get(
 
       const host = data[0];
       const resolved = (await resolveHostCredentials(host, userId)) || host;
-      const value = resolved[field];
+      let value = resolved[field];
+
+      if (!value && field === "sudoPassword" && resolved.terminalConfig) {
+        try {
+          const tc =
+            typeof resolved.terminalConfig === "string"
+              ? JSON.parse(resolved.terminalConfig)
+              : resolved.terminalConfig;
+          value = tc?.sudoPassword || null;
+        } catch {
+          // malformed JSON — leave value null
+        }
+      }
 
       if (!value) {
         return res.status(404).json({ error: "No password set" });
@@ -1574,7 +1618,8 @@ router.get(
               !!resolvedHost.overrideCredentialUsername,
             enableTerminal: !!resolvedHost.enableTerminal,
             enableTunnel: !!resolvedHost.enableTunnel,
-            enableFileManager: !!resolvedHost.enableFileManager,
+            enableFileManager: resolvedHost.enableFileManager !== false,
+            scpLegacy: !!resolvedHost.scpLegacy,
             enableDocker: !!resolvedHost.enableDocker,
             enableProxmox: !!resolvedHost.enableProxmox,
             enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
@@ -1722,7 +1767,7 @@ router.get(
                 !!resolvedHost.overrideCredentialUsername,
               enableTerminal: !!resolvedHost.enableTerminal,
               enableTunnel: !!resolvedHost.enableTunnel,
-              enableFileManager: !!resolvedHost.enableFileManager,
+              enableFileManager: resolvedHost.enableFileManager !== false,
               enableDocker: !!resolvedHost.enableDocker,
               enableProxmox: !!resolvedHost.enableProxmox,
               enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,

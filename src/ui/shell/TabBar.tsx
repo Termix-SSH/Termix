@@ -15,6 +15,7 @@ import {
   LayoutPanelLeft,
   Plus,
   Minus,
+  Pencil,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
@@ -35,6 +36,7 @@ export function TabBar({
   onSplitTab,
   onAddToSplit,
   onRemoveFromSplit,
+  onRenameTab,
 }: {
   tabs: Tab[];
   activeTabId: string;
@@ -48,6 +50,7 @@ export function TabBar({
   onSplitTab: (tabId: string, mode: SplitMode) => void;
   onAddToSplit: (tabId: string) => void;
   onRemoveFromSplit: (tabId: string) => void;
+  onRenameTab?: (tabId: string, newLabel: string) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
@@ -58,6 +61,9 @@ export function TabBar({
   const [contextPos, setContextPos] = useState<{ x: number; y: number } | null>(
     null,
   );
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   const tabBarRef = useRef<HTMLDivElement>(null);
   const tabEls = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -164,6 +170,19 @@ export function TabBar({
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
   }, [contextTabId]);
+
+  useEffect(() => {
+    if (renamingTabId) {
+      setTimeout(() => renameInputRef.current?.focus(), 0);
+    }
+  }, [renamingTabId]);
+
+  function commitRename() {
+    if (!renamingTabId) return;
+    const trimmed = renameValue.trim();
+    if (trimmed) onRenameTab?.(renamingTabId, trimmed);
+    setRenamingTabId(null);
+  }
 
   const dragIdx = tabs.findIndex((t) => t.id === dragTabId);
   const target = dragTargetIndex ?? dragIdx;
@@ -288,8 +307,25 @@ export function TabBar({
                   <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 size-1 rounded-full bg-muted-foreground/40 z-10" />
                 )}
                 {tabIcon(tab.type)}
-                {tab.type !== "dashboard" && tab.label}
-                {tab.type !== "dashboard" && (
+                {tab.type !== "dashboard" && renamingTabId === tab.id ? (
+                  <input
+                    ref={renameInputRef}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      else if (e.key === "Escape") setRenamingTabId(null);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-transparent border-b border-accent-brand outline-none text-sm w-28 min-w-0"
+                    style={{ fontWeight: "inherit" }}
+                  />
+                ) : (
+                  tab.type !== "dashboard" && tab.label
+                )}
+                {tab.type !== "dashboard" && renamingTabId !== tab.id && (
                   <div
                     className={`flex items-center gap-0.5 ml-1 ${active ? "opacity-100" : "opacity-0 group-hover/tab:opacity-100"}`}
                   >
@@ -300,7 +336,7 @@ export function TabBar({
                           e.stopPropagation();
                           onRefreshTab(tab.id);
                         }}
-                        title="Refresh connection"
+                        title={t("nav.refreshTab")}
                         className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
                       >
                         <RefreshCw className="size-3" />
@@ -456,13 +492,25 @@ export function TabBar({
                   }}
                 >
                   <RefreshCw className="size-3" />
-                  Refresh connection
+                  {t("nav.refreshTab")}
                 </button>
               )}
+              <button
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  setRenameValue(ctxTab.label);
+                  setRenamingTabId(contextTabId);
+                  setContextTabId(null);
+                  setContextPos(null);
+                }}
+              >
+                <Pencil className="size-3" />
+                {t("nav.renameTab")}
+              </button>
               <div className="h-px bg-border my-1" />
               {/* Split submenu */}
               <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Split
+                {t("terminal.split.splitTab")}
               </div>
               {SPLIT_MODES.filter((m) => m.id !== "none").map((mode) => (
                 <button
@@ -489,7 +537,7 @@ export function TabBar({
                       }}
                     >
                       <Minus className="size-3" />
-                      Remove from split
+                      {t("terminal.split.removeFromSplit")}
                     </button>
                   ) : hasEmptySlot ? (
                     <button
@@ -500,7 +548,7 @@ export function TabBar({
                       }}
                     >
                       <Plus className="size-3" />
-                      Add to split
+                      {t("terminal.split.addToSplit")}
                     </button>
                   ) : null}
                 </>
@@ -514,7 +562,7 @@ export function TabBar({
                 }}
               >
                 <X className="size-3" />
-                Close tab
+                {t("nav.closeTab")}
               </button>
             </div>
           );

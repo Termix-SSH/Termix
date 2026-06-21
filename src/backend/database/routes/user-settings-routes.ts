@@ -15,6 +15,24 @@ function getDefaultGuacUrl(): string {
   return `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
 }
 
+export type HostDefaults = {
+  useSocks5?: boolean;
+  socks5Host?: string;
+  socks5Port?: number;
+  socks5Username?: string;
+  socks5Password?: string;
+  credentialId?: number | null;
+  metricsEnabled?: boolean;
+  statusCheckEnabled?: boolean;
+  fontSize?: number;
+  fontFamily?: string;
+  theme?: string;
+  cursorStyle?: string;
+  cursorBlink?: boolean;
+  enableSessionLogging?: boolean;
+  enableCommandHistory?: boolean;
+};
+
 export function registerUserSettingsRoutes(
   router: Router,
   authenticateJWT: RequestHandler,
@@ -544,4 +562,91 @@ export function registerUserSettingsRoutes(
       }
     },
   );
+
+  /**
+   * @openapi
+   * /users/host-defaults:
+   *   get:
+   *     summary: Get host creation defaults
+   *     description: Returns the global default settings applied when creating a new host.
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: Host defaults object.
+   *       500:
+   *         description: Failed to get host defaults.
+   */
+  router.get("/host-defaults", authenticateJWT, async (_req, res) => {
+    try {
+      const row = db.$client
+        .prepare("SELECT value FROM settings WHERE key = 'host_defaults'")
+        .get() as { value: string } | undefined;
+      const defaults: HostDefaults = row ? JSON.parse(row.value) : {};
+      res.json(defaults);
+    } catch (err) {
+      authLogger.error("Failed to get host defaults", err);
+      res.status(500).json({ error: "Failed to get host defaults" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/host-defaults:
+   *   patch:
+   *     summary: Update host creation defaults (admin only)
+   *     description: Sets global default settings applied when a new host is created.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Host defaults updated.
+   *       403:
+   *         description: Not authorized.
+   *       500:
+   *         description: Failed to update host defaults.
+   */
+  router.patch("/host-defaults", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    try {
+      const user = await db.select().from(users).where(eq(users.id, userId));
+      if (!user || user.length === 0 || !user[0].isAdmin) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+      const defaults: HostDefaults = req.body;
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('host_defaults', ?)",
+        )
+        .run(JSON.stringify(defaults));
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      const actorRecord = await db
+        .select({ username: users.username })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      await logAudit({
+        userId,
+        username: actorRecord[0]?.username ?? userId,
+        action: "update_host_defaults",
+        resourceType: "setting",
+        details: JSON.stringify(defaults),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json(defaults);
+    } catch (err) {
+      authLogger.error("Failed to update host defaults", err);
+      res.status(500).json({ error: "Failed to update host defaults" });
+    }
+  });
 }

@@ -36,6 +36,7 @@ import type {
   FontSizeId,
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
+import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { useTheme } from "@/components/theme-provider";
 import {
   getSSHHosts,
@@ -80,7 +81,7 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     enableSsh: h.enableSsh ?? (h.connectionType === "ssh" || !h.connectionType),
     enableTerminal: h.enableTerminal ?? true,
     enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? false,
+    enableFileManager: h.enableFileManager ?? true,
     enableDocker: h.enableDocker ?? false,
     enableProxmox: h.enableProxmox ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false, // --- tmux-monitor ---
@@ -108,6 +109,9 @@ function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Username: h.socks5Username,
     socks5Password: h.socks5Password,
     socks5ProxyChain: h.socks5ProxyChain ?? [],
+    statsConfig: (typeof h.statsConfig === "string"
+      ? JSON.parse(h.statsConfig)
+      : h.statsConfig) as Host["statsConfig"],
   };
 }
 
@@ -161,9 +165,11 @@ export { tabIcon, renderTabContent } from "@/shell/tabUtils";
 export function AppShell({
   username,
   onLogout,
+  onChangeServer,
 }: {
   username: string;
   onLogout: () => void;
+  onChangeServer?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const { setTheme } = useTheme();
@@ -193,6 +199,9 @@ export function AppShell({
       JSON.parse(localStorage.getItem("termix_paneTabIds") ?? "null") ??
       Array(6).fill(null),
   );
+  useEffect(() => {
+    paneTabIdsRef.current = paneTabIds;
+  }, [paneTabIds]);
   const [focusedPaneIndex, setFocusedPaneIndex] = useState<number | null>(null);
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
   const [hostsLoading, setHostsLoading] = useState(true);
@@ -204,7 +213,6 @@ export function AppShell({
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
@@ -243,6 +251,26 @@ export function AppShell({
   }, []);
 
   const lastShiftTime = useRef(0);
+  const tabsRef = useRef(tabs);
+  const activeTabIdRef = useRef(activeTabId);
+  const splitModeRef = useRef(splitMode);
+  const focusedPaneIndexRef = useRef<number | null>(null);
+  const paneContentElsRef = useRef<(HTMLDivElement | null)[]>(
+    Array(6).fill(null),
+  );
+  const paneTabIdsRef = useRef<(string | null)[]>(Array(6).fill(null));
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId;
+  }, [activeTabId]);
+  useEffect(() => {
+    splitModeRef.current = splitMode;
+  }, [splitMode]);
+  useEffect(() => {
+    focusedPaneIndexRef.current = focusedPaneIndex;
+  }, [focusedPaneIndex]);
   const [commandPaletteShortcutEnabled, setCommandPaletteShortcutEnabled] =
     useState<boolean>(() => {
       const v = localStorage.getItem("commandPaletteShortcutEnabled");
@@ -254,6 +282,9 @@ export function AppShell({
   const [paneContentEls, setPaneContentEls] = useState<
     (HTMLDivElement | null)[]
   >(Array(6).fill(null));
+  useEffect(() => {
+    paneContentElsRef.current = paneContentEls;
+  }, [paneContentEls]);
 
   // Stable per-tab DOM nodes — created once per tab, never destroyed while the tab lives.
   // We always portal each tab's content into its own node, then move that node between
@@ -313,6 +344,174 @@ export function AppShell({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [commandPaletteShortcutEnabled]);
+
+  // Split-screen and tab navigation hotkeys
+  // Also registered in globalShortcutHandler so xterm can invoke directly
+  // without going through synthetic DOM events (which are unreliable).
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Shift+\ — toggle 2-way split (side by side)
+      if (e.ctrlKey && e.shiftKey && !e.altKey && e.code === "Backslash") {
+        e.preventDefault();
+        if (splitModeRef.current !== "none") {
+          splitModeRef.current = "none";
+          setSplitMode("none");
+          setPaneTabIds(Array(6).fill(null));
+        } else {
+          const mode = "2-way";
+          splitModeRef.current = mode;
+          const currentTabs = tabsRef.current;
+          const currentActiveId = activeTabIdRef.current;
+          const count = PANE_COUNTS[mode];
+          const next: (string | null)[] = Array(6).fill(null);
+          next[0] = currentActiveId;
+          let slot = 1;
+          for (const tab of currentTabs) {
+            if (slot >= count) break;
+            if (tab.id !== currentActiveId && tab.type !== "dashboard") {
+              next[slot] = tab.id;
+              slot++;
+            }
+          }
+          setSplitMode(mode);
+          setPaneTabIds(next);
+        }
+        return;
+      }
+
+      // Ctrl+Shift+- — toggle 3-way-horizontal split (top/bottom)
+      if (e.ctrlKey && e.shiftKey && !e.altKey && e.code === "Minus") {
+        e.preventDefault();
+        if (splitModeRef.current !== "none") {
+          splitModeRef.current = "none";
+          setSplitMode("none");
+          setPaneTabIds(Array(6).fill(null));
+        } else {
+          const mode = "3-way-horizontal";
+          splitModeRef.current = mode;
+          const currentTabs = tabsRef.current;
+          const currentActiveId = activeTabIdRef.current;
+          const count = PANE_COUNTS[mode];
+          const next: (string | null)[] = Array(6).fill(null);
+          next[0] = currentActiveId;
+          let slot = 1;
+          for (const tab of currentTabs) {
+            if (slot >= count) break;
+            if (tab.id !== currentActiveId && tab.type !== "dashboard") {
+              next[slot] = tab.id;
+              slot++;
+            }
+          }
+          setSplitMode(mode);
+          setPaneTabIds(next);
+        }
+        return;
+      }
+
+      // Alt+Arrow — navigate between panes in split mode
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+        if (
+          e.code === "ArrowLeft" ||
+          e.code === "ArrowRight" ||
+          e.code === "ArrowUp" ||
+          e.code === "ArrowDown"
+        ) {
+          if (splitModeRef.current === "none") return;
+          const count = PANE_COUNTS[splitModeRef.current];
+          if (count < 2) return;
+          e.preventDefault();
+          const current = focusedPaneIndexRef.current ?? 0;
+          const mode = splitModeRef.current;
+          const dir = e.code;
+
+          // Layout-aware navigation maps: [left, right, up, down] per pane index.
+          // null means no movement in that direction.
+          const navMap: Record<string, (number | null)[][]> = {
+            "2-way": [
+              [null, 1, null, null],
+              [0, null, null, null],
+            ],
+            "3-way": [
+              [null, 1, null, null],
+              [0, null, null, 2],
+              [0, null, 1, null],
+            ],
+            "3-way-horizontal": [
+              [null, 1, null, 2],
+              [0, null, null, 2],
+              [null, null, 0, null],
+            ],
+            "4-way": [
+              [null, 1, null, 2],
+              [0, null, null, 3],
+              [null, 3, 0, null],
+              [2, null, 1, null],
+            ],
+            "5-way": [
+              [null, 1, null, 3],
+              [0, 2, null, 4],
+              [1, null, null, 4],
+              [null, 4, 0, null],
+              [3, null, 1, null],
+            ],
+            "6-way": [
+              [null, 1, null, 3],
+              [0, 2, null, 4],
+              [1, null, null, 5],
+              [null, 4, 0, null],
+              [3, 5, 1, null],
+              [4, null, 2, null],
+            ],
+          };
+
+          const paneNav = navMap[mode]?.[current];
+          const dirIndex =
+            { ArrowLeft: 0, ArrowRight: 1, ArrowUp: 2, ArrowDown: 3 }[dir] ??
+            -1;
+          const next = paneNav?.[dirIndex] ?? null;
+          if (next === null) return;
+
+          focusedPaneIndexRef.current = next;
+          setFocusedPaneIndex(next);
+          // Physically move DOM focus into the target pane's terminal
+          const tabId = paneTabIdsRef.current[next];
+          if (tabId) {
+            const termRef = terminalRefs.current.get(tabId);
+            (
+              termRef?.current as
+                | import("@/features/terminal/Terminal").TerminalHandle
+                | null
+            )?.focus();
+          }
+          return;
+        }
+      }
+
+      // Ctrl+Shift+] / Ctrl+Shift+[ — cycle through open tabs (] = next, [ = previous)
+      if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
+        if (e.code === "BracketRight" || e.code === "BracketLeft") {
+          e.preventDefault();
+          const currentTabs = tabsRef.current;
+          if (currentTabs.length < 2) return;
+          const currentId = activeTabIdRef.current;
+          const idx = currentTabs.findIndex((t) => t.id === currentId);
+          const next =
+            e.code === "BracketRight"
+              ? (idx + 1) % currentTabs.length
+              : (idx - 1 + currentTabs.length) % currentTabs.length;
+          setActiveTabId(currentTabs[next].id);
+          return;
+        }
+      }
+    };
+
+    globalShortcutHandler.current = handleKeyDown;
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      globalShortcutHandler.current = null;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     const handler = () => {
@@ -623,11 +822,17 @@ export function AppShell({
               const restoredSessionId =
                 liveSession?.sessionId ?? saved.backendSessionId ?? null;
 
+              const isCustomLabel =
+                host &&
+                saved.label !== host.name &&
+                !/^.+ \(\d+\)$/.test(saved.label);
+
               restoredTabs.push({
                 id: tabId,
                 instanceId: saved.id,
                 type: saved.tabType as TabType,
                 label: saved.label,
+                customLabel: isCustomLabel ? saved.label : undefined,
                 host,
                 openedAt: new Date(saved.createdAt).getTime(),
                 restoredSessionId,
@@ -694,7 +899,12 @@ export function AppShell({
   const openTab = useCallback(function openTab(
     host: Host,
     type: TabType,
-    restore?: { instanceId: string; restoredSessionId: string | null },
+    restore?: {
+      instanceId: string;
+      restoredSessionId: string | null;
+      savedLabel?: string;
+      initialFilePath?: string;
+    },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
     const instanceId =
@@ -707,7 +917,34 @@ export function AppShell({
     if (ref) terminalRefs.current.set(tabId, ref);
 
     let finalLabel = host.name;
+    const savedLabel = restore?.savedLabel;
+    const initialFilePath = restore?.initialFilePath;
+    // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
+    const isCustomLabel =
+      savedLabel != null &&
+      savedLabel !== host.name &&
+      !/^.+ \(\d+\)$/.test(savedLabel);
+
     setTabs((prev) => {
+      if (isCustomLabel && savedLabel) {
+        finalLabel = savedLabel;
+        return [
+          ...prev,
+          {
+            id: tabId,
+            instanceId,
+            type,
+            label: finalLabel,
+            customLabel: finalLabel,
+            host,
+            openedAt,
+            terminalRef: ref,
+            restoredSessionId: restore?.restoredSessionId ?? null,
+            initialFilePath,
+          },
+        ];
+      }
+
       const same = prev.filter(
         (t) =>
           t.type === type && t.label.replace(/ \(\d+\)$/, "") === host.name,
@@ -734,6 +971,7 @@ export function AppShell({
           openedAt,
           terminalRef: ref,
           restoredSessionId: restore?.restoredSessionId ?? null,
+          initialFilePath,
         },
       ];
     });
@@ -789,6 +1027,9 @@ export function AppShell({
               ),
             0,
           );
+        } else if (pendingEvent === "host-manager:show-credentials") {
+          setSidebarOpen(true);
+          setRailView("credentials");
         } else {
           setSidebarOpen(true);
           setRailView("hosts");
@@ -917,6 +1158,18 @@ export function AppShell({
       return;
     }
     doCloseTab(id);
+  }
+
+  function renameTab(tabId: string, newLabel: string) {
+    setTabs((prev) =>
+      prev.map((t) =>
+        t.id === tabId ? { ...t, customLabel: newLabel, label: newLabel } : t,
+      ),
+    );
+    const tab = tabs.find((t) => t.id === tabId);
+    if (tab?.instanceId) {
+      patchOpenTab(tab.instanceId, { label: newLabel }).catch(() => {});
+    }
   }
 
   function splitTabQuick(tabId: string, mode: SplitMode) {
@@ -1182,6 +1435,7 @@ export function AppShell({
                 openTab(host, record.tabType as TabType, {
                   instanceId: record.id,
                   restoredSessionId: effectiveSessionId,
+                  savedLabel: record.label,
                 });
               } else {
                 openSingletonTab(record.tabType as TabType);
@@ -1193,6 +1447,8 @@ export function AppShell({
                 prev.filter((r) => r.id !== recordId),
               );
             }}
+            onRenameTab={renameTab}
+            onReorderTabs={setTabs}
           />
         </div>
       )}
@@ -1208,6 +1464,7 @@ export function AppShell({
           <UserProfilePanel
             username={username}
             onLogout={onLogout}
+            onChangeServer={onChangeServer}
             userPrefs={userPrefs}
             onPrefsChange={setUserPrefs}
           />
@@ -1264,8 +1521,6 @@ export function AppShell({
           splitMode={splitMode}
           username={username}
           isAdmin={isAdmin}
-          profileDropdownOpen={profileDropdownOpen}
-          onProfileDropdownChange={setProfileDropdownOpen}
           onRailClick={handleRailClick}
           onOpenTab={openSingletonTab}
           onLogout={onLogout}
@@ -1334,6 +1589,7 @@ export function AppShell({
               onSplitTab={splitTabQuick}
               onAddToSplit={addTabToSplit}
               onRemoveFromSplit={removeTabFromSplit}
+              onRenameTab={renameTab}
             />
             <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
@@ -1388,6 +1644,17 @@ export function AppShell({
                       openTab,
                       closeTab,
                       inPane || activeInline,
+                      (host, filePath) =>
+                        openTab(host, "files", {
+                          instanceId:
+                            typeof crypto.randomUUID === "function"
+                              ? crypto.randomUUID()
+                              : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                          restoredSessionId: null,
+                          initialFilePath: filePath,
+                        }),
+                      (host, path) => openTab(host, "files"),
+                      renameTab,
                     ),
                     tabNode,
                     tab.id,
