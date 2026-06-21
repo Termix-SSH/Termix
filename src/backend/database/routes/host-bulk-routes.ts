@@ -624,11 +624,9 @@ export function registerHostBulkRoutes(
       const { content, overwrite } = req.body;
 
       if (!isNonEmptyString(content)) {
-        return res
-          .status(400)
-          .json({
-            error: "content is required and must be a non-empty string",
-          });
+        return res.status(400).json({
+          error: "content is required and must be a non-empty string",
+        });
       }
 
       let parsed: SSHConfigHost[];
@@ -641,11 +639,9 @@ export function registerHostBulkRoutes(
       }
 
       if (parsed.length === 0) {
-        return res
-          .status(400)
-          .json({
-            error: "No valid Host entries found in the SSH config file",
-          });
+        return res.status(400).json({
+          error: "No valid Host entries found in the SSH config file",
+        });
       }
 
       if (parsed.length > 100) {

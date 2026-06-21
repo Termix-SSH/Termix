@@ -27,9 +27,7 @@ export class SSHHostKeyVerifier {
    * the key exchange critical path fast, avoiding LoginGraceTime expiry on
    * the remote server (especially important for jump-host tunneled connections).
    */
-  static async preloadHostData(
-    hostId: number | null,
-  ): Promise<{
+  static async preloadHostData(hostId: number | null): Promise<{
     hostKeyFingerprint: string | null;
     hostKeyType: string | null;
     hostKeyAlgorithm: string | null;

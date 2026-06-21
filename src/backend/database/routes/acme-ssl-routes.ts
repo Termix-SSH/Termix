@@ -275,11 +275,9 @@ export function registerAcmeSSLRoutes(
 
       if (challengeType === "dns-cloudflare") {
         if (!cloudflareToken) {
-          return res
-            .status(400)
-            .json({
-              error: "Cloudflare API token is required for DNS challenge",
-            });
+          return res.status(400).json({
+            error: "Cloudflare API token is required for DNS challenge",
+          });
         }
 
         await fs.mkdir(path.dirname(CLOUDFLARE_CREDENTIALS_FILE), {

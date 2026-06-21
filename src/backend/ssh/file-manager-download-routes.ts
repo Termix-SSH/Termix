@@ -156,11 +156,9 @@ export function registerFileDownloadRoutes(
         });
       } catch (err) {
         fileLogger.error("Legacy exec/cat download failed:", err);
-        return res
-          .status(500)
-          .json({
-            error: `Failed to download file: ${(err as Error).message}`,
-          });
+        return res.status(500).json({
+          error: `Failed to download file: ${(err as Error).message}`,
+        });
       }
     }
 
