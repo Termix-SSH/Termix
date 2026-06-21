@@ -148,6 +148,14 @@ jobs:
         with:
           node-version-file: ".nvmrc"
 
+      - name: Rebase dev branch onto main
+        run: |
+          git config user.name "LukeGus"
+          git config user.email "bugattiguy527@gmail.com"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:"${{ needs.prep.outputs.dev_branch }}" --force-with-lease
+
       - name: Clean up stale Crowdin git integration branch
         continue-on-error: true
         env:
