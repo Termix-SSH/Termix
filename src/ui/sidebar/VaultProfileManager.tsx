@@ -63,7 +63,7 @@ export function VaultProfileManager({
   const handleSave = async () => {
     if (!form) return;
     if (!form.name.trim() || !form.vaultAddr.trim() || !form.sshRole.trim()) {
-      toast.error("Name, Vault address and SSH signer role are required");
+      toast.error(t("hosts.vaultProfileValidationError"));
       return;
     }
     setSaving(true);
@@ -144,7 +144,7 @@ export function VaultProfileManager({
           <div className="flex flex-col divide-y divide-border/50">
             {profiles.length === 0 && (
               <span className="text-[11px] text-muted-foreground py-1">
-                No Vault profiles yet.
+                {t("hosts.vaultNoProfiles")}
               </span>
             )}
             {profiles.map((p) => (
@@ -157,7 +157,7 @@ export function VaultProfileManager({
                     {p.name}
                     {p.shared && (
                       <span className="ml-1 text-[9px] text-accent-brand">
-                        shared
+                        {t("hosts.vaultSharedBadge")}
                       </span>
                     )}
                   </span>
@@ -265,7 +265,7 @@ export function VaultProfileManager({
               disabled={saving}
             >
               {form.id
-                ? t("hosts.vaultProfileSaved")
+                ? t("hosts.vaultSaveProfile")
                 : t("hosts.vaultCreateProfile")}
             </Button>
           </div>

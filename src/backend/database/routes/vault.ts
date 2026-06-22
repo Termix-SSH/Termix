@@ -61,8 +61,33 @@ function formatProfile(
 }
 
 /**
- * Vault OIDC callback. Unauthenticated: the browser is redirected here by the
- * IdP after login. Correlation is via the unguessable Vault `state`.
+ * @openapi
+ * /vault/oidc/callback:
+ *   get:
+ *     summary: Vault OIDC callback
+ *     description: Unauthenticated endpoint the IdP redirects to after login. Correlates the authorization code to a pending session via the Vault-issued state parameter.
+ *     tags:
+ *       - Vault
+ *     parameters:
+ *       - in: query
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: error
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: HTML page confirming sign-in success or failure.
+ *       400:
+ *         description: Missing parameters or authentication failure.
  */
 router.get("/oidc/callback", async (req: Request, res: Response) => {
   const state = String(req.query.state || "");
@@ -103,7 +128,20 @@ router.get("/oidc/callback", async (req: Request, res: Response) => {
     );
 });
 
-/** List Vault profiles visible to the user (owned or shared). */
+/**
+ * @openapi
+ * /vault/profiles:
+ *   get:
+ *     summary: List Vault profiles
+ *     description: Returns all Vault signer profiles owned by the authenticated user or marked as shared.
+ *     tags:
+ *       - Vault
+ *     responses:
+ *       200:
+ *         description: Array of Vault profile objects.
+ *       500:
+ *         description: Failed to list vault profiles.
+ */
 router.get(
   "/profiles",
   authenticateJWT,
@@ -127,7 +165,55 @@ router.get(
   },
 );
 
-/** Create a Vault profile. The `shared` flag is admin-only. */
+/**
+ * @openapi
+ * /vault/profiles:
+ *   post:
+ *     summary: Create a Vault profile
+ *     description: Creates a new Vault signer profile owned by the authenticated user. The shared flag requires admin privileges.
+ *     tags:
+ *       - Vault
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - vaultAddr
+ *               - sshRole
+ *             properties:
+ *               name:
+ *                 type: string
+ *               vaultAddr:
+ *                 type: string
+ *               vaultNamespace:
+ *                 type: string
+ *               oidcMount:
+ *                 type: string
+ *               oidcRole:
+ *                 type: string
+ *               sshMount:
+ *                 type: string
+ *               sshRole:
+ *                 type: string
+ *               validPrincipals:
+ *                 type: string
+ *               keyType:
+ *                 type: string
+ *               shared:
+ *                 type: boolean
+ *     responses:
+ *       201:
+ *         description: Created Vault profile object.
+ *       400:
+ *         description: Missing required fields.
+ *       403:
+ *         description: Non-admin attempted to create a shared profile.
+ *       500:
+ *         description: Failed to create vault profile.
+ */
 router.post(
   "/profiles",
   authenticateJWT,
@@ -196,7 +282,37 @@ router.post(
   },
 );
 
-/** Update a Vault profile (owner only; `shared` toggle is admin-only). */
+/**
+ * @openapi
+ * /vault/profiles/{id}:
+ *   put:
+ *     summary: Update a Vault profile
+ *     description: Updates a Vault signer profile. Only the owner may edit; toggling shared to true requires admin privileges.
+ *     tags:
+ *       - Vault
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *     responses:
+ *       200:
+ *         description: Updated Vault profile object.
+ *       400:
+ *         description: Invalid profile id.
+ *       403:
+ *         description: Non-owner attempted to edit, or non-admin attempted to share.
+ *       404:
+ *         description: Profile not found.
+ *       500:
+ *         description: Failed to update vault profile.
+ */
 router.put(
   "/profiles/:id",
   authenticateJWT,
@@ -273,7 +389,32 @@ router.put(
   },
 );
 
-/** Delete a Vault profile (owner only). */
+/**
+ * @openapi
+ * /vault/profiles/{id}:
+ *   delete:
+ *     summary: Delete a Vault profile
+ *     description: Permanently deletes a Vault signer profile. Only the owner may delete it.
+ *     tags:
+ *       - Vault
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Deletion confirmed.
+ *       400:
+ *         description: Invalid profile id.
+ *       403:
+ *         description: Non-owner attempted to delete.
+ *       404:
+ *         description: Profile not found.
+ *       500:
+ *         description: Failed to delete vault profile.
+ */
 router.delete(
   "/profiles/:id",
   authenticateJWT,
