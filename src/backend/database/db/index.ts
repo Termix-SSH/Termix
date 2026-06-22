@@ -695,6 +695,18 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "confirm_tab_close", "INTEGER");
   addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
+  addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS dashboard_service_links (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      url TEXT NOT NULL,
+      "order" INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
