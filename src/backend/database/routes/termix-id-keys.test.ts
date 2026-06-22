@@ -4,7 +4,7 @@ import {
   parsePublicKey,
   matchesAlgoFilter,
   MAX_PUBLIC_KEY_LENGTH,
-} from "./ssh-id-keys.js";
+} from "./termix-id-keys.js";
 
 // Build a valid OpenSSH public-key line for a given type by encoding a wire
 // blob whose first string field equals the type (what parsePublicKey checks).

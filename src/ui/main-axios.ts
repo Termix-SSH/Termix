@@ -2115,28 +2115,29 @@ export {
 } from "@/api/open-tabs-api";
 
 // ============================================================================
-// SSH ID API
+// TERMIX ID API
 // ============================================================================
 
 export {
-  getMySshId,
-  checkSshIdHandle,
-  createSshId,
-  updateSshId,
-  deleteSshId,
-  addSshIdKey,
-  generateSshIdKey,
-  setSshIdKeyEnabled,
-  deleteSshIdKey,
+  getMyTermixId,
+  checkTermixIdHandle,
+  createTermixId,
+  updateTermixId,
+  deleteTermixId,
+  addTermixIdKey,
+  generateTermixIdKey,
+  setTermixIdKeyEnabled,
+  deleteTermixIdKey,
   getMyCa,
   createCa,
   rotateCa,
   deleteCa,
   issueCertificate,
-  type SshIdentity,
-  type SshIdentityKey,
-  type SshIdMe,
+  getLinkedCredentialIds,
+  type TermixIdentity,
+  type TermixIdentityKey,
+  type TermixIdMe,
   type GeneratedKey,
-  type SshIdCa,
+  type TermixIdCa,
   type IssuedCertificate,
-} from "@/api/ssh-id-api";
+} from "@/api/termix-id-api";

@@ -21,7 +21,7 @@ import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 export type RailView =
   | "hosts"
   | "credentials"
-  | "ssh-id"
+  | "termix-id"
   | "quick-connect"
   | ToolsTab
   | "connections"
@@ -58,9 +58,9 @@ function buildRailButtons(
     },
     { kind: "separator" },
     {
-      view: "ssh-id",
+      view: "termix-id",
       icon: <Fingerprint size={16} />,
-      title: t("nav.sshId"),
+      title: t("nav.termixId"),
     },
     { kind: "separator" },
     {

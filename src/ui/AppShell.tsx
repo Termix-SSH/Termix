@@ -23,7 +23,7 @@ import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
 import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
-import { SshIdPanel } from "@/sidebar/SshIdPanel";
+import { TermixIdPanel } from "@/sidebar/TermixIdPanel";
 import { SplitView } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
@@ -321,7 +321,7 @@ export function AppShell({
   const sidebarTitle: Record<RailView, string> = {
     hosts: "Hosts",
     credentials: "Credentials",
-    "ssh-id": t("nav.sshId"),
+    "termix-id": t("nav.termixId"),
     "quick-connect": "Quick Connect",
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
@@ -1363,9 +1363,9 @@ export function AppShell({
         />
       </div>
 
-      {railView === "ssh-id" && (
+      {railView === "termix-id" && (
         <div className="flex flex-col flex-1 min-h-0">
-          <SshIdPanel />
+          <TermixIdPanel />
         </div>
       )}
 

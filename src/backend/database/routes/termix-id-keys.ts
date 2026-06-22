@@ -1,5 +1,5 @@
 // Pure, dependency-free helpers for SSH public-key parsing/classification used
-// by the SSH ID routes. Kept separate so they can be unit-tested in isolation.
+// by the Termix ID routes. Kept separate so they can be unit-tested in isolation.
 
 // Upper bound on an accepted public-key line. Public keys are tiny (an RSA-4096
 // line is ~720 chars); this caps the value the unauthenticated resolver later

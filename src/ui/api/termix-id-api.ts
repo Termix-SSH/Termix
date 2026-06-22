@@ -1,6 +1,6 @@
 import { authApi, handleApiError } from "@/main-axios";
 
-export interface SshIdentity {
+export interface TermixIdentity {
   id: number;
   userId: string;
   handle: string;
@@ -10,7 +10,7 @@ export interface SshIdentity {
   updatedAt: string;
 }
 
-export interface SshIdentityKey {
+export interface TermixIdentityKey {
   id: number;
   identityId: number;
   userId: string;
@@ -25,26 +25,26 @@ export interface SshIdentityKey {
   createdAt: string;
 }
 
-export interface SshIdMe {
-  identity: SshIdentity | null;
-  keys: SshIdentityKey[];
+export interface TermixIdMe {
+  identity: TermixIdentity | null;
+  keys: TermixIdentityKey[];
 }
 
-export async function getMySshId(): Promise<SshIdMe> {
+export async function getMyTermixId(): Promise<TermixIdMe> {
   try {
-    const response = await authApi.get("/sshid/me");
+    const response = await authApi.get("/termix-id/me");
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "fetch SSH ID");
+    throw handleApiError(error, "fetch Termix ID");
   }
 }
 
-export async function checkSshIdHandle(
+export async function checkTermixIdHandle(
   handle: string,
 ): Promise<{ available: boolean; valid: boolean }> {
   try {
     const response = await authApi.get(
-      `/sshid/check/${encodeURIComponent(handle)}`,
+      `/termix-id/check/${encodeURIComponent(handle)}`,
     );
     return response.data;
   } catch (error) {
@@ -52,45 +52,45 @@ export async function checkSshIdHandle(
   }
 }
 
-export async function createSshId(
+export async function createTermixId(
   handle: string,
   description?: string,
-): Promise<SshIdentity> {
+): Promise<TermixIdentity> {
   try {
-    const response = await authApi.post("/sshid", { handle, description });
+    const response = await authApi.post("/termix-id", { handle, description });
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "create SSH ID");
+    throw handleApiError(error, "create Termix ID");
   }
 }
 
-export async function updateSshId(data: {
+export async function updateTermixId(data: {
   handle?: string;
   description?: string;
-}): Promise<SshIdentity> {
+}): Promise<TermixIdentity> {
   try {
-    const response = await authApi.put("/sshid", data);
+    const response = await authApi.put("/termix-id", data);
     return response.data;
   } catch (error) {
-    throw handleApiError(error, "update SSH ID");
+    throw handleApiError(error, "update Termix ID");
   }
 }
 
-export async function deleteSshId(): Promise<void> {
+export async function deleteTermixId(): Promise<void> {
   try {
-    await authApi.delete("/sshid");
+    await authApi.delete("/termix-id");
   } catch (error) {
-    throw handleApiError(error, "delete SSH ID");
+    throw handleApiError(error, "delete Termix ID");
   }
 }
 
-export async function addSshIdKey(data: {
+export async function addTermixIdKey(data: {
   publicKey?: string;
   credentialId?: number;
   label?: string;
-}): Promise<SshIdentityKey> {
+}): Promise<TermixIdentityKey> {
   try {
-    const response = await authApi.post("/sshid/keys", data);
+    const response = await authApi.post("/termix-id/keys", data);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "add key");
@@ -98,18 +98,18 @@ export async function addSshIdKey(data: {
 }
 
 export interface GeneratedKey {
-  key: SshIdentityKey;
+  key: TermixIdentityKey;
   privateKey: string;
   publicKey: string;
   credentialId: number | null;
 }
 
-export async function generateSshIdKey(
+export async function generateTermixIdKey(
   type: "ed25519" | "rsa" = "ed25519",
   saveCredential = true,
 ): Promise<GeneratedKey> {
   try {
-    const response = await authApi.post("/sshid/keys/generate", {
+    const response = await authApi.post("/termix-id/keys/generate", {
       type,
       saveCredential,
     });
@@ -119,27 +119,27 @@ export async function generateSshIdKey(
   }
 }
 
-export async function setSshIdKeyEnabled(
+export async function setTermixIdKeyEnabled(
   id: number,
   enabled: boolean,
-): Promise<SshIdentityKey> {
+): Promise<TermixIdentityKey> {
   try {
-    const response = await authApi.patch(`/sshid/keys/${id}`, { enabled });
+    const response = await authApi.patch(`/termix-id/keys/${id}`, { enabled });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update key");
   }
 }
 
-export async function deleteSshIdKey(id: number): Promise<void> {
+export async function deleteTermixIdKey(id: number): Promise<void> {
   try {
-    await authApi.delete(`/sshid/keys/${id}`);
+    await authApi.delete(`/termix-id/keys/${id}`);
   } catch (error) {
     throw handleApiError(error, "delete key");
   }
 }
 
-export interface SshIdCa {
+export interface TermixIdCa {
   publicKey: string;
   validityDays: number;
   resolverPath: string;
@@ -153,27 +153,29 @@ export interface IssuedCertificate {
   validityDays: number;
 }
 
-export async function getMyCa(): Promise<{ ca: SshIdCa | null }> {
+export async function getMyCa(): Promise<{ ca: TermixIdCa | null }> {
   try {
-    const response = await authApi.get("/sshid/ca");
+    const response = await authApi.get("/termix-id/ca");
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch CA");
   }
 }
 
-export async function createCa(validityDays?: number): Promise<SshIdCa> {
+export async function createCa(validityDays?: number): Promise<TermixIdCa> {
   try {
-    const response = await authApi.post("/sshid/ca", { validityDays });
+    const response = await authApi.post("/termix-id/ca", { validityDays });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "create CA");
   }
 }
 
-export async function rotateCa(validityDays?: number): Promise<SshIdCa> {
+export async function rotateCa(validityDays?: number): Promise<TermixIdCa> {
   try {
-    const response = await authApi.post("/sshid/ca/rotate", { validityDays });
+    const response = await authApi.post("/termix-id/ca/rotate", {
+      validityDays,
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "rotate CA");
@@ -182,7 +184,7 @@ export async function rotateCa(validityDays?: number): Promise<SshIdCa> {
 
 export async function deleteCa(): Promise<void> {
   try {
-    await authApi.delete("/sshid/ca");
+    await authApi.delete("/termix-id/ca");
   } catch (error) {
     throw handleApiError(error, "delete CA");
   }
@@ -194,11 +196,22 @@ export async function issueCertificate(
 ): Promise<IssuedCertificate> {
   try {
     const response = await authApi.post(
-      `/sshid/keys/${keyId}/certificate`,
+      `/termix-id/keys/${keyId}/certificate`,
       opts,
     );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "issue certificate");
+  }
+}
+
+export async function getLinkedCredentialIds(): Promise<{
+  credentialIds: number[];
+}> {
+  try {
+    const response = await authApi.get("/termix-id/linked-credentials");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch linked credentials");
   }
 }

@@ -788,13 +788,13 @@ export const dashboardServiceLinks = sqliteTable("dashboard_service_links", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-// --- ssh-id (self-hosted "SSH ID") begin ---
+// --- termix-id begin ---
 // A user claims a unique public handle. Their published SSH public keys are
 // served at an unauthenticated resolver endpoint in authorized_keys format,
-// so any server can be provisioned with `curl <host>/sshid/u/<handle> >> ~/.ssh/authorized_keys`.
-export const sshIdentities = sqliteTable("ssh_identities", {
+// so any server can be provisioned with `curl <host>/termix-id/u/<handle> >> ~/.ssh/authorized_keys`.
+export const termixIdentities = sqliteTable("termix_identities", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  // One SSH ID per user — enforced in schema, not just in code.
+  // One Termix ID per user — enforced in schema, not just in code.
   userId: text("user_id")
     .notNull()
     .unique()
@@ -809,11 +809,11 @@ export const sshIdentities = sqliteTable("ssh_identities", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const sshIdentityKeys = sqliteTable("ssh_identity_keys", {
+export const termixIdentityKeys = sqliteTable("termix_identity_keys", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   identityId: integer("identity_id")
     .notNull()
-    .references(() => sshIdentities.id, { onDelete: "cascade" }),
+    .references(() => termixIdentities.id, { onDelete: "cascade" }),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -839,12 +839,12 @@ export const sshIdentityKeys = sqliteTable("ssh_identity_keys", {
 // Per-identity certificate authority. Servers that trust this CA (via
 // TrustedUserCAKeys / @cert-authority) accept any user certificate it signs,
 // giving central revocation (rotate the CA) and expiry (cert validity).
-export const sshIdentityCa = sqliteTable("ssh_identity_ca", {
+export const termixIdentityCa = sqliteTable("termix_identity_ca", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   identityId: integer("identity_id")
     .notNull()
     .unique()
-    .references(() => sshIdentities.id, { onDelete: "cascade" }),
+    .references(() => termixIdentities.id, { onDelete: "cascade" }),
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
@@ -859,7 +859,7 @@ export const sshIdentityCa = sqliteTable("ssh_identity_ca", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
-// --- ssh-id end ---
+// --- termix-id end ---
 
 // --- tmux-monitor begin ---
 export const tmuxSessionTags = sqliteTable("tmux_session_tags", {

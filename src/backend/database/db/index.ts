@@ -991,11 +991,11 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite.prepare("SELECT id FROM ssh_identities LIMIT 1").get();
+    sqlite.prepare("SELECT id FROM termix_identities LIMIT 1").get();
   } catch {
     try {
       sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS ssh_identities (
+        CREATE TABLE IF NOT EXISTS termix_identities (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           user_id TEXT NOT NULL UNIQUE,
           handle TEXT NOT NULL UNIQUE,
@@ -1006,32 +1006,32 @@ const migrateSchema = () => {
         );
       `);
     } catch (createError) {
-      databaseLogger.warn("Failed to create ssh_identities table", {
+      databaseLogger.warn("Failed to create termix_identities table", {
         operation: "schema_migration",
         error: createError,
       });
     }
   }
 
-  // Enforce one-SSH-ID-per-user on databases where the table predates the
+  // Enforce one-Termix-ID-per-user on databases where the table predates the
   // UNIQUE(user_id) constraint above.
   try {
     sqlite.exec(
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_ssh_identities_user ON ssh_identities(user_id)",
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_termix_identities_user ON termix_identities(user_id)",
     );
   } catch (indexError) {
-    databaseLogger.warn("Failed to create ssh_identities user_id unique index", {
+    databaseLogger.warn("Failed to create termix_identities user_id unique index", {
       operation: "schema_migration",
       error: indexError,
     });
   }
 
   try {
-    sqlite.prepare("SELECT id FROM ssh_identity_keys LIMIT 1").get();
+    sqlite.prepare("SELECT id FROM termix_identity_keys LIMIT 1").get();
   } catch {
     try {
       sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS ssh_identity_keys (
+        CREATE TABLE IF NOT EXISTS termix_identity_keys (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           identity_id INTEGER NOT NULL,
           user_id TEXT NOT NULL,
@@ -1044,13 +1044,13 @@ const migrateSchema = () => {
           credential_id INTEGER,
           enabled INTEGER NOT NULL DEFAULT 1,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (identity_id) REFERENCES ssh_identities (id) ON DELETE CASCADE,
+          FOREIGN KEY (identity_id) REFERENCES termix_identities (id) ON DELETE CASCADE,
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
           FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE SET NULL
         );
       `);
     } catch (createError) {
-      databaseLogger.warn("Failed to create ssh_identity_keys table", {
+      databaseLogger.warn("Failed to create termix_identity_keys table", {
         operation: "schema_migration",
         error: createError,
       });
@@ -1060,21 +1060,21 @@ const migrateSchema = () => {
   // The public resolver fetches keys by identity_id on every request; index it.
   try {
     sqlite.exec(
-      "CREATE INDEX IF NOT EXISTS idx_ssh_identity_keys_identity ON ssh_identity_keys(identity_id)",
+      "CREATE INDEX IF NOT EXISTS idx_termix_identity_keys_identity ON termix_identity_keys(identity_id)",
     );
   } catch (indexError) {
-    databaseLogger.warn("Failed to create ssh_identity_keys identity index", {
+    databaseLogger.warn("Failed to create termix_identity_keys identity index", {
       operation: "schema_migration",
       error: indexError,
     });
   }
 
   try {
-    sqlite.prepare("SELECT id FROM ssh_identity_ca LIMIT 1").get();
+    sqlite.prepare("SELECT id FROM termix_identity_ca LIMIT 1").get();
   } catch {
     try {
       sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS ssh_identity_ca (
+        CREATE TABLE IF NOT EXISTS termix_identity_ca (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           identity_id INTEGER NOT NULL UNIQUE,
           user_id TEXT NOT NULL,
@@ -1083,12 +1083,12 @@ const migrateSchema = () => {
           validity_days INTEGER NOT NULL DEFAULT 90,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (identity_id) REFERENCES ssh_identities (id) ON DELETE CASCADE,
+          FOREIGN KEY (identity_id) REFERENCES termix_identities (id) ON DELETE CASCADE,
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         );
       `);
     } catch (createError) {
-      databaseLogger.warn("Failed to create ssh_identity_ca table", {
+      databaseLogger.warn("Failed to create termix_identity_ca table", {
         operation: "schema_migration",
         error: createError,
       });
