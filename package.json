@@ -60,7 +60,7 @@
     "ldapjs": "^3.0.7",
     "motion": "^12.38.0",
     "multer": "^2.2.0",
-    "nanoid": "^5.1.9",
+    "nanoid": "^5.1.15",
     "qrcode": "^1.5.4",
     "socks": "^2.8.7",
     "speakeasy": "^2.0.0",
