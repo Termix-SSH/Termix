@@ -212,6 +212,16 @@ function ClaimHandle({ onCreated }: { onCreated: () => void }) {
     <SectionCard
       title={t("termixId.title")}
       icon={<Fingerprint className="size-3.5" />}
+      action={
+        <a
+          href="https://docs.termix.site/features/authentication/termix-id"
+          target="_blank"
+          rel="noreferrer"
+          className="text-[10px] text-accent-brand hover:underline"
+        >
+          {t("hosts.docsLink")}
+        </a>
+      }
     >
       <div className="flex flex-col gap-3 py-3">
         <p className="text-xs text-muted-foreground leading-snug">
@@ -337,14 +347,24 @@ function IdentityCard({
             </Button>
           </div>
         ) : (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setConfirming(true)}
-            className="hover:text-destructive"
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <a
+              href="https://docs.termix.site/features/authentication/termix-id"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-accent-brand hover:underline px-1"
+            >
+              {t("hosts.docsLink")}
+            </a>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setConfirming(true)}
+              className="hover:text-destructive"
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          </div>
         )
       }
     >

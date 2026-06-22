@@ -478,13 +478,23 @@ export function HostEditor({
                         <p className="text-[10px] text-muted-foreground">
                           {t("hosts.vaultProfileHint")}
                         </p>
-                        <button
-                          type="button"
-                          className="text-[10px] text-accent-brand hover:text-accent-brand/80 shrink-0"
-                          onClick={() => setShowVaultManager((v) => !v)}
-                        >
-                          {t("hosts.vaultManageProfiles")}
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href="https://docs.termix.site/features/authentication/vault"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-accent-brand hover:underline"
+                          >
+                            {t("hosts.docsLink")}
+                          </a>
+                          <button
+                            type="button"
+                            className="text-[10px] text-accent-brand hover:text-accent-brand/80"
+                            onClick={() => setShowVaultManager((v) => !v)}
+                          >
+                            {t("hosts.vaultManageProfiles")}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
