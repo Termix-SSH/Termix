@@ -172,6 +172,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<TerminalHostConfig | null>(null);
 
+    // Vault SSH signer interactive OIDC flow
+    const [vaultDialog, setVaultDialog] = useState<{
+      stage: "waiting" | "error";
+      error?: string;
+    } | null>(null);
+    const vaultFailedRef = useRef(false);
+    const vaultPopupRef = useRef<Window | null>(null);
+    const vaultTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     const [hostKeyVerification, setHostKeyVerification] = useState<{
       isOpen: boolean;
       scenario: "new" | "changed";
@@ -1141,6 +1150,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             setIsConnecting(false);
           } else if (msg.type === "connected") {
             opksshFailedRef.current = false;
+            vaultFailedRef.current = false;
             wasConnectedRef.current = true;
             setIsConnected(true);
             setIsConnecting(false);
@@ -1324,6 +1334,86 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 );
               }
             }
+          } else if (msg.type === "vault_auth_required") {
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+            if (vaultFailedRef.current) {
+              setVaultDialog({
+                stage: "error",
+                error: t("terminal.vaultAuthFailed"),
+              });
+              updateConnectionError(t("terminal.vaultAuthFailed"));
+              addLog({
+                type: "error",
+                stage: "auth",
+                message: t("terminal.vaultAuthFailed"),
+              });
+            } else {
+              vaultFailedRef.current = true;
+              webSocketRef.current?.send(
+                JSON.stringify({
+                  type: "vault_start_auth",
+                  data: { hostId: msg.hostId },
+                }),
+              );
+            }
+          } else if (msg.type === "vault_auth_url") {
+            if (connectionErrorRef.current) return;
+            try {
+              vaultPopupRef.current = window.open(
+                msg.url,
+                "termix-vault-oidc",
+                "width=540,height=720",
+              );
+            } catch {
+              vaultPopupRef.current = null;
+            }
+            setVaultDialog({ stage: "waiting" });
+            if (vaultTimeoutRef.current) clearTimeout(vaultTimeoutRef.current);
+            vaultTimeoutRef.current = setTimeout(() => {
+              setVaultDialog(null);
+              webSocketRef.current?.close();
+            }, 300000);
+          } else if (msg.type === "vault_completed") {
+            if (vaultTimeoutRef.current) {
+              clearTimeout(vaultTimeoutRef.current);
+              vaultTimeoutRef.current = null;
+            }
+            try {
+              vaultPopupRef.current?.close();
+            } catch {
+              // popup may already be closed
+            }
+            setVaultDialog(null);
+            if (webSocketRef.current && terminal) {
+              webSocketRef.current.send(
+                JSON.stringify({
+                  type: "vault_auth_completed",
+                  data: {
+                    hostId: currentHostIdRef.current,
+                    cols: terminal.cols || 80,
+                    rows: terminal.rows || 24,
+                    hostConfig: currentHostConfigRef.current,
+                  },
+                }),
+              );
+            }
+          } else if (msg.type === "vault_error") {
+            if (connectionErrorRef.current) return;
+            vaultFailedRef.current = true;
+            if (vaultTimeoutRef.current) {
+              clearTimeout(vaultTimeoutRef.current);
+              vaultTimeoutRef.current = null;
+            }
+            try {
+              vaultPopupRef.current?.close();
+            } catch {
+              // popup may already be closed
+            }
+            setVaultDialog({ stage: "error", error: msg.error });
+            setIsConnecting(false);
           } else if (msg.type === "opkssh_status") {
             if (connectionErrorRef.current) return;
             if (msg.stage === "chooser") {
@@ -1473,6 +1563,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           } else if (msg.type === "sessionAttached") {
             isAttachingSessionRef.current = false;
             opksshFailedRef.current = false;
+            vaultFailedRef.current = false;
             wasConnectedRef.current = true;
             setIsConnected(true);
             setIsConnecting(false);
@@ -2767,6 +2858,70 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }}
             backgroundColor={backgroundColor}
           />
+        )}
+
+        {vaultDialog && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="w-[420px] max-w-[90%] border border-border bg-background p-5 shadow-lg">
+              <h3 className="text-sm font-bold mb-2 text-foreground">
+                {vaultDialog.stage === "error"
+                  ? t("terminal.vaultAuthFailed")
+                  : t("terminal.vaultAuthTitle")}
+              </h3>
+              {vaultDialog.stage === "error" ? (
+                <p className="text-xs text-destructive mb-4 break-words">
+                  {vaultDialog.error || t("terminal.vaultAuthFailed")}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mb-4">
+                  {t("terminal.vaultAuthDescription")}
+                </p>
+              )}
+              <div className="flex justify-end gap-2">
+                {vaultDialog.stage === "waiting" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      try {
+                        vaultPopupRef.current?.focus();
+                      } catch {
+                        // popup may be gone
+                      }
+                    }}
+                  >
+                    {t("terminal.vaultReopen")}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (vaultTimeoutRef.current) {
+                      clearTimeout(vaultTimeoutRef.current);
+                      vaultTimeoutRef.current = null;
+                    }
+                    try {
+                      vaultPopupRef.current?.close();
+                    } catch {
+                      // popup may already be closed
+                    }
+                    webSocketRef.current?.send(
+                      JSON.stringify({
+                        type: "vault_cancel",
+                        data: { hostId: currentHostIdRef.current },
+                      }),
+                    );
+                    setVaultDialog(null);
+                  }}
+                >
+                  {vaultDialog.stage === "error"
+                    ? t("common.close")
+                    : t("hosts.cancelBtn")}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {hostKeyVerification?.isOpen && (

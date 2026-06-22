@@ -355,11 +355,12 @@ export function registerHostBulkRoutes(
               "none",
               "opkssh",
               "tailscale",
+              "vault",
             ].includes(hostData.authType)
           ) {
             results.failed++;
             results.errors.push(
-              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', or 'tailscale'`,
+              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', 'tailscale', or 'vault'`,
             );
             continue;
           }

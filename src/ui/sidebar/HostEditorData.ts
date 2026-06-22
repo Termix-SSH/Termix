@@ -79,6 +79,7 @@ export function createHostEditorForm(
     credentialId:
       host?.credentialId ??
       (d?.credentialId != null ? String(d.credentialId) : ""),
+    vaultProfileId: host?.vaultProfileId ?? "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
     tags: host?.tags ?? ([] as string[]),
@@ -281,6 +282,7 @@ export function buildHostEditorPayload(
     keyType: usesKey && form.keyType !== "auto" ? form.keyType : null,
     credentialId:
       usesCredential && form.credentialId ? Number(form.credentialId) : null,
+    vaultProfileId: form.vaultProfileId ? Number(form.vaultProfileId) : null,
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
     macAddress: form.macAddress || null,

@@ -44,6 +44,7 @@ class FieldCrypto {
     ]),
     opkssh_tokens: new Set(["sshCert", "privateKey"]),
     termix_identity_ca: new Set(["privateKey"]),
+    vault_tokens: new Set(["sshCert", "privateKey"]),
   };
 
   static encryptField(

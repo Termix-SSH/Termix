@@ -20,6 +20,7 @@ import proxmoxRoutes from "./routes/proxmox.js";
 import termixIdRoutes from "./routes/termix-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
+import vaultRoutes from "./routes/vault.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import fs from "fs";
 import path from "path";
@@ -1792,6 +1793,7 @@ app.use("/proxmox", proxmoxRoutes);
 app.use("/termix-id", termixIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
+app.use("/vault", vaultRoutes);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),
