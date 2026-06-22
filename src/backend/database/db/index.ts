@@ -991,6 +991,111 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite.prepare("SELECT id FROM termix_identities LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS termix_identities (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL UNIQUE,
+          handle TEXT NOT NULL UNIQUE,
+          description TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create termix_identities table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  // Enforce one-Termix-ID-per-user on databases where the table predates the
+  // UNIQUE(user_id) constraint above.
+  try {
+    sqlite.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_termix_identities_user ON termix_identities(user_id)",
+    );
+  } catch (indexError) {
+    databaseLogger.warn("Failed to create termix_identities user_id unique index", {
+      operation: "schema_migration",
+      error: indexError,
+    });
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM termix_identity_keys LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS termix_identity_keys (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          identity_id INTEGER NOT NULL,
+          user_id TEXT NOT NULL,
+          public_key TEXT NOT NULL,
+          key_type TEXT NOT NULL,
+          algorithm TEXT NOT NULL,
+          label TEXT,
+          comment TEXT,
+          source TEXT NOT NULL DEFAULT 'manual',
+          credential_id INTEGER,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (identity_id) REFERENCES termix_identities (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE SET NULL
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create termix_identity_keys table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  // The public resolver fetches keys by identity_id on every request; index it.
+  try {
+    sqlite.exec(
+      "CREATE INDEX IF NOT EXISTS idx_termix_identity_keys_identity ON termix_identity_keys(identity_id)",
+    );
+  } catch (indexError) {
+    databaseLogger.warn("Failed to create termix_identity_keys identity index", {
+      operation: "schema_migration",
+      error: indexError,
+    });
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM termix_identity_ca LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS termix_identity_ca (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          identity_id INTEGER NOT NULL UNIQUE,
+          user_id TEXT NOT NULL,
+          public_key TEXT NOT NULL,
+          private_key TEXT NOT NULL,
+          validity_days INTEGER NOT NULL DEFAULT 90,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (identity_id) REFERENCES termix_identities (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create termix_identity_ca table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
     sqlite.prepare("SELECT id FROM c2s_tunnel_presets LIMIT 1").get();
   } catch {
     try {

@@ -2113,3 +2113,31 @@ export {
   type ActiveSessionInfo,
   type UserPreferences,
 } from "@/api/open-tabs-api";
+
+// ============================================================================
+// TERMIX ID API
+// ============================================================================
+
+export {
+  getMyTermixId,
+  checkTermixIdHandle,
+  createTermixId,
+  updateTermixId,
+  deleteTermixId,
+  addTermixIdKey,
+  generateTermixIdKey,
+  setTermixIdKeyEnabled,
+  deleteTermixIdKey,
+  getMyCa,
+  createCa,
+  rotateCa,
+  deleteCa,
+  issueCertificate,
+  getLinkedCredentialIds,
+  type TermixIdentity,
+  type TermixIdentityKey,
+  type TermixIdMe,
+  type GeneratedKey,
+  type TermixIdCa,
+  type IssuedCertificate,
+} from "@/api/termix-id-api";

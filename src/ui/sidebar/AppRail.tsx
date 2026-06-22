@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Clock,
+  Fingerprint,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
@@ -20,6 +21,7 @@ import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 export type RailView =
   | "hosts"
   | "credentials"
+  | "termix-id"
   | "quick-connect"
   | ToolsTab
   | "connections"
@@ -53,6 +55,12 @@ function buildRailButtons(
       view: "credentials",
       icon: <KeyRound size={16} />,
       title: t("nav.credentials"),
+    },
+    { kind: "separator" },
+    {
+      view: "termix-id",
+      icon: <Fingerprint size={16} />,
+      title: t("nav.termixId"),
     },
     { kind: "separator" },
     {

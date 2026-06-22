@@ -788,6 +788,79 @@ export const dashboardServiceLinks = sqliteTable("dashboard_service_links", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- termix-id begin ---
+// A user claims a unique public handle. Their published SSH public keys are
+// served at an unauthenticated resolver endpoint in authorized_keys format,
+// so any server can be provisioned with `curl <host>/termix-id/u/<handle> >> ~/.ssh/authorized_keys`.
+export const termixIdentities = sqliteTable("termix_identities", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // One Termix ID per user — enforced in schema, not just in code.
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  handle: text("handle").notNull().unique(),
+  description: text("description"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const termixIdentityKeys = sqliteTable("termix_identity_keys", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  identityId: integer("identity_id")
+    .notNull()
+    .references(() => termixIdentities.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Public keys are non-secret, so they are stored in plaintext (no field-level
+  // encryption). This is what lets the unauthenticated resolver serve them.
+  publicKey: text("public_key", { length: 8192 }).notNull(),
+  // Raw algorithm token (e.g. "ssh-ed25519"), and a normalized group used for
+  // the /<ALGO> resolver filter (RSA / ED25519 / ECDSA / ...).
+  keyType: text("key_type").notNull(),
+  algorithm: text("algorithm").notNull(),
+  label: text("label"),
+  comment: text("comment"),
+  // "manual" (pasted) or "credential" (imported from an ssh_credentials entry).
+  source: text("source").notNull().default("manual"),
+  credentialId: integer("credential_id").references(() => sshCredentials.id, {
+    onDelete: "set null",
+  }),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// Per-identity certificate authority. Servers that trust this CA (via
+// TrustedUserCAKeys / @cert-authority) accept any user certificate it signs,
+// giving central revocation (rotate the CA) and expiry (cert validity).
+export const termixIdentityCa = sqliteTable("termix_identity_ca", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  identityId: integer("identity_id")
+    .notNull()
+    .unique()
+    .references(() => termixIdentities.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // CA public key (plaintext — it is published); CA private key is field-encrypted.
+  publicKey: text("public_key", { length: 4096 }).notNull(),
+  privateKey: text("private_key", { length: 8192 }).notNull(),
+  validityDays: integer("validity_days").notNull().default(90),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- termix-id end ---
+
 // --- tmux-monitor begin ---
 export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
   id: integer("id").primaryKey({ autoIncrement: true }),
