@@ -39,6 +39,19 @@ class SharedCredentialManager {
     ownerId: string,
   ): Promise<void> {
     try {
+      const existing = await db
+        .select({ id: sharedCredentials.id })
+        .from(sharedCredentials)
+        .where(
+          and(
+            eq(sharedCredentials.hostAccessId, hostAccessId),
+            eq(sharedCredentials.targetUserId, targetUserId),
+          ),
+        )
+        .limit(1);
+
+      if (existing.length > 0) return;
+
       const ownerDEK = DataCrypto.getUserDataKey(ownerId);
 
       if (ownerDEK) {
@@ -152,6 +165,83 @@ class SharedCredentialManager {
           operation: "create_shared_credentials_role",
           hostAccessId,
           roleId,
+        },
+      );
+      throw error;
+    }
+  }
+
+  async createSharedCredentialsForRoleMember(
+    roleId: number,
+    targetUserId: string,
+  ): Promise<void> {
+    try {
+      const hostsSharedWithRole = await db
+        .select()
+        .from(hostAccess)
+        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
+        .where(eq(hostAccess.roleId, roleId));
+
+      for (const { host_access, ssh_data } of hostsSharedWithRole) {
+        const activeCredentialId =
+          ssh_data.credentialId ??
+          ssh_data.rdpCredentialId ??
+          ssh_data.vncCredentialId ??
+          ssh_data.telnetCredentialId;
+
+        if (!activeCredentialId) continue;
+
+        try {
+          await this.createSharedCredentialForUser(
+            host_access.id,
+            activeCredentialId,
+            targetUserId,
+            ssh_data.userId,
+          );
+        } catch (error) {
+          databaseLogger.error(
+            "Failed to create shared credential for role member",
+            error,
+            {
+              operation: "create_shared_credentials_role_member",
+              roleId,
+              targetUserId,
+              hostId: ssh_data.id,
+            },
+          );
+        }
+      }
+    } catch (error) {
+      databaseLogger.error(
+        "Failed to create shared credentials for role member",
+        error,
+        {
+          operation: "create_shared_credentials_role_member",
+          roleId,
+          targetUserId,
+        },
+      );
+      throw error;
+    }
+  }
+
+  async createSharedCredentialsForUserRoles(userId: string): Promise<void> {
+    try {
+      const roleRows = await db
+        .select({ roleId: userRoles.roleId })
+        .from(userRoles)
+        .where(eq(userRoles.userId, userId));
+
+      for (const { roleId } of roleRows) {
+        await this.createSharedCredentialsForRoleMember(roleId, userId);
+      }
+    } catch (error) {
+      databaseLogger.error(
+        "Failed to create shared credentials for user roles",
+        error,
+        {
+          operation: "create_shared_credentials_user_roles",
+          userId,
         },
       );
       throw error;
