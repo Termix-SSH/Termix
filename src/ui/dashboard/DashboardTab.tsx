@@ -50,6 +50,7 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
+import { useServerStatus } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 
@@ -387,6 +388,7 @@ function HostStatusCard({
   hosts,
   hostMetrics,
   onOpenTab,
+  statusLoading,
 }: {
   hosts: Host[];
   hostMetrics: Map<
@@ -394,6 +396,7 @@ function HostStatusCard({
     { cpu: number | null; ram: number | null; disk: number | null }
   >;
   onOpenTab: (host: Host, type: TabType) => void;
+  statusLoading?: boolean;
 }) {
   const { t } = useTranslation();
   const statusScheme = useStatusColorScheme();
@@ -431,7 +434,7 @@ function HostStatusCard({
             >
               <div className="flex items-center gap-2.5">
                 <span
-                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot", statusLoading)}`}
                 />
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1">
@@ -470,11 +473,13 @@ function HostStatusCard({
                   </div>
                 )}
                 <span
-                  className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(host.online, statusScheme, "badge")}`}
+                  className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(host.online, statusScheme, "badge", statusLoading)}`}
                 >
-                  {host.online
-                    ? t("dashboardTab.online")
-                    : t("dashboardTab.offline")}
+                  {statusLoading
+                    ? t("dashboardTab.checking")
+                    : host.online
+                      ? t("dashboardTab.online")
+                      : t("dashboardTab.offline")}
                 </span>
               </div>
             </div>
@@ -490,11 +495,13 @@ function RecentActivityCard({
   hosts,
   onOpenTab,
   onClear,
+  statusLoading,
 }: {
   activity: RecentActivityItem[];
   hosts: Host[];
   onOpenTab: (host: Host, type: TabType) => void;
   onClear: () => void;
+  statusLoading?: boolean;
 }) {
   const { t } = useTranslation();
   const statusScheme = useStatusColorScheme();
@@ -573,7 +580,7 @@ function RecentActivityCard({
             >
               <div className="flex items-center gap-2">
                 <span
-                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.online ?? false, statusScheme, "dot")}`}
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host?.online ?? false, statusScheme, "dot", statusLoading)}`}
                 />
                 <div className="flex flex-col">
                   <span className="text-xs font-semibold truncate max-w-24">
@@ -741,6 +748,7 @@ function CardItem({
   serviceLinks,
   onAddServiceLink,
   onDeleteServiceLink,
+  statusLoading,
 }: {
   slot: CardSlot;
   editMode: boolean;
@@ -769,6 +777,7 @@ function CardItem({
   serviceLinks: ServiceLink[];
   onAddServiceLink: (label: string, url: string) => Promise<void>;
   onDeleteServiceLink: (id: number) => Promise<void>;
+  statusLoading?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -850,6 +859,7 @@ function CardItem({
             hostMetrics={hostMetrics}
             onOpenTab={onOpenTab}
             isAdmin={isAdmin}
+            statusLoading={statusLoading}
           />
         )}
         {slot.id === "recent_activity" && (
@@ -858,6 +868,7 @@ function CardItem({
             hosts={hosts}
             onOpenTab={onOpenTab}
             onClear={onClearActivity}
+            statusLoading={statusLoading}
           />
         )}
         {slot.id === "network_graph" && (
@@ -986,6 +997,7 @@ type PanelColumnProps = {
   serviceLinks: ServiceLink[];
   onAddServiceLink: (label: string, url: string) => Promise<void>;
   onDeleteServiceLink: (id: number) => Promise<void>;
+  statusLoading: boolean;
 };
 
 function PanelColumn({
@@ -1016,6 +1028,7 @@ function PanelColumn({
   serviceLinks,
   onAddServiceLink,
   onDeleteServiceLink,
+  statusLoading,
 }: PanelColumnProps) {
   const { t } = useTranslation();
   const sorted = [...slots].sort((a, b) => a.order - b.order);
@@ -1071,6 +1084,7 @@ function PanelColumn({
             serviceLinks={serviceLinks}
             onAddServiceLink={onAddServiceLink}
             onDeleteServiceLink={onDeleteServiceLink}
+            statusLoading={statusLoading}
           />
         </div>
       ))}
@@ -1126,6 +1140,8 @@ export function DashboardTab({
   onOpenTab: (host: Host, type: TabType) => void;
 }) {
   const { t, i18n } = useTranslation();
+  const { initialLoadComplete } = useServerStatus();
+  const statusLoading = !initialLoadComplete;
 
   const [slots, setSlots] = useState<CardSlot[]>(() => {
     try {
@@ -1477,6 +1493,7 @@ export function DashboardTab({
     serviceLinks,
     onAddServiceLink: handleAddServiceLink,
     onDeleteServiceLink: handleDeleteServiceLink,
+    statusLoading,
   };
 
   const isMobile = useIsMobile();
@@ -1587,6 +1604,7 @@ export function DashboardTab({
                   hostMetrics={hostMetrics}
                   onOpenTab={onOpenTab}
                   isAdmin={isAdmin}
+                  statusLoading={statusLoading}
                 />
               )}
               {slot.id === "recent_activity" && (
@@ -1595,6 +1613,7 @@ export function DashboardTab({
                   hosts={hosts}
                   onOpenTab={onOpenTab}
                   onClear={handleClearActivity}
+                  statusLoading={statusLoading}
                 />
               )}
               {slot.id === "network_graph" && (

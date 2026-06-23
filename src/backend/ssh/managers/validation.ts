@@ -93,6 +93,23 @@ export function isValidFirewallTarget(t: unknown): t is FirewallTarget {
   return typeof t === "string" && (FW_TARGETS as string[]).includes(t);
 }
 
+const WG_IFACE_RE = /^[A-Za-z0-9_-]{1,15}$/;
+export function isValidWireGuardInterface(name: unknown): name is string {
+  return typeof name === "string" && WG_IFACE_RE.test(name);
+}
+
+export type WireGuardAction = "up" | "down";
+const WG_ACTIONS: WireGuardAction[] = ["up", "down"];
+export function isValidWireGuardAction(a: unknown): a is WireGuardAction {
+  return typeof a === "string" && (WG_ACTIONS as string[]).includes(a);
+}
+
+export type TailscaleAction = "up" | "down";
+const TAILSCALE_ACTIONS: TailscaleAction[] = ["up", "down"];
+export function isValidTailscaleAction(a: unknown): a is TailscaleAction {
+  return typeof a === "string" && (TAILSCALE_ACTIONS as string[]).includes(a);
+}
+
 /**
  * Validate an absolute file path against an allowlist of permitted prefixes and
  * reject traversal. Used by the log viewer (e.g. only under /var/log).

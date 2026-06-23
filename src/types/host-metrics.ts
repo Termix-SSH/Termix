@@ -21,7 +21,9 @@ export type HostMetricManagerId =
   | "health_check"
   | "disk_breakdown"
   | "systemd_timers"
-  | "top_memory";
+  | "top_memory"
+  | "wireguard_manager"
+  | "tailscale_manager";
 
 export type HostMetricsCardId = HostMetricCardId | HostMetricManagerId;
 
@@ -66,6 +68,8 @@ export const MANAGER_CARD_IDS: HostMetricManagerId[] = [
   "disk_breakdown",
   "systemd_timers",
   "top_memory",
+  "wireguard_manager",
+  "tailscale_manager",
 ];
 
 export function isMetricCardId(id: string): id is HostMetricCardId {

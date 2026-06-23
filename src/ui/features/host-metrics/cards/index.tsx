@@ -26,6 +26,8 @@ import {
   SystemdTimersCard,
   DiskBreakdownCard,
 } from "./managers/SimpleManagerCards";
+import { WireGuardManagerCard } from "./managers/WireGuardManagerCard";
+import { TailscaleManagerCard } from "./managers/TailscaleManagerCard";
 
 export interface MetricCardHistories {
   cpu: number[];
@@ -176,6 +178,16 @@ export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
     "top_memory",
     "hostMetrics.managers.topMemory",
     TopMemoryCard,
+  ),
+  wireguard_manager: managerCard(
+    "wireguard_manager",
+    "hostMetrics.managers.wireguard",
+    WireGuardManagerCard,
+  ),
+  tailscale_manager: managerCard(
+    "tailscale_manager",
+    "hostMetrics.managers.tailscale",
+    TailscaleManagerCard,
   ),
 };
 

@@ -62,6 +62,7 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
+import { useServerStatus } from "@/lib/ServerStatusContext";
 import {
   Tooltip,
   TooltipContent,
@@ -304,6 +305,8 @@ export function HostItem({
     () => localStorage.getItem("compactHostView") === "true",
   );
   const statusScheme = useStatusColorScheme();
+  const { initialLoadComplete } = useServerStatus();
+  const statusLoading = !initialLoadComplete && statusCheckEnabled(host);
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const shouldUseClickTray = trayOnClick || isTouchOnly;
@@ -414,7 +417,7 @@ export function HostItem({
         }}
       >
         <div
-          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe")}`}
+          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe", statusLoading)}`}
         />
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-center gap-1.5 min-w-0 px-2.5 py-1">
@@ -429,7 +432,7 @@ export function HostItem({
               <Tooltip>
                 <TooltipTrigger className="flex items-center">
                   <span
-                    className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+                    className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot", statusLoading)}`}
                   />
                 </TooltipTrigger>
                 <TooltipContent side="right">
@@ -917,7 +920,7 @@ export function HostItem({
     >
       {/* Status stripe */}
       <div
-        className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe")}`}
+        className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(host.online, statusScheme, "stripe", statusLoading)}`}
       />
 
       <div className="flex flex-col flex-1 min-w-0 px-2.5 pt-2 pb-1.5 gap-1">
@@ -934,7 +937,7 @@ export function HostItem({
             <Tooltip>
               <TooltipTrigger className="flex items-center">
                 <span
-                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot")}`}
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot", statusLoading)}`}
                 />
               </TooltipTrigger>
               <TooltipContent side="right">

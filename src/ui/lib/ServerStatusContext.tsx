@@ -21,6 +21,7 @@ interface ServerStatusEntry {
 interface ServerStatusContextType {
   statuses: Map<number, ServerStatusEntry>;
   isLoading: boolean;
+  initialLoadComplete: boolean;
   refreshStatuses: () => Promise<void>;
   getStatus: (hostId: number) => StatusValue;
 }
@@ -40,6 +41,7 @@ export function ServerStatusProvider({
     new Map(),
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [enabledHostIds, setEnabledHostIds] = useState<Set<number>>(new Set());
   const mountedRef = useRef(true);
   const enabledHostIdsRef = useRef(enabledHostIds);
@@ -129,6 +131,7 @@ export function ServerStatusProvider({
     } finally {
       if (mountedRef.current) {
         setIsLoading(false);
+        setInitialLoadComplete(true);
       }
     }
   }, [isAuthenticated]);
@@ -183,6 +186,7 @@ export function ServerStatusProvider({
       value={{
         statuses,
         isLoading,
+        initialLoadComplete,
         refreshStatuses,
         getStatus,
       }}

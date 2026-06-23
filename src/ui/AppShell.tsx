@@ -56,6 +56,7 @@ import {
 } from "@/main-axios";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
+import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
 import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
@@ -1568,7 +1569,7 @@ export function AppShell({
   );
 
   return (
-    <>
+    <ServerStatusProvider isAuthenticated={!!username}>
       <div className="flex w-screen bg-background" style={{ height: "100dvh" }}>
         {/* Skinny icon rail — desktop only, hidden on mobile */}
         <AppRail
@@ -1767,6 +1768,6 @@ export function AppShell({
         }}
       />
       <TransferMonitor />
-    </>
+    </ServerStatusProvider>
   );
 }
