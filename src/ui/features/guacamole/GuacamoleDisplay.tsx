@@ -67,15 +67,27 @@ export const GuacamoleDisplay = forwardRef<
   const windowFocusedRef = useRef(
     typeof document === "undefined" ? true : document.hasFocus(),
   );
+  const hasInitiatedRef = useRef(false);
+  const isMountedRef = useRef(false);
+  const isConnectingRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
 
+  const disconnectClient = useCallback(() => {
+    const client = clientRef.current;
+    clientRef.current = null;
+    isConnectingRef.current = false;
+    if (!client) return;
+
+    try {
+      client.disconnect();
+    } catch (error) {
+      console.warn("Failed to disconnect Guacamole client", error);
+    }
+  }, []);
+
   useImperativeHandle(ref, () => ({
-    disconnect: () => {
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-      }
-    },
+    disconnect: disconnectClient,
     isConnected: () => isReady && !hasError,
     sendKey: (keysym: number, pressed: boolean) => {
       if (clientRef.current) {
@@ -264,6 +276,10 @@ export const GuacamoleDisplay = forwardRef<
     await new Promise<void>((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
     );
+    if (!isMountedRef.current) {
+      isConnectingRef.current = false;
+      return;
+    }
 
     // The tab's DOM node can still be display:none (and report 0x0) when this
     // tab is restored in the background. Measuring then would force the
@@ -284,6 +300,10 @@ export const GuacamoleDisplay = forwardRef<
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => resolve()),
       );
+      if (!isMountedRef.current) {
+        isConnectingRef.current = false;
+        return;
+      }
       ({ width: containerWidth, height: containerHeight } = measureContainer());
     }
 
@@ -293,6 +313,10 @@ export const GuacamoleDisplay = forwardRef<
     }
 
     const wsUrl = await getWebSocketUrl(containerWidth, containerHeight);
+    if (!isMountedRef.current) {
+      isConnectingRef.current = false;
+      return;
+    }
     if (!wsUrl) {
       isConnectingRef.current = false;
       return;
@@ -315,12 +339,13 @@ export const GuacamoleDisplay = forwardRef<
     displayElement.style.outline = "none";
 
     display.onresize = () => {
+      if (!isMountedRef.current) return;
       rescaleDisplay(true);
       setIsReady(true);
     };
 
     const protocol = connectionConfig.protocol ?? connectionConfig.type;
-    if (protocol === "telnet") {
+    if (protocol === "telnet" && isMountedRef.current) {
       setIsReady(true);
     }
 
@@ -364,6 +389,7 @@ export const GuacamoleDisplay = forwardRef<
     refreshKeyboardHandlers();
 
     client.onstatechange = (state: number) => {
+      if (!isMountedRef.current) return;
       switch (state) {
         case 0:
           break;
@@ -395,6 +421,7 @@ export const GuacamoleDisplay = forwardRef<
     };
 
     client.onerror = (error: Guacamole.Status) => {
+      if (!isMountedRef.current) return;
       const errorMessage = error.message || t("guacamole.connectionError");
       setIsReady(false);
       setHasError(true);
@@ -437,7 +464,17 @@ export const GuacamoleDisplay = forwardRef<
       stream.sendAck("OK", Guacamole.Status.Code.SUCCESS);
     };
 
-    client.connect();
+    try {
+      client.connect();
+    } catch (error) {
+      isConnectingRef.current = false;
+      if (!isMountedRef.current) return;
+      setIsReady(false);
+      setHasError(true);
+      onError?.(
+        error instanceof Error ? error.message : t("guacamole.connectionError"),
+      );
+    }
   }, [
     getWebSocketUrl,
     onConnect,
@@ -449,10 +486,6 @@ export const GuacamoleDisplay = forwardRef<
     connectionConfig.type,
     t,
   ]);
-
-  const hasInitiatedRef = useRef(false);
-  const isMountedRef = useRef(false);
-  const isConnectingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -511,13 +544,10 @@ export const GuacamoleDisplay = forwardRef<
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-        clientRef.current = null;
-      }
+      disconnectClient();
       displayElementRef.current = null;
     };
-  }, []);
+  }, [disconnectClient]);
 
   useEffect(() => {
     if (!containerRef.current) return;
