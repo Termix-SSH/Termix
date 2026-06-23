@@ -31,6 +31,7 @@ import {
 } from "./tmux-helper.js";
 import { MemoryAgent, performPortKnocking } from "./terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -2285,19 +2286,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
     ) {
       sendLog("auth", "info", "Using SSH key authentication");
       try {
-        if (
-          !resolvedCredentials.key.includes("-----BEGIN") ||
-          !resolvedCredentials.key.includes("-----END")
-        ) {
-          throw new Error("Invalid private key format");
-        }
-
-        const cleanKey = resolvedCredentials.key
-          .trim()
-          .replace(/\r\n/g, "\n")
-          .replace(/\r/g, "\n");
-
-        connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
+        connectConfig.privateKey = preparePrivateKeyForSSH2(
+          resolvedCredentials.key,
+          resolvedCredentials.keyPassword,
+        );
 
         if (resolvedCredentials.keyPassword) {
           connectConfig.passphrase = resolvedCredentials.keyPassword;
@@ -2346,11 +2338,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
         }
       } catch (keyError) {
-        sshLogger.error("SSH key format error: " + keyError.message);
+        const message =
+          keyError instanceof Error
+            ? keyError.message
+            : "Invalid private key format";
+        sshLogger.error("SSH key format error: " + message);
         ws.send(
           JSON.stringify({
             type: "error",
-            message: "SSH key format error: Invalid private key format",
+            message: `SSH key format error: ${message}`,
           }),
         );
         return;

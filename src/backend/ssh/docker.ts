@@ -19,6 +19,7 @@ import type { SSHHost, ProxyNode } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { registerDockerContainerRoutes } from "./docker-container-routes.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 
 const sshLogger = logger;
 
@@ -923,37 +924,16 @@ app.post("/docker/ssh/connect", async (req, res) => {
       resolvedCredentials.sshKey
     ) {
       try {
-        if (
-          !resolvedCredentials.sshKey.includes("-----BEGIN") ||
-          !resolvedCredentials.sshKey.includes("-----END")
-        ) {
-          sshLogger.error("Invalid SSH key format", {
-            operation: "docker_connect",
-            sessionId,
-            hostId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "docker_auth",
-              "Invalid SSH private key format",
-            ),
-          );
-          return res.status(400).json({
-            error: "Invalid private key format",
-            connectionLogs,
-          });
-        }
-
-        const cleanKey = resolvedCredentials.sshKey
-          .trim()
-          .replace(/\r\n/g, "\n")
-          .replace(/\r/g, "\n");
-        config.privateKey = Buffer.from(cleanKey, "utf8");
+        config.privateKey = preparePrivateKeyForSSH2(
+          resolvedCredentials.sshKey,
+          resolvedCredentials.keyPassword,
+        );
         if (resolvedCredentials.keyPassword) {
           config.passphrase = resolvedCredentials.keyPassword;
         }
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Invalid private key format";
         sshLogger.error("SSH key processing error", error, {
           operation: "docker_connect",
           sessionId,
@@ -963,11 +943,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
           createConnectionLog(
             "error",
             "docker_auth",
-            "SSH key processing error",
+            `SSH key processing error: ${message}`,
           ),
         );
         return res.status(400).json({
-          error: "SSH key format error: Invalid private key format",
+          error: `SSH key format error: ${message}`,
           connectionLogs,
         });
       }

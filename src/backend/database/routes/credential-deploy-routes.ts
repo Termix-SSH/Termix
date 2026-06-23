@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import ssh2Pkg from "ssh2";
 import { db } from "../db/index.js";
 import { hosts, sshCredentials } from "../db/schema.js";
+import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 
 const { Client } = ssh2Pkg;
 
@@ -312,19 +313,10 @@ async function deploySSHKeyToHost(
       } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
         try {
           const privateKey = hostConfig.privateKey as string;
-          if (
-            !privateKey.includes("-----BEGIN") ||
-            !privateKey.includes("-----END")
-          ) {
-            throw new Error("Invalid private key format");
-          }
-
-          const cleanKey = privateKey
-            .trim()
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n");
-
-          connectionConfig.privateKey = Buffer.from(cleanKey, "utf8");
+          connectionConfig.privateKey = preparePrivateKeyForSSH2(
+            privateKey,
+            hostConfig.keyPassword as string | undefined,
+          );
 
           if (hostConfig.keyPassword) {
             connectionConfig.passphrase = hostConfig.keyPassword;

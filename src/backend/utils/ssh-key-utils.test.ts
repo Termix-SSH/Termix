@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   parseSSHKey,
   parsePublicKey,
+  preparePrivateKeyForSSH2,
   getFriendlyKeyTypeName,
   validateKeyPair,
 } from "./ssh-key-utils.js";
@@ -19,6 +21,11 @@ AAAEDLo85Twyg0v6V1zsJaeRaxq9KPQXkqGY0HiJtVMzCXEFH+Ektft4yKdLjAkx8baBZK
 
 const ED25519_PUBLIC =
   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFH+Ektft4yKdLjAkx8baBZK21SK5Iu+oPBVhPnfHSp7 test@termix.test";
+
+const PPK_RSA_PRIVATE = readFileSync(
+  "node_modules/ssh2/test/fixtures/keyParser/ppk_rsa",
+  "utf8",
+);
 
 describe("parsePublicKey", () => {
   it("detects ssh-ed25519 public keys", () => {
@@ -67,6 +74,26 @@ describe("parseSSHKey", () => {
     const info = parseSSHKey("definitely not a key");
     expect(info.success).toBe(false);
     expect(info.keyType).toBe("unknown");
+  });
+
+  it("accepts PuTTY PPK v2 private keys supported by ssh2", () => {
+    const info = parseSSHKey(PPK_RSA_PRIVATE);
+    expect(info.success).toBe(true);
+    expect(info.keyType).toBe("ssh-rsa");
+    expect(info.publicKey).toContain("ssh-rsa");
+  });
+
+  it("prepares PuTTY PPK v2 private keys for ssh2 connections", () => {
+    const prepared = preparePrivateKeyForSSH2(PPK_RSA_PRIVATE);
+    expect(prepared.toString("utf8")).toContain("PuTTY-User-Key-File-2");
+  });
+
+  it("reports unsupported PuTTY PPK versions clearly", () => {
+    const info = parseSSHKey(
+      "PuTTY-User-Key-File-3: ssh-ed25519\nEncryption: none\n",
+    );
+    expect(info.success).toBe(false);
+    expect(info.error).toMatch(/Unsupported PuTTY PPK v3/);
   });
 });
 

@@ -375,7 +375,7 @@ export function HostEditor({
                               </span>
                               <input
                                 type="file"
-                                accept=".pem,.key,.txt"
+                                accept=".pem,.key,.ppk,.txt"
                                 className="hidden"
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];

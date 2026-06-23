@@ -33,6 +33,7 @@ import {
 import { registerFileContentRoutes } from "./file-manager-content-routes.js";
 import { createConnectionLog } from "./file-manager-log.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import {
   ChannelOpenSerializer,
   execChannel,
@@ -929,19 +930,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     resolvedCredentials.sshKey.trim()
   ) {
     try {
-      if (
-        !resolvedCredentials.sshKey.includes("-----BEGIN") ||
-        !resolvedCredentials.sshKey.includes("-----END")
-      ) {
-        throw new Error("Invalid private key format");
-      }
-
-      const cleanKey = resolvedCredentials.sshKey
-        .trim()
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-
-      config.privateKey = Buffer.from(cleanKey, "utf8");
+      config.privateKey = preparePrivateKeyForSSH2(
+        resolvedCredentials.sshKey,
+        resolvedCredentials.keyPassword,
+      );
 
       if (resolvedCredentials.keyPassword)
         config.passphrase = resolvedCredentials.keyPassword;
