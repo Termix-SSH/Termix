@@ -279,6 +279,27 @@ export function Auth({ onLogin }: AuthProps) {
   }, [rememberMe]);
 
   useEffect(() => {
+    if (!isInElectronWebView()) return;
+
+    const handleOIDCSystemBrowserResult = (event: MessageEvent) => {
+      if (event.source !== window.parent) return;
+      if (!event.data || typeof event.data !== "object") return;
+      if (event.data.type !== "OIDC_SYSTEM_BROWSER_AUTH_RESULT") return;
+
+      const providerId =
+        typeof event.data.providerId === "number" ? event.data.providerId : -1;
+      if (event.data.success) return;
+
+      setProviderLoading((prev) => ({ ...prev, [providerId]: false }));
+      toast.error(event.data.error || t("errors.failedOidcLogin"));
+    };
+
+    window.addEventListener("message", handleOIDCSystemBrowserResult);
+    return () =>
+      window.removeEventListener("message", handleOIDCSystemBrowserResult);
+  }, [t]);
+
+  useEffect(() => {
     getRegistrationAllowed()
       .then((res) => setRegistrationAllowed(res.allowed))
       .catch(() => {});
@@ -770,6 +791,7 @@ export function Auth({ onLogin }: AuthProps) {
               source: "oidc_request",
               authUrl,
               callbackPort,
+              providerId: loadingKey,
             },
             "*",
           );
