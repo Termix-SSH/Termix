@@ -63,6 +63,7 @@ import {
 } from "./HostEditorGuacamoleTabs";
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { VaultProfileManager } from "./VaultProfileManager";
+import { findHostByTunnelEndpoint } from "@/features/tunnel/tunnel-endpoints";
 
 export function HostEditor({
   host,
@@ -1428,7 +1429,18 @@ export function HostEditor({
                   </p>
                 )}
                 {form.serverTunnels.map((tun, i) => {
-                  const tunnelName = `${host?.id ?? "new"}-${i}-${tun.sourcePort}`;
+                  const selectedEndpointHost = findHostByTunnelEndpoint(
+                    hosts,
+                    tun.endpointHost,
+                  );
+                  const directEndpoint =
+                    !tun.endpointHost ||
+                    tun.endpointHost === "127.0.0.1" ||
+                    tun.endpointHost === "localhost";
+                  const hostLabel =
+                    host?.name ||
+                    (host ? `${host.username}@${host.ip}` : "new");
+                  const tunnelName = `${host?.id ?? "new"}::${i}::${hostLabel}::${tun.sourcePort}::${tun.endpointHost ?? ""}::${tun.endpointPort}`;
                   const tunnelStatus = tunnelStatuses[tunnelName]?.status as
                     | string
                     | undefined;
@@ -1486,12 +1498,30 @@ export function HostEditor({
                                       sourceCredentialId: form.credentialId
                                         ? Number(form.credentialId)
                                         : undefined,
-                                      endpointIP: host.ip,
-                                      endpointSSHPort:
-                                        host.sshPort ?? host.port,
+                                      endpointIP: directEndpoint
+                                        ? host.ip
+                                        : (selectedEndpointHost?.ip ??
+                                          tun.endpointHost ??
+                                          ""),
+                                      endpointSSHPort: directEndpoint
+                                        ? (host.sshPort ?? host.port)
+                                        : (selectedEndpointHost?.sshPort ??
+                                          selectedEndpointHost?.port ??
+                                          22),
                                       endpointHost: tun.endpointHost ?? "",
-                                      endpointUsername: form.username,
-                                      endpointAuthMethod: form.authType,
+                                      endpointUsername: directEndpoint
+                                        ? form.username
+                                        : (selectedEndpointHost?.username ??
+                                          ""),
+                                      endpointAuthMethod:
+                                        selectedEndpointHost?.authType ??
+                                        "none",
+                                      endpointCredentialId:
+                                        selectedEndpointHost?.credentialId
+                                          ? Number(
+                                              selectedEndpointHost.credentialId,
+                                            )
+                                          : undefined,
                                       sourcePort: tun.sourcePort,
                                       endpointPort: tun.endpointPort ?? 0,
                                       bindHost: tun.bindHost ?? "127.0.0.1",
