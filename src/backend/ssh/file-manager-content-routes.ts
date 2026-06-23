@@ -16,6 +16,20 @@ type FileContentRoutesDeps = {
   verifySessionOwnership: (session: SSHSession, userId: string) => boolean;
 };
 
+const getRequiredQueryParam = (
+  value: string | string[] | undefined,
+): string | undefined => {
+  if (Array.isArray(value)) return value[0];
+  return value;
+};
+
+const parseByteOffset = (value: string | undefined): number | null => {
+  if (!value) return null;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) return null;
+  return parsed;
+};
+
 export function registerFileContentRoutes(
   app: Express,
   { sshSessions, verifySessionOwnership }: FileContentRoutesDeps,
@@ -1505,6 +1519,127 @@ export function registerFileContentRoutes(
       });
 
       req.pipe(bb);
+    },
+  );
+
+  /**
+   * @openapi
+   * /ssh/file_manager/ssh/uploadFileChunk:
+   *   post:
+   *     summary: Upload one raw file chunk
+   *     description: Writes a raw request body to the remote file at the supplied byte offset, allowing browser clients to avoid multipart/FormData 2GB limits.
+   *     tags:
+   *       - File Manager
+   */
+  app.post(
+    "/ssh/file_manager/ssh/uploadFileChunk",
+    (req: Request, res: Response) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      const sessionId = getRequiredQueryParam(req.query.sessionId as string);
+      const remotePath = getRequiredQueryParam(req.query.path as string);
+      const fileName = getRequiredQueryParam(req.query.fileName as string);
+      const offset = parseByteOffset(
+        getRequiredQueryParam(req.query.offset as string),
+      );
+      const totalSize = parseByteOffset(
+        getRequiredQueryParam(req.query.totalSize as string),
+      );
+
+      if (!sessionId || !remotePath || !fileName) {
+        req.resume();
+        return res
+          .status(400)
+          .json({ error: "Missing sessionId, path, or fileName" });
+      }
+
+      if (offset === null || totalSize === null || offset > totalSize) {
+        req.resume();
+        return res.status(400).json({ error: "Invalid upload offset" });
+      }
+
+      const sshConn = sshSessions[sessionId];
+      if (!sshConn?.isConnected) {
+        req.resume();
+        return res.status(400).json({ error: "SSH connection not established" });
+      }
+
+      if (!verifySessionOwnership(sshConn, userId)) {
+        req.resume();
+        return res.status(403).json({ error: "Session access denied" });
+      }
+
+      sshConn.lastActive = Date.now();
+      const fullPath = remotePath.endsWith("/")
+        ? remotePath + fileName
+        : remotePath + "/" + fileName;
+      let resolved = false;
+      let bytesWritten = 0;
+      const uploadStartTime = Date.now();
+
+      getSessionSftp(sshConn)
+        .then((sftp) => {
+          const writeStream = sftp.createWriteStream(fullPath, {
+            flags: offset === 0 ? "w" : "r+",
+            start: offset,
+          });
+
+          const fail = (status: number, error: string) => {
+            if (resolved) return;
+            resolved = true;
+            req.unpipe(writeStream as unknown as NodeJS.WritableStream);
+            writeStream.destroy();
+            res.status(status).json({ error });
+          };
+
+          writeStream.on("error", (err) => {
+            fileLogger.error("SFTP write stream error during chunk upload:", err);
+            fail(500, `Upload failed: ${err.message}`);
+          });
+
+          writeStream.on("finish", () => {
+            if (resolved) return;
+            resolved = true;
+            const nextOffset = offset + bytesWritten;
+            fileLogger.info("File chunk upload completed", {
+              operation: "file_upload_chunk_complete",
+              sessionId,
+              userId,
+              path: fullPath,
+              offset,
+              bytesWritten,
+              nextOffset,
+              totalSize,
+              duration: Date.now() - uploadStartTime,
+            });
+            res.json({
+              message: "File chunk uploaded successfully",
+              path: fullPath,
+              offset,
+              bytesWritten,
+              nextOffset,
+              complete: nextOffset >= totalSize,
+            });
+          });
+
+          req.on("error", (err) => {
+            fileLogger.error("Request stream error during chunk upload:", err);
+            fail(500, `Upload stream error: ${err.message}`);
+          });
+
+          req.on("data", (chunk: Buffer) => {
+            bytesWritten += chunk.length;
+          });
+
+          req.pipe(writeStream as unknown as NodeJS.WritableStream);
+        })
+        .catch((err: Error) => {
+          req.resume();
+          fileLogger.error("SFTP session error during chunk upload:", err);
+          if (!resolved) {
+            resolved = true;
+            res.status(500).json({ error: `SFTP error: ${err.message}` });
+          }
+        });
     },
   );
 }
