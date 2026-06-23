@@ -79,6 +79,8 @@ import type {
 } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
 
+const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
+
 function FileManagerContent({
   initialHost,
   initialFilePath,
@@ -1281,55 +1283,81 @@ function FileManagerContent({
     }
   };
 
+  function openFileWindow(file: FileItem, sessionId: string) {
+    const windowCount = Date.now() % 10;
+    const baseOffsetX = 120 + windowCount * 30;
+    const baseOffsetY = 120 + windowCount * 30;
+
+    const maxOffsetX = Math.max(0, window.innerWidth - 800 - 100);
+    const maxOffsetY = Math.max(0, window.innerHeight - 600 - 100);
+
+    const offsetX = Math.min(baseOffsetX, maxOffsetX);
+    const offsetY = Math.min(baseOffsetY, maxOffsetY);
+
+    const createWindowComponent = (windowId: string) => (
+      <FileWindow
+        windowId={windowId}
+        file={file}
+        sshSessionId={sessionId}
+        sshHost={currentHost}
+        initialX={offsetX}
+        initialY={offsetY}
+        onFileNotFound={handleFileNotFound}
+      />
+    );
+
+    openWindow({
+      title: file.name,
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 600,
+      isMaximized: false,
+      isMinimized: false,
+      component: createWindowComponent,
+    });
+  }
+
+  async function confirmLargeFileOpen(file: FileItem) {
+    if (!file.size || file.size <= LARGE_FILE_WARNING_SIZE) return true;
+
+    return confirmWithToast(
+      {
+        title: t("fileManager.largeFileWarning"),
+        description: t("fileManager.largeFileWarningDesc", {
+          size: formatFileSize(file.size),
+        }),
+        confirmText: t("fileManager.confirm"),
+        cancelText: t("common.cancel"),
+      },
+      undefined,
+      "default",
+      t("common.cancel"),
+      { duration: 12000 },
+    );
+  }
+
   async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
       if (sshSessionId) setIsLoading(true);
       setCurrentPath(file.path);
-    } else if (file.type === "link") {
-      await handleSymlinkClick(file);
-    } else {
-      if (!sshSessionId) {
-        toast.error(t("fileManager.noSSHConnection"));
-        return;
-      }
-
-      await recordRecentFile(file);
-
-      const windowCount = Date.now() % 10;
-      const baseOffsetX = 120 + windowCount * 30;
-      const baseOffsetY = 120 + windowCount * 30;
-
-      const maxOffsetX = Math.max(0, window.innerWidth - 800 - 100);
-      const maxOffsetY = Math.max(0, window.innerHeight - 600 - 100);
-
-      const offsetX = Math.min(baseOffsetX, maxOffsetX);
-      const offsetY = Math.min(baseOffsetY, maxOffsetY);
-
-      const windowTitle = file.name;
-
-      const createWindowComponent = (windowId: string) => (
-        <FileWindow
-          windowId={windowId}
-          file={file}
-          sshSessionId={sshSessionId}
-          sshHost={currentHost}
-          initialX={offsetX}
-          initialY={offsetY}
-          onFileNotFound={handleFileNotFound}
-        />
-      );
-
-      openWindow({
-        title: windowTitle,
-        x: offsetX,
-        y: offsetY,
-        width: 800,
-        height: 600,
-        isMaximized: false,
-        isMinimized: false,
-        component: createWindowComponent,
-      });
+      return;
     }
+
+    if (file.type === "link") {
+      await handleSymlinkClick(file);
+      return;
+    }
+
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    if (!(await confirmLargeFileOpen(file))) return;
+
+    await recordRecentFile(file);
+    openFileWindow(file, sshSessionId);
   }
 
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
