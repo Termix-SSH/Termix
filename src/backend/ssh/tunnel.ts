@@ -107,6 +107,24 @@ type ActiveTunnelRuntime = {
 
 const activeTunnelRuntimes = new Map<string, ActiveTunnelRuntime>();
 
+function findHostByTunnelEndpoint(
+  hosts: SSHHost[],
+  endpointHost?: string,
+): SSHHost | undefined {
+  const value = endpointHost?.trim();
+  if (!value) return undefined;
+
+  return hosts.find((host) => {
+    const userAtIp = `${host.username}@${host.ip}`;
+    return (
+      String(host.id) === value ||
+      host.name === value ||
+      host.ip === value ||
+      userAtIp === value
+    );
+  });
+}
+
 function broadcastTunnelStatus(tunnelName: string, status: TunnelStatus): void {
   if (
     status.status === CONNECTION_STATES.CONNECTED &&
@@ -551,6 +569,12 @@ function isSingleHostTunnel(tunnelConfig: TunnelConfig): boolean {
   return false;
 }
 
+function shouldEstablishDirectTunnel(tunnelConfig: TunnelConfig): boolean {
+  if (isSingleHostTunnel(tunnelConfig)) return true;
+  const mode = getTunnelMode(tunnelConfig);
+  return mode !== "remote" && !tunnelConfig.endpointUsername;
+}
+
 async function establishDirectTunnel(
   sourceClient: Client,
   tunnelConfig: TunnelConfig,
@@ -559,7 +583,8 @@ async function establishDirectTunnel(
   const mode = getTunnelMode(tunnelConfig);
   const bindHost = getTunnelBindHost(tunnelConfig);
   const sourcePort = tunnelConfig.sourcePort;
-  const targetHost = tunnelConfig.targetHost || "127.0.0.1";
+  const targetHost =
+    tunnelConfig.targetHost || tunnelConfig.endpointHost || "127.0.0.1";
   const targetPort = tunnelConfig.endpointPort;
 
   if (mode === "remote") {
@@ -994,6 +1019,7 @@ async function connectSSHTunnel(
   }
 
   if (
+    !shouldEstablishDirectTunnel(tunnelConfig) &&
     resolvedEndpointCredentials.authMethod === "password" &&
     !resolvedEndpointCredentials.password
   ) {
@@ -1014,6 +1040,7 @@ async function connectSSHTunnel(
   }
 
   if (
+    !shouldEstablishDirectTunnel(tunnelConfig) &&
     resolvedEndpointCredentials.authMethod === "key" &&
     !resolvedEndpointCredentials.sshKey
   ) {
@@ -1167,7 +1194,7 @@ async function connectSSHTunnel(
         );
       }
 
-      if (isSingleHostTunnel(tunnelConfig)) {
+      if (shouldEstablishDirectTunnel(tunnelConfig)) {
         await establishDirectTunnel(conn, tunnelConfig);
       } else {
         await establishManagedS2STunnel(
@@ -1931,51 +1958,56 @@ app.post(
             );
 
             const allHosts: SSHHost[] = allHostsResponse.data || [];
-            const endpointHost = allHosts.find(
-              (h) =>
-                h.name === tunnelConfig.endpointHost ||
-                `${h.username}@${h.ip}` === tunnelConfig.endpointHost,
+            const endpointHost = findHostByTunnelEndpoint(
+              allHosts,
+              tunnelConfig.endpointHost,
             );
 
             if (!endpointHost) {
-              throw new Error(
-                `Endpoint host '${tunnelConfig.endpointHost}' not found in database`,
-              );
-            }
-
-            tunnelConfig.endpointIP = endpointHost.ip;
-            tunnelConfig.endpointSSHPort = endpointHost.port;
-            tunnelConfig.endpointUsername = endpointHost.username;
-            tunnelConfig.endpointAuthMethod = endpointHost.authType;
-            tunnelConfig.endpointKeyType = endpointHost.keyType;
-            tunnelConfig.endpointCredentialId = endpointHost.credentialId;
-            tunnelConfig.endpointUserId = endpointHost.userId;
-
-            // Resolve credentials server-side instead of from HTTP response
-            if (endpointHost.id && endpointHost.userId) {
-              try {
-                const { resolveHostById } = await import("./host-resolver.js");
-                const resolved = await resolveHostById(
-                  endpointHost.id,
-                  endpointHost.userId,
+              if (getTunnelMode(tunnelConfig) !== "remote") {
+                tunnelConfig.endpointIP =
+                  tunnelConfig.endpointIP || tunnelConfig.endpointHost;
+              } else {
+                throw new Error(
+                  `Endpoint host '${tunnelConfig.endpointHost}' not found in database`,
                 );
-                if (resolved) {
-                  tunnelConfig.endpointPassword = resolved.password;
-                  tunnelConfig.endpointSSHKey = resolved.key;
-                  tunnelConfig.endpointKeyPassword = resolved.keyPassword;
+              }
+            } else {
+              tunnelConfig.endpointIP = endpointHost.ip;
+              tunnelConfig.endpointSSHPort = endpointHost.port;
+              tunnelConfig.endpointUsername = endpointHost.username;
+              tunnelConfig.endpointAuthMethod = endpointHost.authType;
+              tunnelConfig.endpointKeyType = endpointHost.keyType;
+              tunnelConfig.endpointCredentialId = endpointHost.credentialId;
+              tunnelConfig.endpointUserId = endpointHost.userId;
+
+              // Resolve credentials server-side instead of from HTTP response
+              if (endpointHost.id && endpointHost.userId) {
+                try {
+                  const { resolveHostById } =
+                    await import("./host-resolver.js");
+                  const resolved = await resolveHostById(
+                    endpointHost.id,
+                    endpointHost.userId,
+                  );
+                  if (resolved) {
+                    tunnelConfig.endpointPassword = resolved.password;
+                    tunnelConfig.endpointSSHKey = resolved.key;
+                    tunnelConfig.endpointKeyPassword = resolved.keyPassword;
+                  }
+                } catch (credError) {
+                  tunnelLogger.warn(
+                    "Failed to resolve endpoint credentials from DB",
+                    {
+                      operation: "tunnel_endpoint_credential_resolve",
+                      endpointHostId: endpointHost.id,
+                      error:
+                        credError instanceof Error
+                          ? credError.message
+                          : "Unknown",
+                    },
+                  );
                 }
-              } catch (credError) {
-                tunnelLogger.warn(
-                  "Failed to resolve endpoint credentials from DB",
-                  {
-                    operation: "tunnel_endpoint_credential_resolve",
-                    endpointHostId: endpointHost.id,
-                    error:
-                      credError instanceof Error
-                        ? credError.message
-                        : "Unknown",
-                  },
-                );
               }
             }
           } catch (resolveError) {
@@ -2268,13 +2300,15 @@ async function initializeAutoStartTunnels(): Promise<void> {
       if (host.enableTunnel && host.tunnelConnections) {
         for (const tunnelConnection of host.tunnelConnections) {
           if (tunnelConnection.autoStart) {
-            const endpointHost = allHosts.find(
-              (h) =>
-                h.name === tunnelConnection.endpointHost ||
-                `${h.username}@${h.ip}` === tunnelConnection.endpointHost,
+            const endpointHost = findHostByTunnelEndpoint(
+              allHosts,
+              tunnelConnection.endpointHost,
             );
+            const mode =
+              tunnelConnection.mode || tunnelConnection.tunnelType || "remote";
+            const allowDirectTarget = mode !== "remote";
 
-            if (endpointHost) {
+            if (endpointHost || allowDirectTarget) {
               const tunnelIndex =
                 host.tunnelConnections.indexOf(tunnelConnection);
               const tunnelConfig: TunnelConfig = {
@@ -2287,10 +2321,7 @@ async function initializeAutoStartTunnels(): Promise<void> {
                   tunnelConnection.endpointPort,
                 ),
                 scope: tunnelConnection.scope || "s2s",
-                mode:
-                  tunnelConnection.mode ||
-                  tunnelConnection.tunnelType ||
-                  "remote",
+                mode,
                 bindHost: tunnelConnection.bindHost,
                 targetHost: tunnelConnection.targetHost,
                 tunnelType: tunnelConnection.tunnelType || "remote",
@@ -2304,16 +2335,18 @@ async function initializeAutoStartTunnels(): Promise<void> {
                 sourceKeyType: host.keyType,
                 sourceCredentialId: host.credentialId,
                 sourceUserId: host.userId,
-                endpointIP: endpointHost.ip,
-                endpointSSHPort: endpointHost.port,
-                endpointUsername: endpointHost.username,
+                endpointIP: endpointHost?.ip || tunnelConnection.endpointHost,
+                endpointSSHPort: endpointHost?.port || 22,
+                endpointUsername: endpointHost?.username || "",
                 endpointHost: tunnelConnection.endpointHost,
                 endpointAuthMethod:
-                  tunnelConnection.endpointAuthType || endpointHost.authType,
+                  tunnelConnection.endpointAuthType ||
+                  endpointHost?.authType ||
+                  "none",
                 endpointKeyType:
-                  tunnelConnection.endpointKeyType || endpointHost.keyType,
-                endpointCredentialId: endpointHost.credentialId,
-                endpointUserId: endpointHost.userId,
+                  tunnelConnection.endpointKeyType || endpointHost?.keyType,
+                endpointCredentialId: endpointHost?.credentialId,
+                endpointUserId: endpointHost?.userId,
                 sourcePort: tunnelConnection.sourcePort,
                 endpointPort: tunnelConnection.endpointPort,
                 maxRetries: tunnelConnection.maxRetries,
