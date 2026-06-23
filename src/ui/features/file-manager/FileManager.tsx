@@ -86,6 +86,7 @@ function FileManagerContent({
   initialFilePath,
   initialPath,
   onClose,
+  onOpenTerminalTab,
 }: FileManagerProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
@@ -2483,6 +2484,7 @@ function FileManagerContent({
         initialPath={path}
         initialX={offsetX}
         initialY={offsetY}
+        onPromoteToTab={onOpenTerminalTab}
       />
     );
 
@@ -2529,6 +2531,7 @@ function FileManagerContent({
         initialX={offsetX}
         initialY={offsetY}
         executeCommand={executeCmd}
+        onPromoteToTab={onOpenTerminalTab}
       />
     );
 
@@ -2989,6 +2992,7 @@ function FileManagerInner({
   initialFilePath,
   initialPath,
   onClose,
+  onOpenTerminalTab,
 }: FileManagerProps) {
   return (
     <WindowManager>
@@ -2997,6 +3001,7 @@ function FileManagerInner({
         initialFilePath={initialFilePath}
         initialPath={initialPath}
         onClose={onClose}
+        onOpenTerminalTab={onOpenTerminalTab}
       />
     </WindowManager>
   );

@@ -1644,6 +1644,15 @@ export function AppShell({
                           initialFilePath: filePath,
                         }),
                       (host, _path) => openTab(host, "files"),
+                      (host, path) =>
+                        openTab(host, "terminal", {
+                          instanceId:
+                            typeof crypto.randomUUID === "function"
+                              ? crypto.randomUUID()
+                              : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                          restoredSessionId: null,
+                          initialFilePath: path,
+                        }),
                       renameTab,
                     ),
                     tabNode,
