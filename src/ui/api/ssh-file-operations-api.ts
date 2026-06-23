@@ -357,7 +357,7 @@ export async function uploadSSHFile(
     if (userId !== undefined) form.append("userId", userId);
     form.append("file", file, fileName);
 
-    const response = await fileManagerApi.post("/ssh/uploadFileStream", form, {
+    const response = await fileManagerApi.postForm("/ssh/uploadFileStream", form, {
       timeout: 0,
     });
     return response.data;
