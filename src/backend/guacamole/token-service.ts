@@ -16,6 +16,7 @@ export interface GuacamoleConnectionSettings {
     dpi?: number;
     security?: string;
     "ignore-cert"?: boolean;
+    "disable-auth"?: boolean;
     "enable-wallpaper"?: boolean;
     "enable-drive"?: boolean;
     "drive-path"?: string;
@@ -139,6 +140,7 @@ export class GuacamoleTokenService {
           ...(password ? { password } : {}),
           port: 3389,
           "ignore-cert": true,
+          ...(!username && !password ? { "disable-auth": true } : {}),
           ...settingsOptions,
         },
       },
