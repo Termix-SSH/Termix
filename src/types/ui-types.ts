@@ -17,7 +17,8 @@ export type Host = {
     | "none"
     | "opkssh"
     | "tailscale"
-    | "vault";
+    | "vault"
+    | "agent";
   useWarpgate?: boolean;
   credentialId?: string;
   vaultProfileId?: string;
@@ -64,6 +65,7 @@ export type Host = {
     environmentVariables: { key: string; value: string }[];
     startupSnippetId?: number | null;
     linkClickBehavior?: "confirm" | "direct";
+    agentSocketPath?: string;
   };
 
   useSocks5?: boolean;

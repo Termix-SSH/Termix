@@ -371,6 +371,11 @@ router.post(
       sshDataObj.keyPassword = keyPassword || null;
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
+    } else if (effectiveAuthType === "agent") {
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
@@ -948,6 +953,11 @@ router.put(
         sshDataObj.keyType = keyType;
       }
       sshDataObj.password = null;
+    } else if (effectiveAuthType === "agent") {
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;

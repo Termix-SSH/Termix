@@ -29,7 +29,11 @@ import {
   attachOrCreateTmuxSession,
   waitForTmuxSession,
 } from "./tmux-helper.js";
-import { MemoryAgent, performPortKnocking } from "./terminal-auth-helpers.js";
+import {
+  MemoryAgent,
+  performPortKnocking,
+  resolveAgentSocket,
+} from "./terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 
@@ -2463,6 +2467,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         return;
       }
+    } else if (resolvedCredentials.authType === "agent") {
+      sendLog("auth", "info", "Using SSH agent authentication");
+      const result = await resolveAgentSocket(
+        hostConfig.terminalConfig as Record<string, unknown> | undefined,
+      );
+      if ("error" in result) {
+        ws.send(JSON.stringify({ type: "error", message: result.error }));
+        return;
+      }
+      const { createAgent } = ssh2Pkg;
+      connectConfig.agent = createAgent(result.socketPath);
+      sendLog(
+        "auth",
+        "info",
+        `SSH agent configured (socket: ${result.socketPath})`,
+      );
     } else {
       sendLog("auth", "info", "Using keyboard-interactive authentication");
       sshLogger.error("No valid authentication method provided");
@@ -2475,25 +2495,34 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    if (
-      hostConfig.terminalConfig?.agentForwarding &&
-      connectConfig.privateKey
-    ) {
-      try {
-        const parsed = ssh2Utils.parseKey(
-          connectConfig.privateKey as Buffer,
-          connectConfig.passphrase as string | undefined,
-        );
-        if (parsed && !(parsed instanceof Error)) {
-          connectConfig.agent = new MemoryAgent(parsed);
-          connectConfig.agentForward = true;
-          sendLog("auth", "info", "SSH agent forwarding enabled");
+    if (hostConfig.terminalConfig?.agentForwarding) {
+      if (connectConfig.privateKey) {
+        try {
+          const parsed = ssh2Utils.parseKey(
+            connectConfig.privateKey as Buffer,
+            connectConfig.passphrase as string | undefined,
+          );
+          if (parsed && !(parsed instanceof Error)) {
+            connectConfig.agent = new MemoryAgent(parsed);
+            connectConfig.agentForward = true;
+            sendLog("auth", "info", "SSH agent forwarding enabled");
+          }
+        } catch {
+          sshLogger.warn("Failed to set up agent forwarding", {
+            operation: "agent_forward_setup",
+            hostId: id,
+          });
         }
-      } catch {
-        sshLogger.warn("Failed to set up agent forwarding", {
-          operation: "agent_forward_setup",
-          hostId: id,
-        });
+      } else if (
+        resolvedCredentials.authType === "agent" &&
+        connectConfig.agent
+      ) {
+        connectConfig.agentForward = true;
+        sendLog(
+          "auth",
+          "info",
+          "SSH agent forwarding enabled (external agent)",
+        );
       }
     }
 

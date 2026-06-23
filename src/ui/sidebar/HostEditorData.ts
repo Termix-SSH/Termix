@@ -160,6 +160,7 @@ export function createHostEditorForm(
     allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
     linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
       "default") as "default" | "confirm" | "direct",
+    agentSocketPath: host?.terminalConfig?.agentSocketPath ?? "",
     useSSHTitle: host?.terminalConfig?.useSSHTitle ?? false,
     syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     syntaxHighlightingOptions: {
@@ -244,6 +245,7 @@ export function buildHostEditorPayload(
   const usesCredential = form.authType === "credential";
   const usesKey = form.authType === "key";
   const usesPassword = form.authType === "password";
+  const usesAgent = form.authType === "agent";
 
   return {
     connectionType: protocols.enableSsh
@@ -415,6 +417,7 @@ export function buildHostEditorPayload(
             form.linkClickBehavior !== "default"
               ? form.linkClickBehavior
               : undefined,
+          agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
         }
       : null,
   };

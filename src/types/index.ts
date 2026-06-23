@@ -102,7 +102,14 @@ export interface Host {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "agent";
   useWarpgate?: boolean;
   password?: string;
   key?: string;
@@ -221,7 +228,14 @@ export interface HostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "agent";
   useWarpgate?: boolean;
   password?: string;
   key?: File | null;
@@ -622,6 +636,7 @@ export interface TerminalConfig {
   allowLegacyAlgorithms?: boolean;
   linkClickBehavior?: "confirm" | "direct";
   useSSHTitle?: boolean;
+  agentSocketPath?: string;
 }
 
 // ============================================================================

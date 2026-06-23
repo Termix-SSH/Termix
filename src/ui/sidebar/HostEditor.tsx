@@ -285,6 +285,7 @@ export function HostEditor({
                       "none",
                       "opkssh",
                       "tailscale",
+                      "agent",
                     ].map((m) => (
                       <button
                         key={m}
@@ -684,6 +685,31 @@ export function HostEditor({
                     <p className="text-[10px] text-muted-foreground">
                       {t("hosts.warpgateDesc")}
                     </p>
+                  </div>
+                )}
+                {authMethod === "agent" && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.agentLabel")}
+                    </span>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.agentDesc")}
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.agentSocketPathLabel")}
+                      </label>
+                      <Input
+                        placeholder={t("hosts.agentSocketPathPlaceholder")}
+                        value={form.agentSocketPath}
+                        onChange={(e) =>
+                          setField("agentSocketPath", e.target.value)
+                        }
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.agentSocketPathHint")}
+                      </p>
+                    </div>
                   </div>
                 )}
                 <SettingRow

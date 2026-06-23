@@ -78,4 +78,46 @@ describe("buildHostEditorPayload auth field isolation", () => {
     expect(payload.password).toBeNull();
     expect(payload.credentialId).toBeNull();
   });
+
+  it("preserves agentSocketPath in terminalConfig when authType is agent", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      authType: "agent" as const,
+      agentSocketPath: "/run/user/1000/gnupg/S.gpg-agent.ssh",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.agentSocketPath).toBe("/run/user/1000/gnupg/S.gpg-agent.ssh");
+    expect(payload.password).toBeNull();
+    expect(payload.key).toBeNull();
+  });
+
+  it("sets agentSocketPath to null in payload when authType is agent but path is empty", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      authType: "agent" as const,
+      agentSocketPath: "",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.agentSocketPath).toBeNull();
+  });
+
+  it("nulls out agentSocketPath when switching away from agent auth", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      authType: "password" as const,
+      password: "mypass",
+      agentSocketPath: "/run/user/1000/gnupg/S.gpg-agent.ssh",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.agentSocketPath).toBeNull();
+  });
 });

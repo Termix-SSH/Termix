@@ -44,6 +44,34 @@ export class MemoryAgent extends BaseAgent {
   }
 }
 
+export async function resolveAgentSocket(
+  terminalConfig: Record<string, unknown> | undefined,
+): Promise<{ socketPath: string } | { error: string }> {
+  const explicit = (
+    terminalConfig?.agentSocketPath as string | undefined
+  )?.trim();
+  const resolved = explicit || process.env.SSH_AUTH_SOCK;
+
+  if (!resolved) {
+    return {
+      error: "SSH_AUTH_SOCK is not set and no socket path was provided.",
+    };
+  }
+
+  if (process.platform !== "win32") {
+    const { access } = await import("fs/promises");
+    try {
+      await access(resolved);
+    } catch {
+      return {
+        error: `SSH agent socket not found at ${resolved}. Make sure your agent is running.`,
+      };
+    }
+  }
+
+  return { socketPath: resolved };
+}
+
 export async function performPortKnocking(
   host: string,
   sequence: Array<{ port: number; protocol?: string; delay?: number }>,
