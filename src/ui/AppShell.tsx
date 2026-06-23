@@ -15,6 +15,7 @@ import { AppRail } from "@/sidebar/AppRail";
 import type { RailView } from "@/sidebar/AppRail";
 import { HostsPanel } from "@/sidebar/HostsPanel";
 import { QuickConnectPanel } from "@/sidebar/QuickConnectPanel";
+import { SerialPanel } from "@/sidebar/SerialPanel";
 import { SshToolsPanel } from "@/sidebar/SshToolsPanel";
 import { SnippetsPanel } from "@/sidebar/SnippetsPanel";
 import { HistoryPanel } from "@/sidebar/HistoryPanel";
@@ -35,6 +36,7 @@ import type {
   HostFolder,
   ThemeId,
   FontSizeId,
+  SerialConfig,
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
@@ -266,6 +268,7 @@ export function AppShell({
     credentials: "Credentials",
     "termix-id": t("nav.termixId"),
     "quick-connect": "Quick Connect",
+    serial: t("nav.serial"),
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
     history: "History",
@@ -852,6 +855,7 @@ export function AppShell({
       restoredSessionId: string | null;
       savedLabel?: string;
       initialFilePath?: string;
+      serialConfig?: SerialConfig;
     },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
@@ -867,6 +871,7 @@ export function AppShell({
     let finalLabel = host.name;
     const savedLabel = restore?.savedLabel;
     const initialFilePath = restore?.initialFilePath;
+    const serialConfig = restore?.serialConfig;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
     const isCustomLabel =
       savedLabel != null &&
@@ -889,6 +894,7 @@ export function AppShell({
             terminalRef: ref,
             restoredSessionId: restore?.restoredSessionId ?? null,
             initialFilePath,
+            serialConfig,
           },
         ];
       }
@@ -920,6 +926,7 @@ export function AppShell({
           terminalRef: ref,
           restoredSessionId: restore?.restoredSessionId ?? null,
           initialFilePath,
+          serialConfig,
         },
       ];
     });
@@ -944,6 +951,50 @@ export function AppShell({
       return;
     }
     openTab(host, type);
+  }
+
+  function openSerialTab(config: SerialConfig) {
+    const pseudoHost: Host = {
+      id: `serial-${Date.now()}`,
+      name: config.path
+        ? `${config.path} (${config.baudRate})`
+        : `Serial (${config.baudRate})`,
+      username: "",
+      ip: "",
+      port: 0,
+      folder: "",
+      online: false,
+      cpu: null,
+      ram: null,
+      lastAccess: new Date().toISOString(),
+      authType: "none",
+      enableTerminal: false,
+      enableCommandHistory: false,
+      enableTunnel: false,
+      enableFileManager: false,
+      enableDocker: false,
+      enableProxmox: false,
+      enableTmuxMonitor: false,
+      enableSsh: false,
+      enableRdp: false,
+      enableVnc: false,
+      enableTelnet: false,
+      sshPort: 22,
+      rdpPort: 3389,
+      vncPort: 5900,
+      telnetPort: 23,
+      serverTunnels: [],
+      quickActions: [],
+    };
+    const instanceId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    openTab(pseudoHost, "serial", {
+      instanceId,
+      restoredSessionId: null,
+      serialConfig: config,
+    });
   }
 
   const openSingletonTab = useCallback(
@@ -1027,7 +1078,13 @@ export function AppShell({
     [t],
   );
 
-  const SESSION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
+  const SESSION_TAB_TYPES: TabType[] = [
+    "terminal",
+    "rdp",
+    "vnc",
+    "telnet",
+    "serial",
+  ];
   const ACTIVE_CLOSE_CONFIRM_TYPES: TabType[] = SESSION_TAB_TYPES;
 
   const getTabCloseLabel = useCallback((tab: Tab) => {
@@ -1349,6 +1406,15 @@ export function AppShell({
         <div className="flex flex-col flex-1 min-h-0">
           <TermixIdPanel />
         </div>
+      )}
+
+      {railView === "serial" && (
+        <SerialPanel
+          onConnect={(config) => {
+            openSerialTab(config);
+            if (isMobile) setSidebarOpen(false);
+          }}
+        />
       )}
 
       {railView === "quick-connect" && (

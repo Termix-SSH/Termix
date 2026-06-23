@@ -55,6 +55,7 @@ import {
   ShieldCheck,
   Trash2,
   Type,
+  Usb,
   User,
   X,
   Zap,
@@ -1576,6 +1577,11 @@ export function UserProfilePanel({
                   id: "quick-connect",
                   icon: <Zap size={12} />,
                   label: t("nav.quickConnect"),
+                },
+                {
+                  id: "serial",
+                  icon: <Usb size={12} />,
+                  label: t("nav.serial"),
                 },
                 {
                   id: "ssh-tools",

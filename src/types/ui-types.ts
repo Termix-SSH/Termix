@@ -209,7 +209,16 @@ export type TabType =
   | "docker"
   | "tunnel"
   | "network_graph"
-  | "tmux_monitor"; // --- tmux-monitor ---
+  | "tmux_monitor" // --- tmux-monitor ---
+  | "serial";
+
+export type SerialConfig = {
+  path: string;
+  baudRate: number;
+  dataBits: 5 | 6 | 7 | 8;
+  stopBits: 1 | 2;
+  parity: "none" | "even" | "odd";
+};
 
 export type TunnelStatusValue =
   | "CONNECTED"
@@ -243,6 +252,7 @@ export type Tab = {
   openedAt: number;
   restoredSessionId?: string | null;
   initialFilePath?: string;
+  serialConfig?: SerialConfig;
   terminalRef?: import("react").RefObject<{
     disconnect?: () => void;
     isConnected?: () => boolean;

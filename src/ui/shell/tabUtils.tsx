@@ -8,6 +8,7 @@ import {
   Server,
   Settings,
   Terminal,
+  Usb,
   User,
   Activity,
   TerminalSquare,
@@ -15,6 +16,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
+import { Serial } from "@/features/serial/Serial";
+import type { SerialHandle } from "@/features/serial/serial-types";
 import { Terminal as TerminalFeature } from "@/features/terminal/Terminal";
 import type {
   TerminalHandle,
@@ -121,6 +124,8 @@ export function tabIcon(type: TabType) {
     // --- tmux-monitor ---
     case "tmux_monitor":
       return <Layers className="size-3.5" />;
+    case "serial":
+      return <Usb className="size-3.5" />;
   }
 }
 
@@ -312,6 +317,18 @@ export function renderTabContent(
         <TmuxMonitor
           initialHostId={host ? parseInt(host.id, 10) : undefined}
           isVisible={isVisible}
+        />
+      );
+
+    case "serial":
+      if (!tab.serialConfig)
+        return <EmptyState icon={Usb} messageKey="serial.notSupportedTitle" />;
+      return (
+        <Serial
+          ref={tab.terminalRef as React.Ref<SerialHandle>}
+          config={tab.serialConfig}
+          isVisible={isVisible}
+          instanceId={tab.instanceId}
         />
       );
 

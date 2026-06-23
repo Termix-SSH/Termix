@@ -146,6 +146,7 @@ import {
     await import("./ssh/docker.js");
     await import("./ssh/docker-console.js");
     await import("./ssh/tmux-monitor.js"); // --- tmux-monitor ---
+    await import("./serial/serial.js");
     await import("./dashboard.js");
 
     // Initialize log level from database settings

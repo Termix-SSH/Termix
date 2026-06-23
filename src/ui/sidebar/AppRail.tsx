@@ -13,6 +13,7 @@ import {
   ScrollText,
   Server,
   Settings,
+  Usb,
   User,
   Zap,
 } from "lucide-react";
@@ -23,6 +24,7 @@ export type RailView =
   | "credentials"
   | "termix-id"
   | "quick-connect"
+  | "serial"
   | ToolsTab
   | "connections"
   | "session-logs"
@@ -73,6 +75,12 @@ function buildRailButtons(
       view: "quick-connect",
       icon: <Zap size={16} />,
       title: t("nav.quickConnect"),
+    },
+    { kind: "separator" },
+    {
+      view: "serial",
+      icon: <Usb size={16} />,
+      title: t("nav.serial"),
     },
     { kind: "separator" },
     { view: "ssh-tools", icon: <Hammer size={16} />, title: t("nav.sshTools") },

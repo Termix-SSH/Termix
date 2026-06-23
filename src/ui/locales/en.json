@@ -254,7 +254,8 @@
     "credentials": "Credentials",
     "connections": "Connections",
     "roleAdministrator": "Administrator",
-    "roleUser": "User"
+    "roleUser": "User",
+    "serial": "Serial"
   },
   "hosts": {
     "hosts": "Hosts",
@@ -2888,5 +2889,29 @@
     "removeQuickKey": "Remove",
     "resetDefaults": "Reset to defaults",
     "done": "Done"
+  },
+  "serial": {
+    "title": "Serial",
+    "portLabel": "Port",
+    "portPlaceholder": "/dev/ttyUSB0 or COM3",
+    "baudRateLabel": "Baud Rate",
+    "dataBitsLabel": "Data",
+    "stopBitsLabel": "Stop",
+    "parityLabel": "Parity",
+    "parityNone": "None",
+    "parityEven": "Even",
+    "parityOdd": "Odd",
+    "connect": "Connect to Serial",
+    "disconnect": "Disconnect",
+    "refreshPorts": "Refresh ports",
+    "connected": "Connected to {{path}} at {{baud}} baud",
+    "disconnected": "Serial port disconnected",
+    "connectionError": "Failed to open serial port",
+    "wsError": "WebSocket error",
+    "errorNoServerUrl": "No server URL configured",
+    "notSupportedTitle": "Serial Not Supported",
+    "notSupported": "Serial connections require a browser with Web Serial API support (Chrome, Edge, or Firefox 151+), or the Termix desktop app.",
+    "hideHint": "You can hide the Serial tab under User Profile > Appearance > Sidebar > Navigation.",
+    "browserPickerHint": "Click Connect and your browser will open a port picker to choose the device."
   }
 }
