@@ -1,7 +1,7 @@
 {
   "name": "termix",
   "private": true,
-  "version": "2.4.1",
+  "version": "2.5.0",
   "description": "Self-hosted SSH and remote desktop management.",
   "author": "Karmaa",
   "main": "electron/main.cjs",
