@@ -484,6 +484,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         font_size TEXT,
         accent_color TEXT,
         language TEXT,
+        status_color_scheme TEXT,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
@@ -695,6 +696,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "confirm_tab_close", "INTEGER");
   addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
+  addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
 
   addColumnIfNotExists("users", "is_admin", "INTEGER NOT NULL DEFAULT 0");
 
