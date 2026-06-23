@@ -156,7 +156,7 @@ router.post(
           return res.status(400).json({
             error: keyInfo.error
               ? `Invalid SSH key: ${keyInfo.error}`
-              : "Unrecognized SSH key format. Only OpenSSH and PEM formats are supported (not PuTTY .ppk).",
+              : "Unrecognized SSH key format. Use an OpenSSH, PEM, or PuTTY PPK v2 RSA/DSA private key.",
           });
         }
       }
@@ -529,7 +529,7 @@ router.put(
             return res.status(400).json({
               error: keyInfo.error
                 ? `Invalid SSH key: ${keyInfo.error}`
-                : "Unrecognized SSH key format. Only OpenSSH and PEM formats are supported (not PuTTY .ppk).",
+                : "Unrecognized SSH key format. Use an OpenSSH, PEM, or PuTTY PPK v2 RSA/DSA private key.",
             });
           }
           updateFields.privateKey = keyInfo.privateKey;

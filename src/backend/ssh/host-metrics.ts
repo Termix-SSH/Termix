@@ -28,6 +28,7 @@ import {
   createSocks5Connection,
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 import { registerHostMetricsSettingsRoutes } from "./host-metrics-settings-routes.js";
@@ -1017,18 +1018,9 @@ async function buildSshConfig(
     }
 
     try {
-      if (!host.key.includes("-----BEGIN") || !host.key.includes("-----END")) {
-        throw new Error("Invalid private key format");
-      }
-
-      const cleanKey = host.key
-        .trim()
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-
-      (base as Record<string, unknown>).privateKey = Buffer.from(
-        cleanKey,
-        "utf8",
+      (base as Record<string, unknown>).privateKey = preparePrivateKeyForSSH2(
+        host.key,
+        host.keyPassword,
       );
 
       if (host.keyPassword) {

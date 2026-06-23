@@ -32,6 +32,7 @@ import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
 import { withConnection } from "./ssh-connection-pool.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import {
   applyAuthOptions,
   bindForwardIn,
@@ -1300,37 +1301,33 @@ async function connectSSHTunnel(
     resolvedSourceCredentials.authMethod === "key" &&
     resolvedSourceCredentials.sshKey
   ) {
-    if (
-      !resolvedSourceCredentials.sshKey.includes("-----BEGIN") ||
-      !resolvedSourceCredentials.sshKey.includes("-----END")
-    ) {
+    try {
+      connOptions.privateKey = preparePrivateKeyForSSH2(
+        resolvedSourceCredentials.sshKey,
+        resolvedSourceCredentials.keyPassword,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Invalid SSH key format";
       tunnelLogger.error(
-        `Invalid SSH key format for tunnel '${tunnelName}'. Key should contain both BEGIN and END markers`,
+        `Invalid SSH key format for tunnel '${tunnelName}': ${message}`,
         undefined,
         {
           operation: "tunnel_invalid_ssh_key_format",
           tunnelName,
           sourceHost: `${tunnelConfig.sourceUsername}@${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
           keyType: resolvedSourceCredentials.keyType,
-          hasBeginMarker:
-            resolvedSourceCredentials.sshKey.includes("-----BEGIN"),
-          hasEndMarker: resolvedSourceCredentials.sshKey.includes("-----END"),
         },
       );
       broadcastTunnelStatus(tunnelName, {
         connected: false,
         status: CONNECTION_STATES.FAILED,
-        reason: "Invalid SSH key format",
+        reason: message,
       });
       tunnelConnecting.delete(tunnelName);
       return;
     }
 
-    const cleanKey = resolvedSourceCredentials.sshKey
-      .trim()
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n");
-    connOptions.privateKey = Buffer.from(cleanKey, "utf8");
     if (resolvedSourceCredentials.keyPassword) {
       connOptions.passphrase = resolvedSourceCredentials.keyPassword;
     }
@@ -1482,11 +1479,15 @@ async function killRemoteTunnelByMarker(
     resolvedSourceCredentials.authMethod === "key" &&
     resolvedSourceCredentials.sshKey
   ) {
-    if (
-      !resolvedSourceCredentials.sshKey.includes("-----BEGIN") ||
-      !resolvedSourceCredentials.sshKey.includes("-----END")
-    ) {
-      callback(new Error("Invalid SSH key format"));
+    try {
+      preparePrivateKeyForSSH2(
+        resolvedSourceCredentials.sshKey,
+        resolvedSourceCredentials.keyPassword,
+      );
+    } catch (error) {
+      callback(
+        error instanceof Error ? error : new Error("Invalid SSH key format"),
+      );
       return;
     }
   }
@@ -1542,11 +1543,10 @@ async function killRemoteTunnelByMarker(
       resolvedSourceCredentials.authMethod === "key" &&
       resolvedSourceCredentials.sshKey
     ) {
-      const cleanKey = resolvedSourceCredentials.sshKey
-        .trim()
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-      connOptions.privateKey = Buffer.from(cleanKey, "utf8");
+      connOptions.privateKey = preparePrivateKeyForSSH2(
+        resolvedSourceCredentials.sshKey,
+        resolvedSourceCredentials.keyPassword,
+      );
       if (resolvedSourceCredentials.keyPassword) {
         connOptions.passphrase = resolvedSourceCredentials.keyPassword;
       }

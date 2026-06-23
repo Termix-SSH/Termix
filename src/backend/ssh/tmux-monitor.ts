@@ -10,6 +10,7 @@ import { tmuxSessionTags, users } from "../database/db/schema.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import { sshLogger } from "../utils/logger.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { resolveHostById, checkHostAccess } from "./host-resolver.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
@@ -81,16 +82,12 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
     }
     base.password = host.password;
   } else if (host.authType === "key") {
-    if (!host.key || !host.key.includes("-----BEGIN")) {
+    if (!host.key) {
       throw new Error(`No valid SSH key available for host ${host.ip}`);
     }
-    const cleanKey = host.key
-      .trim()
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n");
-    (base as Record<string, unknown>).privateKey = Buffer.from(
-      cleanKey,
-      "utf8",
+    (base as Record<string, unknown>).privateKey = preparePrivateKeyForSSH2(
+      host.key,
+      host.keyPassword,
     );
     if (host.keyPassword) {
       (base as Record<string, unknown>).passphrase = host.keyPassword;

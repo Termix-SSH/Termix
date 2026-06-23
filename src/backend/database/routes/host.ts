@@ -341,19 +341,6 @@ router.post(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
-          sshLogger.warn("Invalid SSH key format provided", {
-            operation: "host_create",
-            userId,
-            name,
-            ip,
-            port,
-          });
-          return res.status(400).json({
-            error: "Invalid SSH key format. Key must be in PEM format.",
-          });
-        }
-
         const keyValidation = parseSSHKey(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
@@ -919,20 +906,6 @@ router.put(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
-          sshLogger.warn("Invalid SSH key format provided", {
-            operation: "host_update",
-            hostId: parseInt(hostId),
-            userId,
-            name,
-            ip,
-            port,
-          });
-          return res.status(400).json({
-            error: "Invalid SSH key format. Key must be in PEM format.",
-          });
-        }
-
         const keyValidation = parseSSHKey(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
