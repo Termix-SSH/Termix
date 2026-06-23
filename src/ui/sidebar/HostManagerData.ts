@@ -86,6 +86,8 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     domain: h.rdpDomain,
     security: h.rdpSecurity,
     ignoreCert: h.rdpIgnoreCert ?? false,
+    vncAuthType: h.vncAuthType ?? (h.vncCredentialId ? "credential" : "direct"),
+    vncCredentialId: h.vncCredentialId ?? null,
     vncPassword: h.vncPassword ?? "",
     vncUser: h.vncUser,
     telnetUser: h.telnetUser,

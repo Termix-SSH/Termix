@@ -34,6 +34,7 @@ import {
   disconnectTunnel,
   getUserInfo,
   getVaultProfiles,
+  getHostPassword,
 } from "@/main-axios";
 import { getTailscaleDevices, getHostDefaults } from "@/api/settings-api";
 import type { Host, VaultProfile } from "@/types/ui-types";
@@ -142,6 +143,22 @@ export function HostEditor({
       .then((d) => setForm(createHostEditorForm(null, d)))
       .catch(() => {});
   }, [host]);
+
+  useEffect(() => {
+    if (!host?.id || form.vncAuthType !== "direct" || form.vncPassword) return;
+
+    let cancelled = false;
+    getHostPassword(Number(host.id), "vncPassword").then((password) => {
+      if (cancelled || !password) return;
+      setForm((prev) =>
+        prev.vncPassword ? prev : { ...prev, vncPassword: password },
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.vncAuthType, form.vncPassword, host?.id]);
 
   useEffect(() => {
     if (activeTab !== "tunnels") return;

@@ -201,6 +201,8 @@ router.post(
       rdpDomain,
       rdpSecurity,
       rdpIgnoreCert,
+      vncAuthType,
+      vncCredentialId,
       vncPassword,
       vncUser,
       telnetUser,
@@ -324,6 +326,11 @@ router.post(
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
       rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncAuthType: enableVnc ? vncAuthType || null : null,
+      vncCredentialId:
+        enableVnc && vncAuthType === "credential" && vncCredentialId
+          ? vncCredentialId
+          : null,
       vncUser: vncUser || null,
       telnetUser: telnetUser || null,
     };
@@ -778,6 +785,8 @@ router.put(
       rdpDomain,
       rdpSecurity,
       rdpIgnoreCert,
+      vncAuthType,
+      vncCredentialId,
       vncPassword,
       vncUser,
       telnetUser,
@@ -898,6 +907,11 @@ router.put(
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
       rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncAuthType: enableVnc ? vncAuthType || null : null,
+      vncCredentialId:
+        enableVnc && vncAuthType === "credential" && vncCredentialId
+          ? vncCredentialId
+          : null,
       vncUser: vncUser || null,
       telnetUser: telnetUser || null,
     };
@@ -1254,6 +1268,7 @@ router.get(
           rdpDomain: hosts.rdpDomain,
           rdpSecurity: hosts.rdpSecurity,
           rdpIgnoreCert: hosts.rdpIgnoreCert,
+          vncAuthType: hosts.vncAuthType,
           vncCredentialId: hosts.vncCredentialId,
           vncUser: hosts.vncUser,
           vncPassword: hosts.vncPassword,
@@ -1449,7 +1464,7 @@ router.get(
  *         name: field
  *         schema:
  *           type: string
- *           enum: [password, sudoPassword]
+ *           enum: [password, sudoPassword, vncPassword]
  *     responses:
  *       200:
  *         description: The requested password value.
@@ -1465,7 +1480,7 @@ router.get(
     const userId = (req as AuthenticatedRequest).userId;
     const field = (req.query.field as string) || "password";
 
-    if (!["password", "sudoPassword"].includes(field)) {
+    if (!["password", "sudoPassword", "vncPassword"].includes(field)) {
       return res.status(400).json({ error: "Invalid field" });
     }
 
@@ -1604,6 +1619,8 @@ router.get(
             rdpDomain: resolvedHost.rdpDomain || null,
             rdpSecurity: resolvedHost.rdpSecurity || null,
             rdpIgnoreCert: !!resolvedHost.rdpIgnoreCert,
+            vncAuthType: resolvedHost.vncAuthType || null,
+            vncCredentialId: resolvedHost.vncCredentialId || null,
             vncUser: resolvedHost.vncUser || null,
             vncPassword: resolvedHost.vncPassword || null,
             telnetUser: resolvedHost.telnetUser || null,
