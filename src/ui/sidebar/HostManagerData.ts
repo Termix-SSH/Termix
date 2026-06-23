@@ -32,6 +32,7 @@ function parseJson<T>(v: unknown): T | undefined {
 
 export function sshHostToHost(h: SSHHostWithStatus): Host {
   const host = h as RawSSHHost;
+  const isSshHost = h.connectionType === "ssh" || !h.connectionType;
   return {
     id: String(h.id),
     name: h.name,
@@ -59,10 +60,9 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     notes: h.notes,
     pin: h.pin ?? false,
     macAddress: h.macAddress,
-    enableSsh: h.enableSsh != null ? h.enableSsh : h.connectionType === "ssh",
+    enableSsh: h.enableSsh != null ? h.enableSsh : isSshHost,
     enableTerminal:
-      h.enableTerminal ??
-      (h.enableSsh != null ? h.enableSsh : h.connectionType === "ssh"),
+      h.enableTerminal ?? (h.enableSsh != null ? h.enableSsh : isSshHost),
     enableSessionLogging: h.enableSessionLogging ?? true,
     enableCommandHistory: h.enableCommandHistory ?? true,
     enableTunnel: h.enableTunnel ?? false,
