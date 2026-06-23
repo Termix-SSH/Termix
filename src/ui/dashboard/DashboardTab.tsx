@@ -45,7 +45,6 @@ import {
 } from "@/main-axios";
 import type {
   RecentActivityItem,
-  SSHHostWithStatus,
   ServiceLink,
 } from "@/main-axios";
 import { useTranslation } from "react-i18next";
@@ -54,59 +53,8 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-
-function sshHostToHost(h: SSHHostWithStatus): Host {
-  return {
-    id: String(h.id),
-    name: h.name,
-    username: h.username,
-    ip: h.ip,
-    port: h.port,
-    folder: h.folder ?? "",
-    online: h.status === "online",
-    cpu: 0,
-    ram: 0,
-    lastAccess: "",
-    tags: h.tags ?? [],
-    authType: h.authType,
-    password: h.password,
-    key: typeof h.key === "string" ? h.key : undefined,
-    keyPassword: h.keyPassword,
-    keyType: h.keyType,
-    credentialId: h.credentialId != null ? String(h.credentialId) : undefined,
-    notes: h.notes,
-    pin: h.pin ?? false,
-    macAddress: h.macAddress,
-    enableTerminal: h.enableTerminal ?? true,
-    enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? true,
-    enableDocker: h.enableDocker ?? false,
-    enableSsh: h.connectionType === "ssh" || !h.connectionType,
-    enableRdp: h.connectionType === "rdp",
-    enableVnc: h.connectionType === "vnc",
-    enableTelnet: h.connectionType === "telnet",
-    sshPort: h.port,
-    rdpPort: 3389,
-    vncPort: 5900,
-    telnetPort: 23,
-    quickActions: (h.quickActions ?? []).map((a) => ({
-      name: a.name,
-      snippetId: String(a.snippetId),
-    })),
-    jumpHosts: (h.jumpHosts ?? []).map((j) => ({
-      hostId: String(j.hostId),
-    })),
-    serverTunnels: [],
-    defaultPath: h.defaultPath,
-    terminalConfig: h.terminalConfig as Host["terminalConfig"],
-    useSocks5: h.useSocks5,
-    socks5Host: h.socks5Host,
-    socks5Port: h.socks5Port,
-    socks5Username: h.socks5Username,
-    socks5Password: h.socks5Password,
-    socks5ProxyChain: h.socks5ProxyChain ?? [],
-  };
-}
+import { sshHostToHost } from "@/sidebar/HostManagerData";
+import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -277,6 +225,25 @@ function QuickActionsCard({
 }) {
   const { t } = useTranslation();
   const pinnedHosts = hosts.filter((h) => h.pin);
+  const getConnectionEndpoint = (host: Host) => {
+    const type = getDefaultConnectionTab(host);
+    const port =
+      type === "rdp"
+        ? host.rdpPort
+        : type === "vnc"
+          ? host.vncPort
+          : type === "telnet"
+            ? host.telnetPort
+            : host.sshPort;
+    return `${host.ip}:${port}`;
+  };
+  const renderConnectionIcon = (host: Host) => {
+    const type = getDefaultConnectionTab(host);
+    if (type === "terminal" || type === "telnet") {
+      return <Terminal className="size-3 text-accent-brand" />;
+    }
+    return <Server className="size-3 text-accent-brand" />;
+  };
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border shrink-0">
@@ -330,18 +297,18 @@ function QuickActionsCard({
               {pinnedHosts.slice(0, 4).map((host) => (
                 <button
                   key={host.id}
-                  onClick={() => onOpenTab(host, "terminal")}
+                  onClick={() => onOpenTab(host, getDefaultConnectionTab(host))}
                   className="group/btn flex items-center gap-2.5 px-4 py-2 hover:bg-muted transition-colors cursor-pointer border-b border-border last:border-b-0"
                 >
                   <div className="size-7 border border-border bg-muted flex items-center justify-center shrink-0 group-hover/btn:bg-accent-brand/20 group-hover/btn:border-accent-brand/40 transition-colors">
-                    <Terminal className="size-3 text-accent-brand" />
+                    {renderConnectionIcon(host)}
                   </div>
                   <div className="flex flex-col items-start text-left min-w-0">
                     <span className="text-xs font-semibold truncate w-full">
                       {host.name || host.ip}
                     </span>
                     <span className="text-[10px] text-muted-foreground truncate w-full">
-                      {host.ip}:{host.sshPort}
+                      {getConnectionEndpoint(host)}
                     </span>
                   </div>
                 </button>

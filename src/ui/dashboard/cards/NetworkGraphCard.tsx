@@ -554,7 +554,7 @@ export function NetworkGraphCard({
 
   const hideMenu = () => setContextMenu((p) => ({ ...p, visible: false }));
 
-  const fireOpen = (hostId: string, type: string) => {
+  const fireOpen = (hostId: string, type?: string) => {
     window.dispatchEvent(
       new CustomEvent("termix:open-tab", { detail: { hostId, type } }),
     );
@@ -571,7 +571,7 @@ export function NetworkGraphCard({
         setShowNodeDetail(true);
       }
     } else if (action === "connect") {
-      fireOpen(targetId, "terminal");
+      fireOpen(targetId);
     } else if (action === "move") {
       setSelectedNodeId(targetId);
       const node = cyRef.current.$id(targetId);
