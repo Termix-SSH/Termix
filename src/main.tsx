@@ -118,6 +118,10 @@ function App() {
   );
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether fading-in came from a fresh login (vs. session verification on page load).
+  // When session-verified, Auth must not mount during the transition — it would trigger
+  // silent OIDC redirect and cause an infinite refresh loop.
+  const fadingInFromLoginRef = useRef(false);
 
   useEffect(() => {
     const savedAccent = localStorage.getItem("termix-accent");
@@ -139,14 +143,16 @@ function App() {
     if (phase !== "verifying") return;
     appReadyPromise
       .then(() => getUserInfo())
-      .then(() => {
+      .then(async () => {
         if (isElectron()) {
-          getCurrentToken()
-            .then((token) => {
-              if (token) localStorage.setItem("jwt", token);
-            })
-            .catch(() => {});
+          try {
+            const token = await getCurrentToken();
+            if (token) localStorage.setItem("jwt", token);
+          } catch {
+            // Non-fatal: WebSocket connections will fall back to cookie auth
+          }
         }
+        fadingInFromLoginRef.current = false;
         setPhase("fading-in");
         timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
       })
@@ -158,6 +164,7 @@ function App() {
 
   function handleLogin(u: string) {
     setAuthUsername(u);
+    fadingInFromLoginRef.current = true;
     setPhase("fading-in");
     timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
     if (isElectron()) {
@@ -182,7 +189,9 @@ function App() {
   const showApp =
     phase === "idle-app" || phase === "fading-in" || phase === "fading-out";
   const showAuth =
-    phase === "idle-auth" || phase === "fading-in" || phase === "fading-out";
+    phase === "idle-auth" ||
+    (phase === "fading-in" && fadingInFromLoginRef.current) ||
+    phase === "fading-out";
   const appOpacity = phase === "idle-app" ? 1 : 0;
   const authOpacity = phase === "idle-auth" ? 1 : 0;
 

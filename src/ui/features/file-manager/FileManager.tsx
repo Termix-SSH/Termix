@@ -847,12 +847,15 @@ function FileManagerContent({
         files.push({ file, relativePath: path });
       } else if (entry.isDirectory) {
         const reader = (entry as FileSystemDirectoryEntry).createReader();
-        const dirEntries = await new Promise<FileSystemEntry[]>(
-          (resolve, reject) => reader.readEntries(resolve, reject),
-        );
-        for (const child of dirEntries) {
-          await readEntry(child, `${path}/${child.name}`);
-        }
+        let batch: FileSystemEntry[];
+        do {
+          batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+            reader.readEntries(resolve, reject),
+          );
+          for (const child of batch) {
+            await readEntry(child, `${path}/${child.name}`);
+          }
+        } while (batch.length > 0);
       }
     }
 

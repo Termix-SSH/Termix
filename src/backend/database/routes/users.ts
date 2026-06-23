@@ -630,7 +630,8 @@ router.get("/oidc/authorize", async (req, res) => {
       providerId: providerIdStr,
     } = req.query;
     const origin = getRequestOriginWithForceHTTPS(req);
-    const backendCallbackUri = `${origin}/users/oidc/callback`;
+    const basePath = (process.env.BASE_PATH || "").replace(/\/+$/, "");
+    const backendCallbackUri = `${origin}${basePath}/users/oidc/callback`;
 
     const resolvedProviderId = providerIdStr
       ? parseInt(providerIdStr as string, 10)

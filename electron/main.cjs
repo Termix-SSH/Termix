@@ -690,9 +690,11 @@ function getBackendPaths() {
       backendCwd: backendDir,
     };
   }
-  // fork() does not go through Electron's asar redirector — use the unpacked path
+  // fork() does not go through Electron's asar redirector — use the unpacked path.
+  // On macOS multi-arch builds (mergeASARs: false), electron-builder names the ASAR
+  // app-arm64.asar / app-x64.asar instead of app.asar, so match all variants.
   const unpackedRoot = appRoot.replace(
-    /app\.asar(?!\.unpacked)/,
+    /app(-[a-z0-9]+)?\.asar(?!\.unpacked)/,
     "app.asar.unpacked",
   );
   const backendDir = path.join(unpackedRoot, "dist", "backend", "backend");
@@ -850,7 +852,7 @@ function createTray() {
     // use the unpacked path so the OS sees a real file.
     const publicRoot = isDev
       ? path.join(appRoot, "public")
-      : path.join(appRoot.replace("app.asar", "app.asar.unpacked"), "public");
+      : path.join(appRoot.replace(/app(-[a-z0-9]+)?\.asar(?!\.unpacked)/, "app.asar.unpacked"), "public");
 
     let trayIcon;
     if (process.platform === "darwin") {

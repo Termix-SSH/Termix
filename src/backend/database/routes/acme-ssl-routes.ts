@@ -12,6 +12,10 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 const SSL_DIR = path.join(DATA_DIR, "ssl");
 const ACME_WEBROOT = path.join(DATA_DIR, "acme-webroot");
+const CERTBOT_DIR = path.join(DATA_DIR, "certbot");
+const CERTBOT_CONFIG_DIR = path.join(CERTBOT_DIR, "config");
+const CERTBOT_WORK_DIR = path.join(CERTBOT_DIR, "work");
+const CERTBOT_LOGS_DIR = path.join(CERTBOT_DIR, "logs");
 const CLOUDFLARE_CREDENTIALS_FILE = path.join(
   DATA_DIR,
   "ssl",
@@ -270,6 +274,15 @@ export function registerAcmeSSLRoutes(
 
       await fs.mkdir(SSL_DIR, { recursive: true });
       await fs.mkdir(ACME_WEBROOT, { recursive: true });
+      await fs.mkdir(CERTBOT_CONFIG_DIR, { recursive: true });
+      await fs.mkdir(CERTBOT_WORK_DIR, { recursive: true });
+      await fs.mkdir(CERTBOT_LOGS_DIR, { recursive: true });
+
+      const certbotDirFlags = [
+        `--config-dir "${CERTBOT_CONFIG_DIR}"`,
+        `--work-dir "${CERTBOT_WORK_DIR}"`,
+        `--logs-dir "${CERTBOT_LOGS_DIR}"`,
+      ].join(" ");
 
       let certbotCmd: string;
 
@@ -304,6 +317,7 @@ export function registerAcmeSSLRoutes(
           `"${email}"`,
           "--cert-name",
           "termix",
+          certbotDirFlags,
         ].join(" ");
       } else {
         certbotCmd = [
@@ -320,6 +334,7 @@ export function registerAcmeSSLRoutes(
           `"${email}"`,
           "--cert-name",
           "termix",
+          certbotDirFlags,
         ].join(" ");
       }
 
@@ -331,7 +346,7 @@ export function registerAcmeSSLRoutes(
 
       execSync(certbotCmd, { stdio: "pipe", timeout: 120000 });
 
-      const liveDir = `/etc/letsencrypt/live/termix`;
+      const liveDir = path.join(CERTBOT_CONFIG_DIR, "live", "termix");
       const fullchainSrc = path.join(liveDir, "fullchain.pem");
       const privkeySrc = path.join(liveDir, "privkey.pem");
       const certDest = path.join(SSL_DIR, "termix.crt");

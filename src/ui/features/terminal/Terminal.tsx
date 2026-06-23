@@ -2061,6 +2061,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.unicode.activeVersion = "11";
 
       terminal.open(xtermRef.current);
+
+      const xtermTextarea = xtermRef.current.querySelector("textarea");
+      if (xtermTextarea) {
+        xtermTextarea.setAttribute("autocomplete", "off");
+        xtermTextarea.setAttribute("autocorrect", "off");
+        xtermTextarea.setAttribute("autocapitalize", "none");
+        xtermTextarea.setAttribute("spellcheck", "false");
+        xtermTextarea.setAttribute("data-gramm", "false");
+        xtermTextarea.setAttribute("data-gramm_editor", "false");
+        xtermTextarea.setAttribute("data-enable-grammarly", "false");
+      }
+
       terminal.onTitleChange((title) => {
         if (title) onTitleChange?.(title);
       });
