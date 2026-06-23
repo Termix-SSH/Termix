@@ -174,7 +174,7 @@ export function PermissionsDialog({
             <Lock className="size-4 text-accent-brand" />
             {t("fileManager.changePermissions")}
           </DialogTitle>
-          <DialogDescription className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground font-mono break-all">
+          <DialogDescription className="text-[10px] font-bold tracking-tight text-muted-foreground font-mono break-all">
             {file.path}
           </DialogDescription>
         </DialogHeader>

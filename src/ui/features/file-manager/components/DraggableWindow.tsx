@@ -284,7 +284,7 @@ export function DraggableWindow({
             {t("fileManager.editor")}
           </span>
           <div className="h-4 w-px bg-border/50 shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">
+          <span className="text-[10px] font-bold tracking-tight text-muted-foreground truncate">
             {title}
           </span>
         </div>
