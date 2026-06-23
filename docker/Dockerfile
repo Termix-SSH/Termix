@@ -78,7 +78,7 @@ COPY --chown=node:node package.json ./
 
 VOLUME ["/app/data"]
 
-EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
+EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006 30007 30008 30009 30010 30011
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget -q -O /dev/null http://localhost:30001/health || exit 1

@@ -42,6 +42,10 @@ const swaggerOptions: SwaggerJSDocOptions = {
         url: "http://localhost:30007",
         description: "Docker management server",
       },
+      {
+        url: "http://localhost:30011",
+        description: "Serial connection server",
+      },
     ],
     components: {
       securitySchemes: {

@@ -55,7 +55,7 @@ export function createHostEditorForm(
       rawTheme,
     )
       ? "termix"
-      : TERMINAL_THEMES[rawTheme]
+      : rawTheme === "custom" || TERMINAL_THEMES[rawTheme]
         ? rawTheme
         : "termix";
 
@@ -157,6 +157,7 @@ export function createHostEditorForm(
     backgroundImage: host?.terminalConfig?.backgroundImage ?? "",
     backgroundImageOpacity:
       host?.terminalConfig?.backgroundImageOpacity ?? 0.15,
+    customThemeColors: host?.terminalConfig?.customThemeColors ?? null,
     allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
     linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
       "default") as "default" | "confirm" | "direct",
@@ -412,6 +413,8 @@ export function buildHostEditorPayload(
           syntaxHighlightingOptions: form.syntaxHighlightingOptions,
           backgroundImage: form.backgroundImage || null,
           backgroundImageOpacity: Number(form.backgroundImageOpacity),
+          customThemeColors:
+            form.theme === "custom" ? form.customThemeColors : null,
           allowLegacyAlgorithms: form.allowLegacyAlgorithms,
           linkClickBehavior:
             form.linkClickBehavior !== "default"

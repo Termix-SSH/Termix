@@ -118,7 +118,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     };
 
     const activeTheme = previewTheme || config.theme;
-    const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
+    const themeColors = resolveTermixThemeColors(
+      activeTheme,
+      appTheme,
+      config.customThemeColors,
+    );
     const backgroundImage = config.backgroundImage || "";
     const backgroundImageOpacity = config.backgroundImageOpacity ?? 0.15;
     const backgroundColor = backgroundImage
@@ -1908,7 +1912,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       const activeTheme = previewTheme || config.theme;
-      const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
+      const themeColors = resolveTermixThemeColors(
+        activeTheme,
+        appTheme,
+        config.customThemeColors,
+      );
 
       const fontConfig = TERMINAL_FONTS.find(
         (f) => f.value === config.fontFamily,
@@ -1982,7 +1990,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
 
       const activeTheme = previewTheme || config.theme;
-      const themeColors = resolveTermixThemeColors(activeTheme, appTheme);
+      const themeColors = resolveTermixThemeColors(
+        activeTheme,
+        appTheme,
+        config.customThemeColors,
+      );
 
       // Set initial options before opening the terminal
       terminal.options = {

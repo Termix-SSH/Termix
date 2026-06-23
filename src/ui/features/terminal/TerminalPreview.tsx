@@ -1,5 +1,6 @@
 import { useTheme } from "@/components/theme-provider";
 import { TERMINAL_THEMES, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import type { TerminalConfig } from "@/types";
 
 interface TerminalPreviewProps {
   theme: string;
@@ -9,6 +10,7 @@ interface TerminalPreviewProps {
   cursorBlink?: boolean;
   letterSpacing?: number;
   lineHeight?: number;
+  customThemeColors?: TerminalConfig["customThemeColors"];
 }
 
 export function TerminalPreview({
@@ -19,6 +21,7 @@ export function TerminalPreview({
   cursorBlink = true,
   letterSpacing = 0,
   lineHeight = 1.0,
+  customThemeColors,
 }: TerminalPreviewProps) {
   const { theme: appTheme } = useTheme();
 
@@ -31,7 +34,10 @@ export function TerminalPreview({
         : "termixLight"
       : theme;
 
-  const colors = TERMINAL_THEMES[resolvedTheme]?.colors;
+  const colors =
+    theme === "custom" && customThemeColors
+      ? customThemeColors
+      : TERMINAL_THEMES[resolvedTheme]?.colors;
   const fontFallback =
     TERMINAL_FONTS.find((f) => f.value === fontFamily)?.fallback ||
     TERMINAL_FONTS[0].fallback;

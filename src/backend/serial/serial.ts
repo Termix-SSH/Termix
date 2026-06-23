@@ -20,7 +20,7 @@ interface WebSocketMessage {
 const authManager = AuthManager.getInstance();
 const userCrypto = UserCrypto.getInstance();
 
-const wss = new WebSocketServer({ port: 30005 });
+const wss = new WebSocketServer({ port: 30011 });
 
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
@@ -201,8 +201,4 @@ wss.on("connection", async (ws: WebSocket, req) => {
   ws.on("error", () => {
     cleanup();
   });
-});
-
-sshLogger.info("Serial WebSocket server started on port 30005", {
-  operation: "serial_ws_start",
 });

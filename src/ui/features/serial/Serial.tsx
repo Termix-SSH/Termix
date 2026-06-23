@@ -108,7 +108,7 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
 
     if (isDev || isEmbeddedMode()) {
       const token = localStorage.getItem("jwt");
-      const base = "ws://127.0.0.1:30005";
+      const base = "ws://127.0.0.1:30011";
       return token ? `${base}?token=${encodeURIComponent(token)}` : base;
     }
 

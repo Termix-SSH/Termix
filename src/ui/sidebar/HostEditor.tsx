@@ -779,6 +779,7 @@ export function HostEditor({
                     cursorBlink={form.cursorBlink}
                     letterSpacing={form.letterSpacing}
                     lineHeight={form.lineHeight}
+                    customThemeColors={form.customThemeColors ?? undefined}
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -789,8 +790,14 @@ export function HostEditor({
                     <select
                       value={form.theme}
                       onChange={(e) => {
-                        setField("theme", e.target.value);
-                        setPreviewTerminalTheme(e.target.value);
+                        const newTheme = e.target.value;
+                        setField("theme", newTheme);
+                        setPreviewTerminalTheme(newTheme);
+                        if (newTheme === "custom" && !form.customThemeColors) {
+                          setField("customThemeColors", {
+                            ...TERMINAL_THEMES.termixDark.colors,
+                          });
+                        }
                       }}
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
@@ -931,6 +938,121 @@ export function HostEditor({
                     </select>
                   </div>
                 </div>
+                {form.theme === "custom" && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.customThemeColors")}
+                      </label>
+                      <button
+                        type="button"
+                        title={t("hosts.customThemeResetTooltip")}
+                        onClick={() =>
+                          setField("customThemeColors", {
+                            ...TERMINAL_THEMES.termixDark.colors,
+                          })
+                        }
+                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {t("hosts.customThemeResetTooltip")}
+                      </button>
+                    </div>
+                    {(
+                      [
+                        ["background", "customThemeBackground"],
+                        ["foreground", "customThemeForeground"],
+                        ["cursor", "customThemeCursor"],
+                        ["cursorAccent", "customThemeCursorAccent"],
+                        ["selectionBackground", "customThemeSelection"],
+                      ] as const
+                    ).map(([key, labelKey]) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <label className="text-xs text-muted-foreground min-w-0 flex-1">
+                          {t(`hosts.${labelKey}`)}
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={
+                              form.customThemeColors?.[key] ??
+                              TERMINAL_THEMES.termixDark.colors[key]
+                            }
+                            onChange={(e) =>
+                              setField("customThemeColors", {
+                                ...(form.customThemeColors ??
+                                  TERMINAL_THEMES.termixDark.colors),
+                                [key]: e.target.value,
+                              })
+                            }
+                            className="h-7 w-10 cursor-pointer border border-border bg-background p-0.5"
+                          />
+                          <span className="text-[10px] font-mono text-muted-foreground w-16 tabular-nums">
+                            {form.customThemeColors?.[key] ??
+                              TERMINAL_THEMES.termixDark.colors[key]}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+                      {t("hosts.customThemeAnsiColors")}
+                    </label>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {(
+                        [
+                          ["black", "customThemeBlack"],
+                          ["brightBlack", "customThemeBrightBlack"],
+                          ["red", "customThemeRed"],
+                          ["brightRed", "customThemeBrightRed"],
+                          ["green", "customThemeGreen"],
+                          ["brightGreen", "customThemeBrightGreen"],
+                          ["yellow", "customThemeYellow"],
+                          ["brightYellow", "customThemeBrightYellow"],
+                          ["blue", "customThemeBlue"],
+                          ["brightBlue", "customThemeBrightBlue"],
+                          ["magenta", "customThemeMagenta"],
+                          ["brightMagenta", "customThemeBrightMagenta"],
+                          ["cyan", "customThemeCyan"],
+                          ["brightCyan", "customThemeBrightCyan"],
+                          ["white", "customThemeWhite"],
+                          ["brightWhite", "customThemeBrightWhite"],
+                        ] as const
+                      ).map(([key, labelKey]) => (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <label className="text-xs text-muted-foreground min-w-0 flex-1 truncate">
+                            {t(`hosts.${labelKey}`)}
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="color"
+                              value={
+                                form.customThemeColors?.[key] ??
+                                TERMINAL_THEMES.termixDark.colors[key]
+                              }
+                              onChange={(e) =>
+                                setField("customThemeColors", {
+                                  ...(form.customThemeColors ??
+                                    TERMINAL_THEMES.termixDark.colors),
+                                  [key]: e.target.value,
+                                })
+                              }
+                              className="h-7 w-10 cursor-pointer border border-border bg-background p-0.5"
+                            />
+                            <span className="text-[10px] font-mono text-muted-foreground w-16 tabular-nums">
+                              {form.customThemeColors?.[key] ??
+                                TERMINAL_THEMES.termixDark.colors[key]}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <SettingRow
                   label={t("hosts.cursorBlinking")}
                   description={t("hosts.cursorBlinkingDesc")}

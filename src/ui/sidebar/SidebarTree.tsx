@@ -55,6 +55,7 @@ import {
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type { SSHHostData } from "@/types/index";
 import { FolderIconEl } from "@/components/folder-style";
+import { resolveHostTabType } from "@/lib/host-connection-tabs";
 import { copyToClipboard } from "@/lib/clipboard";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
 import {
@@ -1471,6 +1472,7 @@ export function FolderItem({
   onTrayOpenChange,
   onManageFolder,
   onDeleteFolder,
+  onOpenAllSessions,
   onMoveHostsToFolder,
   draggedHostIds,
   onDragHostStart,
@@ -1497,6 +1499,7 @@ export function FolderItem({
   onTrayOpenChange: (hostId: string | null) => void;
   onManageFolder: (folder: HostFolder) => void;
   onDeleteFolder: (folder: HostFolder) => void;
+  onOpenAllSessions: (folder: HostFolder) => void;
   onMoveHostsToFolder: (hostIds: string[], targetPath: string) => void;
   draggedHostIds: string[] | null;
   onDragHostStart: (hostId: string) => void;
@@ -1562,6 +1565,16 @@ export function FolderItem({
             {!isGroup && (
               <span className="flex items-center gap-1.5 ml-1 opacity-0 group-hover/folder:opacity-100 transition-opacity">
                 <span
+                  title={t("hosts.openAllSessions")}
+                  className="text-muted-foreground/50 hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenAllSessions(folder);
+                  }}
+                >
+                  <FolderOpen className="size-2.5" />
+                </span>
+                <span
                   title={t("hosts.editFolder")}
                   className="text-muted-foreground/50 hover:text-foreground"
                   onClick={(e) => {
@@ -1613,6 +1626,7 @@ export function FolderItem({
                 onTrayOpenChange={onTrayOpenChange}
                 onManageFolder={onManageFolder}
                 onDeleteFolder={onDeleteFolder}
+                onOpenAllSessions={onOpenAllSessions}
                 onMoveHostsToFolder={onMoveHostsToFolder}
                 draggedHostIds={draggedHostIds}
                 onDragHostStart={onDragHostStart}
@@ -1730,6 +1744,14 @@ export function SidebarTree({
 
   function handleManageFolder(folder: HostFolder) {
     setFolderDialog({ mode: "edit", folder });
+  }
+
+  function handleOpenAllSessions(folder: HostFolder) {
+    const hosts = collectAllHosts(folder.children);
+    for (const host of hosts) {
+      const type = resolveHostTabType(host);
+      onOpenTab(host, type);
+    }
   }
 
   async function handleSaveFolderMetadata(value: {
@@ -2009,6 +2031,7 @@ export function SidebarTree({
                 onTrayOpenChange={setOpenTrayHostId}
                 onManageFolder={handleManageFolder}
                 onDeleteFolder={handleDeleteFolder}
+                onOpenAllSessions={handleOpenAllSessions}
                 onMoveHostsToFolder={handleMoveHostsToFolder}
                 draggedHostIds={draggedHostIds}
                 onDragHostStart={handleDragHostStart}
