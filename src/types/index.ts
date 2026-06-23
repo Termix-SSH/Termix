@@ -656,6 +656,7 @@ export interface TabContextTab {
 export interface TerminalRefHandle {
   disconnect?: () => void;
   reconnect?: () => void;
+  isConnected?: () => boolean;
   fit?: () => void;
   sendInput?: (data: string) => void;
   notifyResize?: () => void;

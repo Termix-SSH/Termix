@@ -242,6 +242,8 @@ export type Tab = {
   restoredSessionId?: string | null;
   initialFilePath?: string;
   terminalRef?: import("react").RefObject<{
+    disconnect?: () => void;
+    isConnected?: () => boolean;
     sendInput?: (data: string) => void;
     reconnect?: () => void;
     fit?: () => void;

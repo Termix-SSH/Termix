@@ -28,6 +28,7 @@ import { HostMetricsTab } from "@/features/host-metrics/HostMetricsTab";
 // --- tmux-monitor ---
 import { TmuxMonitor } from "@/features/tmux-monitor/TmuxMonitor";
 import GuacamoleApp from "@/features/guacamole/GuacamoleApp";
+import type { GuacamoleAppHandle } from "@/features/guacamole/GuacamoleApp";
 import { DashboardTab } from "@/dashboard/DashboardTab";
 import { TunnelTab } from "@/features/tunnel/TunnelTab";
 import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
@@ -288,6 +289,7 @@ export function renderTabContent(
         );
       return (
         <GuacamoleApp
+          ref={tab.terminalRef as React.Ref<GuacamoleAppHandle>}
           hostId={host.id}
           tabId={tab.id}
           protocol={tab.type as "rdp" | "vnc" | "telnet"}

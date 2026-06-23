@@ -781,8 +781,11 @@ export function AppShell({
                 host,
                 openedAt: new Date(saved.createdAt).getTime(),
                 restoredSessionId,
-                terminalRef:
-                  saved.tabType === "terminal" ? createRef() : undefined,
+                terminalRef: SESSION_TAB_TYPES.includes(
+                  saved.tabType as TabType,
+                )
+                  ? createRef()
+                  : undefined,
               });
             }
 
@@ -858,7 +861,7 @@ export function AppShell({
         ? crypto.randomUUID()
         : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
     const openedAt = Date.now();
-    const ref = type === "terminal" ? createRef() : undefined;
+    const ref = SESSION_TAB_TYPES.includes(type) ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
 
     let finalLabel = host.name;
@@ -1025,6 +1028,35 @@ export function AppShell({
   );
 
   const SESSION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
+  const ACTIVE_CLOSE_CONFIRM_TYPES: TabType[] = SESSION_TAB_TYPES;
+
+  const getTabCloseLabel = useCallback((tab: Tab) => {
+    return tab.customLabel || tab.label || tab.host?.name || String(tab.id);
+  }, []);
+
+  const isActiveConnectionTab = useCallback((tab: Tab) => {
+    if (!ACTIVE_CLOSE_CONFIRM_TYPES.includes(tab.type)) return false;
+    return tab.terminalRef?.current?.isConnected?.() === true;
+  }, []);
+
+  const hasActiveConnection = useCallback(() => {
+    return tabsRef.current.some(isActiveConnectionTab);
+  }, [isActiveConnectionTab]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasActiveConnection()) return;
+
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasActiveConnection]);
 
   function doCloseTab(id: string) {
     const tabToClose = tabs.find((t) => t.id === id);
@@ -1078,20 +1110,37 @@ export function AppShell({
   function closeTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
     const confirmEnabled = localStorage.getItem("confirmTabClose") === "true";
-    if (tab && SESSION_TAB_TYPES.includes(tab.type) && confirmEnabled) {
-      toast(t("nav.confirmClose"), {
-        duration: 5000,
-        action: {
-          label: t("nav.close"),
-          onClick: () => doCloseTab(id),
+    if (tab && confirmEnabled && isActiveConnectionTab(tab)) {
+      const closeLabel = getTabCloseLabel(tab);
+      const toastId = `close-tab-${id}`;
+      toast(
+        t("nav.confirmCloseHost", {
+          host: closeLabel,
+          defaultValue: `Close ${closeLabel}?`,
+        }),
+        {
+          id: toastId,
+          duration: 8000,
+          action: {
+            label: t("nav.close"),
+            onClick: () => {
+              toast.dismiss(toastId);
+              doCloseTab(id);
+            },
+          },
+          cancel: {
+            label: t("nav.cancel"),
+            onClick: () => toast.dismiss(toastId),
+          },
         },
-        cancel: {
-          label: t("nav.cancel"),
-          onClick: () => {},
-        },
-      });
+      );
       return;
     }
+
+    if (tab && SESSION_TAB_TYPES.includes(tab.type) && confirmEnabled) {
+      toast.dismiss(`close-tab-${id}`);
+    }
+
     doCloseTab(id);
   }
 

@@ -30,6 +30,7 @@ export interface GuacamoleConnectionConfig {
 
 export interface GuacamoleDisplayHandle {
   disconnect: () => void;
+  isConnected: () => boolean;
   sendKey: (keysym: number, pressed: boolean) => void;
   sendMouse: (x: number, y: number, buttonMask: number) => void;
   setClipboard: (data: string) => void;
@@ -73,6 +74,7 @@ export const GuacamoleDisplay = forwardRef<
         clientRef.current.disconnect();
       }
     },
+    isConnected: () => isReady && !hasError,
     sendKey: (keysym: number, pressed: boolean) => {
       if (clientRef.current) {
         clientRef.current.sendKeyEvent(pressed ? 1 : 0, keysym);
