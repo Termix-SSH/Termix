@@ -160,6 +160,7 @@ function TerminalTabContent({
               } as TerminalHostConfig
             }
             isVisible={isVisible}
+            initialPath={tab.initialFilePath}
             title={label}
             showTitle={false}
             splitScreen={false}
@@ -194,6 +195,7 @@ export function renderTabContent(
   isVisible = true,
   onOpenFileInEditor?: (host: Host, filePath: string) => void,
   onOpenFileManager?: (host: Host, path?: string) => void,
+  onOpenTerminalTab?: (host: Host, path?: string) => void,
   onRenameTab?: (tabId: string, newLabel: string) => void,
 ) {
   const { host, label } = tab;
@@ -246,6 +248,11 @@ export function renderTabContent(
         <FileManager
           initialHost={hostToSSHHost(host)}
           initialFilePath={tab.initialFilePath}
+          onOpenTerminalTab={
+            onOpenTerminalTab
+              ? (path) => onOpenTerminalTab(host, path)
+              : undefined
+          }
         />
       );
 
