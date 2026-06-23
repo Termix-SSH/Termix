@@ -56,6 +56,43 @@ export function modeToPermissions(mode: number): string {
   return prefix + perms;
 }
 
+export function parseLsDateToTimestamp(dateStr: string): number {
+  const parts = dateStr.trim().split(/\s+/);
+  if (parts.length < 3) return 0;
+
+  const [month, day, timeOrYear] = parts;
+  const monthIndex = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ].indexOf(month);
+  if (monthIndex === -1) return 0;
+
+  const dayNum = parseInt(day, 10);
+  const now = new Date();
+
+  if (timeOrYear.includes(":")) {
+    const [hours, minutes] = timeOrYear.split(":").map(Number);
+    let year = now.getFullYear();
+    const candidate = new Date(year, monthIndex, dayNum, hours, minutes);
+    if (candidate > now) year -= 1;
+    return new Date(year, monthIndex, dayNum, hours, minutes).getTime() / 1000;
+  }
+
+  const year = parseInt(timeOrYear, 10);
+  if (isNaN(year)) return 0;
+  return new Date(year, monthIndex, dayNum).getTime() / 1000;
+}
+
 export function formatMtime(mtime: number): string {
   const date = new Date(mtime * 1000);
   const months = [

@@ -5,6 +5,7 @@ import {
   formatMtime,
   getMimeType,
   detectBinary,
+  parseLsDateToTimestamp,
 } from "./file-manager-utils.js";
 
 describe("isExecutableFile", () => {
@@ -81,6 +82,50 @@ describe("getMimeType", () => {
   it("falls back to octet-stream for unknown or missing extensions", () => {
     expect(getMimeType("mystery.xyz")).toBe("application/octet-stream");
     expect(getMimeType("noextension")).toBe("application/octet-stream");
+  });
+});
+
+describe("parseLsDateToTimestamp", () => {
+  it("parses a year-format date string", () => {
+    const ts = parseLsDateToTimestamp("Dec 12  2025");
+    const d = new Date(ts * 1000);
+    expect(d.getFullYear()).toBe(2025);
+    expect(d.getMonth()).toBe(11);
+    expect(d.getDate()).toBe(12);
+  });
+
+  it("parses a time-format date string for a recent file", () => {
+    const now = new Date();
+    const month = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ][now.getMonth()];
+    const day = now.getDate();
+    const ts = parseLsDateToTimestamp(`${month} ${day} 10:30`);
+    const d = new Date(ts * 1000);
+    expect(d.getHours()).toBe(10);
+    expect(d.getMinutes()).toBe(30);
+  });
+
+  it("returns 0 for an empty or invalid string", () => {
+    expect(parseLsDateToTimestamp("")).toBe(0);
+    expect(parseLsDateToTimestamp("Xyz 5 12:00")).toBe(0);
+  });
+
+  it("produces ascending order for older vs newer dates", () => {
+    const older = parseLsDateToTimestamp("Jan  1  2020");
+    const newer = parseLsDateToTimestamp("Dec 31  2024");
+    expect(older).toBeLessThan(newer);
   });
 });
 

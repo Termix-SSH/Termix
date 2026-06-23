@@ -1146,6 +1146,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
     return new Promise<Client>((resolve, reject) => {
       const timeout = setTimeout(() => {
         client.end();
+        jumpClient?.end();
         reject(new Error("SSH connection timeout"));
       }, 30000);
 
@@ -1154,8 +1155,13 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
         resolve(client);
       });
 
+      client.on("close", () => {
+        jumpClient?.end();
+      });
+
       client.on("error", (err) => {
         clearTimeout(timeout);
+        jumpClient?.end();
         reject(err);
       });
 

@@ -168,6 +168,8 @@ function FileManagerContent({
   const [clipboard, setClipboard] = useState<{
     files: FileItem[];
     operation: "copy" | "cut";
+    sourceHostId: number | null;
+    sourceSessionId: string | null;
   } | null>(null);
 
   interface UndoAction {
@@ -801,6 +803,23 @@ function FileManagerContent({
   }, [currentHost?.id, handleRefreshDirectory]);
 
   useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          files: FileItem[];
+          operation: "copy" | "cut";
+          sourceHostId: number | null;
+          sourceSessionId: string | null;
+        }>
+      ).detail;
+      if (!detail) return;
+      setClipboard(detail);
+    };
+    window.addEventListener("file-manager:clipboard", handler);
+    return () => window.removeEventListener("file-manager:clipboard", handler);
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const activeElement = document.activeElement;
       if (
@@ -1397,14 +1416,32 @@ function FileManagerContent({
   }
 
   function handleCopyFiles(files: FileItem[]) {
-    setClipboard({ files, operation: "copy" });
+    const entry = {
+      files,
+      operation: "copy" as const,
+      sourceHostId: currentHost?.id ?? null,
+      sourceSessionId: sshSessionId,
+    };
+    setClipboard(entry);
+    window.dispatchEvent(
+      new CustomEvent("file-manager:clipboard", { detail: entry }),
+    );
     toast.success(
       t("fileManager.filesCopiedToClipboard", { count: files.length }),
     );
   }
 
   function handleCutFiles(files: FileItem[]) {
-    setClipboard({ files, operation: "cut" });
+    const entry = {
+      files,
+      operation: "cut" as const,
+      sourceHostId: currentHost?.id ?? null,
+      sourceSessionId: sshSessionId,
+    };
+    setClipboard(entry);
+    window.dispatchEvent(
+      new CustomEvent("file-manager:clipboard", { detail: entry }),
+    );
     toast.success(
       t("fileManager.filesCutToClipboard", { count: files.length }),
     );
@@ -1445,8 +1482,63 @@ function FileManagerContent({
     });
   }
 
+  async function handleCrossHostPaste() {
+    if (!clipboard || !sshSessionId || !currentHost) return;
+
+    const { files, operation, sourceSessionId } = clipboard;
+    if (!sourceSessionId) return;
+
+    const sourcePaths = files.map((f) => f.path);
+
+    try {
+      const { transferId } = await transferToHost(
+        sourceSessionId,
+        sourcePaths,
+        sshSessionId,
+        currentPath,
+        operation === "cut",
+        "auto",
+        2,
+      );
+
+      const monitorHandle = beginTransferProgressMonitoring(transferId, t, {
+        formatTransferMetrics,
+      });
+      if (!monitorHandle) return;
+
+      const finalStatus = await monitorHandle.waitForCompletion;
+
+      if (
+        finalStatus.status !== "success" &&
+        finalStatus.status !== "partial"
+      ) {
+        return;
+      }
+
+      if (operation === "cut") {
+        setClipboard(null);
+      }
+
+      handleRefreshDirectory();
+      clearSelection();
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("transfer.transferError")}: ${err.message || t("fileManager.unknownError")}`,
+      );
+    }
+  }
+
   async function handlePasteFiles() {
     if (!clipboard || !sshSessionId) return;
+
+    if (
+      clipboard.sourceHostId !== null &&
+      clipboard.sourceHostId !== currentHost?.id
+    ) {
+      await handleCrossHostPaste();
+      return;
+    }
 
     try {
       await ensureSSHConnection();
@@ -2710,7 +2802,7 @@ function FileManagerContent({
               });
               break;
             case "modified":
-              result = (a.modified || "").localeCompare(b.modified || "");
+              result = (a.modifiedTimestamp || 0) - (b.modifiedTimestamp || 0);
               break;
             case "size":
               result = (a.size || 0) - (b.size || 0);

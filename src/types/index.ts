@@ -544,6 +544,7 @@ export interface FileItem {
   sshSessionId?: string;
   size?: number;
   modified?: string;
+  modifiedTimestamp?: number;
   permissions?: string;
   owner?: string;
   group?: string;
