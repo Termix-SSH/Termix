@@ -1231,9 +1231,11 @@ ipcMain.handle(
   async (_event, authUrl, callbackPort) => {
     const http = require("http");
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
+      let timeout;
+      let settled = false;
       const server = http.createServer((req, res) => {
-        const url = new URL(req.url, `http://localhost:${callbackPort}`);
+        const url = new URL(req.url || "/", `http://localhost:${callbackPort}`);
         if (url.pathname === "/oidc-callback") {
           const success = url.searchParams.get("success");
           const error = url.searchParams.get("error");
@@ -1244,27 +1246,54 @@ ipcMain.handle(
             `<html><body><h2>${success === "true" ? "Authentication successful!" : "Authentication failed."}</h2><p>You can close this tab and return to Termix.</p><script>window.close()</script></body></html>`,
           );
 
-          server.close();
           if (success === "true") {
-            resolve({ success: true, token });
+            finish({ success: true, token });
           } else {
-            resolve({
+            finish({
               success: false,
               error: error || "Authentication failed",
             });
           }
+          return;
+        }
+
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Not found");
+      });
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        if (timeout) clearTimeout(timeout);
+        try {
+          server.close();
+        } catch {
+          // Server may not have started yet.
+        }
+        resolve(result);
+      };
+
+      const fail = (error) => {
+        finish({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      };
+
+      server.once("error", fail);
+
+      server.listen(callbackPort, "127.0.0.1", async () => {
+        try {
+          await shell.openExternal(authUrl);
+        } catch (error) {
+          fail(error);
         }
       });
 
-      server.listen(callbackPort, "127.0.0.1", () => {
-        shell.openExternal(authUrl);
-      });
-
       // Timeout after 5 minutes
-      setTimeout(
+      timeout = setTimeout(
         () => {
-          server.close();
-          reject(new Error("OIDC authentication timed out"));
+          fail(new Error("OIDC authentication timed out"));
         },
         5 * 60 * 1000,
       );
