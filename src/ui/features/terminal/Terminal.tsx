@@ -7,6 +7,7 @@ import {
   forwardRef,
   useCallback,
 } from "react";
+import { createPortal } from "react-dom";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
@@ -2998,56 +2999,58 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           onSelect={handleAutocompleteSelect}
         />
 
-        {linkClickDialog && (
-          <div
-            className="absolute inset-0 flex items-center justify-center z-[150]"
-            style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
-          >
+        {linkClickDialog &&
+          createPortal(
             <div
-              className="flex flex-col gap-3 p-4 rounded shadow-lg max-w-sm w-full mx-4"
-              style={{ backgroundColor }}
+              className="fixed inset-0 flex items-center justify-center z-[10000]"
+              style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
             >
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                {t("terminal.linkDialogTitle")}
-              </p>
-              <p className="text-sm break-all text-foreground select-all">
-                {linkClickDialog.url}
-              </p>
-              <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    writeTextToClipboard(linkClickDialog.url);
-                    setLinkClickDialog(null);
-                  }}
-                >
-                  {t("terminal.linkDialogCopy")}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    window.open(
-                      linkClickDialog.url,
-                      "_blank",
-                      "noopener,noreferrer",
-                    );
-                    setLinkClickDialog(null);
-                  }}
-                >
-                  {t("terminal.linkDialogOpen")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setLinkClickDialog(null)}
-                >
-                  {t("common.cancel")}
-                </Button>
+              <div
+                className="flex flex-col gap-3 p-4 rounded shadow-lg max-w-sm w-full mx-4"
+                style={{ backgroundColor }}
+              >
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("terminal.linkDialogTitle")}
+                </p>
+                <p className="text-sm break-all text-foreground select-all">
+                  {linkClickDialog.url}
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      writeTextToClipboard(linkClickDialog.url);
+                      setLinkClickDialog(null);
+                    }}
+                  >
+                    {t("terminal.linkDialogCopy")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      window.open(
+                        linkClickDialog.url,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                      setLinkClickDialog(null);
+                    }}
+                  >
+                    {t("terminal.linkDialogOpen")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLinkClickDialog(null)}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </div>,
+            document.body,
+          )}
       </div>
     );
   },
