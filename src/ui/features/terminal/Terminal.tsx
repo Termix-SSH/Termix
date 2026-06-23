@@ -652,6 +652,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             connectToHost(cols, rows);
           }
         },
+        isConnected: () => isConnected,
         fit: () => {
           if (!fitAddonRef.current || !terminal || isFittingRef.current) return;
           isFittingRef.current = true;
@@ -705,7 +706,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         },
       }),
-      [terminal],
+      [isConnected, terminal],
     );
 
     function getUseRightClickCopyPaste() {
