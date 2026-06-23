@@ -96,7 +96,7 @@ export async function getSSHHostWithCredentials(
 
 export async function getHostPassword(
   hostId: number,
-  field: "password" | "sudoPassword" = "password",
+  field: "password" | "sudoPassword" | "vncPassword" = "password",
 ): Promise<string | null> {
   try {
     const response = await sshHostApi.get(
