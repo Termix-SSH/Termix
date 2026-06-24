@@ -49,10 +49,14 @@ export interface CardDefinition {
   render: (ctx: CardRenderContext) => ReactNode;
 }
 
-type SimpleMetricCard = ComponentType<{ metrics: ServerMetrics | null }>;
+type SimpleMetricCard = ComponentType<{
+  metrics: ServerMetrics | null;
+  hostId: number | null;
+}>;
 type HistoryMetricCard = ComponentType<{
   metrics: ServerMetrics | null;
   history: number[];
+  hostId: number | null;
 }>;
 
 function metricCard(
@@ -64,7 +68,7 @@ function metricCard(
     id,
     labelKey,
     kind: "metric",
-    render: ({ metrics }) => <Comp metrics={metrics} />,
+    render: ({ metrics, hostId }) => <Comp metrics={metrics} hostId={hostId} />,
   };
 }
 
@@ -78,8 +82,8 @@ function historyCard(
     id,
     labelKey,
     kind: "metric",
-    render: ({ metrics, histories }) => (
-      <Comp metrics={metrics} history={histories[series]} />
+    render: ({ metrics, histories, hostId }) => (
+      <Comp metrics={metrics} history={histories[series]} hostId={hostId} />
     ),
   };
 }

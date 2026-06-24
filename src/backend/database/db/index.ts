@@ -1894,6 +1894,151 @@ const migrateSchema = () => {
     });
   }
 
+  // --- metrics-history begin ---
+  try {
+    sqlite.prepare("SELECT id FROM host_metrics_history LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS host_metrics_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
+          ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          cpu_percent REAL,
+          mem_percent REAL,
+          disk_percent REAL,
+          net_rx_bytes INTEGER,
+          net_tx_bytes INTEGER
+        );
+        CREATE INDEX IF NOT EXISTS idx_host_metrics_history_host_ts
+          ON host_metrics_history (host_id, ts DESC);
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create host_metrics_history table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- metrics-history end ---
+
+  // --- alerts begin ---
+  try {
+    sqlite.prepare("SELECT id FROM alert_rules LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS alert_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          host_id INTEGER REFERENCES ssh_data(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          trigger_type TEXT NOT NULL,
+          threshold_value REAL,
+          threshold_duration_seconds INTEGER,
+          cooldown_minutes INTEGER NOT NULL DEFAULT 15,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create alert_rules table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM notification_channels LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS notification_channels (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          config TEXT NOT NULL,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create notification_channels table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM alert_rule_channels LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS alert_rule_channels (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          rule_id INTEGER NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
+          channel_id INTEGER NOT NULL REFERENCES notification_channels(id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create alert_rule_channels table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM alert_firings LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS alert_firings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          rule_id INTEGER NOT NULL REFERENCES alert_rules(id) ON DELETE CASCADE,
+          host_id INTEGER NOT NULL,
+          host_name TEXT NOT NULL,
+          fired_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          resolved_at TEXT,
+          value REAL,
+          message TEXT NOT NULL,
+          severity TEXT NOT NULL DEFAULT 'warning',
+          acknowledged INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_alert_firings_user_fired
+          ON alert_firings (user_id, fired_at DESC);
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create alert_firings table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- alerts end ---
+
+  // Seed default metrics history retention setting
+  try {
+    const retentionRow = sqlite
+      .prepare("SELECT value FROM settings WHERE key = 'metrics_history_retention_days'")
+      .get();
+    if (!retentionRow) {
+      sqlite
+        .prepare("INSERT INTO settings (key, value) VALUES ('metrics_history_retention_days', '7')")
+        .run();
+    }
+  } catch (e) {
+    databaseLogger.warn("Could not initialize metrics_history_retention_days setting", {
+      operation: "schema_migration",
+      error: e,
+    });
+  }
+
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",
   });

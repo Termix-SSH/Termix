@@ -23,6 +23,7 @@ import { SessionLogsPanel } from "@/sidebar/SessionLogsPanel";
 import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
+import { AlertsPanel } from "@/sidebar/AlertsPanel";
 import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
 import { TermixIdPanel } from "@/sidebar/TermixIdPanel";
 import { SplitView } from "@/shell/SplitView";
@@ -278,6 +279,7 @@ export function AppShell({
     connections: t("nav.connections"),
     "user-profile": "User Profile",
     "admin-settings": "Admin Settings",
+    alerts: t("nav.alerts"),
   };
 
   // Double-shift opens command palette
@@ -1531,6 +1533,12 @@ export function AppShell({
       {railView === "admin-settings" && isAdmin && (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <AdminSettingsPanel />
+        </div>
+      )}
+
+      {railView === "alerts" && (
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <AlertsPanel />
         </div>
       )}
     </div>

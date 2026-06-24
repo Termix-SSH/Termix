@@ -21,6 +21,7 @@ import termixIdRoutes from "./routes/termix-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
+import alertRulesRoutes from "./routes/alert-rules-routes.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import fs from "fs";
 import path from "path";
@@ -1794,6 +1795,7 @@ app.use("/termix-id", termixIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
 app.use("/vault", vaultRoutes);
+app.use("/", alertRulesRoutes);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),

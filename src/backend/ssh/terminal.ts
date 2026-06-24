@@ -36,6 +36,7 @@ import {
 } from "./terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
+import { triggerLoginAlert } from "../utils/alert-trigger.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -1742,6 +1743,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ws.send(
             JSON.stringify({ type: "connected", message: "SSH connected" }),
           );
+
+          if (id && hostConfig.userId) {
+            triggerLoginAlert(
+              id,
+              hostConfig.userId,
+              username,
+              req.socket.remoteAddress ?? "unknown",
+            ).catch(() => {});
+          }
 
           if (id && hostConfig.userId) {
             (async () => {

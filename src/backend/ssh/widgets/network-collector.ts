@@ -58,14 +58,36 @@ export async function collectNetworkMetrics(client: Client): Promise<{
       }
     }
 
-    for (const [name, data] of ifMap.entries()) {
-      interfaces.push({
-        name,
-        ip: data.ip,
-        state: data.state,
-        rxBytes: null,
-        txBytes: null,
-      });
+    try {
+      const procNet = await execCommand(client, "cat /proc/net/dev");
+      const rxTxMap = new Map<string, { rx: string; tx: string }>();
+      for (const line of procNet.stdout.split("\n").slice(2)) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 10) {
+          const ifName = parts[0].replace(":", "");
+          rxTxMap.set(ifName, { rx: parts[1], tx: parts[9] });
+        }
+      }
+      for (const [name, data] of ifMap.entries()) {
+        const rxTx = rxTxMap.get(name);
+        interfaces.push({
+          name,
+          ip: data.ip,
+          state: data.state,
+          rxBytes: rxTx?.rx ?? null,
+          txBytes: rxTx?.tx ?? null,
+        });
+      }
+    } catch {
+      for (const [name, data] of ifMap.entries()) {
+        interfaces.push({
+          name,
+          ip: data.ip,
+          state: data.state,
+          rxBytes: null,
+          txBytes: null,
+        });
+      }
     }
   } catch {
     // expected

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const users = sqliteTable("users", {
@@ -941,3 +941,86 @@ export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- tmux-monitor end ---
+
+// --- metrics-history begin ---
+export const hostMetricsHistory = sqliteTable("host_metrics_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  ts: text("ts")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  cpuPercent: real("cpu_percent"),
+  memPercent: real("mem_percent"),
+  diskPercent: real("disk_percent"),
+  netRxBytes: integer("net_rx_bytes"),
+  netTxBytes: integer("net_tx_bytes"),
+});
+// --- metrics-history end ---
+
+// --- alerts begin ---
+export const alertRules = sqliteTable("alert_rules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id").references(() => hosts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  triggerType: text("trigger_type").notNull(),
+  thresholdValue: real("threshold_value"),
+  thresholdDurationSeconds: integer("threshold_duration_seconds"),
+  cooldownMinutes: integer("cooldown_minutes").notNull().default(15),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const notificationChannels = sqliteTable("notification_channels", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  config: text("config").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const alertRuleChannels = sqliteTable("alert_rule_channels", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ruleId: integer("rule_id")
+    .notNull()
+    .references(() => alertRules.id, { onDelete: "cascade" }),
+  channelId: integer("channel_id")
+    .notNull()
+    .references(() => notificationChannels.id, { onDelete: "cascade" }),
+});
+
+export const alertFirings = sqliteTable("alert_firings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  ruleId: integer("rule_id")
+    .notNull()
+    .references(() => alertRules.id, { onDelete: "cascade" }),
+  hostId: integer("host_id").notNull(),
+  hostName: text("host_name").notNull(),
+  firedAt: text("fired_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  resolvedAt: text("resolved_at"),
+  value: real("value"),
+  message: text("message").notNull(),
+  severity: text("severity").notNull().default("warning"),
+  acknowledged: integer("acknowledged", { mode: "boolean" }).notNull().default(false),
+});
+// --- alerts end ---
