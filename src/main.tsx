@@ -52,6 +52,12 @@ const TmuxMonitorApp = lazy(() =>
   })),
 );
 
+const HomepageApp = lazy(() =>
+  import("@/features/homepage/HomepageApp").then((m) => ({
+    default: m.default,
+  })),
+);
+
 const ElectronVersionCheck = lazy(() =>
   import("@/user/ElectronVersionCheck").then((module) => ({
     default: module.ElectronVersionCheck,
@@ -106,6 +112,8 @@ function FullscreenApp() {
     case "tmux-monitor": // --- tmux-monitor ---
     case "tmux_monitor": // tab type spelling, so copied links also resolve
       return <TmuxMonitorApp hostId={hostId || undefined} />;
+    case "homepage":
+      return <HomepageApp />;
     default:
       return null;
   }

@@ -47,6 +47,12 @@ export const DASHBOARD_CARDS: DashboardCardConfig[] = [
     description: "Clickable buttons linking to services on your servers",
     defaultEnabled: false,
   },
+  {
+    id: "homepage_preview",
+    label: "Homepage",
+    description: "Scaled preview of your Homepage canvas",
+    defaultEnabled: false,
+  },
 ];
 
 export const ACCENT_PRESET_COLORS = [

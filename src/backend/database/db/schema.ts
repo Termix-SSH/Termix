@@ -1024,3 +1024,35 @@ export const alertFirings = sqliteTable("alert_firings", {
   acknowledged: integer("acknowledged", { mode: "boolean" }).notNull().default(false),
 });
 // --- alerts end ---
+
+// --- homepage begin ---
+export const homepageItems = sqliteTable("homepage_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  typeId: text("type_id").notNull(),
+  title: text("title"),
+  config: text("config").notNull().default("{}"),
+  folderId: integer("folder_id"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const homepageLayouts = sqliteTable("homepage_layouts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // JSON: { entries: HomepageLayoutEntry[], pan: {x,y}, zoom: number }
+  layout: text("layout").notNull().default("{}"),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- homepage end ---

@@ -3,6 +3,7 @@ import {
   Box,
   FolderSearch,
   LayoutDashboard,
+  LayoutGrid,
   Monitor,
   Network,
   Server,
@@ -33,6 +34,7 @@ import { TmuxMonitor } from "@/features/tmux-monitor/TmuxMonitor";
 import GuacamoleApp from "@/features/guacamole/GuacamoleApp";
 import type { GuacamoleAppHandle } from "@/features/guacamole/GuacamoleApp";
 import { DashboardTab } from "@/dashboard/DashboardTab";
+import { HomepageCanvas } from "@/features/homepage/HomepageCanvas";
 import { TunnelTab } from "@/features/tunnel/TunnelTab";
 import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
 import type { Tab, TabType, Host } from "@/types/ui-types";
@@ -126,6 +128,8 @@ export function tabIcon(type: TabType) {
       return <Layers className="size-3.5" />;
     case "serial":
       return <Usb className="size-3.5" />;
+    case "homepage":
+      return <LayoutGrid className="size-3.5" />;
   }
 }
 
@@ -331,6 +335,9 @@ export function renderTabContent(
           instanceId={tab.instanceId}
         />
       );
+
+    case "homepage":
+      return <HomepageCanvas />;
 
     case "host-manager":
     case "user-profile":

@@ -2039,6 +2039,52 @@ const migrateSchema = () => {
     });
   }
 
+  // --- homepage begin ---
+  try {
+    sqlite.prepare("SELECT id FROM homepage_items LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS homepage_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          type_id TEXT NOT NULL,
+          title TEXT,
+          config TEXT NOT NULL DEFAULT '{}',
+          folder_id INTEGER,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create homepage_items table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM homepage_layouts LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS homepage_layouts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          layout TEXT NOT NULL DEFAULT '{}',
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create homepage_layouts table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- homepage end ---
+
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",
   });

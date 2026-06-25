@@ -210,7 +210,8 @@ export type TabType =
   | "tunnel"
   | "network_graph"
   | "tmux_monitor" // --- tmux-monitor ---
-  | "serial";
+  | "serial"
+  | "homepage";
 
 export type SerialConfig = {
   path: string;
@@ -289,7 +290,8 @@ export type DashboardCardId =
   | "host_status"
   | "recent_activity"
   | "network_graph"
-  | "service_links";
+  | "service_links"
+  | "homepage_preview";
 
 export type DashboardCardConfig = {
   id: DashboardCardId;

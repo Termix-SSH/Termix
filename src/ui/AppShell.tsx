@@ -1047,6 +1047,7 @@ export function AppShell({
         tunnel: t("nav.tunnels"),
         network_graph: t("nav.networkGraph"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
+        homepage: t("nav.homepage"),
       };
       setTabs((prev) => {
         const existing = prev.find((t) => t.id === id);

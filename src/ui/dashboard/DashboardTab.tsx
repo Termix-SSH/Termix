@@ -5,6 +5,7 @@ import { Card } from "@/components/card";
 import { Separator } from "@/components/separator";
 import {
   Activity,
+  Check,
   Database,
   ExternalLink,
   GripHorizontal,
@@ -46,6 +47,16 @@ import {
 import type { RecentActivityItem, ServiceLink } from "@/main-axios";
 import { useTranslation } from "react-i18next";
 import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
+import { HomepagePreviewCard } from "@/dashboard/cards/HomepagePreviewCard";
+import { HomepageCanvas } from "@/features/homepage/HomepageCanvas";
+
+// Side-effect imports so homepage widgets register themselves
+import "@/features/homepage/widgets/ServiceLinkWidget";
+import "@/features/homepage/widgets/ClockWidget";
+import "@/features/homepage/widgets/NotesWidget";
+import "@/features/homepage/widgets/BookmarkListWidget";
+import "@/features/homepage/widgets/HostStatusWidget";
+import "@/features/homepage/widgets/FolderWidget";
 import {
   useStatusColorScheme,
   getStatusClasses,
@@ -59,6 +70,7 @@ import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
 type PanelId = "main" | "side";
 
 type CardSlot = {
+  key: string;
   id: DashboardCardId;
   panel: PanelId;
   order: number;
@@ -66,6 +78,7 @@ type CardSlot = {
 };
 
 type DragState = {
+  key: string;
   id: DashboardCardId;
   sourcePanel: PanelId;
   sourceOrder: number;
@@ -74,11 +87,35 @@ type DragState = {
 // ─── Default layout ───────────────────────────────────────────────────────────
 
 const DEFAULT_SLOTS: CardSlot[] = [
-  { id: "stats_bar", panel: "main", order: 0, height: 96 },
-  { id: "counters_bar", panel: "main", order: 1, height: 48 },
-  { id: "quick_actions", panel: "main", order: 2, height: 160 },
-  { id: "host_status", panel: "main", order: 3, height: null },
-  { id: "recent_activity", panel: "side", order: 0, height: null },
+  { key: "stats_bar_0", id: "stats_bar", panel: "main", order: 0, height: 96 },
+  {
+    key: "counters_bar_0",
+    id: "counters_bar",
+    panel: "main",
+    order: 1,
+    height: 48,
+  },
+  {
+    key: "quick_actions_0",
+    id: "quick_actions",
+    panel: "main",
+    order: 2,
+    height: 160,
+  },
+  {
+    key: "host_status_0",
+    id: "host_status",
+    panel: "main",
+    order: 3,
+    height: null,
+  },
+  {
+    key: "recent_activity_0",
+    id: "recent_activity",
+    panel: "side",
+    order: 0,
+    height: null,
+  },
 ];
 
 // ─── Card components ──────────────────────────────────────────────────────────
@@ -757,7 +794,7 @@ function CardItem({
   onDrop: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onRemove: () => void;
-  onHeightChange: (id: DashboardCardId, h: number) => void;
+  onHeightChange: (key: string, h: number) => void;
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
@@ -788,7 +825,7 @@ function CardItem({
       const startY = e.clientY;
       const startH = cardRef.current?.getBoundingClientRect().height ?? 100;
       const onMove = (ev: MouseEvent) => {
-        onHeightChange(slot.id, Math.max(50, startH + (ev.clientY - startY)));
+        onHeightChange(slot.key, Math.max(50, startH + (ev.clientY - startY)));
       };
       const onUp = () => {
         window.removeEventListener("mousemove", onMove);
@@ -797,7 +834,7 @@ function CardItem({
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
-    [slot.id, onHeightChange],
+    [slot.key, onHeightChange],
   );
 
   const isFlex = slot.height === null;
@@ -882,6 +919,11 @@ function CardItem({
             links={serviceLinks}
             onAdd={onAddServiceLink}
             onDelete={onDeleteServiceLink}
+          />
+        )}
+        {slot.id === "homepage_preview" && (
+          <HomepagePreviewCard
+            onOpenFullscreen={() => onOpenSingletonTab("homepage")}
           />
         )}
       </div>
@@ -974,9 +1016,9 @@ type PanelColumnProps = {
   onDragStart: (slot: CardSlot) => void;
   onDrop: (targetPanel: PanelId, targetOrder: number) => void;
   onDragOver: (e: React.DragEvent) => void;
-  onRemove: (id: DashboardCardId) => void;
+  onRemove: (key: string) => void;
   onAdd: (id: DashboardCardId, panel: PanelId) => void;
-  onHeightChange: (id: DashboardCardId, h: number) => void;
+  onHeightChange: (key: string, h: number) => void;
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
   hosts: Host[];
@@ -1045,7 +1087,7 @@ function PanelColumn({
       />
       {sorted.map((slot, idx) => (
         <div
-          key={slot.id}
+          key={slot.key}
           className={`flex flex-col min-h-0 ${slot.height === null ? "flex-1" : "shrink-0"}`}
         >
           {idx > 0 && (
@@ -1062,11 +1104,11 @@ function PanelColumn({
           <CardItem
             slot={slot}
             editMode={editMode}
-            isDragging={dragState?.id === slot.id}
+            isDragging={dragState?.key === slot.key}
             onDragStart={() => onDragStart(slot)}
             onDrop={() => onDrop(slot.panel, slot.order)}
             onDragOver={onDragOver}
-            onRemove={() => onRemove(slot.id)}
+            onRemove={() => onRemove(slot.key)}
             onHeightChange={onHeightChange}
             onOpenSingletonTab={onOpenSingletonTab}
             onOpenTab={onOpenTab}
@@ -1146,12 +1188,45 @@ export function DashboardTab({
   const [slots, setSlots] = useState<CardSlot[]>(() => {
     try {
       const saved = localStorage.getItem("dashboardTab.slots");
-      if (saved) return JSON.parse(saved) as CardSlot[];
+      if (saved) {
+        const parsed = JSON.parse(saved) as CardSlot[];
+        return parsed.map((s, i) => ({ key: s.key ?? `${s.id}_${i}`, ...s }));
+      }
     } catch {
       /* ignore */
     }
     return DEFAULT_SLOTS;
   });
+
+  const [homepageLinkCopied, setHomepageLinkCopied] = useState(false);
+
+  const handleCopyHomepageLink = () => {
+    navigator.clipboard
+      .writeText(`${window.location.origin}?view=homepage`)
+      .catch(() => {});
+    setHomepageLinkCopied(true);
+    setTimeout(() => setHomepageLinkCopied(false), 1500);
+  };
+
+  const [dashboardView, setDashboardView] = useState<"dashboard" | "homepage">(
+    () => {
+      try {
+        return (localStorage.getItem("dashboardView") ?? "dashboard") as
+          | "dashboard"
+          | "homepage";
+      } catch {
+        return "dashboard";
+      }
+    },
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("dashboardView", dashboardView);
+    } catch {
+      /* ignore */
+    }
+  }, [dashboardView]);
 
   const [editMode, setEditMode] = useState(false);
   const [dragState, setDragState] = useState<DragState>(null);
@@ -1381,6 +1456,7 @@ export function DashboardTab({
     recent_activity: t("dashboard.recentActivity"),
     network_graph: t("dashboard.networkGraph"),
     service_links: t("dashboard.serviceLinks"),
+    homepage_preview: t("dashboard.homepagePreview"),
   };
 
   const onColumnDividerMouseDown = useCallback(
@@ -1410,6 +1486,7 @@ export function DashboardTab({
 
   const handleDragStart = (slot: CardSlot) =>
     setDragState({
+      key: slot.key,
       id: slot.id,
       sourcePanel: slot.panel,
       sourceOrder: slot.order,
@@ -1418,7 +1495,7 @@ export function DashboardTab({
   const handleDrop = (targetPanel: PanelId, targetOrder: number) => {
     if (!dragState) return;
     setSlots((prev) => {
-      const without = prev.filter((s) => s.id !== dragState.id);
+      const without = prev.filter((s) => s.key !== dragState.key);
       const panelSlots = without
         .filter((s) => s.panel === targetPanel)
         .sort((a, b) => a.order - b.order);
@@ -1428,10 +1505,11 @@ export function DashboardTab({
       const newPanelSlots = [
         ...panelSlots.slice(0, insertAt),
         {
+          key: dragState.key,
           id: dragState.id,
           panel: targetPanel,
           order: 0,
-          height: prev.find((s) => s.id === dragState.id)?.height ?? null,
+          height: prev.find((s) => s.key === dragState.key)?.height ?? null,
         },
         ...panelSlots.slice(insertAt),
       ].map((s, i) => ({ ...s, order: i }));
@@ -1439,8 +1517,8 @@ export function DashboardTab({
     });
     setDragState(null);
   };
-  const handleRemove = (id: DashboardCardId) =>
-    setSlots((prev) => prev.filter((s) => s.id !== id));
+  const handleRemove = (key: string) =>
+    setSlots((prev) => prev.filter((s) => s.key !== key));
   const handleAdd = (id: DashboardCardId, panel: PanelId) => {
     setSlots((prev) => {
       const panelSlots = prev.filter((s) => s.panel === panel);
@@ -1456,12 +1534,16 @@ export function DashboardTab({
             : id === "service_links"
               ? 200
               : 150;
-      return [...prev, { id, panel, order: maxOrder, height: defaultHeight }];
+      const key = `${id}_${Date.now()}`;
+      return [
+        ...prev,
+        { key, id, panel, order: maxOrder, height: defaultHeight },
+      ];
     });
   };
-  const handleHeightChange = (id: DashboardCardId, h: number) =>
+  const handleHeightChange = (key: string, h: number) =>
     setSlots((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, height: h } : s)),
+      prev.map((s) => (s.key === key ? { ...s, height: h } : s)),
     );
   const handleReset = () => {
     setSlots(DEFAULT_SLOTS);
@@ -1639,11 +1721,26 @@ export function DashboardTab({
   return (
     <div className="flex flex-col w-full h-full min-h-0 overflow-hidden">
       <Card className="flex-row items-center justify-between px-5 py-3 shrink-0 mx-5 mt-5 gap-0">
-        <div>
-          <h1 className="text-lg font-bold leading-tight">
-            {t("dashboard.title")}
-          </h1>
-          <p className="text-xs text-muted-foreground">{todayLabel}</p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-0 bg-muted/40 border border-border p-0.5">
+            <button
+              onClick={() => setDashboardView("dashboard")}
+              className={`px-3 py-1 text-sm font-medium transition-colors ${dashboardView === "dashboard" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {t("dashboard.title")}
+            </button>
+            <button
+              onClick={() => setDashboardView("homepage")}
+              className={`px-3 py-1 text-sm font-medium transition-colors ${dashboardView === "homepage" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {t("nav.homepage")}
+            </button>
+          </div>
+          {dashboardView === "dashboard" && (
+            <p className="text-xs text-muted-foreground hidden sm:block">
+              {todayLabel}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <div className="hidden sm:flex items-center gap-2 mr-2 bg-muted/50 px-2.5 py-1 rounded-none border border-border">
@@ -1712,95 +1809,143 @@ export function DashboardTab({
               {t("dashboard.docs")}
             </a>
           </Button>
-          <Separator orientation="vertical" className="mx-1 h-5" />
-          {editMode ? (
+          {dashboardView === "dashboard" && (
             <>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground"
-                onClick={handleReset}
-              >
-                {t("dashboard.reset")}
-              </Button>
-              <Button
-                size="sm"
-                className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white"
-                onClick={() => setEditMode(false)}
-              >
-                {t("dashboardTab.done")}
-              </Button>
+              <Separator orientation="vertical" className="mx-1 h-5" />
+              {editMode ? (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                    onClick={handleReset}
+                  >
+                    {t("dashboard.reset")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs bg-accent-brand hover:bg-accent-brand/90 text-white"
+                    onClick={() => setEditMode(false)}
+                  >
+                    {t("dashboardTab.done")}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditMode(true)}
+                  title={t("dashboard.customizeLayout")}
+                >
+                  <LayoutDashboard className="size-4 text-accent-brand" />
+                </Button>
+              )}
             </>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditMode(true)}
-              title={t("dashboard.customizeLayout")}
-            >
-              <LayoutDashboard className="size-4 text-accent-brand" />
-            </Button>
           )}
         </div>
       </Card>
 
-      {editMode && (
-        <div className="mx-5 mt-4 px-4 py-2 border border-dashed border-accent-brand/40 bg-accent-brand/5 shrink-0 flex items-center gap-2">
-          <LayoutDashboard className="size-3.5 text-accent-brand shrink-0" />
-          <span className="text-xs text-accent-brand font-semibold">
-            {t("dashboardTab.editModeInstructions")}
-          </span>
-        </div>
-      )}
-
-      <div
-        ref={bodyRef}
-        className="flex flex-row flex-1 min-h-0 px-5 pb-5 pt-4 overflow-hidden"
-      >
-        <div
-          className="flex flex-col min-h-0"
-          style={{ width: hasSide || editMode ? `${mainWidthPct}%` : "100%" }}
-        >
-          <PanelColumn
-            panel="main"
-            slots={mainSlots}
-            editMode={editMode}
-            dragState={dragState}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onRemove={handleRemove}
-            onAdd={handleAdd}
-            onHeightChange={handleHeightChange}
-            {...columnProps}
-          />
-        </div>
-
-        {(hasSide || editMode) &&
-          (editMode ? (
-            <ColumnDivider onMouseDown={onColumnDividerMouseDown} />
-          ) : (
-            <div className="w-4 shrink-0" />
-          ))}
-
-        {(hasSide || editMode) && (
-          <div className="flex flex-col min-h-0 flex-1">
-            <PanelColumn
-              panel="side"
-              slots={sideSlots}
-              editMode={editMode}
-              dragState={dragState}
-              onDragStart={handleDragStart}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onRemove={handleRemove}
-              onAdd={handleAdd}
-              onHeightChange={handleHeightChange}
-              {...columnProps}
-            />
+      {dashboardView === "homepage" ? (
+        <div className="flex-1 min-h-0 overflow-hidden mx-5 mb-5 mt-4 border border-border flex flex-col">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0 bg-muted/20">
+            <span className="text-[10px] text-muted-foreground/50 uppercase tracking-widest font-semibold">
+              {t("nav.homepage")}
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                onClick={handleCopyHomepageLink}
+              >
+                {homepageLinkCopied ? (
+                  <>
+                    <Check size={10} className="text-accent-brand" />
+                    <span className="text-accent-brand">
+                      {t("homepage.linkCopied")}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Link size={10} />
+                    {t("homepage.copyLink")}
+                  </>
+                )}
+              </button>
+              <button
+                className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                onClick={() => onOpenSingletonTab("homepage")}
+              >
+                <ExternalLink size={10} />
+                {t("homepage.openFullView")}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <HomepageCanvas />
+          </div>
+        </div>
+      ) : (
+        <>
+          {editMode && (
+            <div className="mx-5 mt-4 px-4 py-2 border border-dashed border-accent-brand/40 bg-accent-brand/5 shrink-0 flex items-center gap-2">
+              <LayoutDashboard className="size-3.5 text-accent-brand shrink-0" />
+              <span className="text-xs text-accent-brand font-semibold">
+                {t("dashboardTab.editModeInstructions")}
+              </span>
+            </div>
+          )}
+
+          <div
+            ref={bodyRef}
+            className="flex flex-row flex-1 min-h-0 px-5 pb-5 pt-4 overflow-hidden"
+          >
+            <div
+              className="flex flex-col min-h-0"
+              style={{
+                width: hasSide || editMode ? `${mainWidthPct}%` : "100%",
+              }}
+            >
+              <PanelColumn
+                panel="main"
+                slots={mainSlots}
+                editMode={editMode}
+                dragState={dragState}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onRemove={handleRemove}
+                onAdd={handleAdd}
+                onHeightChange={handleHeightChange}
+                {...columnProps}
+              />
+            </div>
+
+            {(hasSide || editMode) &&
+              (editMode ? (
+                <ColumnDivider onMouseDown={onColumnDividerMouseDown} />
+              ) : (
+                <div className="w-4 shrink-0" />
+              ))}
+
+            {(hasSide || editMode) && (
+              <div className="flex flex-col min-h-0 flex-1">
+                <PanelColumn
+                  panel="side"
+                  slots={sideSlots}
+                  editMode={editMode}
+                  dragState={dragState}
+                  onDragStart={handleDragStart}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onRemove={handleRemove}
+                  onAdd={handleAdd}
+                  onHeightChange={handleHeightChange}
+                  {...columnProps}
+                />
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -36,7 +36,8 @@ export type RailView =
 
 export type HideableRailView =
   | Exclude<RailView, "user-profile" | "admin-settings">
-  | "network_graph";
+  | "network_graph"
+  | "homepage";
 
 type RailItem =
   | {

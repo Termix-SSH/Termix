@@ -79,6 +79,8 @@ interface SSHTerminalProps {
   onOpenFileManager?: (path?: string) => void;
   onOpenFileInEditor?: (filePath: string) => void;
   previewTheme?: string | null;
+  /** When true, suppress automatic focus on connect/visibility change. */
+  disableAutoFocus?: boolean;
 }
 
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
@@ -95,6 +97,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onOpenFileManager,
       onOpenFileInEditor,
       previewTheme,
+      disableAutoFocus = false,
     },
     ref,
   ) {
@@ -2671,7 +2674,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const fitTimeoutId = setTimeout(() => {
         if (!isFittingRef.current && terminal.cols > 0 && terminal.rows > 0) {
           performFit();
-          if (!splitScreen && !isConnecting) {
+          if (!splitScreen && !isConnecting && !disableAutoFocus) {
             requestAnimationFrame(() => terminal.focus());
           }
         }

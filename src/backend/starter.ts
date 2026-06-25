@@ -148,6 +148,7 @@ import {
     await import("./ssh/tmux-monitor.js"); // --- tmux-monitor ---
     await import("./serial/serial.js");
     await import("./dashboard.js");
+    await import("./homepage.js");
 
     // Initialize log level from database settings
     const { getDb: getDbForSettings } = await import("./database/db/index.js");
