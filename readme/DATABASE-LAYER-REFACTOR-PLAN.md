@@ -87,6 +87,9 @@ Trusted device check/add/remove and TOTP trusted-device cleanup now use the
 current trusted device repository boundary.
 User session routes now use the current user repository boundary for user/admin
 lookups and admin session username enrichment.
+Vault admin checks, Termix ID audit actor username lookup, permission manager
+admin checks, and user data export user lookup now use the current user
+repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

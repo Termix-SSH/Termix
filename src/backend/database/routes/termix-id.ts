@@ -7,8 +7,8 @@ import {
   termixIdentityKeys,
   sshCredentials,
   termixIdentityCa,
-  users,
 } from "../db/schema.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { and, eq, asc } from "drizzle-orm";
 // ssh2 is CommonJS; Node's cjs-module-lexer does not surface its `utils` named
 // export, so we use a default import (esModuleInterop) and read `.utils` off it.
@@ -104,12 +104,8 @@ async function getIdentityForUser(userId: string) {
 // Resolve the real username for audit_logs (the column expects a username, not
 // the user id), matching how the credentials/snippets routes log.
 async function getActorUsername(userId: string): Promise<string> {
-  const rows = await db
-    .select({ username: users.username })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  return rows[0]?.username ?? userId;
+  const user = await createCurrentUserRepository().findById(userId);
+  return user?.username ?? userId;
 }
 
 // ---------------------------------------------------------------------------

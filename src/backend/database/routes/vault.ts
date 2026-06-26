@@ -2,7 +2,8 @@ import express from "express";
 import type { Request, Response } from "express";
 import { desc, eq, or } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { users, vaultProfiles } from "../db/schema.js";
+import { vaultProfiles } from "../db/schema.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -19,12 +20,8 @@ function isNonEmptyString(val: unknown): val is string {
 
 async function userIsAdmin(userId: string): Promise<boolean> {
   try {
-    const rows = await db
-      .select({ isAdmin: users.isAdmin })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    return !!rows[0]?.isAdmin;
+    const user = await createCurrentUserRepository().findById(userId);
+    return !!user?.isAdmin;
   } catch {
     return false;
   }

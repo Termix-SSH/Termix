@@ -1,6 +1,5 @@
 import { getDb } from "../database/db/index.js";
 import {
-  users,
   hosts,
   sshCredentials,
   fileManagerRecent,
@@ -10,6 +9,7 @@ import {
   dismissedAlerts,
 } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
+import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
 
@@ -54,15 +54,10 @@ class UserDataExport {
     } = options;
 
     try {
-      const user = await getDb()
-        .select()
-        .from(users)
-        .where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRecord = await createCurrentUserRepository().findById(userId);
+      if (!userRecord) {
         throw new Error(`User not found: ${userId}`);
       }
-
-      const userRecord = user[0];
 
       let userDataKey: Buffer | null = null;
       if (format === "plaintext") {

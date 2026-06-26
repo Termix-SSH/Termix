@@ -1,12 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../database/db/index.js";
-import {
-  hostAccess,
-  roles,
-  userRoles,
-  hosts,
-  users,
-} from "../database/db/schema.js";
+import { hostAccess, roles, userRoles, hosts } from "../database/db/schema.js";
+import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { eq, and, or, isNull, gte, sql } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
@@ -278,13 +273,9 @@ class PermissionManager {
 
   async isAdmin(userId: string): Promise<boolean> {
     try {
-      const user = await db
-        .select({ isAdmin: users.isAdmin })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
+      const user = await createCurrentUserRepository().findById(userId);
 
-      if (user.length > 0 && user[0].isAdmin) {
+      if (user?.isAdmin) {
         return true;
       }
 
