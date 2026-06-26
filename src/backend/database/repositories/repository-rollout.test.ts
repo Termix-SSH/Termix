@@ -24,6 +24,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "sso_providers",
         "audit_logs",
         "user_preferences",
+        "open_tabs",
       ],
       explicit: false,
     });
@@ -97,6 +98,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "sso_providers",
         "audit_logs",
         "user_preferences",
+        "open_tabs",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
+import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
@@ -26,7 +27,6 @@ import {
   sshCredentials,
   sshFolders,
   transferRecent,
-  userOpenTabs,
 } from "../db/schema.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
@@ -79,7 +79,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await db.delete(networkTopology).where(eq(networkTopology.userId, userId));
     await db.delete(opksshTokens).where(eq(opksshTokens.userId, userId));
-    await db.delete(userOpenTabs).where(eq(userOpenTabs.userId, userId));
+    await createCurrentOpenTabRepository().deleteByUserId(userId);
     await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 
     await createCurrentSettingsRepository().deleteLike(`user_%_${userId}`);

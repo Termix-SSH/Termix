@@ -13,6 +13,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "sso_providers",
   "audit_logs",
   "user_preferences",
+  "open_tabs",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -43,6 +44,10 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   audit_logs: "audit_logs",
   auditlog: "audit_logs",
   auditlogs: "audit_logs",
+  open_tab: "open_tabs",
+  open_tabs: "open_tabs",
+  opentab: "open_tabs",
+  opentabs: "open_tabs",
   setting: "settings",
   settings: "settings",
   session: "sessions",
