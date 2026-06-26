@@ -1,10 +1,7 @@
-import { and, eq } from "drizzle-orm";
 import ssh2Pkg, { type Client as SSHClientType } from "ssh2";
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { sshLogger } from "../utils/logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -37,17 +34,14 @@ async function resolveJumpHost(
     hostId,
   });
   try {
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
-      "ssh_data",
-      userId,
-    );
+    const repository = createCurrentHostResolutionRepository();
+    const resolvedHost = await repository.findHostById(hostId, userId);
 
-    if (hostResults.length === 0) {
+    if (!resolvedHost) {
       return null;
     }
 
-    const host = hostResults[0];
+    const host = resolvedHost as Record<string, unknown>;
     const ownerId = (host.userId || userId) as string;
 
     if (host.credentialId) {
@@ -79,22 +73,12 @@ async function resolveJumpHost(
         }
       }
 
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, ownerId),
-            ),
-          ),
-        "ssh_credentials",
+      const credential = (await repository.findCredentialByIdForUser(
+        host.credentialId as number,
         ownerId,
-      );
+      )) as Record<string, unknown> | null;
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
+      if (credential) {
         return {
           ...host,
           password: credential.password as string | undefined,
