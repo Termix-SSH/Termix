@@ -1,6 +1,6 @@
 import type { Express, RequestHandler } from "express";
-import { getDb } from "../database/db/index.js";
 import { statsLogger } from "../utils/logger.js";
+import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 
 type HostMetricsSettingsConfig = {
   statusCheckInterval: number;
@@ -12,6 +12,12 @@ type HostMetricsSettingsRoutesDeps = {
   defaultStatsConfig: HostMetricsSettingsConfig;
   refreshAllPolling: () => Promise<void>;
 };
+
+function isMissingSettingsTable(error: unknown): boolean {
+  return (
+    error instanceof Error && error.message.includes("no such table: settings")
+  );
+}
 
 export function registerHostMetricsSettingsRoutes(
   app: Express,
@@ -36,17 +42,23 @@ export function registerHostMetricsSettingsRoutes(
    */
   app.get("/global-settings", requireAdmin, async (_req, res) => {
     try {
-      const db = getDb();
+      const settings = createCurrentSettingsRepository();
+      const statusValue = await settings.get("global_status_check_interval");
+      const metricsValue = await settings.get("global_metrics_interval");
 
-      try {
-        db.$client.prepare("SELECT 1 FROM settings LIMIT 1").get();
-      } catch (tableError) {
+      res.json({
+        statusCheckInterval: statusValue
+          ? parseInt(statusValue, 10)
+          : DEFAULT_STATS_CONFIG.statusCheckInterval,
+        metricsInterval: metricsValue
+          ? parseInt(metricsValue, 10)
+          : DEFAULT_STATS_CONFIG.metricsInterval,
+      });
+    } catch (error) {
+      if (isMissingSettingsTable(error)) {
         statsLogger.warn("Settings table does not exist, using defaults", {
           operation: "global_settings_table_check",
-          error:
-            tableError instanceof Error
-              ? tableError.message
-              : String(tableError),
+          error: error.message,
         });
         return res.json({
           statusCheckInterval: DEFAULT_STATS_CONFIG.statusCheckInterval,
@@ -54,26 +66,6 @@ export function registerHostMetricsSettingsRoutes(
         });
       }
 
-      const statusRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'global_status_check_interval'",
-        )
-        .get() as { value: string } | undefined;
-      const metricsRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'global_metrics_interval'",
-        )
-        .get() as { value: string } | undefined;
-
-      res.json({
-        statusCheckInterval: statusRow
-          ? parseInt(statusRow.value, 10)
-          : DEFAULT_STATS_CONFIG.statusCheckInterval,
-        metricsInterval: metricsRow
-          ? parseInt(metricsRow.value, 10)
-          : DEFAULT_STATS_CONFIG.metricsInterval,
-      });
-    } catch (error) {
       statsLogger.error("Failed to fetch global settings", {
         operation: "global_settings_fetch_error",
         error: error instanceof Error ? error.message : String(error),
@@ -133,40 +125,16 @@ export function registerHostMetricsSettingsRoutes(
     }
 
     try {
-      const db = getDb();
-
-      try {
-        db.$client.prepare("SELECT 1 FROM settings LIMIT 1").get();
-      } catch (tableError) {
-        statsLogger.error(
-          "Settings table does not exist, cannot save settings",
-          {
-            operation: "global_settings_table_check",
-            error:
-              tableError instanceof Error
-                ? tableError.message
-                : String(tableError),
-          },
-        );
-        return res.status(500).json({
-          error:
-            "Database settings table is missing. Please check database initialization.",
-        });
-      }
+      const settings = createCurrentSettingsRepository();
 
       if (statusCheckInterval !== undefined) {
-        db.$client
-          .prepare(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES ('global_status_check_interval', ?)",
-          )
-          .run(String(statusCheckInterval));
+        await settings.set(
+          "global_status_check_interval",
+          String(statusCheckInterval),
+        );
       }
       if (metricsInterval !== undefined) {
-        db.$client
-          .prepare(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES ('global_metrics_interval', ?)",
-          )
-          .run(String(metricsInterval));
+        await settings.set("global_metrics_interval", String(metricsInterval));
       }
 
       await refreshAllPolling();
@@ -176,6 +144,20 @@ export function registerHostMetricsSettingsRoutes(
         message: "Settings updated and polling refreshed",
       });
     } catch (error) {
+      if (isMissingSettingsTable(error)) {
+        statsLogger.error(
+          "Settings table does not exist, cannot save settings",
+          {
+            operation: "global_settings_table_check",
+            error: error.message,
+          },
+        );
+        return res.status(500).json({
+          error:
+            "Database settings table is missing. Please check database initialization.",
+        });
+      }
+
       statsLogger.error("Failed to save global settings", {
         operation: "global_settings_save_error",
         error: error instanceof Error ? error.message : String(error),
@@ -200,15 +182,12 @@ export function registerHostMetricsSettingsRoutes(
    *       403:
    *         description: Requires admin privileges.
    */
-  app.get("/global-settings/history", requireAdmin, (_req, res) => {
+  app.get("/global-settings/history", requireAdmin, async (_req, res) => {
     try {
-      const db = getDb();
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'metrics_history_retention_days'",
-        )
-        .get() as { value: string } | undefined;
-      const days = row ? parseInt(row.value, 10) : 7;
+      const value = await createCurrentSettingsRepository().get(
+        "metrics_history_retention_days",
+      );
+      const days = value ? parseInt(value, 10) : 7;
       res.json({ metricsHistoryRetentionDays: isNaN(days) ? 7 : days });
     } catch (error) {
       statsLogger.error("Failed to fetch history retention setting", {
@@ -247,26 +226,22 @@ export function registerHostMetricsSettingsRoutes(
    *       403:
    *         description: Requires admin privileges.
    */
-  app.post("/global-settings/history", requireAdmin, (req, res) => {
+  app.post("/global-settings/history", requireAdmin, async (req, res) => {
     const { metricsHistoryRetentionDays } = req.body;
     if (
       typeof metricsHistoryRetentionDays !== "number" ||
       metricsHistoryRetentionDays < 1 ||
       metricsHistoryRetentionDays > 90
     ) {
-      return res
-        .status(400)
-        .json({
-          error: "metricsHistoryRetentionDays must be between 1 and 90",
-        });
+      return res.status(400).json({
+        error: "metricsHistoryRetentionDays must be between 1 and 90",
+      });
     }
     try {
-      const db = getDb();
-      db.$client
-        .prepare(
-          "INSERT OR REPLACE INTO settings (key, value) VALUES ('metrics_history_retention_days', ?)",
-        )
-        .run(String(Math.floor(metricsHistoryRetentionDays)));
+      await createCurrentSettingsRepository().set(
+        "metrics_history_retention_days",
+        String(Math.floor(metricsHistoryRetentionDays)),
+      );
       res.json({ success: true });
     } catch (error) {
       statsLogger.error("Failed to save history retention setting", {

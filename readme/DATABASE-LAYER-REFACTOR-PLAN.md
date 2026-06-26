@@ -24,6 +24,8 @@ Settings migration status: a first low-risk production route slice now uses
 runtime writes still force a snapshot save through `DatabaseSaveTrigger`.
 The user settings route has also moved its direct `settings` table reads and
 writes behind `SettingsRepository`.
+Host metrics settings routes now use the same repository boundary for global
+monitoring defaults and history retention settings.
 
 ## 1. Background
 
