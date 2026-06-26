@@ -46,6 +46,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "host_metrics_history",
         "alerts",
         "user_data_exports",
+        "host_folders",
       ],
       explicit: false,
     });
@@ -66,7 +67,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
+        "settings,user,api-key,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
     });
 
     expect(config).toEqual({
@@ -87,6 +88,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "ssh_credential_usage",
         "transfer_recent",
         "user_data_exports",
+        "host_folders",
         "file_manager_bookmarks",
         "c2s_tunnel_presets",
         "tmux_session_tags",
@@ -167,6 +169,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "host_metrics_history",
         "alerts",
         "user_data_exports",
+        "host_folders",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

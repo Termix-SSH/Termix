@@ -214,6 +214,8 @@ Alert notification channels, rules, linked channels, firings, and alert engine
 persistence reads/writes now use the current alert repository boundary.
 User data export host and credential read models now use the current user data
 export repository boundary.
+SSH folder list, metadata upsert, rename, and folder host deletion writes now
+use the current host folder repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

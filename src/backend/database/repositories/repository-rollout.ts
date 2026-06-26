@@ -35,6 +35,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "host_metrics_history",
   "alerts",
   "user_data_exports",
+  "host_folders",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -92,6 +93,14 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   homepage_items: "homepage_items",
   homepageitem: "homepage_items",
   homepageitems: "homepage_items",
+  host_folder: "host_folders",
+  host_folders: "host_folders",
+  hostfolder: "host_folders",
+  hostfolders: "host_folders",
+  ssh_folder: "host_folders",
+  ssh_folders: "host_folders",
+  sshfolder: "host_folders",
+  sshfolders: "host_folders",
   item: "homepage_items",
   items: "homepage_items",
   recording: "session_recordings",
