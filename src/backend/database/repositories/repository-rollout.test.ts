@@ -21,6 +21,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "trusted_devices",
         "roles",
         "rbac_access",
+        "sso_providers",
       ],
       explicit: false,
     });
@@ -91,6 +92,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "trusted_devices",
         "roles",
         "rbac_access",
+        "sso_providers",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

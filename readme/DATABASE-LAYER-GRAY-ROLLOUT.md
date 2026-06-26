@@ -23,6 +23,8 @@ Allowed in gray rollout:
   `ApiKeyRepository`.
 - Trusted device check/add/remove and TOTP trusted-device cleanup migrated
   behind `TrustedDeviceRepository`.
+- SSO provider listing, management, OIDC config loading, and LDAP provider
+  validation migrated behind `SsoProviderRepository`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated
@@ -73,7 +75,7 @@ Repository rollout is controlled by `DATABASE_LAYER_REPOSITORY_ROLLOUT`.
 Recommended gray value:
 
 ```bash
-DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,roles,rbac_access
+DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,sso_providers,roles,rbac_access
 ```
 
 Accepted values:
@@ -93,6 +95,7 @@ Supported domains:
 - `sessions`
 - `api_keys`
 - `trusted_devices`
+- `sso_providers`
 - `roles`
 - `rbac_access`
 
@@ -119,8 +122,8 @@ Run before deployment:
 
 ```bash
 npm run type-check
-npx eslint src/backend/database/repositories/repository-rollout.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/current-settings-repository.ts src/backend/database/repositories/current-user-repository.ts src/backend/database/repositories/current-session-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/current-trusted-device-repository.ts src/backend/database/repositories/current-role-repository.ts src/backend/database/repositories/role-repository.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/current-rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/routes/rbac.ts src/backend/database/routes/snippets.ts src/backend/database/routes/host.ts src/backend/database/routes/credentials.ts src/backend/database/routes/delete-user-data.ts src/backend/database/routes/host-folder-routes.ts src/backend/utils/permission-manager.ts src/backend/utils/shared-credential-manager.ts src/backend/starter.ts
-npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/trusted-device-repository.test.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts src/backend/database/routes/termix-id.test.ts src/backend/database/routes/user-totp-routes.test.ts src/backend/utils/permission-manager.test.ts src/backend/ssh/credential-username.test.ts src/backend/ssh/tmux-monitor-helpers.test.ts
+npx eslint src/backend/database/repositories/repository-rollout.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/current-settings-repository.ts src/backend/database/repositories/current-user-repository.ts src/backend/database/repositories/current-session-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/current-trusted-device-repository.ts src/backend/database/repositories/current-sso-provider-repository.ts src/backend/database/repositories/sso-provider-repository.ts src/backend/database/repositories/sso-provider-repository.test.ts src/backend/database/repositories/current-role-repository.ts src/backend/database/repositories/role-repository.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/current-rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/routes/rbac.ts src/backend/database/routes/snippets.ts src/backend/database/routes/host.ts src/backend/database/routes/credentials.ts src/backend/database/routes/delete-user-data.ts src/backend/database/routes/user-admin-routes.ts src/backend/database/routes/ldap-auth-routes.ts src/backend/database/routes/users.ts src/backend/database/routes/user-oidc-utils.ts src/backend/database/routes/sso-provider-routes.ts src/backend/database/routes/host-folder-routes.ts src/backend/utils/permission-manager.ts src/backend/utils/shared-credential-manager.ts src/backend/starter.ts
+npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/trusted-device-repository.test.ts src/backend/database/repositories/sso-provider-repository.test.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts src/backend/database/routes/termix-id.test.ts src/backend/database/routes/user-totp-routes.test.ts src/backend/utils/permission-manager.test.ts src/backend/ssh/credential-username.test.ts src/backend/ssh/tmux-monitor-helpers.test.ts
 git diff --check
 ```
 
@@ -128,20 +131,21 @@ git diff --check
 
 Run these against the gray target:
 
-| Area         | Required check                                                         |
-| ------------ | ---------------------------------------------------------------------- |
-| Startup      | App starts from existing encrypted snapshot without schema errors      |
-| Login        | Password login succeeds for an existing local user                     |
-| Sessions     | Refresh, logout, and session list/revoke still work                    |
-| Users        | `/users/me`, user list, admin create, make/remove admin still work     |
-| Registration | New local user registration works when registration is enabled         |
-| Password     | Change password, logout, and login with the new password               |
-| OIDC         | Existing OIDC login works; auto-provision check only if enabled        |
-| API keys     | Admin create/list/delete API key; API key authentication updates usage |
-| Settings     | Read/write user settings and global auth settings                      |
-| Roles        | Admin list/create/update/delete role and assign/remove a user role     |
-| RBAC access  | Host/snippet share/revoke/list and shared host/snippet endpoints work  |
-| Security     | Non-admin user is rejected from admin-only endpoints                   |
+| Area          | Required check                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| Startup       | App starts from existing encrypted snapshot without schema errors                                      |
+| Login         | Password login succeeds for an existing local user                                                     |
+| Sessions      | Refresh, logout, and session list/revoke still work                                                    |
+| Users         | `/users/me`, user list, admin create, make/remove admin still work                                     |
+| Registration  | New local user registration works when registration is enabled                                         |
+| Password      | Change password, logout, and login with the new password                                               |
+| OIDC          | Existing OIDC login works; auto-provision check only if enabled                                        |
+| API keys      | Admin create/list/delete API key; API key authentication updates usage                                 |
+| Settings      | Read/write user settings and global auth settings                                                      |
+| SSO providers | Login provider list, admin provider list/create/update/delete, and OIDC/LDAP login config loading work |
+| Roles         | Admin list/create/update/delete role and assign/remove a user role                                     |
+| RBAC access   | Host/snippet share/revoke/list and shared host/snippet endpoints work                                  |
+| Security      | Non-admin user is rejected from admin-only endpoints                                                   |
 
 Do not continue gray rollout if any check fails.
 

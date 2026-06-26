@@ -1,11 +1,9 @@
 import { authLogger } from "../../utils/logger.js";
 import type { SSOProviderType } from "../../../types/index.js";
-import { db } from "../db/index.js";
-import { ssoProviders } from "../db/schema.js";
-import { eq } from "drizzle-orm";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { Agent } from "undici";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
 
 export type OIDCConfig = {
   client_id: string;
@@ -312,13 +310,9 @@ export async function loadProviderConfig(
 } | null> {
   if (providerId != null) {
     try {
-      const rows = await db
-        .select()
-        .from(ssoProviders)
-        .where(eq(ssoProviders.id, providerId))
-        .limit(1);
-      if (rows.length > 0) {
-        const row = rows[0];
+      const row =
+        await createCurrentSsoProviderRepository().findById(providerId);
+      if (row) {
         let parsed: Record<string, unknown>;
         try {
           parsed = JSON.parse(row.config);
@@ -368,14 +362,8 @@ export async function loadProviderConfig(
 
   // Fallback: first enabled OIDC-type provider in ssoProviders table
   try {
-    const rows = await db
-      .select()
-      .from(ssoProviders)
-      .where(eq(ssoProviders.enabled, true))
-      .orderBy();
-    const oidcRow = rows.find(
-      (r) => r.type === "oidc" || r.type === "github" || r.type === "google",
-    );
+    const oidcRow =
+      await createCurrentSsoProviderRepository().findFirstEnabledOidcLike();
     if (oidcRow) {
       let parsed: Record<string, unknown>;
       try {

@@ -1,8 +1,6 @@
 import type { Router } from "express";
 import type { LDAPProviderConfig } from "../../../types/index.js";
 import { db } from "../db/index.js";
-import { ssoProviders } from "../db/schema.js";
-import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -11,6 +9,7 @@ import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const authManager = AuthManager.getInstance();
@@ -123,12 +122,9 @@ export function registerLDAPAuthRoutes(router: Router): void {
     }
 
     try {
-      const rows = await db
-        .select()
-        .from(ssoProviders)
-        .where(eq(ssoProviders.id, providerId))
-        .limit(1);
-      if (rows.length === 0 || rows[0].type !== "ldap" || !rows[0].enabled) {
+      const provider =
+        await createCurrentSsoProviderRepository().findById(providerId);
+      if (!provider || provider.type !== "ldap" || !provider.enabled) {
         return res.status(404).json({ error: "LDAP provider not found" });
       }
     } catch (err) {

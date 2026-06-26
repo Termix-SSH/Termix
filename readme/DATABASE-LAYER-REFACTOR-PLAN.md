@@ -163,10 +163,12 @@ LDAP login default role assignment and admin-role sync now use the current role
 repository boundary.
 Local, GitHub OIDC, and standard OIDC user default role assignment plus OIDC
 admin-group role sync now use the current role repository boundary.
+SSO provider listing, management, OIDC config loading, and LDAP provider
+validation now use the current SSO provider repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
-current auth/settings/session/user/API-key/trusted-device/role/RBAC-access
+current auth/settings/session/user/API-key/trusted-device/SSO-provider/role/RBAC-access
 slice has staging evidence. The current migrated slice is now guarded by
 `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which supports `all`, `off`, and a
 comma-separated allowlist of migrated repository domains for controlled gray
