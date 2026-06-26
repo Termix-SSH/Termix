@@ -425,6 +425,8 @@ Started:
   `SettingsRepository`
 - Guacamole route and WebSocket server direct `settings` table access moved
   behind the current settings repository boundary
+- auth token expiry and terminal session timeout settings reads moved behind the
+  current settings repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

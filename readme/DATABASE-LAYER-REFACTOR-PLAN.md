@@ -33,6 +33,8 @@ through `SettingsRepository`.
 Tailscale device route now reads its API key through `SettingsRepository`.
 Guacamole route and WebSocket server now read `guac_url` through the current
 settings repository boundary.
+Authentication token expiry and terminal session timeout reads now use the
+current settings repository boundary.
 
 ## 1. Background
 

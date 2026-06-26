@@ -11,6 +11,7 @@ import { sessions, trustedDevices, apiKeys } from "../database/db/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
+import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 
 interface AuthenticationResult {
   success: boolean;
@@ -324,10 +325,10 @@ class AuthManager {
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-    const timeoutRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
-      .get() as { value: string } | undefined;
-    const defaultExpiry = `${timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24}h`;
+    const timeoutValue = await createCurrentSettingsRepository().get(
+      "session_timeout_hours",
+    );
+    const defaultExpiry = `${timeoutValue ? parseInt(timeoutValue, 10) || 24 : 24}h`;
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {

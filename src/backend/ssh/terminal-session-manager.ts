@@ -5,6 +5,7 @@ import path from "path";
 import { sshLogger } from "../utils/logger.js";
 import { getDb } from "../database/db/index.js";
 import { sessionRecordings } from "../database/db/schema.js";
+import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
 
 const MAX_BUFFER_BYTES = 512 * 1024;
 const DATA_DIR = process.env.DATA_DIR ?? "./db/data";
@@ -494,14 +495,9 @@ class TerminalSessionManager {
 
   private getTimeoutMs(): number {
     try {
-      const db = getDb();
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
-        )
-        .get() as { value: string } | undefined;
-      if (row) {
-        const minutes = parseInt(row.value, 10);
+      const value = getCurrentSettingValue("terminal_session_timeout_minutes");
+      if (value) {
+        const minutes = parseInt(value, 10);
         if (!isNaN(minutes) && minutes > 0) {
           return minutes * 60_000;
         }
