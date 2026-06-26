@@ -1,12 +1,10 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq } from "drizzle-orm";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 type UserSessionRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -39,39 +37,38 @@ export function registerUserSessionRoutes(
     const currentSessionId = authReq.sessionId;
 
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRepository = createCurrentUserRepository();
+      const userRecord = await userRepository.findById(userId);
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const userRecord = user[0];
       let sessionList;
 
       if (userRecord.isAdmin) {
         sessionList = await authManager.getAllSessions();
-
-        const enrichedSessions = await Promise.all(
-          sessionList.map(async (session) => {
-            const sessionUser = await db
-              .select({ username: users.username })
-              .from(users)
-              .where(eq(users.id, session.userId))
-              .limit(1);
-
-            return {
-              id: session.id,
-              userId: session.userId,
-              username: sessionUser[0]?.username || "Unknown",
-              deviceType: session.deviceType,
-              deviceInfo: session.deviceInfo,
-              createdAt: session.createdAt,
-              expiresAt: session.expiresAt,
-              lastActiveAt: session.lastActiveAt,
-              isRevoked: session.isRevoked,
-              isCurrentSession: session.id === currentSessionId,
-            };
-          }),
+        const sessionUsers = await userRepository.listByIds(
+          sessionList.map((session) => session.userId),
         );
+        const usernamesById = new Map(
+          sessionUsers.map((sessionUser) => [
+            sessionUser.id,
+            sessionUser.username,
+          ]),
+        );
+
+        const enrichedSessions = sessionList.map((session) => ({
+          id: session.id,
+          userId: session.userId,
+          username: usernamesById.get(session.userId) || "Unknown",
+          deviceType: session.deviceType,
+          deviceInfo: session.deviceInfo,
+          createdAt: session.createdAt,
+          expiresAt: session.expiresAt,
+          lastActiveAt: session.lastActiveAt,
+          isRevoked: session.isRevoked,
+          isCurrentSession: session.id === currentSessionId,
+        }));
 
         return res.json({ sessions: enrichedSessions });
       } else {
@@ -134,12 +131,11 @@ export function registerUserSessionRoutes(
     }
 
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRepository = createCurrentUserRepository();
+      const userRecord = await userRepository.findById(userId);
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      const userRecord = user[0];
 
       const session =
         await createCurrentSessionRepository().findById(sessionId);
@@ -165,14 +161,9 @@ export function registerUserSessionRoutes(
         });
 
         const { ipAddress, userAgent } = getRequestMeta(req);
-        const actorUser = await db
-          .select({ username: users.username })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1);
         await logAudit({
           userId,
-          username: actorUser[0]?.username ?? userId,
+          username: userRecord.username ?? userId,
           action: "revoke_session",
           resourceType: "session",
           resourceId: sessionId,
@@ -226,12 +217,11 @@ export function registerUserSessionRoutes(
     const { targetUserId, exceptCurrent } = req.body;
 
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRepository = createCurrentUserRepository();
+      const userRecord = await userRepository.findById(userId);
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      const userRecord = user[0];
 
       let revokeUserId = userId;
       if (targetUserId && userRecord.isAdmin) {
@@ -261,23 +251,17 @@ export function registerUserSessionRoutes(
       });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorUser = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-      const targetUserRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, revokeUserId))
-        .limit(1);
+      const targetUserRecord =
+        revokeUserId === userId
+          ? userRecord
+          : await userRepository.findById(revokeUserId);
       await logAudit({
         userId,
-        username: actorUser[0]?.username ?? userId,
+        username: userRecord.username ?? userId,
         action: "revoke_all_sessions",
         resourceType: "session",
         resourceId: revokeUserId,
-        resourceName: targetUserRecord[0]?.username,
+        resourceName: targetUserRecord?.username,
         details: JSON.stringify({ revokedCount, exceptCurrent }),
         ipAddress,
         userAgent,

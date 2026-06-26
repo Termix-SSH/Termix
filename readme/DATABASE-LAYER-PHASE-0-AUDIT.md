@@ -475,6 +475,8 @@ Started:
   behind the current API key repository boundary
 - trusted device check/add/remove and TOTP trusted-device cleanup moved behind
   the current trusted device repository boundary
+- user session routes moved user/admin lookups and admin session username
+  enrichment behind the current user repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

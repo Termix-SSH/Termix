@@ -96,6 +96,10 @@ describe("UserRepository and SessionRepository", () => {
       "user-1",
     ]);
     expect((await repo.users.findByUsername("admin"))?.id).toBe("user-1");
+    expect(
+      (await repo.users.listByIds(["user-1", "user-1"])).map((u) => u.id),
+    ).toEqual(["user-1"]);
+    expect(await repo.users.listByIds([])).toEqual([]);
 
     const updated = await repo.users.update("user-1", {
       oidcIdentifier: "oidc:admin",

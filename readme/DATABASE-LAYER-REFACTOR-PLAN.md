@@ -85,6 +85,8 @@ API key create/list/delete and API key authentication last-used updates now use
 the current API key repository boundary.
 Trusted device check/add/remove and TOTP trusted-device cleanup now use the
 current trusted device repository boundary.
+User session routes now use the current user repository boundary for user/admin
+lookups and admin session username enrichment.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

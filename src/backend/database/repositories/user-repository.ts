@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { users } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 
@@ -47,6 +47,18 @@ export class UserRepository {
       .limit(1);
 
     return rows[0] ?? null;
+  }
+
+  async listByIds(ids: string[]): Promise<UserRecord[]> {
+    const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    return this.context.drizzle
+      .select()
+      .from(users)
+      .where(inArray(users.id, uniqueIds));
   }
 
   async create(user: NewUserRecord): Promise<UserRecord> {
