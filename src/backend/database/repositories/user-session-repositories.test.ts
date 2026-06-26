@@ -16,6 +16,22 @@ describe("UserRepository and SessionRepository", () => {
   async function createRepositories(): Promise<{
     users: UserRepository;
     sessions: SessionRepository;
+  }>;
+  async function createRepositories(options: {
+    onUserWrite?: () => void | Promise<void>;
+    onSessionWrite?: () => void | Promise<void>;
+  }): Promise<{
+    users: UserRepository;
+    sessions: SessionRepository;
+  }>;
+  async function createRepositories(
+    options: {
+      onUserWrite?: () => void | Promise<void>;
+      onSessionWrite?: () => void | Promise<void>;
+    } = {},
+  ): Promise<{
+    users: UserRepository;
+    sessions: SessionRepository;
   }> {
     adapter = new SqliteDatabaseAdapter({
       dialect: "sqlite",
@@ -59,8 +75,8 @@ describe("UserRepository and SessionRepository", () => {
     `);
 
     return {
-      users: new UserRepository(context),
-      sessions: new SessionRepository(context),
+      users: new UserRepository(context, options.onUserWrite),
+      sessions: new SessionRepository(context, options.onSessionWrite),
     };
   }
 
@@ -76,6 +92,9 @@ describe("UserRepository and SessionRepository", () => {
     });
 
     expect(await repo.users.countAdmins()).toBe(1);
+    expect((await repo.users.listAll()).map((user) => user.id)).toEqual([
+      "user-1",
+    ]);
     expect((await repo.users.findByUsername("admin"))?.id).toBe("user-1");
 
     const updated = await repo.users.update("user-1", {
@@ -88,6 +107,27 @@ describe("UserRepository and SessionRepository", () => {
 
     expect(await repo.users.delete("user-1")).toBe(true);
     expect(await repo.users.findById("user-1")).toBeNull();
+  });
+
+  it("runs the user write hook after user writes", async () => {
+    let writeCount = 0;
+    const repo = await createRepositories({
+      onUserWrite: () => {
+        writeCount += 1;
+      },
+    });
+
+    await repo.users.create({
+      id: "user-1",
+      username: "admin",
+      passwordHash: "hash",
+      isAdmin: true,
+      isOidc: false,
+    });
+    await repo.users.update("user-1", { isAdmin: false });
+    await repo.users.delete("user-1");
+
+    expect(writeCount).toBe(3);
   });
 
   it("creates, touches, lists, and revokes sessions", async () => {

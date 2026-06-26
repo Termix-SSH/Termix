@@ -7,7 +7,14 @@ export type NewUserRecord = typeof users.$inferInsert;
 export type UserUpdate = Partial<Omit<NewUserRecord, "id">>;
 
 export class UserRepository {
-  constructor(private readonly context: DatabaseContext) {}
+  constructor(
+    private readonly context: DatabaseContext,
+    private readonly onWrite?: () => void | Promise<void>,
+  ) {}
+
+  async listAll(): Promise<UserRecord[]> {
+    return this.context.drizzle.select().from(users);
+  }
 
   async findById(id: string): Promise<UserRecord | null> {
     const rows = await this.context.drizzle
@@ -46,6 +53,7 @@ export class UserRepository {
       .insert(users)
       .values(user)
       .returning();
+    await this.afterWrite();
     return rows[0];
   }
 
@@ -56,6 +64,7 @@ export class UserRepository {
       .where(eq(users.id, id))
       .returning();
 
+    await this.afterWrite();
     return rows[0] ?? null;
   }
 
@@ -65,6 +74,7 @@ export class UserRepository {
       .where(eq(users.id, id))
       .returning({ id: users.id });
 
+    await this.afterWrite();
     return rows.length > 0;
   }
 
@@ -75,5 +85,9 @@ export class UserRepository {
       .where(eq(users.isAdmin, true));
 
     return rows.length;
+  }
+
+  private async afterWrite(): Promise<void> {
+    await this.onWrite?.();
   }
 }

@@ -65,6 +65,9 @@ using it.
 Remaining `auth-manager.ts` session cleanup/middleware/logout paths and
 `user-session-routes.ts` single-session lookup now use the current session
 repository boundary.
+User repository now has a current-runtime factory and write-save hook, and
+`user-admin-routes.ts` list/admin promotion/admin removal/admin-create user
+paths now use it for `users` table reads and writes.
 
 ## 1. Background
 

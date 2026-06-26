@@ -3,14 +3,29 @@ import type { RequestHandler, Router } from "express";
 import { eq, and } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
-import { users, roles, userRoles } from "../db/schema.js";
+import { roles, userRoles } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import type {
+  UserRecord,
+  UserRepository,
+} from "../repositories/user-repository.js";
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
+}
+
+async function getUserByPreferredIdentifier(
+  userRepository: UserRepository,
+  userId: string | null,
+  username: string | null,
+): Promise<UserRecord | null> {
+  return userId
+    ? userRepository.findById(userId)
+    : userRepository.findByUsername(username!);
 }
 
 export function registerUserAdminRoutes(
@@ -35,15 +50,7 @@ export function registerUserAdminRoutes(
    */
   router.get("/list", authenticateJWT, async (req, res) => {
     try {
-      const allUsers = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          isAdmin: users.isAdmin,
-          isOidc: users.isOidc,
-          passwordHash: users.passwordHash,
-        })
-        .from(users);
+      const allUsers = await createCurrentUserRepository().listAll();
 
       res.json({
         users: allUsers.map((u) => ({
@@ -108,42 +115,29 @@ export function registerUserAdminRoutes(
     }
 
     try {
-      const adminUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId));
-      if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+      const userRepository = createCurrentUserRepository();
+      const adminUser = await userRepository.findById(userId);
+      if (!adminUser?.isAdmin) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      const targetUser = await db
-        .select()
-        .from(users)
-        .where(
-          resolvedUserId
-            ? eq(users.id, resolvedUserId)
-            : eq(users.username, resolvedUsername!),
-        )
-        .limit(1);
-      if (!targetUser || targetUser.length === 0) {
+      const targetUser = await getUserByPreferredIdentifier(
+        userRepository,
+        resolvedUserId,
+        resolvedUsername,
+      );
+      if (!targetUser) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      if (targetUser[0].isAdmin) {
+      if (targetUser.isAdmin) {
         return res.status(400).json({ error: "User is already an admin" });
       }
 
-      await db
-        .update(users)
-        .set({ isAdmin: true })
-        .where(
-          resolvedUserId
-            ? eq(users.id, resolvedUserId)
-            : eq(users.username, resolvedUsername!),
-        );
+      await userRepository.update(targetUser.id, { isAdmin: true });
 
       try {
-        const targetId = targetUser[0].id;
+        const targetId = targetUser.id;
         const adminRole = await db
           .select({ id: roles.id })
           .from(roles)
@@ -182,7 +176,7 @@ export function registerUserAdminRoutes(
       } catch (roleError) {
         authLogger.error("Failed to sync admin role on make-admin", roleError, {
           operation: "make_admin_role_sync",
-          userId: targetUser[0].id,
+          userId: targetUser.id,
         });
       }
 
@@ -195,8 +189,8 @@ export function registerUserAdminRoutes(
           saveError,
           {
             operation: "make_admin_save_failed",
-            userId: targetUser[0].id,
-            username: targetUser[0].username,
+            userId: targetUser.id,
+            username: targetUser.username,
           },
         );
       }
@@ -204,29 +198,24 @@ export function registerUserAdminRoutes(
       authLogger.info("Admin privileges granted", {
         operation: "admin_grant",
         adminId: userId,
-        targetUserId: targetUser[0].id,
-        targetUsername: targetUser[0].username,
+        targetUserId: targetUser.id,
+        targetUsername: targetUser.username,
       });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const adminUserRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: adminUserRecord[0]?.username ?? userId,
+        username: adminUser.username ?? userId,
         action: "make_admin",
         resourceType: "user",
-        resourceId: targetUser[0].id,
-        resourceName: targetUser[0].username,
+        resourceId: targetUser.id,
+        resourceName: targetUser.username,
         ipAddress,
         userAgent,
         success: true,
       });
 
-      res.json({ message: `User ${targetUser[0].username} is now an admin` });
+      res.json({ message: `User ${targetUser.username} is now an admin` });
     } catch (err) {
       authLogger.error("Failed to make user admin", err);
       res.status(500).json({ error: "Failed to make user admin" });
@@ -281,51 +270,38 @@ export function registerUserAdminRoutes(
     }
 
     try {
-      const adminUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId));
-      if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+      const userRepository = createCurrentUserRepository();
+      const adminUser = await userRepository.findById(userId);
+      if (!adminUser?.isAdmin) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
       if (
-        (resolvedUserId && adminUser[0].id === resolvedUserId) ||
-        (resolvedUsername && adminUser[0].username === resolvedUsername)
+        (resolvedUserId && adminUser.id === resolvedUserId) ||
+        (resolvedUsername && adminUser.username === resolvedUsername)
       ) {
         return res
           .status(400)
           .json({ error: "Cannot remove your own admin status" });
       }
 
-      const targetUser = await db
-        .select()
-        .from(users)
-        .where(
-          resolvedUserId
-            ? eq(users.id, resolvedUserId)
-            : eq(users.username, resolvedUsername!),
-        )
-        .limit(1);
-      if (!targetUser || targetUser.length === 0) {
+      const targetUser = await getUserByPreferredIdentifier(
+        userRepository,
+        resolvedUserId,
+        resolvedUsername,
+      );
+      if (!targetUser) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      if (!targetUser[0].isAdmin) {
+      if (!targetUser.isAdmin) {
         return res.status(400).json({ error: "User is not an admin" });
       }
 
-      await db
-        .update(users)
-        .set({ isAdmin: false })
-        .where(
-          resolvedUserId
-            ? eq(users.id, resolvedUserId)
-            : eq(users.username, resolvedUsername!),
-        );
+      await userRepository.update(targetUser.id, { isAdmin: false });
 
       try {
-        const targetId = targetUser[0].id;
+        const targetId = targetUser.id;
         const adminRole = await db
           .select({ id: roles.id })
           .from(roles)
@@ -367,7 +343,7 @@ export function registerUserAdminRoutes(
           roleError,
           {
             operation: "remove_admin_role_sync",
-            userId: targetUser[0].id,
+            userId: targetUser.id,
           },
         );
       }
@@ -378,38 +354,33 @@ export function registerUserAdminRoutes(
       } catch (saveError) {
         authLogger.error("Failed to persist admin removal to disk", saveError, {
           operation: "remove_admin_save_failed",
-          userId: targetUser[0].id,
-          username: targetUser[0].username,
+          userId: targetUser.id,
+          username: targetUser.username,
         });
       }
 
       authLogger.info("Admin privileges revoked", {
         operation: "admin_revoke",
         adminId: userId,
-        targetUserId: targetUser[0].id,
-        targetUsername: targetUser[0].username,
+        targetUserId: targetUser.id,
+        targetUsername: targetUser.username,
       });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const adminUserRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: adminUserRecord[0]?.username ?? userId,
+        username: adminUser.username ?? userId,
         action: "remove_admin",
         resourceType: "user",
-        resourceId: targetUser[0].id,
-        resourceName: targetUser[0].username,
+        resourceId: targetUser.id,
+        resourceName: targetUser.username,
         ipAddress,
         userAgent,
         success: true,
       });
 
       res.json({
-        message: `Admin status removed from ${targetUser[0].username}`,
+        message: `Admin status removed from ${targetUser.username}`,
       });
     } catch (err) {
       authLogger.error("Failed to remove admin status", err);
@@ -450,13 +421,12 @@ export function registerUserAdminRoutes(
    */
   router.post("/admin-create", authenticateJWT, async (req, res) => {
     const adminId = (req as AuthenticatedRequest).userId;
+    const userRepository = createCurrentUserRepository();
+    let adminUser: UserRecord | null = null;
 
     try {
-      const adminUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, adminId));
-      if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+      adminUser = await userRepository.findById(adminId);
+      if (!adminUser?.isAdmin) {
         return res.status(403).json({ error: "Not authorized" });
       }
     } catch (err) {
@@ -473,41 +443,32 @@ export function registerUserAdminRoutes(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-      if (existing && existing.length > 0) {
+      const existing = await userRepository.findByUsername(username);
+      if (existing) {
         return res.status(409).json({ error: "Username already exists" });
       }
 
       const password_hash = await bcrypt.hash(password, 10);
       const id = nanoid();
 
-      db.$client.transaction(() => {
-        db.$client
-          .prepare(
-            "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-          )
-          .run(
-            id,
-            username,
-            password_hash,
-            0,
-            0,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "openid email profile",
-            null,
-            0,
-            null,
-          );
-      })();
+      await userRepository.create({
+        id,
+        username,
+        passwordHash: password_hash,
+        isAdmin: false,
+        isOidc: false,
+        clientId: "",
+        clientSecret: "",
+        issuerUrl: "",
+        authorizationUrl: "",
+        tokenUrl: "",
+        identifierPath: "",
+        namePath: "",
+        scopes: "openid email profile",
+        totpSecret: null,
+        totpEnabled: false,
+        totpBackupCodes: null,
+      });
 
       try {
         const userRole = await db
@@ -537,7 +498,7 @@ export function registerUserAdminRoutes(
       try {
         await authManager.registerUser(id, password);
       } catch (encryptionError) {
-        await db.delete(users).where(eq(users.id, id));
+        await userRepository.delete(id);
         authLogger.error(
           "Failed to setup user encryption during admin create, rolled back",
           encryptionError,
@@ -570,14 +531,9 @@ export function registerUserAdminRoutes(
       });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const adminRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, adminId))
-        .limit(1);
       await logAudit({
         userId: adminId,
-        username: adminRecord[0]?.username ?? adminId,
+        username: adminUser.username ?? adminId,
         action: "create_user",
         resourceType: "user",
         resourceId: id,

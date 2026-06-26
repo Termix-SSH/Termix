@@ -456,6 +456,9 @@ Started:
 - remaining `auth-manager.ts` session cleanup/middleware/logout paths and
   `user-session-routes.ts` single-session lookup moved behind the current
   session repository boundary
+- current user repository factory/write-save hook added, and
+  `user-admin-routes.ts` list/admin promotion/admin removal/admin-create user
+  paths moved behind the current user repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.
