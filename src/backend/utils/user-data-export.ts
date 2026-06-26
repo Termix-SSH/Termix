@@ -1,13 +1,8 @@
 import { getDb } from "../database/db/index.js";
-import {
-  hosts,
-  sshCredentials,
-  fileManagerRecent,
-  fileManagerPinned,
-  fileManagerShortcuts,
-} from "../database/db/schema.js";
+import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { createCurrentDismissedAlertRepository } from "../database/repositories/current-dismissed-alert-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "../database/repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentTransferRecentRepository } from "../database/repositories/current-transfer-recent-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { DataCrypto } from "./data-crypto.js";
@@ -101,18 +96,15 @@ class UserDataExport {
 
       const [recentFiles, pinnedFiles, shortcuts, transferRecentData] =
         await Promise.all([
-          getDb()
-            .select()
-            .from(fileManagerRecent)
-            .where(eq(fileManagerRecent.userId, userId)),
-          getDb()
-            .select()
-            .from(fileManagerPinned)
-            .where(eq(fileManagerPinned.userId, userId)),
-          getDb()
-            .select()
-            .from(fileManagerShortcuts)
-            .where(eq(fileManagerShortcuts.userId, userId)),
+          createCurrentFileManagerBookmarkRepository().listRecentByUserId(
+            userId,
+          ),
+          createCurrentFileManagerBookmarkRepository().listPinnedByUserId(
+            userId,
+          ),
+          createCurrentFileManagerBookmarkRepository().listShortcutsByUserId(
+            userId,
+          ),
           createCurrentTransferRecentRepository().listByUserId(userId),
         ]);
 

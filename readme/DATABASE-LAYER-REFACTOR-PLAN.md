@@ -187,6 +187,9 @@ SSH credential usage writes and host/user cleanup now use the current SSH
 credential usage repository boundary.
 Transfer recent list/upsert/prune/export and host/folder/user cleanup now use
 the current transfer recent repository boundary.
+File manager recent/pinned/shortcut list/create/delete/export and
+host/folder/user/password-reset cleanup now use the current file manager
+bookmark repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

@@ -5,15 +5,13 @@ import { databaseLogger, sshLogger } from "../../utils/logger.js";
 import { db, DatabaseSaveTrigger } from "../db/index.js";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
-  fileManagerPinned,
-  fileManagerRecent,
-  fileManagerShortcuts,
   hosts,
   sessionRecordings,
   sshCredentials,
   sshFolders,
 } from "../db/schema.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
@@ -321,17 +319,9 @@ export function registerHostFolderRoutes(
         const hostIds = hostsToDelete.map((host) => host.id);
 
         if (hostIds.length > 0) {
-          await db
-            .delete(fileManagerRecent)
-            .where(inArray(fileManagerRecent.hostId, hostIds));
-
-          await db
-            .delete(fileManagerPinned)
-            .where(inArray(fileManagerPinned.hostId, hostIds));
-
-          await db
-            .delete(fileManagerShortcuts)
-            .where(inArray(fileManagerShortcuts.hostId, hostIds));
+          await createCurrentFileManagerBookmarkRepository().deleteByHostIds(
+            hostIds,
+          );
 
           await createCurrentTransferRecentRepository().deleteByHostIds(
             hostIds,

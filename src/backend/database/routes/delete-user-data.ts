@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
 import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
@@ -15,9 +16,6 @@ import { createCurrentSshCredentialUsageRepository } from "../repositories/curre
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
-  fileManagerPinned,
-  fileManagerRecent,
-  fileManagerShortcuts,
   hosts,
   opksshTokens,
   sessionRecordings,
@@ -50,15 +48,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 
-    await db
-      .delete(fileManagerRecent)
-      .where(eq(fileManagerRecent.userId, userId));
-    await db
-      .delete(fileManagerPinned)
-      .where(eq(fileManagerPinned.userId, userId));
-    await db
-      .delete(fileManagerShortcuts)
-      .where(eq(fileManagerShortcuts.userId, userId));
+    await createCurrentFileManagerBookmarkRepository().deleteByUserId(userId);
 
     await createCurrentTransferRecentRepository().deleteByUserId(userId);
 

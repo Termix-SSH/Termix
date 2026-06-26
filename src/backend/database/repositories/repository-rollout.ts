@@ -22,6 +22,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "recent_activity",
   "ssh_credential_usage",
   "transfer_recent",
+  "file_manager_bookmarks",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -90,6 +91,12 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   transfer: "transfer_recent",
   transfer_recent: "transfer_recent",
   transferrecent: "transfer_recent",
+  bookmark: "file_manager_bookmarks",
+  bookmarks: "file_manager_bookmarks",
+  file_bookmarks: "file_manager_bookmarks",
+  file_manager_bookmark: "file_manager_bookmarks",
+  file_manager_bookmarks: "file_manager_bookmarks",
+  filemanagerbookmarks: "file_manager_bookmarks",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",

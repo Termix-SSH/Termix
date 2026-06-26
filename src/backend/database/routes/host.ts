@@ -1,14 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import {
-  hosts,
-  sshCredentials,
-  fileManagerRecent,
-  fileManagerPinned,
-  fileManagerShortcuts,
-  sessionRecordings,
-} from "../db/schema.js";
+import { hosts, sshCredentials, sessionRecordings } from "../db/schema.js";
 import { eq, and, inArray } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
@@ -21,6 +14,7 @@ import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { pickResolvedUsername } from "../../ssh/credential-username.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
@@ -1828,17 +1822,9 @@ router.delete(
 
       const numericHostId = Number(hostId);
 
-      await db
-        .delete(fileManagerRecent)
-        .where(eq(fileManagerRecent.hostId, numericHostId));
-
-      await db
-        .delete(fileManagerPinned)
-        .where(eq(fileManagerPinned.hostId, numericHostId));
-
-      await db
-        .delete(fileManagerShortcuts)
-        .where(eq(fileManagerShortcuts.hostId, numericHostId));
+      await createCurrentFileManagerBookmarkRepository().deleteByHostId(
+        numericHostId,
+      );
 
       await createCurrentTransferRecentRepository().deleteByHostId(
         numericHostId,
