@@ -447,6 +447,8 @@ Started:
   boundary, completing direct `settings` access cleanup in `routes/users.ts`
 - user encryption metadata in `utils/user-crypto.ts` moved behind the current
   settings repository boundary
+- database startup and schema migration defaults in `database/db/index.ts`
+  moved to local raw settings helpers
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

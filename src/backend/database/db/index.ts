@@ -24,6 +24,28 @@ let memoryDatabase: Database.Database;
 let isNewDatabase = false;
 let sqlite: Database.Database;
 
+function getRawSettingValue(key: string): string | null {
+  const row = sqlite
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .get(key) as { value?: string } | undefined;
+
+  return row?.value ?? null;
+}
+
+function setRawSettingValue(key: string, value: string): void {
+  sqlite
+    .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+    .run(key, value);
+}
+
+function ensureRawSettingDefault(key: string, value: string): void {
+  if (getRawSettingValue(key) === null) {
+    sqlite
+      .prepare("INSERT INTO settings (key, value) VALUES (?, ?)")
+      .run(key, value);
+  }
+}
+
 async function initializeDatabaseAsync(): Promise<void> {
   const systemCrypto = SystemCrypto.getInstance();
 
@@ -578,16 +600,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   migrateSchema();
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get();
-    if (!row) {
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
-        )
-        .run();
-    }
+    ensureRawSettingDefault("allow_registration", "true");
   } catch (e) {
     databaseLogger.warn("Could not initialize default settings", {
       operation: "db_init",
@@ -596,16 +609,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
-      .get();
-    if (!row) {
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('allow_password_login', 'true')",
-        )
-        .run();
-    }
+    ensureRawSettingDefault("allow_password_login", "true");
   } catch (e) {
     databaseLogger.warn("Could not initialize allow_password_login setting", {
       operation: "db_init",
@@ -614,16 +618,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
-      .get();
-    if (!row) {
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('guac_enabled', 'true')",
-        )
-        .run();
-    }
+    ensureRawSettingDefault("guac_enabled", "true");
   } catch (e) {
     databaseLogger.warn("Could not initialize guac_enabled setting", {
       operation: "db_init",
@@ -632,17 +627,8 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-      .get();
-    if (!row) {
-      const defaultGuacUrl = `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('guac_url', ?)",
-        )
-        .run(defaultGuacUrl);
-    }
+    const defaultGuacUrl = `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
+    ensureRawSettingDefault("guac_url", defaultGuacUrl);
   } catch (e) {
     databaseLogger.warn("Could not initialize guac_url setting", {
       operation: "db_init",
@@ -1861,31 +1847,30 @@ const migrateSchema = () => {
 
   // Migrate legacy single oidc_config settings blob into sso_providers table
   try {
-    const migrationDone = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'sso_migration_v1'")
-      .get();
+    const migrationDone = getRawSettingValue("sso_migration_v1");
     if (!migrationDone) {
       const providerCount = (
-        sqlite.prepare("SELECT COUNT(*) as c FROM sso_providers").get() as { c: number }
+        sqlite.prepare("SELECT COUNT(*) as c FROM sso_providers").get() as {
+          c: number;
+        }
       ).c;
       if (providerCount === 0) {
-        const legacyRow = sqlite
-          .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
-          .get() as { value: string } | undefined;
-        if (legacyRow) {
+        const legacyConfig = getRawSettingValue("oidc_config");
+        if (legacyConfig) {
           sqlite
             .prepare(
               "INSERT INTO sso_providers (name, type, enabled, display_order, config) VALUES (?, 'oidc', 1, 0, ?)",
             )
-            .run("OIDC", legacyRow.value);
-          databaseLogger.info("Migrated legacy oidc_config into sso_providers table", {
-            operation: "sso_migration_v1",
-          });
+            .run("OIDC", legacyConfig);
+          databaseLogger.info(
+            "Migrated legacy oidc_config into sso_providers table",
+            {
+              operation: "sso_migration_v1",
+            },
+          );
         }
       }
-      sqlite
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('sso_migration_v1', 'true')")
-        .run();
+      setRawSettingValue("sso_migration_v1", "true");
     }
   } catch (e) {
     databaseLogger.warn("Failed to run SSO migration v1", {
@@ -2024,19 +2009,15 @@ const migrateSchema = () => {
 
   // Seed default metrics history retention setting
   try {
-    const retentionRow = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'metrics_history_retention_days'")
-      .get();
-    if (!retentionRow) {
-      sqlite
-        .prepare("INSERT INTO settings (key, value) VALUES ('metrics_history_retention_days', '7')")
-        .run();
-    }
+    ensureRawSettingDefault("metrics_history_retention_days", "7");
   } catch (e) {
-    databaseLogger.warn("Could not initialize metrics_history_retention_days setting", {
-      operation: "schema_migration",
-      error: e,
-    });
+    databaseLogger.warn(
+      "Could not initialize metrics_history_retention_days setting",
+      {
+        operation: "schema_migration",
+        error: e,
+      },
+    );
   }
 
   // --- homepage begin ---
