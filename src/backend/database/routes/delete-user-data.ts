@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
+import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
   auditLogs,
   commandHistory,
@@ -15,7 +17,6 @@ import {
   opksshTokens,
   recentActivity,
   sessionRecordings,
-  sessions,
   sharedCredentials,
   snippetFolders,
   snippets,
@@ -26,7 +27,6 @@ import {
   userOpenTabs,
   userPreferences,
   userRoles,
-  users,
 } from "../db/schema.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
@@ -42,7 +42,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db.delete(hostAccess).where(eq(hostAccess.userId, userId));
     await db.delete(hostAccess).where(eq(hostAccess.grantedBy, userId));
 
-    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await createCurrentSessionRepository().revokeAllForUser(userId);
 
     await db.delete(userRoles).where(eq(userRoles.userId, userId));
     await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
@@ -83,7 +83,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await createCurrentSettingsRepository().deleteLike(`user_%_${userId}`);
 
-    await db.delete(users).where(eq(users.id, userId));
+    await createCurrentUserRepository().delete(userId);
 
     authLogger.success("User and all related data deleted successfully", {
       operation: "delete_user_and_related_data_complete",

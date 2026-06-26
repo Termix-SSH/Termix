@@ -106,6 +106,9 @@ module.
 Password reset route user lookups, password hash updates, and TOTP reset fields
 now use the current user repository boundary while retaining existing direct
 cleanup of per-user encrypted data tables.
+User deletion helper now removes sessions through the current session repository
+and deletes the final user record through the current user repository while
+retaining direct cleanup of non-migrated related tables.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
