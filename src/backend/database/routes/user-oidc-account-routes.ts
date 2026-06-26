@@ -1,10 +1,8 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq } from "drizzle-orm";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 
 type UserOidcAccountRoutesDeps = {
@@ -62,23 +60,16 @@ export function registerUserOidcAccountRoutes(
     }
 
     try {
-      const adminUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, adminUserId));
-      if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+      const userRepository = createCurrentUserRepository();
+      const adminUser = await userRepository.findById(adminUserId);
+      if (!adminUser?.isAdmin) {
         return res.status(403).json({ error: "Admin access required" });
       }
 
-      const oidcUserRecords = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, oidcUserId));
-      if (!oidcUserRecords || oidcUserRecords.length === 0) {
+      const oidcUser = await userRepository.findById(oidcUserId);
+      if (!oidcUser) {
         return res.status(404).json({ error: "OIDC user not found" });
       }
-
-      const oidcUser = oidcUserRecords[0];
 
       if (!oidcUser.isOidc) {
         return res.status(400).json({
@@ -86,17 +77,12 @@ export function registerUserOidcAccountRoutes(
         });
       }
 
-      const targetUserRecords = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, targetUsername));
-      if (!targetUserRecords || targetUserRecords.length === 0) {
+      const targetUser = await userRepository.findByUsername(targetUsername);
+      if (!targetUser) {
         return res
           .status(404)
           .json({ error: "Target password user not found" });
       }
-
-      const targetUser = targetUserRecords[0];
 
       if (targetUser.isOidc || !targetUser.passwordHash) {
         return res.status(400).json({
@@ -119,21 +105,18 @@ export function registerUserOidcAccountRoutes(
         adminUserId,
       });
 
-      await db
-        .update(users)
-        .set({
-          isOidc: true,
-          oidcIdentifier: oidcUser.oidcIdentifier,
-          clientId: oidcUser.clientId,
-          clientSecret: oidcUser.clientSecret,
-          issuerUrl: oidcUser.issuerUrl,
-          authorizationUrl: oidcUser.authorizationUrl,
-          tokenUrl: oidcUser.tokenUrl,
-          identifierPath: oidcUser.identifierPath,
-          namePath: oidcUser.namePath,
-          scopes: oidcUser.scopes || "openid email profile",
-        })
-        .where(eq(users.id, targetUser.id));
+      await userRepository.update(targetUser.id, {
+        isOidc: true,
+        oidcIdentifier: oidcUser.oidcIdentifier,
+        clientId: oidcUser.clientId,
+        clientSecret: oidcUser.clientSecret,
+        issuerUrl: oidcUser.issuerUrl,
+        authorizationUrl: oidcUser.authorizationUrl,
+        tokenUrl: oidcUser.tokenUrl,
+        identifierPath: oidcUser.identifierPath,
+        namePath: oidcUser.namePath,
+        scopes: oidcUser.scopes || "openid email profile",
+      });
 
       try {
         await authManager.convertToOIDCEncryption(targetUser.id);
@@ -146,21 +129,18 @@ export function registerUserOidcAccountRoutes(
             userId: targetUser.id,
           },
         );
-        await db
-          .update(users)
-          .set({
-            isOidc: false,
-            oidcIdentifier: null,
-            clientId: "",
-            clientSecret: "",
-            issuerUrl: "",
-            authorizationUrl: "",
-            tokenUrl: "",
-            identifierPath: "",
-            namePath: "",
-            scopes: "openid email profile",
-          })
-          .where(eq(users.id, targetUser.id));
+        await userRepository.update(targetUser.id, {
+          isOidc: false,
+          oidcIdentifier: null,
+          clientId: "",
+          clientSecret: "",
+          issuerUrl: "",
+          authorizationUrl: "",
+          tokenUrl: "",
+          identifierPath: "",
+          namePath: "",
+          scopes: "openid email profile",
+        });
 
         return res.status(500).json({
           error:
@@ -265,12 +245,10 @@ export function registerUserOidcAccountRoutes(
       }
 
       try {
-        const adminUser = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, adminUserId));
+        const userRepository = createCurrentUserRepository();
+        const adminUser = await userRepository.findById(adminUserId);
 
-        if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+        if (!adminUser?.isAdmin) {
           authLogger.warn("Non-admin attempted to unlink OIDC from password", {
             operation: "unlink_oidc_unauthorized",
             adminUserId,
@@ -281,18 +259,12 @@ export function registerUserOidcAccountRoutes(
           });
         }
 
-        const targetUserRecords = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId));
-
-        if (!targetUserRecords || targetUserRecords.length === 0) {
+        const targetUser = await userRepository.findById(userId);
+        if (!targetUser) {
           return res.status(404).json({
             error: "User not found",
           });
         }
-
-        const targetUser = targetUserRecords[0];
 
         if (!targetUser.isOidc) {
           return res.status(400).json({
@@ -314,21 +286,18 @@ export function registerUserOidcAccountRoutes(
           adminUserId,
         });
 
-        await db
-          .update(users)
-          .set({
-            isOidc: false,
-            oidcIdentifier: null,
-            clientId: "",
-            clientSecret: "",
-            issuerUrl: "",
-            authorizationUrl: "",
-            tokenUrl: "",
-            identifierPath: "",
-            namePath: "",
-            scopes: "openid email profile",
-          })
-          .where(eq(users.id, targetUser.id));
+        await userRepository.update(targetUser.id, {
+          isOidc: false,
+          oidcIdentifier: null,
+          clientId: "",
+          clientSecret: "",
+          issuerUrl: "",
+          authorizationUrl: "",
+          tokenUrl: "",
+          identifierPath: "",
+          namePath: "",
+          scopes: "openid email profile",
+        });
 
         try {
           const { saveMemoryDatabaseToFile } = await import("../db/index.js");
