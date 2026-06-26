@@ -33,6 +33,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "host_metrics_preferences",
   "host_health",
   "host_metrics_history",
+  "alerts",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -63,8 +64,8 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   audit_logs: "audit_logs",
   auditlog: "audit_logs",
   auditlogs: "audit_logs",
-  alert: "dismissed_alerts",
-  alerts: "dismissed_alerts",
+  alert: "alerts",
+  alerts: "alerts",
   dashboard_link: "dashboard_service_links",
   dashboard_links: "dashboard_service_links",
   dashboard_service_link: "dashboard_service_links",
@@ -79,6 +80,7 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   dismissed_alerts: "dismissed_alerts",
   dismissedalert: "dismissed_alerts",
   dismissedalerts: "dismissed_alerts",
+  dismissed: "dismissed_alerts",
   homepage_layout: "homepage_layouts",
   homepage_layouts: "homepage_layouts",
   homepagelayout: "homepage_layouts",
