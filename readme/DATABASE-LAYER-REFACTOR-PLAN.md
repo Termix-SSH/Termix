@@ -10,6 +10,9 @@ Phase 1 status: database runtime config and SQLite adapter skeleton have started
 `src/backend/database/runtime/`. This code is not wired into the existing production
 database initialization yet.
 
+Repository status: the first repository skeleton, `SettingsRepository`, has started
+under `src/backend/database/repositories/` and is covered by SQLite-backed tests.
+
 ## 1. Background
 
 Termix currently uses an encrypted SQLite snapshot model:

@@ -1,0 +1,40 @@
+import { eq } from "drizzle-orm";
+import { settings } from "../db/schema.js";
+import type { DatabaseContext } from "../runtime/adapter.js";
+
+export class SettingsRepository {
+  constructor(private readonly context: DatabaseContext) {}
+
+  async get(key: string): Promise<string | null> {
+    const rows = await this.context.drizzle
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, key))
+      .limit(1);
+
+    return rows[0]?.value ?? null;
+  }
+
+  async getBoolean(key: string, fallback = false): Promise<boolean> {
+    const value = await this.get(key);
+    if (value === null) return fallback;
+    return value === "true" || value === "1";
+  }
+
+  async set(key: string, value: string): Promise<void> {
+    const existing = await this.get(key);
+    if (existing === null) {
+      await this.context.drizzle.insert(settings).values({ key, value });
+      return;
+    }
+
+    await this.context.drizzle
+      .update(settings)
+      .set({ value })
+      .where(eq(settings.key, key));
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.context.drizzle.delete(settings).where(eq(settings.key, key));
+  }
+}

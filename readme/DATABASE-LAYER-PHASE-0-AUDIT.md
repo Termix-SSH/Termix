@@ -397,6 +397,13 @@ Recommended first implementation PR on this branch:
 - `src/backend/database/repositories/settings-repository.ts`
 - tests for config parsing and SQLite adapter boot
 
+Started:
+
+- runtime config parser
+- SQLite adapter skeleton
+- migration metadata table bootstrap
+- `SettingsRepository` skeleton and tests
+
 Keep it small. Do not migrate hosts or credentials in the same first implementation commit.
 
 ## 12. Current Unknowns
