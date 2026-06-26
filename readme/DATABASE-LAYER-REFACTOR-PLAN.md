@@ -62,6 +62,9 @@ local helper boundaries for export filtering and admin import upserts.
 Session repository now has a current-runtime factory and write-save hook, and
 core `auth-manager.ts` session create/read/update/revoke/list paths have started
 using it.
+Remaining `auth-manager.ts` session cleanup/middleware/logout paths and
+`user-session-routes.ts` single-session lookup now use the current session
+repository boundary.
 
 ## 1. Background
 

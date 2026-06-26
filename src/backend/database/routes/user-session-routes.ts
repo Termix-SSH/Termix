@@ -4,8 +4,9 @@ import { eq } from "drizzle-orm";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
-import { sessions, users } from "../db/schema.js";
+import { users } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 
 type UserSessionRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -140,17 +141,12 @@ export function registerUserSessionRoutes(
 
       const userRecord = user[0];
 
-      const sessionRecords = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.id, sessionId))
-        .limit(1);
+      const session =
+        await createCurrentSessionRepository().findById(sessionId);
 
-      if (sessionRecords.length === 0) {
+      if (!session) {
         return res.status(404).json({ error: "Session not found" });
       }
-
-      const session = sessionRecords[0];
 
       if (!userRecord.isAdmin && session.userId !== userId) {
         return res

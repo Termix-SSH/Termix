@@ -453,6 +453,9 @@ Started:
   local helper boundaries
 - core `auth-manager.ts` session create/read/update/revoke/list paths started
   using the current session repository boundary
+- remaining `auth-manager.ts` session cleanup/middleware/logout paths and
+  `user-session-routes.ts` single-session lookup moved behind the current
+  session repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

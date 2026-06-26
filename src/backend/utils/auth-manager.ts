@@ -7,8 +7,8 @@ import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "../database/db/index.js";
-import { sessions, trustedDevices, apiKeys } from "../database/db/schema.js";
-import { eq, and, sql } from "drizzle-orm";
+import { trustedDevices, apiKeys } from "../database/db/schema.js";
+import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
 import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
@@ -546,10 +546,9 @@ class AuthManager {
 
   async cleanupExpiredSessions(): Promise<number> {
     try {
-      const expiredSessions = await db
-        .select()
-        .from(sessions)
-        .where(sql`${sessions.expiresAt} < datetime('now')`);
+      const sessionRepository = createCurrentSessionRepository();
+      const now = new Date();
+      const expiredSessions = await sessionRepository.listExpired(now);
 
       const expiredCount = expiredSessions.length;
 
@@ -557,30 +556,11 @@ class AuthManager {
         return 0;
       }
 
-      await db
-        .delete(sessions)
-        .where(sql`${sessions.expiresAt} < datetime('now')`);
-
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after cleaning up expired sessions",
-          saveError,
-          {
-            operation: "sessions_cleanup_db_save_failed",
-          },
-        );
-      }
+      await sessionRepository.deleteExpired(now);
 
       const affectedUsers = new Set(expiredSessions.map((s) => s.userId));
       for (const userId of affectedUsers) {
-        const remainingSessions = await db
-          .select()
-          .from(sessions)
-          .where(eq(sessions.userId, userId));
+        const remainingSessions = await sessionRepository.listByUserId(userId);
 
         if (remainingSessions.length === 0) {
           this.userCrypto.logoutUser(userId);
@@ -754,13 +734,10 @@ class AuthManager {
 
       if (payload.sessionId) {
         try {
-          const sessionRecords = await db
-            .select()
-            .from(sessions)
-            .where(eq(sessions.id, payload.sessionId))
-            .limit(1);
+          const sessionRepository = createCurrentSessionRepository();
+          const session = await sessionRepository.findById(payload.sessionId);
 
-          if (sessionRecords.length === 0) {
+          if (!session) {
             databaseLogger.warn("Session not found in middleware", {
               operation: "middleware_session_not_found",
               sessionId: payload.sessionId,
@@ -774,8 +751,6 @@ class AuthManager {
                 code: "SESSION_NOT_FOUND",
               });
           }
-
-          const session = sessionRecords[0];
 
           const sessionExpiryTime = new Date(session.expiresAt).getTime();
           const currentTime = Date.now();
@@ -791,18 +766,12 @@ class AuthManager {
               difference: currentTime - sessionExpiryTime,
             });
 
-            db.delete(sessions)
-              .where(eq(sessions.id, payload.sessionId))
+            sessionRepository
+              .revoke(payload.sessionId)
               .then(async () => {
                 try {
-                  const { saveMemoryDatabaseToFile } =
-                    await import("../database/db/index.js");
-                  await saveMemoryDatabaseToFile();
-
-                  const remainingSessions = await db
-                    .select()
-                    .from(sessions)
-                    .where(eq(sessions.userId, payload.userId));
+                  const remainingSessions =
+                    await sessionRepository.listByUserId(payload.userId);
 
                   if (remainingSessions.length === 0) {
                     this.userCrypto.logoutUser(payload.userId);
@@ -838,9 +807,8 @@ class AuthManager {
               });
           }
 
-          db.update(sessions)
-            .set({ lastActiveAt: new Date().toISOString() })
-            .where(eq(sessions.id, payload.sessionId))
+          sessionRepository
+            .touch(payload.sessionId)
             .then(() => {})
             .catch((error) => {
               databaseLogger.warn("Failed to update session lastActiveAt", {
@@ -960,30 +928,13 @@ class AuthManager {
   }
 
   async logoutUser(userId: string, sessionId?: string): Promise<void> {
+    const sessionRepository = createCurrentSessionRepository();
+
     if (sessionId) {
       try {
-        await db.delete(sessions).where(eq(sessions.id, sessionId));
+        await sessionRepository.revoke(sessionId);
 
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch (saveError) {
-          databaseLogger.error(
-            "Failed to save database after logout",
-            saveError,
-            {
-              operation: "logout_db_save_failed",
-              userId,
-              sessionId,
-            },
-          );
-        }
-
-        const remainingSessions = await db
-          .select()
-          .from(sessions)
-          .where(eq(sessions.userId, userId));
+        const remainingSessions = await sessionRepository.listByUserId(userId);
 
         if (remainingSessions.length === 0) {
           this.userCrypto.logoutUser(userId);
@@ -999,15 +950,7 @@ class AuthManager {
       }
     } else {
       try {
-        await db.delete(sessions).where(eq(sessions.userId, userId));
-
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch {
-          // best effort
-        }
+        await sessionRepository.revokeAllForUser(userId);
       } catch (error) {
         databaseLogger.error("Failed to revoke all sessions on logout", error, {
           operation: "session_revoke_all_failed",

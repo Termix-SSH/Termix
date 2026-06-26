@@ -41,6 +41,13 @@ export class SessionRepository {
       .where(eq(sessions.userId, userId));
   }
 
+  async listExpired(now = new Date()): Promise<SessionRecord[]> {
+    return this.context.drizzle
+      .select()
+      .from(sessions)
+      .where(lte(sessions.expiresAt, now.toISOString()));
+  }
+
   async touch(
     id: string,
     lastActiveAt = new Date().toISOString(),
