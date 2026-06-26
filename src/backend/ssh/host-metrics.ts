@@ -7,6 +7,7 @@ import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { pickResolvedUsername } from "./credential-username.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
+import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
 import { eq } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -172,26 +173,18 @@ class PollingManager {
     metricsInterval: number;
   } {
     try {
-      const db = getDb();
-      const statusRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'global_status_check_interval'",
-        )
-        .get() as { value: string } | undefined;
-      const metricsRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'global_metrics_interval'",
-        )
-        .get() as { value: string } | undefined;
+      const statusValue = getCurrentSettingValue(
+        "global_status_check_interval",
+      );
+      const metricsValue = getCurrentSettingValue("global_metrics_interval");
 
       return {
-        statusCheckInterval: statusRow
-          ? parseInt(statusRow.value, 10) ||
+        statusCheckInterval: statusValue
+          ? parseInt(statusValue, 10) ||
             DEFAULT_STATS_CONFIG.statusCheckInterval
           : DEFAULT_STATS_CONFIG.statusCheckInterval,
-        metricsInterval: metricsRow
-          ? parseInt(metricsRow.value, 10) ||
-            DEFAULT_STATS_CONFIG.metricsInterval
+        metricsInterval: metricsValue
+          ? parseInt(metricsValue, 10) || DEFAULT_STATS_CONFIG.metricsInterval
           : DEFAULT_STATS_CONFIG.metricsInterval,
       };
     } catch {
@@ -473,13 +466,8 @@ class PollingManager {
 
   private getRetentionDays(): number {
     try {
-      const db = getDb();
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'metrics_history_retention_days'",
-        )
-        .get() as { value: string } | undefined;
-      const days = row ? parseInt(row.value, 10) : 7;
+      const value = getCurrentSettingValue("metrics_history_retention_days");
+      const days = value ? parseInt(value, 10) : 7;
       return isNaN(days) || days < 1 ? 7 : Math.min(days, 90);
     } catch {
       return 7;

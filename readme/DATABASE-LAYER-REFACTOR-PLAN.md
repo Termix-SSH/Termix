@@ -37,6 +37,8 @@ Authentication token expiry and terminal session timeout reads now use the
 current settings repository boundary.
 Open tabs, TOTP, and LDAP auth routes now read their settings through the
 current settings repository boundary.
+Host metrics polling now reads global interval and retention settings through
+the current settings repository boundary.
 
 ## 1. Background
 
