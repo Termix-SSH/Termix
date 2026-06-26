@@ -419,6 +419,8 @@ Started:
   `SettingsRepository`
 - ACME SSL settings route direct `settings` table access moved behind
   `SettingsRepository`
+- terminal route direct `settings` table access moved behind
+  `SettingsRepository`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

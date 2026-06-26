@@ -28,6 +28,8 @@ Host metrics settings routes now use the same repository boundary for global
 monitoring defaults and history retention settings.
 ACME SSL settings route also uses the repository boundary for its persisted
 configuration key.
+Terminal route session settings and command history global flag now read/write
+through `SettingsRepository`.
 
 ## 1. Background
 
