@@ -15,6 +15,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
 
@@ -29,6 +30,11 @@ async function getUserRoleIds(userId: string): Promise<number[]> {
     .where(eq(userRoles.userId, userId));
 
   return rows.map((row) => row.roleId);
+}
+
+async function getActorUsername(userId: string): Promise<string> {
+  const user = await createCurrentUserRepository().findById(userId);
+  return user?.username ?? userId;
 }
 
 function roleIdFilter(roleIds: number[]) {
@@ -1422,14 +1428,9 @@ router.post(
       });
 
       const { ipAddress: scIp, userAgent: scUa } = getRequestMeta(req);
-      const scActor = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: scActor[0]?.username ?? userId,
+        username: await getActorUsername(userId),
         action: "create_snippet",
         resourceType: "snippet",
         resourceId: String(result[0].id),
@@ -1556,14 +1557,9 @@ router.put(
       });
 
       const { ipAddress: suIp, userAgent: suUa } = getRequestMeta(req);
-      const suActor = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: suActor[0]?.username ?? userId,
+        username: await getActorUsername(userId),
         action: "update_snippet",
         resourceType: "snippet",
         resourceId: id,
@@ -1640,14 +1636,9 @@ router.delete(
       });
 
       const { ipAddress: sdIp, userAgent: sdUa } = getRequestMeta(req);
-      const sdActor = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: sdActor[0]?.username ?? userId,
+        username: await getActorUsername(userId),
         action: "delete_snippet",
         resourceType: "snippet",
         resourceId: id,

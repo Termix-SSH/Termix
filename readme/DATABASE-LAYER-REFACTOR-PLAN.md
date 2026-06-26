@@ -109,6 +109,9 @@ cleanup of per-user encrypted data tables.
 User deletion helper now removes sessions through the current session repository
 and deletes the final user record through the current user repository while
 retaining direct cleanup of non-migrated related tables.
+Snippet create/update/delete audit actor username lookups now use the current
+user repository boundary; the remaining snippet `users` usage is the shared
+snippet owner join.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

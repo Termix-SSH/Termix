@@ -493,6 +493,8 @@ Started:
   fields moved behind the current user repository boundary
 - user deletion helper now removes sessions through the current session
   repository and the final user record through the current user repository
+- snippet create/update/delete audit actor username lookups moved behind the
+  current user repository boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device slice
 
