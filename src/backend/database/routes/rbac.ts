@@ -5,7 +5,6 @@ import {
   hostAccess,
   hosts,
   users,
-  roles,
   sharedCredentials,
   snippets,
   snippetAccess,
@@ -16,6 +15,7 @@ import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
@@ -425,40 +425,8 @@ router.get(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      const rawAccessList = await db
-        .select({
-          id: hostAccess.id,
-          userId: hostAccess.userId,
-          roleId: hostAccess.roleId,
-          username: users.username,
-          roleName: roles.name,
-          roleDisplayName: roles.displayName,
-          grantedBy: hostAccess.grantedBy,
-          grantedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${hostAccess.grantedBy})`,
-          permissionLevel: hostAccess.permissionLevel,
-          expiresAt: hostAccess.expiresAt,
-          createdAt: hostAccess.createdAt,
-        })
-        .from(hostAccess)
-        .leftJoin(users, eq(hostAccess.userId, users.id))
-        .leftJoin(roles, eq(hostAccess.roleId, roles.id))
-        .where(eq(hostAccess.hostId, hostId))
-        .orderBy(desc(hostAccess.createdAt));
-
-      const accessList = rawAccessList.map((access) => ({
-        id: access.id,
-        targetType: access.userId ? "user" : "role",
-        userId: access.userId,
-        roleId: access.roleId,
-        username: access.username,
-        roleName: access.roleName,
-        roleDisplayName: access.roleDisplayName,
-        grantedBy: access.grantedBy,
-        grantedByUsername: access.grantedByUsername,
-        permissionLevel: access.permissionLevel,
-        expiresAt: access.expiresAt,
-        createdAt: access.createdAt,
-      }));
+      const accessList =
+        await createCurrentRbacAccessRepository().listHostAccess(hostId);
 
       res.json({ accessList });
     } catch (error) {
@@ -1350,40 +1318,8 @@ router.get(
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
-      const rawAccessList = await db
-        .select({
-          id: snippetAccess.id,
-          userId: snippetAccess.userId,
-          roleId: snippetAccess.roleId,
-          username: users.username,
-          roleName: roles.name,
-          roleDisplayName: roles.displayName,
-          grantedBy: snippetAccess.grantedBy,
-          grantedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${snippetAccess.grantedBy})`,
-          permissionLevel: snippetAccess.permissionLevel,
-          expiresAt: snippetAccess.expiresAt,
-          createdAt: snippetAccess.createdAt,
-        })
-        .from(snippetAccess)
-        .leftJoin(users, eq(snippetAccess.userId, users.id))
-        .leftJoin(roles, eq(snippetAccess.roleId, roles.id))
-        .where(eq(snippetAccess.snippetId, snippetId))
-        .orderBy(desc(snippetAccess.createdAt));
-
-      const accessList = rawAccessList.map((access) => ({
-        id: access.id,
-        targetType: access.userId ? "user" : "role",
-        userId: access.userId,
-        roleId: access.roleId,
-        username: access.username,
-        roleName: access.roleName,
-        roleDisplayName: access.roleDisplayName,
-        grantedBy: access.grantedBy,
-        grantedByUsername: access.grantedByUsername,
-        permissionLevel: access.permissionLevel,
-        expiresAt: access.expiresAt,
-        createdAt: access.createdAt,
-      }));
+      const accessList =
+        await createCurrentRbacAccessRepository().listSnippetAccess(snippetId);
 
       res.json({ accessList });
     } catch (error) {

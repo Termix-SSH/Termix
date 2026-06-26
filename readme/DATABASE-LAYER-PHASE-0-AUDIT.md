@@ -509,8 +509,12 @@ Started:
 - permission manager role permission aggregation, role-id lookups for shared
   host access, and admin role checks moved behind the current role repository
   boundary
+- RBAC host/snippet access-list read models moved behind the current RBAC access
+  repository boundary, and snippet route shared-access role-id lookups moved
+  behind the current role repository boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
-  for the migrated settings/users/sessions/API-key/trusted-device/role slice
+  for the migrated settings/users/sessions/API-key/trusted-device/role/RBAC-access
+  slice
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

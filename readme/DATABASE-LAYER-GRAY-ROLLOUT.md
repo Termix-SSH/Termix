@@ -27,6 +27,8 @@ Allowed in gray rollout:
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated
   behind `RoleRepository`.
+- RBAC host/snippet access-list read models migrated behind
+  `RbacAccessRepository`.
 - Current field encryption behavior.
 
 Not included in gray rollout:
@@ -35,8 +37,8 @@ Not included in gray rollout:
 - New external database configuration UI.
 - New schema migration strategy.
 - Host and credential route migration beyond existing repository skeletons.
-- Full RBAC/sharing joins, audit, preferences, file manager, metrics, and
-  notification repository migration.
+- Full shared host/snippet list joins, audit, preferences, file manager,
+  metrics, and notification repository migration.
 - Multi-instance backend deployment.
 
 ## 2. Required Preflight
@@ -58,7 +60,7 @@ Repository rollout is controlled by `DATABASE_LAYER_REPOSITORY_ROLLOUT`.
 Recommended gray value:
 
 ```bash
-DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,roles
+DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,roles,rbac_access
 ```
 
 Accepted values:
@@ -79,6 +81,7 @@ Supported domains:
 - `api_keys`
 - `trusted_devices`
 - `roles`
+- `rbac_access`
 
 The backend logs the parsed rollout mode at startup with operation
 `repository_rollout_config`. Use an explicit value in any staging or production
@@ -103,8 +106,8 @@ Run before deployment:
 
 ```bash
 npm run type-check
-npx eslint src/backend/database/repositories/repository-rollout.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/current-settings-repository.ts src/backend/database/repositories/current-user-repository.ts src/backend/database/repositories/current-session-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/current-trusted-device-repository.ts src/backend/database/repositories/current-role-repository.ts src/backend/database/repositories/role-repository.ts src/backend/database/repositories/role-repository.test.ts src/backend/starter.ts
-npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/trusted-device-repository.test.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts
+npx eslint src/backend/database/repositories/repository-rollout.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/current-settings-repository.ts src/backend/database/repositories/current-user-repository.ts src/backend/database/repositories/current-session-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/current-trusted-device-repository.ts src/backend/database/repositories/current-role-repository.ts src/backend/database/repositories/role-repository.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/current-rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/starter.ts
+npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/trusted-device-repository.test.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts
 git diff --check
 ```
 
@@ -124,6 +127,7 @@ Run these against the gray target:
 | API keys     | Admin create/list/delete API key; API key authentication updates usage |
 | Settings     | Read/write user settings and global auth settings                      |
 | Roles        | Admin list/create/update/delete role and assign/remove a user role     |
+| RBAC access  | Host/snippet access-list endpoints show user and role entries          |
 | Security     | Non-admin user is rejected from admin-only endpoints                   |
 
 Do not continue gray rollout if any check fails.

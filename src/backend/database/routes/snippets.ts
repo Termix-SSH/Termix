@@ -6,7 +6,6 @@ import {
   snippetFolders,
   snippetAccess,
   users,
-  userRoles,
 } from "../db/schema.js";
 import { eq, and, desc, asc, sql, or, isNull, gte } from "drizzle-orm";
 import type { Request, Response } from "express";
@@ -15,6 +14,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
@@ -24,12 +24,7 @@ function isNonEmptyString(val: unknown): val is string {
 }
 
 async function getUserRoleIds(userId: string): Promise<number[]> {
-  const rows = await db
-    .select({ roleId: userRoles.roleId })
-    .from(userRoles)
-    .where(eq(userRoles.userId, userId));
-
-  return rows.map((row) => row.roleId);
+  return createCurrentRoleRepository().listUserRoleIds(userId);
 }
 
 async function getActorUsername(userId: string): Promise<string> {

@@ -20,6 +20,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "trusted_devices",
         "roles",
+        "rbac_access",
       ],
       explicit: false,
     });
@@ -89,6 +90,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "trusted_devices",
         "roles",
+        "rbac_access",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",
