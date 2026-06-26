@@ -399,6 +399,7 @@ Recommended first implementation PR on this branch:
 - `src/backend/database/repositories/session-repository.ts`
 - `src/backend/database/repositories/host-repository.ts`
 - `src/backend/database/repositories/credential-repository.ts`
+- `src/backend/database/repositories/field-encryption-boundary.ts`
 - tests for config parsing and SQLite adapter boot
 
 Started:
@@ -409,6 +410,7 @@ Started:
 - `SettingsRepository` skeleton and tests
 - `UserRepository` and `SessionRepository` skeletons and tests
 - `HostRepository` and `CredentialRepository` skeletons and tests
+- `FieldEncryptionBoundary` skeleton and tests
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.
@@ -428,4 +430,6 @@ the same first implementation commit.
 - PostgreSQL/MySQL migration should be explicit and initially manual/experimental.
 - Runtime SSH/WebSocket/tunnel state remains memory-only.
 - Field-level encryption is mandatory for every database backend.
+- Field-level encryption must use a stable record id; temporary encryption
+  contexts are forbidden for newly written repository data.
 - Repository migration should start with settings/users/sessions/hosts/credentials.

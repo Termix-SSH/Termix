@@ -15,6 +15,10 @@ Repository status: the first repository skeletons, `SettingsRepository`,
 `CredentialRepository`, have started under `src/backend/database/repositories/`
 and are covered by SQLite-backed tests.
 
+Field encryption status: repository-level field encryption boundary tests have
+started. New field encryption requires a stable record id and must not invent a
+temporary encryption context.
+
 ## 1. Background
 
 Termix currently uses an encrypted SQLite snapshot model:
@@ -165,6 +169,7 @@ Repositories should own:
 - Query construction
 - Data mapping
 - Field encryption/decryption
+- Stable record-id enforcement before encrypting field values
 - Permission-aware reads where appropriate
 - Transaction participation
 - Database-specific compatibility
@@ -814,7 +819,7 @@ Recommended first PRs:
 1. Add database access inventory and sensitive field map. (Started in `DATABASE-LAYER-PHASE-0-AUDIT.md`)
 2. Add adapter interfaces and SQLite persistent adapter skeleton.
 3. Add repository skeleton for settings/users/sessions/hosts/credentials.
-4. Add field encryption boundary tests.
+4. Add field encryption boundary tests. (Started)
 5. Migrate settings as the first low-risk vertical slice.
 6. Migrate users/sessions.
 7. Migrate hosts/credentials.
