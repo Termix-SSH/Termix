@@ -10,6 +10,7 @@ import {
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
 
 const { Client } = ssh2Pkg;
 
@@ -149,13 +150,17 @@ export async function createJumpHostChain(
       }
     }
 
+    const firstHopSocks5Config = getJumpHostSocks5Config(
+      jumpHostConfigs[0],
+      socks5Config,
+    );
     let proxySocket: import("net").Socket | null = null;
-    if (socks5Config?.useSocks5) {
+    if (firstHopSocks5Config?.useSocks5) {
       const firstHop = jumpHostConfigs[0];
       proxySocket = await createSocks5Connection(
         firstHop.ip,
         firstHop.port || 22,
-        socks5Config,
+        firstHopSocks5Config,
       );
     }
 
