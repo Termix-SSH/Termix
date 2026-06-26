@@ -29,6 +29,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "tmux_session_tags",
   "opkssh_tokens",
   "vault_tokens",
+  "vault_profiles",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -136,6 +137,10 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   vault_tokens: "vault_tokens",
   vaulttoken: "vault_tokens",
   vaulttokens: "vault_tokens",
+  vault_profile: "vault_profiles",
+  vault_profiles: "vault_profiles",
+  vaultprofile: "vault_profiles",
+  vaultprofiles: "vault_profiles",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",

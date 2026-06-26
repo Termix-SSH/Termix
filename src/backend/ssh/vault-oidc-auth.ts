@@ -13,7 +13,8 @@
 import { WebSocket } from "ws";
 import { eq } from "drizzle-orm";
 import { getDb } from "../database/db/index.js";
-import { hosts, vaultProfiles } from "../database/db/schema.js";
+import { hosts } from "../database/db/schema.js";
+import { createCurrentVaultProfileRepository } from "../database/repositories/current-vault-profile-repository.js";
 import { sshLogger } from "../utils/logger.js";
 import {
   type VaultProfileConfig,
@@ -70,14 +71,12 @@ export async function loadVaultProfileForHost(
     .limit(1);
   if (!hostRows.length || hostRows[0].vaultProfileId == null) return null;
 
-  const profileRows = await db
-    .select()
-    .from(vaultProfiles)
-    .where(eq(vaultProfiles.id, hostRows[0].vaultProfileId as number))
-    .limit(1);
-  if (!profileRows.length) return null;
+  const profile = await createCurrentVaultProfileRepository().findById(
+    hostRows[0].vaultProfileId as number,
+  );
+  if (!profile) return null;
 
-  return rowToProfileConfig(profileRows[0] as Record<string, unknown>);
+  return rowToProfileConfig(profile as Record<string, unknown>);
 }
 
 /**

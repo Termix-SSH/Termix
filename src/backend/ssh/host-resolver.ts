@@ -1,6 +1,7 @@
 import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials, vaultProfiles } from "../database/db/schema.js";
+import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
+import { createCurrentVaultProfileRepository } from "../database/repositories/current-vault-profile-repository.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { logger } from "../utils/logger.js";
 import {
@@ -223,13 +224,11 @@ export async function resolveHostById(
   // certificate itself is obtained per-user at connect time via Vault OIDC.
   if (host.vaultProfileId) {
     try {
-      const profiles = await db
-        .select()
-        .from(vaultProfiles)
-        .where(eq(vaultProfiles.id, host.vaultProfileId as number))
-        .limit(1);
-      if (profiles.length > 0) {
-        (host as Record<string, unknown>).vaultProfile = profiles[0];
+      const profile = await createCurrentVaultProfileRepository().findById(
+        host.vaultProfileId as number,
+      );
+      if (profile) {
+        (host as Record<string, unknown>).vaultProfile = profile;
         host.authType = "vault";
       }
     } catch (e) {

@@ -202,6 +202,8 @@ OPKSSH token upsert/read/touch/delete and user cleanup now use the current
 OPKSSH token repository boundary.
 Vault token upsert/read/touch/delete now uses the current Vault token repository
 boundary.
+Vault profile list/create/update/delete and profile lookup now use the current
+Vault profile repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

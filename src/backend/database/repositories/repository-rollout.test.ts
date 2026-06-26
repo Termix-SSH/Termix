@@ -40,6 +40,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "tmux_session_tags",
         "opkssh_tokens",
         "vault_tokens",
+        "vault_profiles",
       ],
       explicit: false,
     });
@@ -60,7 +61,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,bookmarks,c2s,tmux,opkssh,vault-token",
+        "settings,user,api-key,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile",
     });
 
     expect(config).toEqual({
@@ -84,6 +85,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "tmux_session_tags",
         "opkssh_tokens",
         "vault_tokens",
+        "vault_profiles",
       ],
       explicit: true,
     });
@@ -149,6 +151,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "tmux_session_tags",
         "opkssh_tokens",
         "vault_tokens",
+        "vault_profiles",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",
