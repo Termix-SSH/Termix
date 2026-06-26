@@ -445,6 +445,8 @@ Started:
   the current settings repository boundary
 - user login settings reads moved behind the current settings repository
   boundary, completing direct `settings` access cleanup in `routes/users.ts`
+- user encryption metadata in `utils/user-crypto.ts` moved behind the current
+  settings repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

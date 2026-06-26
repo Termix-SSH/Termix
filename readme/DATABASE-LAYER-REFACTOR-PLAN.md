@@ -53,6 +53,8 @@ OIDC authorize/callback temporary state and auto-provision reads now use the
 current settings repository boundary.
 User login settings reads now use the current settings repository boundary, so
 `routes/users.ts` no longer reads or writes `settings` directly.
+User encryption metadata in `utils/user-crypto.ts` now reads and writes KEK/DEK
+settings through the current settings repository boundary.
 
 ## 1. Background
 
