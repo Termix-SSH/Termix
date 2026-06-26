@@ -14,8 +14,9 @@ import {
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
 import { db } from "../db/index.js";
-import { sessions, trustedDevices, users } from "../db/schema.js";
+import { sessions, users } from "../db/schema.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentTrustedDeviceRepository } from "../repositories/current-trusted-device-repository.js";
 
 type NativeAppRequestChecker = (req: Request) => boolean;
 
@@ -280,7 +281,7 @@ export function registerUserTotpRoutes(
             ? and(eq(sessions.userId, userId), ne(sessions.id, sessionId))
             : eq(sessions.userId, userId),
         );
-      await db.delete(trustedDevices).where(eq(trustedDevices.userId, userId));
+      await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
       try {
         const { saveMemoryDatabaseToFile } = await import("../db/index.js");

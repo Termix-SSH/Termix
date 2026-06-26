@@ -21,6 +21,8 @@ Allowed in gray rollout:
 - User create/read/update/delete/auth paths migrated behind `UserRepository`.
 - API key create/list/delete and authentication last-used updates migrated behind
   `ApiKeyRepository`.
+- Trusted device check/add/remove and TOTP trusted-device cleanup migrated
+  behind `TrustedDeviceRepository`.
 - Current field encryption behavior.
 
 Not included in gray rollout:

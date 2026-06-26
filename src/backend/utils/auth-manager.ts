@@ -6,15 +6,13 @@ import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
-import { db } from "../database/db/index.js";
-import { trustedDevices } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
 import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 import { createCurrentSessionRepository } from "../database/repositories/current-session-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { createCurrentApiKeyRepository } from "../database/repositories/current-api-key-repository.js";
+import { createCurrentTrustedDeviceRepository } from "../database/repositories/current-trusted-device-repository.js";
 
 interface AuthenticationResult {
   success: boolean;
@@ -986,38 +984,29 @@ class AuthManager {
     deviceFingerprint: string,
   ): Promise<boolean> {
     try {
-      const device = await db
-        .select()
-        .from(trustedDevices)
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        )
-        .limit(1);
+      const trustedDeviceRepository = createCurrentTrustedDeviceRepository();
+      const device = await trustedDeviceRepository.findByUserAndFingerprint(
+        userId,
+        deviceFingerprint,
+      );
 
-      if (!device || device.length === 0) {
+      if (!device) {
         return false;
       }
 
       const now = new Date();
-      const expiresAt = new Date(device[0].expiresAt);
+      const expiresAt = new Date(device.expiresAt);
 
       if (now > expiresAt) {
         await this.removeTrustedDevice(userId, deviceFingerprint);
         return false;
       }
 
-      await db
-        .update(trustedDevices)
-        .set({ lastUsedAt: now.toISOString() })
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        );
+      await trustedDeviceRepository.touch(
+        userId,
+        deviceFingerprint,
+        now.toISOString(),
+      );
 
       return true;
     } catch (error) {
@@ -1035,56 +1024,26 @@ class AuthManager {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const existingDevice = await db
-      .select()
-      .from(trustedDevices)
-      .where(
-        and(
-          eq(trustedDevices.userId, userId),
-          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-        ),
-      )
-      .limit(1);
-
-    if (existingDevice && existingDevice.length > 0) {
-      await db
-        .update(trustedDevices)
-        .set({
-          expiresAt: expiresAt.toISOString(),
-          lastUsedAt: now.toISOString(),
-        })
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        );
-    } else {
-      await db.insert(trustedDevices).values({
-        id: nanoid(),
-        userId,
-        deviceFingerprint,
-        deviceType,
-        deviceInfo,
-        createdAt: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        lastUsedAt: now.toISOString(),
-      });
-    }
+    await createCurrentTrustedDeviceRepository().upsert({
+      id: nanoid(),
+      userId,
+      deviceFingerprint,
+      deviceType,
+      deviceInfo,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      lastUsedAt: now.toISOString(),
+    });
   }
 
   async removeTrustedDevice(
     userId: string,
     deviceFingerprint: string,
   ): Promise<void> {
-    await db
-      .delete(trustedDevices)
-      .where(
-        and(
-          eq(trustedDevices.userId, userId),
-          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-        ),
-      );
+    await createCurrentTrustedDeviceRepository().deleteByUserAndFingerprint(
+      userId,
+      deviceFingerprint,
+    );
   }
 }
 

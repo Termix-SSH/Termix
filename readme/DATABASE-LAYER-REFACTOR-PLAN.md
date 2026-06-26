@@ -83,10 +83,13 @@ Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,
 and `auth-manager.ts`.
 API key create/list/delete and API key authentication last-used updates now use
 the current API key repository boundary.
+Trusted device check/add/remove and TOTP trusted-device cleanup now use the
+current trusted device repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
-current auth/settings/session/user/API-key slice has staging evidence.
+current auth/settings/session/user/API-key/trusted-device slice has staging
+evidence.
 
 ## 1. Background
 
