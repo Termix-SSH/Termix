@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { hosts, sshCredentials, sessionRecordings } from "../db/schema.js";
+import { hosts, sshCredentials } from "../db/schema.js";
 import { eq, and, inArray } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
@@ -17,6 +17,7 @@ import { createCurrentCommandHistoryRepository } from "../repositories/current-c
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
 import {
   isNonEmptyString,
@@ -1846,9 +1847,9 @@ router.delete(
         numericHostId,
       );
 
-      await db
-        .delete(sessionRecordings)
-        .where(eq(sessionRecordings.hostId, numericHostId));
+      await createCurrentSessionRecordingRepository().deleteByHostId(
+        numericHostId,
+      );
 
       await db
         .delete(hosts)

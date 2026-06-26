@@ -11,6 +11,7 @@ import { createCurrentRecentActivityRepository } from "../repositories/current-r
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
+import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
@@ -18,7 +19,6 @@ import { createCurrentUserRepository } from "../repositories/current-user-reposi
 import {
   hosts,
   opksshTokens,
-  sessionRecordings,
   sharedCredentials,
   snippetFolders,
   snippets,
@@ -33,9 +33,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
       .delete(sharedCredentials)
       .where(eq(sharedCredentials.targetUserId, userId));
 
-    await db
-      .delete(sessionRecordings)
-      .where(eq(sessionRecordings.userId, userId));
+    await createCurrentSessionRecordingRepository().deleteByUserId(userId);
 
     await createCurrentRbacAccessRepository().deleteHostAccessForUserReferences(
       userId,

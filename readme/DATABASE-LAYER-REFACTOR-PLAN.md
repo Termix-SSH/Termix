@@ -181,6 +181,8 @@ Network topology read/write and user cleanup now use the current network
 topology repository boundary.
 Dashboard service link list/create/update/delete now uses the current dashboard
 service link repository boundary.
+Session recording create/list/read/content/delete/prune and host/folder/user
+cleanup now uses the current session recording repository boundary.
 Command history save/list/delete and host/user cleanup now use the current
 command history repository boundary.
 Recent activity host/user cleanup now uses the current recent activity

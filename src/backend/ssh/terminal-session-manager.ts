@@ -3,9 +3,8 @@ import { WebSocket } from "ws";
 import fs from "fs";
 import path from "path";
 import { sshLogger } from "../utils/logger.js";
-import { getDb } from "../database/db/index.js";
-import { sessionRecordings } from "../database/db/schema.js";
 import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
+import { createCurrentSessionRecordingRepository } from "../database/repositories/current-session-recording-repository.js";
 
 const MAX_BUFFER_BYTES = 512 * 1024;
 const DATA_DIR = process.env.DATA_DIR ?? "./db/data";
@@ -427,8 +426,7 @@ class TerminalSessionManager {
     const duration = Math.floor((endedAt - session.sessionStartedAt) / 1000);
 
     try {
-      const db = getDb();
-      await db.insert(sessionRecordings).values({
+      await createCurrentSessionRecordingRepository().create({
         hostId: session.hostId,
         userId: session.userId,
         startedAt: new Date(session.sessionStartedAt).toISOString(),

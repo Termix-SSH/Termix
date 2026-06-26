@@ -30,6 +30,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "homepage_items",
         "network_topology",
         "dashboard_service_links",
+        "session_recordings",
         "command_history",
         "recent_activity",
         "ssh_credential_usage",
@@ -56,7 +57,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,alerts,layout,items,topology,dashboard-link,history,activity,usage,transfer,bookmarks,c2s",
+        "settings,user,api-key,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,bookmarks,c2s",
     });
 
     expect(config).toEqual({
@@ -70,6 +71,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "homepage_items",
         "network_topology",
         "dashboard_service_links",
+        "session_recordings",
         "command_history",
         "recent_activity",
         "ssh_credential_usage",
@@ -131,6 +133,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "homepage_items",
         "network_topology",
         "dashboard_service_links",
+        "session_recordings",
         "command_history",
         "recent_activity",
         "ssh_credential_usage",

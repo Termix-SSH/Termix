@@ -2,12 +2,10 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { eq, and, desc, lt } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { sessionRecordings, hosts } from "../db/schema.js";
 import { apiLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { Request, Response } from "express";
+import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
 
 const router = express.Router();
 
@@ -22,13 +20,9 @@ async function pruneOldLogs(): Promise<void> {
       Date.now() - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
 
-    const old = await db
-      .select({
-        id: sessionRecordings.id,
-        recordingPath: sessionRecordings.recordingPath,
-      })
-      .from(sessionRecordings)
-      .where(lt(sessionRecordings.startedAt, cutoff));
+    const sessionRecordingRepository =
+      createCurrentSessionRecordingRepository();
+    const old = await sessionRecordingRepository.listPathsOlderThan(cutoff);
 
     for (const row of old) {
       if (row.recordingPath) {
@@ -38,9 +32,7 @@ async function pruneOldLogs(): Promise<void> {
           await fs.promises.unlink(resolved).catch(() => {});
         }
       }
-      await db
-        .delete(sessionRecordings)
-        .where(eq(sessionRecordings.id, row.id));
+      await sessionRecordingRepository.deleteById(row.id);
     }
 
     if (old.length > 0) {
@@ -81,22 +73,10 @@ const authenticateJWT = authManager.createAuthMiddleware();
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const rows = await db
-      .select({
-        id: sessionRecordings.id,
-        hostId: sessionRecordings.hostId,
-        userId: sessionRecordings.userId,
-        startedAt: sessionRecordings.startedAt,
-        endedAt: sessionRecordings.endedAt,
-        duration: sessionRecordings.duration,
-        recordingPath: sessionRecordings.recordingPath,
-        hostName: hosts.name,
-        hostIp: hosts.ip,
-      })
-      .from(sessionRecordings)
-      .leftJoin(hosts, eq(sessionRecordings.hostId, hosts.id))
-      .where(eq(sessionRecordings.userId, userId))
-      .orderBy(desc(sessionRecordings.startedAt));
+    const rows =
+      await createCurrentSessionRecordingRepository().listByUserIdWithHost(
+        userId,
+      );
 
     const records = rows.map((row) => {
       let sizeBytes: number | null = null;
@@ -150,16 +130,13 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
   try {
-    const rows = await db
-      .select()
-      .from(sessionRecordings)
-      .where(
-        and(eq(sessionRecordings.id, id), eq(sessionRecordings.userId, userId)),
-      )
-      .limit(1);
+    const row = await createCurrentSessionRecordingRepository().findByIdForUser(
+      userId,
+      id,
+    );
 
-    if (rows.length === 0) return res.status(404).json({ error: "Not found" });
-    res.json({ log: rows[0] });
+    if (!row) return res.status(404).json({ error: "Not found" });
+    res.json({ log: row });
   } catch (error) {
     apiLogger.error("Failed to fetch session log", error, {
       operation: "session_log_get",
@@ -205,21 +182,15 @@ router.get(
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
     try {
-      const rows = await db
-        .select({ recordingPath: sessionRecordings.recordingPath })
-        .from(sessionRecordings)
-        .where(
-          and(
-            eq(sessionRecordings.id, id),
-            eq(sessionRecordings.userId, userId),
-          ),
-        )
-        .limit(1);
+      const row =
+        await createCurrentSessionRecordingRepository().findPathByIdForUser(
+          userId,
+          id,
+        );
 
-      if (rows.length === 0)
-        return res.status(404).json({ error: "Not found" });
+      if (!row) return res.status(404).json({ error: "Not found" });
 
-      const filePath = rows[0].recordingPath;
+      const filePath = row.recordingPath;
       if (!filePath)
         return res.status(404).json({ error: "No recording file" });
 
@@ -276,23 +247,18 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
   try {
-    const rows = await db
-      .select({ recordingPath: sessionRecordings.recordingPath })
-      .from(sessionRecordings)
-      .where(
-        and(eq(sessionRecordings.id, id), eq(sessionRecordings.userId, userId)),
-      )
-      .limit(1);
+    const sessionRecordingRepository =
+      createCurrentSessionRecordingRepository();
+    const row = await sessionRecordingRepository.findPathByIdForUser(
+      userId,
+      id,
+    );
 
-    if (rows.length === 0) return res.status(404).json({ error: "Not found" });
+    if (!row) return res.status(404).json({ error: "Not found" });
 
-    const filePath = rows[0].recordingPath;
+    const filePath = row.recordingPath;
 
-    await db
-      .delete(sessionRecordings)
-      .where(
-        and(eq(sessionRecordings.id, id), eq(sessionRecordings.userId, userId)),
-      );
+    await sessionRecordingRepository.deleteForUser(userId, id);
 
     if (filePath) {
       const resolvedPath = path.resolve(filePath);

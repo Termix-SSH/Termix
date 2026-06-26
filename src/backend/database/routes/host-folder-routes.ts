@@ -1,20 +1,16 @@
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { and, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, eq, like, or, sql } from "drizzle-orm";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
 import { db, DatabaseSaveTrigger } from "../db/index.js";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
-import {
-  hosts,
-  sessionRecordings,
-  sshCredentials,
-  sshFolders,
-} from "../db/schema.js";
+import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
@@ -343,9 +339,9 @@ export function registerHostFolderRoutes(
             hostIds,
           );
 
-          await db
-            .delete(sessionRecordings)
-            .where(inArray(sessionRecordings.hostId, hostIds));
+          await createCurrentSessionRecordingRepository().deleteByHostIds(
+            hostIds,
+          );
         }
 
         if (hostIds.length > 0) {
