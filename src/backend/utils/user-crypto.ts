@@ -245,6 +245,62 @@ class UserCrypto {
     }
   }
 
+  async setupWebAuthnUserEncryption(userId: string): Promise<void> {
+    const existingDEK = this.getUserDataKey(userId);
+
+    if (!existingDEK) {
+      throw new Error(
+        "Cannot enable WebAuthn encryption - user session not active. Please log in first.",
+      );
+    }
+
+    const systemKey = this.deriveWebAuthnSystemKey(userId);
+    const encryptedDEK = this.encryptDEK(existingDEK, systemKey);
+    systemKey.fill(0);
+
+    await this.storeWebAuthnEncryptedDEK(userId, encryptedDEK);
+  }
+
+  async authenticateWebAuthnUser(
+    userId: string,
+    sessionDurationMs: number,
+  ): Promise<boolean> {
+    try {
+      const encryptedDEK = await this.getWebAuthnEncryptedDEK(userId);
+      if (!encryptedDEK) {
+        return false;
+      }
+
+      const systemKey = this.deriveWebAuthnSystemKey(userId);
+      const DEK = this.decryptDEK(encryptedDEK, systemKey);
+      systemKey.fill(0);
+
+      if (!DEK || DEK.length === 0) {
+        return false;
+      }
+
+      const oldSession = this.userSessions.get(userId);
+      if (oldSession) {
+        oldSession.dataKey.fill(0);
+      }
+
+      this.userSessions.set(userId, {
+        dataKey: Buffer.from(DEK),
+        expiresAt: Date.now() + sessionDurationMs,
+      });
+
+      DEK.fill(0);
+      return true;
+    } catch (error) {
+      databaseLogger.warn("WebAuthn authentication failed", {
+        operation: "webauthn_auth_failed",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown",
+      });
+      return false;
+    }
+  }
+
   getUserDataKey(userId: string): Buffer | null {
     const session = this.userSessions.get(userId);
     if (!session) {
@@ -513,6 +569,21 @@ class UserCrypto {
     );
   }
 
+  private deriveWebAuthnSystemKey(userId: string): Buffer {
+    const systemSecret =
+      process.env.WEBAUTHN_SYSTEM_SECRET ||
+      process.env.OIDC_SYSTEM_SECRET ||
+      "termix-webauthn-system-secret-default";
+    const salt = Buffer.from(`webauthn:${userId}`, "utf8");
+    return crypto.pbkdf2Sync(
+      systemSecret,
+      salt,
+      100000,
+      UserCrypto.KEK_LENGTH,
+      "sha256",
+    );
+  }
+
   private encryptDEK(dek: Buffer, kek: Buffer): EncryptedDEK {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv("aes-256-gcm", kek, iv);
@@ -626,6 +697,48 @@ class UserCrypto {
   ): Promise<EncryptedDEK | null> {
     try {
       const key = `user_encrypted_dek_oidc_${userId}`;
+      const result = await getDb()
+        .select()
+        .from(settings)
+        .where(eq(settings.key, key));
+
+      if (result.length === 0) {
+        return null;
+      }
+
+      return JSON.parse(result[0].value);
+    } catch {
+      return null;
+    }
+  }
+
+  private async storeWebAuthnEncryptedDEK(
+    userId: string,
+    encryptedDEK: EncryptedDEK,
+  ): Promise<void> {
+    const key = `user_encrypted_dek_webauthn_${userId}`;
+    const value = JSON.stringify(encryptedDEK);
+
+    const existing = await getDb()
+      .select()
+      .from(settings)
+      .where(eq(settings.key, key));
+
+    if (existing.length > 0) {
+      await getDb()
+        .update(settings)
+        .set({ value })
+        .where(eq(settings.key, key));
+    } else {
+      await getDb().insert(settings).values({ key, value });
+    }
+  }
+
+  private async getWebAuthnEncryptedDEK(
+    userId: string,
+  ): Promise<EncryptedDEK | null> {
+    try {
+      const key = `user_encrypted_dek_webauthn_${userId}`;
       const result = await getDb()
         .select()
         .from(settings)
