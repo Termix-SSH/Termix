@@ -204,6 +204,8 @@ Vault token upsert/read/touch/delete now uses the current Vault token repository
 boundary.
 Vault profile list/create/update/delete and profile lookup now use the current
 Vault profile repository boundary.
+Host metrics layout preference read/upsert now uses the current host metrics
+preference repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

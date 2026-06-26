@@ -30,6 +30,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "opkssh_tokens",
   "vault_tokens",
   "vault_profiles",
+  "host_metrics_preferences",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -141,6 +142,11 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   vault_profiles: "vault_profiles",
   vaultprofile: "vault_profiles",
   vaultprofiles: "vault_profiles",
+  host_metrics_preference: "host_metrics_preferences",
+  host_metrics_preferences: "host_metrics_preferences",
+  hostmetricspreference: "host_metrics_preferences",
+  hostmetricspreferences: "host_metrics_preferences",
+  metrics_preferences: "host_metrics_preferences",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",

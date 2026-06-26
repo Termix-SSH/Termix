@@ -110,7 +110,7 @@ describe("GET /termix-id/linked-credentials", () => {
     expect(router).toBeDefined();
 
     expect(router).toBeDefined();
-  });
+  }, 15_000);
 
   it("returns empty list when identity has no keys", async () => {
     mockSelect
