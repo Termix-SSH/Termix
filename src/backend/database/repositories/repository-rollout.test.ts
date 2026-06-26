@@ -22,6 +22,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "roles",
         "rbac_access",
         "sso_providers",
+        "audit_logs",
       ],
       explicit: false,
     });
@@ -93,6 +94,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "roles",
         "rbac_access",
         "sso_providers",
+        "audit_logs",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

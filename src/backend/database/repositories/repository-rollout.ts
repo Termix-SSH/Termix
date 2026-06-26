@@ -11,6 +11,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "roles",
   "rbac_access",
   "sso_providers",
+  "audit_logs",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -36,6 +37,11 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   api_keys: "api_keys",
   apikey: "api_keys",
   apikeys: "api_keys",
+  audit: "audit_logs",
+  audit_log: "audit_logs",
+  audit_logs: "audit_logs",
+  auditlog: "audit_logs",
+  auditlogs: "audit_logs",
   setting: "settings",
   settings: "settings",
   session: "sessions",

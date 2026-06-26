@@ -1,37 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../database/db/index.js", () => ({
-  db: {
-    insert: vi.fn().mockReturnValue({
-      values: vi.fn().mockResolvedValue(undefined),
-    }),
-    $client: {
-      prepare: vi.fn().mockReturnValue({
-        get: vi.fn().mockReturnValue({ count: 0 }),
-        run: vi.fn(),
-      }),
-    },
-  },
+const createMock = vi.fn().mockResolvedValue(undefined);
+
+vi.mock("../database/repositories/current-audit-log-repository.js", () => ({
+  createCurrentAuditLogRepository: vi.fn(() => ({
+    create: createMock,
+  })),
 }));
 
 import { logAudit, getRequestMeta } from "./audit-logger.js";
-import { db } from "../database/db/index.js";
-
-const mockDb = db as {
-  insert: ReturnType<typeof vi.fn>;
-  $client: { prepare: ReturnType<typeof vi.fn> };
-};
 
 describe("logAudit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDb.insert.mockReturnValue({
-      values: vi.fn().mockResolvedValue(undefined),
-    });
-    mockDb.$client.prepare.mockReturnValue({
-      get: vi.fn().mockReturnValue({ count: 0 }),
-      run: vi.fn(),
-    });
+    createMock.mockResolvedValue(undefined);
   });
 
   it("inserts an audit log entry with all required fields", async () => {
@@ -49,9 +31,8 @@ describe("logAudit", () => {
 
     await logAudit(params);
 
-    expect(mockDb.insert).toHaveBeenCalledOnce();
-    const valuesFn = mockDb.insert.mock.results[0].value.values;
-    expect(valuesFn).toHaveBeenCalledWith(
+    expect(createMock).toHaveBeenCalledOnce();
+    expect(createMock).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "user-1",
         username: "alice",
@@ -65,9 +46,7 @@ describe("logAudit", () => {
   });
 
   it("does not throw when insert fails", async () => {
-    mockDb.insert.mockReturnValue({
-      values: vi.fn().mockRejectedValue(new Error("db error")),
-    });
+    createMock.mockRejectedValue(new Error("db error"));
 
     await expect(
       logAudit({
@@ -78,32 +57,6 @@ describe("logAudit", () => {
         success: false,
       }),
     ).resolves.toBeUndefined();
-  });
-
-  it("triggers pruning when row count exceeds threshold", async () => {
-    const prepareMock = vi.fn();
-    const runMock = vi.fn();
-    prepareMock.mockImplementation((sql: string) => {
-      if (sql.includes("COUNT(*)")) {
-        return { get: () => ({ count: 10001 }) };
-      }
-      return { run: runMock };
-    });
-    mockDb.$client.prepare = prepareMock;
-
-    await logAudit({
-      userId: "u",
-      username: "u",
-      action: "x",
-      resourceType: "y",
-      success: true,
-    });
-
-    const deleteCalled = prepareMock.mock.calls.some((args: unknown[]) =>
-      String(args[0]).includes("DELETE"),
-    );
-    expect(deleteCalled).toBe(true);
-    expect(runMock).toHaveBeenCalledWith(1001);
   });
 });
 
