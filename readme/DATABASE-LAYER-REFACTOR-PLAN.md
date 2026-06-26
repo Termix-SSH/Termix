@@ -76,6 +76,10 @@ repository boundary while preserving the first-user admin transaction inside
 `UserRepository`.
 Traditional login username lookup and `auth-manager.ts` admin user checks now
 use the current user repository boundary.
+GitHub and standard OIDC callback user lookup/create/rollback/profile/admin
+sync writes now use the current user repository boundary, removing direct
+Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,
+and `auth-manager.ts`.
 
 ## 1. Background
 

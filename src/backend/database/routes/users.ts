@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { users, roles, userRoles } from "../db/schema.js";
+import { roles, userRoles } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -854,16 +854,12 @@ router.get("/oidc/callback", async (req, res) => {
         ghUserInfo.login ||
         ghIdentifier) as string;
       const deviceInfo = parseUserAgent(req);
+      const userRepository = createCurrentUserRepository();
 
-      let ghUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.oidcIdentifier, ghIdentifier));
-      if (!ghUser || ghUser.length === 0) {
-        const preCheckCount = db.$client
-          .prepare("SELECT COUNT(*) as count FROM users")
-          .get() as { count?: number };
-        const isFirstUser = (preCheckCount?.count || 0) === 0;
+      let ghUserRecord =
+        await userRepository.findByOidcIdentifier(ghIdentifier);
+      if (!ghUserRecord) {
+        const isFirstUser = (await userRepository.countAll()) === 0;
 
         if (!isFirstUser && config.allowed_users) {
           const email = ghUserInfo.email as string | undefined;
@@ -895,31 +891,18 @@ router.get("/oidc/callback", async (req, res) => {
         }
 
         const ghId = nanoid();
-        const ghIsFirst = db.$client.transaction(() => {
-          const c =
-            (
-              db.$client
-                .prepare("SELECT COUNT(*) as count FROM users")
-                .get() as { count?: number }
-            )?.count || 0;
-          const first = c === 0;
-          db.$client
-            .prepare(
-              "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, 1, ?, ?)",
-            )
-            .run(
-              ghId,
-              ghName,
-              "",
-              first ? 1 : 0,
-              ghIdentifier,
-              callbackProviderDbId,
-            );
-          return first;
-        })();
+        const createdUser = await userRepository.createFirstLocalUser({
+          id: ghId,
+          username: ghName,
+          passwordHash: "",
+          isOidc: true,
+          oidcIdentifier: ghIdentifier,
+          ssoProviderId: callbackProviderDbId,
+        });
+        ghUserRecord = createdUser.user;
 
         try {
-          const defaultRoleName = ghIsFirst ? "admin" : "user";
+          const defaultRoleName = createdUser.isFirstUser ? "admin" : "user";
           const defaultRole = await db
             .select({ id: roles.id })
             .from(roles)
@@ -942,16 +925,13 @@ router.get("/oidc/callback", async (req, res) => {
               : 24 * 60 * 60 * 1000;
           await authManager.registerOIDCUser(ghId, sessionDurationMs);
         } catch {
-          await db.delete(users).where(eq(users.id, ghId));
+          await userRepository.delete(ghId);
           return res.status(500).json({
             error: "Failed to setup user security - user creation cancelled",
           });
         }
-
-        ghUser = await db.select().from(users).where(eq(users.id, ghId));
       }
 
-      const ghUserRecord = ghUser[0];
       try {
         await authManager.authenticateOIDCUser(
           ghUserRecord.id,
@@ -1160,17 +1140,12 @@ router.get("/oidc/callback", async (req, res) => {
     }
 
     const deviceInfo = parseUserAgent(req);
-    let user = await db
-      .select()
-      .from(users)
-      .where(eq(users.oidcIdentifier, identifier));
+    const userRepository = createCurrentUserRepository();
+    let userRecord = await userRepository.findByOidcIdentifier(identifier);
 
     let isFirstUser = false;
-    if (!user || user.length === 0) {
-      const preCheckCount = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users")
-        .get();
-      isFirstUser = ((preCheckCount as { count?: number })?.count || 0) === 0;
+    if (!userRecord) {
+      isFirstUser = (await userRepository.countAll()) === 0;
 
       if (!isFirstUser && config.allowed_users) {
         const email = userInfo.email as string | undefined;
@@ -1217,26 +1192,16 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       const id = nanoid();
-      isFirstUser = db.$client.transaction(() => {
-        const countResult = db.$client
-          .prepare("SELECT COUNT(*) as count FROM users")
-          .get() as { count?: number };
-        const first = (countResult?.count || 0) === 0;
-        db.$client
-          .prepare(
-            "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          )
-          .run(
-            id,
-            name,
-            "",
-            first ? 1 : 0,
-            1,
-            identifier,
-            callbackProviderDbId,
-          );
-        return first;
-      })();
+      const createdUser = await userRepository.createFirstLocalUser({
+        id,
+        username: name,
+        passwordHash: "",
+        isOidc: true,
+        oidcIdentifier: identifier,
+        ssoProviderId: callbackProviderDbId,
+      });
+      isFirstUser = createdUser.isFirstUser;
+      userRecord = createdUser.user;
 
       try {
         const defaultRoleName = isFirstUser ? "admin" : "user";
@@ -1280,7 +1245,7 @@ router.get("/oidc/callback", async (req, res) => {
             : 24 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
-        await db.delete(users).where(eq(users.id, id));
+        await userRepository.delete(id);
         authLogger.error(
           "Failed to setup OIDC user encryption, user creation rolled back",
           encryptionError,
@@ -1303,8 +1268,6 @@ router.get("/oidc/callback", async (req, res) => {
           userId: id,
         });
       }
-
-      user = await db.select().from(users).where(eq(users.id, id));
     } else {
       if (config.allowed_users) {
         const email = userInfo.email as string | undefined;
@@ -1313,7 +1276,7 @@ router.get("/oidc/callback", async (req, res) => {
             operation: "oidc_user_not_allowed_existing",
             identifier,
             email,
-            userId: user[0].id,
+            userId: userRecord.id,
           });
           const redirectUrl = new URL(frontendOrigin);
           redirectUrl.searchParams.set("error", "user_not_allowed");
@@ -1322,19 +1285,14 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       const isDualAuth =
-        user[0].passwordHash && user[0].passwordHash.trim() !== "";
+        userRecord.passwordHash && userRecord.passwordHash.trim() !== "";
 
       if (!isDualAuth) {
-        await db
-          .update(users)
-          .set({ username: name })
-          .where(eq(users.id, user[0].id));
+        userRecord =
+          (await userRepository.update(userRecord.id, { username: name })) ??
+          userRecord;
       }
-
-      user = await db.select().from(users).where(eq(users.id, user[0].id));
     }
-
-    const userRecord = user[0];
 
     // Sync admin status based on OIDC group membership
     if (config.admin_group) {
@@ -1359,11 +1317,10 @@ router.get("/oidc/callback", async (req, res) => {
           group: config.admin_group,
           isAdmin: shouldBeAdmin,
         });
-        await db
-          .update(users)
-          .set({ isAdmin: shouldBeAdmin })
-          .where(eq(users.id, userRecord.id));
-        userRecord.isAdmin = shouldBeAdmin;
+        userRecord =
+          (await userRepository.update(userRecord.id, {
+            isAdmin: shouldBeAdmin,
+          })) ?? userRecord;
         try {
           const newRoleName = shouldBeAdmin ? "admin" : "user";
           const oldRoleName = shouldBeAdmin ? "user" : "admin";

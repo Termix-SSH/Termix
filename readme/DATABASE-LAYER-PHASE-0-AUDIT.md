@@ -467,6 +467,10 @@ Started:
   `UserRepository`
 - traditional login username lookup and `auth-manager.ts` admin user checks
   moved behind the current user repository boundary
+- GitHub and standard OIDC callback user lookup/create/rollback/profile/admin
+  sync writes moved behind the current user repository boundary, removing direct
+  Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,
+  and `auth-manager.ts`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.
