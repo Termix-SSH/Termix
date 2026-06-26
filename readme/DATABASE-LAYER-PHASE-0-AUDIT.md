@@ -413,6 +413,8 @@ Started:
 - `HostRepository` and `CredentialRepository` skeletons and tests
 - `FieldEncryptionBoundary` skeleton and tests
 - first settings route slice wired through `SettingsRepository`
+- user settings route direct `settings` table access moved behind
+  `SettingsRepository`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

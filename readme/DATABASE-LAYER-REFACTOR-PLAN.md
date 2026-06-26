@@ -22,6 +22,8 @@ temporary encryption context.
 Settings migration status: a first low-risk production route slice now uses
 `SettingsRepository` through the current SQLite runtime context. Legacy in-memory
 runtime writes still force a snapshot save through `DatabaseSaveTrigger`.
+The user settings route has also moved its direct `settings` table reads and
+writes behind `SettingsRepository`.
 
 ## 1. Background
 
