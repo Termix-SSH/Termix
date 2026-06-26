@@ -38,6 +38,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "file_manager_bookmarks",
         "c2s_tunnel_presets",
         "tmux_session_tags",
+        "opkssh_tokens",
       ],
       explicit: false,
     });
@@ -58,7 +59,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,bookmarks,c2s,tmux",
+        "settings,user,api-key,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,bookmarks,c2s,tmux,opkssh",
     });
 
     expect(config).toEqual({
@@ -80,6 +81,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "file_manager_bookmarks",
         "c2s_tunnel_presets",
         "tmux_session_tags",
+        "opkssh_tokens",
       ],
       explicit: true,
     });
@@ -143,6 +145,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "file_manager_bookmarks",
         "c2s_tunnel_presets",
         "tmux_session_tags",
+        "opkssh_tokens",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

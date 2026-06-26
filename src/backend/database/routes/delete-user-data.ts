@@ -6,6 +6,7 @@ import { createCurrentCommandHistoryRepository } from "../repositories/current-c
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
+import { createCurrentOpksshTokenRepository } from "../repositories/current-opkssh-token-repository.js";
 import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
@@ -18,7 +19,6 @@ import { createCurrentUserPreferenceRepository } from "../repositories/current-u
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
   hosts,
-  opksshTokens,
   sharedCredentials,
   snippetFolders,
   snippets,
@@ -64,7 +64,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
 
     await createCurrentNetworkTopologyRepository().deleteByUserId(userId);
-    await db.delete(opksshTokens).where(eq(opksshTokens.userId, userId));
+    await createCurrentOpksshTokenRepository().deleteByUserId(userId);
     await createCurrentOpenTabRepository().deleteByUserId(userId);
     await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 

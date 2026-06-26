@@ -15,6 +15,7 @@ import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { pickResolvedUsername } from "../../ssh/credential-username.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentOpksshTokenRepository } from "../repositories/current-opkssh-token-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
@@ -2155,31 +2156,20 @@ router.get(
     }
 
     try {
-      const { opksshTokens } = await import("../db/schema.js");
-      const token = await db
-        .select()
-        .from(opksshTokens)
-        .where(
-          and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-        )
-        .limit(1);
+      const opksshTokenRepository = createCurrentOpksshTokenRepository();
+      const tokenData = await opksshTokenRepository.findByUserAndHost(
+        userId,
+        hostId,
+      );
 
-      if (!token || token.length === 0) {
+      if (!tokenData) {
         return res.status(404).json({ exists: false });
       }
 
-      const tokenData = token[0];
       const expiresAt = new Date(tokenData.expiresAt);
 
       if (expiresAt < new Date()) {
-        await db
-          .delete(opksshTokens)
-          .where(
-            and(
-              eq(opksshTokens.userId, userId),
-              eq(opksshTokens.hostId, hostId),
-            ),
-          );
+        await opksshTokenRepository.deleteByUserAndHost(userId, hostId);
         return res.status(404).json({ exists: false });
       }
 

@@ -27,6 +27,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "file_manager_bookmarks",
   "c2s_tunnel_presets",
   "tmux_session_tags",
+  "opkssh_tokens",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -125,6 +126,11 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   tmux_session_tag: "tmux_session_tags",
   tmux_session_tags: "tmux_session_tags",
   tmuxsessiontags: "tmux_session_tags",
+  opkssh: "opkssh_tokens",
+  opkssh_token: "opkssh_tokens",
+  opkssh_tokens: "opkssh_tokens",
+  opksshtoken: "opkssh_tokens",
+  opksshtokens: "opkssh_tokens",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",

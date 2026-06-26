@@ -3,9 +3,7 @@ import { randomUUID } from "crypto";
 import { WebSocket } from "ws";
 import { OPKSSHBinaryManager } from "../utils/opkssh-binary-manager.js";
 import { sshLogger } from "../utils/logger.js";
-import { getDb } from "../database/db/index.js";
-import { opksshTokens } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { createCurrentOpksshTokenRepository } from "../database/repositories/current-opkssh-token-repository.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { promises as fs } from "fs";
@@ -649,7 +647,6 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
 
 async function storeOPKSSHToken(session: OPKSSHAuthSession): Promise<void> {
   try {
-    const db = getDb();
     const userCrypto = UserCrypto.getInstance();
 
     const expiresAt = new Date();
@@ -675,32 +672,17 @@ async function storeOPKSSHToken(session: OPKSSHAuthSession): Promise<void> {
       "private_key",
     );
 
-    await db
-      .insert(opksshTokens)
-      .values({
-        userId: session.userId,
-        hostId: session.hostId,
-        sshCert: encryptedCert,
-        privateKey: encryptedKey,
-        email: session.identity.email,
-        sub: session.identity.sub,
-        issuer: session.identity.issuer,
-        audience: session.identity.audience,
-        expiresAt: expiresAt.toISOString(),
-      })
-      .onConflictDoUpdate({
-        target: [opksshTokens.userId, opksshTokens.hostId],
-        set: {
-          sshCert: encryptedCert,
-          privateKey: encryptedKey,
-          email: session.identity.email,
-          sub: session.identity.sub,
-          issuer: session.identity.issuer,
-          audience: session.identity.audience,
-          expiresAt: expiresAt.toISOString(),
-          createdAt: new Date().toISOString(),
-        },
-      });
+    await createCurrentOpksshTokenRepository().upsert({
+      userId: session.userId,
+      hostId: session.hostId,
+      sshCert: encryptedCert,
+      privateKey: encryptedKey,
+      email: session.identity.email,
+      sub: session.identity.sub,
+      issuer: session.identity.issuer,
+      audience: session.identity.audience,
+      expiresAt: expiresAt.toISOString(),
+    });
 
     session.status = "completed";
     session.ws.send(
@@ -733,28 +715,17 @@ export async function getOPKSSHToken(
   hostId: number,
 ): Promise<{ sshCert: string; privateKey: string } | null> {
   try {
-    const db = getDb();
-    const token = await db
-      .select()
-      .from(opksshTokens)
-      .where(
-        and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-      )
-      .limit(1);
+    const repository = createCurrentOpksshTokenRepository();
+    const tokenData = await repository.findByUserAndHost(userId, hostId);
 
-    if (!token || token.length === 0) {
+    if (!tokenData) {
       return null;
     }
 
-    const tokenData = token[0];
     const expiresAt = new Date(tokenData.expiresAt);
 
     if (expiresAt < new Date()) {
-      await db
-        .delete(opksshTokens)
-        .where(
-          and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-        );
+      await repository.deleteByUserAndHost(userId, hostId);
       return null;
     }
 
@@ -778,12 +749,7 @@ export async function getOPKSSHToken(
       "private_key",
     );
 
-    await db
-      .update(opksshTokens)
-      .set({ lastUsed: new Date().toISOString() })
-      .where(
-        and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-      );
+    await repository.updateLastUsed(userId, hostId);
 
     return {
       sshCert: decryptedCert,
@@ -799,12 +765,10 @@ export async function deleteOPKSSHToken(
   userId: string,
   hostId: number,
 ): Promise<void> {
-  const db = getDb();
-  await db
-    .delete(opksshTokens)
-    .where(
-      and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-    );
+  await createCurrentOpksshTokenRepository().deleteByUserAndHost(
+    userId,
+    hostId,
+  );
 }
 
 export async function invalidateOPKSSHToken(
@@ -813,12 +777,10 @@ export async function invalidateOPKSSHToken(
   reason: string,
 ): Promise<void> {
   try {
-    const db = getDb();
-    await db
-      .delete(opksshTokens)
-      .where(
-        and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-      );
+    await createCurrentOpksshTokenRepository().deleteByUserAndHost(
+      userId,
+      hostId,
+    );
   } catch (error) {
     sshLogger.error(`Failed to invalidate OPKSSH token`, {
       userId,
