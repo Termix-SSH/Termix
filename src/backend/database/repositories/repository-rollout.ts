@@ -15,6 +15,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "user_preferences",
   "open_tabs",
   "dismissed_alerts",
+  "homepage_layouts",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -51,6 +52,12 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   dismissed_alerts: "dismissed_alerts",
   dismissedalert: "dismissed_alerts",
   dismissedalerts: "dismissed_alerts",
+  homepage_layout: "homepage_layouts",
+  homepage_layouts: "homepage_layouts",
+  homepagelayout: "homepage_layouts",
+  homepagelayouts: "homepage_layouts",
+  layout: "homepage_layouts",
+  layouts: "homepage_layouts",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",
