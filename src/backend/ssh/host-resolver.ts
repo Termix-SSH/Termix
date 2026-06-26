@@ -1,8 +1,5 @@
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { createCurrentVaultProfileRepository } from "../database/repositories/current-vault-profile-repository.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { logger } from "../utils/logger.js";
 import {
   pickResolvedUsername,
@@ -20,17 +17,11 @@ export async function resolveHostById(
   hostId: number,
   userId: string,
 ): Promise<SSHHost | null> {
-  const db = getDb();
+  const repository = createCurrentHostResolutionRepository();
+  const resolvedHost = await repository.findHostById(hostId, userId);
+  if (!resolvedHost) return null;
 
-  const hostResults = await SimpleDBOps.select(
-    db.select().from(hosts).where(eq(hosts.id, hostId)),
-    "ssh_data",
-    userId,
-  );
-
-  if (hostResults.length === 0) return null;
-
-  const host = hostResults[0] as Record<string, unknown>;
+  const host = resolvedHost as Record<string, unknown>;
 
   // Parse JSON fields
   if (typeof host.jumpHosts === "string" && host.jumpHosts) {
@@ -83,33 +74,16 @@ export async function resolveHostById(
       // Try user's own override credential first
       if (userId !== ownerId) {
         try {
-          const { hostAccess } = await import("../database/db/schema.js");
-          const accessRecords = await db
-            .select()
-            .from(hostAccess)
-            .where(
-              and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
-            )
-            .limit(1);
-          const overrideCredId = accessRecords[0]?.overrideCredentialId as
-            | number
-            | null;
+          const overrideCredId = await repository.findOverrideCredentialId(
+            hostId,
+            userId,
+          );
           if (overrideCredId) {
-            const userCreds = await SimpleDBOps.select(
-              db
-                .select()
-                .from(sshCredentials)
-                .where(
-                  and(
-                    eq(sshCredentials.id, overrideCredId),
-                    eq(sshCredentials.userId, userId),
-                  ),
-                ),
-              "ssh_credentials",
+            const cred = (await repository.findCredentialByIdForUser(
+              overrideCredId,
               userId,
-            );
-            if (userCreds.length > 0) {
-              const cred = userCreds[0] as Record<string, unknown>;
+            )) as Record<string, unknown> | null;
+            if (cred) {
               host.password = cred.password;
               host.key = cred.key;
               host.keyPassword = cred.keyPassword;
@@ -175,22 +149,12 @@ export async function resolveHostById(
         return null;
       }
 
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, ownerId),
-            ),
-          ),
-        "ssh_credentials",
+      const cred = (await repository.findCredentialByIdForUser(
+        host.credentialId as number,
         ownerId,
-      );
+      )) as Record<string, unknown> | null;
 
-      if (credentials.length > 0) {
-        const cred = credentials[0] as Record<string, unknown>;
+      if (cred) {
         host.password = cred.password;
         // Prefer the normalised private key; fall back to raw key field
         host.key = (cred.privateKey || cred.key) as string | null;
