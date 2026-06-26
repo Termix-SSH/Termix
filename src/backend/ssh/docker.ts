@@ -4,11 +4,9 @@ import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
 import { logger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import {
@@ -142,17 +140,14 @@ async function resolveJumpHost(
   userId: string,
 ): Promise<JumpHostConfig | null> {
   try {
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
-      "ssh_data",
-      userId,
-    );
+    const repository = createCurrentHostResolutionRepository();
+    const resolvedHost = await repository.findHostById(hostId, userId);
 
-    if (hostResults.length === 0) {
+    if (!resolvedHost) {
       return null;
     }
 
-    const host = hostResults[0];
+    const host = resolvedHost as Record<string, unknown>;
     const ownerId = (host.userId || userId) as string;
 
     if (host.credentialId) {
@@ -184,22 +179,12 @@ async function resolveJumpHost(
         }
       }
 
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, ownerId),
-            ),
-          ),
-        "ssh_credentials",
+      const credential = (await repository.findCredentialByIdForUser(
+        host.credentialId as number,
         ownerId,
-      );
+      )) as Record<string, unknown> | null;
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
+      if (credential) {
         return {
           ...host,
           password: credential.password as string | undefined,
@@ -643,20 +628,17 @@ app.post("/docker/ssh/connect", async (req, res) => {
   );
 
   try {
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.id, hostId)),
-      "ssh_data",
-      userId,
-    );
+    const repository = createCurrentHostResolutionRepository();
+    const resolvedHost = await repository.findHostById(hostId, userId);
 
-    if (hostResults.length === 0) {
+    if (!resolvedHost) {
       connectionLogs.push(
         createConnectionLog("error", "docker_connecting", "Host not found"),
       );
       return res.status(404).json({ error: "Host not found", connectionLogs });
     }
 
-    const host = hostResults[0] as unknown as SSHHost;
+    const host = resolvedHost as unknown as SSHHost;
 
     if (host.userId !== userId) {
       const { PermissionManager } =
@@ -796,22 +778,12 @@ app.post("/docker/ssh/connect", async (req, res) => {
           });
         }
       } else {
-        const credentials = await SimpleDBOps.select(
-          getDb()
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, host.credentialId as number),
-                eq(sshCredentials.userId, userId),
-              ),
-            ),
-          "ssh_credentials",
+        const credential = await repository.findCredentialByIdForUser(
+          host.credentialId as number,
           userId,
         );
 
-        if (credentials.length > 0) {
-          const credential = credentials[0];
+        if (credential) {
           resolvedCredentials = {
             password: credential.password as string | undefined,
             sshKey: (credential.key || credential.privateKey) as
@@ -1744,23 +1716,15 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hostResults = await SimpleDBOps.select(
-              getDb()
-                .select()
-                .from(hosts)
-                .where(
-                  and(
-                    eq(hosts.id, session.hostId!),
-                    eq(hosts.userId, session.userId!),
-                  ),
-                ),
-              "ssh_data",
-              session.userId!,
-            );
+            const host =
+              await createCurrentHostResolutionRepository().findHostById(
+                session.hostId!,
+                session.userId!,
+              );
 
             const hostName =
-              hostResults.length > 0 && hostResults[0].name
-                ? hostResults[0].name
+              host?.userId === session.userId && host.name
+                ? host.name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             await axios.post(
@@ -1930,23 +1894,15 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hostResults = await SimpleDBOps.select(
-              getDb()
-                .select()
-                .from(hosts)
-                .where(
-                  and(
-                    eq(hosts.id, session.hostId!),
-                    eq(hosts.userId, session.userId!),
-                  ),
-                ),
-              "ssh_data",
-              session.userId!,
-            );
+            const host =
+              await createCurrentHostResolutionRepository().findHostById(
+                session.hostId!,
+                session.userId!,
+              );
 
             const hostName =
-              hostResults.length > 0 && hostResults[0].name
-                ? hostResults[0].name
+              host?.userId === session.userId && host.name
+                ? host.name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             await axios.post(

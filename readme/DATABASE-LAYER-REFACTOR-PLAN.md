@@ -216,9 +216,9 @@ User data export host and credential read models now use the current user data
 export repository boundary.
 SSH folder list, metadata upsert, rename, and folder host deletion writes now
 use the current host folder repository boundary.
-Host, jump-host, and Docker console jump-host resolution host, credential, and
-shared override read models now use the current host resolution repository
-boundary.
+Host, jump-host, Docker SSH, and Docker console jump-host resolution host,
+credential, and shared override read models now use the current host resolution
+repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which
