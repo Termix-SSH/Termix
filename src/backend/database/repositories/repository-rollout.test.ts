@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getRepositoryRolloutStatus,
+  getRepositoryRolloutWarnings,
   isRepositoryRolloutDomainEnabled,
   parseRepositoryRolloutConfig,
   REPOSITORY_ROLLOUT_ENV,
@@ -87,6 +88,29 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "trusted_devices",
       ],
+      warnings: [
+        "Partial repository rollout enabled for domains: settings, sessions.",
+      ],
     });
+  });
+
+  it("warns when gray rollout is implicit", () => {
+    const warnings = getRepositoryRolloutWarnings(
+      parseRepositoryRolloutConfig({}),
+    );
+
+    expect(warnings).toEqual([
+      "DATABASE_LAYER_REPOSITORY_ROLLOUT is not explicitly set; gray targets should set it so rollout state is visible in deployment config.",
+    ]);
+  });
+
+  it("warns when migrated repository domains are disabled", () => {
+    const warnings = getRepositoryRolloutWarnings(
+      parseRepositoryRolloutConfig({ [REPOSITORY_ROLLOUT_ENV]: "off" }),
+    );
+
+    expect(warnings).toEqual([
+      "All migrated repository domains are disabled; migrated auth/settings/session paths will fail closed.",
+    ]);
   });
 });

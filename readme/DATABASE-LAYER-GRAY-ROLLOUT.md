@@ -82,7 +82,8 @@ gray target so logs show the intended rollout state.
 Admin users can also verify the active rollout state through
 `GET /database/migration/status`. The response includes `repositoryRollout`
 with the parsed mode, enabled domains, supported domains, env key, and whether
-the value was explicitly configured.
+the value was explicitly configured. Startup logs and this endpoint also expose
+rollout warnings for implicit, disabled, or partial configurations.
 
 Minimum backup artifacts:
 
@@ -132,6 +133,8 @@ Also verify these startup log cases before production gray:
 Then check `/database/migration/status` as an admin and confirm
 `repositoryRollout.mode`, `repositoryRollout.enabledDomains`, and
 `repositoryRollout.explicit` match the intended gray target.
+`repositoryRollout.warnings` should be empty for the recommended full gray
+slice.
 
 ## 5. Rollout Stages
 

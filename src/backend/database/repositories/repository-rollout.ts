@@ -22,6 +22,7 @@ export interface RepositoryRolloutConfig {
 export interface RepositoryRolloutStatus extends RepositoryRolloutConfig {
   envKey: typeof REPOSITORY_ROLLOUT_ENV;
   supportedDomains: RepositoryRolloutDomain[];
+  warnings: string[];
 }
 
 type EnvLike = Record<string, string | undefined>;
@@ -117,7 +118,34 @@ export function getRepositoryRolloutStatus(
     ...config,
     envKey: REPOSITORY_ROLLOUT_ENV,
     supportedDomains: [...REPOSITORY_ROLLOUT_DOMAINS],
+    warnings: getRepositoryRolloutWarnings(config),
   };
+}
+
+export function getRepositoryRolloutWarnings(
+  config: RepositoryRolloutConfig,
+): string[] {
+  const warnings: string[] = [];
+
+  if (!config.explicit) {
+    warnings.push(
+      `${REPOSITORY_ROLLOUT_ENV} is not explicitly set; gray targets should set it so rollout state is visible in deployment config.`,
+    );
+  }
+
+  if (config.mode === "none") {
+    warnings.push(
+      "All migrated repository domains are disabled; migrated auth/settings/session paths will fail closed.",
+    );
+  }
+
+  if (config.mode === "partial") {
+    warnings.push(
+      `Partial repository rollout enabled for domains: ${config.enabledDomains.join(", ")}.`,
+    );
+  }
+
+  return warnings;
 }
 
 export function assertRepositoryRolloutDomainEnabled(
@@ -139,4 +167,14 @@ export function logRepositoryRolloutConfig(env: EnvLike = process.env): void {
     explicit: config.explicit,
     envKey: REPOSITORY_ROLLOUT_ENV,
   });
+
+  for (const warning of config.warnings) {
+    databaseLogger.warn(warning, {
+      operation: "repository_rollout_warning",
+      mode: config.mode,
+      enabledDomains: config.enabledDomains,
+      explicit: config.explicit,
+      envKey: REPOSITORY_ROLLOUT_ENV,
+    });
+  }
 }
