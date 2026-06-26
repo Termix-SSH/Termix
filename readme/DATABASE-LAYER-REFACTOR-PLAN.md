@@ -138,6 +138,9 @@ retaining shared credential material creation in the existing manager.
 Permission manager host-access expiration cleanup, shared host-access lookup,
 and last-access timestamp updates now use the current RBAC access repository
 boundary.
+RBAC role assignment now reads role-shared host credential sources through the
+current RBAC access repository boundary while keeping shared credential material
+creation in the existing manager.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

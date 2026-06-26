@@ -71,6 +71,7 @@ describe("RbacAccessRepository", () => {
         ip TEXT NOT NULL,
         port INTEGER NOT NULL,
         username TEXT NOT NULL,
+        credential_id INTEGER,
         folder TEXT,
         tags TEXT
       );
@@ -108,8 +109,8 @@ describe("RbacAccessRepository", () => {
       INSERT INTO roles (id, name, display_name, is_system)
       VALUES (7, 'ops', 'Operations', 0);
 
-      INSERT INTO ssh_data (id, user_id, name, ip, port, username, folder, tags)
-      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 'servers', 'linux');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, credential_id, folder, tags)
+      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 'servers', 'linux');
 
       INSERT INTO host_access (
         id, host_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
@@ -204,6 +205,19 @@ describe("RbacAccessRepository", () => {
         ip: "10.0.0.42",
         ownerUsername: "owner",
         permissionLevel: "view",
+      },
+    ]);
+  });
+
+  it("lists role host access credential sources for role assignment", async () => {
+    const repo = await createRepository();
+
+    await expect(repo.listRoleHostAccessCredentialSources(7)).resolves.toEqual([
+      {
+        hostAccessId: 2,
+        credentialId: 123,
+        hostId: 42,
+        hostOwnerId: "owner-1",
       },
     ]);
   });

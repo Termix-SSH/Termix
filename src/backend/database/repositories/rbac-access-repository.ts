@@ -59,6 +59,13 @@ export interface RbacVisibleSharedSnippet extends RbacSharedSnippet {
   updatedAt: string;
 }
 
+export interface RbacRoleHostAccessCredentialSource {
+  hostAccessId: number;
+  credentialId: number | null;
+  hostId: number;
+  hostOwnerId: string;
+}
+
 export type RbacAccessTarget =
   | { targetType: "user"; targetUserId: string }
   | { targetType: "role"; targetRoleId: number };
@@ -425,6 +432,21 @@ export class RbacAccessRepository {
       .set({ lastAccessedAt })
       .where(eq(hostAccess.id, accessId));
     await this.afterWrite();
+  }
+
+  async listRoleHostAccessCredentialSources(
+    roleId: number,
+  ): Promise<RbacRoleHostAccessCredentialSource[]> {
+    return this.context.drizzle
+      .select({
+        hostAccessId: hostAccess.id,
+        credentialId: hosts.credentialId,
+        hostId: hosts.id,
+        hostOwnerId: hosts.userId,
+      })
+      .from(hostAccess)
+      .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
+      .where(eq(hostAccess.roleId, roleId));
   }
 
   private userOrRoleHostAccessFilter(userId: string, roleIds: number[]) {

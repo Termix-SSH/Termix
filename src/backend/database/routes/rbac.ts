@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { hostAccess, hosts, snippets, sshCredentials } from "../db/schema.js";
+import { hosts, snippets, sshCredentials } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
@@ -836,24 +836,23 @@ router.post(
         grantedBy: currentUserId,
       });
 
-      const hostsSharedWithRole = await db
-        .select()
-        .from(hostAccess)
-        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
-        .where(eq(hostAccess.roleId, roleId));
+      const hostsSharedWithRole =
+        await createCurrentRbacAccessRepository().listRoleHostAccessCredentialSources(
+          roleId,
+        );
 
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
 
-      for (const { host_access, ssh_data } of hostsSharedWithRole) {
-        if (ssh_data.credentialId) {
+      for (const sharedHost of hostsSharedWithRole) {
+        if (sharedHost.credentialId) {
           try {
             await sharedCredManager.createSharedCredentialForUser(
-              host_access.id,
-              ssh_data.credentialId,
+              sharedHost.hostAccessId,
+              sharedHost.credentialId,
               targetUserId,
-              ssh_data.userId,
+              sharedHost.hostOwnerId,
             );
           } catch (error) {
             databaseLogger.error(
@@ -863,7 +862,7 @@ router.post(
                 operation: "assign_role_create_credentials",
                 targetUserId,
                 roleId,
-                hostId: ssh_data.id,
+                hostId: sharedHost.hostId,
               },
             );
           }
