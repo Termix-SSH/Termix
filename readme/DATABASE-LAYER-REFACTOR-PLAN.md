@@ -190,6 +190,8 @@ the current transfer recent repository boundary.
 File manager recent/pinned/shortcut list/create/delete/export and
 host/folder/user/password-reset cleanup now use the current file manager
 bookmark repository boundary.
+C2S tunnel preset list/create/update/delete now uses the current C2S tunnel
+preset repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

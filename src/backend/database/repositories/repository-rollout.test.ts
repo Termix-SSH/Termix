@@ -34,6 +34,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "ssh_credential_usage",
         "transfer_recent",
         "file_manager_bookmarks",
+        "c2s_tunnel_presets",
       ],
       explicit: false,
     });
@@ -54,7 +55,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,alerts,layout,topology,dashboard-link,history,activity,usage,transfer,bookmarks",
+        "settings,user,api-key,alerts,layout,topology,dashboard-link,history,activity,usage,transfer,bookmarks,c2s",
     });
 
     expect(config).toEqual({
@@ -72,6 +73,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "ssh_credential_usage",
         "transfer_recent",
         "file_manager_bookmarks",
+        "c2s_tunnel_presets",
       ],
       explicit: true,
     });
@@ -131,6 +133,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "ssh_credential_usage",
         "transfer_recent",
         "file_manager_bookmarks",
+        "c2s_tunnel_presets",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

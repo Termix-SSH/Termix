@@ -23,6 +23,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "ssh_credential_usage",
   "transfer_recent",
   "file_manager_bookmarks",
+  "c2s_tunnel_presets",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -97,6 +98,12 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   file_manager_bookmark: "file_manager_bookmarks",
   file_manager_bookmarks: "file_manager_bookmarks",
   filemanagerbookmarks: "file_manager_bookmarks",
+  c2s: "c2s_tunnel_presets",
+  c2s_preset: "c2s_tunnel_presets",
+  c2s_presets: "c2s_tunnel_presets",
+  c2s_tunnel_preset: "c2s_tunnel_presets",
+  c2s_tunnel_presets: "c2s_tunnel_presets",
+  c2stunnelpresets: "c2s_tunnel_presets",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",
