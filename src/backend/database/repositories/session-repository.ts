@@ -6,14 +6,22 @@ export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;
 
 export class SessionRepository {
-  constructor(private readonly context: DatabaseContext) {}
+  constructor(
+    private readonly context: DatabaseContext,
+    private readonly onWrite?: () => void | Promise<void>,
+  ) {}
 
   async create(session: NewSessionRecord): Promise<SessionRecord> {
     const rows = await this.context.drizzle
       .insert(sessions)
       .values(session)
       .returning();
+    await this.afterWrite();
     return rows[0];
+  }
+
+  async listAll(): Promise<SessionRecord[]> {
+    return this.context.drizzle.select().from(sessions);
   }
 
   async findById(id: string): Promise<SessionRecord | null> {
@@ -41,6 +49,19 @@ export class SessionRepository {
       .update(sessions)
       .set({ lastActiveAt })
       .where(eq(sessions.id, id));
+    await this.afterWrite();
+  }
+
+  async updateToken(
+    id: string,
+    jwtToken: string,
+    lastActiveAt = new Date().toISOString(),
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(sessions)
+      .set({ jwtToken, lastActiveAt })
+      .where(eq(sessions.id, id));
+    await this.afterWrite();
   }
 
   async revoke(id: string): Promise<boolean> {
@@ -49,6 +70,7 @@ export class SessionRepository {
       .where(eq(sessions.id, id))
       .returning({ id: sessions.id });
 
+    await this.afterWrite();
     return rows.length > 0;
   }
 
@@ -65,6 +87,7 @@ export class SessionRepository {
       .where(where)
       .returning({ id: sessions.id });
 
+    await this.afterWrite();
     return rows.length;
   }
 
@@ -74,6 +97,11 @@ export class SessionRepository {
       .where(lte(sessions.expiresAt, now.toISOString()))
       .returning({ id: sessions.id });
 
+    await this.afterWrite();
     return rows.length;
+  }
+
+  private async afterWrite(): Promise<void> {
+    await this.onWrite?.();
   }
 }

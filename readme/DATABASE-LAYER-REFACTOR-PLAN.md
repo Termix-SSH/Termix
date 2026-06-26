@@ -59,6 +59,9 @@ Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses
 local helper boundaries for export filtering and admin import upserts.
+Session repository now has a current-runtime factory and write-save hook, and
+core `auth-manager.ts` session create/read/update/revoke/list paths have started
+using it.
 
 ## 1. Background
 
