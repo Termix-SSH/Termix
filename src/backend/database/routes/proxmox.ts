@@ -1,8 +1,6 @@
 import express from "express";
 import { Client as SSHClient } from "ssh2";
-import { getDb } from "../db/index.js";
-import { hosts, sshCredentials } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import { logger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -225,17 +223,14 @@ router.post(
       // -----------------------------------------------------------------------
       // Load host from DB
       // -----------------------------------------------------------------------
-      const hostResults = await SimpleDBOps.select(
-        getDb().select().from(hosts).where(eq(hosts.id, parsedHostId)),
-        "ssh_data",
-        userId,
-      );
+      const repository = createCurrentHostResolutionRepository();
+      const resolvedHost = await repository.findHostById(parsedHostId, userId);
 
-      if (!hostResults.length) {
+      if (!resolvedHost) {
         return res.status(404).json({ error: "Host not found" });
       }
 
-      const host = hostResults[0] as unknown as SSHHost;
+      const host = resolvedHost as unknown as SSHHost;
 
       // Read discovery settings from the host's proxmoxConfig
       const proxmoxCfgRaw = host.proxmoxConfig
@@ -308,26 +303,18 @@ router.post(
             });
           }
         } else {
-          const creds = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, host.credentialId as number),
-                  eq(sshCredentials.userId, userId),
-                ),
-              ),
-            "ssh_credentials",
+          const credential = await repository.findCredentialByIdForUser(
+            host.credentialId as number,
             userId,
           );
-          if (creds.length > 0) {
-            const c = creds[0];
+          if (credential) {
             resolvedCredentials = {
-              password: c.password as string | undefined,
-              sshKey: (c.key || c.privateKey) as string | undefined,
-              keyPassword: c.keyPassword as string | undefined,
-              authType: c.authType as string | undefined,
+              password: credential.password as string | undefined,
+              sshKey: (credential.key || credential.privateKey) as
+                | string
+                | undefined,
+              keyPassword: credential.keyPassword as string | undefined,
+              authType: credential.authType as string | undefined,
             };
           }
         }
