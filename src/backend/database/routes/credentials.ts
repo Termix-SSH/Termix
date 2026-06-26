@@ -1,12 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import {
-  sshCredentials,
-  sshCredentialUsage,
-  hosts,
-  hostAccess,
-} from "../db/schema.js";
+import { sshCredentials, sshCredentialUsage, hosts } from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -16,6 +11,7 @@ import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 
 const router = express.Router();
 
@@ -700,19 +696,19 @@ router.delete(
           );
 
         for (const host of hostsUsingCredential) {
-          const revokedShares = await db
-            .delete(hostAccess)
-            .where(eq(hostAccess.hostId, host.id))
-            .returning({ id: hostAccess.id });
+          const revokedCount =
+            await createCurrentRbacAccessRepository().deleteHostAccessForHost(
+              host.id,
+            );
 
-          if (revokedShares.length > 0) {
+          if (revokedCount > 0) {
             authLogger.info(
               "Auto-revoked host shares due to credential deletion",
               {
                 operation: "auto_revoke_shares",
                 hostId: host.id,
                 credentialId: parseInt(id),
-                revokedCount: revokedShares.length,
+                revokedCount,
                 reason: "credential_deleted",
               },
             );

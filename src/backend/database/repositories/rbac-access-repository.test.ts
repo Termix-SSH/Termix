@@ -438,6 +438,36 @@ describe("RbacAccessRepository", () => {
     expect(writeCount).toBe(1);
   });
 
+  it("deletes host access for multiple hosts", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    expect(await repo.deleteHostAccessForHosts([])).toBe(0);
+    expect(writeCount).toBe(0);
+
+    expect(await repo.deleteHostAccessForHosts([42, 44])).toBe(3);
+    expect(await repo.listHostAccess(42)).toEqual([]);
+    expect(await repo.findDirectHostAccess(44, "user-1")).toBeNull();
+    expect(writeCount).toBe(1);
+  });
+
+  it("deletes host access that references a user directly or as grantor", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    expect(await repo.deleteHostAccessForUserReferences("admin")).toBe(3);
+    expect(await repo.listHostAccess(42)).toEqual([]);
+    expect(await repo.findDirectHostAccess(44, "user-1")).toBeNull();
+    expect(writeCount).toBe(1);
+
+    expect(await repo.deleteHostAccessForUserReferences("admin")).toBe(0);
+    expect(writeCount).toBe(1);
+  });
+
   it("upserts and revokes snippet access", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
@@ -11,7 +12,6 @@ import {
   fileManagerPinned,
   fileManagerRecent,
   fileManagerShortcuts,
-  hostAccess,
   hosts,
   networkTopology,
   opksshTokens,
@@ -39,8 +39,9 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
       .delete(sessionRecordings)
       .where(eq(sessionRecordings.userId, userId));
 
-    await db.delete(hostAccess).where(eq(hostAccess.userId, userId));
-    await db.delete(hostAccess).where(eq(hostAccess.grantedBy, userId));
+    await createCurrentRbacAccessRepository().deleteHostAccessForUserReferences(
+      userId,
+    );
 
     await createCurrentSessionRepository().revokeAllForUser(userId);
 

@@ -193,6 +193,42 @@ export class RbacAccessRepository {
     return rows.length;
   }
 
+  async deleteHostAccessForHosts(hostIds: number[]): Promise<number> {
+    if (hostIds.length === 0) {
+      return 0;
+    }
+
+    const rows = await this.context.drizzle
+      .delete(hostAccess)
+      .where(inArray(hostAccess.hostId, hostIds))
+      .returning({ id: hostAccess.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
+  async deleteHostAccessForUserReferences(userId: string): Promise<number> {
+    const directRows = await this.context.drizzle
+      .delete(hostAccess)
+      .where(eq(hostAccess.userId, userId))
+      .returning({ id: hostAccess.id });
+
+    const grantedRows = await this.context.drizzle
+      .delete(hostAccess)
+      .where(eq(hostAccess.grantedBy, userId))
+      .returning({ id: hostAccess.id });
+
+    const deletedCount = directRows.length + grantedRows.length;
+    if (deletedCount > 0) {
+      await this.afterWrite();
+    }
+
+    return deletedCount;
+  }
+
   async findDirectHostAccess(
     hostId: number,
     userId: string,

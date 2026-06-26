@@ -151,6 +151,8 @@ now use the current RBAC access repository boundary.
 Host route shared-host list access checks now use the current role and RBAC
 access repository boundaries while host row loading stays local to the host
 route.
+Credential deletion, folder deletion, and user deletion host-access cleanup
+writes now use the current RBAC access repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

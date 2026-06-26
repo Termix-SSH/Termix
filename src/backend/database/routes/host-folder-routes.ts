@@ -9,7 +9,6 @@ import {
   fileManagerPinned,
   fileManagerRecent,
   fileManagerShortcuts,
-  hostAccess,
   hosts,
   recentActivity,
   sessionRecordings,
@@ -18,6 +17,7 @@ import {
   sshFolders,
   transferRecent,
 } from "../db/schema.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 type HostFolderRoutesDeps = {
@@ -354,9 +354,9 @@ export function registerHostFolderRoutes(
             .delete(recentActivity)
             .where(inArray(recentActivity.hostId, hostIds));
 
-          await db
-            .delete(hostAccess)
-            .where(inArray(hostAccess.hostId, hostIds));
+          await createCurrentRbacAccessRepository().deleteHostAccessForHosts(
+            hostIds,
+          );
 
           await db
             .delete(sessionRecordings)
