@@ -443,6 +443,8 @@ Started:
   behind the current settings repository boundary
 - OIDC authorize/callback temporary state and auto-provision reads moved behind
   the current settings repository boundary
+- user login settings reads moved behind the current settings repository
+  boundary, completing direct `settings` access cleanup in `routes/users.ts`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

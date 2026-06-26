@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { users, settings, roles, userRoles } from "../db/schema.js";
+import { users, roles, userRoles } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -1592,12 +1592,11 @@ router.post("/login", async (req, res) => {
     }
 
     try {
-      const kekSalt = await db
-        .select()
-        .from(settings)
-        .where(eq(settings.key, `user_kek_salt_${userRecord.id}`));
+      const kekSalt = await createCurrentSettingsRepository().get(
+        `user_kek_salt_${userRecord.id}`,
+      );
 
-      if (kekSalt.length === 0) {
+      if (!kekSalt) {
         await authManager.registerUser(userRecord.id, password);
       }
     } catch {
@@ -1691,10 +1690,11 @@ router.post("/login", async (req, res) => {
       ...(isNativeAppRequest(req) ? { token } : {}),
     };
 
-    const timeoutRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
-      .get() as { value: string } | undefined;
-    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const sessionTimeoutHoursValue =
+      await createCurrentSettingsRepository().get("session_timeout_hours");
+    const timeoutHours = sessionTimeoutHoursValue
+      ? parseInt(sessionTimeoutHoursValue, 10) || 24
+      : 24;
     const maxAge = rememberMe
       ? 30 * 24 * 60 * 60 * 1000
       : timeoutHours * 60 * 60 * 1000;

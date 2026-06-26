@@ -51,6 +51,8 @@ User route registration/password flags and OIDC config administration now use
 the current settings repository boundary.
 OIDC authorize/callback temporary state and auto-provision reads now use the
 current settings repository boundary.
+User login settings reads now use the current settings repository boundary, so
+`routes/users.ts` no longer reads or writes `settings` directly.
 
 ## 1. Background
 
