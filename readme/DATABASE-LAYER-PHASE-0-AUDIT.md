@@ -518,6 +518,9 @@ Started:
 - RBAC host/snippet access grant, revoke, and direct host-access credential
   override writes moved behind the current RBAC access repository boundary,
   with shared credential material creation retained in the existing manager
+- permission manager host-access expiration cleanup, shared host-access lookup,
+  and last-access timestamp updates moved behind the current RBAC access
+  repository boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device/role/RBAC-access
   slice

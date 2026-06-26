@@ -375,6 +375,58 @@ export class RbacAccessRepository {
       );
   }
 
+  async deleteExpiredHostAccess(
+    now = new Date().toISOString(),
+  ): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(hostAccess)
+      .where(
+        and(
+          sql`${hostAccess.expiresAt} IS NOT NULL`,
+          sql`${hostAccess.expiresAt} <= ${now}`,
+        ),
+      )
+      .returning({ id: hostAccess.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
+  async findActiveHostAccess(
+    hostId: number,
+    userId: string,
+    roleIds: number[],
+    now = new Date().toISOString(),
+  ): Promise<typeof hostAccess.$inferSelect | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hostAccess)
+      .where(
+        and(
+          eq(hostAccess.hostId, hostId),
+          this.userOrRoleHostAccessFilter(userId, roleIds),
+          or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
+        ),
+      )
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async touchHostAccess(
+    accessId: number,
+    lastAccessedAt = new Date().toISOString(),
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(hostAccess)
+      .set({ lastAccessedAt })
+      .where(eq(hostAccess.id, accessId));
+    await this.afterWrite();
+  }
+
   private userOrRoleHostAccessFilter(userId: string, roleIds: number[]) {
     if (roleIds.length === 0) {
       return eq(hostAccess.userId, userId);

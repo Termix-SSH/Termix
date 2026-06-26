@@ -1,9 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../database/db/index.js";
-import { hostAccess, hosts } from "../database/db/schema.js";
+import { hosts } from "../database/db/schema.js";
+import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
-import { eq, and, or, isNull, gte, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
 
 interface AuthenticatedRequest extends Request {
@@ -61,15 +62,7 @@ class PermissionManager {
 
   private async cleanupExpiredAccess(): Promise<void> {
     try {
-      const now = new Date().toISOString();
-      await db
-        .delete(hostAccess)
-        .where(
-          and(
-            sql`${hostAccess.expiresAt} IS NOT NULL`,
-            sql`${hostAccess.expiresAt} <= ${now}`,
-          ),
-        );
+      await createCurrentRbacAccessRepository().deleteExpiredHostAccess();
     } catch (error) {
       databaseLogger.error("Failed to cleanup expired host access", error, {
         operation: "host_access_cleanup_failed",
@@ -173,30 +166,14 @@ class PermissionManager {
       const roleIds =
         await createCurrentRoleRepository().listUserRoleIds(userId);
 
-      const now = new Date().toISOString();
-      const sharedAccess = await db
-        .select()
-        .from(hostAccess)
-        .where(
-          and(
-            eq(hostAccess.hostId, hostId),
-            or(
-              eq(hostAccess.userId, userId),
-              roleIds.length > 0
-                ? sql`${hostAccess.roleId} IN (${sql.join(
-                    roleIds.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})`
-                : sql`false`,
-            ),
-            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
-          ),
-        )
-        .limit(1);
+      const access =
+        await createCurrentRbacAccessRepository().findActiveHostAccess(
+          hostId,
+          userId,
+          roleIds,
+        );
 
-      if (sharedAccess.length > 0) {
-        const access = sharedAccess[0];
-
+      if (access) {
         const hostOwnerCheck = await db
           .select({ ownerId: hosts.userId })
           .from(hosts)
@@ -222,12 +199,7 @@ class PermissionManager {
         }
 
         try {
-          await db
-            .update(hostAccess)
-            .set({
-              lastAccessedAt: now,
-            })
-            .where(eq(hostAccess.id, access.id));
+          await createCurrentRbacAccessRepository().touchHostAccess(access.id);
         } catch (error) {
           databaseLogger.warn("Failed to update host access timestamp", {
             operation: "update_host_access_timestamp",

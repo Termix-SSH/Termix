@@ -135,6 +135,9 @@ read model now use the current RBAC access repository boundary.
 RBAC host/snippet access grant, revoke, and direct host-access credential
 override writes now use the current RBAC access repository boundary while
 retaining shared credential material creation in the existing manager.
+Permission manager host-access expiration cleanup, shared host-access lookup,
+and last-access timestamp updates now use the current RBAC access repository
+boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

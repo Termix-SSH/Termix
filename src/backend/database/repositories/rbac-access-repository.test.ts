@@ -116,7 +116,8 @@ describe("RbacAccessRepository", () => {
       )
       VALUES
         (1, 42, 'user-1', NULL, 'admin', 'view', NULL, '2026-06-26T00:00:00.000Z'),
-        (2, 42, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z');
+        (2, 42, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z'),
+        (5, 44, 'user-1', NULL, 'admin', 'view', '2026-06-25T00:00:00.000Z', '2026-06-24T00:00:00.000Z');
 
       INSERT INTO snippets (id, user_id, name, content)
       VALUES (99, 'owner-1', 'deploy', 'echo deploy');
@@ -275,9 +276,44 @@ describe("RbacAccessRepository", () => {
       (await repo.findDirectHostAccess(42, "user-1"))?.overrideCredentialId,
     ).toBe(123);
 
+    await repo.touchHostAccess(1, "2026-06-26T03:00:00.000Z");
+    expect(
+      (await repo.findDirectHostAccess(42, "user-1"))?.lastAccessedAt,
+    ).toBe("2026-06-26T03:00:00.000Z");
+
     await repo.revokeHostAccess(1);
     expect(await repo.findDirectHostAccess(42, "user-1")).toBeNull();
-    expect(writeCount).toBe(4);
+    expect(writeCount).toBe(5);
+  });
+
+  it("finds active host access and deletes expired host access", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    expect(
+      await repo.findActiveHostAccess(
+        42,
+        "user-1",
+        [7],
+        "2026-06-26T12:00:00.000Z",
+      ),
+    ).toMatchObject({ id: 1 });
+    expect(
+      await repo.findActiveHostAccess(
+        44,
+        "user-1",
+        [],
+        "2026-06-26T12:00:00.000Z",
+      ),
+    ).toBeNull();
+
+    expect(await repo.deleteExpiredHostAccess("2026-06-26T12:00:00.000Z")).toBe(
+      1,
+    );
+    expect(await repo.findDirectHostAccess(44, "user-1")).toBeNull();
+    expect(writeCount).toBe(1);
   });
 
   it("upserts and revokes snippet access", async () => {

@@ -33,6 +33,8 @@ Allowed in gray rollout:
   `RbacAccessRepository`.
 - RBAC host/snippet access grant, revoke, and direct host-access credential
   override writes migrated behind `RbacAccessRepository`.
+- Permission manager host-access cleanup, shared-access lookup, and last-access
+  touch migrated behind `RbacAccessRepository`.
 - Current field encryption behavior.
 
 Not included in gray rollout:
@@ -41,9 +43,8 @@ Not included in gray rollout:
 - New external database configuration UI.
 - New schema migration strategy.
 - Host and credential route migration beyond existing repository skeletons.
-- Remaining permission-manager host-access checks/cleanup, shared credential
-  material creation, audit, preferences, file manager, metrics, and notification
-  repository migration.
+- Remaining shared credential material creation, audit, preferences, file
+  manager, metrics, and notification repository migration.
 - Multi-instance backend deployment.
 
 ## 2. Required Preflight
