@@ -45,6 +45,8 @@ User deletion cleanup now removes per-user settings through
 `SettingsRepository.deleteLike`.
 Password reset route now stores reset codes and temporary reset tokens through
 `SettingsRepository`.
+OIDC utility legacy config fallback now reads `oidc_config` through
+`SettingsRepository`.
 
 ## 1. Background
 

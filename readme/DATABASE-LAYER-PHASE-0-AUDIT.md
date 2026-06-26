@@ -437,6 +437,8 @@ Started:
   `SettingsRepository.deleteLike`
 - password reset route reset code and temporary token settings access moved
   behind `SettingsRepository`
+- OIDC utility legacy config fallback reads `oidc_config` through
+  `SettingsRepository`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

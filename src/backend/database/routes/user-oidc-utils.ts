@@ -5,6 +5,7 @@ import { ssoProviders } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { Agent } from "undici";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 
 export type OIDCConfig = {
   client_id: string;
@@ -399,11 +400,10 @@ export async function loadProviderConfig(
 
   // Fallback: legacy settings blob
   try {
-    const legacyRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
-      .get() as { value: string } | undefined;
-    if (legacyRow) {
-      let config = JSON.parse(legacyRow.value) as Record<string, unknown>;
+    const legacyValue =
+      await createCurrentSettingsRepository().get("oidc_config");
+    if (legacyValue) {
+      let config = JSON.parse(legacyValue) as Record<string, unknown>;
       config = decryptConfigSecret(config);
       return {
         config: config as unknown as OIDCConfig,
