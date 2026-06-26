@@ -91,7 +91,10 @@ lookups and admin session username enrichment.
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
 current auth/settings/session/user/API-key/trusted-device slice has staging
-evidence.
+evidence. The current migrated slice is now guarded by
+`DATABASE_LAYER_REPOSITORY_ROLLOUT`, which supports `all`, `off`, and a
+comma-separated allowlist of migrated repository domains for controlled gray
+targets.
 
 ## 1. Background
 

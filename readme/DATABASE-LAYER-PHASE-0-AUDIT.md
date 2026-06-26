@@ -477,6 +477,8 @@ Started:
   the current trusted device repository boundary
 - user session routes moved user/admin lookups and admin session username
   enrichment behind the current user repository boundary
+- repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
+  for the migrated settings/users/sessions/API-key/trusted-device slice
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

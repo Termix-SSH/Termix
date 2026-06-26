@@ -95,6 +95,10 @@ import {
       version: version,
     });
 
+    const { logRepositoryRolloutConfig } =
+      await import("./database/repositories/repository-rollout.js");
+    logRepositoryRolloutConfig();
+
     const systemCrypto = SystemCrypto.getInstance();
     await systemCrypto.initializeJWTSecret();
     await systemCrypto.initializeDatabaseKey();

@@ -49,6 +49,36 @@ Before enabling this branch for any gray target:
 7. Keep an operator available for rollback during the first login/API-key smoke
    tests.
 
+Repository rollout is controlled by `DATABASE_LAYER_REPOSITORY_ROLLOUT`.
+
+Recommended gray value:
+
+```bash
+DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices
+```
+
+Accepted values:
+
+| Value                                       | Behavior                                      |
+| ------------------------------------------- | --------------------------------------------- |
+| unset                                       | current migrated slice enabled; logs implicit |
+| `all`, `true`, `1`, `on`, `enabled`         | all current migrated repository domains       |
+| `off`, `false`, `0`, `none`, `disabled`     | no migrated repository domains; fail closed   |
+| comma list, for example `settings,users`    | only listed repository domains enabled        |
+| aliases such as `user`, `api-key`, `apikey` | normalized to the supported domain names      |
+
+Supported domains:
+
+- `settings`
+- `users`
+- `sessions`
+- `api_keys`
+- `trusted_devices`
+
+The backend logs the parsed rollout mode at startup with operation
+`repository_rollout_config`. Use an explicit value in any staging or production
+gray target so logs show the intended rollout state.
+
 Minimum backup artifacts:
 
 - encrypted SQLite snapshot file
@@ -62,8 +92,8 @@ Run before deployment:
 
 ```bash
 npm run type-check
-npx eslint src/backend/database/repositories/api-key-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/routes/user-api-key-routes.ts src/backend/database/routes/users.ts src/backend/utils/auth-manager.ts
-npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts
+npx eslint src/backend/database/repositories/repository-rollout.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/current-settings-repository.ts src/backend/database/repositories/current-user-repository.ts src/backend/database/repositories/current-session-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/current-trusted-device-repository.ts src/backend/starter.ts
+npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/trusted-device-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts
 git diff --check
 ```
 
@@ -85,6 +115,14 @@ Run these against the gray target:
 | Security     | Non-admin user is rejected from admin-only endpoints                   |
 
 Do not continue gray rollout if any check fails.
+
+Also verify these startup log cases before production gray:
+
+| Environment value                            | Expected startup behavior                          |
+| -------------------------------------------- | -------------------------------------------------- |
+| `DATABASE_LAYER_REPOSITORY_ROLLOUT=all`      | startup logs `mode: all` and all supported domains |
+| `DATABASE_LAYER_REPOSITORY_ROLLOUT=off`      | migrated repository use fails closed               |
+| `DATABASE_LAYER_REPOSITORY_ROLLOUT=settings` | only settings repository boundary is allowed       |
 
 ## 5. Rollout Stages
 
@@ -129,6 +167,8 @@ Stop gray rollout immediately if any of these happen:
 - Any database error mentioning missing tables, unknown columns, or failed
   serialization.
 - Any user encryption or data unlock failure.
+- Any unexpected `Repository domain ... is disabled` error for a domain that was
+  intended to be enabled.
 
 ## 8. Current Gray Readiness
 
