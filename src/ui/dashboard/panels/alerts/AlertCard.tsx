@@ -32,16 +32,19 @@ const getAlertIcon = (type?: string) => {
   }
 };
 
-const getAccentBarClass = (priority?: string, type?: string): string => {
-  if (priority === "critical" || type === "error") return "bg-destructive";
-  if (priority === "high" || type === "warning") return "bg-accent-brand";
-  if (priority === "medium" || type === "success") return "bg-green-400";
-  return "bg-border";
+const getAccentBorderClass = (priority?: string, type?: string): string => {
+  if (priority === "critical" || type === "error")
+    return "border-t-2 border-t-destructive";
+  if (priority === "high" || type === "warning")
+    return "border-t-2 border-t-accent-brand";
+  if (priority === "medium" || type === "success")
+    return "border-t-2 border-t-green-400";
+  return "";
 };
 
 const getPriorityBadgeVariant = (
   priority?: string,
-): "destructive" | "secondary" | "outline" => {
+): "destructive" | "secondary" | "default" => {
   switch (priority) {
     case "critical":
     case "high":
@@ -50,13 +53,13 @@ const getPriorityBadgeVariant = (
       return "secondary";
     case "low":
     default:
-      return "outline";
+      return "default";
   }
 };
 
 const getTypeBadgeVariant = (
   type?: string,
-): "destructive" | "secondary" | "outline" => {
+): "destructive" | "secondary" | "default" => {
   switch (type) {
     case "error":
       return "destructive";
@@ -65,7 +68,7 @@ const getTypeBadgeVariant = (
     case "success":
     case "info":
     default:
-      return "outline";
+      return "default";
   }
 };
 
@@ -86,13 +89,9 @@ export function AlertCard({
   };
 
   return (
-    <div className="w-full border border-edge rounded-md !bg-elevated overflow-hidden">
-      <div
-        className={
-          "h-1 w-full " + getAccentBarClass(alert.priority, alert.type)
-        }
-      />
-
+    <div
+      className={`w-full border border-foreground/10 rounded-none bg-card overflow-hidden ${getAccentBorderClass(alert.priority, alert.type)}`}
+    >
       <div className="flex items-start justify-between px-4 pt-4 pb-2">
         <div className="flex items-center gap-3">
           {getAlertIcon(alert.type)}
@@ -123,7 +122,7 @@ export function AlertCard({
         </div>
       )}
 
-      <div className="mx-3 mb-3 border border-edge rounded-md px-3 py-3 !bg-canvas">
+      <div className="mx-3 mb-3 border border-foreground/10 px-3 py-3 bg-background">
         <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
           {alert.message}
         </p>

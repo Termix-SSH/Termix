@@ -25,6 +25,7 @@ import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
 import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
 import { SplitView } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
+import { AlertManager } from "@/dashboard/panels/alerts/AlertManager";
 import { TabBar } from "@/shell/TabBar";
 import type {
   Tab,
@@ -207,6 +208,7 @@ export function AppShell({
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
@@ -246,7 +248,10 @@ export function AppShell({
 
   useEffect(() => {
     getUserInfo()
-      .then((info) => setIsAdmin(info.is_admin))
+      .then((info) => {
+        setIsAdmin(info.is_admin);
+        setUserId(info.userId);
+      })
       .catch(() => setIsAdmin(false));
   }, []);
 
@@ -1702,6 +1707,7 @@ export function AppShell({
         }}
       />
       <TransferMonitor />
+      <AlertManager userId={userId} loggedIn={!!username} />
     </>
   );
 }
