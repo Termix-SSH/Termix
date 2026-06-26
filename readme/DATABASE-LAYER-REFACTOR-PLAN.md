@@ -175,10 +175,12 @@ Dismissed alert read/dismiss/undismiss/export and user cleanup now use the
 current dismissed alert repository boundary.
 Homepage layout read/write now uses the current homepage layout repository
 boundary.
+Network topology read/write and user cleanup now use the current network
+topology repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
-current auth/settings/session/user/API-key/trusted-device/SSO-provider/audit-log/user-preference/open-tab/dismissed-alert/homepage-layout/role/RBAC-access
+current auth/settings/session/user/API-key/trusted-device/SSO-provider/audit-log/user-preference/open-tab/dismissed-alert/homepage-layout/network-topology/role/RBAC-access
 slice has staging evidence. The current migrated slice is now guarded by
 `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which supports `all`, `off`, and a
 comma-separated allowlist of migrated repository domains for controlled gray

@@ -27,6 +27,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "open_tabs",
         "dismissed_alerts",
         "homepage_layouts",
+        "network_topology",
       ],
       explicit: false,
     });
@@ -46,7 +47,7 @@ describe("parseRepositoryRolloutConfig", () => {
 
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
-      [REPOSITORY_ROLLOUT_ENV]: "settings,user,api-key,alerts,layout",
+      [REPOSITORY_ROLLOUT_ENV]: "settings,user,api-key,alerts,layout,topology",
     });
 
     expect(config).toEqual({
@@ -57,6 +58,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "dismissed_alerts",
         "homepage_layouts",
+        "network_topology",
       ],
       explicit: true,
     });
@@ -109,6 +111,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "open_tabs",
         "dismissed_alerts",
         "homepage_layouts",
+        "network_topology",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",
