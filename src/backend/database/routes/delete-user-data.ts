@@ -6,6 +6,7 @@ import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
   commandHistory,
@@ -26,7 +27,6 @@ import {
   sshFolders,
   transferRecent,
   userOpenTabs,
-  userPreferences,
 } from "../db/schema.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
@@ -80,7 +80,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db.delete(networkTopology).where(eq(networkTopology.userId, userId));
     await db.delete(opksshTokens).where(eq(opksshTokens.userId, userId));
     await db.delete(userOpenTabs).where(eq(userOpenTabs.userId, userId));
-    await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
+    await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 
     await createCurrentSettingsRepository().deleteLike(`user_%_${userId}`);
 

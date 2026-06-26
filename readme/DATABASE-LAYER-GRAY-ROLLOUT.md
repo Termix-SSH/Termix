@@ -27,6 +27,8 @@ Allowed in gray rollout:
   validation migrated behind `SsoProviderRepository`.
 - Audit log writes, filtered reads, action lists, and user cleanup migrated
   behind `AuditLogRepository`.
+- User preferences read/write and user cleanup migrated behind
+  `UserPreferenceRepository`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated
@@ -77,7 +79,7 @@ Repository rollout is controlled by `DATABASE_LAYER_REPOSITORY_ROLLOUT`.
 Recommended gray value:
 
 ```bash
-DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,sso_providers,audit_logs,roles,rbac_access
+DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,sso_providers,audit_logs,user_preferences,roles,rbac_access
 ```
 
 Accepted values:
@@ -99,6 +101,7 @@ Supported domains:
 - `trusted_devices`
 - `sso_providers`
 - `audit_logs`
+- `user_preferences`
 - `roles`
 - `rbac_access`
 
@@ -125,8 +128,8 @@ Run before deployment:
 
 ```bash
 npm run type-check
-npx eslint src/backend/database/repositories/repository-rollout.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/current-settings-repository.ts src/backend/database/repositories/current-user-repository.ts src/backend/database/repositories/current-session-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/current-trusted-device-repository.ts src/backend/database/repositories/current-sso-provider-repository.ts src/backend/database/repositories/sso-provider-repository.ts src/backend/database/repositories/sso-provider-repository.test.ts src/backend/database/repositories/current-audit-log-repository.ts src/backend/database/repositories/audit-log-repository.ts src/backend/database/repositories/audit-log-repository.test.ts src/backend/database/repositories/current-role-repository.ts src/backend/database/repositories/role-repository.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/current-rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/routes/rbac.ts src/backend/database/routes/snippets.ts src/backend/database/routes/host.ts src/backend/database/routes/credentials.ts src/backend/database/routes/delete-user-data.ts src/backend/database/routes/user-admin-routes.ts src/backend/database/routes/ldap-auth-routes.ts src/backend/database/routes/users.ts src/backend/database/routes/user-oidc-utils.ts src/backend/database/routes/sso-provider-routes.ts src/backend/database/routes/audit-log-routes.ts src/backend/database/routes/host-folder-routes.ts src/backend/utils/audit-logger.ts src/backend/utils/audit-logger.test.ts src/backend/utils/permission-manager.ts src/backend/utils/shared-credential-manager.ts src/backend/starter.ts
-npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/trusted-device-repository.test.ts src/backend/database/repositories/sso-provider-repository.test.ts src/backend/database/repositories/audit-log-repository.test.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/utils/audit-logger.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts src/backend/database/routes/termix-id.test.ts src/backend/database/routes/user-totp-routes.test.ts src/backend/utils/permission-manager.test.ts src/backend/ssh/credential-username.test.ts src/backend/ssh/tmux-monitor-helpers.test.ts
+npx eslint src/backend/database/repositories/repository-rollout.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/current-settings-repository.ts src/backend/database/repositories/current-user-repository.ts src/backend/database/repositories/current-session-repository.ts src/backend/database/repositories/current-api-key-repository.ts src/backend/database/repositories/current-trusted-device-repository.ts src/backend/database/repositories/current-sso-provider-repository.ts src/backend/database/repositories/sso-provider-repository.ts src/backend/database/repositories/sso-provider-repository.test.ts src/backend/database/repositories/current-audit-log-repository.ts src/backend/database/repositories/audit-log-repository.ts src/backend/database/repositories/audit-log-repository.test.ts src/backend/database/repositories/current-user-preference-repository.ts src/backend/database/repositories/user-preference-repository.ts src/backend/database/repositories/user-preference-repository.test.ts src/backend/database/repositories/current-role-repository.ts src/backend/database/repositories/role-repository.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/current-rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/routes/rbac.ts src/backend/database/routes/snippets.ts src/backend/database/routes/host.ts src/backend/database/routes/credentials.ts src/backend/database/routes/delete-user-data.ts src/backend/database/routes/user-preferences.ts src/backend/database/routes/user-admin-routes.ts src/backend/database/routes/ldap-auth-routes.ts src/backend/database/routes/users.ts src/backend/database/routes/user-oidc-utils.ts src/backend/database/routes/sso-provider-routes.ts src/backend/database/routes/audit-log-routes.ts src/backend/database/routes/host-folder-routes.ts src/backend/utils/audit-logger.ts src/backend/utils/audit-logger.test.ts src/backend/utils/permission-manager.ts src/backend/utils/shared-credential-manager.ts src/backend/starter.ts
+npm run test -- src/backend/database/runtime/config.test.ts src/backend/database/runtime/sqlite-adapter.test.ts src/backend/database/repositories/repository-rollout.test.ts src/backend/database/repositories/settings-repository.test.ts src/backend/database/repositories/user-session-repositories.test.ts src/backend/database/repositories/api-key-repository.test.ts src/backend/database/repositories/trusted-device-repository.test.ts src/backend/database/repositories/sso-provider-repository.test.ts src/backend/database/repositories/audit-log-repository.test.ts src/backend/database/repositories/user-preference-repository.test.ts src/backend/database/repositories/role-repository.test.ts src/backend/database/repositories/rbac-access-repository.test.ts src/backend/database/repositories/host-credential-repositories.test.ts src/backend/database/repositories/field-encryption-boundary.test.ts src/backend/utils/field-crypto.test.ts src/backend/utils/audit-logger.test.ts src/backend/guacamole/token-service.test.ts src/backend/database/routes/user-oidc-utils.test.ts src/backend/database/routes/termix-id.test.ts src/backend/database/routes/user-totp-routes.test.ts src/backend/utils/permission-manager.test.ts src/backend/ssh/credential-username.test.ts src/backend/ssh/tmux-monitor-helpers.test.ts
 git diff --check
 ```
 
@@ -145,6 +148,7 @@ Run these against the gray target:
 | OIDC          | Existing OIDC login works; auto-provision check only if enabled                                        |
 | API keys      | Admin create/list/delete API key; API key authentication updates usage                                 |
 | Settings      | Read/write user settings and global auth settings                                                      |
+| Preferences   | Read/write user preferences and user cleanup still work                                                |
 | SSO providers | Login provider list, admin provider list/create/update/delete, and OIDC/LDAP login config loading work |
 | Audit logs    | Audit write, audit list filters, action filter list, and user cleanup still work                       |
 | Roles         | Admin list/create/update/delete role and assign/remove a user role                                     |
