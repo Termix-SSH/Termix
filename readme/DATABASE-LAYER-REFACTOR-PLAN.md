@@ -26,6 +26,8 @@ The user settings route has also moved its direct `settings` table reads and
 writes behind `SettingsRepository`.
 Host metrics settings routes now use the same repository boundary for global
 monitoring defaults and history retention settings.
+ACME SSL settings route also uses the repository boundary for its persisted
+configuration key.
 
 ## 1. Background
 
