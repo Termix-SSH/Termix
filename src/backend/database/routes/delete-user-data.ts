@@ -26,8 +26,8 @@ import {
   snippets,
   sshCredentials,
   sshFolders,
-  transferRecent,
 } from "../db/schema.js";
+import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
@@ -60,7 +60,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
       .delete(fileManagerShortcuts)
       .where(eq(fileManagerShortcuts.userId, userId));
 
-    await db.delete(transferRecent).where(eq(transferRecent.userId, userId));
+    await createCurrentTransferRecentRepository().deleteByUserId(userId);
 
     await createCurrentRecentActivityRepository().deleteByUserId(userId);
     await createCurrentDismissedAlertRepository().deleteByUserId(userId);

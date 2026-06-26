@@ -7,10 +7,9 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
-  transferRecent,
   sessionRecordings,
 } from "../db/schema.js";
-import { eq, and, or, inArray, desc } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
 import multer from "multer";
@@ -24,6 +23,7 @@ import { pickResolvedUsername } from "../../ssh/credential-username.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -1840,14 +1840,9 @@ router.delete(
         .delete(fileManagerShortcuts)
         .where(eq(fileManagerShortcuts.hostId, numericHostId));
 
-      await db
-        .delete(transferRecent)
-        .where(
-          or(
-            eq(transferRecent.sourceHostId, numericHostId),
-            eq(transferRecent.destHostId, numericHostId),
-          ),
-        );
+      await createCurrentTransferRecentRepository().deleteByHostId(
+        numericHostId,
+      );
 
       await createCurrentCommandHistoryRepository().deleteByHostId(
         numericHostId,
@@ -1954,17 +1949,12 @@ router.get(
     }
 
     try {
-      const recent = await db
-        .select()
-        .from(transferRecent)
-        .where(
-          and(
-            eq(transferRecent.userId, userId),
-            eq(transferRecent.sourceHostId, sourceHostId),
-          ),
-        )
-        .orderBy(desc(transferRecent.lastUsed))
-        .limit(10);
+      const recent =
+        await createCurrentTransferRecentRepository().listBySourceHost(
+          userId,
+          sourceHostId,
+          10,
+        );
 
       res.json(recent);
     } catch (err) {
@@ -1991,53 +1981,15 @@ router.post(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(transferRecent)
-        .where(
-          and(
-            eq(transferRecent.userId, userId),
-            eq(transferRecent.sourceHostId, sourceHostId),
-            eq(transferRecent.destHostId, destHostId),
-            eq(transferRecent.destPath, destPath),
-          ),
-        );
+      const transferRecentRepository = createCurrentTransferRecentRepository();
+      await transferRecentRepository.upsertForDestination(userId, {
+        sourceHostId,
+        destHostId,
+        destPath,
+        destPathLabel,
+      });
 
-      if (existing.length > 0) {
-        await db
-          .update(transferRecent)
-          .set({ lastUsed: new Date().toISOString() })
-          .where(eq(transferRecent.id, existing[0].id));
-      } else {
-        await db.insert(transferRecent).values({
-          userId,
-          sourceHostId,
-          destHostId,
-          destPath,
-          destPathLabel: destPathLabel || destPath,
-          lastUsed: new Date().toISOString(),
-        });
-      }
-
-      const allRecent = await db
-        .select()
-        .from(transferRecent)
-        .where(
-          and(
-            eq(transferRecent.userId, userId),
-            eq(transferRecent.sourceHostId, sourceHostId),
-          ),
-        )
-        .orderBy(desc(transferRecent.lastUsed));
-
-      if (allRecent.length > 10) {
-        const toDelete = allRecent.slice(10);
-        for (const entry of toDelete) {
-          await db
-            .delete(transferRecent)
-            .where(eq(transferRecent.id, entry.id));
-        }
-      }
+      await transferRecentRepository.pruneSourceHost(userId, sourceHostId, 10);
 
       res.json({ message: "Recent destination saved" });
     } catch (err) {

@@ -32,6 +32,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "command_history",
         "recent_activity",
         "ssh_credential_usage",
+        "transfer_recent",
       ],
       explicit: false,
     });
@@ -52,7 +53,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,alerts,layout,topology,dashboard-link,history,activity,usage",
+        "settings,user,api-key,alerts,layout,topology,dashboard-link,history,activity,usage,transfer",
     });
 
     expect(config).toEqual({
@@ -68,6 +69,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "command_history",
         "recent_activity",
         "ssh_credential_usage",
+        "transfer_recent",
       ],
       explicit: true,
     });
@@ -125,6 +127,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "command_history",
         "recent_activity",
         "ssh_credential_usage",
+        "transfer_recent",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

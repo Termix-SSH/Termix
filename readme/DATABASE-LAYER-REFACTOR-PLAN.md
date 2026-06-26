@@ -185,13 +185,12 @@ Recent activity host/user cleanup now uses the current recent activity
 repository boundary.
 SSH credential usage writes and host/user cleanup now use the current SSH
 credential usage repository boundary.
+Transfer recent list/upsert/prune/export and host/folder/user cleanup now use
+the current transfer recent repository boundary.
 
-Gray rollout status: the branch is shifting from broad migration work to gray
-readiness hardening. No additional database domains should be migrated until the
-current auth/settings/session/user/API-key/trusted-device/SSO-provider/audit-log/user-preference/open-tab/dismissed-alert/homepage-layout/network-topology/dashboard-service-link/command-history/recent-activity/SSH-credential-usage/role/RBAC-access
-slice has staging evidence. The current migrated slice is now guarded by
-`DATABASE_LAYER_REPOSITORY_ROLLOUT`, which supports `all`, `off`, and a
-comma-separated allowlist of migrated repository domains for controlled gray
+Gray rollout status: the branch is expanding the repository boundary slice while
+keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which
+supports `all`, `off`, and a comma-separated allowlist for controlled gray
 targets.
 
 ## 1. Background

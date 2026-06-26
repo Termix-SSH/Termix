@@ -5,10 +5,10 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
-  transferRecent,
 } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
 import { createCurrentDismissedAlertRepository } from "../database/repositories/current-dismissed-alert-repository.js";
+import { createCurrentTransferRecentRepository } from "../database/repositories/current-transfer-recent-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
@@ -113,10 +113,7 @@ class UserDataExport {
             .select()
             .from(fileManagerShortcuts)
             .where(eq(fileManagerShortcuts.userId, userId)),
-          getDb()
-            .select()
-            .from(transferRecent)
-            .where(eq(transferRecent.userId, userId)),
+          createCurrentTransferRecentRepository().listByUserId(userId),
         ]);
 
       const alerts =
