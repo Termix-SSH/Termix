@@ -4,13 +4,12 @@ import { db } from "../db/index.js";
 import {
   hostAccess,
   hosts,
-  users,
   sharedCredentials,
   snippets,
   snippetAccess,
   sshCredentials,
 } from "../db/schema.js";
-import { eq, and, desc, sql, or, isNull, gte } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -461,43 +460,13 @@ router.get(
     const userId = req.userId!;
 
     try {
-      const now = new Date().toISOString();
-
       const roleIds =
         await createCurrentRoleRepository().listUserRoleIds(userId);
-
-      const sharedHosts = await db
-        .select({
-          id: hosts.id,
-          name: hosts.name,
-          ip: hosts.ip,
-          port: hosts.port,
-          username: hosts.username,
-          folder: hosts.folder,
-          tags: hosts.tags,
-          permissionLevel: hostAccess.permissionLevel,
-          expiresAt: hostAccess.expiresAt,
-          grantedBy: hostAccess.grantedBy,
-          ownerUsername: users.username,
-        })
-        .from(hostAccess)
-        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
-        .innerJoin(users, eq(hosts.userId, users.id))
-        .where(
-          and(
-            or(
-              eq(hostAccess.userId, userId),
-              roleIds.length > 0
-                ? sql`${hostAccess.roleId} IN (${sql.join(
-                    roleIds.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})`
-                : sql`false`,
-            ),
-            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
-          ),
-        )
-        .orderBy(desc(hostAccess.createdAt));
+      const sharedHosts =
+        await createCurrentRbacAccessRepository().listSharedHosts(
+          userId,
+          roleIds,
+        );
 
       res.json({ sharedHosts });
     } catch (error) {
@@ -1348,69 +1317,15 @@ router.get(
     const userId = req.userId!;
 
     try {
-      const now = new Date().toISOString();
-
-      const directShared = await db
-        .select({
-          id: snippets.id,
-          name: snippets.name,
-          content: snippets.content,
-          description: snippets.description,
-          folder: snippets.folder,
-          ownerUsername: users.username,
-          permissionLevel: snippetAccess.permissionLevel,
-          expiresAt: snippetAccess.expiresAt,
-        })
-        .from(snippetAccess)
-        .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-        .innerJoin(users, eq(snippets.userId, users.id))
-        .where(
-          and(
-            eq(snippetAccess.userId, userId),
-            or(
-              isNull(snippetAccess.expiresAt),
-              gte(snippetAccess.expiresAt, now),
-            ),
-          ),
-        );
-
       const roleIds =
         await createCurrentRoleRepository().listUserRoleIds(userId);
+      const sharedSnippets =
+        await createCurrentRbacAccessRepository().listSharedSnippets(
+          userId,
+          roleIds,
+        );
 
-      let roleShared: typeof directShared = [];
-      if (roleIds.length > 0) {
-        const directIds = directShared.map((s) => s.id);
-        const roleResults = await db
-          .select({
-            id: snippets.id,
-            name: snippets.name,
-            content: snippets.content,
-            description: snippets.description,
-            folder: snippets.folder,
-            ownerUsername: users.username,
-            permissionLevel: snippetAccess.permissionLevel,
-            expiresAt: snippetAccess.expiresAt,
-          })
-          .from(snippetAccess)
-          .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-          .innerJoin(users, eq(snippets.userId, users.id))
-          .where(
-            and(
-              or(
-                isNull(snippetAccess.expiresAt),
-                gte(snippetAccess.expiresAt, now),
-              ),
-              sql`${snippetAccess.roleId} IN (${sql.join(
-                roleIds.map((id) => sql`${id}`),
-                sql`, `,
-              )})`,
-            ),
-          );
-
-        roleShared = roleResults.filter((s) => !directIds.includes(s.id));
-      }
-
-      res.json({ sharedSnippets: [...directShared, ...roleShared] });
+      res.json({ sharedSnippets });
     } catch (error) {
       databaseLogger.error("Failed to get shared snippets", error, {
         operation: "get_shared_snippets",

@@ -50,6 +50,17 @@ describe("RbacAccessRepository", () => {
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
+      CREATE TABLE ssh_data (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        name TEXT,
+        ip TEXT NOT NULL,
+        port INTEGER NOT NULL,
+        username TEXT NOT NULL,
+        folder TEXT,
+        tags TEXT
+      );
+
       CREATE TABLE snippets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -82,6 +93,9 @@ describe("RbacAccessRepository", () => {
 
       INSERT INTO roles (id, name, display_name, is_system)
       VALUES (7, 'ops', 'Operations', 0);
+
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, folder, tags)
+      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 'servers', 'linux');
 
       INSERT INTO host_access (
         id, host_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
@@ -153,6 +167,57 @@ describe("RbacAccessRepository", () => {
       userId: "user-1",
       username: "alice",
       grantedByUsername: "admin",
+    });
+  });
+
+  it("lists shared hosts for direct and role access", async () => {
+    const repo = await createRepository();
+
+    const sharedHosts = await repo.listSharedHosts("user-1", [7]);
+
+    expect(sharedHosts).toMatchObject([
+      {
+        id: 42,
+        name: "prod",
+        ip: "10.0.0.42",
+        ownerUsername: "owner",
+        permissionLevel: "view",
+      },
+      {
+        id: 42,
+        name: "prod",
+        ip: "10.0.0.42",
+        ownerUsername: "owner",
+        permissionLevel: "view",
+      },
+    ]);
+  });
+
+  it("lists shared snippets and preserves route-level direct-over-role behavior", async () => {
+    const repo = await createRepository();
+
+    const sharedSnippets = await repo.listSharedSnippets("user-1", [7]);
+
+    expect(sharedSnippets).toHaveLength(1);
+    expect(sharedSnippets[0]).toMatchObject({
+      id: 99,
+      name: "deploy",
+      ownerUsername: "owner",
+      permissionLevel: "view",
+    });
+  });
+
+  it("lists visible shared snippets for the main snippets route", async () => {
+    const repo = await createRepository();
+
+    const sharedSnippets = await repo.listVisibleSharedSnippets("user-1", [7]);
+
+    expect(sharedSnippets.map((snippet) => snippet.id)).toEqual([99, 99]);
+    expect(sharedSnippets[0]).toMatchObject({
+      userId: "owner-1",
+      name: "deploy",
+      content: "echo deploy",
+      ownerUsername: "owner",
     });
   });
 });

@@ -512,6 +512,9 @@ Started:
 - RBAC host/snippet access-list read models moved behind the current RBAC access
   repository boundary, and snippet route shared-access role-id lookups moved
   behind the current role repository boundary
+- RBAC shared host/shared snippet read models and the main snippet
+  shared-snippet read model moved behind the current RBAC access repository
+  boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device/role/RBAC-access
   slice

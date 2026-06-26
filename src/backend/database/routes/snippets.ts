@@ -1,19 +1,15 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import {
-  snippets,
-  snippetFolders,
-  snippetAccess,
-  users,
-} from "../db/schema.js";
-import { eq, and, desc, asc, sql, or, isNull, gte } from "drizzle-orm";
+import { snippets, snippetFolders, snippetAccess } from "../db/schema.js";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
@@ -30,32 +26,6 @@ async function getUserRoleIds(userId: string): Promise<number[]> {
 async function getActorUsername(userId: string): Promise<string> {
   const user = await createCurrentUserRepository().findById(userId);
   return user?.username ?? userId;
-}
-
-function roleIdFilter(roleIds: number[]) {
-  if (roleIds.length === 0) {
-    return undefined;
-  }
-
-  return sql`${snippetAccess.roleId} IN (${sql.join(
-    roleIds.map((id) => sql`${id}`),
-    sql`, `,
-  )})`;
-}
-
-function activeSnippetAccessFilter(userId: string, roleIds: number[]) {
-  const roleFilter = roleIdFilter(roleIds);
-  const targetFilter = roleFilter
-    ? or(eq(snippetAccess.userId, userId), roleFilter)
-    : eq(snippetAccess.userId, userId);
-
-  return and(
-    targetFilter,
-    or(
-      isNull(snippetAccess.expiresAt),
-      gte(snippetAccess.expiresAt, new Date().toISOString()),
-    ),
-  );
 }
 
 function sortSnippets<
@@ -1228,25 +1198,11 @@ router.get(
         );
 
       const roleIds = await getUserRoleIds(userId);
-      const sharedSnippets = await db
-        .select({
-          id: snippets.id,
-          userId: snippets.userId,
-          name: snippets.name,
-          content: snippets.content,
-          description: snippets.description,
-          folder: snippets.folder,
-          order: snippets.order,
-          createdAt: snippets.createdAt,
-          updatedAt: snippets.updatedAt,
-          ownerUsername: users.username,
-          permissionLevel: snippetAccess.permissionLevel,
-          expiresAt: snippetAccess.expiresAt,
-        })
-        .from(snippetAccess)
-        .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-        .innerJoin(users, eq(snippets.userId, users.id))
-        .where(activeSnippetAccessFilter(userId, roleIds));
+      const sharedSnippets =
+        await createCurrentRbacAccessRepository().listVisibleSharedSnippets(
+          userId,
+          roleIds,
+        );
 
       const visibleSnippets = new Map<number, Record<string, unknown>>();
       for (const snippet of ownedSnippets) {

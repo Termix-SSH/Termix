@@ -130,6 +130,8 @@ access, and admin role checks now use the current role repository boundary.
 RBAC host/snippet access-list read models now use the current RBAC access
 repository boundary, and snippet route shared-access role-id lookups now use the
 current role repository boundary.
+RBAC shared host/shared snippet read models and the main snippet shared-snippet
+read model now use the current RBAC access repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
