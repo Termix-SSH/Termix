@@ -32,6 +32,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "vault_profiles",
   "host_metrics_preferences",
   "host_health",
+  "host_metrics_history",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -153,6 +154,9 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   host_health_checks: "host_health",
   host_health_history: "host_health",
   hosthealth: "host_health",
+  host_metrics_history: "host_metrics_history",
+  hostmetricshistory: "host_metrics_history",
+  metrics_history: "host_metrics_history",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",

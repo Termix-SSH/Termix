@@ -208,6 +208,8 @@ Host metrics layout preference read/upsert now uses the current host metrics
 preference repository boundary.
 Host health check config and history read/write now use the current host health
 repository boundary.
+Host metrics history record/prune/query now uses the current host metrics
+history repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

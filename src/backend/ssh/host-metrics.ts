@@ -8,6 +8,7 @@ import { pickResolvedUsername } from "./credential-username.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
+import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/current-host-metrics-history-repository.js";
 import { eq } from "drizzle-orm";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
@@ -422,7 +423,7 @@ class PollingManager {
         data: metrics,
         timestamp: Date.now(),
       });
-      this.insertMetricsHistory(refreshedHost.id, metrics);
+      await this.insertMetricsHistory(refreshedHost.id, metrics);
       AlertEngine.getInstance()
         .evaluateMetrics(refreshedHost.id, metrics)
         .catch(() => {});
@@ -474,7 +475,7 @@ class PollingManager {
     }
   }
 
-  private insertMetricsHistory(
+  private async insertMetricsHistory(
     hostId: number,
     metrics: {
       cpu: { percent: number | null };
@@ -484,34 +485,24 @@ class PollingManager {
         interfaces: Array<{ rxBytes: string | null; txBytes: string | null }>;
       };
     },
-  ): void {
+  ): Promise<void> {
     try {
-      const db = getDb();
       const iface = metrics.network?.interfaces?.[0];
       const rxRaw = iface?.rxBytes ? parseInt(iface.rxBytes, 10) : null;
       const txRaw = iface?.txBytes ? parseInt(iface.txBytes, 10) : null;
 
-      db.$client
-        .prepare(
-          `INSERT INTO host_metrics_history
-             (host_id, cpu_percent, mem_percent, disk_percent, net_rx_bytes, net_tx_bytes)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          hostId,
-          metrics.cpu?.percent ?? null,
-          metrics.memory?.percent ?? null,
-          metrics.disk?.percent ?? null,
-          isNaN(rxRaw as number) ? null : rxRaw,
-          isNaN(txRaw as number) ? null : txRaw,
-        );
+      const repository = createCurrentHostMetricsHistoryRepository();
+      await repository.create({
+        hostId,
+        cpuPercent: metrics.cpu?.percent ?? null,
+        memPercent: metrics.memory?.percent ?? null,
+        diskPercent: metrics.disk?.percent ?? null,
+        netRxBytes: isNaN(rxRaw as number) ? null : rxRaw,
+        netTxBytes: isNaN(txRaw as number) ? null : txRaw,
+      });
 
       const retentionDays = this.getRetentionDays();
-      db.$client
-        .prepare(
-          `DELETE FROM host_metrics_history WHERE host_id = ? AND ts < datetime('now', ?)`,
-        )
-        .run(hostId, `-${retentionDays} days`);
+      repository.pruneOlderThan(hostId, retentionDays);
     } catch (err) {
       statsLogger.warn("Failed to write metrics history", {
         operation: "insert_metrics_history",
