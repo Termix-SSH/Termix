@@ -10,6 +10,7 @@ import {
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 
 const { Client } = ssh2Pkg;
 
@@ -274,6 +275,16 @@ export async function createJumpHostChain(
           connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
           if (jumpHostConfig.keyPassword) {
             connectConfig.passphrase = jumpHostConfig.keyPassword;
+          }
+        } else if (jumpHostConfig.authType === "agent") {
+          const result = await applyAgentAuth(
+            connectConfig,
+            jumpHostConfig.terminalConfig as
+              | Record<string, unknown>
+              | undefined,
+          );
+          if ("error" in result) {
+            throw new Error(result.error);
           }
         }
 

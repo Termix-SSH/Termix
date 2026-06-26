@@ -6,7 +6,7 @@ vi.mock("fs/promises", () => ({
   access: mockAccess,
 }));
 
-import { resolveAgentSocket } from "./terminal-auth-helpers.js";
+import { applyAgentAuth, resolveAgentSocket } from "./terminal-auth-helpers.js";
 
 describe("resolveAgentSocket", () => {
   const originalEnv = process.env.SSH_AUTH_SOCK;
@@ -63,6 +63,25 @@ describe("resolveAgentSocket", () => {
     expect(result).toEqual({ socketPath: "/tmp/ssh-XXXX/agent.789" });
   });
 
+  it("reads agent socket path from serialized terminal config", async () => {
+    Object.defineProperty(process, "platform", { value: "linux" });
+    mockAccess.mockResolvedValue(undefined);
+
+    const result = await resolveAgentSocket(
+      JSON.stringify({ agentSocketPath: "/tmp/serialized-agent.sock" }),
+    );
+
+    expect(result).toEqual({ socketPath: "/tmp/serialized-agent.sock" });
+  });
+
+  it("returns error for invalid serialized terminal config", async () => {
+    const result = await resolveAgentSocket("{");
+
+    expect(result).toEqual({
+      error: "Invalid terminal configuration for SSH agent auth.",
+    });
+  });
+
   it("returns error when neither SSH_AUTH_SOCK nor explicit path is set", async () => {
     const result = await resolveAgentSocket({});
 
@@ -99,5 +118,18 @@ describe("resolveAgentSocket", () => {
       socketPath: "\\\\.\\pipe\\openssh-ssh-agent",
     });
     expect(mockAccess).not.toHaveBeenCalled();
+  });
+
+  it("attaches an ssh2 agent to a connect config", async () => {
+    Object.defineProperty(process, "platform", { value: "linux" });
+    mockAccess.mockResolvedValue(undefined);
+    const config: Record<string, unknown> = {};
+
+    const result = await applyAgentAuth(config, {
+      agentSocketPath: "/tmp/ssh-agent.sock",
+    });
+
+    expect(result).toEqual({ socketPath: "/tmp/ssh-agent.sock" });
+    expect(config.agent).toBeDefined();
   });
 });

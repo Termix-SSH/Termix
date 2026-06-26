@@ -15,6 +15,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { applyAgentAuth } from "../../ssh/terminal-auth-helpers.js";
 
 const router = express.Router();
 
@@ -885,6 +886,14 @@ router.post(
           config.privateKey = Buffer.from(cleanKey, "utf8");
           if (passphrase) {
             config.passphrase = passphrase;
+          }
+        } else if (authType === "agent") {
+          const result = await applyAgentAuth(
+            config,
+            host.terminalConfig as Record<string, unknown> | string | undefined,
+          );
+          if ("error" in result) {
+            throw new Error(result.error);
           }
         } else if (password) {
           config.password = password;

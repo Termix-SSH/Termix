@@ -10,6 +10,7 @@ import {
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 
 type JumpHostConfig = {
   id: number;
@@ -260,6 +261,16 @@ export async function createJumpHostChain(
           connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
           if (jumpHostConfig.keyPassword) {
             connectConfig.passphrase = jumpHostConfig.keyPassword;
+          }
+        } else if (jumpHostConfig.authType === "agent") {
+          const result = await applyAgentAuth(
+            connectConfig,
+            jumpHostConfig.terminalConfig as
+              | Record<string, unknown>
+              | undefined,
+          );
+          if ("error" in result) {
+            throw new Error(result.error);
           }
         }
 

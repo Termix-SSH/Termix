@@ -14,6 +14,7 @@ import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { resolveHostById, checkHostAccess } from "./host-resolver.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -94,6 +95,14 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
     }
   } else if (host.authType === "none") {
     // no credentials needed
+  } else if (host.authType === "agent") {
+    const result = await applyAgentAuth(
+      base as Record<string, unknown>,
+      host.terminalConfig as Record<string, unknown> | undefined,
+    );
+    if ("error" in result) {
+      throw new Error(result.error);
+    }
   } else {
     // opkssh and other interactive flows are not supported by this module
     throw new Error(
