@@ -29,6 +29,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "homepage_layouts",
         "network_topology",
         "dashboard_service_links",
+        "command_history",
       ],
       explicit: false,
     });
@@ -49,7 +50,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,alerts,layout,topology,dashboard-link",
+        "settings,user,api-key,alerts,layout,topology,dashboard-link,history",
     });
 
     expect(config).toEqual({
@@ -62,6 +63,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "homepage_layouts",
         "network_topology",
         "dashboard_service_links",
+        "command_history",
       ],
       explicit: true,
     });
@@ -116,6 +118,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "homepage_layouts",
         "network_topology",
         "dashboard_service_links",
+        "command_history",
       ],
       warnings: [
         "Partial repository rollout enabled for domains: settings, sessions.",

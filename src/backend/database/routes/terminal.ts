@@ -1,11 +1,12 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { commandHistory, hosts } from "../db/schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { hosts } from "../db/schema.js";
+import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 
 const router = express.Router();
@@ -119,18 +120,13 @@ router.post(
     }
 
     try {
-      const insertData = {
+      const result = await createCurrentCommandHistoryRepository().create(
         userId,
-        hostId: parseInt(hostId, 10),
-        command: trimmedCommand,
-      };
+        parseInt(hostId, 10),
+        trimmedCommand,
+      );
 
-      const result = await db
-        .insert(commandHistory)
-        .values(insertData)
-        .returning();
-
-      res.status(201).json(result[0]);
+      res.status(201).json(result);
     } catch (err) {
       authLogger.error("Failed to save command to history", err);
       res.status(500).json({
@@ -182,23 +178,11 @@ router.get(
     }
 
     try {
-      const result = await db
-        .select({
-          command: commandHistory.command,
-          maxExecutedAt: sql<number>`MAX(${commandHistory.executedAt})`,
-        })
-        .from(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.userId, userId),
-            eq(commandHistory.hostId, hostIdNum),
-          ),
-        )
-        .groupBy(commandHistory.command)
-        .orderBy(desc(sql`MAX(${commandHistory.executedAt})`))
-        .limit(500);
-
-      const uniqueCommands = result.map((r) => r.command);
+      const uniqueCommands =
+        await createCurrentCommandHistoryRepository().listUniqueCommandsForHost(
+          userId,
+          hostIdNum,
+        );
 
       res.json(uniqueCommands);
     } catch (err) {
@@ -258,15 +242,11 @@ router.post(
     try {
       const hostIdNum = parseInt(hostId, 10);
 
-      await db
-        .delete(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.userId, userId),
-            eq(commandHistory.hostId, hostIdNum),
-            eq(commandHistory.command, command.trim()),
-          ),
-        );
+      await createCurrentCommandHistoryRepository().deleteCommandForHost(
+        userId,
+        hostIdNum,
+        command.trim(),
+      );
 
       res.json({ success: true });
     } catch (err) {
@@ -317,14 +297,10 @@ router.delete(
     }
 
     try {
-      await db
-        .delete(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.userId, userId),
-            eq(commandHistory.hostId, hostIdNum),
-          ),
-        );
+      await createCurrentCommandHistoryRepository().deleteByUserAndHost(
+        userId,
+        hostIdNum,
+      );
       databaseLogger.info("Terminal history cleared", {
         operation: "terminal_history_clear",
         userId,

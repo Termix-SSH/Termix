@@ -9,7 +9,6 @@ import {
   fileManagerPinned,
   fileManagerShortcuts,
   transferRecent,
-  commandHistory,
   recentActivity,
   sessionRecordings,
 } from "../db/schema.js";
@@ -24,6 +23,7 @@ import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { pickResolvedUsername } from "../../ssh/credential-username.js";
+import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -1849,9 +1849,9 @@ router.delete(
           ),
         );
 
-      await db
-        .delete(commandHistory)
-        .where(eq(commandHistory.hostId, numericHostId));
+      await createCurrentCommandHistoryRepository().deleteByHostId(
+        numericHostId,
+      );
 
       await db
         .delete(sshCredentialUsage)

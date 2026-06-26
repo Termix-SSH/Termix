@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
+import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
 import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
@@ -12,7 +13,6 @@ import { createCurrentSettingsRepository } from "../repositories/current-setting
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
-  commandHistory,
   fileManagerPinned,
   fileManagerRecent,
   fileManagerShortcuts,
@@ -72,7 +72,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await db.delete(sshFolders).where(eq(sshFolders.userId, userId));
 
-    await db.delete(commandHistory).where(eq(commandHistory.userId, userId));
+    await createCurrentCommandHistoryRepository().deleteByUserId(userId);
 
     await db.delete(hosts).where(eq(hosts.userId, userId));
     await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));

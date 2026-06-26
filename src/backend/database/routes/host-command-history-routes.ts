@@ -1,9 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { and, desc, eq } from "drizzle-orm";
 import { sshLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { commandHistory } from "../db/schema.js";
+import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 export function registerHostCommandHistoryRoutes(
@@ -52,22 +50,13 @@ export function registerHostCommandHistoryRoutes(
       }
 
       try {
-        const history = await db
-          .select({
-            id: commandHistory.id,
-            command: commandHistory.command,
-          })
-          .from(commandHistory)
-          .where(
-            and(
-              eq(commandHistory.userId, userId),
-              eq(commandHistory.hostId, hostId),
-            ),
-          )
-          .orderBy(desc(commandHistory.executedAt))
-          .limit(200);
+        const history =
+          await createCurrentCommandHistoryRepository().listCommandsForHost(
+            userId,
+            hostId,
+          );
 
-        res.json(history.map((h) => h.command));
+        res.json(history);
       } catch (err) {
         sshLogger.error("Failed to fetch command history from database", err, {
           operation: "command_history_fetch",
@@ -123,15 +112,11 @@ export function registerHostCommandHistoryRoutes(
       }
 
       try {
-        await db
-          .delete(commandHistory)
-          .where(
-            and(
-              eq(commandHistory.userId, userId),
-              eq(commandHistory.hostId, hostId),
-              eq(commandHistory.command, command),
-            ),
-          );
+        await createCurrentCommandHistoryRepository().deleteCommandForHost(
+          userId,
+          hostId,
+          command,
+        );
 
         res.json({ message: "Command deleted from history" });
       } catch (err) {

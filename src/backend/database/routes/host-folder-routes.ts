@@ -5,7 +5,6 @@ import { databaseLogger, sshLogger } from "../../utils/logger.js";
 import { db, DatabaseSaveTrigger } from "../db/index.js";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import {
-  commandHistory,
   fileManagerPinned,
   fileManagerRecent,
   fileManagerShortcuts,
@@ -17,6 +16,7 @@ import {
   sshFolders,
   transferRecent,
 } from "../db/schema.js";
+import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
@@ -342,9 +342,9 @@ export function registerHostFolderRoutes(
               ),
             );
 
-          await db
-            .delete(commandHistory)
-            .where(inArray(commandHistory.hostId, hostIds));
+          await createCurrentCommandHistoryRepository().deleteByHostIds(
+            hostIds,
+          );
 
           await db
             .delete(sshCredentialUsage)

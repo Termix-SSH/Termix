@@ -179,10 +179,12 @@ Network topology read/write and user cleanup now use the current network
 topology repository boundary.
 Dashboard service link list/create/update/delete now uses the current dashboard
 service link repository boundary.
+Command history save/list/delete and host/user cleanup now use the current
+command history repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
-current auth/settings/session/user/API-key/trusted-device/SSO-provider/audit-log/user-preference/open-tab/dismissed-alert/homepage-layout/network-topology/dashboard-service-link/role/RBAC-access
+current auth/settings/session/user/API-key/trusted-device/SSO-provider/audit-log/user-preference/open-tab/dismissed-alert/homepage-layout/network-topology/dashboard-service-link/command-history/role/RBAC-access
 slice has staging evidence. The current migrated slice is now guarded by
 `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which supports `all`, `off`, and a
 comma-separated allowlist of migrated repository domains for controlled gray

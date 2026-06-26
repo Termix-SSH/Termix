@@ -18,6 +18,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "homepage_layouts",
   "network_topology",
   "dashboard_service_links",
+  "command_history",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -56,6 +57,10 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   dashboard_service_links: "dashboard_service_links",
   dashboardlink: "dashboard_service_links",
   dashboardlinks: "dashboard_service_links",
+  command_history: "command_history",
+  commandhistory: "command_history",
+  history: "command_history",
+  terminal_history: "command_history",
   dismissed_alert: "dismissed_alerts",
   dismissed_alerts: "dismissed_alerts",
   dismissedalert: "dismissed_alerts",
