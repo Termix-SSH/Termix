@@ -1,7 +1,7 @@
 import type { Router } from "express";
 import type { LDAPProviderConfig } from "../../../types/index.js";
 import { db } from "../db/index.js";
-import { ssoProviders, users, roles, userRoles } from "../db/schema.js";
+import { ssoProviders, roles, userRoles } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
@@ -10,6 +10,7 @@ import { parseUserAgent } from "../../utils/user-agent-parser.js";
 import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -269,14 +270,13 @@ export function registerLDAPAuthRoutes(router: Router): void {
 
       const deviceInfo = parseUserAgent(req);
       const oidcIdentifier = `ldap:${providerId}:${ldapIdentifier}`;
+      const userRepository = createCurrentUserRepository();
 
-      let existingUsers = await db
-        .select()
-        .from(users)
-        .where(eq(users.oidcIdentifier, oidcIdentifier));
+      let existingUser =
+        await userRepository.findByOidcIdentifier(oidcIdentifier);
 
       let userId: string;
-      if (existingUsers.length === 0) {
+      if (!existingUser) {
         let autoProvision = false;
         try {
           autoProvision = await createCurrentSettingsRepository().getBoolean(
@@ -346,7 +346,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
               : 24 * 60 * 60 * 1000;
           await authManager.registerOIDCUser(userId, sessionDurationMs);
         } catch (encryptionError) {
-          await db.delete(users).where(eq(users.id, userId));
+          await userRepository.delete(userId);
           authLogger.error(
             "Failed to setup LDAP user encryption",
             encryptionError,
@@ -356,17 +356,17 @@ export function registerLDAPAuthRoutes(router: Router): void {
             .json({ error: "Failed to setup user security" });
         }
 
-        existingUsers = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId));
+        existingUser = await userRepository.findById(userId);
+        if (!existingUser) {
+          throw new Error("Created LDAP user could not be loaded");
+        }
       } else {
-        userId = existingUsers[0].id;
+        userId = existingUser.id;
 
         // Sync admin status from group membership
-        if (config.adminGroup && !!existingUsers[0].isAdmin !== isAdmin) {
-          await db.update(users).set({ isAdmin }).where(eq(users.id, userId));
-          existingUsers[0].isAdmin = isAdmin;
+        if (config.adminGroup && !!existingUser.isAdmin !== isAdmin) {
+          existingUser =
+            (await userRepository.update(userId, { isAdmin })) ?? existingUser;
           try {
             const newRoleName = isAdmin ? "admin" : "user";
             const oldRoleName = isAdmin ? "user" : "admin";
@@ -404,17 +404,15 @@ export function registerLDAPAuthRoutes(router: Router): void {
 
         // Update display name if not dual-auth
         const isDualAuth =
-          existingUsers[0].passwordHash &&
-          existingUsers[0].passwordHash.trim() !== "";
-        if (!isDualAuth && existingUsers[0].username !== displayName) {
-          await db
-            .update(users)
-            .set({ username: displayName })
-            .where(eq(users.id, userId));
+          existingUser.passwordHash && existingUser.passwordHash.trim() !== "";
+        if (!isDualAuth && existingUser.username !== displayName) {
+          existingUser =
+            (await userRepository.update(userId, { username: displayName })) ??
+            existingUser;
         }
       }
 
-      const userRecord = existingUsers[0];
+      const userRecord = existingUser;
       try {
         await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
       } catch {

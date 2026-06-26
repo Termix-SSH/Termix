@@ -112,6 +112,9 @@ retaining direct cleanup of non-migrated related tables.
 Snippet create/update/delete audit actor username lookups now use the current
 user repository boundary; the remaining snippet `users` usage is the shared
 snippet owner join.
+LDAP login existing-user lookup, encryption rollback delete, admin sync, and
+display-name sync now use the current user repository boundary while retaining
+the existing first-user creation transaction.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
