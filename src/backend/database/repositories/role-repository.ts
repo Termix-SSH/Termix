@@ -129,6 +129,15 @@ export class RoleRepository {
     return rows.map((row) => row.roleId);
   }
 
+  async listRoleUserIds(roleId: number): Promise<string[]> {
+    const rows = await this.context.drizzle
+      .select({ userId: userRoles.userId })
+      .from(userRoles)
+      .where(eq(userRoles.roleId, roleId));
+
+    return rows.map((row) => row.userId);
+  }
+
   async listUserRolePermissions(
     userId: string,
   ): Promise<UserRolePermissionRecord[]> {

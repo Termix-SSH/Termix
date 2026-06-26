@@ -110,6 +110,7 @@ describe("RoleRepository", () => {
 
     expect(await repo.findUserRole("user-1", roleId)).not.toBeNull();
     expect(await repo.listUserRoleIds("user-1")).toEqual([roleId]);
+    expect(await repo.listRoleUserIds(roleId)).toEqual(["user-1"]);
     expect((await repo.listUserRoles("user-1"))[0]).toMatchObject({
       roleId,
       roleName: "ops",

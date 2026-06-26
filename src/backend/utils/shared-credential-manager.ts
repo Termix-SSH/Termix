@@ -1,11 +1,8 @@
 import { db } from "../database/db/index.js";
-import {
-  sharedCredentials,
-  sshCredentials,
-  userRoles,
-} from "../database/db/schema.js";
+import { sharedCredentials, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
+import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";
 import { databaseLogger } from "./logger.js";
@@ -130,12 +127,10 @@ class SharedCredentialManager {
     ownerId: string,
   ): Promise<void> {
     try {
-      const roleUsers = await db
-        .select({ userId: userRoles.userId })
-        .from(userRoles)
-        .where(eq(userRoles.roleId, roleId));
+      const roleUserIds =
+        await createCurrentRoleRepository().listRoleUserIds(roleId);
 
-      for (const { userId } of roleUsers) {
+      for (const userId of roleUserIds) {
         try {
           await this.createSharedCredentialForUser(
             hostAccessId,
@@ -225,12 +220,10 @@ class SharedCredentialManager {
 
   async createSharedCredentialsForUserRoles(userId: string): Promise<void> {
     try {
-      const roleRows = await db
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
 
-      for (const { roleId } of roleRows) {
+      for (const roleId of roleIds) {
         await this.createSharedCredentialsForRoleMember(roleId, userId);
       }
     } catch (error) {
