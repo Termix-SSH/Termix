@@ -11,11 +11,9 @@ import {
   transferRecent,
   commandHistory,
   recentActivity,
-  hostAccess,
-  userRoles,
   sessionRecordings,
 } from "../db/schema.js";
-import { eq, and, or, isNull, gte, sql, inArray, desc } from "drizzle-orm";
+import { eq, and, or, inArray, desc } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
 import multer from "multer";
@@ -42,6 +40,7 @@ import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 
 const router = express.Router();
 
@@ -1171,131 +1170,59 @@ router.get(
     try {
       const now = new Date().toISOString();
 
-      const userRoleIds = await db
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
-      const roleIds = userRoleIds.map((r) => r.roleId);
-
-      const rawData = await db
-        .select({
-          id: hosts.id,
-          userId: hosts.userId,
-          connectionType: hosts.connectionType,
-          name: hosts.name,
-          ip: hosts.ip,
-          port: hosts.port,
-          username: hosts.username,
-          folder: hosts.folder,
-          tags: hosts.tags,
-          pin: hosts.pin,
-          authType: hosts.authType,
-          password: hosts.password,
-          key: hosts.key,
-          keyPassword: hosts.keyPassword,
-          keyType: hosts.keyType,
-          enableTerminal: hosts.enableTerminal,
-          enableTunnel: hosts.enableTunnel,
-          tunnelConnections: hosts.tunnelConnections,
-          jumpHosts: hosts.jumpHosts,
-          enableFileManager: hosts.enableFileManager,
-          scpLegacy: hosts.scpLegacy,
-          defaultPath: hosts.defaultPath,
-          autostartPassword: hosts.autostartPassword,
-          autostartKey: hosts.autostartKey,
-          autostartKeyPassword: hosts.autostartKeyPassword,
-          forceKeyboardInteractive: hosts.forceKeyboardInteractive,
-          statsConfig: hosts.statsConfig,
-          terminalConfig: hosts.terminalConfig,
-          sudoPassword: hosts.sudoPassword,
-          createdAt: hosts.createdAt,
-          updatedAt: hosts.updatedAt,
-          credentialId: hosts.credentialId,
-          vaultProfileId: hosts.vaultProfileId,
-          overrideCredentialUsername: hosts.overrideCredentialUsername,
-          quickActions: hosts.quickActions,
-          notes: hosts.notes,
-          enableDocker: hosts.enableDocker,
-          enableProxmox: hosts.enableProxmox,
-          enableTmuxMonitor: hosts.enableTmuxMonitor,
-          showTerminalInSidebar: hosts.showTerminalInSidebar,
-          showFileManagerInSidebar: hosts.showFileManagerInSidebar,
-          showTunnelInSidebar: hosts.showTunnelInSidebar,
-          showDockerInSidebar: hosts.showDockerInSidebar,
-          showServerStatsInSidebar: hosts.showServerStatsInSidebar,
-          useSocks5: hosts.useSocks5,
-          socks5Host: hosts.socks5Host,
-          socks5Port: hosts.socks5Port,
-          socks5Username: hosts.socks5Username,
-          socks5Password: hosts.socks5Password,
-          socks5ProxyChain: hosts.socks5ProxyChain,
-          portKnockSequence: hosts.portKnockSequence,
-          domain: hosts.domain,
-          security: hosts.security,
-          ignoreCert: hosts.ignoreCert,
-          guacamoleConfig: hosts.guacamoleConfig,
-          macAddress: hosts.macAddress,
-          wolBroadcastAddress: hosts.wolBroadcastAddress,
-          dockerConfig: hosts.dockerConfig,
-          proxmoxConfig: hosts.proxmoxConfig,
-          enableSsh: hosts.enableSsh,
-          enableRdp: hosts.enableRdp,
-          enableVnc: hosts.enableVnc,
-          enableTelnet: hosts.enableTelnet,
-          sshPort: hosts.sshPort,
-          rdpPort: hosts.rdpPort,
-          vncPort: hosts.vncPort,
-          telnetPort: hosts.telnetPort,
-          rdpCredentialId: hosts.rdpCredentialId,
-          rdpUser: hosts.rdpUser,
-          rdpPassword: hosts.rdpPassword,
-          rdpDomain: hosts.rdpDomain,
-          rdpSecurity: hosts.rdpSecurity,
-          rdpIgnoreCert: hosts.rdpIgnoreCert,
-          vncAuthType: hosts.vncAuthType,
-          vncCredentialId: hosts.vncCredentialId,
-          vncUser: hosts.vncUser,
-          vncPassword: hosts.vncPassword,
-          telnetUser: hosts.telnetUser,
-          telnetPassword: hosts.telnetPassword,
-
-          ownerId: hosts.userId,
-          isShared: sql<boolean>`${hostAccess.id} IS NOT NULL AND ${hosts.userId} != ${userId}`,
-          permissionLevel: hostAccess.permissionLevel,
-          expiresAt: hostAccess.expiresAt,
-        })
-        .from(hosts)
-        .leftJoin(
-          hostAccess,
-          and(
-            eq(hostAccess.hostId, hosts.id),
-            or(
-              eq(hostAccess.userId, userId),
-              roleIds.length > 0
-                ? inArray(hostAccess.roleId, roleIds)
-                : sql`false`,
-            ),
-            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
-          ),
-        )
-        .where(
-          or(
-            eq(hosts.userId, userId),
-            and(
-              eq(hostAccess.userId, userId),
-              or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
-            ),
-            roleIds.length > 0
-              ? and(
-                  inArray(hostAccess.roleId, roleIds),
-                  or(
-                    isNull(hostAccess.expiresAt),
-                    gte(hostAccess.expiresAt, now),
-                  ),
-                )
-              : sql`false`,
-          ),
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
+      const accessEntries =
+        await createCurrentRbacAccessRepository().listVisibleHostAccessEntries(
+          userId,
+          roleIds,
+          now,
         );
+
+      const ownHostRows = await db
+        .select()
+        .from(hosts)
+        .where(eq(hosts.userId, userId));
+
+      const sharedHostIds = Array.from(
+        new Set(accessEntries.map((access) => access.hostId)),
+      );
+      const sharedHostRows =
+        sharedHostIds.length > 0
+          ? await db
+              .select()
+              .from(hosts)
+              .where(inArray(hosts.id, sharedHostIds))
+          : [];
+      const sharedHostsById = new Map(
+        sharedHostRows.map((host) => [host.id, host]),
+      );
+
+      const rawData = [
+        ...ownHostRows.map((host) => ({
+          ...host,
+          ownerId: host.userId,
+          isShared: false,
+          permissionLevel: undefined,
+          expiresAt: undefined,
+        })),
+        ...accessEntries.flatMap((access) => {
+          const host = sharedHostsById.get(access.hostId);
+          if (!host || host.userId === userId) {
+            return [];
+          }
+
+          return [
+            {
+              ...host,
+              ownerId: host.userId,
+              isShared: host.userId !== userId,
+              permissionLevel: access.permissionLevel,
+              expiresAt: access.expiresAt,
+            },
+          ];
+        }),
+      ];
 
       const ownHosts = rawData.filter((row) => row.userId === userId);
       const sharedHosts = rawData.filter((row) => row.userId !== userId);

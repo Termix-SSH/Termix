@@ -226,6 +226,29 @@ describe("RbacAccessRepository", () => {
     ]);
   });
 
+  it("lists visible host access entries for host list access checks", async () => {
+    const repo = await createRepository();
+
+    await expect(
+      repo.listVisibleHostAccessEntries(
+        "user-1",
+        [7],
+        "2026-06-26T12:00:00.000Z",
+      ),
+    ).resolves.toEqual([
+      {
+        hostId: 42,
+        permissionLevel: "view",
+        expiresAt: "2026-06-27T00:00:00.000Z",
+      },
+      {
+        hostId: 42,
+        permissionLevel: "view",
+        expiresAt: null,
+      },
+    ]);
+  });
+
   it("lists role host access credential sources for role assignment", async () => {
     const repo = await createRepository();
 

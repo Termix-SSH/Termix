@@ -73,6 +73,12 @@ export interface RbacRoleHostAccessCredentialSource {
   hostOwnerId: string;
 }
 
+export interface RbacVisibleHostAccessEntry {
+  hostId: number;
+  permissionLevel: string;
+  expiresAt: string | null;
+}
+
 export type RbacAccessTarget =
   | { targetType: "user"; targetUserId: string }
   | { targetType: "role"; targetRoleId: number };
@@ -295,6 +301,27 @@ export class RbacAccessRepository {
       .from(hostAccess)
       .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
       .innerJoin(users, eq(hosts.userId, users.id))
+      .where(
+        and(
+          this.userOrRoleHostAccessFilter(userId, roleIds),
+          or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
+        ),
+      )
+      .orderBy(desc(hostAccess.createdAt));
+  }
+
+  async listVisibleHostAccessEntries(
+    userId: string,
+    roleIds: number[],
+    now = new Date().toISOString(),
+  ): Promise<RbacVisibleHostAccessEntry[]> {
+    return this.context.drizzle
+      .select({
+        hostId: hostAccess.hostId,
+        permissionLevel: hostAccess.permissionLevel,
+        expiresAt: hostAccess.expiresAt,
+      })
+      .from(hostAccess)
       .where(
         and(
           this.userOrRoleHostAccessFilter(userId, roleIds),
