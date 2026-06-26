@@ -5,18 +5,13 @@ import { dashboardLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { dashboardServiceLinks } from "../db/schema.js";
 import { isNonEmptyString } from "./host-normalizers.js";
+import {
+  isValidServiceLinkUrl,
+  normalizeServiceLinkUrl,
+} from "./service-link-url.js";
 import express from "express";
 
 export const dashboardServiceLinksRouter = express.Router();
-
-function isValidUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
 
 /**
  * @openapi
@@ -84,7 +79,8 @@ dashboardServiceLinksRouter.post("/", async (req: Request, res: Response) => {
   if (!isNonEmptyString(label) || !isNonEmptyString(url)) {
     return res.status(400).json({ error: "label and url are required" });
   }
-  if (!isValidUrl(url)) {
+  const normalizedUrl = normalizeServiceLinkUrl(url);
+  if (!isValidServiceLinkUrl(normalizedUrl)) {
     return res
       .status(400)
       .json({ error: "url must be a valid http or https URL" });
@@ -105,7 +101,7 @@ dashboardServiceLinksRouter.post("/", async (req: Request, res: Response) => {
       .values({
         userId,
         label: label.trim(),
-        url: url.trim(),
+        url: normalizedUrl,
         order: nextOrder,
         createdAt: new Date().toISOString(),
       })
@@ -233,7 +229,10 @@ dashboardServiceLinksRouter.put("/:id", async (req: Request, res: Response) => {
   if (isNaN(id)) {
     return res.status(400).json({ error: "Invalid id" });
   }
-  if (url !== undefined && !isValidUrl(url)) {
+  const normalizedUrl = isNonEmptyString(url)
+    ? normalizeServiceLinkUrl(url)
+    : undefined;
+  if (normalizedUrl !== undefined && !isValidServiceLinkUrl(normalizedUrl)) {
     return res
       .status(400)
       .json({ error: "url must be a valid http or https URL" });
@@ -256,7 +255,7 @@ dashboardServiceLinksRouter.put("/:id", async (req: Request, res: Response) => {
 
     const updates: Partial<{ label: string; url: string }> = {};
     if (isNonEmptyString(label)) updates.label = label.trim();
-    if (isNonEmptyString(url)) updates.url = url.trim();
+    if (normalizedUrl !== undefined) updates.url = normalizedUrl;
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "Nothing to update" });
