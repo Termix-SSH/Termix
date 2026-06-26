@@ -8,6 +8,7 @@ import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js"
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseMigration } from "../../utils/database-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
@@ -636,12 +637,11 @@ async function initializeCompleteDatabase(): Promise<void> {
       .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
       .get();
     if (!row) {
-      const defaultGuacUrl = `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
       sqlite
         .prepare(
           "INSERT INTO settings (key, value) VALUES ('guac_url', ?)",
         )
-        .run(defaultGuacUrl);
+        .run(getDefaultGuacdUrl());
     }
   } catch (e) {
     databaseLogger.warn("Could not initialize guac_url setting", {
