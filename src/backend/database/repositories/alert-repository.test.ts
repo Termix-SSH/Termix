@@ -28,7 +28,7 @@ describe("AlertRepository", () => {
         password_hash TEXT NOT NULL
       );
 
-      CREATE TABLE hosts (
+      CREATE TABLE ssh_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
         name TEXT,
@@ -81,7 +81,7 @@ describe("AlertRepository", () => {
 
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name, ip)
+      INSERT INTO ssh_data (id, user_id, name, ip)
       VALUES (1, 'user-1', 'alpha', '127.0.0.1');
     `);
 
@@ -285,5 +285,12 @@ describe("AlertRepository", () => {
         enabled: true,
       },
     ]);
+  });
+
+  it("loads host display names for alert payloads", async () => {
+    const repo = await createRepository();
+
+    expect(await repo.getHostDisplayName(1)).toBe("alpha");
+    expect(await repo.getHostDisplayName(999)).toBeNull();
   });
 });

@@ -3,6 +3,7 @@ import {
   alertFirings,
   alertRuleChannels,
   alertRules,
+  hosts,
   notificationChannels,
 } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
@@ -441,6 +442,17 @@ export class AlertRepository {
       );
 
     return rows;
+  }
+
+  async getHostDisplayName(hostId: number): Promise<string | null> {
+    const rows = await this.context.drizzle
+      .select({ name: hosts.name, ip: hosts.ip })
+      .from(hosts)
+      .where(eq(hosts.id, hostId))
+      .limit(1);
+
+    const row = rows[0];
+    return row ? row.name || row.ip : null;
   }
 
   private async replaceRuleChannels(

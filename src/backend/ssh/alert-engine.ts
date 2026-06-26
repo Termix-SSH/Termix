@@ -1,4 +1,3 @@
-import { getDb } from "../database/db/index.js";
 import { createCurrentAlertRepository } from "../database/repositories/current-alert-repository.js";
 import { statsLogger } from "../utils/logger.js";
 import {
@@ -90,7 +89,7 @@ export class AlertEngine {
           now - breachStart >= durationMs &&
           !(await this.isCoolingDown(rule.id, hostId))
         ) {
-          const hostName = this.getHostName(hostId);
+          const hostName = await this.getHostName(hostId);
           await this.fireAlert(rule, hostId, hostName, {
             value: currentValue,
             message: `${rule.triggerType.replace("_threshold", "").toUpperCase()} usage at ${currentValue.toFixed(1)}% (threshold: ${rule.thresholdValue}%)`,
@@ -121,7 +120,7 @@ export class AlertEngine {
 
     for (const rule of rules) {
       if (!(await this.isCoolingDown(rule.id, hostId))) {
-        const hostName = this.getHostName(hostId);
+        const hostName = await this.getHostName(hostId);
         await this.fireAlert(rule, hostId, hostName, {
           message: isOnline
             ? `Host "${hostName}" is back online`
@@ -157,7 +156,7 @@ export class AlertEngine {
 
     for (const rule of rules) {
       if (!(await this.isCoolingDown(rule.id, hostId))) {
-        const hostName = this.getHostName(hostId);
+        const hostName = await this.getHostName(hostId);
         await this.fireAlert(rule, hostId, hostName, {
           message: ok
             ? `Health check recovered on "${hostName}"${detail ? `: ${detail}` : ""}`
@@ -180,7 +179,7 @@ export class AlertEngine {
 
     for (const rule of rules) {
       if (!(await this.isCoolingDown(rule.id, hostId))) {
-        const hostName = this.getHostName(hostId);
+        const hostName = await this.getHostName(hostId);
         await this.fireAlert(rule, hostId, hostName, {
           message: `User "${sshUser}" logged in to "${hostName}" from ${fromIp}`,
           severity: "info",
@@ -309,13 +308,12 @@ export class AlertEngine {
     }
   }
 
-  private getHostName(hostId: number): string {
+  private async getHostName(hostId: number): Promise<string> {
     try {
-      const db = getDb();
-      const row = db.$client
-        .prepare("SELECT name, ip FROM ssh_data WHERE id = ?")
-        .get(hostId) as { name: string | null; ip: string } | undefined;
-      return row?.name || row?.ip || `Host #${hostId}`;
+      return (
+        (await createCurrentAlertRepository().getHostDisplayName(hostId)) ??
+        `Host #${hostId}`
+      );
     } catch {
       return `Host #${hostId}`;
     }
