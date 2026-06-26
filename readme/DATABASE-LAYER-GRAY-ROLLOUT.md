@@ -63,7 +63,7 @@ Allowed in gray rollout:
 - Vault token upsert/read/touch/delete migrated behind `VaultTokenRepository`.
 - Vault profile list/create/update/delete and profile lookup migrated behind
   `VaultProfileRepository`.
-- Host metrics layout preference read/upsert migrated behind
+- Host metrics layout preference read/upsert and statsConfig widget sync migrated behind
   `HostMetricsPreferenceRepository`.
 - Host health check config and history read/write migrated behind
   `HostHealthRepository`.

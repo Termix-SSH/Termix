@@ -28,10 +28,11 @@ describe("HostMetricsPreferenceRepository", () => {
         password_hash TEXT NOT NULL
       );
 
-      CREATE TABLE hosts (
+      CREATE TABLE ssh_data (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
-        name TEXT NOT NULL
+        name TEXT NOT NULL,
+        stats_config TEXT
       );
 
       CREATE TABLE host_metrics_preferences (
@@ -45,8 +46,8 @@ describe("HostMetricsPreferenceRepository", () => {
 
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-2', 'two');
+      INSERT INTO ssh_data (id, user_id, name, stats_config)
+      VALUES (1, 'user-1', 'one', '{}'), (2, 'user-2', 'two', '{}');
       INSERT INTO host_metrics_preferences (
         user_id, host_id, layout, created_at, updated_at
       )
@@ -102,5 +103,25 @@ describe("HostMetricsPreferenceRepository", () => {
       updatedAt: "2026-03-01T00:00:00.000Z",
     });
     expect(writeCount).toBe(2);
+  });
+
+  it("updates host stats config for the owning user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await expect(
+      repo.updateHostStatsConfig(
+        "user-1",
+        1,
+        '{"enabledWidgets":["cpu","memory"]}',
+      ),
+    ).resolves.toBe(true);
+    await expect(
+      repo.updateHostStatsConfig("user-2", 1, '{"enabledWidgets":["disk"]}'),
+    ).resolves.toBe(false);
+
+    expect(writeCount).toBe(1);
   });
 });

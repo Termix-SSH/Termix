@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { hostMetricsPreferences } from "../db/schema.js";
+import { hostMetricsPreferences, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 
 export type HostMetricsPreferenceRecord =
@@ -60,6 +60,22 @@ export class HostMetricsPreferenceRepository {
 
     await this.afterWrite();
     return created;
+  }
+
+  async updateHostStatsConfig(
+    userId: string,
+    hostId: number,
+    statsConfig: string,
+  ): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .update(hosts)
+      .set({ statsConfig })
+      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+      .returning({ id: hosts.id });
+
+    if (rows.length === 0) return false;
+    await this.afterWrite();
+    return true;
   }
 
   private async afterWrite(): Promise<void> {

@@ -1,6 +1,5 @@
 import type { Express, RequestHandler } from "express";
 import type { AuthenticatedRequest } from "../../types/index.js";
-import { DatabaseSaveTrigger, getDb } from "../database/db/index.js";
 import { createCurrentHostMetricsPreferenceRepository } from "../database/repositories/current-host-metrics-preference-repository.js";
 import { statsLogger } from "../utils/logger.js";
 import {
@@ -199,14 +198,10 @@ export function registerHostMetricsPreferencesRoutes(
               ...current,
               enabledWidgets: deriveEnabledWidgets(layout.slots),
             };
-            const db = getDb();
-            db.$client
-              .prepare(
-                "UPDATE ssh_data SET stats_config = ? WHERE id = ? AND user_id = ?",
-              )
-              .run(JSON.stringify(merged), hostId, userId);
-            await DatabaseSaveTrigger.forceSave(
-              "host_metrics_preferences_stats_config_sync",
+            await createCurrentHostMetricsPreferenceRepository().updateHostStatsConfig(
+              userId,
+              hostId,
+              JSON.stringify(merged),
             );
           } catch (syncErr) {
             statsLogger.warn("Failed to sync enabledWidgets from layout", {
