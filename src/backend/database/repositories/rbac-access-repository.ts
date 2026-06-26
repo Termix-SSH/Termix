@@ -66,6 +66,9 @@ export interface RbacAccessibleSnippet extends RbacVisibleSharedSnippet {
 export interface RbacRoleHostAccessCredentialSource {
   hostAccessId: number;
   credentialId: number | null;
+  rdpCredentialId: number | null;
+  vncCredentialId: number | null;
+  telnetCredentialId: number | null;
   hostId: number;
   hostOwnerId: string;
 }
@@ -485,12 +488,47 @@ export class RbacAccessRepository {
       .select({
         hostAccessId: hostAccess.id,
         credentialId: hosts.credentialId,
+        rdpCredentialId: hosts.rdpCredentialId,
+        vncCredentialId: hosts.vncCredentialId,
+        telnetCredentialId: hosts.telnetCredentialId,
         hostId: hosts.id,
         hostOwnerId: hosts.userId,
       })
       .from(hostAccess)
       .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
       .where(eq(hostAccess.roleId, roleId));
+  }
+
+  async findSharedCredentialForHostAndUser(
+    hostId: number,
+    userId: string,
+  ): Promise<typeof sharedCredentials.$inferSelect | null> {
+    const rows = await this.context.drizzle
+      .select({
+        sharedCredential: sharedCredentials,
+      })
+      .from(sharedCredentials)
+      .innerJoin(hostAccess, eq(sharedCredentials.hostAccessId, hostAccess.id))
+      .where(
+        and(
+          eq(hostAccess.hostId, hostId),
+          eq(sharedCredentials.targetUserId, userId),
+        ),
+      )
+      .limit(1);
+
+    return rows[0]?.sharedCredential ?? null;
+  }
+
+  async findHostAccessOwnerId(hostAccessId: number): Promise<string | null> {
+    const rows = await this.context.drizzle
+      .select({ ownerId: hosts.userId })
+      .from(hostAccess)
+      .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
+      .where(eq(hostAccess.id, hostAccessId))
+      .limit(1);
+
+    return rows[0]?.ownerId ?? null;
   }
 
   private userOrRoleHostAccessFilter(userId: string, roleIds: number[]) {

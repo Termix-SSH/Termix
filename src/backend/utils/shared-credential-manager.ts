@@ -2,11 +2,10 @@ import { db } from "../database/db/index.js";
 import {
   sharedCredentials,
   sshCredentials,
-  hostAccess,
   userRoles,
-  hosts,
 } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
+import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";
 import { databaseLogger } from "./logger.js";
@@ -176,27 +175,26 @@ class SharedCredentialManager {
     targetUserId: string,
   ): Promise<void> {
     try {
-      const hostsSharedWithRole = await db
-        .select()
-        .from(hostAccess)
-        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
-        .where(eq(hostAccess.roleId, roleId));
+      const hostsSharedWithRole =
+        await createCurrentRbacAccessRepository().listRoleHostAccessCredentialSources(
+          roleId,
+        );
 
-      for (const { host_access, ssh_data } of hostsSharedWithRole) {
+      for (const sharedHost of hostsSharedWithRole) {
         const activeCredentialId =
-          ssh_data.credentialId ??
-          ssh_data.rdpCredentialId ??
-          ssh_data.vncCredentialId ??
-          ssh_data.telnetCredentialId;
+          sharedHost.credentialId ??
+          sharedHost.rdpCredentialId ??
+          sharedHost.vncCredentialId ??
+          sharedHost.telnetCredentialId;
 
         if (!activeCredentialId) continue;
 
         try {
           await this.createSharedCredentialForUser(
-            host_access.id,
+            sharedHost.hostAccessId,
             activeCredentialId,
             targetUserId,
-            ssh_data.userId,
+            sharedHost.hostOwnerId,
           );
         } catch (error) {
           databaseLogger.error(
@@ -206,7 +204,7 @@ class SharedCredentialManager {
               operation: "create_shared_credentials_role_member",
               roleId,
               targetUserId,
-              hostId: ssh_data.id,
+              hostId: sharedHost.hostId,
             },
           );
         }
@@ -258,26 +256,15 @@ class SharedCredentialManager {
         throw new Error(`User ${userId} data not unlocked`);
       }
 
-      const sharedCred = await db
-        .select()
-        .from(sharedCredentials)
-        .innerJoin(
-          hostAccess,
-          eq(sharedCredentials.hostAccessId, hostAccess.id),
-        )
-        .where(
-          and(
-            eq(hostAccess.hostId, hostId),
-            eq(sharedCredentials.targetUserId, userId),
-          ),
-        )
-        .limit(1);
+      const cred =
+        await createCurrentRbacAccessRepository().findSharedCredentialForHostAndUser(
+          hostId,
+          userId,
+        );
 
-      if (sharedCred.length === 0) {
+      if (!cred) {
         return null;
       }
-
-      const cred = sharedCred[0].shared_credentials;
 
       if (cred.needsReEncryption) {
         await this.reEncryptSharedCredential(cred.id, userId);
@@ -686,22 +673,18 @@ class SharedCredentialManager {
 
       const cred = sharedCred[0];
 
-      const access = await db
-        .select()
-        .from(hostAccess)
-        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
-        .where(eq(hostAccess.id, cred.hostAccessId))
-        .limit(1);
+      const ownerId =
+        await createCurrentRbacAccessRepository().findHostAccessOwnerId(
+          cred.hostAccessId,
+        );
 
-      if (access.length === 0) {
+      if (!ownerId) {
         databaseLogger.warn("Re-encrypt: host access not found", {
           operation: "reencrypt_access_not_found",
           sharedCredId,
         });
         return;
       }
-
-      const ownerId = access[0].ssh_data.userId;
 
       const userDEK = DataCrypto.getUserDataKey(userId);
       if (!userDEK) {

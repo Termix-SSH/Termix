@@ -58,10 +58,17 @@ describe("RbacAccessRepository", () => {
       CREATE TABLE shared_credentials (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host_access_id INTEGER NOT NULL,
-        credential_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
-        owner_id TEXT NOT NULL,
-        encrypted_data TEXT
+        original_credential_id INTEGER NOT NULL,
+        target_user_id TEXT NOT NULL,
+        encrypted_username TEXT NOT NULL,
+        encrypted_auth_type TEXT NOT NULL,
+        encrypted_password TEXT,
+        encrypted_key TEXT,
+        encrypted_key_password TEXT,
+        encrypted_key_type TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        needs_re_encryption INTEGER NOT NULL DEFAULT 0
       );
 
       CREATE TABLE ssh_data (
@@ -72,6 +79,9 @@ describe("RbacAccessRepository", () => {
         port INTEGER NOT NULL,
         username TEXT NOT NULL,
         credential_id INTEGER,
+        rdp_credential_id INTEGER,
+        vnc_credential_id INTEGER,
+        telnet_credential_id INTEGER,
         folder TEXT,
         tags TEXT
       );
@@ -109,8 +119,10 @@ describe("RbacAccessRepository", () => {
       INSERT INTO roles (id, name, display_name, is_system)
       VALUES (7, 'ops', 'Operations', 0);
 
-      INSERT INTO ssh_data (id, user_id, name, ip, port, username, credential_id, folder, tags)
-      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 'servers', 'linux');
+      INSERT INTO ssh_data (
+        id, user_id, name, ip, port, username, credential_id, rdp_credential_id, vnc_credential_id, telnet_credential_id, folder, tags
+      )
+      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124, 125, 126, 'servers', 'linux');
 
       INSERT INTO host_access (
         id, host_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
@@ -119,6 +131,11 @@ describe("RbacAccessRepository", () => {
         (1, 42, 'user-1', NULL, 'admin', 'view', NULL, '2026-06-26T00:00:00.000Z'),
         (2, 42, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z'),
         (5, 44, 'user-1', NULL, 'admin', 'view', '2026-06-25T00:00:00.000Z', '2026-06-24T00:00:00.000Z');
+
+      INSERT INTO shared_credentials (
+        id, host_access_id, original_credential_id, target_user_id, encrypted_username, encrypted_auth_type, needs_re_encryption
+      )
+      VALUES (8, 2, 123, 'user-1', 'enc-user', 'enc-auth', 0);
 
       INSERT INTO snippets (id, user_id, name, content)
       VALUES (99, 'owner-1', 'deploy', 'echo deploy');
@@ -216,10 +233,34 @@ describe("RbacAccessRepository", () => {
       {
         hostAccessId: 2,
         credentialId: 123,
+        rdpCredentialId: 124,
+        vncCredentialId: 125,
+        telnetCredentialId: 126,
         hostId: 42,
         hostOwnerId: "owner-1",
       },
     ]);
+  });
+
+  it("finds shared credential and host access owner for shared credential reads", async () => {
+    const repo = await createRepository();
+
+    await expect(
+      repo.findSharedCredentialForHostAndUser(42, "user-1"),
+    ).resolves.toMatchObject({
+      id: 8,
+      hostAccessId: 2,
+      originalCredentialId: 123,
+      targetUserId: "user-1",
+      encryptedUsername: "enc-user",
+      encryptedAuthType: "enc-auth",
+    });
+
+    await expect(
+      repo.findSharedCredentialForHostAndUser(99, "user-1"),
+    ).resolves.toBeNull();
+    await expect(repo.findHostAccessOwnerId(2)).resolves.toBe("owner-1");
+    await expect(repo.findHostAccessOwnerId(999)).resolves.toBeNull();
   });
 
   it("lists shared snippets and preserves route-level direct-over-role behavior", async () => {
