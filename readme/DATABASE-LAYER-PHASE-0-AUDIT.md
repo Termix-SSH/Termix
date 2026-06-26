@@ -435,6 +435,8 @@ Started:
   boundary
 - user deletion cleanup now removes per-user settings through
   `SettingsRepository.deleteLike`
+- password reset route reset code and temporary token settings access moved
+  behind `SettingsRepository`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

@@ -43,6 +43,8 @@ Backend startup now reads persisted log level and Guacamole enablement through
 the current settings repository boundary.
 User deletion cleanup now removes per-user settings through
 `SettingsRepository.deleteLike`.
+Password reset route now stores reset codes and temporary reset tokens through
+`SettingsRepository`.
 
 ## 1. Background
 
