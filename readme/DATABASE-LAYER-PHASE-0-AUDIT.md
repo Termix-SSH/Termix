@@ -459,6 +459,8 @@ Started:
 - current user repository factory/write-save hook added, and
   `user-admin-routes.ts` list/admin promotion/admin removal/admin-create user
   paths moved behind the current user repository boundary
+- low-risk `routes/users.ts` current-user lookup and admin gate checks moved
+  behind the current user repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

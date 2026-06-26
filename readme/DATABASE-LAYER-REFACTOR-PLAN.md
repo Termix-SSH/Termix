@@ -68,6 +68,8 @@ repository boundary.
 User repository now has a current-runtime factory and write-save hook, and
 `user-admin-routes.ts` list/admin promotion/admin removal/admin-create user
 paths now use it for `users` table reads and writes.
+Low-risk `routes/users.ts` current-user lookup and admin gate checks now use the
+current user repository boundary.
 
 ## 1. Background
 

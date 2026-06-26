@@ -40,6 +40,8 @@ import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
 } from "../repositories/current-settings-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import type { UserRecord } from "../repositories/user-repository.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -106,6 +108,15 @@ function isNativeAppRequest(req: Request): boolean {
     (req.get("User-Agent") || "").startsWith("Termix-Mobile/") ||
     req.get("X-Electron-App") === "true"
   );
+}
+
+async function findCurrentUser(userId: string): Promise<UserRecord | null> {
+  return createCurrentUserRepository().findById(userId);
+}
+
+async function requireCurrentAdmin(userId: string): Promise<UserRecord | null> {
+  const user = await findCurrentUser(userId);
+  return user?.isAdmin ? user : null;
 }
 
 async function deleteOIDCStateSettings(state: string): Promise<void> {
@@ -330,8 +341,8 @@ router.post("/create", async (req, res) => {
 router.post("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -485,8 +496,8 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
 router.delete("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -1771,24 +1782,23 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid userId" });
   }
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
+    const user = await findCurrentUser(userId);
+    if (!user) {
       authLogger.warn(`User not found for /users/me: ${userId}`);
       return res.status(401).json({ error: "User not found" });
     }
 
-    const hasPassword =
-      user[0].passwordHash && user[0].passwordHash.trim() !== "";
-    const hasOidc = user[0].isOidc && user[0].oidcIdentifier;
+    const hasPassword = user.passwordHash && user.passwordHash.trim() !== "";
+    const hasOidc = user.isOidc && user.oidcIdentifier;
     const isDualAuth = hasPassword && hasOidc;
 
     res.json({
-      userId: user[0].id,
-      username: user[0].username,
-      is_admin: !!user[0].isAdmin,
-      is_oidc: !!user[0].isOidc,
+      userId: user.id,
+      username: user.username,
+      is_admin: !!user.isAdmin,
+      is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
-      totp_enabled: !!user[0].totpEnabled,
+      totp_enabled: !!user.totpEnabled,
       data_unlocked: authManager.isUserUnlocked(userId),
     });
   } catch (err) {
@@ -1873,8 +1883,8 @@ router.get("/setup-required", async (req, res) => {
 router.get("/count", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user[0] || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
@@ -1966,8 +1976,8 @@ router.get("/registration-allowed", async (req, res) => {
 router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
@@ -2004,8 +2014,8 @@ router.get("/oidc-auto-provision", async (_req, res) => {
 router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { enabled } = req.body;
@@ -2084,8 +2094,8 @@ router.patch(
   async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const user = await requireCurrentAdmin(userId);
+      if (!user) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { enabled } = req.body;
@@ -2159,8 +2169,8 @@ router.get("/password-login-allowed", async (req, res) => {
 router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
@@ -2242,8 +2252,8 @@ router.get("/password-reset-allowed", async (req, res) => {
 router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
