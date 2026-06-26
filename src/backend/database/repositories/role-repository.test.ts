@@ -130,6 +130,75 @@ describe("RoleRepository", () => {
     expect(await repo.findUserRole("user-1", roleId)).toBeNull();
   });
 
+  it("assigns roles by name", async () => {
+    const repo = await createRepository();
+    const roleId = await repo.createRole({
+      name: "user",
+      displayName: "User",
+      isSystem: true,
+      permissions: null,
+    });
+
+    expect(
+      await repo.assignRoleNameToUser({
+        userId: "user-1",
+        roleName: "missing",
+        grantedBy: "admin",
+      }),
+    ).toBe(false);
+    expect(await repo.listUserRoleIds("user-1")).toEqual([]);
+
+    expect(
+      await repo.assignRoleNameToUser({
+        userId: "user-1",
+        roleName: "user",
+        grantedBy: "admin",
+      }),
+    ).toBe(true);
+    expect(await repo.listUserRoleIds("user-1")).toEqual([roleId]);
+  });
+
+  it("switches user roles by role name", async () => {
+    const repo = await createRepository();
+    const userRoleId = await repo.createRole({
+      name: "user",
+      displayName: "User",
+      isSystem: true,
+      permissions: null,
+    });
+    const adminRoleId = await repo.createRole({
+      name: "admin",
+      displayName: "Admin",
+      isSystem: true,
+      permissions: null,
+    });
+    await repo.assignRoleToUser({
+      userId: "user-1",
+      roleId: userRoleId,
+      grantedBy: "admin",
+    });
+
+    await expect(
+      repo.switchUserRoleName({
+        userId: "user-1",
+        addRoleName: "admin",
+        removeRoleName: "user",
+        grantedBy: "admin",
+      }),
+    ).resolves.toEqual({ added: true, removed: true });
+    expect(await repo.listUserRoleIds("user-1")).toEqual([adminRoleId]);
+
+    await expect(
+      repo.switchUserRoleName({
+        userId: "user-1",
+        addRoleName: "missing",
+        removeRoleName: "admin",
+        grantedBy: "admin",
+      }),
+    ).resolves.toEqual({ added: false, removed: true });
+    expect(await repo.listUserRoleIds("user-1")).toEqual([]);
+  });
+
   it("deletes role assignments and returns affected users", async () => {
     const repo = await createRepository();
     const roleId = await repo.createRole({

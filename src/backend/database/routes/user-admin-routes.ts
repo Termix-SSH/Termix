@@ -1,13 +1,11 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq, and } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { roles, userRoles } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import type {
   UserRecord,
@@ -137,42 +135,12 @@ export function registerUserAdminRoutes(
       await userRepository.update(targetUser.id, { isAdmin: true });
 
       try {
-        const targetId = targetUser.id;
-        const adminRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.name, "admin"))
-          .limit(1);
-        const userRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.name, "user"))
-          .limit(1);
-        if (adminRole.length > 0) {
-          await db
-            .delete(userRoles)
-            .where(
-              and(
-                eq(userRoles.userId, targetId),
-                eq(userRoles.roleId, adminRole[0].id),
-              ),
-            );
-          await db.insert(userRoles).values({
-            userId: targetId,
-            roleId: adminRole[0].id,
-            grantedBy: userId,
-          });
-        }
-        if (userRole.length > 0) {
-          await db
-            .delete(userRoles)
-            .where(
-              and(
-                eq(userRoles.userId, targetId),
-                eq(userRoles.roleId, userRole[0].id),
-              ),
-            );
-        }
+        await createCurrentRoleRepository().switchUserRoleName({
+          userId: targetUser.id,
+          addRoleName: "admin",
+          removeRoleName: "user",
+          grantedBy: userId,
+        });
       } catch (roleError) {
         authLogger.error("Failed to sync admin role on make-admin", roleError, {
           operation: "make_admin_role_sync",
@@ -301,42 +269,12 @@ export function registerUserAdminRoutes(
       await userRepository.update(targetUser.id, { isAdmin: false });
 
       try {
-        const targetId = targetUser.id;
-        const adminRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.name, "admin"))
-          .limit(1);
-        const userRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.name, "user"))
-          .limit(1);
-        if (adminRole.length > 0) {
-          await db
-            .delete(userRoles)
-            .where(
-              and(
-                eq(userRoles.userId, targetId),
-                eq(userRoles.roleId, adminRole[0].id),
-              ),
-            );
-        }
-        if (userRole.length > 0) {
-          await db
-            .delete(userRoles)
-            .where(
-              and(
-                eq(userRoles.userId, targetId),
-                eq(userRoles.roleId, userRole[0].id),
-              ),
-            );
-          await db.insert(userRoles).values({
-            userId: targetId,
-            roleId: userRole[0].id,
-            grantedBy: userId,
-          });
-        }
+        await createCurrentRoleRepository().switchUserRoleName({
+          userId: targetUser.id,
+          addRoleName: "user",
+          removeRoleName: "admin",
+          grantedBy: userId,
+        });
       } catch (roleError) {
         authLogger.error(
           "Failed to sync user role on remove-admin",
@@ -471,18 +409,11 @@ export function registerUserAdminRoutes(
       });
 
       try {
-        const userRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.name, "user"))
-          .limit(1);
-        if (userRole.length > 0) {
-          await db.insert(userRoles).values({
-            userId: id,
-            roleId: userRole[0].id,
-            grantedBy: adminId,
-          });
-        }
+        await createCurrentRoleRepository().assignRoleNameToUser({
+          userId: id,
+          roleName: "user",
+          grantedBy: adminId,
+        });
       } catch (roleError) {
         authLogger.error(
           "Failed to assign default role during admin create",

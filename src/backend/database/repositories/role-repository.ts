@@ -23,6 +23,11 @@ export type UserRolePermissionRecord = {
   permissions: string | null;
 };
 
+export type UserRoleNameSwitchResult = {
+  added: boolean;
+  removed: boolean;
+};
+
 export class RoleRepository {
   constructor(
     private readonly context: DatabaseContext,
@@ -111,6 +116,76 @@ export class RoleRepository {
   }): Promise<void> {
     await this.context.drizzle.insert(userRoles).values(input);
     await this.afterWrite();
+  }
+
+  async assignRoleNameToUser(input: {
+    userId: string;
+    roleName: string;
+    grantedBy: string;
+  }): Promise<boolean> {
+    const role = await this.findRoleByName(input.roleName);
+    if (!role) {
+      return false;
+    }
+
+    await this.context.drizzle.insert(userRoles).values({
+      userId: input.userId,
+      roleId: role.id,
+      grantedBy: input.grantedBy,
+    });
+    await this.afterWrite();
+    return true;
+  }
+
+  async switchUserRoleName(input: {
+    userId: string;
+    addRoleName: string;
+    removeRoleName: string;
+    grantedBy: string;
+  }): Promise<UserRoleNameSwitchResult> {
+    const [addRole, removeRole] = await Promise.all([
+      this.findRoleByName(input.addRoleName),
+      this.findRoleByName(input.removeRoleName),
+    ]);
+
+    let added = false;
+    let removed = false;
+
+    if (addRole) {
+      await this.context.drizzle
+        .delete(userRoles)
+        .where(
+          and(
+            eq(userRoles.userId, input.userId),
+            eq(userRoles.roleId, addRole.id),
+          ),
+        );
+      await this.context.drizzle.insert(userRoles).values({
+        userId: input.userId,
+        roleId: addRole.id,
+        grantedBy: input.grantedBy,
+      });
+      added = true;
+    }
+
+    if (removeRole) {
+      const rows = await this.context.drizzle
+        .delete(userRoles)
+        .where(
+          and(
+            eq(userRoles.userId, input.userId),
+            eq(userRoles.roleId, removeRole.id),
+          ),
+        )
+        .returning({ id: userRoles.id });
+      removed = rows.length > 0;
+    }
+
+    if (added || removed) {
+      await this.afterWrite();
+    }
+
+    return { added, removed };
   }
 
   async removeRoleFromUser(userId: string, roleId: number): Promise<void> {
