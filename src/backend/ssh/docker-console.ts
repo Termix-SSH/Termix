@@ -8,6 +8,11 @@ import { getDb } from "../database/db/index.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { systemLogger } from "../utils/logger.js";
 import type { SSHHost } from "../../types/index.js";
+import {
+  containerCommand,
+  getContainerRuntimeConfig,
+  type ContainerRuntime,
+} from "./container-runtime.js";
 
 const sshLogger = systemLogger;
 
@@ -18,6 +23,7 @@ interface SSHSession {
   containerId?: string;
   shell?: string;
   hostId?: number;
+  containerRuntime?: ContainerRuntime;
 }
 
 const activeSessions = new Map<string, SSHSession>();
@@ -37,7 +43,10 @@ async function detectShell(
     try {
       await new Promise<void>((resolve, reject) => {
         session.client.exec(
-          `docker exec ${containerId} which ${shell}`,
+          containerCommand(
+            session.containerRuntime,
+            `exec ${containerId} which ${shell}`,
+          ),
           (err, stream) => {
             if (err) return reject(err);
 
@@ -459,12 +468,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
               client.connect(config);
             });
 
+            const { runtime: containerRuntime } = getContainerRuntimeConfig(
+              resolvedHost.dockerConfig,
+            );
+
             sshSession = {
               client,
               stream: null,
               isConnected: true,
               containerId,
               hostId: resolvedHost.id,
+              containerRuntime,
             };
 
             activeSessions.set(sessionId, sshSession);
@@ -475,7 +489,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
               try {
                 await new Promise<void>((resolve, reject) => {
                   client.exec(
-                    `docker exec ${containerId} which ${shell}`,
+                    containerCommand(
+                      containerRuntime,
+                      `exec ${containerId} which ${shell}`,
+                    ),
                     (err, stream) => {
                       if (err) return reject(err);
 
@@ -518,7 +535,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
             sshSession.shell = shellToUse;
 
-            const execCommand = `docker exec -it ${containerId} /bin/${shellToUse}`;
+            const execCommand = containerCommand(
+              containerRuntime,
+              `exec -it ${containerId} /bin/${shellToUse}`,
+            );
             sshLogger.info("Attaching to Docker container", {
               operation: "docker_attach",
               sessionId,

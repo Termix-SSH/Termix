@@ -20,6 +20,12 @@ import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { registerDockerContainerRoutes } from "./docker-container-routes.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
+import {
+  containerCommand,
+  getContainerRuntimeConfig,
+  getRuntimeLabel,
+  type ContainerRuntime,
+} from "./container-runtime.js";
 
 const sshLogger = logger;
 
@@ -46,6 +52,7 @@ interface SSHSession {
   hostId?: number;
   userId?: string;
   isWindows?: boolean;
+  containerRuntime?: ContainerRuntime;
 }
 
 interface PendingTOTPSession {
@@ -64,6 +71,7 @@ interface PendingTOTPSession {
   resolvedPassword?: string;
   totpAttempts: number;
   isWarpgate?: boolean;
+  containerRuntime?: ContainerRuntime;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -701,6 +709,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
         host.terminalConfig = undefined;
       }
     }
+    const { runtime: containerRuntime } = getContainerRuntimeConfig(
+      host.dockerConfig,
+    );
 
     if (!host.enableDocker) {
       sshLogger.warn("Docker not enabled for host", {
@@ -1027,6 +1038,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         activeOperations: 0,
         hostId,
         userId,
+        containerRuntime,
       };
 
       sshSessions[sessionId] = session;
@@ -1224,6 +1236,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
               resolvedPassword: resolvedCredentials.password,
               totpAttempts: 0,
               isWarpgate: true,
+              containerRuntime,
             };
 
             connectionLogs.push(
@@ -1290,6 +1303,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
             totpPromptIndex,
             resolvedPassword: resolvedCredentials.password,
             totpAttempts: 0,
+            containerRuntime,
           };
 
           connectionLogs.push(
@@ -1380,6 +1394,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
               totpPromptIndex: passwordPromptIndex,
               resolvedPassword: resolvedCredentials.password,
               totpAttempts: 0,
+              containerRuntime,
             };
 
             res.json({
@@ -1733,6 +1748,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
         activeOperations: 0,
         hostId: session.hostId,
         userId,
+        containerRuntime: session.containerRuntime,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1919,6 +1935,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
         activeOperations: 0,
         hostId: session.hostId,
         userId,
+        containerRuntime: session.containerRuntime,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2134,20 +2151,24 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
 
   try {
     try {
+      const runtime = session.containerRuntime ?? "docker";
+      const runtimeLabel = getRuntimeLabel(runtime);
       const versionOutput = await executeDockerCommand(
         session,
-        "docker --version",
+        containerCommand(runtime, "--version"),
         sessionId,
         userId,
         session.hostId,
       );
-      const versionMatch = versionOutput.match(/Docker version ([^\s,]+)/);
+      const versionMatch = versionOutput.match(
+        /(?:Docker|podman) version ([^\s,]+)/i,
+      );
       const version = versionMatch ? versionMatch[1] : "unknown";
 
       try {
         await executeDockerCommand(
           session,
-          "docker ps",
+          containerCommand(runtime, "ps"),
           sessionId,
           userId,
           session.hostId,
@@ -2157,6 +2178,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
         return res.json({
           available: true,
           version,
+          runtime,
         });
       } catch (daemonError) {
         session.activeOperations--;
@@ -2166,18 +2188,18 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
         if (errorMsg.includes("Cannot connect to the Docker daemon")) {
           return res.json({
             available: false,
-            error:
-              "Docker daemon is not running. Start it with: sudo systemctl start docker",
+            error: `${runtimeLabel} daemon is not running or accessible`,
             code: "DAEMON_NOT_RUNNING",
+            runtime,
           });
         }
 
         if (errorMsg.includes("permission denied")) {
           return res.json({
             available: false,
-            error:
-              "Permission denied. Add your user to the docker group: sudo usermod -aG docker $USER",
+            error: `Permission denied accessing ${runtimeLabel}`,
             code: "PERMISSION_DENIED",
+            runtime,
           });
         }
 
@@ -2185,15 +2207,18 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
           available: false,
           error: errorMsg,
           code: "DOCKER_ERROR",
+          runtime,
         });
       }
     } catch {
       session.activeOperations--;
+      const runtime = session.containerRuntime ?? "docker";
+      const runtimeLabel = getRuntimeLabel(runtime);
       return res.json({
         available: false,
-        error:
-          "Docker is not installed on this host. Please install Docker to use this feature.",
+        error: `${runtimeLabel} is not installed on this host.`,
         code: "NOT_INSTALLED",
+        runtime,
       });
     }
   } catch (error) {

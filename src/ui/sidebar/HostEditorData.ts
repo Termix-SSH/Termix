@@ -105,6 +105,7 @@ export function createHostEditorForm(
     enableFileManager: host?.enableFileManager ?? false,
     scpLegacy: host?.scpLegacy ?? false,
     enableDocker: host?.enableDocker ?? false,
+    dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
@@ -297,6 +298,7 @@ export function buildHostEditorPayload(
     enableFileManager: form.enableFileManager,
     scpLegacy: form.scpLegacy,
     enableDocker: form.enableDocker,
+    dockerConfig: form.enableDocker ? form.dockerConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableProxmox: form.enableProxmox,
     proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,

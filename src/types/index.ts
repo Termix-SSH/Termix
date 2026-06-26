@@ -1085,6 +1085,7 @@ export interface DockerLogOptions {
 export interface DockerValidation {
   available: boolean;
   version?: string;
+  runtime?: "docker" | "podman";
   error?: string;
   code?: string;
 }
