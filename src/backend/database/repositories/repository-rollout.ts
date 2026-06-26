@@ -34,6 +34,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "host_health",
   "host_metrics_history",
   "alerts",
+  "user_data_exports",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -115,6 +116,12 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   transfer: "transfer_recent",
   transfer_recent: "transfer_recent",
   transferrecent: "transfer_recent",
+  export: "user_data_exports",
+  exports: "user_data_exports",
+  user_data_export: "user_data_exports",
+  user_data_exports: "user_data_exports",
+  userdataexport: "user_data_exports",
+  userdataexports: "user_data_exports",
   bookmark: "file_manager_bookmarks",
   bookmarks: "file_manager_bookmarks",
   file_bookmarks: "file_manager_bookmarks",

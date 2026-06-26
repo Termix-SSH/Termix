@@ -1,9 +1,7 @@
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
 import { createCurrentDismissedAlertRepository } from "../database/repositories/current-dismissed-alert-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../database/repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentTransferRecentRepository } from "../database/repositories/current-transfer-recent-repository.js";
+import { createCurrentUserDataExportRepository } from "../database/repositories/current-user-data-export-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
@@ -64,10 +62,8 @@ class UserDataExport {
         }
       }
 
-      const sshHosts = await getDb()
-        .select()
-        .from(hosts)
-        .where(eq(hosts.userId, userId));
+      const exportRepository = createCurrentUserDataExportRepository();
+      const sshHosts = await exportRepository.listHostsByUserId(userId);
       const processedSshHosts =
         format === "plaintext" && userDataKey
           ? sshHosts.map((host) =>
@@ -77,10 +73,8 @@ class UserDataExport {
 
       let sshCredentialsData: unknown[] = [];
       if (includeCredentials) {
-        const credentials = await getDb()
-          .select()
-          .from(sshCredentials)
-          .where(eq(sshCredentials.userId, userId));
+        const credentials =
+          await exportRepository.listCredentialsByUserId(userId);
         sshCredentialsData =
           format === "plaintext" && userDataKey
             ? credentials.map((cred) =>
