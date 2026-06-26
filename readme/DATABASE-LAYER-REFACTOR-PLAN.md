@@ -74,6 +74,8 @@ User registration, self-delete, password change hash updates, and admin
 delete-user lookup paths in `routes/users.ts` now use the current user
 repository boundary while preserving the first-user admin transaction inside
 `UserRepository`.
+Traditional login username lookup and `auth-manager.ts` admin user checks now
+use the current user repository boundary.
 
 ## 1. Background
 

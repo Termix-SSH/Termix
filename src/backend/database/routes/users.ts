@@ -1537,12 +1537,10 @@ router.post("/login", async (req, res) => {
   }
 
   try {
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
+    const userRecord =
+      await createCurrentUserRepository().findByUsername(username);
 
-    if (!user || user.length === 0) {
+    if (!userRecord) {
       loginRateLimiter.recordFailedAttempt(clientIp, username);
       authLogger.warn(`Login failed: user not found`, {
         operation: "user_login",
@@ -1555,8 +1553,6 @@ router.post("/login", async (req, res) => {
       });
       return res.status(401).json({ error: "Invalid username or password" });
     }
-
-    const userRecord = user[0];
 
     if (
       userRecord.isOidc &&

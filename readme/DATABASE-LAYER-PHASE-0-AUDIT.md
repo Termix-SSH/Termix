@@ -465,6 +465,8 @@ Started:
   delete-user lookup paths in `routes/users.ts` moved behind the current user
   repository boundary, with first-user admin creation kept transactional inside
   `UserRepository`
+- traditional login username lookup and `auth-manager.ts` admin user checks
+  moved behind the current user repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

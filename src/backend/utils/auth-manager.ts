@@ -13,6 +13,7 @@ import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
 import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 import { createCurrentSessionRepository } from "../database/repositories/current-session-repository.js";
+import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 
 interface AuthenticationResult {
   success: boolean;
@@ -662,13 +663,10 @@ class AuthManager {
       }
 
       if (requireAdmin) {
-        const { users } = await import("../database/db/schema.js");
-        const userRows = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, matchedKey.userId))
-          .limit(1);
-        if (!userRows[0]?.isAdmin) {
+        const user = await createCurrentUserRepository().findById(
+          matchedKey.userId,
+        );
+        if (!user?.isAdmin) {
           res.status(403).json({ error: "Admin access required" });
           return;
         }
@@ -889,16 +887,11 @@ class AuthManager {
       }
 
       try {
-        const { db } = await import("../database/db/index.js");
-        const { users } = await import("../database/db/schema.js");
-        const { eq } = await import("drizzle-orm");
+        const user = await createCurrentUserRepository().findById(
+          payload.userId,
+        );
 
-        const user = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, payload.userId));
-
-        if (!user || user.length === 0 || !user[0].isAdmin) {
+        if (!user?.isAdmin) {
           databaseLogger.warn(
             "Non-admin user attempted to access admin endpoint",
             {
