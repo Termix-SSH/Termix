@@ -482,6 +482,8 @@ Started:
   repository boundary
 - SSH credential OIDC username expansion and tmux monitor audit actor username
   lookup moved behind the current user repository boundary
+- user settings route admin checks and audit actor username lookups moved behind
+  the current user repository boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device slice
 

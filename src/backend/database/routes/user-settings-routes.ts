@@ -1,16 +1,15 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq } from "drizzle-orm";
 import { restartGuacServer } from "../../guacamole/guacamole-server.js";
 import {
   authLogger,
   getGlobalLogLevel,
   setGlobalLogLevel,
 } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import type { UserRecord } from "../repositories/user-repository.js";
 
 function getDefaultGuacUrl(): string {
   return `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
@@ -33,6 +32,14 @@ export type HostDefaults = {
   enableSessionLogging?: boolean;
   enableCommandHistory?: boolean;
 };
+
+async function getAdminActor(
+  userId: string | undefined,
+): Promise<UserRecord | null> {
+  if (!userId) return null;
+  const user = await createCurrentUserRepository().findById(userId);
+  return user?.isAdmin ? user : null;
+}
 
 export function registerUserSettingsRoutes(
   router: Router,
@@ -106,8 +113,8 @@ export function registerUserSettingsRoutes(
   router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { enabled, url } = req.body;
@@ -130,14 +137,9 @@ export function registerUserSettingsRoutes(
       const currentUrl = await settings.get("guac_url");
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_guacamole_settings",
         resourceType: "setting",
         details: JSON.stringify({ enabled, url }),
@@ -199,8 +201,8 @@ export function registerUserSettingsRoutes(
   router.patch("/log-level", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { level } = req.body;
@@ -214,14 +216,9 @@ export function registerUserSettingsRoutes(
       setGlobalLogLevel(level);
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_log_level",
         resourceType: "setting",
         details: JSON.stringify({ level }),
@@ -282,8 +279,8 @@ export function registerUserSettingsRoutes(
   router.patch("/session-timeout", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { timeoutHours } = req.body;
@@ -302,14 +299,9 @@ export function registerUserSettingsRoutes(
       );
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_session_timeout",
         resourceType: "setting",
         details: JSON.stringify({ timeoutHours }),
@@ -392,8 +384,8 @@ export function registerUserSettingsRoutes(
   router.patch("/tailscale-settings", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { apiKey } = req.body;
@@ -403,14 +395,9 @@ export function registerUserSettingsRoutes(
       await createCurrentSettingsRepository().set("tailscale_api_key", apiKey);
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_tailscale_settings",
         resourceType: "setting",
         details: JSON.stringify({ hasApiKey: !!apiKey }),
@@ -492,8 +479,8 @@ export function registerUserSettingsRoutes(
     async (req, res) => {
       const userId = (req as AuthenticatedRequest).userId;
       try {
-        const user = await db.select().from(users).where(eq(users.id, userId));
-        if (!user || user.length === 0 || !user[0].isAdmin) {
+        const actor = await getAdminActor(userId);
+        if (!actor) {
           return res.status(403).json({ error: "Not authorized" });
         }
         const { enabled } = req.body;
@@ -506,14 +493,9 @@ export function registerUserSettingsRoutes(
         );
 
         const { ipAddress, userAgent } = getRequestMeta(req);
-        const actorRecord = await db
-          .select({ username: users.username })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1);
         await logAudit({
           userId,
-          username: actorRecord[0]?.username ?? userId,
+          username: actor.username ?? userId,
           action: "update_command_history_enabled",
           resourceType: "setting",
           details: JSON.stringify({ enabled }),
@@ -586,8 +568,8 @@ export function registerUserSettingsRoutes(
   router.patch("/host-defaults", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const defaults: HostDefaults = req.body;
@@ -597,14 +579,9 @@ export function registerUserSettingsRoutes(
       );
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_host_defaults",
         resourceType: "setting",
         details: JSON.stringify(defaults),
