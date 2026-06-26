@@ -120,6 +120,19 @@ export class RoleRepository {
     await this.afterWrite();
   }
 
+  async removeAllRolesFromUser(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(userRoles)
+      .where(eq(userRoles.userId, userId))
+      .returning({ id: userRoles.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   async listUserRoleIds(userId: string): Promise<number[]> {
     const rows = await this.context.drizzle
       .select({ roleId: userRoles.roleId })

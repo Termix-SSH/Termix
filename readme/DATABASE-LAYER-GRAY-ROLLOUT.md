@@ -27,6 +27,7 @@ Allowed in gray rollout:
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated
   behind `RoleRepository`.
+- User deletion role-assignment cleanup migrated behind `RoleRepository`.
 - RBAC host/snippet access-list read models migrated behind
   `RbacAccessRepository`.
 - RBAC shared host/shared snippet read models migrated behind

@@ -155,6 +155,8 @@ Credential deletion, folder deletion, and user deletion host-access cleanup
 writes now use the current RBAC access repository boundary.
 Shared credential manager role-member lookups now use the current role
 repository boundary.
+User deletion role-assignment cleanup now uses the current role repository
+boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

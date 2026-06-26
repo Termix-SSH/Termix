@@ -151,6 +151,42 @@ describe("RoleRepository", () => {
     expect(await repo.listUserRoleIds("user-1")).toEqual([]);
   });
 
+  it("removes all roles for a user only when assignments exist", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+    const opsRoleId = await repo.createRole({
+      name: "ops",
+      displayName: "Operations",
+      isSystem: false,
+      permissions: null,
+    });
+    const auditRoleId = await repo.createRole({
+      name: "audit",
+      displayName: "Audit",
+      isSystem: false,
+      permissions: null,
+    });
+    await repo.assignRoleToUser({
+      userId: "user-1",
+      roleId: opsRoleId,
+      grantedBy: "admin",
+    });
+    await repo.assignRoleToUser({
+      userId: "user-1",
+      roleId: auditRoleId,
+      grantedBy: "admin",
+    });
+
+    expect(await repo.removeAllRolesFromUser("missing-user")).toBe(0);
+    expect(writeCount).toBe(4);
+
+    expect(await repo.removeAllRolesFromUser("user-1")).toBe(2);
+    expect(await repo.listUserRoleIds("user-1")).toEqual([]);
+    expect(writeCount).toBe(5);
+  });
+
   it("runs the write hook after writes", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

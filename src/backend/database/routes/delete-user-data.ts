@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
@@ -26,7 +27,6 @@ import {
   transferRecent,
   userOpenTabs,
   userPreferences,
-  userRoles,
 } from "../db/schema.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
@@ -45,7 +45,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await createCurrentSessionRepository().revokeAllForUser(userId);
 
-    await db.delete(userRoles).where(eq(userRoles.userId, userId));
+    await createCurrentRoleRepository().removeAllRolesFromUser(userId);
     await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
 
     await db
