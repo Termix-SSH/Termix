@@ -1649,6 +1649,20 @@ export function DashboardTab({
                   {t("dashboard.docs")}
                 </a>
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <a
+                  href="https://donate.termix.site/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("dashboard.donate")}
+                </a>
+              </Button>
             </div>
           </Card>
           {allSlots.map((slot) => (
@@ -1807,6 +1821,20 @@ export function DashboardTab({
               rel="noreferrer"
             >
               {t("dashboard.docs")}
+            </a>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs text-muted-foreground hover:text-foreground"
+            asChild
+          >
+            <a
+              href="https://donate.termix.site/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {t("dashboard.donate")}
             </a>
           </Button>
           {dashboardView === "dashboard" && (
