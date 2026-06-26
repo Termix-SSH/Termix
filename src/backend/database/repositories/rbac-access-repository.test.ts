@@ -250,6 +250,36 @@ describe("RbacAccessRepository", () => {
     });
   });
 
+  it("finds an accessible shared snippet for direct or role access", async () => {
+    const repo = await createRepository();
+
+    await expect(
+      repo.findAccessibleSharedSnippet(
+        99,
+        "user-2",
+        [7],
+        "2026-06-26T12:00:00.000Z",
+      ),
+    ).resolves.toMatchObject({
+      id: 99,
+      userId: "owner-1",
+      name: "deploy",
+      content: "echo deploy",
+      ownerUsername: "owner",
+      permissionLevel: "view",
+      hostFilter: null,
+    });
+
+    await expect(
+      repo.findAccessibleSharedSnippet(
+        99,
+        "user-2",
+        [7],
+        "2026-06-28T00:00:00.000Z",
+      ),
+    ).resolves.toBeNull();
+  });
+
   it("upserts host access and updates overrides", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

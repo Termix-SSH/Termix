@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { snippets, snippetFolders, snippetAccess } from "../db/schema.js";
+import { snippets, snippetFolders } from "../db/schema.js";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
@@ -54,30 +54,11 @@ async function getAccessibleSnippet(snippetId: number, userId: string) {
   }
 
   const roleIds = await getUserRoleIds(userId);
-  const shared = await db
-    .select({
-      id: snippets.id,
-      userId: snippets.userId,
-      name: snippets.name,
-      content: snippets.content,
-      description: snippets.description,
-      folder: snippets.folder,
-      order: snippets.order,
-      createdAt: snippets.createdAt,
-      updatedAt: snippets.updatedAt,
-      hostFilter: snippets.hostFilter,
-    })
-    .from(snippetAccess)
-    .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-    .where(
-      and(
-        eq(snippetAccess.snippetId, snippetId),
-        activeSnippetAccessFilter(userId, roleIds),
-      ),
-    )
-    .limit(1);
-
-  return shared[0] ?? null;
+  return createCurrentRbacAccessRepository().findAccessibleSharedSnippet(
+    snippetId,
+    userId,
+    roleIds,
+  );
 }
 
 const authManager = AuthManager.getInstance();

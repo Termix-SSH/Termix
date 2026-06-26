@@ -59,6 +59,10 @@ export interface RbacVisibleSharedSnippet extends RbacSharedSnippet {
   updatedAt: string;
 }
 
+export interface RbacAccessibleSnippet extends RbacVisibleSharedSnippet {
+  hostFilter: string | null;
+}
+
 export interface RbacRoleHostAccessCredentialSource {
   hostAccessId: number;
   credentialId: number | null;
@@ -380,6 +384,46 @@ export class RbacAccessRepository {
           ),
         ),
       );
+  }
+
+  async findAccessibleSharedSnippet(
+    snippetId: number,
+    userId: string,
+    roleIds: number[],
+    now = new Date().toISOString(),
+  ): Promise<RbacAccessibleSnippet | null> {
+    const rows = await this.context.drizzle
+      .select({
+        id: snippets.id,
+        userId: snippets.userId,
+        name: snippets.name,
+        content: snippets.content,
+        description: snippets.description,
+        folder: snippets.folder,
+        order: snippets.order,
+        createdAt: snippets.createdAt,
+        updatedAt: snippets.updatedAt,
+        hostFilter: snippets.hostFilter,
+        ownerUsername: users.username,
+        permissionLevel: snippetAccess.permissionLevel,
+        expiresAt: snippetAccess.expiresAt,
+      })
+      .from(snippetAccess)
+      .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
+      .innerJoin(users, eq(snippets.userId, users.id))
+      .where(
+        and(
+          eq(snippetAccess.snippetId, snippetId),
+          this.userOrRoleSnippetAccessFilter(userId, roleIds),
+          or(
+            isNull(snippetAccess.expiresAt),
+            gte(snippetAccess.expiresAt, now),
+          ),
+        ),
+      )
+      .limit(1);
+
+    return rows[0] ?? null;
   }
 
   async deleteExpiredHostAccess(
