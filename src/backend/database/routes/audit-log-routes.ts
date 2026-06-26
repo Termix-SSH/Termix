@@ -2,8 +2,15 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { auditLogs, users } from "../db/schema.js";
+import { auditLogs } from "../db/schema.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { apiLogger } from "../../utils/logger.js";
+
+async function isAdminUser(userId: string | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const user = await createCurrentUserRepository().findById(userId);
+  return !!user?.isAdmin;
+}
 
 export function registerAuditLogRoutes(
   router: Router,
@@ -53,13 +60,7 @@ export function registerAuditLogRoutes(
   router.get("/audit-logs", authenticateJWT, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const adminUser = await db
-        .select({ isAdmin: users.isAdmin })
-        .from(users)
-        .where(eq(users.id, authReq.userId))
-        .limit(1);
-
-      if (!adminUser[0]?.isAdmin) {
+      if (!(await isAdminUser(authReq.userId))) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
@@ -131,13 +132,7 @@ export function registerAuditLogRoutes(
   router.get("/audit-logs/actions", authenticateJWT, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const adminUser = await db
-        .select({ isAdmin: users.isAdmin })
-        .from(users)
-        .where(eq(users.id, authReq.userId))
-        .limit(1);
-
-      if (!adminUser[0]?.isAdmin) {
+      if (!(await isAdminUser(authReq.userId))) {
         return res.status(403).json({ error: "Not authorized" });
       }
 

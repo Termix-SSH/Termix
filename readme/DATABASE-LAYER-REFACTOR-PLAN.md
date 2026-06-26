@@ -98,6 +98,8 @@ route module.
 ACME SSL route admin checks and audit actor username lookups now use the current
 user repository boundary, removing direct DB/schema imports from that route
 module.
+Audit log route admin checks now use the current user repository boundary,
+removing direct `users` access from that route module.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
