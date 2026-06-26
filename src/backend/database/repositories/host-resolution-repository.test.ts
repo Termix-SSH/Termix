@@ -175,7 +175,10 @@ describe("HostResolutionRepository", () => {
       INSERT INTO ssh_data (
         id, user_id, name, ip, port, username, auth_type, credential_id
       )
-      VALUES (1, 'user-1', 'web', '10.0.0.1', 22, 'root', 'password', 7);
+      VALUES
+        (1, 'user-1', 'web', '10.0.0.1', 22, 'root', 'password', 7),
+        (2, 'user-1', 'db', '10.0.0.2', 22, 'admin', 'none', NULL),
+        (3, 'user-2', 'other', '10.0.0.3', 22, 'root', 'none', NULL);
       INSERT INTO ssh_credentials (
         id, user_id, name, auth_type, username, password, private_key, key_password
       )
@@ -225,11 +228,35 @@ describe("HostResolutionRepository", () => {
     );
   });
 
+  it("lists user-owned hosts through the decryption boundary", async () => {
+    vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(
+      Buffer.from("user-key"),
+    );
+    const repository = await createRepository();
+
+    const rows = await repository.findHostsByUserId("user-1");
+
+    expect(rows.map((row) => row.id)).toEqual([1, 2]);
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 1 }),
+      "user-1",
+      Buffer.from("user-key"),
+    );
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 2 }),
+      "user-1",
+      Buffer.from("user-key"),
+    );
+  });
+
   it("returns null when user data is locked", async () => {
     vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(null);
     const repository = await createRepository();
 
     await expect(repository.findHostById(1, "user-1")).resolves.toBeNull();
+    await expect(repository.findHostsByUserId("user-1")).resolves.toEqual([]);
     await expect(
       repository.findCredentialByIdForUser(7, "user-1"),
     ).resolves.toBeNull();

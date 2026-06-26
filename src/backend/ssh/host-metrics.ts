@@ -5,11 +5,9 @@ import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { pickResolvedUsername } from "./credential-username.js";
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
 import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
 import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/current-host-metrics-history-repository.js";
-import { eq } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { statsLogger } from "../utils/logger.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
@@ -732,11 +730,8 @@ async function fetchAllHosts(
   userId: string,
 ): Promise<SSHHostWithCredentials[]> {
   try {
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.userId, userId)),
-      "ssh_data",
-      userId,
-    );
+    const repository = createCurrentHostResolutionRepository();
+    const hostResults = await repository.findHostsByUserId(userId);
 
     const hostsWithCredentials: SSHHostWithCredentials[] = [];
     for (const host of hostResults) {
@@ -783,17 +778,13 @@ async function fetchHostById(
       return undefined;
     }
 
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.id, id)),
-      "ssh_data",
-      userId,
-    );
+    const repository = createCurrentHostResolutionRepository();
+    const host = await repository.findHostById(id, userId);
 
-    if (hostResults.length === 0) {
+    if (!host) {
       return undefined;
     }
 
-    const host = hostResults[0];
     return await resolveHostCredentials(host, userId);
   } catch (err) {
     statsLogger.error(`Failed to fetch host ${id}`, err);
@@ -900,17 +891,13 @@ async function resolveHostCredentials(
             }
           }
         } else {
-          const credentials = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(eq(sshCredentials.id, host.credentialId as number)),
-            "ssh_credentials",
-            userId,
-          );
+          const credential =
+            await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+              host.credentialId as number,
+              userId,
+            );
 
-          if (credentials.length > 0) {
-            const credential = credentials[0];
+          if (credential) {
             baseHost.credentialId = credential.id;
             baseHost.authType =
               credential.authType ||

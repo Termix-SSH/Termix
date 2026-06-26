@@ -22,6 +22,15 @@ export class HostResolutionRepository {
     return this.decryptOne("ssh_data", rows[0], userId);
   }
 
+  async findHostsByUserId(userId: string): Promise<HostResolutionHostRecord[]> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hosts)
+      .where(eq(hosts.userId, userId));
+
+    return this.decryptMany("ssh_data", rows, userId);
+  }
+
   async findCredentialByIdForUser(
     credentialId: number,
     userId: string,
@@ -62,5 +71,17 @@ export class HostResolutionRepository {
     const userDataKey = DataCrypto.getUserDataKey(userId);
     if (!userDataKey) return null;
     return DataCrypto.decryptRecord(tableName, record, userId, userDataKey);
+  }
+
+  private decryptMany<T extends Record<string, unknown>>(
+    tableName: "ssh_data" | "ssh_credentials",
+    records: T[],
+    userId: string,
+  ): T[] {
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) return [];
+    return records.map((record) =>
+      DataCrypto.decryptRecord(tableName, record, userId, userDataKey),
+    );
   }
 }
