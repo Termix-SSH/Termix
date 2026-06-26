@@ -17,6 +17,7 @@ import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
 
@@ -143,13 +144,10 @@ router.post(
       }
 
       if (targetType === "user") {
-        const targetUser = await db
-          .select({ id: users.id, username: users.username })
-          .from(users)
-          .where(eq(users.id, targetUserId))
-          .limit(1);
+        const targetUser =
+          await createCurrentUserRepository().findById(targetUserId);
 
-        if (targetUser.length === 0) {
+        if (!targetUser) {
           return res.status(404).json({ error: "Target user not found" });
         }
       } else {
@@ -922,13 +920,10 @@ router.post(
         return res.status(400).json({ error: "Role ID is required" });
       }
 
-      const targetUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, targetUserId))
-        .limit(1);
+      const targetUser =
+        await createCurrentUserRepository().findById(targetUserId);
 
-      if (targetUser.length === 0) {
+      if (!targetUser) {
         return res.status(404).json({ error: "User not found" });
       }
 
@@ -1248,12 +1243,9 @@ router.post(
       }
 
       if (targetType === "user") {
-        const targetUser = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.id, targetUserId))
-          .limit(1);
-        if (targetUser.length === 0) {
+        const targetUser =
+          await createCurrentUserRepository().findById(targetUserId);
+        if (!targetUser) {
           return res.status(404).json({ error: "Target user not found" });
         }
       } else {

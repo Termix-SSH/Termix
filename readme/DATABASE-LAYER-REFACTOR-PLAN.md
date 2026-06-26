@@ -117,6 +117,9 @@ display-name sync now use the current user repository boundary while retaining
 the existing first-user creation transaction.
 TOTP setup/enable/disable/backup-code/login verification user updates and
 session revocation now use the current user/session repository boundaries.
+RBAC host sharing, role assignment, and snippet sharing target-user existence
+checks now use the current user repository boundary while retaining existing
+RBAC/snippet owner username joins.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
