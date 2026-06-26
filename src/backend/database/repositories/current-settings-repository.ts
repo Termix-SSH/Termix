@@ -14,3 +14,11 @@ export function createCurrentSettingsRepository(): SettingsRepository {
     DatabaseSaveTrigger.forceSave("settings_repository_write"),
   );
 }
+
+export function getCurrentSettingValue(key: string): string | null {
+  const row = getSqlite()
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .get(key) as { value?: string } | undefined;
+
+  return row?.value ?? null;
+}

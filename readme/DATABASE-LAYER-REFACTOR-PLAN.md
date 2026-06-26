@@ -31,6 +31,8 @@ configuration key.
 Terminal route session settings and command history global flag now read/write
 through `SettingsRepository`.
 Tailscale device route now reads its API key through `SettingsRepository`.
+Guacamole route and WebSocket server now read `guac_url` through the current
+settings repository boundary.
 
 ## 1. Background
 

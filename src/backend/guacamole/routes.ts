@@ -10,6 +10,7 @@ import { eq, and } from "drizzle-orm";
 import { Client } from "ssh2";
 import net from "net";
 import type { AuthenticatedRequest } from "../../types/index.js";
+import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -592,12 +593,9 @@ router.get("/status", async (req, res) => {
     let guacdHost = process.env.GUACD_HOST || "localhost";
     let guacdPort = parseInt(process.env.GUACD_PORT || "4822", 10);
     try {
-      const db = getDb();
-      const urlRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-        .get() as { value: string } | undefined;
-      if (urlRow?.value) {
-        const parts = urlRow.value.split(":");
+      const url = await createCurrentSettingsRepository().get("guac_url");
+      if (url) {
+        const parts = url.split(":");
         guacdHost = parts[0] || guacdHost;
         guacdPort = parseInt(parts[1] || String(guacdPort), 10);
       }

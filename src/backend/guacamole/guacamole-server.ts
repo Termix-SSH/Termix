@@ -1,7 +1,7 @@
 import GuacamoleLite from "guacamole-lite";
 import { guacLogger } from "../utils/logger.js";
 import { GuacamoleTokenService } from "./token-service.js";
-import { getDb } from "../database/db/index.js";
+import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
 
 const tokenService = GuacamoleTokenService.getInstance();
 
@@ -17,12 +17,9 @@ function readGuacdOptions(): { host: string; port: number } {
   let host = process.env.GUACD_HOST || "localhost";
   let port = parseInt(process.env.GUACD_PORT || "4822", 10);
   try {
-    const db = getDb();
-    const urlRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-      .get() as { value: string } | undefined;
-    if (urlRow?.value) {
-      const parsed = parseGuacUrl(urlRow.value);
+    const url = getCurrentSettingValue("guac_url");
+    if (url) {
+      const parsed = parseGuacUrl(url);
       host = parsed.host;
       port = parsed.port;
     }
