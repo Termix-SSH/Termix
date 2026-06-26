@@ -13,8 +13,9 @@ database initialization yet.
 
 Repository status: the first repository skeletons, `SettingsRepository`,
 `UserRepository`, `SessionRepository`, `HostRepository`, and
-`CredentialRepository`, have started under `src/backend/database/repositories/`
-and are covered by SQLite-backed tests.
+`CredentialRepository`, have started under `src/backend/database/repositories/`.
+`RoleRepository` has also started for the RBAC role/user-role slice, and these
+repositories are covered by SQLite-backed tests.
 
 Field encryption status: repository-level field encryption boundary tests have
 started. New field encryption requires a stable record id and must not invent a
@@ -120,10 +121,13 @@ session revocation now use the current user/session repository boundaries.
 RBAC host sharing, role assignment, and snippet sharing target-user existence
 checks now use the current user repository boundary while retaining existing
 RBAC/snippet owner username joins.
+RBAC role list/create/update/delete, user-role assignment/removal/listing, and
+shared host/snippet role-id lookups now use the current role repository
+boundary while retaining existing RBAC/share credential joins in the route.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
-current auth/settings/session/user/API-key/trusted-device slice has staging
+current auth/settings/session/user/API-key/trusted-device/role slice has staging
 evidence. The current migrated slice is now guarded by
 `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which supports `all`, `off`, and a
 comma-separated allowlist of migrated repository domains for controlled gray

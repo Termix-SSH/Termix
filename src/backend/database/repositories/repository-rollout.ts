@@ -8,6 +8,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "sessions",
   "api_keys",
   "trusted_devices",
+  "roles",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -41,6 +42,8 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   trusted_devices: "trusted_devices",
   trusteddevice: "trusted_devices",
   trusteddevices: "trusted_devices",
+  role: "roles",
+  roles: "roles",
   user: "users",
   users: "users",
 };

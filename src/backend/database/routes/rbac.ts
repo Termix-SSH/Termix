@@ -6,7 +6,6 @@ import {
   hosts,
   users,
   roles,
-  userRoles,
   sharedCredentials,
   snippets,
   snippetAccess,
@@ -17,6 +16,7 @@ import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
@@ -151,13 +151,10 @@ router.post(
           return res.status(404).json({ error: "Target user not found" });
         }
       } else {
-        const targetRole = await db
-          .select({ id: roles.id, name: roles.name })
-          .from(roles)
-          .where(eq(roles.id, targetRoleId))
-          .limit(1);
+        const targetRole =
+          await createCurrentRoleRepository().findRoleById(targetRoleId);
 
-        if (targetRole.length === 0) {
+        if (!targetRole) {
           return res.status(404).json({ error: "Target role not found" });
         }
       }
@@ -498,11 +495,8 @@ router.get(
     try {
       const now = new Date().toISOString();
 
-      const userRoleIds = await db
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
-      const roleIds = userRoleIds.map((r) => r.roleId);
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
 
       const sharedHosts = await db
         .select({
@@ -567,18 +561,25 @@ router.get(
   authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const rolesList = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          displayName: roles.displayName,
-          description: roles.description,
-          isSystem: roles.isSystem,
-          createdAt: roles.createdAt,
-          updatedAt: roles.updatedAt,
-        })
-        .from(roles)
-        .orderBy(roles.isSystem, roles.name);
+      const rolesList = (await createCurrentRoleRepository().listRoles()).map(
+        ({
+          id,
+          name,
+          displayName,
+          description,
+          isSystem,
+          createdAt,
+          updatedAt,
+        }) => ({
+          id,
+          name,
+          displayName,
+          description,
+          isSystem,
+          createdAt,
+          updatedAt,
+        }),
+      );
 
       res.json({ roles: rolesList });
     } catch (error) {
@@ -642,27 +643,21 @@ router.post(
     }
 
     try {
-      const existing = await db
-        .select({ id: roles.id })
-        .from(roles)
-        .where(eq(roles.name, name))
-        .limit(1);
+      const existing = await createCurrentRoleRepository().findRoleByName(name);
 
-      if (existing.length > 0) {
+      if (existing) {
         return res.status(409).json({
           error: "A role with this name already exists",
         });
       }
 
-      const result = await db.insert(roles).values({
+      const newRoleId = await createCurrentRoleRepository().createRole({
         name,
         displayName,
         description: description || null,
         isSystem: false,
         permissions: null,
       });
-
-      const newRoleId = result.lastInsertRowid;
 
       res.status(201).json({
         success: true,
@@ -734,17 +729,10 @@ router.put(
     }
 
     try {
-      const existingRole = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          isSystem: roles.isSystem,
-        })
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+      const existingRole =
+        await createCurrentRoleRepository().findRoleById(roleId);
 
-      if (existingRole.length === 0) {
+      if (!existingRole) {
         return res.status(404).json({ error: "Role not found" });
       }
 
@@ -764,7 +752,7 @@ router.put(
         updates.description = description || null;
       }
 
-      await db.update(roles).set(updates).where(eq(roles.id, roleId));
+      await createCurrentRoleRepository().updateRole(roleId, updates);
 
       res.json({
         success: true,
@@ -819,38 +807,24 @@ router.delete(
     }
 
     try {
-      const role = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          isSystem: roles.isSystem,
-        })
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+      const role = await createCurrentRoleRepository().findRoleById(roleId);
 
-      if (role.length === 0) {
+      if (!role) {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      if (role[0].isSystem) {
+      if (role.isSystem) {
         return res.status(403).json({
           error: "Cannot delete system roles",
         });
       }
 
-      const deletedUserRoles = await db
-        .delete(userRoles)
-        .where(eq(userRoles.roleId, roleId))
-        .returning({ userId: userRoles.userId });
+      const { deletedUserIds } =
+        await createCurrentRoleRepository().deleteRole(roleId);
 
-      for (const { userId } of deletedUserRoles) {
+      for (const userId of deletedUserIds) {
         permissionManager.invalidateUserPermissionCache(userId);
       }
-
-      await db.delete(hostAccess).where(eq(hostAccess.roleId, roleId));
-
-      await db.delete(roles).where(eq(roles.id, roleId));
 
       res.json({
         success: true,
@@ -927,36 +901,29 @@ router.post(
         return res.status(404).json({ error: "User not found" });
       }
 
-      const role = await db
-        .select()
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+      const role = await createCurrentRoleRepository().findRoleById(roleId);
 
-      if (role.length === 0) {
+      if (!role) {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      if (role[0].isSystem) {
+      if (role.isSystem) {
         return res.status(403).json({
           error:
             "System roles (admin, user) are automatically assigned and cannot be manually assigned",
         });
       }
 
-      const existing = await db
-        .select()
-        .from(userRoles)
-        .where(
-          and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
-        )
-        .limit(1);
+      const existing = await createCurrentRoleRepository().findUserRole(
+        targetUserId,
+        roleId,
+      );
 
-      if (existing.length > 0) {
+      if (existing) {
         return res.status(409).json({ error: "Role already assigned" });
       }
 
-      await db.insert(userRoles).values({
+      await createCurrentRoleRepository().assignRoleToUser({
         userId: targetUserId,
         roleId,
         grantedBy: currentUserId,
@@ -1002,7 +969,7 @@ router.post(
         adminId: currentUserId,
         targetUserId,
         roleId,
-        roleName: role[0].name,
+        roleName: role.name,
       });
 
       res.json({
@@ -1068,32 +1035,23 @@ router.delete(
     }
 
     try {
-      const role = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          isSystem: roles.isSystem,
-        })
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+      const role = await createCurrentRoleRepository().findRoleById(roleId);
 
-      if (role.length === 0) {
+      if (!role) {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      if (role[0].isSystem) {
+      if (role.isSystem) {
         return res.status(403).json({
           error:
             "System roles (admin, user) are automatically assigned and cannot be removed",
         });
       }
 
-      await db
-        .delete(userRoles)
-        .where(
-          and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
-        );
+      await createCurrentRoleRepository().removeRoleFromUser(
+        targetUserId,
+        roleId,
+      );
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
       databaseLogger.info("Role removed from user", {
@@ -1157,19 +1115,8 @@ router.get(
     }
 
     try {
-      const userRolesList = await db
-        .select({
-          id: userRoles.id,
-          roleId: roles.id,
-          roleName: roles.name,
-          roleDisplayName: roles.displayName,
-          description: roles.description,
-          isSystem: roles.isSystem,
-          grantedAt: userRoles.grantedAt,
-        })
-        .from(userRoles)
-        .innerJoin(roles, eq(userRoles.roleId, roles.id))
-        .where(eq(userRoles.userId, targetUserId));
+      const userRolesList =
+        await createCurrentRoleRepository().listUserRoles(targetUserId);
 
       res.json({ roles: userRolesList });
     } catch (error) {
@@ -1249,12 +1196,9 @@ router.post(
           return res.status(404).json({ error: "Target user not found" });
         }
       } else {
-        const targetRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.id, targetRoleId))
-          .limit(1);
-        if (targetRole.length === 0) {
+        const targetRole =
+          await createCurrentRoleRepository().findRoleById(targetRoleId);
+        if (!targetRole) {
           return res.status(404).json({ error: "Target role not found" });
         }
       }
@@ -1494,11 +1438,8 @@ router.get(
           ),
         );
 
-      const userRoleRows = await db
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
-      const roleIds = userRoleRows.map((r) => r.roleId);
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
 
       let roleShared: typeof directShared = [];
       if (roleIds.length > 0) {

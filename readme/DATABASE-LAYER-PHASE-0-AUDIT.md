@@ -503,8 +503,11 @@ Started:
 - RBAC host sharing, role assignment, and snippet sharing target-user existence
   checks moved behind the current user repository boundary, with existing
   RBAC/snippet owner username joins retained
+- RBAC role list/create/update/delete, user-role assignment/removal/listing,
+  and shared host/snippet role-id lookups moved behind the current role
+  repository boundary, with existing RBAC/share credential joins retained
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
-  for the migrated settings/users/sessions/API-key/trusted-device slice
+  for the migrated settings/users/sessions/API-key/trusted-device/role slice
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.
