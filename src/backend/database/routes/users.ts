@@ -1,8 +1,6 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { roles, userRoles } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
@@ -40,6 +38,7 @@ import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
 } from "../repositories/current-settings-repository.js";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
@@ -224,19 +223,15 @@ router.post("/create", async (req, res) => {
 
     try {
       const defaultRoleName = isFirstUser ? "admin" : "user";
-      const defaultRole = await db
-        .select({ id: roles.id })
-        .from(roles)
-        .where(eq(roles.name, defaultRoleName))
-        .limit(1);
-
-      if (defaultRole.length > 0) {
-        await db.insert(userRoles).values({
+      const assigned = await createCurrentRoleRepository().assignRoleNameToUser(
+        {
           userId: id,
-          roleId: defaultRole[0].id,
+          roleName: defaultRoleName,
           grantedBy: id,
-        });
-      } else {
+        },
+      );
+
+      if (!assigned) {
         authLogger.warn("Default role not found during user registration", {
           operation: "assign_default_role",
           userId: id,
@@ -903,17 +898,11 @@ router.get("/oidc/callback", async (req, res) => {
 
         try {
           const defaultRoleName = createdUser.isFirstUser ? "admin" : "user";
-          const defaultRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, defaultRoleName))
-            .limit(1);
-          if (defaultRole.length > 0)
-            await db.insert(userRoles).values({
-              userId: ghId,
-              roleId: defaultRole[0].id,
-              grantedBy: ghId,
-            });
+          await createCurrentRoleRepository().assignRoleNameToUser({
+            userId: ghId,
+            roleName: defaultRoleName,
+            grantedBy: ghId,
+          });
         } catch {
           /* */
         }
@@ -1205,19 +1194,14 @@ router.get("/oidc/callback", async (req, res) => {
 
       try {
         const defaultRoleName = isFirstUser ? "admin" : "user";
-        const defaultRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.name, defaultRoleName))
-          .limit(1);
-
-        if (defaultRole.length > 0) {
-          await db.insert(userRoles).values({
+        const assigned =
+          await createCurrentRoleRepository().assignRoleNameToUser({
             userId: id,
-            roleId: defaultRole[0].id,
+            roleName: defaultRoleName,
             grantedBy: id,
           });
-        } else {
+
+        if (!assigned) {
           authLogger.warn(
             "Default role not found during OIDC user registration",
             {
@@ -1324,33 +1308,12 @@ router.get("/oidc/callback", async (req, res) => {
         try {
           const newRoleName = shouldBeAdmin ? "admin" : "user";
           const oldRoleName = shouldBeAdmin ? "user" : "admin";
-          const newRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, newRoleName))
-            .limit(1);
-          const oldRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, oldRoleName))
-            .limit(1);
-          if (oldRole.length > 0) {
-            await db
-              .delete(userRoles)
-              .where(
-                and(
-                  eq(userRoles.userId, userRecord.id),
-                  eq(userRoles.roleId, oldRole[0].id),
-                ),
-              );
-          }
-          if (newRole.length > 0) {
-            await db.insert(userRoles).values({
-              userId: userRecord.id,
-              roleId: newRole[0].id,
-              grantedBy: userRecord.id,
-            });
-          }
+          await createCurrentRoleRepository().switchUserRoleName({
+            userId: userRecord.id,
+            addRoleName: newRoleName,
+            removeRoleName: oldRoleName,
+            grantedBy: userRecord.id,
+          });
         } catch {
           /* non-fatal */
         }

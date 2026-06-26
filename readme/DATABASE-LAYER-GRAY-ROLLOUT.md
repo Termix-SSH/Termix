@@ -32,6 +32,8 @@ Allowed in gray rollout:
   behind `RoleRepository`.
 - LDAP login default role assignment and admin-role sync migrated behind
   `RoleRepository`.
+- Local, GitHub OIDC, and standard OIDC user default role assignment plus OIDC
+  admin-group role sync migrated behind `RoleRepository`.
 - RBAC host/snippet access-list read models migrated behind
   `RbacAccessRepository`.
 - RBAC shared host/shared snippet read models migrated behind

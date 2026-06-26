@@ -161,6 +161,8 @@ User admin route role sync and admin-created default role assignment now use
 the current role repository boundary.
 LDAP login default role assignment and admin-role sync now use the current role
 repository boundary.
+Local, GitHub OIDC, and standard OIDC user default role assignment plus OIDC
+admin-group role sync now use the current role repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
