@@ -108,6 +108,15 @@ function isNativeAppRequest(req: Request): boolean {
   );
 }
 
+async function deleteOIDCStateSettings(state: string): Promise<void> {
+  const settingsRepository = createCurrentSettingsRepository();
+  await settingsRepository.delete(`oidc_state_${state}`);
+  await settingsRepository.delete(`oidc_backend_callback_${state}`);
+  await settingsRepository.delete(`oidc_frontend_origin_${state}`);
+  await settingsRepository.delete(`oidc_remember_me_${state}`);
+  await settingsRepository.delete(`oidc_provider_${state}`);
+}
+
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 
@@ -663,29 +672,26 @@ router.get("/oidc/authorize", async (req, res) => {
       frontendOrigin = origin;
     }
 
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_state_${state}`, nonce);
-
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_backend_callback_${state}`, backendCallbackUri);
-
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_frontend_origin_${state}`, frontendOrigin);
-
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(
-        `oidc_remember_me_${state}`,
-        rememberMe === "true" ? "true" : "false",
-      );
+    const settingsRepository = createCurrentSettingsRepository();
+    await settingsRepository.set(`oidc_state_${state}`, nonce);
+    await settingsRepository.set(
+      `oidc_backend_callback_${state}`,
+      backendCallbackUri,
+    );
+    await settingsRepository.set(
+      `oidc_frontend_origin_${state}`,
+      frontendOrigin,
+    );
+    await settingsRepository.set(
+      `oidc_remember_me_${state}`,
+      rememberMe === "true" ? "true" : "false",
+    );
 
     if (providerDbId != null) {
-      db.$client
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-        .run(`oidc_provider_${state}`, String(providerDbId));
+      await settingsRepository.set(
+        `oidc_provider_${state}`,
+        String(providerDbId),
+      );
     }
 
     const authUrl = new URL(config.authorization_url);
@@ -724,43 +730,38 @@ router.get("/oidc/callback", async (req, res) => {
     return res.status(400).json({ error: "Code and state are required" });
   }
 
-  const storedBackendCallbackRow = db.$client
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .get(`oidc_backend_callback_${state}`);
-  const storedFrontendOriginRow = db.$client
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .get(`oidc_frontend_origin_${state}`);
-  const storedRememberMeRow = db.$client
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .get(`oidc_remember_me_${state}`);
+  const settingsRepository = createCurrentSettingsRepository();
+  const storedBackendCallback = await settingsRepository.get(
+    `oidc_backend_callback_${state}`,
+  );
+  const storedFrontendOrigin = await settingsRepository.get(
+    `oidc_frontend_origin_${state}`,
+  );
+  const storedRememberMeValue = await settingsRepository.get(
+    `oidc_remember_me_${state}`,
+  );
 
-  if (!storedBackendCallbackRow || !storedFrontendOriginRow) {
+  if (!storedBackendCallback || !storedFrontendOrigin) {
     return res
       .status(400)
       .json({ error: "Invalid state parameter - redirect URIs not found" });
   }
 
-  const backendCallbackUri = (
-    storedBackendCallbackRow as Record<string, unknown>
-  ).value as string;
-  const frontendOrigin = (storedFrontendOriginRow as Record<string, unknown>)
-    .value as string;
-  const storedRememberMe =
-    (storedRememberMeRow as Record<string, unknown> | null)?.value === "true";
+  const backendCallbackUri = storedBackendCallback;
+  const frontendOrigin = storedFrontendOrigin;
+  const storedRememberMe = storedRememberMeValue === "true";
 
   try {
-    const storedNonce = db.$client
-      .prepare("SELECT value FROM settings WHERE key = ?")
-      .get(`oidc_state_${state}`);
+    const storedNonce = await settingsRepository.get(`oidc_state_${state}`);
     if (!storedNonce) {
       return res.status(400).json({ error: "Invalid state parameter" });
     }
 
-    const storedProviderIdRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = ?")
-      .get(`oidc_provider_${state}`) as { value: string } | null;
-    const callbackProviderId = storedProviderIdRow
-      ? parseInt(storedProviderIdRow.value, 10)
+    const storedProviderId = await settingsRepository.get(
+      `oidc_provider_${state}`,
+    );
+    const callbackProviderId = storedProviderId
+      ? parseInt(storedProviderId, 10)
       : null;
 
     const providerResult = await loadProviderConfig(
@@ -775,12 +776,7 @@ router.get("/oidc/callback", async (req, res) => {
       providerDbId: callbackProviderDbId,
     } = providerResult;
 
-    // Clean up provider state key
-    if (storedProviderIdRow) {
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_provider_${state}`);
-    }
+    await settingsRepository.delete(`oidc_provider_${state}`);
 
     const caCert = config.ca_cert;
     const fetchOptions = buildFetchOptions(caCert);
@@ -819,18 +815,7 @@ router.get("/oidc/callback", async (req, res) => {
         string,
         unknown
       >;
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_state_${state}`);
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_backend_callback_${state}`);
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_frontend_origin_${state}`);
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_remember_me_${state}`);
+      await deleteOIDCStateSettings(state);
 
       const ghUserInfoResponse = await fetch("https://api.github.com/user", {
         headers: {
@@ -894,12 +879,10 @@ router.get("/oidc/callback", async (req, res) => {
 
         let ghAutoProvision = false;
         try {
-          const r = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
-            )
-            .get() as { value: string } | undefined;
-          if (r) ghAutoProvision = r.value === "true";
+          ghAutoProvision = await settingsRepository.getBoolean(
+            "oidc_auto_provision",
+            false,
+          );
         } catch {
           /* */
         }
@@ -1047,18 +1030,7 @@ router.get("/oidc/callback", async (req, res) => {
 
     const tokenData = (await tokenResponse.json()) as Record<string, unknown>;
 
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_state_${state}`);
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_backend_callback_${state}`);
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_frontend_origin_${state}`);
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_remember_me_${state}`);
+    await deleteOIDCStateSettings(state);
 
     let userInfo: Record<string, unknown> = null;
     const userInfoUrls: string[] = [];
@@ -1219,15 +1191,10 @@ router.get("/oidc/callback", async (req, res) => {
 
       let oidcAutoProvision = false;
       try {
-        const oidcProvRow = db.$client
-          .prepare(
-            "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
-          )
-          .get();
-        if (oidcProvRow) {
-          oidcAutoProvision =
-            (oidcProvRow as Record<string, unknown>).value === "true";
-        }
+        oidcAutoProvision = await settingsRepository.getBoolean(
+          "oidc_auto_provision",
+          false,
+        );
       } catch {
         // fall through to env var check
       }

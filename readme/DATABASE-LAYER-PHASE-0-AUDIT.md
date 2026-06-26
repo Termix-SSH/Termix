@@ -441,6 +441,8 @@ Started:
   `SettingsRepository`
 - user route registration/password flags and OIDC config administration moved
   behind the current settings repository boundary
+- OIDC authorize/callback temporary state and auto-provision reads moved behind
+  the current settings repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

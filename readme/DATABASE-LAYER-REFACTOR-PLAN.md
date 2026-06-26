@@ -49,6 +49,8 @@ OIDC utility legacy config fallback now reads `oidc_config` through
 `SettingsRepository`.
 User route registration/password flags and OIDC config administration now use
 the current settings repository boundary.
+OIDC authorize/callback temporary state and auto-provision reads now use the
+current settings repository boundary.
 
 ## 1. Background
 
