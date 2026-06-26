@@ -103,6 +103,9 @@ removing direct `users` access from that route module.
 OIDC account link/unlink route user lookups and OIDC field updates now use the
 current user repository boundary, removing direct `users` access from that route
 module.
+Password reset route user lookups, password hash updates, and TOTP reset fields
+now use the current user repository boundary while retaining existing direct
+cleanup of per-user encrypted data tables.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

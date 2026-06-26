@@ -489,6 +489,8 @@ Started:
 - audit log route admin checks moved behind the current user repository boundary
 - OIDC account link/unlink route user lookups and OIDC field updates moved
   behind the current user repository boundary
+- password reset route user lookups, password hash updates, and TOTP reset
+  fields moved behind the current user repository boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device slice
 

@@ -8,7 +8,6 @@ import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 import { db } from "../db/index.js";
 import {
-  users,
   hosts,
   sshCredentials,
   fileManagerRecent,
@@ -20,6 +19,7 @@ import {
   snippets,
 } from "../db/schema.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 interface UserPasswordResetRoutesDeps {
   authManager: AuthManager;
@@ -91,12 +91,9 @@ export function registerUserPasswordResetRoutes(
     }
 
     try {
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
+      const user = await createCurrentUserRepository().findByUsername(username);
 
-      if (!user || user.length === 0) {
+      if (!user) {
         authLogger.warn(
           `Password reset attempted for non-existent user: ${username}`,
         );
@@ -106,7 +103,7 @@ export function registerUserPasswordResetRoutes(
         });
       }
 
-      if (user[0].isOidc) {
+      if (user.isOidc) {
         return res.json({
           message:
             "If the user exists, a password reset code has been generated. Check docker logs for the code.",
@@ -333,14 +330,11 @@ export function registerUserPasswordResetRoutes(
         return res.status(400).json({ error: "Invalid temporary token" });
       }
 
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-      if (!user || user.length === 0) {
+      const user = await createCurrentUserRepository().findByUsername(username);
+      if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const userId = user[0].id;
+      const userId = user.id;
 
       const password_hash = await bcrypt.hash(newPassword, 10);
 
@@ -372,10 +366,9 @@ export function registerUserPasswordResetRoutes(
             );
           }
 
-          await db
-            .update(users)
-            .set({ passwordHash: password_hash })
-            .where(eq(users.id, userId));
+          await createCurrentUserRepository().update(userId, {
+            passwordHash: password_hash,
+          });
           authManager.logoutUser(userId);
           authLogger.success(
             `Password reset (data preserved) for user: ${username}`,
@@ -400,10 +393,9 @@ export function registerUserPasswordResetRoutes(
           });
         }
       } else {
-        await db
-          .update(users)
-          .set({ passwordHash: password_hash })
-          .where(eq(users.username, username));
+        await createCurrentUserRepository().update(userId, {
+          passwordHash: password_hash,
+        });
 
         try {
           await db
@@ -433,14 +425,11 @@ export function registerUserPasswordResetRoutes(
           await authManager.registerUser(userId, newPassword);
           authManager.logoutUser(userId);
 
-          await db
-            .update(users)
-            .set({
-              totpEnabled: false,
-              totpSecret: null,
-              totpBackupCodes: null,
-            })
-            .where(eq(users.id, userId));
+          await createCurrentUserRepository().update(userId, {
+            totpEnabled: false,
+            totpSecret: null,
+            totpBackupCodes: null,
+          });
 
           authLogger.warn(
             `Password reset completed for user: ${username}. All encrypted data has been deleted due to lost encryption key.`,
