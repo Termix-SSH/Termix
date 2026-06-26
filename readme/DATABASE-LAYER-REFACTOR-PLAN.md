@@ -4,6 +4,8 @@ Status: Draft
 Branch: `chore/database-layer-refactor-draft`  
 Target: Replace the current in-memory encrypted SQLite snapshot model with a persistent, secure, multi-database architecture.
 
+Phase 0 audit: [`DATABASE-LAYER-PHASE-0-AUDIT.md`](./DATABASE-LAYER-PHASE-0-AUDIT.md)
+
 ## 1. Background
 
 Termix currently uses an encrypted SQLite snapshot model:
@@ -800,7 +802,7 @@ Docker should support:
 
 Recommended first PRs:
 
-1. Add database access inventory and sensitive field map.
+1. Add database access inventory and sensitive field map. (Started in `DATABASE-LAYER-PHASE-0-AUDIT.md`)
 2. Add adapter interfaces and SQLite persistent adapter skeleton.
 3. Add repository skeleton for settings/users/hosts/credentials.
 4. Add field encryption boundary tests.
