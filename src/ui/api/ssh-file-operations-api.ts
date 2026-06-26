@@ -348,8 +348,78 @@ export async function uploadSSHFile(
   file: File,
   hostId?: number,
   userId?: string,
+  onChunkProgress?: (progress: {
+    chunkIndex: number;
+    totalChunks: number;
+    bytesSent: number;
+    totalBytes: number;
+  }) => void,
 ): Promise<Record<string, unknown>> {
+  // Browser-side safety: any single multipart body approaching 2^31 bytes (~2.14GB)
+  // crashes the XHR/ArrayBuffer pipeline in both Chromium (Electron) and Firefox,
+  // surfacing as "DOMException: File could not be read" inside FileManager-*.js.
+  // For larger files we slice into <=8MB chunks and upload each one separately,
+  // never materializing the whole file in JS memory.
+  const CHUNK_THRESHOLD_BYTES = 1.5 * 1024 * 1024 * 1024; // 1.5 GiB
+  const CHUNK_SIZE_BYTES = 8 * 1024 * 1024; // 8 MiB
+
   try {
+    if (file.size > CHUNK_THRESHOLD_BYTES) {
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE_BYTES);
+      fileLogger.info("Starting chunked upload", {
+        operation: "file_upload_chunked_start",
+        fileName,
+        fileSize: file.size,
+        totalChunks,
+        chunkSize: CHUNK_SIZE_BYTES,
+      });
+
+      let bytesSent = 0;
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE_BYTES;
+        const end = Math.min(start + CHUNK_SIZE_BYTES, file.size);
+        // Blob.slice is the streaming path: it returns a sub-Blob reference
+        // without copying bytes into a buffer.
+        const chunkBlob = file.slice(start, end);
+
+        const form = new FormData();
+        form.append("sessionId", sessionId);
+        form.append("path", path);
+        form.append("fileName", fileName);
+        form.append("chunkIndex", String(i));
+        form.append("totalChunks", String(totalChunks));
+        form.append("totalSize", String(file.size));
+        form.append("chunk", chunkBlob, fileName);
+
+        const response = await fileManagerApi.post(
+          "/ssh/uploadFileChunk",
+          form,
+          { timeout: 0 },
+        );
+
+        bytesSent = end;
+        onChunkProgress?.({
+          chunkIndex: i,
+          totalChunks,
+          bytesSent,
+          totalBytes: file.size,
+        });
+
+        if (i === totalChunks - 1) {
+          fileLogger.success("Chunked upload completed", {
+            operation: "file_upload_chunked_complete",
+            fileName,
+            fileSize: file.size,
+            totalChunks,
+          });
+          return response.data;
+        }
+      }
+      // Should be unreachable; the loop returns on the final chunk.
+      return { message: "File uploaded successfully", chunked: true };
+    }
+
+    // Small files: keep the existing single-pass path.
     const form = new FormData();
     form.append("sessionId", sessionId);
     form.append("path", path);
