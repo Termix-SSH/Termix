@@ -9,7 +9,6 @@ import {
   fileManagerPinned,
   fileManagerShortcuts,
   transferRecent,
-  recentActivity,
   sessionRecordings,
 } from "../db/schema.js";
 import { eq, and, or, inArray, desc } from "drizzle-orm";
@@ -24,6 +23,7 @@ import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { pickResolvedUsername } from "../../ssh/credential-username.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
+import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -1857,9 +1857,9 @@ router.delete(
         .delete(sshCredentialUsage)
         .where(eq(sshCredentialUsage.hostId, numericHostId));
 
-      await db
-        .delete(recentActivity)
-        .where(eq(recentActivity.hostId, numericHostId));
+      await createCurrentRecentActivityRepository().deleteByHostId(
+        numericHostId,
+      );
 
       await createCurrentRbacAccessRepository().deleteHostAccessForHost(
         numericHostId,

@@ -14,10 +14,10 @@ import {
   fileManagerPinned,
   fileManagerShortcuts,
   sshCredentialUsage,
-  recentActivity,
   snippets,
 } from "../db/schema.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
+import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
@@ -410,9 +410,7 @@ export function registerUserPasswordResetRoutes(
           await db
             .delete(fileManagerShortcuts)
             .where(eq(fileManagerShortcuts.userId, userId));
-          await db
-            .delete(recentActivity)
-            .where(eq(recentActivity.userId, userId));
+          await createCurrentRecentActivityRepository().deleteByUserId(userId);
           await createCurrentDismissedAlertRepository().deleteByUserId(userId);
           await db.delete(snippets).where(eq(snippets.userId, userId));
           await db.delete(hosts).where(eq(hosts.userId, userId));

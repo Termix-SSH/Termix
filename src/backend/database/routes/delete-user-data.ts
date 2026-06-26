@@ -6,6 +6,7 @@ import { createCurrentCommandHistoryRepository } from "../repositories/current-c
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
 import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
+import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
@@ -18,7 +19,6 @@ import {
   fileManagerShortcuts,
   hosts,
   opksshTokens,
-  recentActivity,
   sessionRecordings,
   sharedCredentials,
   snippetFolders,
@@ -64,7 +64,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await db.delete(transferRecent).where(eq(transferRecent.userId, userId));
 
-    await db.delete(recentActivity).where(eq(recentActivity.userId, userId));
+    await createCurrentRecentActivityRepository().deleteByUserId(userId);
     await createCurrentDismissedAlertRepository().deleteByUserId(userId);
 
     await db.delete(snippets).where(eq(snippets.userId, userId));
