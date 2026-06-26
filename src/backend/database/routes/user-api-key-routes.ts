@@ -3,11 +3,10 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { apiKeys, users } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentApiKeyRepository } from "../repositories/current-api-key-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 export function registerUserApiKeyRoutes(
   router: Router,
@@ -56,6 +55,8 @@ export function registerUserApiKeyRoutes(
   router.post("/api-keys", requireAdmin, async (req, res) => {
     try {
       const { name, userId: targetUserId, expiresAt } = req.body;
+      const apiKeyRepository = createCurrentApiKeyRepository();
+      const userRepository = createCurrentUserRepository();
 
       if (typeof name !== "string" || !name.trim()) {
         return res.status(400).json({ error: "name is required" });
@@ -64,12 +65,8 @@ export function registerUserApiKeyRoutes(
         return res.status(400).json({ error: "userId is required" });
       }
 
-      const targetUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, targetUserId))
-        .limit(1);
-      if (targetUser.length === 0) {
+      const targetUser = await userRepository.findById(targetUserId);
+      if (!targetUser) {
         return res.status(404).json({ error: "Target user not found" });
       }
 
@@ -93,7 +90,7 @@ export function registerUserApiKeyRoutes(
       const keyId = nanoid();
       const now = new Date().toISOString();
 
-      await db.insert(apiKeys).values({
+      await apiKeyRepository.create({
         id: keyId,
         userId: targetUserId,
         name: name.trim(),
@@ -105,26 +102,21 @@ export function registerUserApiKeyRoutes(
         isActive: true,
       });
 
-      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-      await saveMemoryDatabaseToFile();
-
       const actorId = (req as AuthenticatedRequest).userId;
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, actorId))
-        .limit(1);
+      const actorRecord = actorId
+        ? await userRepository.findById(actorId)
+        : null;
       await logAudit({
         userId: actorId,
-        username: actorRecord[0]?.username ?? actorId,
+        username: actorRecord?.username ?? actorId,
         action: "create_api_key",
         resourceType: "api_key",
         resourceId: keyId,
         resourceName: name.trim(),
         details: JSON.stringify({
           targetUserId,
-          targetUsername: targetUser[0].username,
+          targetUsername: targetUser.username,
         }),
         ipAddress,
         userAgent,
@@ -135,7 +127,7 @@ export function registerUserApiKeyRoutes(
         id: keyId,
         name: name.trim(),
         userId: targetUserId,
-        username: targetUser[0].username,
+        username: targetUser.username,
         tokenPrefix,
         createdAt: now,
         expiresAt: expiresAtValue,
@@ -165,21 +157,7 @@ export function registerUserApiKeyRoutes(
    */
   router.get("/api-keys", requireAdmin, async (_req, res) => {
     try {
-      const keys = await db
-        .select({
-          id: apiKeys.id,
-          name: apiKeys.name,
-          userId: apiKeys.userId,
-          username: users.username,
-          tokenPrefix: apiKeys.tokenPrefix,
-          createdAt: apiKeys.createdAt,
-          expiresAt: apiKeys.expiresAt,
-          lastUsedAt: apiKeys.lastUsedAt,
-          isActive: apiKeys.isActive,
-        })
-        .from(apiKeys)
-        .leftJoin(users, eq(apiKeys.userId, users.id))
-        .orderBy(apiKeys.createdAt);
+      const keys = await createCurrentApiKeyRepository().listAllWithUsers();
 
       return res.json({ apiKeys: keys });
     } catch (err) {
@@ -216,36 +194,26 @@ export function registerUserApiKeyRoutes(
   router.delete("/api-keys/:keyId", requireAdmin, async (req, res) => {
     try {
       const keyId = String(req.params.keyId);
+      const apiKeyRepository = createCurrentApiKeyRepository();
+      const userRepository = createCurrentUserRepository();
 
-      const existing = await db
-        .select()
-        .from(apiKeys)
-        .where(eq(apiKeys.id, keyId))
-        .limit(1);
-
-      if (existing.length === 0) {
+      const deleted = await apiKeyRepository.delete(keyId);
+      if (!deleted) {
         return res.status(404).json({ error: "API key not found" });
       }
 
-      await db.delete(apiKeys).where(eq(apiKeys.id, keyId));
-
-      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-      await saveMemoryDatabaseToFile();
-
       const actorId = (req as AuthenticatedRequest).userId;
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, actorId))
-        .limit(1);
+      const actorRecord = actorId
+        ? await userRepository.findById(actorId)
+        : null;
       await logAudit({
         userId: actorId,
-        username: actorRecord[0]?.username ?? actorId,
+        username: actorRecord?.username ?? actorId,
         action: "delete_api_key",
         resourceType: "api_key",
         resourceId: keyId,
-        resourceName: existing[0].name,
+        resourceName: deleted.name,
         ipAddress,
         userAgent,
         success: true,

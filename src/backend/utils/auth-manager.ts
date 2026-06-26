@@ -7,13 +7,14 @@ import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "../database/db/index.js";
-import { trustedDevices, apiKeys } from "../database/db/schema.js";
+import { trustedDevices } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
 import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 import { createCurrentSessionRepository } from "../database/repositories/current-session-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
+import { createCurrentApiKeyRepository } from "../database/repositories/current-api-key-repository.js";
 
 interface AuthenticationResult {
   success: boolean;
@@ -631,13 +632,10 @@ class AuthManager {
   ): Promise<void> {
     try {
       const tokenPrefix = token.substring(0, 12);
+      const apiKeyRepository = createCurrentApiKeyRepository();
 
-      const candidates = await db
-        .select()
-        .from(apiKeys)
-        .where(
-          and(eq(apiKeys.tokenPrefix, tokenPrefix), eq(apiKeys.isActive, true)),
-        );
+      const candidates =
+        await apiKeyRepository.listActiveByTokenPrefix(tokenPrefix);
 
       if (candidates.length === 0) {
         res.status(401).json({ error: "Invalid API key" });
@@ -672,9 +670,8 @@ class AuthManager {
         }
       }
 
-      db.update(apiKeys)
-        .set({ lastUsedAt: new Date().toISOString() })
-        .where(eq(apiKeys.id, matchedKey.id))
+      apiKeyRepository
+        .updateLastUsedAt(matchedKey.id, new Date().toISOString())
         .then(() => {})
         .catch((err) => {
           databaseLogger.warn("Failed to update API key lastUsedAt", {

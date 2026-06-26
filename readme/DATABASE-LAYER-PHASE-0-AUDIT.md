@@ -471,6 +471,8 @@ Started:
   sync writes moved behind the current user repository boundary, removing direct
   Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,
   and `auth-manager.ts`
+- API key create/list/delete and API key authentication last-used updates moved
+  behind the current API key repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.
