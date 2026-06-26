@@ -5,6 +5,7 @@ Branch: `feature/database-layer-refactor`
 Target: Replace the current in-memory encrypted SQLite snapshot model with a persistent, secure, multi-database architecture.
 
 Phase 0 audit: [`DATABASE-LAYER-PHASE-0-AUDIT.md`](./DATABASE-LAYER-PHASE-0-AUDIT.md)
+Gray rollout guide: [`DATABASE-LAYER-GRAY-ROLLOUT.md`](./DATABASE-LAYER-GRAY-ROLLOUT.md)
 
 Phase 1 status: database runtime config and SQLite adapter skeleton have started under
 `src/backend/database/runtime/`. This code is not wired into the existing production
@@ -82,6 +83,10 @@ Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,
 and `auth-manager.ts`.
 API key create/list/delete and API key authentication last-used updates now use
 the current API key repository boundary.
+
+Gray rollout status: the branch is shifting from broad migration work to gray
+readiness hardening. No additional database domains should be migrated until the
+current auth/settings/session/user/API-key slice has staging evidence.
 
 ## 1. Background
 
