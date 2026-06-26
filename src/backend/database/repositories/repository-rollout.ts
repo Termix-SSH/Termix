@@ -19,6 +19,11 @@ export interface RepositoryRolloutConfig {
   explicit: boolean;
 }
 
+export interface RepositoryRolloutStatus extends RepositoryRolloutConfig {
+  envKey: typeof REPOSITORY_ROLLOUT_ENV;
+  supportedDomains: RepositoryRolloutDomain[];
+}
+
 type EnvLike = Record<string, string | undefined>;
 
 const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
@@ -104,6 +109,17 @@ export function isRepositoryRolloutDomainEnabled(
   return parseRepositoryRolloutConfig(env).enabledDomains.includes(domain);
 }
 
+export function getRepositoryRolloutStatus(
+  env: EnvLike = process.env,
+): RepositoryRolloutStatus {
+  const config = parseRepositoryRolloutConfig(env);
+  return {
+    ...config,
+    envKey: REPOSITORY_ROLLOUT_ENV,
+    supportedDomains: [...REPOSITORY_ROLLOUT_DOMAINS],
+  };
+}
+
 export function assertRepositoryRolloutDomainEnabled(
   domain: RepositoryRolloutDomain,
 ): void {
@@ -115,7 +131,7 @@ export function assertRepositoryRolloutDomainEnabled(
 }
 
 export function logRepositoryRolloutConfig(env: EnvLike = process.env): void {
-  const config = parseRepositoryRolloutConfig(env);
+  const config = getRepositoryRolloutStatus(env);
   databaseLogger.info("Database repository rollout configuration loaded", {
     operation: "repository_rollout_config",
     mode: config.mode,

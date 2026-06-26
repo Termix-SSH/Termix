@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  getRepositoryRolloutStatus,
   isRepositoryRolloutDomainEnabled,
   parseRepositoryRolloutConfig,
   REPOSITORY_ROLLOUT_ENV,
@@ -67,5 +68,25 @@ describe("parseRepositoryRolloutConfig", () => {
 
     expect(isRepositoryRolloutDomainEnabled("sessions", env)).toBe(true);
     expect(isRepositoryRolloutDomainEnabled("users", env)).toBe(false);
+  });
+
+  it("builds a status payload for admin visibility", () => {
+    const status = getRepositoryRolloutStatus({
+      [REPOSITORY_ROLLOUT_ENV]: "settings,sessions",
+    });
+
+    expect(status).toEqual({
+      mode: "partial",
+      enabledDomains: ["settings", "sessions"],
+      explicit: true,
+      envKey: REPOSITORY_ROLLOUT_ENV,
+      supportedDomains: [
+        "settings",
+        "users",
+        "sessions",
+        "api_keys",
+        "trusted_devices",
+      ],
+    });
   });
 });

@@ -34,6 +34,7 @@ import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
+import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
 import { eq, and } from "drizzle-orm";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
@@ -1975,6 +1976,7 @@ app.get(
 
       res.json({
         migrationStatus: status,
+        repositoryRollout: getRepositoryRolloutStatus(),
         files: {
           unencryptedDbSize: unencryptedSize,
           encryptedDbSize: encryptedSize,

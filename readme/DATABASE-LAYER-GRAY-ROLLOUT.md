@@ -79,6 +79,11 @@ The backend logs the parsed rollout mode at startup with operation
 `repository_rollout_config`. Use an explicit value in any staging or production
 gray target so logs show the intended rollout state.
 
+Admin users can also verify the active rollout state through
+`GET /database/migration/status`. The response includes `repositoryRollout`
+with the parsed mode, enabled domains, supported domains, env key, and whether
+the value was explicitly configured.
+
 Minimum backup artifacts:
 
 - encrypted SQLite snapshot file
@@ -123,6 +128,10 @@ Also verify these startup log cases before production gray:
 | `DATABASE_LAYER_REPOSITORY_ROLLOUT=all`      | startup logs `mode: all` and all supported domains |
 | `DATABASE_LAYER_REPOSITORY_ROLLOUT=off`      | migrated repository use fails closed               |
 | `DATABASE_LAYER_REPOSITORY_ROLLOUT=settings` | only settings repository boundary is allowed       |
+
+Then check `/database/migration/status` as an admin and confirm
+`repositoryRollout.mode`, `repositoryRollout.enabledDomains`, and
+`repositoryRollout.explicit` match the intended gray target.
 
 ## 5. Rollout Stages
 
