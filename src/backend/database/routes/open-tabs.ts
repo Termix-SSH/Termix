@@ -7,6 +7,7 @@ import type { Request, Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { sessionManager } from "../../ssh/terminal-session-manager.js";
+import { getCurrentSettingValue } from "../repositories/current-settings-repository.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -27,13 +28,9 @@ const DEFAULT_TAB_TTL_MINUTES = 30;
 
 function getTabTtlMs(): number {
   try {
-    const row = db.$client
-      .prepare(
-        "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
-      )
-      .get() as { value: string } | undefined;
-    if (row) {
-      const minutes = parseInt(row.value, 10);
+    const value = getCurrentSettingValue("terminal_session_timeout_minutes");
+    if (value) {
+      const minutes = parseInt(value, 10);
       if (!isNaN(minutes) && minutes > 0) return minutes * 60_000;
     }
   } catch {

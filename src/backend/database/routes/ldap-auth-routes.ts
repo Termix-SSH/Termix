@@ -9,6 +9,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
 import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -278,12 +279,10 @@ export function registerLDAPAuthRoutes(router: Router): void {
       if (existingUsers.length === 0) {
         let autoProvision = false;
         try {
-          const r = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
-            )
-            .get() as { value: string } | undefined;
-          if (r) autoProvision = r.value === "true";
+          autoProvision = await createCurrentSettingsRepository().getBoolean(
+            "oidc_auto_provision",
+            false,
+          );
         } catch {
           /* */
         }

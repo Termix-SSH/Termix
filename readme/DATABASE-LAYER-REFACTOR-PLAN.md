@@ -35,6 +35,8 @@ Guacamole route and WebSocket server now read `guac_url` through the current
 settings repository boundary.
 Authentication token expiry and terminal session timeout reads now use the
 current settings repository boundary.
+Open tabs, TOTP, and LDAP auth routes now read their settings through the
+current settings repository boundary.
 
 ## 1. Background
 

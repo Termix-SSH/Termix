@@ -15,6 +15,7 @@ import {
 } from "../../utils/user-agent-parser.js";
 import { db } from "../db/index.js";
 import { sessions, trustedDevices, users } from "../db/schema.js";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 
 type NativeAppRequestChecker = (req: Request) => boolean;
 
@@ -202,14 +203,11 @@ export function registerUserTotpRoutes(
     }
 
     try {
-      const passwordLoginRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'allow_password_login'",
-        )
-        .get() as { value: string } | undefined;
-      const passwordLoginAllowed = passwordLoginRow
-        ? passwordLoginRow.value === "true"
-        : true;
+      const passwordLoginAllowed =
+        await createCurrentSettingsRepository().getBoolean(
+          "allow_password_login",
+          true,
+        );
       if (!passwordLoginAllowed) {
         return res.status(409).json({
           error:
@@ -683,14 +681,10 @@ export function registerUserTotpRoutes(
         ...(isNativeAppRequest(req) ? { token } : {}),
       };
 
-      const timeoutRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'session_timeout_hours'",
-        )
-        .get() as { value: string } | undefined;
-      const timeoutHours = timeoutRow
-        ? parseInt(timeoutRow.value, 10) || 24
-        : 24;
+      const timeoutValue = await createCurrentSettingsRepository().get(
+        "session_timeout_hours",
+      );
+      const timeoutHours = timeoutValue ? parseInt(timeoutValue, 10) || 24 : 24;
       const maxAge = rememberMe
         ? 30 * 24 * 60 * 60 * 1000
         : timeoutHours * 60 * 60 * 1000;
