@@ -253,6 +253,14 @@ networks:
 
 <br />
 
+## Quyên góp
+
+Termix là dự án miễn phí và mã nguồn mở, không có gói đăng ký hay trả phí. Nếu bạn thấy hữu ích, hãy cân nhắc quyên góp để giúp trang trải chi phí máy chủ, tên miền và thời gian phát triển.
+
+[Quyên góp](https://donate.termix.site/)
+
+<br />
+
 ## Anh Chup Man Hinh
 
 <div align="center">

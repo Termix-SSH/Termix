@@ -253,6 +253,14 @@ networks:
 
 <br />
 
+## Donar
+
+Termix es gratuito y de código abierto sin suscripciones ni planes de pago. Si lo encuentras útil, considera hacer una donación para ayudar a cubrir los costos del servidor, dominios y tiempo de desarrollo.
+
+[Donar](https://donate.termix.site/)
+
+<br />
+
 ## Capturas de Pantalla
 
 <div align="center">
