@@ -400,6 +400,7 @@ Recommended first implementation PR on this branch:
 - `src/backend/database/repositories/host-repository.ts`
 - `src/backend/database/repositories/credential-repository.ts`
 - `src/backend/database/repositories/field-encryption-boundary.ts`
+- `src/backend/database/repositories/current-settings-repository.ts`
 - tests for config parsing and SQLite adapter boot
 
 Started:
@@ -411,6 +412,7 @@ Started:
 - `UserRepository` and `SessionRepository` skeletons and tests
 - `HostRepository` and `CredentialRepository` skeletons and tests
 - `FieldEncryptionBoundary` skeleton and tests
+- first settings route slice wired through `SettingsRepository`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

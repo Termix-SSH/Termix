@@ -36,6 +36,7 @@ import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -2012,9 +2013,10 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
     if (typeof allowed !== "boolean") {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
-    db.$client
-      .prepare("UPDATE settings SET value = ? WHERE key = 'allow_registration'")
-      .run(allowed ? "true" : "false");
+    await createCurrentSettingsRepository().set(
+      "allow_registration",
+      allowed ? "true" : "false",
+    );
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set registration allowed", err);
@@ -2024,11 +2026,11 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
 
 router.get("/oidc-auto-provision", async (_req, res) => {
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
-      .get();
     res.json({
-      enabled: row ? (row as Record<string, unknown>).value === "true" : false,
+      enabled: await createCurrentSettingsRepository().getBoolean(
+        "oidc_auto_provision",
+        false,
+      ),
     });
   } catch (err) {
     authLogger.error("Failed to get OIDC auto-provision setting", err);
@@ -2049,22 +2051,10 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
     if (typeof enabled !== "boolean") {
       return res.status(400).json({ error: "Invalid value for enabled" });
     }
-    const existing = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
-      .get();
-    if (existing) {
-      db.$client
-        .prepare(
-          "UPDATE settings SET value = ? WHERE key = 'oidc_auto_provision'",
-        )
-        .run(enabled ? "true" : "false");
-    } else {
-      db.$client
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('oidc_auto_provision', ?)",
-        )
-        .run(enabled ? "true" : "false");
-    }
+    await createCurrentSettingsRepository().set(
+      "oidc_auto_provision",
+      enabled ? "true" : "false",
+    );
     res.json({ enabled });
   } catch (err) {
     authLogger.error("Failed to set OIDC auto-provision", err);
@@ -2088,13 +2078,11 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
  */
 router.get("/oidc-silent-login-default", async (_req, res) => {
   try {
-    const row = db.$client
-      .prepare(
-        "SELECT value FROM settings WHERE key = 'oidc_silent_login_default'",
-      )
-      .get();
     res.json({
-      enabled: row ? (row as Record<string, unknown>).value === "true" : false,
+      enabled: await createCurrentSettingsRepository().getBoolean(
+        "oidc_silent_login_default",
+        false,
+      ),
     });
   } catch (err) {
     authLogger.error("Failed to get OIDC silent login default", err);
@@ -2143,26 +2131,10 @@ router.patch(
       if (typeof enabled !== "boolean") {
         return res.status(400).json({ error: "Invalid value for enabled" });
       }
-      const existing = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'oidc_silent_login_default'",
-        )
-        .get();
-      if (existing) {
-        db.$client
-          .prepare(
-            "UPDATE settings SET value = ? WHERE key = 'oidc_silent_login_default'",
-          )
-          .run(enabled ? "true" : "false");
-      } else {
-        db.$client
-          .prepare(
-            "INSERT INTO settings (key, value) VALUES ('oidc_silent_login_default', ?)",
-          )
-          .run(enabled ? "true" : "false");
-      }
-      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-      await saveMemoryDatabaseToFile();
+      await createCurrentSettingsRepository().set(
+        "oidc_silent_login_default",
+        enabled ? "true" : "false",
+      );
       res.json({ enabled });
     } catch (err) {
       authLogger.error("Failed to set OIDC silent login default", err);

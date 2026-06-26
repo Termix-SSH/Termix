@@ -19,6 +19,10 @@ Field encryption status: repository-level field encryption boundary tests have
 started. New field encryption requires a stable record id and must not invent a
 temporary encryption context.
 
+Settings migration status: a first low-risk production route slice now uses
+`SettingsRepository` through the current SQLite runtime context. Legacy in-memory
+runtime writes still force a snapshot save through `DatabaseSaveTrigger`.
+
 ## 1. Background
 
 Termix currently uses an encrypted SQLite snapshot model:
@@ -820,7 +824,7 @@ Recommended first PRs:
 2. Add adapter interfaces and SQLite persistent adapter skeleton.
 3. Add repository skeleton for settings/users/sessions/hosts/credentials.
 4. Add field encryption boundary tests. (Started)
-5. Migrate settings as the first low-risk vertical slice.
+5. Migrate settings as the first low-risk vertical slice. (Started)
 6. Migrate users/sessions.
 7. Migrate hosts/credentials.
 8. Add legacy snapshot migration dry-run.
