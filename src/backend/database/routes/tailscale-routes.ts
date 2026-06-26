@@ -1,8 +1,8 @@
 import { Router } from "express";
 import type { RequestHandler, Router as ExpressRouter } from "express";
-import { db } from "../db/index.js";
 import { apiLogger } from "../../utils/logger.js";
 import { getProxyAgent } from "../../utils/proxy-agent.js";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 
 interface TailscaleDevice {
   id: string;
@@ -56,11 +56,9 @@ export function registerTailscaleRoutes(
    */
   router.get("/devices", authenticateJWT, async (_req, res) => {
     try {
-      const row = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'tailscale_api_key'")
-        .get() as { value: string } | undefined;
-
-      const apiKey = row?.value ?? "";
+      const apiKey =
+        (await createCurrentSettingsRepository().get("tailscale_api_key")) ??
+        "";
       if (!apiKey) {
         return res.json({ devices: [], hasApiKey: false });
       }

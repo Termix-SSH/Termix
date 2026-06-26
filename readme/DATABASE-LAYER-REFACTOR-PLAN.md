@@ -30,6 +30,7 @@ ACME SSL settings route also uses the repository boundary for its persisted
 configuration key.
 Terminal route session settings and command history global flag now read/write
 through `SettingsRepository`.
+Tailscale device route now reads its API key through `SettingsRepository`.
 
 ## 1. Background
 
