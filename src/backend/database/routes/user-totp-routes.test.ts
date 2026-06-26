@@ -2,16 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import bcrypt from "bcryptjs";
 import speakeasy from "speakeasy";
 
-// The route module imports the db barrel (which has filesystem/crypto side
-// effects on import) plus the logger; stub both so importing stays inert.
-const updateWhere = vi.fn().mockResolvedValue(undefined);
-const updateSet = vi.fn(() => ({ where: updateWhere }));
-const dbUpdate = vi.fn(() => ({ set: updateSet }));
+// The route module imports repository factories and the logger; stub both so
+// importing stays inert.
+const userRepositoryUpdate = vi.fn().mockResolvedValue(null);
 
-vi.mock("../db/index.js", () => ({
-  db: {
-    update: dbUpdate,
-  },
+vi.mock("../repositories/current-user-repository.js", () => ({
+  createCurrentUserRepository: () => ({
+    update: userRepositoryUpdate,
+  }),
 }));
 
 vi.mock("../../utils/logger.js", () => ({
@@ -59,14 +57,14 @@ describe("verifyTotpReauth", () => {
   it("accepts a valid backup code and consumes it", async () => {
     const result = await verifyTotpReauth(makeUser(), "BACKUP01");
     expect(result).toBe(true);
-    expect(updateSet).toHaveBeenCalledWith({
+    expect(userRepositoryUpdate).toHaveBeenCalledWith("user-1", {
       totpBackupCodes: JSON.stringify(["BACKUP02"]),
     });
   });
 
   it("rejects a wrong password / invalid code", async () => {
     expect(await verifyTotpReauth(makeUser(), "wrong")).toBe(false);
-    expect(updateSet).not.toHaveBeenCalled();
+    expect(userRepositoryUpdate).not.toHaveBeenCalled();
   });
 
   it("ignores the password path for OIDC users but still accepts TOTP", async () => {

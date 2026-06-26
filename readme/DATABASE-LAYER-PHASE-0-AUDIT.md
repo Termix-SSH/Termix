@@ -497,6 +497,9 @@ Started:
   current user repository boundary
 - LDAP login existing-user lookup, encryption rollback delete, admin sync, and
   display-name sync moved behind the current user repository boundary
+- TOTP setup/enable/disable/backup-code/login verification user updates and
+  session revocation moved behind the current user/session repository
+  boundaries
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device slice
 

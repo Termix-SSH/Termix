@@ -1,6 +1,5 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Router } from "express";
-import { and, eq, ne } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import QRCode from "qrcode";
 import speakeasy from "speakeasy";
@@ -13,10 +12,11 @@ import {
   generateDeviceFingerprint,
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
-import { db } from "../db/index.js";
-import { sessions, users } from "../db/schema.js";
+import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentTrustedDeviceRepository } from "../repositories/current-trusted-device-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import type { UserRecord } from "../repositories/user-repository.js";
 
 type NativeAppRequestChecker = (req: Request) => boolean;
 
@@ -26,10 +26,8 @@ interface UserTotpRoutesDeps {
   isNativeAppRequest: NativeAppRequestChecker;
 }
 
-type TotpUserRecord = typeof users.$inferSelect;
-
 export async function verifyTotpReauth(
-  userRecord: TotpUserRecord,
+  userRecord: UserRecord,
   credential: string,
   userDataKey?: Buffer | null,
 ): Promise<boolean> {
@@ -95,10 +93,9 @@ export async function verifyTotpReauth(
             "totpBackupCodes",
           )
         : updatedJson;
-      await db
-        .update(users)
-        .set({ totpBackupCodes: storedValue })
-        .where(eq(users.id, userRecord.id));
+      await createCurrentUserRepository().update(userRecord.id, {
+        totpBackupCodes: storedValue,
+      });
       return true;
     }
   }
@@ -132,12 +129,10 @@ export function registerUserTotpRoutes(
     const userId = (req as AuthenticatedRequest).userId;
 
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRecord = await createCurrentUserRepository().findById(userId);
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      const userRecord = user[0];
 
       if (userRecord.totpEnabled) {
         return res.status(400).json({ error: "TOTP is already enabled" });
@@ -148,10 +143,9 @@ export function registerUserTotpRoutes(
         length: 32,
       });
 
-      await db
-        .update(users)
-        .set({ totpSecret: secret.base32 })
-        .where(eq(users.id, userId));
+      await createCurrentUserRepository().update(userId, {
+        totpSecret: secret.base32,
+      });
 
       const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || "");
 
@@ -216,12 +210,10 @@ export function registerUserTotpRoutes(
         });
       }
 
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRecord = await createCurrentUserRepository().findById(userId);
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      const userRecord = user[0];
 
       if (userRecord.totpEnabled) {
         return res.status(400).json({ error: "TOTP is already enabled" });
@@ -266,21 +258,15 @@ export function registerUserTotpRoutes(
           )
         : backupCodesJson;
 
-      await db
-        .update(users)
-        .set({
-          totpEnabled: true,
-          totpBackupCodes: storedBackupCodes,
-        })
-        .where(eq(users.id, userId));
+      await createCurrentUserRepository().update(userId, {
+        totpEnabled: true,
+        totpBackupCodes: storedBackupCodes,
+      });
 
-      await db
-        .delete(sessions)
-        .where(
-          sessionId
-            ? and(eq(sessions.userId, userId), ne(sessions.id, sessionId))
-            : eq(sessions.userId, userId),
-        );
+      await createCurrentSessionRepository().revokeAllForUser(
+        userId,
+        sessionId,
+      );
       await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
       try {
@@ -350,12 +336,10 @@ export function registerUserTotpRoutes(
     }
 
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRecord = await createCurrentUserRepository().findById(userId);
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      const userRecord = user[0];
 
       if (!userRecord.totpEnabled) {
         return res.status(400).json({ error: "TOTP is not enabled" });
@@ -373,14 +357,11 @@ export function registerUserTotpRoutes(
           .json({ error: "Incorrect password or invalid TOTP code" });
       }
 
-      await db
-        .update(users)
-        .set({
-          totpEnabled: false,
-          totpSecret: null,
-          totpBackupCodes: null,
-        })
-        .where(eq(users.id, userId));
+      await createCurrentUserRepository().update(userId, {
+        totpEnabled: false,
+        totpSecret: null,
+        totpBackupCodes: null,
+      });
       authLogger.info("Two-factor authentication disabled", {
         operation: "totp_disable",
         userId,
@@ -436,12 +417,10 @@ export function registerUserTotpRoutes(
     }
 
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRecord = await createCurrentUserRepository().findById(userId);
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      const userRecord = user[0];
 
       if (!userRecord.totpEnabled) {
         return res.status(400).json({ error: "TOTP is not enabled" });
@@ -473,10 +452,9 @@ export function registerUserTotpRoutes(
           )
         : backupCodesJson;
 
-      await db
-        .update(users)
-        .set({ totpBackupCodes: storedBackupCodes })
-        .where(eq(users.id, userId));
+      await createCurrentUserRepository().update(userId, {
+        totpBackupCodes: storedBackupCodes,
+      });
 
       res.json({ backup_codes: backupCodes });
     } catch (err) {
@@ -531,15 +509,12 @@ export function registerUserTotpRoutes(
         return res.status(401).json({ error: "Invalid temporary token" });
       }
 
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, decoded.userId));
-      if (!user || user.length === 0) {
+      const userRecord = await createCurrentUserRepository().findById(
+        decoded.userId,
+      );
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
-
-      const userRecord = user[0];
 
       const lockStatus = loginRateLimiter.isTOTPLocked(userRecord.id);
       if (lockStatus.locked) {
@@ -579,14 +554,11 @@ export function registerUserTotpRoutes(
       );
 
       if (!totpSecret) {
-        await db
-          .update(users)
-          .set({
-            totpEnabled: false,
-            totpSecret: null,
-            totpBackupCodes: null,
-          })
-          .where(eq(users.id, userRecord.id));
+        await createCurrentUserRepository().update(userRecord.id, {
+          totpEnabled: false,
+          totpSecret: null,
+          totpBackupCodes: null,
+        });
 
         return res.status(400).json({
           error:
@@ -634,10 +606,9 @@ export function registerUserTotpRoutes(
         }
 
         backupCodes.splice(backupIndex, 1);
-        await db
-          .update(users)
-          .set({ totpBackupCodes: JSON.stringify(backupCodes) })
-          .where(eq(users.id, userRecord.id));
+        await createCurrentUserRepository().update(userRecord.id, {
+          totpBackupCodes: JSON.stringify(backupCodes),
+        });
       }
 
       loginRateLimiter.resetTOTPAttempts(userRecord.id);

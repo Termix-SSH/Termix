@@ -115,6 +115,8 @@ snippet owner join.
 LDAP login existing-user lookup, encryption rollback delete, admin sync, and
 display-name sync now use the current user repository boundary while retaining
 the existing first-user creation transaction.
+TOTP setup/enable/disable/backup-code/login verification user updates and
+session revocation now use the current user/session repository boundaries.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
