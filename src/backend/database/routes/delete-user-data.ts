@@ -11,6 +11,7 @@ import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
@@ -23,7 +24,6 @@ import {
   sharedCredentials,
   snippetFolders,
   snippets,
-  sshCredentialUsage,
   sshCredentials,
   sshFolders,
   transferRecent,
@@ -48,9 +48,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentRoleRepository().removeAllRolesFromUser(userId);
     await createCurrentAuditLogRepository().deleteByUserId(userId);
 
-    await db
-      .delete(sshCredentialUsage)
-      .where(eq(sshCredentialUsage.userId, userId));
+    await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 
     await db
       .delete(fileManagerRecent)

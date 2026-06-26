@@ -10,7 +10,6 @@ import {
   fileManagerShortcuts,
   hosts,
   sessionRecordings,
-  sshCredentialUsage,
   sshCredentials,
   sshFolders,
   transferRecent,
@@ -18,6 +17,7 @@ import {
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 type HostFolderRoutesDeps = {
@@ -346,9 +346,9 @@ export function registerHostFolderRoutes(
             hostIds,
           );
 
-          await db
-            .delete(sshCredentialUsage)
-            .where(inArray(sshCredentialUsage.hostId, hostIds));
+          await createCurrentSshCredentialUsageRepository().deleteByHostIds(
+            hostIds,
+          );
 
           await createCurrentRecentActivityRepository().deleteByHostIds(
             hostIds,

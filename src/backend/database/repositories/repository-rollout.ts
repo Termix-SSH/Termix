@@ -20,6 +20,7 @@ export const REPOSITORY_ROLLOUT_DOMAINS = [
   "dashboard_service_links",
   "command_history",
   "recent_activity",
+  "ssh_credential_usage",
 ] as const;
 
 export type RepositoryRolloutDomain =
@@ -81,6 +82,10 @@ const DOMAIN_ALIASES: Record<string, RepositoryRolloutDomain> = {
   recent_activities: "recent_activity",
   recent_activity: "recent_activity",
   recentactivity: "recent_activity",
+  credential_usage: "ssh_credential_usage",
+  ssh_credential_usage: "ssh_credential_usage",
+  sshcredentialusage: "ssh_credential_usage",
+  usage: "ssh_credential_usage",
   open_tab: "open_tabs",
   open_tabs: "open_tabs",
   opentab: "open_tabs",

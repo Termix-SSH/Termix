@@ -4,7 +4,6 @@ import { db } from "../db/index.js";
 import {
   hosts,
   sshCredentials,
-  sshCredentialUsage,
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
@@ -24,6 +23,7 @@ import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { pickResolvedUsername } from "../../ssh/credential-username.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -1853,9 +1853,9 @@ router.delete(
         numericHostId,
       );
 
-      await db
-        .delete(sshCredentialUsage)
-        .where(eq(sshCredentialUsage.hostId, numericHostId));
+      await createCurrentSshCredentialUsageRepository().deleteByHostId(
+        numericHostId,
+      );
 
       await createCurrentRecentActivityRepository().deleteByHostId(
         numericHostId,

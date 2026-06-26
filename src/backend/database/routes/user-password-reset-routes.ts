@@ -13,12 +13,12 @@ import {
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
-  sshCredentialUsage,
   snippets,
 } from "../db/schema.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 interface UserPasswordResetRoutesDeps {
@@ -398,9 +398,9 @@ export function registerUserPasswordResetRoutes(
         });
 
         try {
-          await db
-            .delete(sshCredentialUsage)
-            .where(eq(sshCredentialUsage.userId, userId));
+          await createCurrentSshCredentialUsageRepository().deleteByUserId(
+            userId,
+          );
           await db
             .delete(fileManagerRecent)
             .where(eq(fileManagerRecent.userId, userId));

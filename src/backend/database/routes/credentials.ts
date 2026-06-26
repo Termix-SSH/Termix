@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { sshCredentials, sshCredentialUsage, hosts } from "../db/schema.js";
+import { sshCredentials, hosts } from "../db/schema.js";
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -12,6 +12,7 @@ import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 
 const router = express.Router();
 
@@ -847,11 +848,11 @@ router.post(
         })
         .where(and(eq(hosts.id, parseInt(hostId)), eq(hosts.userId, userId)));
 
-      await db.insert(sshCredentialUsage).values({
-        credentialId: parseInt(credentialId),
-        hostId: parseInt(hostId),
+      await createCurrentSshCredentialUsageRepository().create(
+        parseInt(credentialId),
+        parseInt(hostId),
         userId,
-      });
+      );
 
       await db
         .update(sshCredentials)
