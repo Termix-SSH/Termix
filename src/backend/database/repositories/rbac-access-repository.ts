@@ -174,6 +174,19 @@ export class RbacAccessRepository {
     await this.afterWrite();
   }
 
+  async deleteHostAccessForHost(hostId: number): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(hostAccess)
+      .where(eq(hostAccess.hostId, hostId))
+      .returning({ id: hostAccess.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   async findDirectHostAccess(
     hostId: number,
     userId: string,

@@ -401,6 +401,20 @@ describe("RbacAccessRepository", () => {
     expect(writeCount).toBe(1);
   });
 
+  it("deletes host access for a host and only saves when rows changed", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    expect(await repo.deleteHostAccessForHost(42)).toBe(2);
+    expect(await repo.listHostAccess(42)).toEqual([]);
+    expect(writeCount).toBe(1);
+
+    expect(await repo.deleteHostAccessForHost(42)).toBe(0);
+    expect(writeCount).toBe(1);
+  });
+
   it("upserts and revokes snippet access", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

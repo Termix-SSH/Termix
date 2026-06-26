@@ -146,6 +146,8 @@ repository boundary.
 Shared credential manager host-access lookups for role-member credential
 creation, shared credential reads, and pending re-encryption owner discovery now
 use the current RBAC access repository boundary.
+Host route host-access cleanup writes for credential removal and host deletion
+now use the current RBAC access repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

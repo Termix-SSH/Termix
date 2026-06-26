@@ -41,6 +41,7 @@ import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 
 const router = express.Router();
 
@@ -1059,9 +1060,9 @@ router.put(
         const willHaveCredential =
           newCredId !== null || newRdpCredId !== null || newVncCredId !== null;
         if (hadCredential && !willHaveCredential) {
-          await db
-            .delete(hostAccess)
-            .where(eq(hostAccess.hostId, Number(hostId)));
+          await createCurrentRbacAccessRepository().deleteHostAccessForHost(
+            Number(hostId),
+          );
         }
       }
 
@@ -1933,7 +1934,9 @@ router.delete(
         .delete(recentActivity)
         .where(eq(recentActivity.hostId, numericHostId));
 
-      await db.delete(hostAccess).where(eq(hostAccess.hostId, numericHostId));
+      await createCurrentRbacAccessRepository().deleteHostAccessForHost(
+        numericHostId,
+      );
 
       await db
         .delete(sessionRecordings)
