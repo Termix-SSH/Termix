@@ -190,11 +190,9 @@ router.post("/create", async (req, res) => {
   }
 
   try {
-    const existing = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
-    if (existing && existing.length > 0) {
+    const userRepository = createCurrentUserRepository();
+    const existing = await userRepository.findByUsername(username);
+    if (existing) {
       authLogger.warn("Registration failed - username exists", {
         operation: "user_register_failed",
         username,
@@ -206,35 +204,23 @@ router.post("/create", async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     const id = nanoid();
 
-    const isFirstUser = db.$client.transaction(() => {
-      const countResult = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users")
-        .get() as { count?: number };
-      const first = (countResult?.count || 0) === 0;
-      db.$client
-        .prepare(
-          "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .run(
-          id,
-          username,
-          password_hash,
-          first ? 1 : 0,
-          0,
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "openid email profile",
-          null,
-          0,
-          null,
-        );
-      return first;
-    })();
+    const { isFirstUser } = await userRepository.createFirstLocalUser({
+      id,
+      username,
+      passwordHash: password_hash,
+      isOidc: false,
+      clientId: "",
+      clientSecret: "",
+      issuerUrl: "",
+      authorizationUrl: "",
+      tokenUrl: "",
+      identifierPath: "",
+      namePath: "",
+      scopes: "openid email profile",
+      totpSecret: null,
+      totpEnabled: false,
+      totpBackupCodes: null,
+    });
 
     try {
       const defaultRoleName = isFirstUser ? "admin" : "user";
@@ -267,7 +253,7 @@ router.post("/create", async (req, res) => {
     try {
       await authManager.registerUser(id, password);
     } catch (encryptionError) {
-      await db.delete(users).where(eq(users.id, id));
+      await userRepository.delete(id);
       authLogger.error(
         "Failed to setup user encryption, user creation rolled back",
         encryptionError,
@@ -2313,12 +2299,10 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
   }
 
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
+    const userRecord = await findCurrentUser(userId);
+    if (!userRecord) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    const userRecord = user[0];
 
     if (userRecord.isOidc) {
       return res.status(403).json({
@@ -2346,7 +2330,7 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
       }
     }
 
-    await db.delete(users).where(eq(users.id, userId));
+    await createCurrentUserRepository().delete(userId);
 
     authLogger.success(`User account deleted: ${userRecord.username}`);
     res.json({ message: "Account deleted successfully" });
@@ -2405,12 +2389,12 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
       .json({ error: "Old and new passwords are required." });
   }
 
-  const user = await db.select().from(users).where(eq(users.id, userId));
-  if (!user || user.length === 0) {
+  const user = await findCurrentUser(userId);
+  if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
 
-  const isMatch = await bcrypt.compare(oldPassword, user[0].passwordHash);
+  const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
   if (!isMatch) {
     authLogger.warn("Password change failed - old password incorrect", {
       operation: "password_change_failed",
@@ -2432,10 +2416,9 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
   }
 
   const password_hash = await bcrypt.hash(newPassword, 10);
-  await db
-    .update(users)
-    .set({ passwordHash: password_hash })
-    .where(eq(users.id, userId));
+  await createCurrentUserRepository().update(userId, {
+    passwordHash: password_hash,
+  });
 
   authManager.logoutUser(userId);
   authLogger.success("Password changed successfully", {
@@ -2444,14 +2427,9 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
   });
 
   const { ipAddress: pwIp, userAgent: pwUa } = getRequestMeta(req);
-  const pwUser = await db
-    .select({ username: users.username })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
   await logAudit({
     userId,
-    username: pwUser[0]?.username ?? userId,
+    username: user.username ?? userId,
     action: "change_password",
     resourceType: "user",
     resourceId: userId,
@@ -2509,35 +2487,30 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
   }
 
   try {
-    const adminUser = await db.select().from(users).where(eq(users.id, userId));
-    if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+    const userRepository = createCurrentUserRepository();
+    const adminUser = await userRepository.findById(userId);
+    if (!adminUser?.isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    if (adminUser[0].username === username) {
+    if (adminUser.username === username) {
       return res.status(400).json({ error: "Cannot delete your own account" });
     }
 
-    const targetUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
-    if (!targetUser || targetUser.length === 0) {
+    const targetUser = await userRepository.findByUsername(username);
+    if (!targetUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (targetUser[0].isAdmin) {
-      const adminCount = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
-        .get();
-      if (((adminCount as { count?: number })?.count || 0) <= 1) {
+    if (targetUser.isAdmin) {
+      if ((await userRepository.countAdmins()) <= 1) {
         return res
           .status(403)
           .json({ error: "Cannot delete the last admin user" });
       }
     }
 
-    const targetUserId = targetUser[0].id;
+    const targetUserId = targetUser.id;
 
     await deleteUserAndRelatedData(targetUserId);
 
@@ -2549,14 +2522,9 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     });
 
     const { ipAddress: deleteIp, userAgent: deleteUa } = getRequestMeta(req);
-    const delAdminRecord = await db
-      .select({ username: users.username })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
     await logAudit({
       userId,
-      username: delAdminRecord[0]?.username ?? userId,
+      username: adminUser.username ?? userId,
       action: "delete_user",
       resourceType: "user",
       resourceId: targetUserId,

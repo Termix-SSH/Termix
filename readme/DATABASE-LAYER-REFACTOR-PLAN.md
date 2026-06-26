@@ -70,6 +70,10 @@ User repository now has a current-runtime factory and write-save hook, and
 paths now use it for `users` table reads and writes.
 Low-risk `routes/users.ts` current-user lookup and admin gate checks now use the
 current user repository boundary.
+User registration, self-delete, password change hash updates, and admin
+delete-user lookup paths in `routes/users.ts` now use the current user
+repository boundary while preserving the first-user admin transaction inside
+`UserRepository`.
 
 ## 1. Background
 

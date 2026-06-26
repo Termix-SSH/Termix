@@ -461,6 +461,10 @@ Started:
   paths moved behind the current user repository boundary
 - low-risk `routes/users.ts` current-user lookup and admin gate checks moved
   behind the current user repository boundary
+- user registration, self-delete, password change hash updates, and admin
+  delete-user lookup paths in `routes/users.ts` moved behind the current user
+  repository boundary, with first-user admin creation kept transactional inside
+  `UserRepository`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

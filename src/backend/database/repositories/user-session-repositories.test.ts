@@ -109,6 +109,29 @@ describe("UserRepository and SessionRepository", () => {
     expect(await repo.users.findById("user-1")).toBeNull();
   });
 
+  it("creates the first local user as admin inside the repository", async () => {
+    const repo = await createRepositories();
+
+    const first = await repo.users.createFirstLocalUser({
+      id: "user-1",
+      username: "first",
+      passwordHash: "hash",
+      isOidc: false,
+    });
+    const second = await repo.users.createFirstLocalUser({
+      id: "user-2",
+      username: "second",
+      passwordHash: "hash",
+      isOidc: false,
+    });
+
+    expect(first.isFirstUser).toBe(true);
+    expect(first.user.isAdmin).toBe(true);
+    expect(second.isFirstUser).toBe(false);
+    expect(second.user.isAdmin).toBe(false);
+    expect(await repo.users.countAll()).toBe(2);
+  });
+
   it("runs the user write hook after user writes", async () => {
     let writeCount = 0;
     const repo = await createRepositories({

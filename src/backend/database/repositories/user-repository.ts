@@ -5,6 +5,7 @@ import type { DatabaseContext } from "../runtime/adapter.js";
 export type UserRecord = typeof users.$inferSelect;
 export type NewUserRecord = typeof users.$inferInsert;
 export type UserUpdate = Partial<Omit<NewUserRecord, "id">>;
+export type NewFirstLocalUserRecord = Omit<NewUserRecord, "isAdmin">;
 
 export class UserRepository {
   constructor(
@@ -57,6 +58,25 @@ export class UserRepository {
     return rows[0];
   }
 
+  async createFirstLocalUser(
+    user: NewFirstLocalUserRecord,
+  ): Promise<{ user: UserRecord; isFirstUser: boolean }> {
+    const result = this.context.drizzle.transaction((tx) => {
+      const existingUsers = tx.select({ id: users.id }).from(users).all();
+      const isFirstUser = existingUsers.length === 0;
+      const rows = tx
+        .insert(users)
+        .values({ ...user, isAdmin: isFirstUser })
+        .returning()
+        .all();
+
+      return { user: rows[0], isFirstUser };
+    });
+
+    await this.afterWrite();
+    return result;
+  }
+
   async update(id: string, update: UserUpdate): Promise<UserRecord | null> {
     const rows = await this.context.drizzle
       .update(users)
@@ -83,6 +103,14 @@ export class UserRepository {
       .select({ id: users.id })
       .from(users)
       .where(eq(users.isAdmin, true));
+
+    return rows.length;
+  }
+
+  async countAll(): Promise<number> {
+    const rows = await this.context.drizzle
+      .select({ id: users.id })
+      .from(users);
 
     return rows.length;
   }
