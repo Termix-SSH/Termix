@@ -431,6 +431,8 @@ Started:
   settings repository boundary
 - host metrics polling settings reads moved behind the current settings
   repository boundary
+- backend startup settings reads moved behind the current settings repository
+  boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.
