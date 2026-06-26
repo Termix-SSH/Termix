@@ -2,7 +2,7 @@ import type { Express } from "express";
 import type { Client } from "ssh2";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { execCommand } from "../widgets/common-utils.js";
-import { getDb, DatabaseSaveTrigger } from "../../database/db/index.js";
+import { createCurrentHostHealthRepository } from "../../database/repositories/current-host-health-repository.js";
 import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import { shellSingleQuote } from "./exec-elevated.js";
 import { isValidPort } from "./validation.js";
@@ -115,46 +115,20 @@ function recordHistory(
   userId: string,
   hostId: number,
   results: HealthResult[],
-): void {
-  const db = getDb();
-  const now = new Date().toISOString();
-  const insert = db.$client.prepare(
-    "INSERT INTO host_health_history (user_id, host_id, check_id, ts, ok, latency_ms, detail) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  );
-  for (const r of results) {
-    insert.run(
-      userId,
-      hostId,
-      r.checkId,
-      now,
-      r.ok ? 1 : 0,
-      r.latencyMs,
-      r.detail,
-    );
-  }
-  // Prune to the most recent HISTORY_KEEP rows per (host, check).
-  db.$client
-    .prepare(
-      `DELETE FROM host_health_history
-       WHERE id IN (
-         SELECT id FROM host_health_history
-         WHERE user_id = ? AND host_id = ?
-         AND id NOT IN (
-           SELECT id FROM host_health_history
-           WHERE user_id = ? AND host_id = ?
-           ORDER BY ts DESC LIMIT ?
-         )
-       )`,
-    )
-    .run(userId, hostId, userId, hostId, HISTORY_KEEP);
+): Promise<void> {
+  return createCurrentHostHealthRepository()
+    .recordHistory(userId, hostId, results, HISTORY_KEEP)
+    .then(() => undefined);
 }
 
-function loadChecks(userId: string, hostId: number): HealthCheck[] {
-  const row = getDb()
-    .$client.prepare(
-      "SELECT checks FROM host_health_checks WHERE user_id = ? AND host_id = ?",
-    )
-    .get(userId, hostId) as { checks: string } | undefined;
+async function loadChecks(
+  userId: string,
+  hostId: number,
+): Promise<HealthCheck[]> {
+  const row = await createCurrentHostHealthRepository().findChecksByUserAndHost(
+    userId,
+    hostId,
+  );
   if (!row?.checks) return [];
   try {
     const parsed = JSON.parse(row.checks);
@@ -177,10 +151,10 @@ export function registerHealthRoutes(
       "health_get",
       async (client, host, req) => {
         const userId = (req as AuthenticatedRequest).userId;
-        const checks = loadChecks(userId, host.id);
+        const checks = await loadChecks(userId, host.id);
         const results = checks.length ? await runChecks(client, checks) : [];
         if (results.length) {
-          recordHistory(userId, host.id, results);
+          await recordHistory(userId, host.id, results);
           for (const r of results) {
             AlertEngine.getInstance()
               .evaluateHealthCheck(
@@ -194,11 +168,19 @@ export function registerHealthRoutes(
           }
         }
 
-        const history = getDb()
-          .$client.prepare(
-            "SELECT check_id as checkId, ts, ok, latency_ms as latencyMs, detail FROM host_health_history WHERE user_id = ? AND host_id = ? ORDER BY ts DESC LIMIT 200",
+        const history = (
+          await createCurrentHostHealthRepository().listHistory(
+            userId,
+            host.id,
+            200,
           )
-          .all(userId, host.id);
+        ).map((row) => ({
+          checkId: row.checkId,
+          ts: row.ts,
+          ok: row.ok,
+          latencyMs: row.latencyMs,
+          detail: row.detail,
+        }));
         return { checks, results, history };
       },
     ),
@@ -226,27 +208,14 @@ export function registerHealthRoutes(
           intervalSeconds <= 86400
             ? Math.round(intervalSeconds)
             : 300;
-        const db = getDb();
         const now = new Date().toISOString();
-        const existing = db.$client
-          .prepare(
-            "SELECT id FROM host_health_checks WHERE user_id = ? AND host_id = ?",
-          )
-          .get(userId, host.id) as { id: number } | undefined;
-        if (existing) {
-          db.$client
-            .prepare(
-              "UPDATE host_health_checks SET checks = ?, interval_seconds = ?, updated_at = ? WHERE id = ?",
-            )
-            .run(JSON.stringify(checks), interval, now, existing.id);
-        } else {
-          db.$client
-            .prepare(
-              "INSERT INTO host_health_checks (user_id, host_id, checks, interval_seconds, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            )
-            .run(userId, host.id, JSON.stringify(checks), interval, now, now);
-        }
-        DatabaseSaveTrigger.triggerSave("host_health_checks_updated");
+        await createCurrentHostHealthRepository().upsertChecks(
+          userId,
+          host.id,
+          JSON.stringify(checks),
+          interval,
+          now,
+        );
         return { success: true };
       },
     ),
@@ -261,10 +230,10 @@ export function registerHealthRoutes(
       "health_run",
       async (client, host, req) => {
         const userId = (req as AuthenticatedRequest).userId;
-        const checks = loadChecks(userId, host.id);
+        const checks = await loadChecks(userId, host.id);
         const results = await runChecks(client, checks);
         if (results.length) {
-          recordHistory(userId, host.id, results);
+          await recordHistory(userId, host.id, results);
           for (const r of results) {
             AlertEngine.getInstance()
               .evaluateHealthCheck(
