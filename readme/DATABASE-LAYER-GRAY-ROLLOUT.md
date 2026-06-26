@@ -76,9 +76,9 @@ Allowed in gray rollout:
 - SSH folder list, metadata upsert, rename, and folder host deletion writes
   migrated behind `HostFolderRepository`.
 - Host, jump-host, Docker SSH, Proxmox discovery, Docker console jump-host,
-  file-manager activity, host metrics, and terminal SSH auth resolution host,
-  credential, and shared override read models migrated behind
-  `HostResolutionRepository`.
+  file-manager activity, host metrics, terminal SSH auth, and tunnel endpoint
+  credential resolution host, credential, and shared override read models
+  migrated behind `HostResolutionRepository`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated

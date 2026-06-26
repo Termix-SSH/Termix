@@ -12,9 +12,7 @@ import { WebSocketServer } from "ws";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { ChildProcess } from "child_process";
 import axios from "axios";
-import { getDb } from "../database/db/index.js";
-import { sshCredentials } from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import type {
   SSHHost,
   TunnelConfig,
@@ -27,7 +25,6 @@ import { tunnelLogger } from "../utils/logger.js";
 import { logAudit } from "../utils/audit-logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
-import { DataCrypto } from "../utils/data-crypto.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
@@ -972,21 +969,14 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
     try {
-      const userDataKey = DataCrypto.getUserDataKey(
-        tunnelConfig.endpointUserId,
-      );
-      if (userDataKey) {
-        const credentials = await SimpleDBOps.select(
-          getDb()
-            .select()
-            .from(sshCredentials)
-            .where(eq(sshCredentials.id, tunnelConfig.endpointCredentialId)),
-          "ssh_credentials",
-          tunnelConfig.endpointUserId,
-        );
+      if (SimpleDBOps.isUserDataUnlocked(tunnelConfig.endpointUserId)) {
+        const credential =
+          await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+            tunnelConfig.endpointCredentialId,
+            tunnelConfig.endpointUserId,
+          );
 
-        if (credentials.length > 0) {
-          const credential = credentials[0];
+        if (credential) {
           resolvedEndpointCredentials = {
             password: credential.password as string | undefined,
             sshKey: (credential.key || credential.privateKey) as
