@@ -57,6 +57,8 @@ User encryption metadata in `utils/user-crypto.ts` now reads and writes KEK/DEK
 settings through the current settings repository boundary.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
+Database import/export settings handling in `database/database.ts` now uses
+local helper boundaries for export filtering and admin import upserts.
 
 ## 1. Background
 

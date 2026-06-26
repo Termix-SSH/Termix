@@ -70,6 +70,67 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 app.use(createCorsMiddleware());
 
+type AppDatabase = ReturnType<typeof getDb>;
+type SettingData = {
+  key: string;
+  value: string;
+};
+
+function shouldExportSetting(key: string): boolean {
+  return !key.startsWith("reset_code_") && !key.startsWith("temp_reset_token_");
+}
+
+async function getExportableSettings(): Promise<SettingData[]> {
+  const settingsRows = await getDb()
+    .select({ key: settings.key, value: settings.value })
+    .from(settings);
+
+  return settingsRows.filter((setting) => shouldExportSetting(setting.key));
+}
+
+function writeSettingsToExportDatabase(
+  exportDb: Database.Database,
+  settingsRows: SettingData[],
+): void {
+  const insertSetting = exportDb.prepare(`
+    INSERT INTO settings (key, value)
+    VALUES (?, ?)
+  `);
+
+  for (const setting of settingsRows) {
+    insertSetting.run(setting.key, setting.value);
+  }
+}
+
+function readImportedSettings(importDb: Database.Database): SettingData[] {
+  return importDb
+    .prepare("SELECT key, value FROM settings")
+    .all() as SettingData[];
+}
+
+async function upsertImportedSetting(
+  mainDb: AppDatabase,
+  setting: SettingData,
+): Promise<void> {
+  const existing = await mainDb
+    .select()
+    .from(settings)
+    .where(eq(settings.key, setting.key));
+
+  if (existing.length > 0) {
+    await mainDb
+      .update(settings)
+      .set({ value: setting.value })
+      .where(eq(settings.key, setting.key));
+    return;
+  }
+
+  await mainDb.insert(settings).values({
+    key: setting.key,
+    value: setting.value,
+  });
+}
+
 const uploadsDir = path.join(process.env.DATA_DIR || "./db/data", "uploads");
 
 const storage = multer.diskStorage({
@@ -1074,20 +1135,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      const settingsData = await getDb().select().from(settings);
-      const insertSetting = exportDb.prepare(`
-        INSERT INTO settings (key, value)
-        VALUES (?, ?)
-      `);
-      for (const setting of settingsData) {
-        if (
-          setting.key.startsWith("reset_code_") ||
-          setting.key.startsWith("temp_reset_token_")
-        ) {
-          continue;
-        }
-        insertSetting.run(setting.key, setting.value);
-      }
+      writeSettingsToExportDatabase(exportDb, await getExportableSettings());
     } finally {
       exportDb.close();
     }
@@ -1549,29 +1597,11 @@ app.post(
           .where(eq(users.id, userId));
         if (targetUser.length > 0 && targetUser[0].isAdmin) {
           try {
-            const importedSettings = importDb
-              .prepare("SELECT * FROM settings")
-              .all();
+            const importedSettings = readImportedSettings(importDb);
             for (const setting of importedSettings) {
               try {
-                const existing = await mainDb
-                  .select()
-                  .from(settings)
-                  .where(eq(settings.key, setting.key));
-
-                if (existing.length > 0) {
-                  await mainDb
-                    .update(settings)
-                    .set({ value: setting.value })
-                    .where(eq(settings.key, setting.key));
-                  result.summary.settingsImported++;
-                } else {
-                  await mainDb.insert(settings).values({
-                    key: setting.key,
-                    value: setting.value,
-                  });
-                  result.summary.settingsImported++;
-                }
+                await upsertImportedSetting(mainDb, setting);
+                result.summary.settingsImported++;
               } catch (settingError) {
                 result.summary.errors.push(
                   `Setting import error (${setting.key}): ${settingError.message}`,

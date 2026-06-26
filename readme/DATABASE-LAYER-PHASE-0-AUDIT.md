@@ -449,6 +449,8 @@ Started:
   settings repository boundary
 - database startup and schema migration defaults in `database/db/index.ts`
   moved to local raw settings helpers
+- database import/export settings handling in `database/database.ts` moved to
+  local helper boundaries
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.
