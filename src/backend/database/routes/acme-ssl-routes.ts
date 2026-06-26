@@ -3,12 +3,11 @@ import { promises as fs } from "fs";
 import path from "path";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import type { UserRecord } from "../repositories/user-repository.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./db/data";
 const SSL_DIR = path.join(DATA_DIR, "ssl");
@@ -33,6 +32,14 @@ export type AcmeSettings = {
   certStatus: "none" | "valid" | "expiring" | "expired";
   certExpiresAt: string | null;
 };
+
+async function getAdminActor(
+  userId: string | undefined,
+): Promise<UserRecord | null> {
+  if (!userId) return null;
+  const user = await createCurrentUserRepository().findById(userId);
+  return user?.isAdmin ? user : null;
+}
 
 function getCertInfo(): {
   status: "none" | "valid" | "expiring" | "expired";
@@ -162,8 +169,8 @@ export function registerAcmeSSLRoutes(
   router.patch("/acme-ssl-settings", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
@@ -191,14 +198,9 @@ export function registerAcmeSSLRoutes(
       );
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_acme_ssl_settings",
         resourceType: "setting",
         details: JSON.stringify({
@@ -240,9 +242,9 @@ export function registerAcmeSSLRoutes(
    */
   router.post("/acme-ssl-request", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
+    const actor = await getAdminActor(userId);
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
@@ -365,14 +367,9 @@ export function registerAcmeSSLRoutes(
       });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "acme_ssl_request",
         resourceType: "setting",
         details: JSON.stringify({ domain, challengeType, success: true }),
@@ -387,14 +384,9 @@ export function registerAcmeSSLRoutes(
       authLogger.error("ACME certificate request failed", err);
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor?.username ?? userId,
         action: "acme_ssl_request",
         resourceType: "setting",
         details: JSON.stringify({ error: message }),
