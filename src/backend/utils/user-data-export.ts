@@ -6,9 +6,9 @@ import {
   fileManagerPinned,
   fileManagerShortcuts,
   transferRecent,
-  dismissedAlerts,
 } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
+import { createCurrentDismissedAlertRepository } from "../database/repositories/current-dismissed-alert-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
@@ -119,10 +119,8 @@ class UserDataExport {
             .where(eq(transferRecent.userId, userId)),
         ]);
 
-      const alerts = await getDb()
-        .select()
-        .from(dismissedAlerts)
-        .where(eq(dismissedAlerts.userId, userId));
+      const alerts =
+        await createCurrentDismissedAlertRepository().listByUserId(userId);
 
       const exportData: UserExportData = {
         version: this.EXPORT_VERSION,

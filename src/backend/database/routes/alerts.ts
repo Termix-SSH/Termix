@@ -4,12 +4,10 @@ import type {
   TermixAlert,
 } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { dismissedAlerts } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { getProxyAgent } from "../../utils/proxy-agent.js";
+import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 
 class AlertCache {
   private cache: Map<string, CacheEntry> = new Map();
@@ -120,13 +118,10 @@ router.get("/", authenticateJWT, async (req, res) => {
 
     const allAlerts = await fetchAlertsFromGitHub();
 
-    const dismissedAlertRecords = await db
-      .select({ alertId: dismissedAlerts.alertId })
-      .from(dismissedAlerts)
-      .where(eq(dismissedAlerts.userId, userId));
-
     const dismissedAlertIds = new Set(
-      dismissedAlertRecords.map((record) => record.alertId),
+      await createCurrentDismissedAlertRepository().listAlertIdsByUserId(
+        userId,
+      ),
     );
 
     const activeAlertsForUser = allAlerts.filter(
@@ -181,25 +176,18 @@ router.post("/dismiss", authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: "Alert ID is required" });
     }
 
-    const existingDismissal = await db
-      .select()
-      .from(dismissedAlerts)
-      .where(
-        and(
-          eq(dismissedAlerts.userId, userId),
-          eq(dismissedAlerts.alertId, alertId),
-        ),
+    const existingDismissal =
+      await createCurrentDismissedAlertRepository().findForUser(
+        userId,
+        alertId,
       );
 
-    if (existingDismissal.length > 0) {
+    if (existingDismissal) {
       authLogger.warn(`Alert ${alertId} already dismissed by user ${userId}`);
       return res.status(409).json({ error: "Alert already dismissed" });
     }
 
-    await db.insert(dismissedAlerts).values({
-      userId,
-      alertId,
-    });
+    await createCurrentDismissedAlertRepository().create(userId, alertId);
 
     res.json({ message: "Alert dismissed successfully" });
   } catch (error) {
@@ -226,13 +214,8 @@ router.get("/dismissed", authenticateJWT, async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
 
-    const dismissedAlertRecords = await db
-      .select({
-        alertId: dismissedAlerts.alertId,
-        dismissedAt: dismissedAlerts.dismissedAt,
-      })
-      .from(dismissedAlerts)
-      .where(eq(dismissedAlerts.userId, userId));
+    const dismissedAlertRecords =
+      await createCurrentDismissedAlertRepository().listByUserId(userId);
 
     res.json({
       dismissed_alerts: dismissedAlertRecords,
@@ -280,16 +263,12 @@ router.delete("/dismiss", authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: "Alert ID is required" });
     }
 
-    const result = await db
-      .delete(dismissedAlerts)
-      .where(
-        and(
-          eq(dismissedAlerts.userId, userId),
-          eq(dismissedAlerts.alertId, alertId),
-        ),
-      );
+    const deleted = await createCurrentDismissedAlertRepository().deleteForUser(
+      userId,
+      alertId,
+    );
 
-    if (result.changes === 0) {
+    if (!deleted) {
       return res.status(404).json({ error: "Dismissed alert not found" });
     }
     res.json({ message: "Alert undismissed successfully" });

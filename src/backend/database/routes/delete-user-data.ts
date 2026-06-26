@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
+import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
@@ -11,7 +12,6 @@ import { createCurrentUserPreferenceRepository } from "../repositories/current-u
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
   commandHistory,
-  dismissedAlerts,
   fileManagerPinned,
   fileManagerRecent,
   fileManagerShortcuts,
@@ -65,7 +65,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db.delete(transferRecent).where(eq(transferRecent.userId, userId));
 
     await db.delete(recentActivity).where(eq(recentActivity.userId, userId));
-    await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
+    await createCurrentDismissedAlertRepository().deleteByUserId(userId);
 
     await db.delete(snippets).where(eq(snippets.userId, userId));
     await db.delete(snippetFolders).where(eq(snippetFolders.userId, userId));
