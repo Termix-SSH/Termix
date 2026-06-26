@@ -515,6 +515,9 @@ Started:
 - RBAC shared host/shared snippet read models and the main snippet
   shared-snippet read model moved behind the current RBAC access repository
   boundary
+- RBAC host/snippet access grant, revoke, and direct host-access credential
+  override writes moved behind the current RBAC access repository boundary,
+  with shared credential material creation retained in the existing manager
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device/role/RBAC-access
   slice

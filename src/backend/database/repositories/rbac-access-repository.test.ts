@@ -12,7 +12,9 @@ describe("RbacAccessRepository", () => {
     }
   });
 
-  async function createRepository(): Promise<RbacAccessRepository> {
+  async function createRepository(
+    onWrite?: () => void | Promise<void>,
+  ): Promise<RbacAccessRepository> {
     adapter = new SqliteDatabaseAdapter({
       dialect: "sqlite",
       url: ":memory:",
@@ -47,7 +49,19 @@ describe("RbacAccessRepository", () => {
         granted_by TEXT NOT NULL,
         permission_level TEXT NOT NULL DEFAULT 'view',
         expires_at TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_accessed_at TEXT,
+        access_count INTEGER NOT NULL DEFAULT 0,
+        override_credential_id INTEGER
+      );
+
+      CREATE TABLE shared_credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        host_access_id INTEGER NOT NULL,
+        credential_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        owner_id TEXT NOT NULL,
+        encrypted_data TEXT
       );
 
       CREATE TABLE ssh_data (
@@ -115,7 +129,7 @@ describe("RbacAccessRepository", () => {
         (4, 99, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z');
     `);
 
-    return new RbacAccessRepository(context);
+    return new RbacAccessRepository(context, onWrite);
   }
 
   it("lists host access with user and role target metadata", async () => {
@@ -219,5 +233,85 @@ describe("RbacAccessRepository", () => {
       content: "echo deploy",
       ownerUsername: "owner",
     });
+  });
+
+  it("upserts host access and updates overrides", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    const updated = await repo.upsertHostAccess({
+      hostId: 42,
+      targetType: "user",
+      targetUserId: "user-1",
+      grantedBy: "admin",
+      permissionLevel: "view",
+      expiresAt: "2026-06-28T00:00:00.000Z",
+    });
+
+    expect(updated).toEqual({ id: 1, created: false });
+    expect(
+      (await repo.listHostAccess(42)).find((row) => row.id === 1),
+    ).toMatchObject({
+      expiresAt: "2026-06-28T00:00:00.000Z",
+    });
+
+    const created = await repo.upsertHostAccess({
+      hostId: 43,
+      targetType: "role",
+      targetRoleId: 7,
+      grantedBy: "admin",
+      permissionLevel: "view",
+      expiresAt: null,
+    });
+    expect(created.created).toBe(true);
+
+    const directAccess = await repo.findDirectHostAccess(42, "user-1");
+    expect(directAccess?.id).toBe(1);
+
+    await repo.updateHostAccessOverrideCredential(1, 123);
+    expect(
+      (await repo.findDirectHostAccess(42, "user-1"))?.overrideCredentialId,
+    ).toBe(123);
+
+    await repo.revokeHostAccess(1);
+    expect(await repo.findDirectHostAccess(42, "user-1")).toBeNull();
+    expect(writeCount).toBe(4);
+  });
+
+  it("upserts and revokes snippet access", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    const updated = await repo.upsertSnippetAccess({
+      snippetId: 99,
+      targetType: "user",
+      targetUserId: "user-1",
+      grantedBy: "admin",
+      expiresAt: "2026-06-28T00:00:00.000Z",
+    });
+
+    expect(updated).toEqual({ id: 3, created: false });
+    expect(
+      (await repo.listSnippetAccess(99)).find((row) => row.id === 3),
+    ).toMatchObject({ expiresAt: "2026-06-28T00:00:00.000Z" });
+
+    const created = await repo.upsertSnippetAccess({
+      snippetId: 100,
+      targetType: "role",
+      targetRoleId: 7,
+      grantedBy: "admin",
+      expiresAt: null,
+    });
+    expect(created.created).toBe(true);
+
+    await repo.revokeSnippetAccess(3);
+    expect((await repo.listSnippetAccess(99)).map((row) => row.id)).toEqual([
+      4,
+    ]);
+    expect(writeCount).toBe(3);
   });
 });

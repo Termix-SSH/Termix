@@ -31,6 +31,8 @@ Allowed in gray rollout:
   `RbacAccessRepository`.
 - RBAC shared host/shared snippet read models migrated behind
   `RbacAccessRepository`.
+- RBAC host/snippet access grant, revoke, and direct host-access credential
+  override writes migrated behind `RbacAccessRepository`.
 - Current field encryption behavior.
 
 Not included in gray rollout:
@@ -39,8 +41,9 @@ Not included in gray rollout:
 - New external database configuration UI.
 - New schema migration strategy.
 - Host and credential route migration beyond existing repository skeletons.
-- Remaining RBAC/share credential write paths, audit, preferences, file manager,
-  metrics, and notification repository migration.
+- Remaining permission-manager host-access checks/cleanup, shared credential
+  material creation, audit, preferences, file manager, metrics, and notification
+  repository migration.
 - Multi-instance backend deployment.
 
 ## 2. Required Preflight
@@ -129,7 +132,7 @@ Run these against the gray target:
 | API keys     | Admin create/list/delete API key; API key authentication updates usage |
 | Settings     | Read/write user settings and global auth settings                      |
 | Roles        | Admin list/create/update/delete role and assign/remove a user role     |
-| RBAC access  | Host/snippet access-list and shared host/snippet endpoints still work  |
+| RBAC access  | Host/snippet share/revoke/list and shared host/snippet endpoints work  |
 | Security     | Non-admin user is rejected from admin-only endpoints                   |
 
 Do not continue gray rollout if any check fails.

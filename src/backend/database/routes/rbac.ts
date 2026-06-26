@@ -1,14 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import {
-  hostAccess,
-  hosts,
-  sharedCredentials,
-  snippets,
-  snippetAccess,
-  sshCredentials,
-} from "../db/schema.js";
+import { hostAccess, hosts, snippets, sshCredentials } from "../db/schema.js";
 import { eq, and } from "drizzle-orm";
 import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
@@ -177,32 +170,18 @@ router.post(
         });
       }
 
-      const whereConditions = [eq(hostAccess.hostId, hostId)];
-      if (targetType === "user") {
-        whereConditions.push(eq(hostAccess.userId, targetUserId));
-      } else {
-        whereConditions.push(eq(hostAccess.roleId, targetRoleId));
-      }
+      const accessGrant =
+        await createCurrentRbacAccessRepository().upsertHostAccess({
+          hostId,
+          grantedBy: userId,
+          permissionLevel,
+          expiresAt,
+          ...(targetType === "user"
+            ? { targetType: "user" as const, targetUserId: targetUserId! }
+            : { targetType: "role" as const, targetRoleId: targetRoleId! }),
+        });
 
-      const existing = await db
-        .select()
-        .from(hostAccess)
-        .where(and(...whereConditions))
-        .limit(1);
-
-      if (existing.length > 0) {
-        await db
-          .update(hostAccess)
-          .set({
-            permissionLevel,
-            expiresAt,
-          })
-          .where(eq(hostAccess.id, existing[0].id));
-
-        await db
-          .delete(sharedCredentials)
-          .where(eq(sharedCredentials.hostAccessId, existing[0].id));
-
+      if (!accessGrant.created) {
         const activeCredentialId =
           host[0].credentialId ??
           host[0].rdpCredentialId ??
@@ -213,14 +192,14 @@ router.post(
           const sharedCredManager = SharedCredentialManager.getInstance();
           if (targetType === "user") {
             await sharedCredManager.createSharedCredentialForUser(
-              existing[0].id,
+              accessGrant.id,
               activeCredentialId,
               targetUserId!,
               userId,
             );
           } else {
             await sharedCredManager.createSharedCredentialsForRole(
-              existing[0].id,
+              accessGrant.id,
               activeCredentialId,
               targetRoleId!,
               userId,
@@ -242,15 +221,6 @@ router.post(
         });
       }
 
-      const result = await db.insert(hostAccess).values({
-        hostId,
-        userId: targetType === "user" ? targetUserId : null,
-        roleId: targetType === "role" ? targetRoleId : null,
-        grantedBy: userId,
-        permissionLevel,
-        expiresAt,
-      });
-
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
@@ -262,14 +232,14 @@ router.post(
       if (activeCredentialId) {
         if (targetType === "user") {
           await sharedCredManager.createSharedCredentialForUser(
-            result.lastInsertRowid as number,
+            accessGrant.id,
             activeCredentialId,
             targetUserId!,
             userId,
           );
         } else {
           await sharedCredManager.createSharedCredentialsForRole(
-            result.lastInsertRowid as number,
+            accessGrant.id,
             activeCredentialId,
             targetRoleId!,
             userId,
@@ -356,7 +326,7 @@ router.delete(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      await db.delete(hostAccess).where(eq(hostAccess.id, accessId));
+      await createCurrentRbacAccessRepository().revokeHostAccess(accessId);
       databaseLogger.info("Permission revoked", {
         operation: "rbac_permission_revoke",
         adminId: userId,
@@ -1151,40 +1121,23 @@ router.post(
         expiresAt = expiryDate.toISOString();
       }
 
-      const whereConditions = [eq(snippetAccess.snippetId, snippetId)];
-      if (targetType === "user") {
-        whereConditions.push(eq(snippetAccess.userId, targetUserId));
-      } else {
-        whereConditions.push(eq(snippetAccess.roleId, targetRoleId));
-      }
+      const accessGrant =
+        await createCurrentRbacAccessRepository().upsertSnippetAccess({
+          snippetId,
+          grantedBy: userId,
+          expiresAt,
+          ...(targetType === "user"
+            ? { targetType: "user" as const, targetUserId: targetUserId! }
+            : { targetType: "role" as const, targetRoleId: targetRoleId! }),
+        });
 
-      const existing = await db
-        .select()
-        .from(snippetAccess)
-        .where(and(...whereConditions))
-        .limit(1);
-
-      if (existing.length > 0) {
-        await db
-          .update(snippetAccess)
-          .set({ expiresAt })
-          .where(eq(snippetAccess.id, existing[0].id));
-
+      if (!accessGrant.created) {
         return res.json({
           success: true,
           message: "Snippet access updated",
           expiresAt,
         });
       }
-
-      await db.insert(snippetAccess).values({
-        snippetId,
-        userId: targetType === "user" ? targetUserId : null,
-        roleId: targetType === "role" ? targetRoleId : null,
-        grantedBy: userId,
-        permissionLevel: "view",
-        expiresAt,
-      });
 
       databaseLogger.success("Snippet shared successfully", {
         operation: "rbac_snippet_share",
@@ -1242,7 +1195,7 @@ router.delete(
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
-      await db.delete(snippetAccess).where(eq(snippetAccess.id, accessId));
+      await createCurrentRbacAccessRepository().revokeSnippetAccess(accessId);
 
       res.json({ success: true, message: "Snippet access revoked" });
     } catch (error) {
@@ -1348,15 +1301,13 @@ router.put(
         return res.status(400).json({ error: "Invalid host ID" });
       }
 
-      const access = await db
-        .select()
-        .from(hostAccess)
-        .where(
-          and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
-        )
-        .limit(1);
+      const access =
+        await createCurrentRbacAccessRepository().findDirectHostAccess(
+          hostId,
+          userId,
+        );
 
-      if (access.length === 0) {
+      if (!access) {
         return res.status(403).json({ error: "No access to this host" });
       }
 
@@ -1377,10 +1328,10 @@ router.put(
         }
       }
 
-      await db
-        .update(hostAccess)
-        .set({ overrideCredentialId: credentialId || null })
-        .where(eq(hostAccess.id, access[0].id));
+      await createCurrentRbacAccessRepository().updateHostAccessOverrideCredential(
+        access.id,
+        credentialId || null,
+      );
 
       res.json({ success: true });
     } catch (error) {

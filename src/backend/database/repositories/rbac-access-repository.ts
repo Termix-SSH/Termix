@@ -3,6 +3,7 @@ import {
   hostAccess,
   hosts,
   roles,
+  sharedCredentials,
   snippetAccess,
   snippets,
   users,
@@ -58,6 +59,23 @@ export interface RbacVisibleSharedSnippet extends RbacSharedSnippet {
   updatedAt: string;
 }
 
+export type RbacAccessTarget =
+  | { targetType: "user"; targetUserId: string }
+  | { targetType: "role"; targetRoleId: number };
+
+export interface UpsertHostAccessInput extends RbacAccessTarget {
+  hostId: number;
+  grantedBy: string;
+  permissionLevel: string;
+  expiresAt: string | null;
+}
+
+export interface UpsertSnippetAccessInput extends RbacAccessTarget {
+  snippetId: number;
+  grantedBy: string;
+  expiresAt: string | null;
+}
+
 type RawAccessListItem = Omit<RbacAccessListItem, "targetType">;
 
 function toAccessListItem(access: RawAccessListItem): RbacAccessListItem {
@@ -68,7 +86,10 @@ function toAccessListItem(access: RawAccessListItem): RbacAccessListItem {
 }
 
 export class RbacAccessRepository {
-  constructor(private readonly context: DatabaseContext) {}
+  constructor(
+    private readonly context: DatabaseContext,
+    private readonly onWrite?: () => void | Promise<void>,
+  ) {}
 
   async listHostAccess(hostId: number): Promise<RbacAccessListItem[]> {
     const rows = await this.context.drizzle
@@ -96,6 +117,73 @@ export class RbacAccessRepository {
     return rows.map(toAccessListItem);
   }
 
+  async upsertHostAccess(input: UpsertHostAccessInput): Promise<{
+    id: number;
+    created: boolean;
+  }> {
+    const existing = await this.findHostAccess(input.hostId, input);
+
+    if (existing) {
+      await this.context.drizzle
+        .update(hostAccess)
+        .set({
+          permissionLevel: input.permissionLevel,
+          expiresAt: input.expiresAt,
+        })
+        .where(eq(hostAccess.id, existing.id));
+
+      await this.context.drizzle
+        .delete(sharedCredentials)
+        .where(eq(sharedCredentials.hostAccessId, existing.id));
+
+      await this.afterWrite();
+      return { id: existing.id, created: false };
+    }
+
+    const result = await this.context.drizzle.insert(hostAccess).values({
+      hostId: input.hostId,
+      userId: input.targetType === "user" ? input.targetUserId : null,
+      roleId: input.targetType === "role" ? input.targetRoleId : null,
+      grantedBy: input.grantedBy,
+      permissionLevel: input.permissionLevel,
+      expiresAt: input.expiresAt,
+    });
+
+    await this.afterWrite();
+    return { id: Number(result.lastInsertRowid), created: true };
+  }
+
+  async revokeHostAccess(accessId: number): Promise<void> {
+    await this.context.drizzle
+      .delete(hostAccess)
+      .where(eq(hostAccess.id, accessId));
+    await this.afterWrite();
+  }
+
+  async findDirectHostAccess(
+    hostId: number,
+    userId: string,
+  ): Promise<typeof hostAccess.$inferSelect | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hostAccess)
+      .where(and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async updateHostAccessOverrideCredential(
+    accessId: number,
+    credentialId: number | null,
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(hostAccess)
+      .set({ overrideCredentialId: credentialId })
+      .where(eq(hostAccess.id, accessId));
+    await this.afterWrite();
+  }
+
   async listSnippetAccess(snippetId: number): Promise<RbacAccessListItem[]> {
     const rows = await this.context.drizzle
       .select({
@@ -120,6 +208,42 @@ export class RbacAccessRepository {
       .orderBy(desc(snippetAccess.createdAt));
 
     return rows.map(toAccessListItem);
+  }
+
+  async upsertSnippetAccess(input: UpsertSnippetAccessInput): Promise<{
+    id: number;
+    created: boolean;
+  }> {
+    const existing = await this.findSnippetAccess(input.snippetId, input);
+
+    if (existing) {
+      await this.context.drizzle
+        .update(snippetAccess)
+        .set({ expiresAt: input.expiresAt })
+        .where(eq(snippetAccess.id, existing.id));
+
+      await this.afterWrite();
+      return { id: existing.id, created: false };
+    }
+
+    const result = await this.context.drizzle.insert(snippetAccess).values({
+      snippetId: input.snippetId,
+      userId: input.targetType === "user" ? input.targetUserId : null,
+      roleId: input.targetType === "role" ? input.targetRoleId : null,
+      grantedBy: input.grantedBy,
+      permissionLevel: "view",
+      expiresAt: input.expiresAt,
+    });
+
+    await this.afterWrite();
+    return { id: Number(result.lastInsertRowid), created: true };
+  }
+
+  async revokeSnippetAccess(accessId: number): Promise<void> {
+    await this.context.drizzle
+      .delete(snippetAccess)
+      .where(eq(snippetAccess.id, accessId));
+    await this.afterWrite();
   }
 
   async listSharedHosts(
@@ -271,5 +395,43 @@ export class RbacAccessRepository {
       eq(snippetAccess.userId, userId),
       inArray(snippetAccess.roleId, roleIds),
     );
+  }
+
+  private async findHostAccess(hostId: number, target: RbacAccessTarget) {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hostAccess)
+      .where(
+        and(
+          eq(hostAccess.hostId, hostId),
+          target.targetType === "user"
+            ? eq(hostAccess.userId, target.targetUserId)
+            : eq(hostAccess.roleId, target.targetRoleId),
+        ),
+      )
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  private async findSnippetAccess(snippetId: number, target: RbacAccessTarget) {
+    const rows = await this.context.drizzle
+      .select()
+      .from(snippetAccess)
+      .where(
+        and(
+          eq(snippetAccess.snippetId, snippetId),
+          target.targetType === "user"
+            ? eq(snippetAccess.userId, target.targetUserId)
+            : eq(snippetAccess.roleId, target.targetRoleId),
+        ),
+      )
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  private async afterWrite(): Promise<void> {
+    await this.onWrite?.();
   }
 }
