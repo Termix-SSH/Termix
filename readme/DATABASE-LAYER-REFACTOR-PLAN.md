@@ -1,7 +1,7 @@
 # Database Layer Refactor Plan
 
 Status: Draft  
-Branch: `chore/database-layer-refactor-draft`  
+Branch: `feature/database-layer-refactor`  
 Target: Replace the current in-memory encrypted SQLite snapshot model with a persistent, secure, multi-database architecture.
 
 Phase 0 audit: [`DATABASE-LAYER-PHASE-0-AUDIT.md`](./DATABASE-LAYER-PHASE-0-AUDIT.md)
@@ -10,8 +10,9 @@ Phase 1 status: database runtime config and SQLite adapter skeleton have started
 `src/backend/database/runtime/`. This code is not wired into the existing production
 database initialization yet.
 
-Repository status: the first repository skeleton, `SettingsRepository`, has started
-under `src/backend/database/repositories/` and is covered by SQLite-backed tests.
+Repository status: the first repository skeletons, `SettingsRepository`,
+`UserRepository`, and `SessionRepository`, have started under
+`src/backend/database/repositories/` and are covered by SQLite-backed tests.
 
 ## 1. Background
 
@@ -150,12 +151,12 @@ Business code should stop calling `getDb()` directly.
 Examples:
 
 ```ts
-hostRepository.getById(userId, hostId)
-hostRepository.create(userId, input)
-credentialRepository.resolveForHost(userId, hostId)
-sessionRepository.create(userId, sessionData)
-auditRepository.write(event)
-settingsRepository.get(key)
+hostRepository.getById(userId, hostId);
+hostRepository.create(userId, input);
+credentialRepository.resolveForHost(userId, hostId);
+sessionRepository.create(userId, sessionData);
+auditRepository.write(event);
+settingsRepository.get(key);
 ```
 
 Repositories should own:
@@ -793,17 +794,17 @@ Docker should support:
 
 ## 14. Risk Register
 
-| Risk | Severity | Mitigation |
-|---|---:|---|
-| User data cannot decrypt after migration | Critical | Preserve key model, add fixtures, dry-run decryption checks |
-| Migration partially writes target DB | High | Transactions, migration markers, idempotent batches |
-| Old snapshot overwritten or deleted | Critical | Never delete source automatically, backup before migration |
-| Direct DB access remains scattered | High | Repository enforcement and lint guard |
-| Dialect differences break features | High | Adapter tests and DB matrix |
-| Sensitive fields accidentally stored plaintext | Critical | Central encryption boundary and sensitive field map |
-| Large migrations block startup too long | Medium | Progress logs, batching, optional preflight |
-| External DB configuration confuses users | Medium | Keep SQLite default, make external DB opt-in |
-| Runtime state accidentally persisted | Medium | Explicit runtime/persistent boundary |
+| Risk                                           | Severity | Mitigation                                                  |
+| ---------------------------------------------- | -------: | ----------------------------------------------------------- |
+| User data cannot decrypt after migration       | Critical | Preserve key model, add fixtures, dry-run decryption checks |
+| Migration partially writes target DB           |     High | Transactions, migration markers, idempotent batches         |
+| Old snapshot overwritten or deleted            | Critical | Never delete source automatically, backup before migration  |
+| Direct DB access remains scattered             |     High | Repository enforcement and lint guard                       |
+| Dialect differences break features             |     High | Adapter tests and DB matrix                                 |
+| Sensitive fields accidentally stored plaintext | Critical | Central encryption boundary and sensitive field map         |
+| Large migrations block startup too long        |   Medium | Progress logs, batching, optional preflight                 |
+| External DB configuration confuses users       |   Medium | Keep SQLite default, make external DB opt-in                |
+| Runtime state accidentally persisted           |   Medium | Explicit runtime/persistent boundary                        |
 
 ## 15. Initial Work Breakdown
 
@@ -811,7 +812,7 @@ Recommended first PRs:
 
 1. Add database access inventory and sensitive field map. (Started in `DATABASE-LAYER-PHASE-0-AUDIT.md`)
 2. Add adapter interfaces and SQLite persistent adapter skeleton.
-3. Add repository skeleton for settings/users/hosts/credentials.
+3. Add repository skeleton for settings/users/sessions/hosts/credentials.
 4. Add field encryption boundary tests.
 5. Migrate settings as the first low-risk vertical slice.
 6. Migrate users/sessions.

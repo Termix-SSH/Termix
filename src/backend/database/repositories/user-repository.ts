@@ -1,0 +1,79 @@
+import { eq } from "drizzle-orm";
+import { users } from "../db/schema.js";
+import type { DatabaseContext } from "../runtime/adapter.js";
+
+export type UserRecord = typeof users.$inferSelect;
+export type NewUserRecord = typeof users.$inferInsert;
+export type UserUpdate = Partial<Omit<NewUserRecord, "id">>;
+
+export class UserRepository {
+  constructor(private readonly context: DatabaseContext) {}
+
+  async findById(id: string): Promise<UserRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async findByUsername(username: string): Promise<UserRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async findByOidcIdentifier(
+    oidcIdentifier: string,
+  ): Promise<UserRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(users)
+      .where(eq(users.oidcIdentifier, oidcIdentifier))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async create(user: NewUserRecord): Promise<UserRecord> {
+    const rows = await this.context.drizzle
+      .insert(users)
+      .values(user)
+      .returning();
+    return rows[0];
+  }
+
+  async update(id: string, update: UserUpdate): Promise<UserRecord | null> {
+    const rows = await this.context.drizzle
+      .update(users)
+      .set(update)
+      .where(eq(users.id, id))
+      .returning();
+
+    return rows[0] ?? null;
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
+
+    return rows.length > 0;
+  }
+
+  async countAdmins(): Promise<number> {
+    const rows = await this.context.drizzle
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.isAdmin, true));
+
+    return rows.length;
+  }
+}

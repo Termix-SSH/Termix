@@ -1,7 +1,7 @@
 # Database Layer Refactor Phase 0 Audit
 
 Status: Draft  
-Branch: `chore/database-layer-refactor-draft`  
+Branch: `feature/database-layer-refactor`  
 Purpose: Establish the current database access inventory, domain map, sensitive field map, and first implementation boundaries before changing runtime persistence.
 
 ## 1. Scope
@@ -40,23 +40,23 @@ High-level findings:
 
 The most database-heavy files by audit hits:
 
-| File | Approx. hits | Notes |
-|---|---:|---|
-| `src/backend/database/db/index.ts` | 75 | database init, schema creation, ad-hoc migration, snapshot save |
-| `src/backend/database/routes/alert-rules-routes.ts` | 64 | alert rules, channels, firings, raw SQL deletes |
-| `src/backend/database/routes/users.ts` | 54 | users, settings, OIDC/GitHub settings, admin flows |
-| `src/backend/database/database.ts` | 27 | import/export, legacy SQLite handling |
-| `src/backend/ssh/host-metrics.ts` | 26 | metrics connection and settings reads |
-| `src/backend/database/routes/user-settings-routes.ts` | 16 | user settings |
-| `src/backend/dashboard.ts` | 15 | dashboard aggregation reads |
-| `src/backend/ssh/docker.ts` | 14 | host/credential reads for Docker SSH |
-| `src/backend/ssh/managers/health.ts` | 13 | host health checks |
-| `src/backend/ssh/alert-engine.ts` | 13 | alert evaluation and firing state |
-| `src/backend/utils/user-crypto.ts` | 12 | settings writes for crypto metadata |
-| `src/backend/ssh/host-metrics-settings-routes.ts` | 12 | metrics settings |
-| `src/backend/ssh/tmux-monitor.ts` | 11 | tmux session tags |
-| `src/backend/guacamole/routes.ts` | 11 | Guacamole config/routes |
-| `src/backend/database/routes/host.ts` | 10 | host operations and related rows |
+| File                                                  | Approx. hits | Notes                                                           |
+| ----------------------------------------------------- | -----------: | --------------------------------------------------------------- |
+| `src/backend/database/db/index.ts`                    |           75 | database init, schema creation, ad-hoc migration, snapshot save |
+| `src/backend/database/routes/alert-rules-routes.ts`   |           64 | alert rules, channels, firings, raw SQL deletes                 |
+| `src/backend/database/routes/users.ts`                |           54 | users, settings, OIDC/GitHub settings, admin flows              |
+| `src/backend/database/database.ts`                    |           27 | import/export, legacy SQLite handling                           |
+| `src/backend/ssh/host-metrics.ts`                     |           26 | metrics connection and settings reads                           |
+| `src/backend/database/routes/user-settings-routes.ts` |           16 | user settings                                                   |
+| `src/backend/dashboard.ts`                            |           15 | dashboard aggregation reads                                     |
+| `src/backend/ssh/docker.ts`                           |           14 | host/credential reads for Docker SSH                            |
+| `src/backend/ssh/managers/health.ts`                  |           13 | host health checks                                              |
+| `src/backend/ssh/alert-engine.ts`                     |           13 | alert evaluation and firing state                               |
+| `src/backend/utils/user-crypto.ts`                    |           12 | settings writes for crypto metadata                             |
+| `src/backend/ssh/host-metrics-settings-routes.ts`     |           12 | metrics settings                                                |
+| `src/backend/ssh/tmux-monitor.ts`                     |           11 | tmux session tags                                               |
+| `src/backend/guacamole/routes.ts`                     |           11 | Guacamole config/routes                                         |
+| `src/backend/database/routes/host.ts`                 |           10 | host operations and related rows                                |
 
 This confirms the refactor must be domain-by-domain. A mechanical replacement of `getDb()` would be noisy and unsafe.
 
@@ -68,20 +68,20 @@ Under the current architecture, a direct write is risky when it bypasses `Simple
 
 These areas perform direct writes and should move behind repositories/services:
 
-| Area | Representative files | Examples |
-|---|---|---|
-| users/settings/auth | `routes/users.ts`, `utils/auth-manager.ts`, `utils/user-crypto.ts` | sessions, trusted devices, OIDC settings, registration settings |
-| RBAC/sharing | `routes/rbac.ts`, `utils/shared-credential-manager.ts` | roles, host access, snippet access, shared credentials |
-| hosts/credentials | `routes/host.ts`, `routes/credentials.ts`, `host-resolver.ts` | host access cleanup, credential usage |
-| file manager metadata | `host-file-manager-bookmark-routes.ts` | recent, pinned, shortcuts |
-| alerts | `alert-rules-routes.ts`, `ssh/alert-engine.ts` | channels, rules, firings |
-| metrics | `host-metrics-preferences-routes.ts`, `managers/health.ts` | preferences, health checks, history |
-| terminal logs | `terminal-session-manager.ts` | session recording metadata |
-| tmux | `tmux-monitor.ts` | tmux session tags |
-| import/export | `database/database.ts` | SQLite import and forced save |
-| open tabs | `routes/open-tabs.ts` | tab persistence and cleanup |
-| API keys | `user-api-key-routes.ts`, `utils/auth-manager.ts` | API key create/delete/last-used |
-| SSO and identity | `sso-provider-routes.ts`, `termix-id.ts` | providers, identity keys/CA |
+| Area                  | Representative files                                               | Examples                                                        |
+| --------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------- |
+| users/settings/auth   | `routes/users.ts`, `utils/auth-manager.ts`, `utils/user-crypto.ts` | sessions, trusted devices, OIDC settings, registration settings |
+| RBAC/sharing          | `routes/rbac.ts`, `utils/shared-credential-manager.ts`             | roles, host access, snippet access, shared credentials          |
+| hosts/credentials     | `routes/host.ts`, `routes/credentials.ts`, `host-resolver.ts`      | host access cleanup, credential usage                           |
+| file manager metadata | `host-file-manager-bookmark-routes.ts`                             | recent, pinned, shortcuts                                       |
+| alerts                | `alert-rules-routes.ts`, `ssh/alert-engine.ts`                     | channels, rules, firings                                        |
+| metrics               | `host-metrics-preferences-routes.ts`, `managers/health.ts`         | preferences, health checks, history                             |
+| terminal logs         | `terminal-session-manager.ts`                                      | session recording metadata                                      |
+| tmux                  | `tmux-monitor.ts`                                                  | tmux session tags                                               |
+| import/export         | `database/database.ts`                                             | SQLite import and forced save                                   |
+| open tabs             | `routes/open-tabs.ts`                                              | tab persistence and cleanup                                     |
+| API keys              | `user-api-key-routes.ts`, `utils/auth-manager.ts`                  | API key create/delete/last-used                                 |
+| SSO and identity      | `sso-provider-routes.ts`, `termix-id.ts`                           | providers, identity keys/CA                                     |
 
 ### 4.2 Immediate Compatibility Rule
 
@@ -95,16 +95,16 @@ Until a domain is migrated to repositories:
 
 ### 5.1 Identity and Authentication
 
-| Tables | Notes |
-|---|---|
-| `users` | local/OIDC users, TOTP fields, password hash |
-| `sessions` | JWT sessions |
-| `trusted_devices` | remembered devices |
-| `api_keys` | API token hashes/prefixes |
-| `sso_providers` | configured SSO providers |
-| `termix_identities` | Termix identity records |
-| `termix_identity_keys` | public/private identity key metadata |
-| `termix_identity_ca` | CA material, private key is sensitive |
+| Tables                 | Notes                                        |
+| ---------------------- | -------------------------------------------- |
+| `users`                | local/OIDC users, TOTP fields, password hash |
+| `sessions`             | JWT sessions                                 |
+| `trusted_devices`      | remembered devices                           |
+| `api_keys`             | API token hashes/prefixes                    |
+| `sso_providers`        | configured SSO providers                     |
+| `termix_identities`    | Termix identity records                      |
+| `termix_identity_keys` | public/private identity key metadata         |
+| `termix_identity_ca`   | CA material, private key is sensitive        |
 
 Suggested repository:
 
@@ -117,15 +117,15 @@ Suggested repository:
 
 ### 5.2 Hosts and Credentials
 
-| Tables | Notes |
-|---|---|
-| `ssh_data` | primary host table, many config JSON/text fields |
-| `ssh_credentials` | reusable credentials |
-| `ssh_credential_usage` | usage history |
-| `ssh_folders` | folder metadata |
-| `host_access` | sharing/RBAC access rows |
-| `shared_credentials` | encrypted shared credential material |
-| `network_topology` | topology graph/config |
+| Tables                 | Notes                                            |
+| ---------------------- | ------------------------------------------------ |
+| `ssh_data`             | primary host table, many config JSON/text fields |
+| `ssh_credentials`      | reusable credentials                             |
+| `ssh_credential_usage` | usage history                                    |
+| `ssh_folders`          | folder metadata                                  |
+| `host_access`          | sharing/RBAC access rows                         |
+| `shared_credentials`   | encrypted shared credential material             |
+| `network_topology`     | topology graph/config                            |
 
 Suggested repository:
 
@@ -139,12 +139,12 @@ Suggested repository:
 
 ### 5.3 RBAC
 
-| Tables | Notes |
-|---|---|
-| `roles` | role definitions |
-| `user_roles` | user to role assignments |
-| `host_access` | host-level grants |
-| `snippet_access` | snippet-level grants |
+| Tables           | Notes                    |
+| ---------------- | ------------------------ |
+| `roles`          | role definitions         |
+| `user_roles`     | user to role assignments |
+| `host_access`    | host-level grants        |
+| `snippet_access` | snippet-level grants     |
 
 Suggested repository:
 
@@ -153,12 +153,12 @@ Suggested repository:
 
 ### 5.4 File Manager
 
-| Tables | Notes |
-|---|---|
-| `file_manager_recent` | recently opened paths |
-| `file_manager_pinned` | pinned paths |
-| `file_manager_shortcuts` | saved shortcuts |
-| `transfer_recent` | host-to-host transfer destinations |
+| Tables                   | Notes                              |
+| ------------------------ | ---------------------------------- |
+| `file_manager_recent`    | recently opened paths              |
+| `file_manager_pinned`    | pinned paths                       |
+| `file_manager_shortcuts` | saved shortcuts                    |
+| `transfer_recent`        | host-to-host transfer destinations |
 
 Suggested repository:
 
@@ -167,11 +167,11 @@ Suggested repository:
 
 ### 5.5 Snippets
 
-| Tables | Notes |
-|---|---|
-| `snippets` | command snippets |
+| Tables            | Notes                   |
+| ----------------- | ----------------------- |
+| `snippets`        | command snippets        |
 | `snippet_folders` | snippet folder metadata |
-| `snippet_access` | snippet sharing |
+| `snippet_access`  | snippet sharing         |
 
 Suggested repository:
 
@@ -179,15 +179,15 @@ Suggested repository:
 
 ### 5.6 Runtime Metadata and Audit
 
-| Tables | Notes |
-|---|---|
-| `audit_logs` | append-only audit trail |
+| Tables               | Notes                                                  |
+| -------------------- | ------------------------------------------------------ |
+| `audit_logs`         | append-only audit trail                                |
 | `session_recordings` | terminal recording metadata, log content is file-based |
-| `recent_activity` | host activity feed |
-| `command_history` | terminal command history |
-| `user_open_tabs` | UI restore state; currently cleared on startup |
-| `user_preferences` | per-user UI/preferences |
-| `settings` | global settings |
+| `recent_activity`    | host activity feed                                     |
+| `command_history`    | terminal command history                               |
+| `user_open_tabs`     | UI restore state; currently cleared on startup         |
+| `user_preferences`   | per-user UI/preferences                                |
+| `settings`           | global settings                                        |
 
 Suggested repository:
 
@@ -201,17 +201,17 @@ Suggested repository:
 
 ### 5.7 Metrics and Alerts
 
-| Tables | Notes |
-|---|---|
+| Tables                     | Notes                      |
+| -------------------------- | -------------------------- |
 | `host_metrics_preferences` | metrics layout/preferences |
-| `host_health_checks` | health check definitions |
-| `host_health_history` | health check results |
-| `host_metrics_history` | metrics history |
-| `alert_rules` | alert definitions |
-| `notification_channels` | webhook/ntfy/etc config |
-| `alert_rule_channels` | rule/channel joins |
-| `alert_firings` | firing/ack state |
-| `dismissed_alerts` | dismissed system alerts |
+| `host_health_checks`       | health check definitions   |
+| `host_health_history`      | health check results       |
+| `host_metrics_history`     | metrics history            |
+| `alert_rules`              | alert definitions          |
+| `notification_channels`    | webhook/ntfy/etc config    |
+| `alert_rule_channels`      | rule/channel joins         |
+| `alert_firings`            | firing/ack state           |
+| `dismissed_alerts`         | dismissed system alerts    |
 
 Suggested repository:
 
@@ -222,16 +222,16 @@ Suggested repository:
 
 ### 5.8 Integrations and Feature Config
 
-| Tables | Notes |
-|---|---|
-| `c2s_tunnel_presets` | tunnel preset config |
-| `opkssh_tokens` | OPKSSH cert/private key cache |
-| `vault_profiles` | Vault profile config, mostly non-secret |
-| `vault_tokens` | Vault cert/private key cache |
-| `dashboard_service_links` | dashboard links |
-| `homepage_items` | homepage widgets/items |
-| `homepage_layouts` | homepage layouts |
-| `tmux_session_tags` | tmux tag metadata |
+| Tables                    | Notes                                   |
+| ------------------------- | --------------------------------------- |
+| `c2s_tunnel_presets`      | tunnel preset config                    |
+| `opkssh_tokens`           | OPKSSH cert/private key cache           |
+| `vault_profiles`          | Vault profile config, mostly non-secret |
+| `vault_tokens`            | Vault cert/private key cache            |
+| `dashboard_service_links` | dashboard links                         |
+| `homepage_items`          | homepage widgets/items                  |
+| `homepage_layouts`        | homepage layouts                        |
+| `tmux_session_tags`       | tmux tag metadata                       |
 
 Suggested repository:
 
@@ -246,29 +246,29 @@ Suggested repository:
 
 The current explicit `FieldCrypto` map encrypts:
 
-| Table | Fields |
-|---|---|
-| `users` | `passwordHash`, `clientSecret`, `totpSecret`, `totpBackupCodes`, `oidcIdentifier` |
-| `ssh_data` | `password`, `key`, `keyPassword`, `sudoPassword`, `autostartPassword`, `autostartKey`, `autostartKeyPassword`, `socks5Password`, `rdpPassword`, `vncPassword`, `telnetPassword` |
-| `ssh_credentials` | `password`, `privateKey`, `keyPassword`, `key`, `publicKey` |
-| `opkssh_tokens` | `sshCert`, `privateKey` |
-| `termix_identity_ca` | `privateKey` |
-| `vault_tokens` | `sshCert`, `privateKey` |
+| Table                | Fields                                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`              | `passwordHash`, `clientSecret`, `totpSecret`, `totpBackupCodes`, `oidcIdentifier`                                                                                               |
+| `ssh_data`           | `password`, `key`, `keyPassword`, `sudoPassword`, `autostartPassword`, `autostartKey`, `autostartKeyPassword`, `socks5Password`, `rdpPassword`, `vncPassword`, `telnetPassword` |
+| `ssh_credentials`    | `password`, `privateKey`, `keyPassword`, `key`, `publicKey`                                                                                                                     |
+| `opkssh_tokens`      | `sshCert`, `privateKey`                                                                                                                                                         |
+| `termix_identity_ca` | `privateKey`                                                                                                                                                                    |
+| `vault_tokens`       | `sshCert`, `privateKey`                                                                                                                                                         |
 
 Additional sensitive fields by table semantics:
 
-| Table | Fields / reason |
-|---|---|
-| `ssh_credentials` | `systemPassword`, `systemKey`, `systemKeyPassword` are system-key encrypted credential copies |
-| `shared_credentials` | `encryptedUsername`, `encryptedAuthType`, `encryptedPassword`, `encryptedKey`, `encryptedKeyPassword`, `encryptedKeyType` are already encrypted payload fields |
-| `api_keys` | `tokenHash` is not plaintext but is authentication material; `tokenPrefix` may remain plaintext for display |
-| `settings` | some keys may hold provider secrets or reset codes; repository must classify by key |
-| `notification_channels` | config may include webhook URLs/tokens; treat config as sensitive unless split |
-| `alert_rules` | rule definitions are usually not secret but can include host/resource metadata |
-| `homepage_items` | widget config can include URLs/API config; classify per widget type |
-| `c2s_tunnel_presets` | config can include connection details; review before plaintext external DB storage |
-| `termix_identity_keys` | inspect key material fields before migration; public keys are not secret but private material must never be plaintext |
-| `vault_profiles` | current comments say profile fields are non-secret; keep that invariant explicit |
+| Table                   | Fields / reason                                                                                                                                                |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ssh_credentials`       | `systemPassword`, `systemKey`, `systemKeyPassword` are system-key encrypted credential copies                                                                  |
+| `shared_credentials`    | `encryptedUsername`, `encryptedAuthType`, `encryptedPassword`, `encryptedKey`, `encryptedKeyPassword`, `encryptedKeyType` are already encrypted payload fields |
+| `api_keys`              | `tokenHash` is not plaintext but is authentication material; `tokenPrefix` may remain plaintext for display                                                    |
+| `settings`              | some keys may hold provider secrets or reset codes; repository must classify by key                                                                            |
+| `notification_channels` | config may include webhook URLs/tokens; treat config as sensitive unless split                                                                                 |
+| `alert_rules`           | rule definitions are usually not secret but can include host/resource metadata                                                                                 |
+| `homepage_items`        | widget config can include URLs/API config; classify per widget type                                                                                            |
+| `c2s_tunnel_presets`    | config can include connection details; review before plaintext external DB storage                                                                             |
+| `termix_identity_keys`  | inspect key material fields before migration; public keys are not secret but private material must never be plaintext                                          |
+| `vault_profiles`        | current comments say profile fields are non-secret; keep that invariant explicit                                                                               |
 
 Open privacy decision:
 
@@ -395,6 +395,8 @@ Recommended first implementation PR on this branch:
 - `src/backend/database/runtime/adapter.ts`
 - `src/backend/database/runtime/sqlite-adapter.ts`
 - `src/backend/database/repositories/settings-repository.ts`
+- `src/backend/database/repositories/user-repository.ts`
+- `src/backend/database/repositories/session-repository.ts`
 - tests for config parsing and SQLite adapter boot
 
 Started:
@@ -403,6 +405,7 @@ Started:
 - SQLite adapter skeleton
 - migration metadata table bootstrap
 - `SettingsRepository` skeleton and tests
+- `UserRepository` and `SessionRepository` skeletons and tests
 
 Keep it small. Do not migrate hosts or credentials in the same first implementation commit.
 
