@@ -433,6 +433,8 @@ Started:
   repository boundary
 - backend startup settings reads moved behind the current settings repository
   boundary
+- user deletion cleanup now removes per-user settings through
+  `SettingsRepository.deleteLike`
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

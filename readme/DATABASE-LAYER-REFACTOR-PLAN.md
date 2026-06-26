@@ -41,6 +41,8 @@ Host metrics polling now reads global interval and retention settings through
 the current settings repository boundary.
 Backend startup now reads persisted log level and Guacamole enablement through
 the current settings repository boundary.
+User deletion cleanup now removes per-user settings through
+`SettingsRepository.deleteLike`.
 
 ## 1. Background
 

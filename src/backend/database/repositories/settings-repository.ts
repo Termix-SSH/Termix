@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { settings } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 
@@ -42,6 +42,15 @@ export class SettingsRepository {
   async delete(key: string): Promise<void> {
     await this.context.drizzle.delete(settings).where(eq(settings.key, key));
     await this.afterWrite();
+  }
+
+  async deleteLike(pattern: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(settings)
+      .where(like(settings.key, pattern))
+      .returning({ key: settings.key });
+    await this.afterWrite();
+    return rows.length;
   }
 
   private async afterWrite(): Promise<void> {

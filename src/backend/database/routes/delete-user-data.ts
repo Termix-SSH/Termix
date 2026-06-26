@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import {
   auditLogs,
   commandHistory,
@@ -80,9 +81,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await db.delete(userOpenTabs).where(eq(userOpenTabs.userId, userId));
     await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
 
-    db.$client
-      .prepare("DELETE FROM settings WHERE key LIKE ?")
-      .run(`user_%_${userId}`);
+    await createCurrentSettingsRepository().deleteLike(`user_%_${userId}`);
 
     await db.delete(users).where(eq(users.id, userId));
 

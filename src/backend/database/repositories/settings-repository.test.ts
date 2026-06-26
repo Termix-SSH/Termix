@@ -63,4 +63,17 @@ describe("SettingsRepository", () => {
 
     expect(await repo.get("theme")).toBeNull();
   });
+
+  it("deletes settings by SQL LIKE pattern", async () => {
+    const repo = await createRepository();
+
+    await repo.set("user_kek_salt_user-1", "salt");
+    await repo.set("user_encrypted_dek_user-1", "dek");
+    await repo.set("user_kek_salt_user-2", "other");
+
+    expect(await repo.deleteLike("user_%_user-1")).toBe(2);
+    expect(await repo.get("user_kek_salt_user-1")).toBeNull();
+    expect(await repo.get("user_encrypted_dek_user-1")).toBeNull();
+    expect(await repo.get("user_kek_salt_user-2")).toBe("other");
+  });
 });
