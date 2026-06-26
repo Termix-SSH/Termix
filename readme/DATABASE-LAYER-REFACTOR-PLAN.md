@@ -6,6 +6,10 @@ Target: Replace the current in-memory encrypted SQLite snapshot model with a per
 
 Phase 0 audit: [`DATABASE-LAYER-PHASE-0-AUDIT.md`](./DATABASE-LAYER-PHASE-0-AUDIT.md)
 
+Phase 1 status: database runtime config and SQLite adapter skeleton have started under
+`src/backend/database/runtime/`. This code is not wired into the existing production
+database initialization yet.
+
 ## 1. Background
 
 Termix currently uses an encrypted SQLite snapshot model:
