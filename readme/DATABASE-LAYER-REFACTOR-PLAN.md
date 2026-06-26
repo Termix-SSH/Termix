@@ -90,6 +90,8 @@ lookups and admin session username enrichment.
 Vault admin checks, Termix ID audit actor username lookup, permission manager
 admin checks, and user data export user lookup now use the current user
 repository boundary.
+SSH credential OIDC username expansion and tmux monitor audit actor username
+lookup now use the current user repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

@@ -35,18 +35,10 @@ export async function expandOidcUsername(
   }
 
   try {
-    const { getDb } = await import("../database/db/index.js");
-    const { users } = await import("../database/db/schema.js");
-    const { eq } = await import("drizzle-orm");
-
-    const db = getDb();
-    const rows = await db
-      .select({ oidcIdentifier: users.oidcIdentifier })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    const oidcIdentifier = rows[0]?.oidcIdentifier;
+    const { createCurrentUserRepository } =
+      await import("../database/repositories/current-user-repository.js");
+    const user = await createCurrentUserRepository().findById(userId);
+    const oidcIdentifier = user?.oidcIdentifier;
     if (!oidcIdentifier) return username;
 
     return username.replace(/\$oidc\.preferred_username/g, oidcIdentifier);

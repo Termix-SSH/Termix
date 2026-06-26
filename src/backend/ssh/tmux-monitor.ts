@@ -6,7 +6,8 @@ import { createCorsMiddleware } from "../utils/cors-config.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
-import { tmuxSessionTags, users } from "../database/db/schema.js";
+import { tmuxSessionTags } from "../database/db/schema.js";
+import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import { sshLogger } from "../utils/logger.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
@@ -389,12 +390,8 @@ async function auditTmuxAction(
   const { ipAddress, userAgent } = getRequestMeta(req);
   let username = userId;
   try {
-    const actor = await getDb()
-      .select({ username: users.username })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    username = actor[0]?.username ?? userId;
+    const actor = await createCurrentUserRepository().findById(userId);
+    username = actor?.username ?? userId;
   } catch {
     // fall back to the raw user id
   }

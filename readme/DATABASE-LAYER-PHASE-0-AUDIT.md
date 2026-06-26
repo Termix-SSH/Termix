@@ -480,6 +480,8 @@ Started:
 - vault admin checks, Termix ID audit username lookup, permission manager admin
   checks, and user data export user lookup moved behind the current user
   repository boundary
+- SSH credential OIDC username expansion and tmux monitor audit actor username
+  lookup moved behind the current user repository boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device slice
 

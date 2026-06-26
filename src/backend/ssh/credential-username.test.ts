@@ -41,19 +41,11 @@ describe("expandOidcUsername", () => {
   });
 
   it("expands the placeholder with the user's OIDC identifier", async () => {
-    vi.doMock("../database/db/index.js", () => ({
-      getDb: () => ({
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              limit: async () => [{ oidcIdentifier: "jdoe" }],
-            }),
-          }),
-        }),
+    vi.doMock("../database/repositories/current-user-repository.js", () => ({
+      createCurrentUserRepository: () => ({
+        findById: async () => ({ oidcIdentifier: "jdoe" }),
       }),
     }));
-    vi.doMock("../database/db/schema.js", () => ({ users: {} }));
-    vi.doMock("drizzle-orm", () => ({ eq: vi.fn() }));
 
     const { expandOidcUsername: expand } =
       await import("./credential-username.js");
@@ -61,19 +53,11 @@ describe("expandOidcUsername", () => {
   });
 
   it("leaves the placeholder as-is when the user has no OIDC identifier", async () => {
-    vi.doMock("../database/db/index.js", () => ({
-      getDb: () => ({
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              limit: async () => [{ oidcIdentifier: null }],
-            }),
-          }),
-        }),
+    vi.doMock("../database/repositories/current-user-repository.js", () => ({
+      createCurrentUserRepository: () => ({
+        findById: async () => ({ oidcIdentifier: null }),
       }),
     }));
-    vi.doMock("../database/db/schema.js", () => ({ users: {} }));
-    vi.doMock("drizzle-orm", () => ({ eq: vi.fn() }));
 
     const { expandOidcUsername: expand } =
       await import("./credential-username.js");
@@ -83,8 +67,8 @@ describe("expandOidcUsername", () => {
   });
 
   it("returns the username unchanged when the DB lookup throws", async () => {
-    vi.doMock("../database/db/index.js", () => ({
-      getDb: () => {
+    vi.doMock("../database/repositories/current-user-repository.js", () => ({
+      createCurrentUserRepository: () => {
         throw new Error("DB unavailable");
       },
     }));
