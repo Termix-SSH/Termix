@@ -1,11 +1,9 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, Response } from "express";
-import { and, asc, eq } from "drizzle-orm";
 import { dashboardLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { dashboardServiceLinks } from "../db/schema.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 import express from "express";
+import { createCurrentDashboardServiceLinkRepository } from "../repositories/current-dashboard-service-link-repository.js";
 
 export const dashboardServiceLinksRouter = express.Router();
 
@@ -35,11 +33,8 @@ function isValidUrl(url: string): boolean {
 dashboardServiceLinksRouter.get("/", async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const links = await db
-      .select()
-      .from(dashboardServiceLinks)
-      .where(eq(dashboardServiceLinks.userId, userId))
-      .orderBy(asc(dashboardServiceLinks.order), asc(dashboardServiceLinks.id));
+    const links =
+      await createCurrentDashboardServiceLinkRepository().listByUserId(userId);
     res.json(links);
   } catch (err) {
     dashboardLogger.error("Failed to fetch service links", err);
@@ -91,25 +86,14 @@ dashboardServiceLinksRouter.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const existing = await db
-      .select({ order: dashboardServiceLinks.order })
-      .from(dashboardServiceLinks)
-      .where(eq(dashboardServiceLinks.userId, userId))
-      .orderBy(asc(dashboardServiceLinks.order));
-
-    const nextOrder =
-      existing.length > 0 ? existing[existing.length - 1].order + 1 : 0;
-
-    const [created] = await db
-      .insert(dashboardServiceLinks)
-      .values({
+    const created =
+      await createCurrentDashboardServiceLinkRepository().createForUser(
         userId,
-        label: label.trim(),
-        url: url.trim(),
-        order: nextOrder,
-        createdAt: new Date().toISOString(),
-      })
-      .returning();
+        {
+          label: label.trim(),
+          url: url.trim(),
+        },
+      );
 
     res.status(201).json(created);
   } catch (err) {
@@ -156,28 +140,20 @@ dashboardServiceLinksRouter.delete(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(dashboardServiceLinks)
-        .where(
-          and(
-            eq(dashboardServiceLinks.id, id),
-            eq(dashboardServiceLinks.userId, userId),
-          ),
+      const existing =
+        await createCurrentDashboardServiceLinkRepository().findByIdForUser(
+          userId,
+          id,
         );
 
-      if (existing.length === 0) {
+      if (!existing) {
         return res.status(404).json({ error: "Not found" });
       }
 
-      await db
-        .delete(dashboardServiceLinks)
-        .where(
-          and(
-            eq(dashboardServiceLinks.id, id),
-            eq(dashboardServiceLinks.userId, userId),
-          ),
-        );
+      await createCurrentDashboardServiceLinkRepository().deleteForUser(
+        userId,
+        id,
+      );
 
       res.json({ message: "Service link deleted" });
     } catch (err) {
@@ -240,17 +216,13 @@ dashboardServiceLinksRouter.put("/:id", async (req: Request, res: Response) => {
   }
 
   try {
-    const existing = await db
-      .select()
-      .from(dashboardServiceLinks)
-      .where(
-        and(
-          eq(dashboardServiceLinks.id, id),
-          eq(dashboardServiceLinks.userId, userId),
-        ),
+    const existing =
+      await createCurrentDashboardServiceLinkRepository().findByIdForUser(
+        userId,
+        id,
       );
 
-    if (existing.length === 0) {
+    if (!existing) {
       return res.status(404).json({ error: "Not found" });
     }
 
@@ -262,16 +234,12 @@ dashboardServiceLinksRouter.put("/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Nothing to update" });
     }
 
-    const [updated] = await db
-      .update(dashboardServiceLinks)
-      .set(updates)
-      .where(
-        and(
-          eq(dashboardServiceLinks.id, id),
-          eq(dashboardServiceLinks.userId, userId),
-        ),
-      )
-      .returning();
+    const updated =
+      await createCurrentDashboardServiceLinkRepository().updateForUser(
+        userId,
+        id,
+        updates,
+      );
 
     res.json(updated);
   } catch (err) {
