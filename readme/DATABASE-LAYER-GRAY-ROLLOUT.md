@@ -75,9 +75,9 @@ Allowed in gray rollout:
   `UserDataExportRepository`.
 - SSH folder list, metadata upsert, rename, and folder host deletion writes
   migrated behind `HostFolderRepository`.
-- Host, jump-host, Docker SSH, Proxmox discovery, and Docker console jump-host
-  resolution host, credential, and shared override read models migrated behind
-  `HostResolutionRepository`.
+- Host, jump-host, Docker SSH, Proxmox discovery, Docker console jump-host, and
+  file-manager activity resolution host, credential, and shared override read
+  models migrated behind `HostResolutionRepository`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated

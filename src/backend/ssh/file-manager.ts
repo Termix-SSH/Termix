@@ -4,11 +4,8 @@ import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
-import { getDb } from "../database/db/index.js";
-import { hosts } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { fileLogger } from "../utils/logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
 import {
@@ -1145,18 +1142,15 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     if (hostId && userId) {
       (async () => {
         try {
-          const hostResults = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(hosts)
-              .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
-            "ssh_data",
-            userId,
-          );
+          const host =
+            await createCurrentHostResolutionRepository().findHostById(
+              hostId,
+              userId,
+            );
 
           const hostName =
-            hostResults.length > 0 && hostResults[0].name
-              ? hostResults[0].name
+            host?.userId === userId && host.name
+              ? host.name
               : `${username}@${ip}:${port}`;
 
           const authManager = AuthManager.getInstance();
@@ -1843,23 +1837,15 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hostResults = await SimpleDBOps.select(
-              getDb()
-                .select()
-                .from(hosts)
-                .where(
-                  and(
-                    eq(hosts.id, session.hostId!),
-                    eq(hosts.userId, session.userId!),
-                  ),
-                ),
-              "ssh_data",
-              session.userId!,
-            );
+            const host =
+              await createCurrentHostResolutionRepository().findHostById(
+                session.hostId!,
+                session.userId!,
+              );
 
             const hostName =
-              hostResults.length > 0 && hostResults[0].name
-                ? hostResults[0].name
+              host?.userId === session.userId && host.name
+                ? host.name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             const authManager = AuthManager.getInstance();
@@ -2050,23 +2036,15 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
       if (session.hostId && session.userId) {
         (async () => {
           try {
-            const hostResults = await SimpleDBOps.select(
-              getDb()
-                .select()
-                .from(hosts)
-                .where(
-                  and(
-                    eq(hosts.id, session.hostId!),
-                    eq(hosts.userId, session.userId!),
-                  ),
-                ),
-              "ssh_data",
-              session.userId!,
-            );
+            const host =
+              await createCurrentHostResolutionRepository().findHostById(
+                session.hostId!,
+                session.userId!,
+              );
 
             const hostName =
-              hostResults.length > 0 && hostResults[0].name
-                ? hostResults[0].name
+              host?.userId === session.userId && host.name
+                ? host.name
                 : `${session.username}@${session.ip}:${session.port}`;
 
             await axios.post(
