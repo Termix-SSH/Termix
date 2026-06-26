@@ -992,44 +992,46 @@ async function connectSSHTunnel(
     });
   }
 
-  if (
-    resolvedEndpointCredentials.authMethod === "password" &&
-    !resolvedEndpointCredentials.password
-  ) {
-    const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires password authentication but no plaintext password available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
-    tunnelLogger.error(errorMessage, undefined, {
-      operation: "tunnel_endpoint_password_unavailable",
-      tunnelName,
-      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
-      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
-    });
-    broadcastTunnelStatus(tunnelName, {
-      connected: false,
-      status: CONNECTION_STATES.FAILED,
-      reason: errorMessage,
-    });
-    tunnelConnecting.delete(tunnelName);
-    return;
-  }
+  if (!isSingleHostTunnel(tunnelConfig)) {
+    if (
+      resolvedEndpointCredentials.authMethod === "password" &&
+      !resolvedEndpointCredentials.password
+    ) {
+      const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires password authentication but no plaintext password available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
+      tunnelLogger.error(errorMessage, undefined, {
+        operation: "tunnel_endpoint_password_unavailable",
+        tunnelName,
+        endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+        endpointAuthMethod: resolvedEndpointCredentials.authMethod,
+      });
+      broadcastTunnelStatus(tunnelName, {
+        connected: false,
+        status: CONNECTION_STATES.FAILED,
+        reason: errorMessage,
+      });
+      tunnelConnecting.delete(tunnelName);
+      return;
+    }
 
-  if (
-    resolvedEndpointCredentials.authMethod === "key" &&
-    !resolvedEndpointCredentials.sshKey
-  ) {
-    const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires key authentication but no plaintext key available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
-    tunnelLogger.error(errorMessage, undefined, {
-      operation: "tunnel_endpoint_key_unavailable",
-      tunnelName,
-      endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
-      endpointAuthMethod: resolvedEndpointCredentials.authMethod,
-    });
-    broadcastTunnelStatus(tunnelName, {
-      connected: false,
-      status: CONNECTION_STATES.FAILED,
-      reason: errorMessage,
-    });
-    tunnelConnecting.delete(tunnelName);
-    return;
+    if (
+      resolvedEndpointCredentials.authMethod === "key" &&
+      !resolvedEndpointCredentials.sshKey
+    ) {
+      const errorMessage = `Cannot connect tunnel '${tunnelName}': endpoint host requires key authentication but no plaintext key available. Enable autostart for endpoint host or configure credentials in tunnel connection.`;
+      tunnelLogger.error(errorMessage, undefined, {
+        operation: "tunnel_endpoint_key_unavailable",
+        tunnelName,
+        endpointHost: `${tunnelConfig.endpointUsername}@${tunnelConfig.endpointIP}:${tunnelConfig.endpointPort}`,
+        endpointAuthMethod: resolvedEndpointCredentials.authMethod,
+      });
+      broadcastTunnelStatus(tunnelName, {
+        connected: false,
+        status: CONNECTION_STATES.FAILED,
+        reason: errorMessage,
+      });
+      tunnelConnecting.delete(tunnelName);
+      return;
+    }
   }
 
   const conn = new Client();
