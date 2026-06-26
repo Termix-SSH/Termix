@@ -11,8 +11,9 @@ Phase 1 status: database runtime config and SQLite adapter skeleton have started
 database initialization yet.
 
 Repository status: the first repository skeletons, `SettingsRepository`,
-`UserRepository`, and `SessionRepository`, have started under
-`src/backend/database/repositories/` and are covered by SQLite-backed tests.
+`UserRepository`, `SessionRepository`, `HostRepository`, and
+`CredentialRepository`, have started under `src/backend/database/repositories/`
+and are covered by SQLite-backed tests.
 
 ## 1. Background
 

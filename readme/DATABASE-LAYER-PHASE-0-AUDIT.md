@@ -397,6 +397,8 @@ Recommended first implementation PR on this branch:
 - `src/backend/database/repositories/settings-repository.ts`
 - `src/backend/database/repositories/user-repository.ts`
 - `src/backend/database/repositories/session-repository.ts`
+- `src/backend/database/repositories/host-repository.ts`
+- `src/backend/database/repositories/credential-repository.ts`
 - tests for config parsing and SQLite adapter boot
 
 Started:
@@ -406,8 +408,10 @@ Started:
 - migration metadata table bootstrap
 - `SettingsRepository` skeleton and tests
 - `UserRepository` and `SessionRepository` skeletons and tests
+- `HostRepository` and `CredentialRepository` skeletons and tests
 
-Keep it small. Do not migrate hosts or credentials in the same first implementation commit.
+Keep it small. Do not wire host or credential routes into the new repositories in
+the same first implementation commit.
 
 ## 12. Current Unknowns
 
