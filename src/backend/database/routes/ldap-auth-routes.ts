@@ -1,14 +1,15 @@
 import type { Router } from "express";
 import type { LDAPProviderConfig } from "../../../types/index.js";
 import { db } from "../db/index.js";
-import { ssoProviders, roles, userRoles } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { ssoProviders } from "../db/schema.js";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
 import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
@@ -326,15 +327,11 @@ export function registerLDAPAuthRoutes(router: Router): void {
 
         try {
           const defaultRoleName = isFirstFinal || isAdmin ? "admin" : "user";
-          const defaultRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, defaultRoleName))
-            .limit(1);
-          if (defaultRole.length > 0)
-            await db
-              .insert(userRoles)
-              .values({ userId, roleId: defaultRole[0].id, grantedBy: userId });
+          await createCurrentRoleRepository().assignRoleNameToUser({
+            userId,
+            roleName: defaultRoleName,
+            grantedBy: userId,
+          });
         } catch {
           /* */
         }
@@ -370,33 +367,12 @@ export function registerLDAPAuthRoutes(router: Router): void {
           try {
             const newRoleName = isAdmin ? "admin" : "user";
             const oldRoleName = isAdmin ? "user" : "admin";
-            const newRole = await db
-              .select({ id: roles.id })
-              .from(roles)
-              .where(eq(roles.name, newRoleName))
-              .limit(1);
-            const oldRole = await db
-              .select({ id: roles.id })
-              .from(roles)
-              .where(eq(roles.name, oldRoleName))
-              .limit(1);
-            if (oldRole.length > 0) {
-              await db
-                .delete(userRoles)
-                .where(
-                  and(
-                    eq(userRoles.userId, userId),
-                    eq(userRoles.roleId, oldRole[0].id),
-                  ),
-                );
-            }
-            if (newRole.length > 0) {
-              await db.insert(userRoles).values({
-                userId,
-                roleId: newRole[0].id,
-                grantedBy: userId,
-              });
-            }
+            await createCurrentRoleRepository().switchUserRoleName({
+              userId,
+              addRoleName: newRoleName,
+              removeRoleName: oldRoleName,
+              grantedBy: userId,
+            });
           } catch {
             /* non-fatal */
           }

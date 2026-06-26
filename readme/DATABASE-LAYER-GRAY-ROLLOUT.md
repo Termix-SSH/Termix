@@ -30,6 +30,8 @@ Allowed in gray rollout:
 - User deletion role-assignment cleanup migrated behind `RoleRepository`.
 - User admin route role sync and admin-created default role assignment migrated
   behind `RoleRepository`.
+- LDAP login default role assignment and admin-role sync migrated behind
+  `RoleRepository`.
 - RBAC host/snippet access-list read models migrated behind
   `RbacAccessRepository`.
 - RBAC shared host/shared snippet read models migrated behind

@@ -159,6 +159,8 @@ User deletion role-assignment cleanup now uses the current role repository
 boundary.
 User admin route role sync and admin-created default role assignment now use
 the current role repository boundary.
+LDAP login default role assignment and admin-role sync now use the current role
+repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the
