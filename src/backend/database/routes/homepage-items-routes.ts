@@ -1,10 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, Response } from "express";
-import { and, asc, eq } from "drizzle-orm";
 import { homepageLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { homepageItems } from "../db/schema.js";
-import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import { createCurrentHomepageItemRepository } from "../repositories/current-homepage-item-repository.js";
 import express from "express";
 
 export const homepageItemsRouter = express.Router();
@@ -26,11 +23,8 @@ export const homepageItemsRouter = express.Router();
 homepageItemsRouter.get("/", async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const items = await db
-      .select()
-      .from(homepageItems)
-      .where(eq(homepageItems.userId, userId))
-      .orderBy(asc(homepageItems.id));
+    const items =
+      await createCurrentHomepageItemRepository().listByUserId(userId);
     res.json(items);
   } catch (err) {
     homepageLogger.error("Failed to fetch homepage items", err);
@@ -78,18 +72,14 @@ homepageItemsRouter.post("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const [created] = await db
-      .insert(homepageItems)
-      .values({
-        userId,
+    const created = await createCurrentHomepageItemRepository().createForUser(
+      userId,
+      {
         typeId,
         title: title ?? null,
         config: config ? JSON.stringify(config) : "{}",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
-      .returning();
-    DatabaseSaveTrigger.triggerSave("homepage_item_created");
+      },
+    );
     res.status(201).json(created);
   } catch (err) {
     homepageLogger.error("Failed to create homepage item", err);
@@ -140,33 +130,18 @@ homepageItemsRouter.put("/:id", async (req: Request, res: Response) => {
   const { title, config } = req.body;
 
   try {
-    const existing = await db
-      .select()
-      .from(homepageItems)
-      .where(and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)));
-
-    if (existing.length === 0) {
+    const itemRepository = createCurrentHomepageItemRepository();
+    const existing = await itemRepository.findByIdForUser(userId, id);
+    if (!existing) {
       return res.status(404).json({ error: "Not found" });
     }
 
-    const updates: Partial<{
-      title: string | null;
-      config: string;
-      updatedAt: string;
-    }> = {
-      updatedAt: new Date().toISOString(),
-    };
+    const updates: Parameters<typeof itemRepository.updateForUser>[2] = {};
     if (title !== undefined) updates.title = title;
     if (config !== undefined) updates.config = JSON.stringify(config);
 
-    const [updated] = await db
-      .update(homepageItems)
-      .set(updates)
-      .where(and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)))
-      .returning();
-
-    DatabaseSaveTrigger.triggerSave("homepage_item_updated");
-    res.json(updated);
+    const updated = await itemRepository.updateForUser(userId, id, updates);
+    res.json(updated ?? existing);
   } catch (err) {
     homepageLogger.error("Failed to update homepage item", err);
     res.status(500).json({ error: "Failed to update homepage item" });
@@ -203,20 +178,13 @@ homepageItemsRouter.delete("/:id", async (req: Request, res: Response) => {
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
   try {
-    const existing = await db
-      .select()
-      .from(homepageItems)
-      .where(and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)));
-
-    if (existing.length === 0) {
+    const itemRepository = createCurrentHomepageItemRepository();
+    const existing = await itemRepository.findByIdForUser(userId, id);
+    if (!existing) {
       return res.status(404).json({ error: "Not found" });
     }
 
-    await db
-      .delete(homepageItems)
-      .where(and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)));
-
-    DatabaseSaveTrigger.triggerSave("homepage_item_deleted");
+    await itemRepository.deleteForUser(userId, id);
     res.json({ message: "Homepage item deleted" });
   } catch (err) {
     homepageLogger.error("Failed to delete homepage item", err);

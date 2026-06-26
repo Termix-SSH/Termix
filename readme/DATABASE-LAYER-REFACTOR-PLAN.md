@@ -175,6 +175,8 @@ Dismissed alert read/dismiss/undismiss/export and user cleanup now use the
 current dismissed alert repository boundary.
 Homepage layout read/write now uses the current homepage layout repository
 boundary.
+Homepage item list/create/update/delete now uses the current homepage item
+repository boundary.
 Network topology read/write and user cleanup now use the current network
 topology repository boundary.
 Dashboard service link list/create/update/delete now uses the current dashboard

@@ -27,6 +27,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "open_tabs",
         "dismissed_alerts",
         "homepage_layouts",
+        "homepage_items",
         "network_topology",
         "dashboard_service_links",
         "command_history",
@@ -55,7 +56,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,alerts,layout,topology,dashboard-link,history,activity,usage,transfer,bookmarks,c2s",
+        "settings,user,api-key,alerts,layout,items,topology,dashboard-link,history,activity,usage,transfer,bookmarks,c2s",
     });
 
     expect(config).toEqual({
@@ -66,6 +67,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "dismissed_alerts",
         "homepage_layouts",
+        "homepage_items",
         "network_topology",
         "dashboard_service_links",
         "command_history",
@@ -126,6 +128,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "open_tabs",
         "dismissed_alerts",
         "homepage_layouts",
+        "homepage_items",
         "network_topology",
         "dashboard_service_links",
         "command_history",
