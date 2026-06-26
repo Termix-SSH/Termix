@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { hostAccess, roles, userRoles } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 
@@ -17,6 +17,10 @@ export type UserRoleWithRole = {
   description: string | null;
   isSystem: boolean;
   grantedAt: string;
+};
+
+export type UserRolePermissionRecord = {
+  permissions: string | null;
 };
 
 export class RoleRepository {
@@ -123,6 +127,34 @@ export class RoleRepository {
       .where(eq(userRoles.userId, userId));
 
     return rows.map((row) => row.roleId);
+  }
+
+  async listUserRolePermissions(
+    userId: string,
+  ): Promise<UserRolePermissionRecord[]> {
+    return this.context.drizzle
+      .select({ permissions: roles.permissions })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(eq(userRoles.userId, userId));
+  }
+
+  async userHasAnyRoleName(
+    userId: string,
+    roleNames: string[],
+  ): Promise<boolean> {
+    if (roleNames.length === 0) {
+      return false;
+    }
+
+    const rows = await this.context.drizzle
+      .select({ roleName: roles.name })
+      .from(userRoles)
+      .innerJoin(roles, eq(userRoles.roleId, roles.id))
+      .where(and(eq(userRoles.userId, userId), inArray(roles.name, roleNames)))
+      .limit(1);
+
+    return rows.length > 0;
   }
 
   async listUserRoles(userId: string): Promise<UserRoleWithRole[]> {

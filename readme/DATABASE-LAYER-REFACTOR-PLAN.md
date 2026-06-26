@@ -124,6 +124,8 @@ RBAC/snippet owner username joins.
 RBAC role list/create/update/delete, user-role assignment/removal/listing, and
 shared host/snippet role-id lookups now use the current role repository
 boundary while retaining existing RBAC/share credential joins in the route.
+Permission manager role permission aggregation, role-id lookups for shared host
+access, and admin role checks now use the current role repository boundary.
 
 Gray rollout status: the branch is shifting from broad migration work to gray
 readiness hardening. No additional database domains should be migrated until the

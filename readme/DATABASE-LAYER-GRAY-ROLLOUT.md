@@ -25,6 +25,8 @@ Allowed in gray rollout:
   behind `TrustedDeviceRepository`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
+- Permission manager role permission aggregation and admin-role checks migrated
+  behind `RoleRepository`.
 - Current field encryption behavior.
 
 Not included in gray rollout:

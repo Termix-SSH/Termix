@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { db } from "../database/db/index.js";
-import { hostAccess, roles, userRoles, hosts } from "../database/db/schema.js";
+import { hostAccess, hosts } from "../database/db/schema.js";
+import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { eq, and, or, isNull, gte, sql } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
@@ -91,13 +92,8 @@ class PermissionManager {
     }
 
     try {
-      const userRoleRecords = await db
-        .select({
-          permissions: roles.permissions,
-        })
-        .from(userRoles)
-        .innerJoin(roles, eq(userRoles.roleId, roles.id))
-        .where(eq(userRoles.userId, userId));
+      const userRoleRecords =
+        await createCurrentRoleRepository().listUserRolePermissions(userId);
 
       const allPermissions = new Set<string>();
       for (const record of userRoleRecords) {
@@ -174,11 +170,8 @@ class PermissionManager {
         };
       }
 
-      const userRoleIds = await db
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
-      const roleIds = userRoleIds.map((r) => r.roleId);
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
 
       const now = new Date().toISOString();
       const sharedAccess = await db
@@ -279,18 +272,10 @@ class PermissionManager {
         return true;
       }
 
-      const adminRoles = await db
-        .select({ roleName: roles.name })
-        .from(userRoles)
-        .innerJoin(roles, eq(userRoles.roleId, roles.id))
-        .where(
-          and(
-            eq(userRoles.userId, userId),
-            or(eq(roles.name, "admin"), eq(roles.name, "super_admin")),
-          ),
-        );
-
-      return adminRoles.length > 0;
+      return createCurrentRoleRepository().userHasAnyRoleName(userId, [
+        "admin",
+        "super_admin",
+      ]);
     } catch (error) {
       databaseLogger.error("Failed to check admin status", error, {
         operation: "is_admin",

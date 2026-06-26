@@ -506,6 +506,9 @@ Started:
 - RBAC role list/create/update/delete, user-role assignment/removal/listing,
   and shared host/snippet role-id lookups moved behind the current role
   repository boundary, with existing RBAC/share credential joins retained
+- permission manager role permission aggregation, role-id lookups for shared
+  host access, and admin role checks moved behind the current role repository
+  boundary
 - repository rollout guard added through `DATABASE_LAYER_REPOSITORY_ROLLOUT`
   for the migrated settings/users/sessions/API-key/trusted-device/role slice
 

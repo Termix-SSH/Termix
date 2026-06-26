@@ -99,7 +99,7 @@ describe("RoleRepository", () => {
       name: "ops",
       displayName: "Operations",
       isSystem: false,
-      permissions: null,
+      permissions: JSON.stringify(["hosts.read", "hosts.*"]),
     });
 
     await repo.assignRoleToUser({
@@ -116,6 +116,14 @@ describe("RoleRepository", () => {
       roleDisplayName: "Operations",
       isSystem: false,
     });
+    expect(await repo.listUserRolePermissions("user-1")).toEqual([
+      { permissions: JSON.stringify(["hosts.read", "hosts.*"]) },
+    ]);
+    expect(await repo.userHasAnyRoleName("user-1", ["admin", "ops"])).toBe(
+      true,
+    );
+    expect(await repo.userHasAnyRoleName("user-1", ["admin"])).toBe(false);
+    expect(await repo.userHasAnyRoleName("user-1", [])).toBe(false);
 
     await repo.removeRoleFromUser("user-1", roleId);
     expect(await repo.findUserRole("user-1", roleId)).toBeNull();
