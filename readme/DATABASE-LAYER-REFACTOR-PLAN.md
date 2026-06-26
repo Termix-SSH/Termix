@@ -47,6 +47,8 @@ Password reset route now stores reset codes and temporary reset tokens through
 `SettingsRepository`.
 OIDC utility legacy config fallback now reads `oidc_config` through
 `SettingsRepository`.
+User route registration/password flags and OIDC config administration now use
+the current settings repository boundary.
 
 ## 1. Background
 

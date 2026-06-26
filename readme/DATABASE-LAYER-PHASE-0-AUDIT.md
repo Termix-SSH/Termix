@@ -439,6 +439,8 @@ Started:
   behind `SettingsRepository`
 - OIDC utility legacy config fallback reads `oidc_config` through
   `SettingsRepository`
+- user route registration/password flags and OIDC config administration moved
+  behind the current settings repository boundary
 
 Keep it small. Do not wire host or credential routes into the new repositories in
 the same first implementation commit.

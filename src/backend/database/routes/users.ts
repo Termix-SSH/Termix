@@ -36,7 +36,10 @@ import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import {
+  createCurrentSettingsRepository,
+  getCurrentSettingValue,
+} from "../repositories/current-settings-repository.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -69,10 +72,8 @@ function isRegistrationAllowed(): boolean {
   const envVal = process.env.ALLOW_REGISTRATION;
   if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get() as { value: string } | undefined;
-    return row ? row.value === "true" : true;
+    const value = getCurrentSettingValue("allow_registration");
+    return value ? value === "true" : true;
   } catch {
     return true;
   }
@@ -82,10 +83,8 @@ function isPasswordLoginAllowed(): boolean {
   const envVal = process.env.ALLOW_PASSWORD_LOGIN;
   if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
-      .get() as { value: string } | undefined;
-    return row ? row.value === "true" : true;
+    const value = getCurrentSettingValue("allow_password_login");
+    return value ? value === "true" : true;
   } catch {
     return true;
   }
@@ -95,10 +94,8 @@ function isPasswordResetAllowed(): boolean {
   const envVal = process.env.ALLOW_PASSWORD_RESET;
   if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
-      .get() as { value: string } | undefined;
-    return row ? row.value === "true" : true;
+    const value = getCurrentSettingValue("allow_password_reset");
+    return value ? value === "true" : true;
   } catch {
     return true;
   }
@@ -379,10 +376,10 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         .json({ error: "All OIDC configuration fields are required" });
     }
 
+    const settingsRepository = createCurrentSettingsRepository();
+
     if (isDisableRequest) {
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = 'oidc_config'")
-        .run();
+      await settingsRepository.delete("oidc_config");
       authLogger.info("OIDC configuration disabled", {
         operation: "oidc_disable",
         userId,
@@ -443,11 +440,10 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         };
       }
 
-      db.$client
-        .prepare(
-          "INSERT OR REPLACE INTO settings (key, value) VALUES ('oidc_config', ?)",
-        )
-        .run(JSON.stringify(encryptedConfig));
+      await settingsRepository.set(
+        "oidc_config",
+        JSON.stringify(encryptedConfig),
+      );
       authLogger.info("OIDC configuration updated", {
         operation: "oidc_update",
         userId,
@@ -485,7 +481,7 @@ router.delete("/oidc-config", authenticateJWT, async (req, res) => {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
+    await createCurrentSettingsRepository().delete("oidc_config");
     authLogger.success("OIDC configuration disabled", {
       operation: "oidc_disable",
       userId,
@@ -547,15 +543,13 @@ router.get("/oidc-config", async (_req, res) => {
 router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
-      .get();
-    if (!row) {
+    const value = await createCurrentSettingsRepository().get("oidc_config");
+    if (!value) {
       const envConfig = getOIDCConfigFromEnv();
       return res.json(envConfig);
     }
 
-    let config = JSON.parse((row as Record<string, unknown>).value as string);
+    let config = JSON.parse(value);
 
     if (config.client_secret?.startsWith("encrypted:")) {
       try {
@@ -2217,13 +2211,10 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
         });
       }
     }
-    db.$client
-      .prepare(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_login', ?)",
-      )
-      .run(allowed ? "true" : "false");
-    const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-    await saveMemoryDatabaseToFile();
+    await createCurrentSettingsRepository().set(
+      "allow_password_login",
+      allowed ? "true" : "false",
+    );
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password login allowed", err);
@@ -2292,11 +2283,10 @@ router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
     if (typeof allowed !== "boolean") {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
-    db.$client
-      .prepare(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_reset', ?)",
-      )
-      .run(allowed ? "true" : "false");
+    await createCurrentSettingsRepository().set(
+      "allow_password_reset",
+      allowed ? "true" : "false",
+    );
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password reset allowed", err);
