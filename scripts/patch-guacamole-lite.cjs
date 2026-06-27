@@ -50,6 +50,59 @@ const newConnect =
   "\n" +
   "        this.sendInstruction(['connect'].concat(connectArgs));";
 
+// Patch 4: answer guacd's dynamic argument requests locally.
+// macOS Screen Sharing can request VNC username/password through the
+// post-handshake `required`/`require` flow. guacamole-lite forwards those
+// instructions to the browser, but Termix already keeps the credentials in the
+// server-side token and the browser does not provide an onrequired handler.
+const oldSendBuffer =
+  "        this.lastActivity = Date.now();\n" + "        this.sendBuffer = '';";
+const newSendBuffer =
+  "        this.lastActivity = Date.now();\n" +
+  "        this.sendBuffer = '';\n" +
+  "        this.nextArgumentStreamIndex = 0;";
+
+const oldSendInstructionBlock =
+  "    sendInstruction(instruction) {\n" +
+  "        // convert every element in the instruction array to a string. convert null to an empty string\n" +
+  "        instruction = instruction.map((element) => {\n" +
+  "            if (element === null || element === undefined) {\n" +
+  "                return '';\n" +
+  "            }\n" +
+  "            return String(element);\n" +
+  "        });\n" +
+  "\n" +
+  "        const instructionString = GuacamoleParser.toInstruction(instruction);\n" +
+  "        this.send(instructionString);\n" +
+  "    }\n";
+const newSendInstructionBlock =
+  oldSendInstructionBlock +
+  "\n" +
+  "    sendArgumentValue(name, value) {\n" +
+  "        const stream = this.nextArgumentStreamIndex++;\n" +
+  "        this.sendInstruction(['argv', stream, 'text/plain', name]);\n" +
+  "        this.sendInstruction(['blob', stream, Buffer.from(String(value ?? ''), 'utf8').toString('base64')]);\n" +
+  "        this.sendInstruction(['end', stream]);\n" +
+  "    }\n" +
+  "\n" +
+  "    sendRequiredArguments(params) {\n" +
+  "        params.forEach((name) => {\n" +
+  "            this.sendArgumentValue(name, this.connectionSettings[name]);\n" +
+  "        });\n" +
+  "    }\n";
+
+const oldReadyHandler =
+  '        // Handle "ready" instruction\n' +
+  "        if (opcode === 'ready') {";
+const newReadyHandler =
+  "        // Handle dynamic argument requests from guacd\n" +
+  "        if (opcode === 'required' || opcode === 'require') {\n" +
+  "            this.sendRequiredArguments(params);\n" +
+  "            return;\n" +
+  "        }\n" +
+  "\n" +
+  oldReadyHandler;
+
 let patched = false;
 
 if (!guacdClientContent.includes(newVersionCheck)) {
@@ -86,7 +139,48 @@ if (!guacdClientContent.includes(newConnect)) {
   patched = true;
 }
 
-// Patch 4: guacamole-lite decrypts token JSON through ASCII/binary strings,
+if (!guacdClientContent.includes("this.nextArgumentStreamIndex = 0;")) {
+  if (!guacdClientContent.includes(oldSendBuffer)) {
+    console.log(
+      "[patch-guacamole-lite] Argument stream index target not found, skipping",
+    );
+    process.exit(0);
+  }
+  guacdClientContent = guacdClientContent.replace(oldSendBuffer, newSendBuffer);
+  patched = true;
+}
+
+if (!guacdClientContent.includes("sendRequiredArguments(params) {")) {
+  if (!guacdClientContent.includes(oldSendInstructionBlock)) {
+    console.log(
+      "[patch-guacamole-lite] Required argument helper target not found, skipping",
+    );
+    process.exit(0);
+  }
+  guacdClientContent = guacdClientContent.replace(
+    oldSendInstructionBlock,
+    newSendInstructionBlock,
+  );
+  patched = true;
+}
+
+if (
+  !guacdClientContent.includes("opcode === 'required' || opcode === 'require'")
+) {
+  if (!guacdClientContent.includes(oldReadyHandler)) {
+    console.log(
+      "[patch-guacamole-lite] Required opcode target not found, skipping",
+    );
+    process.exit(0);
+  }
+  guacdClientContent = guacdClientContent.replace(
+    oldReadyHandler,
+    newReadyHandler,
+  );
+  patched = true;
+}
+
+// Patch 5: guacamole-lite decrypts token JSON through ASCII/binary strings,
 // which corrupts IV/ciphertext bytes and non-ASCII connection settings such as
 // RDP/VNC passwords with umlauts. Keep the encrypted fields as Buffers and
 // decode the plaintext JSON as UTF-8.
@@ -146,5 +240,5 @@ if (!patched) {
 fs.writeFileSync(guacdClientPath, guacdClientContent);
 fs.writeFileSync(cryptPath, cryptContent);
 console.log(
-  "[patch-guacamole-lite] Patched protocol VERSION_1_3_0/1_5_0 support, name handshake, and UTF-8 token decrypt",
+  "[patch-guacamole-lite] Patched protocol VERSION_1_3_0/1_5_0 support, name handshake, required arguments, and UTF-8 token decrypt",
 );
