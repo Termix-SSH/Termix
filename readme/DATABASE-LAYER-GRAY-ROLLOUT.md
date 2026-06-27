@@ -30,6 +30,8 @@ Allowed in gray rollout:
   `HostResolutionRepository`.
 - Host route update readback, single-host fetch, password-field fetch, and host
   export reads migrated behind `HostResolutionRepository`.
+- Host route update-state and delete-audit host reads migrated behind
+  `HostResolutionRepository`.
 - Host user-cleanup delete paths migrated behind `HostRepository`.
 - SSO provider listing, management, OIDC config loading, and LDAP provider
   validation migrated behind `SsoProviderRepository`.

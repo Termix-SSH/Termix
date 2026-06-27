@@ -277,6 +277,20 @@ describe("HostResolutionRepository", () => {
     expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();
   });
 
+  it("loads host update state without decrypting host data", async () => {
+    const repository = await createRepository();
+
+    await expect(repository.findHostUpdateState(1)).resolves.toEqual({
+      userId: "user-1",
+      credentialId: 7,
+      rdpCredentialId: null,
+      vncCredentialId: null,
+      authType: "password",
+    });
+    await expect(repository.findHostUpdateState(999)).resolves.toBeNull();
+    expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();
+  });
+
   it("lists hosts using a credential through the decryption boundary", async () => {
     vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(
       Buffer.from("user-key"),

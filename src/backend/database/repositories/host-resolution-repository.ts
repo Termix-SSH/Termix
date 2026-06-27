@@ -12,6 +12,13 @@ export interface HostKeyVerificationRecord {
   hostKeyChangedCount: number | null;
   name: string | null;
 }
+export interface HostUpdateStateRecord {
+  userId: string;
+  credentialId: number | null;
+  rdpCredentialId: number | null;
+  vncCredentialId: number | null;
+  authType: string;
+}
 
 export class HostResolutionRepository {
   constructor(
@@ -43,6 +50,24 @@ export class HostResolutionRepository {
       .limit(1);
 
     return this.decryptOne("ssh_data", rows[0], userId);
+  }
+
+  async findHostUpdateState(
+    hostId: number,
+  ): Promise<HostUpdateStateRecord | null> {
+    const rows = await this.context.drizzle
+      .select({
+        userId: hosts.userId,
+        credentialId: hosts.credentialId,
+        rdpCredentialId: hosts.rdpCredentialId,
+        vncCredentialId: hosts.vncCredentialId,
+        authType: hosts.authType,
+      })
+      .from(hosts)
+      .where(eq(hosts.id, hostId))
+      .limit(1);
+
+    return rows[0] ?? null;
   }
 
   async findHostsByUserId(userId: string): Promise<HostResolutionHostRecord[]> {

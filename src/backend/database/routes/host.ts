@@ -983,19 +983,12 @@ router.put(
         });
       }
 
-      const hostRecord = await db
-        .select({
-          userId: hosts.userId,
-          credentialId: hosts.credentialId,
-          rdpCredentialId: hosts.rdpCredentialId,
-          vncCredentialId: hosts.vncCredentialId,
-          authType: hosts.authType,
-        })
-        .from(hosts)
-        .where(eq(hosts.id, Number(hostId)))
-        .limit(1);
+      const hostRecord =
+        await createCurrentHostResolutionRepository().findHostUpdateState(
+          Number(hostId),
+        );
 
-      if (hostRecord.length === 0) {
+      if (!hostRecord) {
         sshLogger.warn("Host not found for update", {
           operation: "host_update",
           hostId: parseInt(hostId),
@@ -1004,12 +997,12 @@ router.put(
         return res.status(404).json({ error: "Host not found" });
       }
 
-      const ownerId = hostRecord[0].userId;
+      const ownerId = hostRecord.userId;
 
       if (
         !accessInfo.isOwner &&
         sshDataObj.credentialId !== undefined &&
-        sshDataObj.credentialId !== hostRecord[0].credentialId
+        sshDataObj.credentialId !== hostRecord.credentialId
       ) {
         return res.status(403).json({
           error: "Only the host owner can change the credential",
@@ -1019,7 +1012,7 @@ router.put(
       if (
         !accessInfo.isOwner &&
         sshDataObj.authType !== undefined &&
-        sshDataObj.authType !== hostRecord[0].authType
+        sshDataObj.authType !== hostRecord.authType
       ) {
         return res.status(403).json({
           error: "Only the host owner can change the authentication type",
@@ -1030,19 +1023,19 @@ router.put(
         const newCredId =
           sshDataObj.credentialId !== undefined
             ? sshDataObj.credentialId
-            : hostRecord[0].credentialId;
+            : hostRecord.credentialId;
         const newRdpCredId =
           sshDataObj.rdpCredentialId !== undefined
             ? sshDataObj.rdpCredentialId
-            : hostRecord[0].rdpCredentialId;
+            : hostRecord.rdpCredentialId;
         const newVncCredId =
           sshDataObj.vncCredentialId !== undefined
             ? sshDataObj.vncCredentialId
-            : hostRecord[0].vncCredentialId;
+            : hostRecord.vncCredentialId;
         const hadCredential =
-          hostRecord[0].credentialId !== null ||
-          hostRecord[0].rdpCredentialId !== null ||
-          hostRecord[0].vncCredentialId !== null;
+          hostRecord.credentialId !== null ||
+          hostRecord.rdpCredentialId !== null ||
+          hostRecord.vncCredentialId !== null;
         const willHaveCredential =
           newCredId !== null || newRdpCredId !== null || newVncCredId !== null;
         if (hadCredential && !willHaveCredential) {
@@ -1781,12 +1774,13 @@ router.delete(
       hostId: parseInt(hostId),
     });
     try {
-      const hostToDelete = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId)));
+      const hostToDelete =
+        await createCurrentHostResolutionRepository().findHostByIdForUser(
+          Number(hostId),
+          userId,
+        );
 
-      if (hostToDelete.length === 0) {
+      if (!hostToDelete) {
         sshLogger.warn("SSH host not found for deletion", {
           operation: "host_delete",
           hostId: parseInt(hostId),
@@ -1848,7 +1842,7 @@ router.delete(
         action: "delete_host",
         resourceType: "host",
         resourceId: hostId,
-        resourceName: hostToDelete[0].name ?? hostToDelete[0].ip,
+        resourceName: hostToDelete.name ?? hostToDelete.ip,
         ipAddress: dhIp,
         userAgent: dhUa,
         success: true,
