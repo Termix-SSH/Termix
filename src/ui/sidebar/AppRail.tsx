@@ -164,6 +164,9 @@ export function AppRail({
   const [pinned, setPinned] = useState(
     () => localStorage.getItem("pinAppRail") === "true",
   );
+  const [expandOnHover, setExpandOnHover] = useState(
+    () => localStorage.getItem("expandAppRailOnHover") !== "false",
+  );
   const [unreadAlerts, setUnreadAlerts] = useState(0);
 
   useEffect(() => {
@@ -192,10 +195,18 @@ export function AppRail({
   });
 
   useEffect(() => {
-    const handler = () =>
+    const pinHandler = () =>
       setPinned(localStorage.getItem("pinAppRail") === "true");
-    window.addEventListener("pinAppRailChanged", handler);
-    return () => window.removeEventListener("pinAppRailChanged", handler);
+    const hoverHandler = () =>
+      setExpandOnHover(
+        localStorage.getItem("expandAppRailOnHover") !== "false",
+      );
+    window.addEventListener("pinAppRailChanged", pinHandler);
+    window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    return () => {
+      window.removeEventListener("pinAppRailChanged", pinHandler);
+      window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    };
   }, []);
 
   useEffect(() => {
@@ -211,7 +222,7 @@ export function AppRail({
     return () => window.removeEventListener("hiddenRailTabsChanged", handler);
   }, []);
 
-  const railExpanded = pinned || hovered;
+  const railExpanded = pinned || (expandOnHover && hovered);
   const railButtons = buildRailButtons(splitMode, t, hiddenTabs);
 
   return (

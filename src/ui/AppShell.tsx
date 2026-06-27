@@ -558,6 +558,7 @@ export function AppShell({
               "showHostTags",
               "hostTrayOnClick",
               "pinAppRail",
+              "expandAppRailOnHover",
               "defaultSnippetFoldersCollapsed",
               "confirmSnippetExecution",
               "disableUpdateCheck",
@@ -609,8 +610,20 @@ export function AppShell({
               "hostTrayOnClick",
               String(prefs.hostTrayOnClick),
             );
-          if (prefs.pinAppRail !== null && prefs.pinAppRail !== undefined)
+          if (prefs.pinAppRail !== null && prefs.pinAppRail !== undefined) {
             localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+            window.dispatchEvent(new Event("pinAppRailChanged"));
+          }
+          if (
+            prefs.expandAppRailOnHover !== null &&
+            prefs.expandAppRailOnHover !== undefined
+          ) {
+            localStorage.setItem(
+              "expandAppRailOnHover",
+              String(prefs.expandAppRailOnHover),
+            );
+            window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
+          }
           if (
             prefs.foldersCollapsed !== null &&
             prefs.foldersCollapsed !== undefined

@@ -430,6 +430,7 @@ export function UserProfilePanel({
     hostTrayOnClick?: boolean | null;
     compactHostView?: boolean | null;
     pinAppRail?: boolean | null;
+    expandAppRailOnHover?: boolean | null;
     foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
@@ -536,6 +537,9 @@ export function UserProfilePanel({
   const [pinAppRail, setPinAppRail] = useState(
     () => localStorage.getItem("pinAppRail") === "true",
   );
+  const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(
+    () => localStorage.getItem("expandAppRailOnHover") !== "false",
+  );
   const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
   );
@@ -616,6 +620,7 @@ export function UserProfilePanel({
         "hostTrayOnClick",
         "compactHostView",
         "pinAppRail",
+        "expandAppRailOnHover",
         "defaultSnippetFoldersCollapsed",
         "confirmSnippetExecution",
         "disableUpdateCheck",
@@ -683,6 +688,15 @@ export function UserProfilePanel({
         if (prefs.pinAppRail != null) {
           setPinAppRail(prefs.pinAppRail);
           localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+          window.dispatchEvent(new Event("pinAppRailChanged"));
+        }
+        if (prefs.expandAppRailOnHover != null) {
+          setExpandAppRailOnHover(prefs.expandAppRailOnHover);
+          localStorage.setItem(
+            "expandAppRailOnHover",
+            String(prefs.expandAppRailOnHover),
+          );
+          window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
         }
         if (prefs.foldersCollapsed != null) {
           setFoldersCollapsed(prefs.foldersCollapsed);
@@ -759,6 +773,10 @@ export function UserProfilePanel({
     window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
     setPinAppRail(false);
     localStorage.setItem("pinAppRail", "false");
+    window.dispatchEvent(new Event("pinAppRailChanged"));
+    setExpandAppRailOnHover(true);
+    localStorage.setItem("expandAppRailOnHover", "true");
+    window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
     setFoldersCollapsed(true);
     localStorage.removeItem("defaultSnippetFoldersCollapsed");
     setConfirmSnippetExecution(false);
@@ -785,6 +803,7 @@ export function UserProfilePanel({
         hostTrayOnClick: false,
         compactHostView: false,
         pinAppRail: false,
+        expandAppRailOnHover: true,
         foldersCollapsed: true,
         confirmSnippetExecution: false,
         disableUpdateCheck: false,
@@ -864,6 +883,16 @@ export function UserProfilePanel({
     const restoredPinRail = restore("pinAppRail", "false") === "true";
     setPinAppRail(restoredPinRail);
     localStorage.setItem("pinAppRail", String(restoredPinRail));
+    window.dispatchEvent(new Event("pinAppRailChanged"));
+
+    const restoredExpandRailOnHover =
+      restore("expandAppRailOnHover", "true") !== "false";
+    setExpandAppRailOnHover(restoredExpandRailOnHover);
+    localStorage.setItem(
+      "expandAppRailOnHover",
+      String(restoredExpandRailOnHover),
+    );
+    window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
 
     const restoredFolders =
       restore("defaultSnippetFoldersCollapsed", null) !== "false";
@@ -1544,6 +1573,25 @@ export function UserProfilePanel({
                   localStorage.setItem("pinAppRail", v.toString());
                   window.dispatchEvent(new Event("pinAppRailChanged"));
                   if (storageMode === "cloud") saveToCloud({ pinAppRail: v });
+                }}
+              />
+            </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.expandAppRailOnHover")}
+              description={t(
+                "newUi.sidebar.userProfile.expandAppRailOnHoverDesc",
+              )}
+            >
+              <FakeSwitch
+                checked={expandAppRailOnHover}
+                onChange={(v) => {
+                  setExpandAppRailOnHover(v);
+                  localStorage.setItem("expandAppRailOnHover", v.toString());
+                  window.dispatchEvent(
+                    new Event("expandAppRailOnHoverChanged"),
+                  );
+                  if (storageMode === "cloud")
+                    saveToCloud({ expandAppRailOnHover: v });
                 }}
               />
             </SettingRow>

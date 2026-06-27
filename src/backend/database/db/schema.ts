@@ -774,6 +774,9 @@ export const userPreferences = sqliteTable("user_preferences", {
   showHostTags: integer("show_host_tags", { mode: "boolean" }),
   hostTrayOnClick: integer("host_tray_on_click", { mode: "boolean" }),
   pinAppRail: integer("pin_app_rail", { mode: "boolean" }),
+  expandAppRailOnHover: integer("expand_app_rail_on_hover", {
+    mode: "boolean",
+  }),
   foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
   confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),

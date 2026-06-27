@@ -2767,6 +2767,8 @@
         "statusColorsDesc": "Use green/red for online/offline status instead of the accent color",
         "pinAppRail": "Pin App Rail",
         "pinAppRailDesc": "Keep the left sidebar app rail always expanded instead of expanding on hover",
+        "expandAppRailOnHover": "Expand App Rail on Hover",
+        "expandAppRailOnHoverDesc": "Allow the left sidebar app rail to expand when the pointer moves over it",
         "settingsNavigation": "Navigation",
         "navigationTabsDesc": "Choose which tabs appear in the app rail",
         "settingsSnippets": "Snippets",

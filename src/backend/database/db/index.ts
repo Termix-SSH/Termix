@@ -689,6 +689,11 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "show_host_tags", "INTEGER");
   addColumnIfNotExists("user_preferences", "host_tray_on_click", "INTEGER");
   addColumnIfNotExists("user_preferences", "pin_app_rail", "INTEGER");
+  addColumnIfNotExists(
+    "user_preferences",
+    "expand_app_rail_on_hover",
+    "INTEGER",
+  );
   addColumnIfNotExists("user_preferences", "folders_collapsed", "INTEGER");
   addColumnIfNotExists("user_preferences", "confirm_snippet_execution", "INTEGER");
   addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");
