@@ -111,4 +111,20 @@ describe("TmuxSessionTagRepository", () => {
     ).toBe(0);
     expect(writeCount).toBe(2);
   });
+
+  it("deletes all tags for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(3);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.listByUserAndHost("user-1", 1)).toEqual(new Map());
+    expect(await repo.listByUserAndHost("user-2", 2)).toEqual(
+      new Map([["api", ["other"]]]),
+    );
+    expect(writeCount).toBe(1);
+  });
 });

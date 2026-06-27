@@ -120,6 +120,19 @@ export class TmuxSessionTagRepository {
     return changedRows;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(tmuxSessionTags)
+      .where(eq(tmuxSessionTags.userId, userId))
+      .returning({ id: tmuxSessionTags.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   private async afterWrite(): Promise<void> {
     await this.onWrite?.();
   }

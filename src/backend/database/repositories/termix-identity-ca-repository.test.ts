@@ -238,4 +238,41 @@ describe("TermixIdentityCaRepository", () => {
     ).toEqual({ count: 0 });
     expect(onWrite).toHaveBeenCalledTimes(1);
   });
+
+  it("deletes CA rows for a user", async () => {
+    const { repo, sqlite, onWrite } = await createRepository();
+    sqlite
+      .prepare(
+        "INSERT INTO users (id, username, password_hash) VALUES (?, ?, ?)",
+      )
+      .run("user-2", "bob", "hash");
+    sqlite
+      .prepare(
+        "INSERT INTO termix_identities (id, user_id, handle) VALUES (?, ?, ?)",
+      )
+      .run(8, "user-2", "bob");
+    sqlite
+      .prepare(
+        "INSERT INTO termix_identity_ca (identity_id, user_id, public_key, private_key, validity_days) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(7, "user-1", "ssh-ed25519 public", "encrypted-ca-private", 45);
+    sqlite
+      .prepare(
+        "INSERT INTO termix_identity_ca (identity_id, user_id, public_key, private_key, validity_days) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(8, "user-2", "ssh-ed25519 other", "encrypted-other", 90);
+    onWrite.mockClear();
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(1);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(
+      sqlite
+        .prepare(
+          "SELECT user_id, public_key FROM termix_identity_ca ORDER BY user_id",
+        )
+        .all(),
+    ).toEqual([{ user_id: "user-2", public_key: "ssh-ed25519 other" }]);
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
 });

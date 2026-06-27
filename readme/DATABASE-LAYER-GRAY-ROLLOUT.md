@@ -183,8 +183,9 @@ Allowed in gray rollout:
 - User deletion role-assignment cleanup migrated behind `RoleRepository`.
 - User deletion API key, trusted device, dashboard link, homepage layout/item,
   host health, host metrics preference, C2S preset, Vault token/profile, audit,
-  alert, encrypted-data, UI state, and related per-user cleanup now uses
-  current repository boundaries before the final user row delete.
+  alert, Termix ID identity/CA, tmux session tag, encrypted-data, UI state, and
+  related per-user cleanup now uses current repository boundaries before the
+  final user row delete.
 - User admin route role sync and admin-created default role assignment migrated
   behind `RoleRepository`.
 - LDAP login default role assignment and admin-role sync migrated behind

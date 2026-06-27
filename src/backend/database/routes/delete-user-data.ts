@@ -26,6 +26,9 @@ import { createCurrentSettingsRepository } from "../repositories/current-setting
 import { createCurrentSharedCredentialRepository } from "../repositories/current-shared-credential-repository.js";
 import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentTermixIdentityCaRepository } from "../repositories/current-termix-identity-ca-repository.js";
+import { createCurrentTermixIdentityRepository } from "../repositories/current-termix-identity-repository.js";
+import { createCurrentTmuxSessionTagRepository } from "../repositories/current-tmux-session-tag-repository.js";
 import { createCurrentTrustedDeviceRepository } from "../repositories/current-trusted-device-repository.js";
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
@@ -81,6 +84,9 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentOpksshTokenRepository().deleteByUserId(userId);
     await createCurrentVaultTokenRepository().deleteByUserId(userId);
     await createCurrentVaultProfileRepository().deleteByUserId(userId);
+    await createCurrentTermixIdentityCaRepository().deleteByUserId(userId);
+    await createCurrentTermixIdentityRepository().deleteByUserId(userId);
+    await createCurrentTmuxSessionTagRepository().deleteByUserId(userId);
     await createCurrentOpenTabRepository().deleteByUserId(userId);
     await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 

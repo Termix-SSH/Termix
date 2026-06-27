@@ -129,6 +129,19 @@ export class TermixIdentityCaRepository {
     return rows.length > 0;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(termixIdentityCa)
+      .where(eq(termixIdentityCa.userId, userId))
+      .returning({ id: termixIdentityCa.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   private decryptOne<T extends Record<string, unknown>>(
     record: T | null,
     userId: string,

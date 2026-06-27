@@ -96,6 +96,30 @@ export class TermixIdentityRepository {
     return rows.length > 0;
   }
 
+  async deleteByUserId(userId: string): Promise<{
+    identitiesDeleted: number;
+    keysDeleted: number;
+  }> {
+    const keyRows = await this.context.drizzle
+      .delete(termixIdentityKeys)
+      .where(eq(termixIdentityKeys.userId, userId))
+      .returning({ id: termixIdentityKeys.id });
+
+    const identityRows = await this.context.drizzle
+      .delete(termixIdentities)
+      .where(eq(termixIdentities.userId, userId))
+      .returning({ id: termixIdentities.id });
+
+    if (keyRows.length > 0 || identityRows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return {
+      identitiesDeleted: identityRows.length,
+      keysDeleted: keyRows.length,
+    };
+  }
+
   async listKeysByIdentityId(
     identityId: number,
   ): Promise<TermixIdentityKeyRecord[]> {

@@ -155,4 +155,52 @@ describe("TermixIdentityRepository", () => {
     );
     expect(onWrite).toHaveBeenCalledTimes(4);
   });
+
+  it("deletes identities and keys for a user", async () => {
+    const { repo, onWrite } = await createRepository();
+    const userIdentity = await repo.createIdentity({
+      userId: "user-1",
+      handle: "alice",
+      description: null,
+    });
+    const otherIdentity = await repo.createIdentity({
+      userId: "user-2",
+      handle: "bob",
+      description: null,
+    });
+    await repo.createKey({
+      identityId: userIdentity.id,
+      userId: "user-1",
+      publicKey: "ssh-ed25519 AAAA1",
+      keyType: "ssh-ed25519",
+      algorithm: "ED25519",
+      source: "manual",
+    });
+    await repo.createKey({
+      identityId: otherIdentity.id,
+      userId: "user-2",
+      publicKey: "ssh-ed25519 AAAA2",
+      keyType: "ssh-ed25519",
+      algorithm: "ED25519",
+      source: "manual",
+    });
+    onWrite.mockClear();
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toEqual({
+      identitiesDeleted: 1,
+      keysDeleted: 1,
+    });
+    await expect(repo.deleteByUserId("missing")).resolves.toEqual({
+      identitiesDeleted: 0,
+      keysDeleted: 0,
+    });
+
+    expect(await repo.findIdentityForUser("user-1")).toBeNull();
+    expect(await repo.listKeysByIdentityId(userIdentity.id)).toEqual([]);
+    expect(await repo.findIdentityForUser("user-2")).toMatchObject({
+      handle: "bob",
+    });
+    expect(await repo.listKeysByIdentityId(otherIdentity.id)).toHaveLength(1);
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
 });
