@@ -38,8 +38,11 @@ Allowed in gray rollout:
   `HostRepository`.
 - Host route update readback, single-host fetch, password-field fetch, and host
   export reads migrated behind `HostResolutionRepository`.
+- Host route create/update encrypted writes migrated behind `HostRepository`.
 - Host route update-state and delete-audit host reads migrated behind
   `HostResolutionRepository`.
+- Host route delete final host-row writes and audit actor username lookups
+  migrated behind `HostRepository` and `UserRepository`.
 - Host route own/shared list assembly reads migrated behind
   `HostResolutionRepository` while preserving route-level own-host decryption.
 - Host bulk-update state reads and non-sensitive bulk flag/config writes

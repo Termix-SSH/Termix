@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { hostAccess, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
 
 export type HostRecord = typeof hosts.$inferSelect;
 export type NewHostRecord = typeof hosts.$inferInsert;
@@ -25,6 +26,33 @@ export class HostRepository {
       .returning();
     await this.afterWrite();
     return rows[0];
+  }
+
+  async createEncryptedForUser(
+    userId: string,
+    host: NewHostRecord,
+  ): Promise<HostRecord> {
+    const userDataKey = DataCrypto.validateUserAccess(userId);
+    const tempId = host.id ?? `temp-${userId}-${Date.now()}`;
+    const dataWithTempId = { ...host, id: tempId };
+    const encryptedHost = DataCrypto.encryptRecord(
+      "ssh_data",
+      dataWithTempId,
+      userId,
+      userDataKey,
+    );
+
+    if (!host.id) {
+      delete (encryptedHost as Partial<NewHostRecord>).id;
+    }
+
+    const rows = await this.context.drizzle
+      .insert(hosts)
+      .values(encryptedHost)
+      .returning();
+
+    await this.afterWrite();
+    return DataCrypto.decryptRecord("ssh_data", rows[0], userId, userDataKey);
   }
 
   async findById(id: number): Promise<HostRecord | null> {
@@ -70,6 +98,31 @@ export class HostRepository {
 
     await this.afterWrite();
     return rows[0] ?? null;
+  }
+
+  async updateEncryptedForUser(
+    userId: string,
+    hostId: number,
+    update: HostUpdate,
+  ): Promise<HostRecord | null> {
+    const userDataKey = DataCrypto.validateUserAccess(userId);
+    const encryptedUpdate = DataCrypto.encryptRecord(
+      "ssh_data",
+      update,
+      userId,
+      userDataKey,
+    );
+
+    const rows = await this.context.drizzle
+      .update(hosts)
+      .set(encryptedUpdate)
+      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+      .returning();
+
+    await this.afterWrite();
+    return rows[0]
+      ? DataCrypto.decryptRecord("ssh_data", rows[0], userId, userDataKey)
+      : null;
   }
 
   async listBulkUpdateState(

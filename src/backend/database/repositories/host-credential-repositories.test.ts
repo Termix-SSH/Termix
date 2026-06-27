@@ -454,6 +454,55 @@ describe("HostRepository and CredentialRepository", () => {
     expect(await repo.hosts.findById(host.id)).toBeNull();
   });
 
+  it("encrypts host writes through the repository boundary", async () => {
+    const repo = await createRepositories();
+    vi.spyOn(DataCrypto, "validateUserAccess").mockReturnValue(
+      Buffer.from("user-key"),
+    );
+    vi.spyOn(DataCrypto, "encryptRecord").mockImplementation(
+      (_tableName, record) =>
+        ({
+          ...record,
+          password: "encrypted-host-password",
+        }) as typeof record,
+    );
+    vi.spyOn(DataCrypto, "decryptRecord").mockImplementation(
+      (_tableName, record) => record,
+    );
+
+    const created = await repo.hosts.createEncryptedForUser("user-1", {
+      userId: "user-1",
+      name: "web-1",
+      ip: "10.0.0.10",
+      port: 22,
+      username: "root",
+      authType: "password",
+      password: "secret",
+    });
+
+    const raw = repo.sqlite
+      .prepare("SELECT password FROM ssh_data WHERE id = ?")
+      .get(created.id) as { password: string };
+
+    expect(raw.password).toBe("encrypted-host-password");
+
+    await repo.hosts.updateEncryptedForUser("user-1", created.id, {
+      password: "updated-secret",
+    });
+
+    const updatedRaw = repo.sqlite
+      .prepare("SELECT password FROM ssh_data WHERE id = ?")
+      .get(created.id) as { password: string };
+
+    expect(updatedRaw.password).toBe("encrypted-host-password");
+    expect(DataCrypto.encryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ password: "updated-secret" }),
+      "user-1",
+      Buffer.from("user-key"),
+    );
+  });
+
   it("deletes user hosts through the cleanup boundary", async () => {
     const onWrite = vi.fn();
     const repo = await createRepositories(undefined, onWrite);

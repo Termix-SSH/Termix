@@ -1,13 +1,9 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { hosts } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
 import multer from "multer";
 import { sshLogger, databaseLogger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -38,12 +34,19 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 const STATS_SERVER_URL = "http://localhost:30005";
+
+async function getAuditUsername(userId: string): Promise<string> {
+  const actor = await createCurrentUserRepository().findById(userId);
+  return actor?.username ?? userId;
+}
 
 function notifyStatsHostUpdated(
   hostId: number,
@@ -385,11 +388,9 @@ router.post(
     sshDataObj.telnetPassword = telnetPassword || null;
 
     try {
-      const result = await SimpleDBOps.insert(
-        hosts,
-        "ssh_data",
-        sshDataObj,
+      const result = await createCurrentHostRepository().createEncryptedForUser(
         userId,
+        sshDataObj,
       );
 
       if (!result) {
@@ -416,15 +417,9 @@ router.post(
       });
 
       const { ipAddress: chIp, userAgent: chUa } = getRequestMeta(req);
-      const { users: usersTable } = await import("../db/schema.js");
-      const chActor = await db
-        .select({ username: usersTable.username })
-        .from(usersTable)
-        .where(eq(usersTable.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: chActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "create_host",
         resourceType: "host",
         resourceId: String(createdHost.id),
@@ -1045,12 +1040,10 @@ router.put(
         }
       }
 
-      await SimpleDBOps.update(
-        hosts,
-        "ssh_data",
-        eq(hosts.id, Number(hostId)),
-        sshDataObj,
+      await createCurrentHostRepository().updateEncryptedForUser(
         ownerId,
+        Number(hostId),
+        sshDataObj,
       );
 
       const updatedHost =
@@ -1079,15 +1072,9 @@ router.put(
       });
 
       const { ipAddress: uhIp, userAgent: uhUa } = getRequestMeta(req);
-      const { users: usersTableUpd } = await import("../db/schema.js");
-      const uhActor = await db
-        .select({ username: usersTableUpd.username })
-        .from(usersTableUpd)
-        .where(eq(usersTableUpd.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: uhActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "update_host",
         resourceType: "host",
         resourceId: hostId,
@@ -1780,9 +1767,7 @@ router.delete(
         numericHostId,
       );
 
-      await db
-        .delete(hosts)
-        .where(and(eq(hosts.id, numericHostId), eq(hosts.userId, userId)));
+      await createCurrentHostRepository().deleteForUser(userId, numericHostId);
 
       databaseLogger.success("SSH host deleted", {
         operation: "host_delete_success",
@@ -1791,15 +1776,9 @@ router.delete(
       });
 
       const { ipAddress: dhIp, userAgent: dhUa } = getRequestMeta(req);
-      const { users: usersTableDel } = await import("../db/schema.js");
-      const dhActor = await db
-        .select({ username: usersTableDel.username })
-        .from(usersTableDel)
-        .where(eq(usersTableDel.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: dhActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "delete_host",
         resourceType: "host",
         resourceId: hostId,

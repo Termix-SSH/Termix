@@ -90,8 +90,12 @@ Credential delete host cleanup and apply-to-host writes now use the current host
 repository boundary.
 Host route update readback, single-host fetch, password-field fetch, and host
 export reads now use the current host resolution repository boundary.
+Host route create/update encrypted writes now use the current host repository
+boundary.
 Host route update-state and delete-audit host reads now use the current host
 resolution repository boundary.
+Host route delete final host-row writes and audit actor username lookups now use
+the current host and user repository boundaries.
 Host route own/shared list assembly reads now use the current host resolution
 repository boundary while preserving route-level own-host decryption.
 Host bulk-update state reads and non-sensitive bulk flag/config writes now use
