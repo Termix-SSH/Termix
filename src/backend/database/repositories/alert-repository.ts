@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import {
   alertFirings,
   alertRuleChannels,
@@ -417,6 +417,72 @@ export class AlertRepository {
         "DELETE FROM alert_firings WHERE user_id = ? AND fired_at < datetime('now', ?)",
       )
       .run(userId, `-${days} days`);
+  }
+
+  async deleteByUserId(userId: string): Promise<{
+    firingsDeleted: number;
+    ruleLinksDeleted: number;
+    rulesDeleted: number;
+    channelsDeleted: number;
+  }> {
+    const ruleIds = (
+      await this.context.drizzle
+        .select({ id: alertRules.id })
+        .from(alertRules)
+        .where(eq(alertRules.userId, userId))
+    ).map((row) => row.id);
+    const channelIds = (
+      await this.context.drizzle
+        .select({ id: notificationChannels.id })
+        .from(notificationChannels)
+        .where(eq(notificationChannels.userId, userId))
+    ).map((row) => row.id);
+
+    const firingRows = await this.context.drizzle
+      .delete(alertFirings)
+      .where(eq(alertFirings.userId, userId))
+      .returning({ id: alertFirings.id });
+
+    const linkFilters = [
+      ...(ruleIds.length > 0
+        ? [inArray(alertRuleChannels.ruleId, ruleIds)]
+        : []),
+      ...(channelIds.length > 0
+        ? [inArray(alertRuleChannels.channelId, channelIds)]
+        : []),
+    ];
+    const linkRows =
+      linkFilters.length === 0
+        ? []
+        : await this.context.drizzle
+            .delete(alertRuleChannels)
+            .where(or(...linkFilters))
+            .returning({ id: alertRuleChannels.id });
+
+    const ruleRows = await this.context.drizzle
+      .delete(alertRules)
+      .where(eq(alertRules.userId, userId))
+      .returning({ id: alertRules.id });
+    const channelRows = await this.context.drizzle
+      .delete(notificationChannels)
+      .where(eq(notificationChannels.userId, userId))
+      .returning({ id: notificationChannels.id });
+
+    if (
+      firingRows.length > 0 ||
+      linkRows.length > 0 ||
+      ruleRows.length > 0 ||
+      channelRows.length > 0
+    ) {
+      await this.afterWrite();
+    }
+
+    return {
+      firingsDeleted: firingRows.length,
+      ruleLinksDeleted: linkRows.length,
+      rulesDeleted: ruleRows.length,
+      channelsDeleted: channelRows.length,
+    };
   }
 
   async listEnabledChannelsForRule(

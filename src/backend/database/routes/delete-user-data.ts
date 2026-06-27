@@ -1,4 +1,5 @@
 import { authLogger } from "../../utils/logger.js";
+import { createCurrentAlertRepository } from "../repositories/current-alert-repository.js";
 import { createCurrentApiKeyRepository } from "../repositories/current-api-key-repository.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
 import { createCurrentC2sTunnelPresetRepository } from "../repositories/current-c2s-tunnel-preset-repository.js";
@@ -49,6 +50,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
     await createCurrentRoleRepository().removeAllRolesFromUser(userId);
+    await createCurrentAlertRepository().deleteByUserId(userId);
     await createCurrentAuditLogRepository().deleteByUserId(userId);
 
     await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);

@@ -293,4 +293,91 @@ describe("AlertRepository", () => {
     expect(await repo.getHostDisplayName(1)).toBe("alpha");
     expect(await repo.getHostDisplayName(999)).toBeNull();
   });
+
+  it("deletes all alert data for a user", async () => {
+    let writes = 0;
+    const repo = await createRepository(() => {
+      writes += 1;
+    });
+
+    const userChannel = await repo.createNotificationChannel({
+      userId: "user-1",
+      name: "Ops",
+      type: "webhook",
+      config: '{"url":"https://example.test"}',
+      enabled: true,
+    });
+    const otherChannel = await repo.createNotificationChannel({
+      userId: "user-2",
+      name: "Other",
+      type: "webhook",
+      config: '{"url":"https://other.test"}',
+      enabled: true,
+    });
+    const userRule = await repo.createAlertRule({
+      userId: "user-1",
+      hostId: 1,
+      name: "CPU high",
+      enabled: true,
+      triggerType: "cpu_threshold",
+      thresholdValue: 80,
+      thresholdDurationSeconds: 30,
+      cooldownMinutes: 5,
+      channels: [userChannel.id],
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    const otherRule = await repo.createAlertRule({
+      userId: "user-2",
+      hostId: null,
+      name: "Memory high",
+      enabled: true,
+      triggerType: "memory_threshold",
+      thresholdValue: 90,
+      thresholdDurationSeconds: 60,
+      cooldownMinutes: 10,
+      channels: [otherChannel.id],
+      now: "2026-01-01T00:00:00.000Z",
+    });
+    await repo.createFiring({
+      userId: "user-1",
+      ruleId: userRule.id,
+      hostId: 1,
+      hostName: "alpha",
+      value: 95,
+      message: "high",
+      severity: "warning",
+    });
+    await repo.createFiring({
+      userId: "user-2",
+      ruleId: otherRule.id,
+      hostId: 1,
+      hostName: "alpha",
+      value: 91,
+      message: "other",
+      severity: "warning",
+    });
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toEqual({
+      firingsDeleted: 1,
+      ruleLinksDeleted: 1,
+      rulesDeleted: 1,
+      channelsDeleted: 1,
+    });
+    await expect(repo.deleteByUserId("missing")).resolves.toEqual({
+      firingsDeleted: 0,
+      ruleLinksDeleted: 0,
+      rulesDeleted: 0,
+      channelsDeleted: 0,
+    });
+
+    expect(await repo.listNotificationChannels("user-1")).toEqual([]);
+    expect(await repo.listAlertRules("user-1")).toEqual([]);
+    expect(
+      await repo.listAlertFirings({ userId: "user-1", limit: 10, offset: 0 }),
+    ).toEqual({ firings: [], total: 0 });
+    expect(await repo.listNotificationChannels("user-2")).toHaveLength(1);
+    expect(await repo.listAlertRules("user-2")).toHaveLength(1);
+    expect(await repo.listEnabledChannelsForRule(otherRule.id)).toHaveLength(1);
+    expect(writes).toBe(7);
+  });
 });
