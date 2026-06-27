@@ -120,13 +120,16 @@ async function fetchInternalHosts(
 
   for (let attempt = 1; attempt <= AUTOSTART_FETCH_RETRIES; attempt++) {
     try {
-      const response = await axios.get(`${INTERNAL_HOST_API_BASE_URL}/${path}`, {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Internal-Auth-Token": internalAuthToken,
+      const response = await axios.get(
+        `${INTERNAL_HOST_API_BASE_URL}/${path}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Internal-Auth-Token": internalAuthToken,
+          },
+          timeout: 5000,
         },
-        timeout: 5000,
-      });
+      );
       return response.data || [];
     } catch (error) {
       lastError = error;
@@ -2330,7 +2333,10 @@ async function initializeAutoStartTunnels(): Promise<void> {
       "internal",
       internalAuthToken,
     );
-    const allHosts = await fetchInternalHosts("internal/all", internalAuthToken);
+    const allHosts = await fetchInternalHosts(
+      "internal/all",
+      internalAuthToken,
+    );
     const autoStartTunnels: TunnelConfig[] = [];
     tunnelLogger.info(
       `Found ${autostartHosts.length} autostart hosts and ${allHosts.length} total hosts for endpointHost resolution`,
