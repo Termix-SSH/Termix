@@ -255,6 +255,8 @@ plus snippet execution, terminal OPKSSH/activity, Vault OIDC profile, and
 Wake-on-LAN host, internal host list, host-key verification metadata,
 credential, and shared override read/write models now use the current host
 resolution repository boundary.
+Host metrics, host metrics viewer, tmux monitor, Docker, tunnel, and Proxmox
+unlock gates now use `DataCrypto` directly instead of `SimpleDBOps`.
 Permission manager host owner checks now use the current host resolution
 repository boundary.
 

@@ -24,7 +24,7 @@ import { CONNECTION_STATES } from "../../types/index.js";
 import { tunnelLogger } from "../utils/logger.js";
 import { logAudit } from "../utils/audit-logger.js";
 import { SystemCrypto } from "../utils/system-crypto.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
@@ -969,7 +969,7 @@ async function connectSSHTunnel(
 
   if (tunnelConfig.endpointCredentialId && tunnelConfig.endpointUserId) {
     try {
-      if (SimpleDBOps.isUserDataUnlocked(tunnelConfig.endpointUserId)) {
+      if (DataCrypto.getUserDataKey(tunnelConfig.endpointUserId) !== null) {
         const credential =
           await createCurrentHostResolutionRepository().findCredentialByIdForUser(
             tunnelConfig.endpointCredentialId,

@@ -2,7 +2,7 @@ import express from "express";
 import { Client as SSHClient } from "ssh2";
 import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import { logger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { SSHHost } from "../../../types/index.js";
@@ -213,7 +213,7 @@ router.post(
     }
 
     try {
-      if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+      if (DataCrypto.getUserDataKey(userId) === null) {
         return res.status(401).json({
           error: "Session expired — please log in again",
           code: "SESSION_EXPIRED",

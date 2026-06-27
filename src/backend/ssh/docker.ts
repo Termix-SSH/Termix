@@ -5,7 +5,7 @@ import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { logger } from "../utils/logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
@@ -590,7 +590,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
       .json({ error: "Authentication required", connectionLogs });
   }
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     connectionLogs.push(
       createConnectionLog("error", "docker_connecting", "Session expired"),
     );

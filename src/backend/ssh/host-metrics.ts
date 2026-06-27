@@ -9,7 +9,7 @@ import { getCurrentSettingValue } from "../database/repositories/current-setting
 import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/current-host-metrics-history-repository.js";
 import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { statsLogger } from "../utils/logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
@@ -759,7 +759,7 @@ async function fetchHostById(
   userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (DataCrypto.getUserDataKey(userId) === null) {
       return undefined;
     }
 
@@ -1567,7 +1567,7 @@ function tcpPing(
 app.get("/status", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1612,7 +1612,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1649,7 +1649,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
 app.post("/clear-connections", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1677,7 +1677,7 @@ app.post("/clear-connections", async (req, res) => {
 app.post("/refresh", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1723,7 +1723,7 @@ app.post("/host-updated", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { hostId } = req.body;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1785,7 +1785,7 @@ app.post("/host-deleted", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { hostId } = req.body;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1835,7 +1835,7 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1898,7 +1898,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 
   const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     connectionLogs.push(
       createConnectionLog("error", "stats_connecting", "Session expired"),
     );
@@ -2340,7 +2340,7 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { viewerSessionId } = req.body;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -2412,7 +2412,7 @@ app.post("/metrics/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",

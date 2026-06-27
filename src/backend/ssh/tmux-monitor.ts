@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { AuthManager } from "../utils/auth-manager.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { createCurrentTmuxSessionTagRepository } from "../database/repositories/current-tmux-session-tag-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
@@ -322,7 +322,7 @@ async function requireHost(
     res.status(400).json({ error: "Invalid host ID" });
     return null;
   }
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     res.status(401).json({ error: "User data is locked" });
     return null;
   }

@@ -106,6 +106,8 @@ Allowed in gray rollout:
   Wake-on-LAN host, internal host list, host-key verification metadata,
   credential, permission-manager owner checks, and shared override read/write
   models migrated behind `HostResolutionRepository`.
+- Host metrics, host metrics viewer, tmux monitor, Docker, tunnel, and Proxmox
+  unlock gates now use `DataCrypto` directly instead of `SimpleDBOps`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated
