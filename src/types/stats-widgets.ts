@@ -8,7 +8,8 @@ export type WidgetType =
   | "system"
   | "login_stats"
   | "ports"
-  | "firewall";
+  | "firewall"
+  | "temperature";
 
 export interface ListeningPort {
   protocol: "tcp" | "udp";
@@ -49,6 +50,17 @@ export interface FirewallMetrics {
   chains: FirewallChain[];
 }
 
+export interface TemperatureSensor {
+  label: string;
+  celsius: number;
+}
+
+export interface TemperatureMetrics {
+  source: "sysfs" | "sensors" | "none";
+  highestCelsius: number | null;
+  sensors: TemperatureSensor[];
+}
+
 export interface StatsConfig {
   enabledWidgets: WidgetType[];
   statusCheckEnabled: boolean;
@@ -72,6 +84,7 @@ export const DEFAULT_STATS_CONFIG: StatsConfig = {
     "processes",
     "ports",
     "firewall",
+    "temperature",
   ],
   statusCheckEnabled: true,
   statusCheckInterval: 30,

@@ -1690,7 +1690,9 @@
       "logGrep": "Filter lines...",
       "firewallPersist": "Persist rules",
       "firewallPersisted": "Firewall rules persisted"
-    }
+    },
+    "temperature": "Temperature",
+    "highestTemperature": "Highest temperature"
   },
   "auth": {
     "tagline": "Samostatně hostované SSH a správa vzdálené plochy",

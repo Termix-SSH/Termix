@@ -12,6 +12,7 @@ import { LoginStatsCard } from "./LoginStatsCard";
 import { PortsCard } from "./PortsCard";
 import { ProcessesCard } from "./ProcessesCard";
 import { FirewallCard } from "./FirewallCard";
+import { TemperatureCard } from "./TemperatureCard";
 import { ServiceManagerCard } from "./managers/ServiceManagerCard";
 import { ProcessInspectorCard } from "./managers/ProcessInspectorCard";
 import { PackageManagerCard } from "./managers/PackageManagerCard";
@@ -123,6 +124,11 @@ export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
   ports: metricCard("ports", "hostMetrics.ports.title", PortsCard),
   processes: metricCard("processes", "hostMetrics.processes", ProcessesCard),
   firewall: metricCard("firewall", "hostMetrics.firewall.title", FirewallCard),
+  temperature: metricCard(
+    "temperature",
+    "hostMetrics.temperature",
+    TemperatureCard,
+  ),
   service_manager: managerCard(
     "service_manager",
     "hostMetrics.managers.services",

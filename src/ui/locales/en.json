@@ -1694,6 +1694,8 @@
     "cpuUsage": "CPU Usage",
     "memoryUsage": "Memory Usage",
     "diskUsage": "Disk Usage",
+    "temperature": "Temperature",
+    "highestTemperature": "Highest temperature",
     "failedToFetchHostConfig": "Failed to fetch host configuration",
     "serverOffline": "Server Offline",
     "cannotFetchMetrics": "Cannot fetch metrics from offline server",
