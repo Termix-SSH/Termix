@@ -64,8 +64,8 @@ Auth login lazy user-field encryption migration now calls the `DataCrypto`
 current-runtime migration boundary instead of opening SQLite in
 `auth-manager.ts`.
 Current user-field encryption migration now resolves SQLite through
-`createCurrentUserEncryptionMigrationStore`, keeping `DataCrypto` on the
-migration-store interface.
+`createCurrentUserEncryptionMigrationStore` and the shared current runtime
+helper, keeping `DataCrypto` on the migration-store interface.
 User, admin, TOTP, OIDC account, and credential migration explicit saves now
 use `DatabaseSaveTrigger` instead of importing the SQLite snapshot save function
 from routes.
@@ -77,7 +77,8 @@ Direct SQLite snapshot save-function imports are now isolated inside
 `DatabaseSaveTrigger`.
 Database import SQLite foreign-key toggling is isolated behind the
 `withSqliteForeignKeysDisabled` runtime boundary and restores constraints in a
-`finally` path.
+`finally` path; the current variant resolves SQLite through the shared current
+runtime helper.
 Database import now uses the current SQLite foreign-key boundary without
 importing `getDb()` in the route handler.
 Settings, user, host, API key, session, trusted device, audit log, user

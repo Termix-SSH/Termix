@@ -1,4 +1,4 @@
-import { getDb } from "../db/index.js";
+import { getCurrentRepositorySqlite } from "../repositories/current-repository-runtime.js";
 
 export interface SqliteForeignKeyClient {
   exec(sql: string): unknown;
@@ -19,5 +19,5 @@ export async function withSqliteForeignKeysDisabled<T>(
 export async function withCurrentSqliteForeignKeysDisabled<T>(
   operation: () => Promise<T>,
 ): Promise<T> {
-  return withSqliteForeignKeysDisabled(getDb().$client, operation);
+  return withSqliteForeignKeysDisabled(getCurrentRepositorySqlite(), operation);
 }

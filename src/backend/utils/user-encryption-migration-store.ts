@@ -1,3 +1,5 @@
+import { getCurrentRepositorySqlite } from "../database/repositories/current-repository-runtime.js";
+
 export interface UserEncryptionMigrationRecord {
   id: number | string;
   [key: string]: unknown;
@@ -142,6 +144,7 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
 }
 
 export async function createCurrentUserEncryptionMigrationStore(): Promise<UserEncryptionMigrationStore> {
-  const { getSqlite } = await import("../database/db/index.js");
-  return new RawSqliteUserEncryptionMigrationStore(getSqlite());
+  return new RawSqliteUserEncryptionMigrationStore(
+    getCurrentRepositorySqlite(),
+  );
 }
