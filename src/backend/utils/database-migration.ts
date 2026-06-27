@@ -1,8 +1,8 @@
-import Database from "better-sqlite3";
 import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
 import { DatabaseFileEncryption } from "./database-file-encryption.js";
+import { LegacySqliteDatabaseCopyStore } from "./legacy-sqlite-database-copy-store.js";
 
 export interface MigrationResult {
   success: boolean;
@@ -124,80 +124,6 @@ export class DatabaseMigration {
     }
   }
 
-  private async verifyMigration(
-    originalDb: Database.Database,
-    memoryDb: Database.Database,
-  ): Promise<boolean> {
-    try {
-      memoryDb.exec("PRAGMA foreign_keys = OFF");
-
-      const originalTables = originalDb
-        .prepare(
-          `
-          SELECT name FROM sqlite_master
-          WHERE type='table' AND name NOT LIKE 'sqlite_%'
-          ORDER BY name
-        `,
-        )
-        .all() as { name: string }[];
-
-      const memoryTables = memoryDb
-        .prepare(
-          `
-          SELECT name FROM sqlite_master
-          WHERE type='table' AND name NOT LIKE 'sqlite_%'
-          ORDER BY name
-        `,
-        )
-        .all() as { name: string }[];
-
-      if (originalTables.length !== memoryTables.length) {
-        databaseLogger.error(
-          "Table count mismatch during migration verification",
-          null,
-          {
-            operation: "migration_verify_failed",
-            originalCount: originalTables.length,
-            memoryCount: memoryTables.length,
-          },
-        );
-        return false;
-      }
-
-      for (const table of originalTables) {
-        const originalCount = originalDb
-          .prepare(`SELECT COUNT(*) as count FROM ${table.name}`)
-          .get() as { count: number };
-        const memoryCount = memoryDb
-          .prepare(`SELECT COUNT(*) as count FROM ${table.name}`)
-          .get() as { count: number };
-
-        if (originalCount.count !== memoryCount.count) {
-          databaseLogger.error(
-            "Row count mismatch for table during migration verification",
-            null,
-            {
-              operation: "migration_verify_table_failed",
-              table: table.name,
-              originalRows: originalCount.count,
-              memoryRows: memoryCount.count,
-            },
-          );
-          return false;
-        }
-      }
-
-      memoryDb.exec("PRAGMA foreign_keys = ON");
-
-      return true;
-    } catch (error) {
-      databaseLogger.error("Migration verification failed", error, {
-        operation: "migration_verify_error",
-      });
-      return false;
-    }
-  }
-
   async migrateDatabase(): Promise<MigrationResult> {
     const startTime = Date.now();
     let backupPath: string | undefined;
@@ -207,121 +133,46 @@ export class DatabaseMigration {
     try {
       backupPath = this.createBackup();
 
-      const originalDb = new Database(this.unencryptedDbPath, {
-        readonly: true,
+      const copyResult =
+        new LegacySqliteDatabaseCopyStore().copyDatabaseToMemoryBuffer(
+          this.unencryptedDbPath,
+        );
+      migratedTables = copyResult.migratedTables;
+      migratedRows = copyResult.migratedRows;
+
+      await DatabaseFileEncryption.encryptDatabaseFromBuffer(
+        copyResult.buffer,
+        this.encryptedDbPath,
+      );
+
+      if (
+        !DatabaseFileEncryption.isEncryptedDatabaseFile(this.encryptedDbPath)
+      ) {
+        throw new Error("Encrypted database file verification failed");
+      }
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const migratedPath = `${this.unencryptedDbPath}.migrated-${timestamp}`;
+
+      fs.renameSync(this.unencryptedDbPath, migratedPath);
+
+      databaseLogger.success("Database migration completed successfully", {
+        operation: "migration_complete",
+        migratedTables,
+        migratedRows,
+        duration: Date.now() - startTime,
+        backupPath,
+        migratedPath,
+        encryptedDbPath: this.encryptedDbPath,
       });
 
-      const memoryDb = new Database(":memory:");
-
-      try {
-        const tables = originalDb
-          .prepare(
-            `
-            SELECT name, sql FROM sqlite_master
-            WHERE type='table' AND name NOT LIKE 'sqlite_%'
-          `,
-          )
-          .all() as { name: string; sql: string }[];
-
-        for (const table of tables) {
-          memoryDb.exec(table.sql);
-          migratedTables++;
-        }
-
-        memoryDb.exec("PRAGMA foreign_keys = OFF");
-
-        for (const table of tables) {
-          const rows = originalDb
-            .prepare(`SELECT * FROM ${table.name}`)
-            .all() as Record<string, unknown>[];
-
-          if (rows.length > 0) {
-            const columns = Object.keys(rows[0]);
-            const placeholders = columns.map(() => "?").join(", ");
-            const insertStmt = memoryDb.prepare(
-              `INSERT INTO ${table.name} (${columns.join(", ")}) VALUES (${placeholders})`,
-            );
-
-            const insertTransaction = memoryDb.transaction(
-              (dataRows: Record<string, unknown>[]) => {
-                for (const row of dataRows) {
-                  const values = columns.map((col) => row[col]);
-                  insertStmt.run(values);
-                }
-              },
-            );
-
-            insertTransaction(rows);
-            migratedRows += rows.length;
-          }
-        }
-
-        memoryDb.exec("PRAGMA foreign_keys = ON");
-
-        const fkCheckResult = memoryDb
-          .prepare("PRAGMA foreign_key_check")
-          .all();
-        if (fkCheckResult.length > 0) {
-          databaseLogger.error(
-            "Foreign key constraints violations detected after migration",
-            null,
-            {
-              operation: "migration_fk_check_failed",
-              violations: fkCheckResult,
-            },
-          );
-          throw new Error(
-            `Foreign key violations detected: ${JSON.stringify(fkCheckResult)}`,
-          );
-        }
-
-        const verificationPassed = await this.verifyMigration(
-          originalDb,
-          memoryDb,
-        );
-        if (!verificationPassed) {
-          throw new Error("Migration integrity verification failed");
-        }
-
-        const buffer = memoryDb.serialize();
-
-        await DatabaseFileEncryption.encryptDatabaseFromBuffer(
-          buffer,
-          this.encryptedDbPath,
-        );
-
-        if (
-          !DatabaseFileEncryption.isEncryptedDatabaseFile(this.encryptedDbPath)
-        ) {
-          throw new Error("Encrypted database file verification failed");
-        }
-
-        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const migratedPath = `${this.unencryptedDbPath}.migrated-${timestamp}`;
-
-        fs.renameSync(this.unencryptedDbPath, migratedPath);
-
-        databaseLogger.success("Database migration completed successfully", {
-          operation: "migration_complete",
-          migratedTables,
-          migratedRows,
-          duration: Date.now() - startTime,
-          backupPath,
-          migratedPath,
-          encryptedDbPath: this.encryptedDbPath,
-        });
-
-        return {
-          success: true,
-          migratedTables,
-          migratedRows,
-          backupPath,
-          duration: Date.now() - startTime,
-        };
-      } finally {
-        originalDb.close();
-        memoryDb.close();
-      }
+      return {
+        success: true,
+        migratedTables,
+        migratedRows,
+        backupPath,
+        duration: Date.now() - startTime,
+      };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

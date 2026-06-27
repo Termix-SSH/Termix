@@ -92,6 +92,8 @@ Credential system-key copy backfill migration now uses current credential and
 shared credential repository boundaries.
 Legacy user field-encryption migration SQL is now centralized behind
 `RawSqliteUserEncryptionMigrationStore`.
+Legacy unencrypted SQLite copy/verification during encrypted-file migration is
+now centralized behind `LegacySqliteDatabaseCopyStore`.
 Termix ID credential lookup, generated credential persistence, and generated
 credential cleanup now use the current credential repository boundary.
 Termix ID identity handle CRUD/resolution, public key publish/list/update/delete,

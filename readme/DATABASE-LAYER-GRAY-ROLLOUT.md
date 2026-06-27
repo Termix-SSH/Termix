@@ -40,6 +40,8 @@ Allowed in gray rollout:
   `CredentialRepository` and `SharedCredentialRepository`.
 - Legacy user field-encryption migration SQL centralized behind
   `RawSqliteUserEncryptionMigrationStore`.
+- Legacy unencrypted SQLite copy/verification path centralized behind
+  `LegacySqliteDatabaseCopyStore`.
 - Termix ID credential lookup, generated credential persistence, and generated
   credential cleanup migrated behind `CredentialRepository`.
 - Host route update readback, single-host fetch, password-field fetch, and host
