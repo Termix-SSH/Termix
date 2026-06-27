@@ -631,25 +631,21 @@ router.delete(
     });
 
     try {
-      const credentialToDelete = await db
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, parseInt(id)),
-            eq(sshCredentials.userId, userId),
-          ),
+      const credentialId = parseInt(id);
+      const credentialToDelete =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          credentialId,
         );
 
-      if (credentialToDelete.length === 0) {
+      if (!credentialToDelete) {
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      const hostsUsingCredential = await db
-        .select()
-        .from(hosts)
-        .where(
-          and(eq(hosts.credentialId, parseInt(id)), eq(hosts.userId, userId)),
+      const hostsUsingCredential =
+        await createCurrentHostResolutionRepository().listHostsUsingCredentialForUser(
+          userId,
+          credentialId,
         );
 
       if (hostsUsingCredential.length > 0) {
@@ -663,7 +659,7 @@ router.delete(
             authType: "password",
           })
           .where(
-            and(eq(hosts.credentialId, parseInt(id)), eq(hosts.userId, userId)),
+            and(eq(hosts.credentialId, credentialId), eq(hosts.userId, userId)),
           );
 
         for (const host of hostsUsingCredential) {
@@ -678,7 +674,7 @@ router.delete(
               {
                 operation: "auto_revoke_shares",
                 hostId: host.id,
-                credentialId: parseInt(id),
+                credentialId,
                 revokedCount,
                 reason: "credential_deleted",
               },
@@ -690,21 +686,17 @@ router.delete(
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
-      await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
+      await sharedCredManager.deleteSharedCredentialsForOriginal(credentialId);
 
-      await db
-        .delete(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, parseInt(id)),
-            eq(sshCredentials.userId, userId),
-          ),
-        );
+      await createCurrentCredentialRepository().deleteForUser(
+        userId,
+        credentialId,
+      );
 
       authLogger.success("SSH credential deleted", {
         operation: "credential_delete_success",
         userId,
-        credentialId: parseInt(id),
+        credentialId,
       });
 
       const { ipAddress: cdIp, userAgent: cdUa } = getRequestMeta(req);
@@ -720,7 +712,7 @@ router.delete(
         action: "delete_credential",
         resourceType: "credential",
         resourceId: id,
-        resourceName: credentialToDelete[0].name,
+        resourceName: String(credentialToDelete.name ?? id),
         ipAddress: cdIp,
         userAgent: cdUa,
         success: true,

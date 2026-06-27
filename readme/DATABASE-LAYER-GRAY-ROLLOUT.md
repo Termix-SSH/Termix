@@ -24,8 +24,9 @@ Allowed in gray rollout:
 - Trusted device check/add/remove and TOTP trusted-device cleanup migrated
   behind `TrustedDeviceRepository`.
 - Credential list, folder list, detail reads, folder rename writes, apply usage
-  writes, shared credential source row reads, and credential-host list reads
-  migrated behind `CredentialRepository` and `HostResolutionRepository`.
+  writes, shared credential source row reads, credential delete lookup/delete,
+  and credential-host list reads migrated behind `CredentialRepository` and
+  `HostResolutionRepository`.
 - Host user-cleanup delete paths migrated behind `HostRepository`.
 - SSO provider listing, management, OIDC config loading, and LDAP provider
   validation migrated behind `SsoProviderRepository`.
