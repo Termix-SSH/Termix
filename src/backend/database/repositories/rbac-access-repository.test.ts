@@ -4,6 +4,7 @@ import { RbacAccessRepository } from "./rbac-access-repository.js";
 
 describe("RbacAccessRepository", () => {
   let adapter: SqliteDatabaseAdapter | null = null;
+  const activeAccessTime = "2026-06-26T12:00:00.000Z";
 
   afterEach(async () => {
     if (adapter) {
@@ -206,7 +207,11 @@ describe("RbacAccessRepository", () => {
   it("lists shared hosts for direct and role access", async () => {
     const repo = await createRepository();
 
-    const sharedHosts = await repo.listSharedHosts("user-1", [7]);
+    const sharedHosts = await repo.listSharedHosts(
+      "user-1",
+      [7],
+      activeAccessTime,
+    );
 
     expect(sharedHosts).toMatchObject([
       {
@@ -230,11 +235,7 @@ describe("RbacAccessRepository", () => {
     const repo = await createRepository();
 
     await expect(
-      repo.listVisibleHostAccessEntries(
-        "user-1",
-        [7],
-        "2026-06-26T12:00:00.000Z",
-      ),
+      repo.listVisibleHostAccessEntries("user-1", [7], activeAccessTime),
     ).resolves.toEqual([
       {
         hostId: 42,
@@ -289,7 +290,11 @@ describe("RbacAccessRepository", () => {
   it("lists shared snippets and preserves route-level direct-over-role behavior", async () => {
     const repo = await createRepository();
 
-    const sharedSnippets = await repo.listSharedSnippets("user-1", [7]);
+    const sharedSnippets = await repo.listSharedSnippets(
+      "user-1",
+      [7],
+      activeAccessTime,
+    );
 
     expect(sharedSnippets).toHaveLength(1);
     expect(sharedSnippets[0]).toMatchObject({
@@ -303,7 +308,11 @@ describe("RbacAccessRepository", () => {
   it("lists visible shared snippets for the main snippets route", async () => {
     const repo = await createRepository();
 
-    const sharedSnippets = await repo.listVisibleSharedSnippets("user-1", [7]);
+    const sharedSnippets = await repo.listVisibleSharedSnippets(
+      "user-1",
+      [7],
+      activeAccessTime,
+    );
 
     expect(sharedSnippets.map((snippet) => snippet.id)).toEqual([99, 99]);
     expect(sharedSnippets[0]).toMatchObject({
@@ -318,12 +327,7 @@ describe("RbacAccessRepository", () => {
     const repo = await createRepository();
 
     await expect(
-      repo.findAccessibleSharedSnippet(
-        99,
-        "user-2",
-        [7],
-        "2026-06-26T12:00:00.000Z",
-      ),
+      repo.findAccessibleSharedSnippet(99, "user-2", [7], activeAccessTime),
     ).resolves.toMatchObject({
       id: 99,
       userId: "owner-1",

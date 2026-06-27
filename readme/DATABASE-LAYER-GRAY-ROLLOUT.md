@@ -22,9 +22,9 @@ Allowed in gray rollout:
   plus C2S tunnel preset, tmux session tag, OPKSSH token, Vault token/profile,
   SSH credential usage, role, SSO provider, host folder, alert, host health,
   host metrics preference/history, credential, host resolution, snippet,
-  shared credential, Termix ID identity/CA, and user data export current
-  repository factories share `current-repository-runtime` for SQLite context
-  and write-save hooks.
+  RBAC access, shared credential, Termix ID identity/CA, and user data export
+  current repository factories share `current-repository-runtime` for SQLite
+  context and write-save hooks.
 - Settings reads and writes migrated behind `SettingsRepository`.
 - Database import/export settings reads and admin upserts migrated behind
   `SettingsRepository`.
