@@ -83,8 +83,8 @@ Allowed in gray rollout:
   credential plus credential deployment and command history host-flag resolution
   plus snippet execution, terminal OPKSSH/activity, Vault OIDC profile, and
   Wake-on-LAN host, internal host list, host-key verification metadata,
-  credential, and shared override read/write models migrated behind
-  `HostResolutionRepository`.
+  credential, permission-manager owner checks, and shared override read/write
+  models migrated behind `HostResolutionRepository`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated

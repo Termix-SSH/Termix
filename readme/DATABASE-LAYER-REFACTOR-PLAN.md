@@ -226,6 +226,8 @@ plus snippet execution, terminal OPKSSH/activity, Vault OIDC profile, and
 Wake-on-LAN host, internal host list, host-key verification metadata,
 credential, and shared override read/write models now use the current host
 resolution repository boundary.
+Permission manager host owner checks now use the current host resolution
+repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

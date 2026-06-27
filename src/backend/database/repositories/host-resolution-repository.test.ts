@@ -254,6 +254,18 @@ describe("HostResolutionRepository", () => {
     );
   });
 
+  it("loads host owner metadata without decrypting host data", async () => {
+    const repository = await createRepository();
+
+    await expect(repository.findHostOwnerId(1)).resolves.toBe("user-1");
+    await expect(repository.findHostOwnerId(999)).resolves.toBeNull();
+    await expect(repository.isHostOwnedByUser(1, "user-1")).resolves.toBe(true);
+    await expect(repository.isHostOwnedByUser(1, "user-2")).resolves.toBe(
+      false,
+    );
+    expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();
+  });
+
   it("lists hosts using a credential through the decryption boundary", async () => {
     vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(
       Buffer.from("user-key"),

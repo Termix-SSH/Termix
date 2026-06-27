@@ -1,10 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
-import { db } from "../database/db/index.js";
-import { hosts } from "../database/db/schema.js";
 import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
-import { eq, and } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { databaseLogger } from "./logger.js";
 
 interface AuthenticatedRequest extends Request {
@@ -149,13 +147,9 @@ class PermissionManager {
     action: "read" | "write" | "execute" | "delete" | "share" = "read",
   ): Promise<HostAccessInfo> {
     try {
-      const host = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-        .limit(1);
+      const hostResolutionRepository = createCurrentHostResolutionRepository();
 
-      if (host.length > 0) {
+      if (await hostResolutionRepository.isHostOwnedByUser(hostId, userId)) {
         return {
           hasAccess: true,
           isOwner: true,
@@ -174,13 +168,9 @@ class PermissionManager {
         );
 
       if (access) {
-        const hostOwnerCheck = await db
-          .select({ ownerId: hosts.userId })
-          .from(hosts)
-          .where(eq(hosts.id, hostId))
-          .limit(1);
+        const ownerId = await hostResolutionRepository.findHostOwnerId(hostId);
 
-        if (hostOwnerCheck.length > 0 && hostOwnerCheck[0].ownerId === userId) {
+        if (ownerId === userId) {
           return {
             hasAccess: true,
             isOwner: true,

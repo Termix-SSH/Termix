@@ -41,6 +41,26 @@ export class HostResolutionRepository {
     return this.decryptMany("ssh_data", rows, userId);
   }
 
+  async findHostOwnerId(hostId: number): Promise<string | null> {
+    const rows = await this.context.drizzle
+      .select({ ownerId: hosts.userId })
+      .from(hosts)
+      .where(eq(hosts.id, hostId))
+      .limit(1);
+
+    return rows[0]?.ownerId ?? null;
+  }
+
+  async isHostOwnedByUser(hostId: number, userId: string): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+      .limit(1);
+
+    return rows.length > 0;
+  }
+
   async listAllHosts(): Promise<HostResolutionHostRecord[]> {
     const rows = await this.context.drizzle.select().from(hosts);
 
