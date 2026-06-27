@@ -1,19 +1,15 @@
-import { getDb, getSqlite } from "../db/index.js";
-import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
 import { SnippetRepository } from "./snippet-repository.js";
+import {
+  createCurrentRepositoryContext,
+  createCurrentRepositoryWriteHook,
+} from "./current-repository-runtime.js";
 import { assertRepositoryRolloutDomainEnabled } from "./repository-rollout.js";
 
 export function createCurrentSnippetRepository(): SnippetRepository {
   assertRepositoryRolloutDomainEnabled("snippets");
 
-  const context: DatabaseContext = {
-    dialect: "sqlite",
-    drizzle: getDb(),
-    sqlite: getSqlite(),
-  };
-
-  return new SnippetRepository(context, () =>
-    DatabaseSaveTrigger.forceSave("snippet_repository_write"),
+  return new SnippetRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("snippet_repository_write"),
   );
 }

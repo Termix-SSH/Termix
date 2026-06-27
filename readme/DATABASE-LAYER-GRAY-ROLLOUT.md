@@ -21,8 +21,10 @@ Allowed in gray rollout:
   activity, transfer recent, and file-manager bookmark current repository
   plus C2S tunnel preset, tmux session tag, OPKSSH token, Vault token/profile,
   SSH credential usage, role, SSO provider, host folder, alert, host health,
-  and host metrics preference/history current repository factories share
-  `current-repository-runtime` for SQLite context and write-save hooks.
+  host metrics preference/history, credential, host resolution, snippet,
+  shared credential, Termix ID identity/CA, and user data export current
+  repository factories share `current-repository-runtime` for SQLite context
+  and write-save hooks.
 - Settings reads and writes migrated behind `SettingsRepository`.
 - Database import/export settings reads and admin upserts migrated behind
   `SettingsRepository`.
