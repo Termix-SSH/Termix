@@ -78,8 +78,8 @@ Allowed in gray rollout:
 - Host, jump-host, Docker SSH, Proxmox discovery, Docker console jump-host,
   file-manager activity, host metrics, terminal SSH auth, and tunnel endpoint
   credential plus credential deployment and command history host-flag resolution
-  plus snippet execution, terminal OPKSSH/activity, and Vault OIDC profile host,
-  credential, and shared override read models migrated behind
+  plus snippet execution, terminal OPKSSH/activity, Vault OIDC profile, and
+  Wake-on-LAN host, credential, and shared override read models migrated behind
   `HostResolutionRepository`.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
