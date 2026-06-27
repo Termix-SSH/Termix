@@ -85,8 +85,9 @@ preference, open tab, dismissed alert, homepage layout/item, and network
 topology, dashboard service link, session recording, command history, recent
 activity, transfer recent, and file-manager bookmark current repository
 factories plus C2S tunnel preset, tmux session tag, OPKSSH token, Vault
-token/profile, and SSH credential usage current repository factories now share
-`current-repository-runtime` for SQLite context and write-save hooks.
+token/profile, SSH credential usage, role, SSO provider, host folder, alert,
+host health, and host metrics preference/history current repository factories
+now share `current-repository-runtime` for SQLite context and write-save hooks.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses
