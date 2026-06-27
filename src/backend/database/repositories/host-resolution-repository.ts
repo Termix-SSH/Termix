@@ -58,6 +58,20 @@ export class HostResolutionRepository {
     return this.decryptManyByOwner("ssh_data", rows);
   }
 
+  async listHostsUsingCredentialForUser(
+    userId: string,
+    credentialId: number,
+  ): Promise<HostResolutionHostRecord[]> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hosts)
+      .where(
+        and(eq(hosts.credentialId, credentialId), eq(hosts.userId, userId)),
+      );
+
+    return this.decryptMany("ssh_data", rows, userId);
+  }
+
   async findHostKeyVerificationData(
     hostId: number,
   ): Promise<HostKeyVerificationRecord | null> {

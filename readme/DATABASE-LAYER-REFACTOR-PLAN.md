@@ -79,8 +79,9 @@ repository boundary while preserving the first-user admin transaction inside
 `UserRepository`.
 Traditional login username lookup and `auth-manager.ts` admin user checks now
 use the current user repository boundary.
-Credential list, folder list, and detail reads now use the current credential
-repository boundary.
+Credential list, folder list, detail reads, apply usage writes, and
+credential-host list reads now use current credential and host resolution
+repository boundaries.
 GitHub and standard OIDC callback user lookup/create/rollback/profile/admin
 sync writes now use the current user repository boundary, removing direct
 Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,

@@ -254,6 +254,23 @@ describe("HostResolutionRepository", () => {
     );
   });
 
+  it("lists hosts using a credential through the decryption boundary", async () => {
+    vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(
+      Buffer.from("user-key"),
+    );
+    const repository = await createRepository();
+
+    const rows = await repository.listHostsUsingCredentialForUser("user-1", 7);
+
+    expect(rows.map((row) => row.id)).toEqual([1]);
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 1 }),
+      "user-1",
+      Buffer.from("user-key"),
+    );
+  });
+
   it("lists all hosts through each owner decryption boundary", async () => {
     vi.mocked(DataCrypto.getUserDataKey).mockImplementation((userId) =>
       Buffer.from(`${userId}-key`),
@@ -379,6 +396,9 @@ describe("HostResolutionRepository", () => {
 
     await expect(repository.findHostById(1, "user-1")).resolves.toBeNull();
     await expect(repository.findHostsByUserId("user-1")).resolves.toEqual([]);
+    await expect(
+      repository.listHostsUsingCredentialForUser("user-1", 7),
+    ).resolves.toEqual([]);
     await expect(
       repository.findCredentialByIdForUser(7, "user-1"),
     ).resolves.toBeNull();

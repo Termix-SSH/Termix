@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { sshCredentials, hosts } from "../db/schema.js";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
@@ -12,8 +12,8 @@ import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
-import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 
 const router = express.Router();
 
@@ -784,25 +784,15 @@ router.post(
     }
 
     try {
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, parseInt(credentialId)),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
-        userId,
-      );
+      const credential =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          parseInt(credentialId),
+        );
 
-      if (credentials.length === 0) {
+      if (!credential) {
         return res.status(404).json({ error: "Credential not found" });
       }
-
-      const credential = credentials[0];
 
       await db
         .update(hosts)
@@ -818,21 +808,11 @@ router.post(
         })
         .where(and(eq(hosts.id, parseInt(hostId)), eq(hosts.userId, userId)));
 
-      await createCurrentSshCredentialUsageRepository().create(
+      await createCurrentCredentialRepository().recordUsage(
+        userId,
         parseInt(credentialId),
         parseInt(hostId),
-        userId,
       );
-
-      await db
-        .update(sshCredentials)
-        .set({
-          usageCount: sql`${sshCredentials.usageCount}
-                + 1`,
-          lastUsed: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(sshCredentials.id, parseInt(credentialId)));
       res.json({ message: "Credential applied to host successfully" });
     } catch (err) {
       authLogger.error("Failed to apply credential to host", err);
@@ -883,14 +863,10 @@ router.get(
     }
 
     try {
-      const hostsUsingCredential = await db
-        .select()
-        .from(hosts)
-        .where(
-          and(
-            eq(hosts.credentialId, parseInt(credentialId)),
-            eq(hosts.userId, userId),
-          ),
+      const hostsUsingCredential =
+        await createCurrentHostResolutionRepository().listHostsUsingCredentialForUser(
+          userId,
+          parseInt(credentialId),
         );
 
       res.json(hostsUsingCredential.map((host) => formatSSHHostOutput(host)));
