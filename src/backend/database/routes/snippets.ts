@@ -12,6 +12,7 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
+import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
@@ -44,14 +45,13 @@ function sortSnippets<
 }
 
 async function getAccessibleSnippet(snippetId: number, userId: string) {
-  const owned = await db
-    .select()
-    .from(snippets)
-    .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-    .limit(1);
+  const owned = await createCurrentSnippetRepository().findOwnedById(
+    userId,
+    snippetId,
+  );
 
-  if (owned.length > 0) {
-    return owned[0];
+  if (owned) {
+    return owned;
   }
 
   const roleIds = await getUserRoleIds(userId);
@@ -95,11 +95,7 @@ router.get(
     }
 
     try {
-      const result = await db
-        .select()
-        .from(snippetFolders)
-        .where(eq(snippetFolders.userId, userId))
-        .orderBy(asc(snippetFolders.name));
+      const result = await createCurrentSnippetRepository().listFolders(userId);
 
       res.json(result);
     } catch (err) {
@@ -884,17 +880,9 @@ router.get(
     }
 
     try {
-      const allSnippets = await db
-        .select()
-        .from(snippets)
-        .where(eq(snippets.userId, userId))
-        .orderBy(asc(snippets.folder), asc(snippets.order));
-
-      const allFolders = await db
-        .select()
-        .from(snippetFolders)
-        .where(eq(snippetFolders.userId, userId))
-        .orderBy(asc(snippetFolders.name));
+      const snippetRepository = createCurrentSnippetRepository();
+      const allSnippets = await snippetRepository.listSnippetsForExport(userId);
+      const allFolders = await snippetRepository.listFoldersForExport(userId);
 
       const exportedSnippets = allSnippets.map((s) => ({
         name: s.name,
