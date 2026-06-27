@@ -112,6 +112,9 @@ Allowed in gray rollout:
   `RbacAccessRepository`.
 - RBAC shared host/shared snippet read models migrated behind
   `RbacAccessRepository`.
+- RBAC route host/snippet owner checks and direct host-access credential
+  existence reads migrated behind current host, snippet, and credential
+  repository boundaries.
 - RBAC host/snippet access grant, revoke, and direct host-access credential
   override writes migrated behind `RbacAccessRepository`.
 - Permission manager host-access cleanup, shared-access lookup, and last-access

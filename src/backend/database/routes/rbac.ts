@@ -1,14 +1,14 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { hosts, snippets, sshCredentials } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
+import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
@@ -105,13 +105,12 @@ router.post(
           .json({ error: "Target role ID is required when sharing with role" });
       }
 
-      const host = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-        .limit(1);
+      const host =
+        await createCurrentHostResolutionRepository().findHostUpdateState(
+          hostId,
+        );
 
-      if (host.length === 0) {
+      if (!host || host.userId !== userId) {
         databaseLogger.warn("Permission denied", {
           operation: "rbac_permission_denied",
           userId,
@@ -123,10 +122,10 @@ router.post(
       }
 
       if (
-        !host[0].credentialId &&
-        !host[0].rdpCredentialId &&
-        !host[0].vncCredentialId &&
-        host[0].authType !== "opkssh"
+        !host.credentialId &&
+        !host.rdpCredentialId &&
+        !host.vncCredentialId &&
+        host.authType !== "opkssh"
       ) {
         return res.status(400).json({
           error:
@@ -183,9 +182,7 @@ router.post(
 
       if (!accessGrant.created) {
         const activeCredentialId =
-          host[0].credentialId ??
-          host[0].rdpCredentialId ??
-          host[0].vncCredentialId;
+          host.credentialId ?? host.rdpCredentialId ?? host.vncCredentialId;
         if (activeCredentialId) {
           const { SharedCredentialManager } =
             await import("../../utils/shared-credential-manager.js");
@@ -226,9 +223,7 @@ router.post(
       const sharedCredManager = SharedCredentialManager.getInstance();
 
       const activeCredentialId =
-        host[0].credentialId ??
-        host[0].rdpCredentialId ??
-        host[0].vncCredentialId;
+        host.credentialId ?? host.rdpCredentialId ?? host.vncCredentialId;
       if (activeCredentialId) {
         if (targetType === "user") {
           await sharedCredManager.createSharedCredentialForUser(
@@ -316,13 +311,13 @@ router.delete(
     }
 
     try {
-      const host = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-        .limit(1);
+      const isHostOwner =
+        await createCurrentHostResolutionRepository().isHostOwnedByUser(
+          hostId,
+          userId,
+        );
 
-      if (host.length === 0) {
+      if (!isHostOwner) {
         return res.status(403).json({ error: "Not host owner" });
       }
 
@@ -384,13 +379,13 @@ router.get(
     }
 
     try {
-      const host = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-        .limit(1);
+      const isHostOwner =
+        await createCurrentHostResolutionRepository().isHostOwnedByUser(
+          hostId,
+          userId,
+        );
 
-      if (host.length === 0) {
+      if (!isHostOwner) {
         return res.status(403).json({ error: "Not host owner" });
       }
 
@@ -1085,13 +1080,12 @@ router.post(
           .json({ error: "Target role ID is required when sharing with role" });
       }
 
-      const snippet = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-        .limit(1);
+      const snippet = await createCurrentSnippetRepository().findOwnedById(
+        userId,
+        snippetId,
+      );
 
-      if (snippet.length === 0) {
+      if (!snippet) {
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
@@ -1184,13 +1178,12 @@ router.delete(
     }
 
     try {
-      const snippet = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-        .limit(1);
+      const snippet = await createCurrentSnippetRepository().findOwnedById(
+        userId,
+        snippetId,
+      );
 
-      if (snippet.length === 0) {
+      if (!snippet) {
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
@@ -1229,13 +1222,12 @@ router.get(
     }
 
     try {
-      const snippet = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-        .limit(1);
+      const snippet = await createCurrentSnippetRepository().findOwnedById(
+        userId,
+        snippetId,
+      );
 
-      if (snippet.length === 0) {
+      if (!snippet) {
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
@@ -1311,18 +1303,12 @@ router.put(
       }
 
       if (credentialId) {
-        const cred = await db
-          .select({ id: sshCredentials.id })
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, credentialId),
-              eq(sshCredentials.userId, userId),
-            ),
-          )
-          .limit(1);
+        const cred = await createCurrentCredentialRepository().findByIdForUser(
+          userId,
+          credentialId,
+        );
 
-        if (cred.length === 0) {
+        if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
         }
       }
