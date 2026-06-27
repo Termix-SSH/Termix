@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
-import { hosts, sshCredentials } from "../db/schema.js";
+import { hosts } from "../db/schema.js";
 import { eq, and, inArray } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
@@ -37,6 +37,7 @@ import { registerHostBulkRoutes } from "./host-bulk-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 
 const router = express.Router();
 
@@ -555,25 +556,15 @@ router.post(
       let resolvedUsername = username;
 
       if (authType === "credential" && credentialId) {
-        const credentials = await SimpleDBOps.select(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, credentialId),
-                eq(sshCredentials.userId, userId),
-              ),
-            ),
-          "ssh_credentials",
-          userId,
-        );
+        const cred =
+          await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+            Number(credentialId),
+            userId,
+          );
 
-        if (!credentials || credentials.length === 0) {
+        if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
         }
-
-        const cred = credentials[0];
 
         resolvedPassword = cred.password as string | undefined;
         resolvedKey = cred.privateKey as string | undefined;
@@ -2043,22 +2034,13 @@ async function resolveHostCredentials(
         }
       }
 
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, credentialId),
-              eq(sshCredentials.userId, ownerId),
-            ),
-          ),
-        "ssh_credentials",
-        ownerId,
-      );
+      const credential =
+        await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+          credentialId,
+          ownerId,
+        );
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
+      if (credential) {
         const resolvedHost: Record<string, unknown> = {
           ...host,
           password: credential.password,

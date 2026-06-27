@@ -79,10 +79,11 @@ repository boundary while preserving the first-user admin transaction inside
 `UserRepository`.
 Traditional login username lookup and `auth-manager.ts` admin user checks now
 use the current user repository boundary.
-Credential list, folder list, detail reads, update lookup/readback, folder
-rename writes, apply usage writes, shared credential source row reads,
-credential delete lookup/delete, and credential-host list reads now use current
-credential and host resolution repository boundaries.
+Credential list, folder list, detail reads, update lookup/readback, host route
+credential resolution reads, folder rename writes, apply usage writes, shared
+credential source row reads, credential delete lookup/delete, and
+credential-host list reads now use current credential and host resolution
+repository boundaries.
 User cleanup and password-reset data-discard host/credential deletes now use
 current host and credential repository boundaries.
 GitHub and standard OIDC callback user lookup/create/rollback/profile/admin
