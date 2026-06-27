@@ -87,6 +87,16 @@ export class ApiKeyRepository {
     return rows[0] ?? null;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(apiKeys)
+      .where(eq(apiKeys.userId, userId))
+      .returning({ id: apiKeys.id });
+
+    await this.afterWrite();
+    return rows.length;
+  }
+
   private async afterWrite(): Promise<void> {
     await this.onWrite?.();
   }

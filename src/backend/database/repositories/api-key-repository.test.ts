@@ -111,4 +111,39 @@ describe("ApiKeyRepository", () => {
 
     expect(writeCount).toBe(3);
   });
+
+  it("deletes all API keys for a user", async () => {
+    const repo = await createRepository();
+
+    await repo.apiKeys.create({
+      id: "key-1",
+      userId: "user-2",
+      name: "deploy",
+      tokenHash: "hash-1",
+      tokenPrefix: "tmx_11111111",
+      isActive: true,
+    });
+    await repo.apiKeys.create({
+      id: "key-2",
+      userId: "user-2",
+      name: "ops",
+      tokenHash: "hash-2",
+      tokenPrefix: "tmx_22222222",
+      isActive: true,
+    });
+    await repo.apiKeys.create({
+      id: "key-3",
+      userId: "user-1",
+      name: "admin",
+      tokenHash: "hash-3",
+      tokenPrefix: "tmx_33333333",
+      isActive: true,
+    });
+
+    await expect(repo.apiKeys.deleteByUserId("user-2")).resolves.toBe(2);
+
+    expect(await repo.apiKeys.findById("key-1")).toBeNull();
+    expect(await repo.apiKeys.findById("key-2")).toBeNull();
+    expect((await repo.apiKeys.findById("key-3"))?.userId).toBe("user-1");
+  });
 });

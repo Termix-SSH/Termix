@@ -1,4 +1,5 @@
 import { authLogger } from "../../utils/logger.js";
+import { createCurrentApiKeyRepository } from "../repositories/current-api-key-repository.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
@@ -18,6 +19,7 @@ import { createCurrentSettingsRepository } from "../repositories/current-setting
 import { createCurrentSharedCredentialRepository } from "../repositories/current-shared-credential-repository.js";
 import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentTrustedDeviceRepository } from "../repositories/current-trusted-device-repository.js";
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
@@ -35,6 +37,8 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     );
 
     await createCurrentSessionRepository().revokeAllForUser(userId);
+    await createCurrentApiKeyRepository().deleteByUserId(userId);
+    await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
     await createCurrentRoleRepository().removeAllRolesFromUser(userId);
     await createCurrentAuditLogRepository().deleteByUserId(userId);

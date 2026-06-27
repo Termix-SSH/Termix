@@ -194,12 +194,11 @@ removing direct `users` access from that route module.
 OIDC account link/unlink route user lookups and OIDC field updates now use the
 current user repository boundary, removing direct `users` access from that route
 module.
-Password reset route user lookups, password hash updates, and TOTP reset fields
-now use the current user repository boundary while retaining existing direct
-cleanup of per-user encrypted data tables.
-User deletion helper now removes sessions through the current session repository
-and deletes the final user record through the current user repository while
-retaining direct cleanup of non-migrated related tables.
+Password reset route user lookups, password hash updates, TOTP reset fields, and
+per-user encrypted-data cleanup now use current repository boundaries.
+User deletion helper now removes sessions, API keys, trusted devices, roles,
+audit logs, encrypted data, UI state, and related per-user rows through current
+repository boundaries before deleting the final user record.
 Snippet create/update/delete audit actor username lookups now use the current
 user repository boundary; the remaining snippet `users` usage is the shared
 snippet owner join.
