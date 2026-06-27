@@ -9,6 +9,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
@@ -671,24 +672,12 @@ router.post(
       }
 
       const { Client } = await import("ssh2");
-      const { hosts, sshCredentials } = await import("../db/schema.js");
+      const repository = createCurrentHostResolutionRepository();
+      const host = await repository.findHostById(parseInt(hostId), userId);
 
-      const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
-
-      const hostResult = await SimpleDBOps.select(
-        db
-          .select()
-          .from(hosts)
-          .where(and(eq(hosts.id, parseInt(hostId)), eq(hosts.userId, userId))),
-        "ssh_data",
-        userId,
-      );
-
-      if (hostResult.length === 0) {
+      if (!host || host.userId !== userId) {
         return res.status(404).json({ error: "Host not found" });
       }
-
-      const host = hostResult[0];
 
       let password = host.password;
       let privateKey = host.key;
@@ -696,22 +685,12 @@ router.post(
       let authType = host.authType;
 
       if (host.credentialId) {
-        const credResult = await SimpleDBOps.select(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, host.credentialId as number),
-                eq(sshCredentials.userId, userId),
-              ),
-            ),
-          "ssh_credentials",
+        const cred = await repository.findCredentialByIdForUser(
+          host.credentialId as number,
           userId,
         );
 
-        if (credResult.length > 0) {
-          const cred = credResult[0];
+        if (cred) {
           authType = (cred.authType || authType) as string;
           password = (cred.password || undefined) as string | undefined;
           privateKey = (cred.privateKey || cred.key || undefined) as
