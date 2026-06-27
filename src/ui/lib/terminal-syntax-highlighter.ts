@@ -280,9 +280,7 @@ function highlightPlainText(
           captureEnd,
         });
       } else {
-        if (
-          isProtectedRange(m.index, m.index + m[0].length, protectedRanges)
-        ) {
+        if (isProtectedRange(m.index, m.index + m[0].length, protectedRanges)) {
           continue;
         }
         matches.push({
