@@ -139,6 +139,46 @@ describe("UserRepository and SessionRepository", () => {
     expect(await repo.users.countAll()).toBe(2);
   });
 
+  it("creates SSO users with first-user and provider admin semantics", async () => {
+    const repo = await createRepositories();
+
+    const first = await repo.users.createFirstSsoUser({
+      id: "user-1",
+      username: "first",
+      passwordHash: "",
+      isAdmin: false,
+      isOidc: true,
+      oidcIdentifier: "ldap:provider:first",
+      ssoProviderId: 1,
+    });
+    const providerAdmin = await repo.users.createFirstSsoUser({
+      id: "user-2",
+      username: "provider-admin",
+      passwordHash: "",
+      isAdmin: true,
+      isOidc: true,
+      oidcIdentifier: "ldap:provider:admin",
+      ssoProviderId: 1,
+    });
+    const regular = await repo.users.createFirstSsoUser({
+      id: "user-3",
+      username: "regular",
+      passwordHash: "",
+      isAdmin: false,
+      isOidc: true,
+      oidcIdentifier: "ldap:provider:regular",
+      ssoProviderId: 1,
+    });
+
+    expect(first.isFirstUser).toBe(true);
+    expect(first.user.isAdmin).toBe(true);
+    expect(providerAdmin.isFirstUser).toBe(false);
+    expect(providerAdmin.user.isAdmin).toBe(true);
+    expect(regular.isFirstUser).toBe(false);
+    expect(regular.user.isAdmin).toBe(false);
+    expect(await repo.users.countAll()).toBe(3);
+  });
+
   it("runs the user write hook after user writes", async () => {
     let writeCount = 0;
     const repo = await createRepositories({

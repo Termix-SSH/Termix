@@ -142,9 +142,9 @@ retaining direct cleanup of non-migrated related tables.
 Snippet create/update/delete audit actor username lookups now use the current
 user repository boundary; the remaining snippet `users` usage is the shared
 snippet owner join.
-LDAP login existing-user lookup, encryption rollback delete, admin sync, and
-display-name sync now use the current user repository boundary while retaining
-the existing first-user creation transaction.
+LDAP login first-user provisioning, admin-group user creation, existing-user
+lookup, encryption rollback delete, admin sync, and display-name sync now use
+the current user repository boundary.
 TOTP setup/enable/disable/backup-code/login verification user updates and
 session revocation now use the current user/session repository boundaries.
 RBAC host sharing, role assignment, and snippet sharing target-user existence

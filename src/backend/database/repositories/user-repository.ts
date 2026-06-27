@@ -89,6 +89,25 @@ export class UserRepository {
     return result;
   }
 
+  async createFirstSsoUser(
+    user: NewUserRecord,
+  ): Promise<{ user: UserRecord; isFirstUser: boolean }> {
+    const result = this.context.drizzle.transaction((tx) => {
+      const existingUsers = tx.select({ id: users.id }).from(users).all();
+      const isFirstUser = existingUsers.length === 0;
+      const rows = tx
+        .insert(users)
+        .values({ ...user, isAdmin: isFirstUser || Boolean(user.isAdmin) })
+        .returning()
+        .all();
+
+      return { user: rows[0], isFirstUser };
+    });
+
+    await this.afterWrite();
+    return result;
+  }
+
   async update(id: string, update: UserUpdate): Promise<UserRecord | null> {
     const rows = await this.context.drizzle
       .update(users)

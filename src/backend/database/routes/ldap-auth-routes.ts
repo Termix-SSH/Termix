@@ -1,6 +1,5 @@
 import type { Router } from "express";
 import type { LDAPProviderConfig } from "../../../types/index.js";
-import { db } from "../db/index.js";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -288,38 +287,23 @@ export function registerLDAPAuthRoutes(router: Router): void {
             (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() ===
             "true";
 
-        const countRow = db.$client
-          .prepare("SELECT COUNT(*) as count FROM users")
-          .get() as { count?: number };
-        const isFirst = (countRow?.count || 0) === 0;
+        const isFirst = (await userRepository.countAll()) === 0;
 
         if (!isFirst && !autoProvision) {
           return res.status(403).json({ error: "Registration is disabled" });
         }
 
         userId = nanoid();
-        const isFirstFinal = db.$client.transaction(() => {
-          const c =
-            (
-              db.$client
-                .prepare("SELECT COUNT(*) as count FROM users")
-                .get() as { count?: number }
-            )?.count || 0;
-          const first = c === 0;
-          db.$client
-            .prepare(
-              "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, 1, ?, ?)",
-            )
-            .run(
-              userId,
-              displayName,
-              "",
-              first || isAdmin ? 1 : 0,
-              oidcIdentifier,
-              providerId,
-            );
-          return first;
-        })();
+        const createdUser = await userRepository.createFirstSsoUser({
+          id: userId,
+          username: displayName,
+          passwordHash: "",
+          isAdmin,
+          isOidc: true,
+          oidcIdentifier,
+          ssoProviderId: providerId,
+        });
+        const isFirstFinal = createdUser.isFirstUser;
 
         try {
           const defaultRoleName = isFirstFinal || isAdmin ? "admin" : "user";
