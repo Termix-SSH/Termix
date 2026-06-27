@@ -1,12 +1,10 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { hosts } from "../db/schema.js";
-import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 
 const router = express.Router();
@@ -104,12 +102,12 @@ router.post(
       });
     }
 
-    const hostRecord = await db
-      .select({ enableCommandHistory: hosts.enableCommandHistory })
-      .from(hosts)
-      .where(eq(hosts.id, parseInt(hostId, 10)))
-      .limit(1);
-    if (hostRecord.length > 0 && hostRecord[0].enableCommandHistory === false) {
+    const hostRecord =
+      await createCurrentHostResolutionRepository().findHostById(
+        parseInt(hostId, 10),
+        userId,
+      );
+    if (hostRecord?.enableCommandHistory === false) {
       return res.status(201).json({
         id: 0,
         userId,
