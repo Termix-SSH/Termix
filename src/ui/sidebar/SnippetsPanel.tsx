@@ -1248,6 +1248,9 @@ export function SnippetsPanel({
   const [uncategorizedOpen, setUncategorizedOpen] = useState(
     () => !getFoldersCollapsed(),
   );
+  const [collapsedVirtualFolders, setCollapsedVirtualFolders] = useState<
+    Set<string>
+  >(new Set());
 
   useEffect(() => {
     const handler = () => {
@@ -1443,10 +1446,22 @@ export function SnippetsPanel({
     }
   }
 
-  function toggleFolder(id: number) {
-    setFolders((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, open: !f.open } : f)),
-    );
+  function toggleFolder(folder: SnippetFolder) {
+    if (folder.isVirtual) {
+      setCollapsedVirtualFolders((prev) => {
+        const next = new Set(prev);
+        if (next.has(folder.name)) {
+          next.delete(folder.name);
+        } else {
+          next.add(folder.name);
+        }
+        return next;
+      });
+    } else {
+      setFolders((prev) =>
+        prev.map((f) => (f.id === folder.id ? { ...f, open: !f.open } : f)),
+      );
+    }
   }
 
   async function handleDeleteFolder(folder: SnippetFolder) {
@@ -1610,7 +1625,29 @@ export function SnippetsPanel({
       )
     : snippets;
 
-  const uncategorizedSnippets = filtered.filter((s) => s.folder === null);
+  const uncategorizedSnippets = filtered.filter(
+    (s) => !s.folder || s.folder.trim() === "",
+  );
+
+  const localFolderNames = new Set(folders.map((f) => f.name));
+  const virtualFolders: SnippetFolder[] = [];
+  let virtualId = -1;
+  for (const s of filtered) {
+    if (s.folder && s.folder.trim() !== "" && !localFolderNames.has(s.folder)) {
+      localFolderNames.add(s.folder);
+      virtualFolders.push({
+        id: virtualId--,
+        name: s.folder,
+        color: "#71717a",
+        icon: "folder",
+        open: !collapsedVirtualFolders.has(s.folder),
+        isVirtual: true,
+      });
+    }
+  }
+  const displayFolders = [...folders, ...virtualFolders].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 
   return (
     <>
@@ -1804,7 +1841,7 @@ export function SnippetsPanel({
               )}
             </div>
           )}
-          {folders.map((folder) => {
+          {displayFolders.map((folder) => {
             const folderSnippets = filtered.filter(
               (s) => s.folder === folder.name,
             );
@@ -1813,7 +1850,7 @@ export function SnippetsPanel({
               <div key={folder.id} className="flex flex-col gap-2">
                 <div className="flex items-center gap-1.5 w-full group">
                   <button
-                    onClick={() => toggleFolder(folder.id)}
+                    onClick={() => toggleFolder(folder)}
                     className="flex items-center gap-1.5 flex-1 min-w-0 text-left"
                   >
                     <ChevronDown
@@ -1834,31 +1871,33 @@ export function SnippetsPanel({
                       {folderSnippets.length}
                     </span>
                   </button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="shrink-0 size-5 flex items-center justify-center text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreHorizontal className="size-3.5" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="text-xs">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEditFolder(folder);
-                          setEditFolderOpen(true);
-                        }}
-                      >
-                        <Pencil className="size-3.5 mr-2" />
-                        {t("newUi.sidebar.snippets.editFolder")}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteFolder(folder)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="size-3.5 mr-2" />
-                        {t("newUi.sidebar.snippets.deleteFolder")}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {!folder.isVirtual && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="shrink-0 size-5 flex items-center justify-center text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreHorizontal className="size-3.5" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="text-xs">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditFolder(folder);
+                            setEditFolderOpen(true);
+                          }}
+                        >
+                          <Pencil className="size-3.5 mr-2" />
+                          {t("newUi.sidebar.snippets.editFolder")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteFolder(folder)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="size-3.5 mr-2" />
+                          {t("newUi.sidebar.snippets.deleteFolder")}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
                 {folder.open && (
                   <div

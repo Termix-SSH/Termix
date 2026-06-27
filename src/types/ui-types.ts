@@ -223,11 +223,7 @@ export type Tab = {
 };
 
 export type DockerContainerStatus =
-  | "running"
-  | "exited"
-  | "paused"
-  | "created"
-  | "restarting";
+  "running" | "exited" | "paused" | "created" | "restarting";
 
 export type DockerContainer = {
   id: string;
@@ -276,10 +272,7 @@ export type LayoutPreset = {
 };
 
 export type UserProfileSection =
-  | "account"
-  | "appearance"
-  | "security"
-  | "api-keys";
+  "account" | "appearance" | "security" | "api-keys";
 export type AdminSection =
   | "general"
   | "sso"
@@ -307,13 +300,7 @@ export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
 
 export type ToolsTab = "ssh-tools" | "snippets" | "history" | "split-screen";
 export type SplitMode =
-  | "none"
-  | "2-way"
-  | "3-way"
-  | "3-way-horizontal"
-  | "4-way"
-  | "5-way"
-  | "6-way";
+  "none" | "2-way" | "3-way" | "3-way-horizontal" | "4-way" | "5-way" | "6-way";
 
 export type Snippet = {
   id: number;
@@ -345,6 +332,7 @@ export type SnippetFolder = {
   color: string;
   icon: FolderIconId;
   open: boolean;
+  isVirtual?: boolean;
 };
 
 export type HistoryEntry = {
