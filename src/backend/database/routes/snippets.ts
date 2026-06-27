@@ -1,8 +1,5 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { snippets, snippetFolders } from "../db/schema.js";
-import { eq, and, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -859,131 +856,13 @@ router.post(
         .json({ error: "snippets or folders array is required" });
     }
 
-    const results = {
-      snippetsImported: 0,
-      snippetsSkipped: 0,
-      snippetsUpdated: 0,
-      foldersImported: 0,
-      foldersSkipped: 0,
-      failed: 0,
-      errors: [] as string[],
-    };
-
     try {
-      if (Array.isArray(foldersToImport)) {
-        for (const folder of foldersToImport) {
-          if (!isNonEmptyString(folder.name)) {
-            results.failed++;
-            results.errors.push(`Folder missing name`);
-            continue;
-          }
-
-          const existing = await db
-            .select()
-            .from(snippetFolders)
-            .where(
-              and(
-                eq(snippetFolders.userId, userId),
-                eq(snippetFolders.name, folder.name.trim()),
-              ),
-            )
-            .limit(1);
-
-          if (existing.length > 0) {
-            results.foldersSkipped++;
-            continue;
-          }
-
-          await db.insert(snippetFolders).values({
-            userId,
-            name: folder.name.trim(),
-            color: folder.color?.trim() || null,
-            icon: folder.icon?.trim() || null,
-          });
-          results.foldersImported++;
-        }
-      }
-
-      if (Array.isArray(snippetsToImport)) {
-        for (let i = 0; i < snippetsToImport.length; i++) {
-          const s = snippetsToImport[i];
-
-          if (!isNonEmptyString(s.name) || !isNonEmptyString(s.content)) {
-            results.failed++;
-            results.errors.push(
-              `Snippet ${i + 1}: name and content are required`,
-            );
-            continue;
-          }
-
-          const folderVal = s.folder?.trim() || null;
-
-          const existing = await db
-            .select()
-            .from(snippets)
-            .where(
-              and(
-                eq(snippets.userId, userId),
-                eq(snippets.name, s.name.trim()),
-                folderVal
-                  ? eq(snippets.folder, folderVal)
-                  : sql`(${snippets.folder} IS NULL OR ${snippets.folder} = '')`,
-              ),
-            )
-            .limit(1);
-
-          if (existing.length > 0) {
-            if (!overwrite) {
-              results.snippetsSkipped++;
-              continue;
-            }
-
-            await db
-              .update(snippets)
-              .set({
-                content: s.content.trim(),
-                description: s.description?.trim() || null,
-                folder: folderVal,
-                order:
-                  typeof s.order === "number" ? s.order : existing[0].order,
-                hostFilter: s.hostFilter || null,
-                updatedAt: sql`CURRENT_TIMESTAMP`,
-              })
-              .where(
-                and(
-                  eq(snippets.id, existing[0].id),
-                  eq(snippets.userId, userId),
-                ),
-              );
-            results.snippetsUpdated++;
-            continue;
-          }
-
-          const maxOrderResult = await db
-            .select({ maxOrder: sql<number>`MAX(${snippets.order})` })
-            .from(snippets)
-            .where(
-              and(
-                eq(snippets.userId, userId),
-                folderVal
-                  ? eq(snippets.folder, folderVal)
-                  : sql`(${snippets.folder} IS NULL OR ${snippets.folder} = '')`,
-              ),
-            );
-          const maxOrder = maxOrderResult[0]?.maxOrder ?? -1;
-
-          await db.insert(snippets).values({
-            userId,
-            name: s.name.trim(),
-            content: s.content.trim(),
-            description: s.description?.trim() || null,
-            folder: folderVal,
-            order: typeof s.order === "number" ? s.order : maxOrder + 1,
-            hostFilter: s.hostFilter || null,
-          });
-          results.snippetsImported++;
-        }
-      }
+      const results = await createCurrentSnippetRepository().bulkImport(
+        userId,
+        snippetsToImport,
+        foldersToImport,
+        !!overwrite,
+      );
 
       authLogger.success(`Snippets bulk-imported by user ${userId}`, {
         operation: "snippet_bulk_import",

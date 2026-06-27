@@ -32,6 +32,28 @@ export interface UpdateSnippetResult {
   existing: SnippetRecord;
   updated: SnippetRecord;
 }
+export interface SnippetBulkImportResult {
+  snippetsImported: number;
+  snippetsSkipped: number;
+  snippetsUpdated: number;
+  foldersImported: number;
+  foldersSkipped: number;
+  failed: number;
+  errors: string[];
+}
+interface BulkImportSnippetInput {
+  name?: unknown;
+  content?: unknown;
+  description?: string | null;
+  folder?: string | null;
+  order?: unknown;
+  hostFilter?: string | null;
+}
+interface BulkImportFolderInput {
+  name?: unknown;
+  color?: string | null;
+  icon?: string | null;
+}
 
 export class SnippetRepository {
   constructor(
@@ -201,11 +223,129 @@ export class SnippetRepository {
     return existing;
   }
 
+  async bulkImport(
+    userId: string,
+    snippetsToImport: unknown[] | undefined,
+    foldersToImport: unknown[] | undefined,
+    overwrite: boolean,
+  ): Promise<SnippetBulkImportResult> {
+    const results: SnippetBulkImportResult = {
+      snippetsImported: 0,
+      snippetsSkipped: 0,
+      snippetsUpdated: 0,
+      foldersImported: 0,
+      foldersSkipped: 0,
+      failed: 0,
+      errors: [],
+    };
+
+    let changed = false;
+
+    if (Array.isArray(foldersToImport)) {
+      for (const rawFolder of foldersToImport) {
+        const folder = rawFolder as BulkImportFolderInput;
+        if (!isNonEmptyString(folder.name)) {
+          results.failed++;
+          results.errors.push(`Folder missing name`);
+          continue;
+        }
+
+        const created = await this.createFolder(
+          userId,
+          folder.name,
+          folder.color,
+          folder.icon,
+          false,
+        );
+
+        if (!created) {
+          results.foldersSkipped++;
+          continue;
+        }
+
+        changed = true;
+        results.foldersImported++;
+      }
+    }
+
+    if (Array.isArray(snippetsToImport)) {
+      for (let i = 0; i < snippetsToImport.length; i++) {
+        const snippet = snippetsToImport[i] as BulkImportSnippetInput;
+
+        if (
+          !isNonEmptyString(snippet.name) ||
+          !isNonEmptyString(snippet.content)
+        ) {
+          results.failed++;
+          results.errors.push(
+            `Snippet ${i + 1}: name and content are required`,
+          );
+          continue;
+        }
+
+        const folderVal = snippet.folder?.trim() || null;
+        const existing = await this.findByNameAndFolder(
+          userId,
+          snippet.name.trim(),
+          folderVal,
+        );
+
+        if (existing) {
+          if (!overwrite) {
+            results.snippetsSkipped++;
+            continue;
+          }
+
+          await this.context.drizzle
+            .update(snippets)
+            .set({
+              content: snippet.content.trim(),
+              description: snippet.description?.trim() || null,
+              folder: folderVal,
+              order:
+                typeof snippet.order === "number"
+                  ? snippet.order
+                  : existing.order,
+              hostFilter: snippet.hostFilter || null,
+              updatedAt: sql`CURRENT_TIMESTAMP`,
+            })
+            .where(
+              and(eq(snippets.id, existing.id), eq(snippets.userId, userId)),
+            );
+          changed = true;
+          results.snippetsUpdated++;
+          continue;
+        }
+
+        const maxOrder = await this.maxOrderForFolder(userId, folderVal);
+        await this.context.drizzle.insert(snippets).values({
+          userId,
+          name: snippet.name.trim(),
+          content: snippet.content.trim(),
+          description: snippet.description?.trim() || null,
+          folder: folderVal,
+          order:
+            typeof snippet.order === "number" ? snippet.order : maxOrder + 1,
+          hostFilter: snippet.hostFilter || null,
+        });
+        changed = true;
+        results.snippetsImported++;
+      }
+    }
+
+    if (changed) {
+      await this.afterWrite();
+    }
+
+    return results;
+  }
+
   async createFolder(
     userId: string,
     name: string,
     color: string | null | undefined,
     icon: string | null | undefined,
+    triggerSave = true,
   ): Promise<SnippetFolderRecord | null> {
     const existing = await this.findFolderByName(userId, name);
     if (existing) return null;
@@ -220,7 +360,9 @@ export class SnippetRepository {
       })
       .returning();
 
-    await this.afterWrite();
+    if (triggerSave) {
+      await this.afterWrite();
+    }
     return rows[0] ?? null;
   }
 
@@ -320,6 +462,13 @@ export class SnippetRepository {
     userId: string,
     folder: string,
   ): Promise<number> {
+    return (await this.maxOrderForFolder(userId, folder || null)) + 1;
+  }
+
+  private async maxOrderForFolder(
+    userId: string,
+    folder: string | null,
+  ): Promise<number> {
     const maxOrderResult = await this.context.drizzle
       .select({ maxOrder: sql<number>`MAX(${snippets.order})` })
       .from(snippets)
@@ -332,10 +481,36 @@ export class SnippetRepository {
         ),
       );
     const maxOrder = maxOrderResult[0]?.maxOrder ?? -1;
-    return maxOrder + 1;
+    return maxOrder;
+  }
+
+  private async findByNameAndFolder(
+    userId: string,
+    name: string,
+    folder: string | null,
+  ): Promise<SnippetRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(snippets)
+      .where(
+        and(
+          eq(snippets.userId, userId),
+          eq(snippets.name, name),
+          folder
+            ? eq(snippets.folder, folder)
+            : sql`(${snippets.folder} IS NULL OR ${snippets.folder} = '')`,
+        ),
+      )
+      .limit(1);
+
+    return rows[0] ?? null;
   }
 
   private async afterWrite(): Promise<void> {
     await this.onWrite?.();
   }
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

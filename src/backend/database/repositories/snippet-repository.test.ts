@@ -189,6 +189,87 @@ describe("SnippetRepository", () => {
     expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
+  it("bulk imports folders and snippets", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    const result = await repository.bulkImport(
+      "user-1",
+      [
+        {
+          name: " new snippet ",
+          content: " echo hi ",
+          description: " desc ",
+          folder: " new folder ",
+          hostFilter: "linux",
+        },
+        { name: "", content: "bad" },
+        { name: "deploy", content: "skip", folder: "ops" },
+      ],
+      [
+        { name: " new folder ", color: " #fff ", icon: " star " },
+        { name: "ops" },
+        { name: "" },
+      ],
+      false,
+    );
+
+    expect(result).toEqual({
+      snippetsImported: 1,
+      snippetsSkipped: 1,
+      snippetsUpdated: 0,
+      foldersImported: 1,
+      foldersSkipped: 1,
+      failed: 2,
+      errors: [
+        "Folder missing name",
+        "Snippet 2: name and content are required",
+      ],
+    });
+    await expect(repository.findOwnedById("user-1", 4)).resolves.toMatchObject({
+      name: "new snippet",
+      content: "echo hi",
+      description: "desc",
+      folder: "new folder",
+      order: 0,
+      hostFilter: "linux",
+    });
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("bulk import overwrites existing snippets", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    const result = await repository.bulkImport(
+      "user-1",
+      [
+        {
+          name: "deploy",
+          content: "make deploy v2",
+          folder: "ops",
+          order: 5,
+          hostFilter: "prod",
+        },
+      ],
+      undefined,
+      true,
+    );
+
+    expect(result).toMatchObject({
+      snippetsImported: 0,
+      snippetsSkipped: 0,
+      snippetsUpdated: 1,
+      failed: 0,
+    });
+    await expect(repository.findOwnedById("user-1", 2)).resolves.toMatchObject({
+      content: "make deploy v2",
+      order: 5,
+      hostFilter: "prod",
+    });
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
   it("creates folders and rejects duplicate names", async () => {
     const onWrite = vi.fn();
     const { repository } = await createRepository(onWrite);
