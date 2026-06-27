@@ -50,7 +50,8 @@ async function getVideoStatus(accessToken, videoId) {
     `https://www.googleapis.com/youtube/v3/videos?part=status&id=${videoId}`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
   );
-  if (!res.ok) throw new Error(`videos.list failed (${res.status}): ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`videos.list failed (${res.status}): ${await res.text()}`);
   const json = await res.json();
   return json.items?.[0]?.status?.privacyStatus ?? null;
 }
