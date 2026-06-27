@@ -1,12 +1,14 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { HostRepository } from "./host-repository.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
 
 describe("HostRepository and CredentialRepository", () => {
   let adapter: SqliteDatabaseAdapter | null = null;
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     if (adapter) {
       await adapter.close();
       adapter = null;
@@ -232,6 +234,67 @@ describe("HostRepository and CredentialRepository", () => {
     expect(
       await repo.credentials.findByIdForUser("user-1", created.id),
     ).toBeNull();
+  });
+
+  it("loads credentials through the decryption boundary", async () => {
+    const repo = await createRepositories();
+    vi.spyOn(DataCrypto, "getUserDataKey").mockReturnValue(
+      Buffer.from("user-key"),
+    );
+    vi.spyOn(DataCrypto, "decryptRecords").mockImplementation(
+      (_tableName, records) => records,
+    );
+    vi.spyOn(DataCrypto, "decryptRecord").mockImplementation(
+      (_tableName, record) => record,
+    );
+
+    const created = await repo.credentials.create({
+      userId: "user-1",
+      name: "primary",
+      authType: "password",
+      username: "root",
+      password: "secret",
+      folder: "prod",
+    });
+
+    await expect(
+      repo.credentials.listDecryptedByUserId("user-1"),
+    ).resolves.toMatchObject([{ id: created.id, password: "secret" }]);
+    await expect(
+      repo.credentials.findDecryptedByIdForUser("user-1", created.id),
+    ).resolves.toMatchObject({ id: created.id, password: "secret" });
+    expect(DataCrypto.decryptRecords).toHaveBeenCalledWith(
+      "ssh_credentials",
+      expect.arrayContaining([expect.objectContaining({ id: created.id })]),
+      "user-1",
+      Buffer.from("user-key"),
+    );
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_credentials",
+      expect.objectContaining({ id: created.id }),
+      "user-1",
+      Buffer.from("user-key"),
+    );
+  });
+
+  it("returns empty credential reads when user data is locked", async () => {
+    const repo = await createRepositories();
+    vi.spyOn(DataCrypto, "getUserDataKey").mockReturnValue(null);
+
+    const created = await repo.credentials.create({
+      userId: "user-1",
+      name: "primary",
+      authType: "password",
+      username: "root",
+      password: "secret",
+    });
+
+    await expect(
+      repo.credentials.listDecryptedByUserId("user-1"),
+    ).resolves.toEqual([]);
+    await expect(
+      repo.credentials.findDecryptedByIdForUser("user-1", created.id),
+    ).resolves.toBeNull();
   });
 
   it("creates, finds, updates, lists, and deletes hosts", async () => {

@@ -1,6 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
 
 export type CredentialRecord = typeof sshCredentials.$inferSelect;
 export type NewCredentialRecord = typeof sshCredentials.$inferInsert;
@@ -9,13 +10,17 @@ export type CredentialUpdate = Partial<
 >;
 
 export class CredentialRepository {
-  constructor(private readonly context: DatabaseContext) {}
+  constructor(
+    private readonly context: DatabaseContext,
+    private readonly onWrite?: () => void | Promise<void>,
+  ) {}
 
   async create(credential: NewCredentialRecord): Promise<CredentialRecord> {
     const rows = await this.context.drizzle
       .insert(sshCredentials)
       .values(credential)
       .returning();
+    await this.afterWrite();
     return rows[0];
   }
 
@@ -41,7 +46,21 @@ export class CredentialRepository {
     return this.context.drizzle
       .select()
       .from(sshCredentials)
-      .where(eq(sshCredentials.userId, userId));
+      .where(eq(sshCredentials.userId, userId))
+      .orderBy(desc(sshCredentials.updatedAt));
+  }
+
+  async findDecryptedByIdForUser(
+    userId: string,
+    credentialId: number,
+  ): Promise<CredentialRecord | null> {
+    const row = await this.findByIdForUser(userId, credentialId);
+    return this.decryptOne(row, userId);
+  }
+
+  async listDecryptedByUserId(userId: string): Promise<CredentialRecord[]> {
+    const rows = await this.listByUserId(userId);
+    return this.decryptMany(rows, userId);
   }
 
   async listFolders(userId: string): Promise<string[]> {
@@ -69,6 +88,7 @@ export class CredentialRepository {
       )
       .returning();
 
+    await this.afterWrite();
     return rows[0] ?? null;
   }
 
@@ -83,6 +103,7 @@ export class CredentialRepository {
       )
       .returning({ id: sshCredentials.id });
 
+    await this.afterWrite();
     return rows.length > 0;
   }
 
@@ -111,5 +132,39 @@ export class CredentialRepository {
           eq(sshCredentials.userId, userId),
         ),
       );
+    await this.afterWrite();
+  }
+
+  private decryptOne<T extends Record<string, unknown>>(
+    record: T | null,
+    userId: string,
+  ): T | null {
+    if (!record) return null;
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) return null;
+    return DataCrypto.decryptRecord(
+      "ssh_credentials",
+      record,
+      userId,
+      userDataKey,
+    );
+  }
+
+  private decryptMany<T extends Record<string, unknown>>(
+    records: T[],
+    userId: string,
+  ): T[] {
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) return [];
+    return DataCrypto.decryptRecords(
+      "ssh_credentials",
+      records,
+      userId,
+      userDataKey,
+    );
+  }
+
+  private async afterWrite(): Promise<void> {
+    await this.onWrite?.();
   }
 }

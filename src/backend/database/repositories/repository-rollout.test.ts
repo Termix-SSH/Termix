@@ -19,6 +19,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "sessions",
         "api_keys",
         "trusted_devices",
+        "credentials",
         "roles",
         "rbac_access",
         "sso_providers",
@@ -68,7 +69,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
+        "settings,user,api-key,credential,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
     });
 
     expect(config).toEqual({
@@ -77,6 +78,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "settings",
         "users",
         "api_keys",
+        "credentials",
         "dismissed_alerts",
         "alerts",
         "homepage_layouts",
@@ -144,6 +146,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "sessions",
         "api_keys",
         "trusted_devices",
+        "credentials",
         "roles",
         "rbac_access",
         "sso_providers",

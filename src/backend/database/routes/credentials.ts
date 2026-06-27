@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { sshCredentials, hosts } from "../db/schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { SimpleDBOps } from "../../utils/simple-db-ops.js";
@@ -13,6 +13,7 @@ import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 
 const router = express.Router();
 
@@ -263,15 +264,8 @@ router.get(
     }
 
     try {
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(eq(sshCredentials.userId, userId))
-          .orderBy(desc(sshCredentials.updatedAt)),
-        "ssh_credentials",
-        userId,
-      );
+      const credentials =
+        await createCurrentCredentialRepository().listDecryptedByUserId(userId);
 
       res.json(credentials.map((cred) => formatCredentialOutput(cred)));
     } catch (err) {
@@ -310,22 +304,7 @@ router.get(
     }
 
     try {
-      const result = await db
-        .select({ folder: sshCredentials.folder })
-        .from(sshCredentials)
-        .where(eq(sshCredentials.userId, userId));
-
-      const folderCounts: Record<string, number> = {};
-      result.forEach((r) => {
-        if (r.folder && r.folder.trim() !== "") {
-          folderCounts[r.folder] = (folderCounts[r.folder] || 0) + 1;
-        }
-      });
-
-      const folders = Object.keys(folderCounts).filter(
-        (folder) => folderCounts[folder] > 0,
-      );
-      res.json(folders);
+      res.json(await createCurrentCredentialRepository().listFolders(userId));
     } catch (err) {
       authLogger.error("Failed to fetch credential folders", err);
       res.status(500).json({ error: "Failed to fetch credential folders" });
@@ -371,25 +350,16 @@ router.get(
     }
 
     try {
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, parseInt(id)),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
-        userId,
-      );
+      const credential =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          parseInt(id),
+        );
 
-      if (credentials.length === 0) {
+      if (!credential) {
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      const credential = credentials[0];
       const output = formatCredentialOutput(credential);
 
       if (credential.password) {
