@@ -19,8 +19,9 @@ Allowed in gray rollout:
   preference, open tab, dismissed alert, homepage layout/item, and network
   topology, dashboard service link, session recording, command history, recent
   activity, transfer recent, and file-manager bookmark current repository
-  factories share `current-repository-runtime` for SQLite context and
-  write-save hooks.
+  plus C2S tunnel preset, tmux session tag, OPKSSH token, Vault token/profile,
+  and SSH credential usage current repository factories share
+  `current-repository-runtime` for SQLite context and write-save hooks.
 - Settings reads and writes migrated behind `SettingsRepository`.
 - Database import/export settings reads and admin upserts migrated behind
   `SettingsRepository`.
