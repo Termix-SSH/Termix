@@ -268,6 +268,7 @@ export type Tab = {
   } | null>;
 };
 
+// prettier-ignore
 export type DockerContainerStatus =
   | "running"
   | "exited"
@@ -322,6 +323,7 @@ export type LayoutPreset = {
   cards: CardLayoutConfig[];
 };
 
+// prettier-ignore
 export type UserProfileSection =
   | "account"
   | "appearance"
@@ -353,6 +355,7 @@ export type ThemeId =
 export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
 
 export type ToolsTab = "ssh-tools" | "snippets" | "history" | "split-screen";
+// prettier-ignore
 export type SplitMode =
   | "none"
   | "2-way"
@@ -392,6 +395,7 @@ export type SnippetFolder = {
   color: string;
   icon: FolderIconId;
   open: boolean;
+  isVirtual?: boolean;
 };
 
 export type HistoryEntry = {
