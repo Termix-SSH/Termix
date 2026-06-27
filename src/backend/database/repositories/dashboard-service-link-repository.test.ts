@@ -107,4 +107,33 @@ describe("DashboardServiceLinkRepository", () => {
     expect(await repo.deleteForUser("user-1", link.id)).toBe(true);
     expect(writeCount).toBe(3);
   });
+
+  it("deletes all dashboard links for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await repo.createForUser("user-1", {
+      label: "Docs",
+      url: "https://docs.example.com",
+    });
+    await repo.createForUser("user-1", {
+      label: "Status",
+      url: "https://status.example.com",
+    });
+    await repo.createForUser("user-2", {
+      label: "Other",
+      url: "https://other.example.com",
+    });
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(2);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.listByUserId("user-1")).toEqual([]);
+    expect(
+      (await repo.listByUserId("user-2")).map((link) => link.label),
+    ).toEqual(["Other"]);
+    expect(writeCount).toBe(4);
+  });
 });

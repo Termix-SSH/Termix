@@ -4,8 +4,11 @@ import { createCurrentAuditLogRepository } from "../repositories/current-audit-l
 import { createCurrentC2sTunnelPresetRepository } from "../repositories/current-c2s-tunnel-preset-repository.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
+import { createCurrentDashboardServiceLinkRepository } from "../repositories/current-dashboard-service-link-repository.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentHomepageItemRepository } from "../repositories/current-homepage-item-repository.js";
+import { createCurrentHomepageLayoutRepository } from "../repositories/current-homepage-layout-repository.js";
 import { createCurrentHostFolderRepository } from "../repositories/current-host-folder-repository.js";
 import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
@@ -65,6 +68,9 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentCredentialRepository().deleteByUserId(userId);
 
     await createCurrentNetworkTopologyRepository().deleteByUserId(userId);
+    await createCurrentDashboardServiceLinkRepository().deleteByUserId(userId);
+    await createCurrentHomepageItemRepository().deleteByUserId(userId);
+    await createCurrentHomepageLayoutRepository().deleteByUserId(userId);
     await createCurrentC2sTunnelPresetRepository().deleteByUserId(userId);
     await createCurrentOpksshTokenRepository().deleteByUserId(userId);
     await createCurrentVaultTokenRepository().deleteByUserId(userId);

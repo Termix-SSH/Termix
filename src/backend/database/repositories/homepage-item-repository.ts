@@ -95,6 +95,19 @@ export class HomepageItemRepository {
     return rows.length > 0;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(homepageItems)
+      .where(eq(homepageItems.userId, userId))
+      .returning({ id: homepageItems.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   private async afterWrite(): Promise<void> {
     await this.onWrite?.();
   }

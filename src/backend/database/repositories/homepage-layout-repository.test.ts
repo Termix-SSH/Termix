@@ -84,4 +84,21 @@ describe("HomepageLayoutRepository", () => {
 
     expect(writeCount).toBe(2);
   });
+
+  it("deletes a layout for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await repo.upsertForUser("user-1", '{"zoom":1}');
+    await repo.upsertForUser("user-2", '{"zoom":2}');
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(1);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.findByUserId("user-1")).toBeNull();
+    expect((await repo.findByUserId("user-2"))?.layout).toBe('{"zoom":2}');
+    expect(writeCount).toBe(3);
+  });
 });

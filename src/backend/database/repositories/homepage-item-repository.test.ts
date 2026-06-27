@@ -115,4 +115,36 @@ describe("HomepageItemRepository", () => {
     expect(await repo.deleteForUser("user-1", item.id)).toBe(true);
     expect(writeCount).toBe(3);
   });
+
+  it("deletes all homepage items for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await repo.createForUser("user-1", {
+      typeId: "clock",
+      title: "Clock",
+      config: "{}",
+    });
+    await repo.createForUser("user-1", {
+      typeId: "terminal",
+      title: "Terminal",
+      config: "{}",
+    });
+    await repo.createForUser("user-2", {
+      typeId: "other",
+      title: "Other",
+      config: "{}",
+    });
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(2);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.listByUserId("user-1")).toEqual([]);
+    expect(
+      (await repo.listByUserId("user-2")).map((item) => item.title),
+    ).toEqual(["Other"]);
+    expect(writeCount).toBe(4);
+  });
 });

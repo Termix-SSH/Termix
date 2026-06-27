@@ -45,6 +45,19 @@ export class HomepageLayoutRepository {
     return updated;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(homepageLayouts)
+      .where(eq(homepageLayouts.userId, userId))
+      .returning({ id: homepageLayouts.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   private async afterWrite(): Promise<void> {
     await this.onWrite?.();
   }
