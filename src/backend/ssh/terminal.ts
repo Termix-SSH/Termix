@@ -896,7 +896,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
             await import("./vault-oidc-auth.js");
           const { getRequestOrigin } =
             await import("../utils/request-origin.js");
-          const profile = await loadVaultProfileForHost(vaultData.hostId);
+          const profile = await loadVaultProfileForHost(
+            vaultData.hostId,
+            userId,
+          );
           if (!profile) {
             ws.send(
               JSON.stringify({
