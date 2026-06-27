@@ -1,9 +1,7 @@
 import type { Request, Response, Router } from "express";
-import { and, eq, isNotNull } from "drizzle-orm";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { sshLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { hosts } from "../db/schema.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 
 export function registerHostInternalRoutes(router: Router): void {
   /**
@@ -45,12 +43,8 @@ export function registerHostInternalRoutes(router: Router): void {
     }
 
     try {
-      const autostartHosts = await db
-        .select()
-        .from(hosts)
-        .where(
-          and(eq(hosts.enableTunnel, true), isNotNull(hosts.tunnelConnections)),
-        );
+      const autostartHosts =
+        await createCurrentHostResolutionRepository().listHostsWithTunnelConnections();
 
       const result = autostartHosts
         .map((host) => {
@@ -134,7 +128,8 @@ export function registerHostInternalRoutes(router: Router): void {
           .json({ error: "Invalid internal authentication token" });
       }
 
-      const allHosts = await db.select().from(hosts);
+      const allHosts =
+        await createCurrentHostResolutionRepository().listAllHosts();
 
       const result = allHosts.map((host) => {
         const tunnelConnections = host.tunnelConnections

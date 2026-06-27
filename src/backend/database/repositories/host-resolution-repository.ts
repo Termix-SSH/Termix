@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { hostAccess, hosts, sshCredentials } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -29,6 +29,23 @@ export class HostResolutionRepository {
       .where(eq(hosts.userId, userId));
 
     return this.decryptMany("ssh_data", rows, userId);
+  }
+
+  async listAllHosts(): Promise<HostResolutionHostRecord[]> {
+    const rows = await this.context.drizzle.select().from(hosts);
+
+    return this.decryptManyByOwner("ssh_data", rows);
+  }
+
+  async listHostsWithTunnelConnections(): Promise<HostResolutionHostRecord[]> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hosts)
+      .where(
+        and(eq(hosts.enableTunnel, true), isNotNull(hosts.tunnelConnections)),
+      );
+
+    return this.decryptManyByOwner("ssh_data", rows);
   }
 
   async findCredentialByIdForUser(
@@ -83,5 +100,17 @@ export class HostResolutionRepository {
     return records.map((record) =>
       DataCrypto.decryptRecord(tableName, record, userId, userDataKey),
     );
+  }
+
+  private decryptManyByOwner<
+    T extends Record<string, unknown> & { userId: string },
+  >(tableName: "ssh_data" | "ssh_credentials", records: T[]): T[] {
+    return records.flatMap((record) => {
+      const userDataKey = DataCrypto.getUserDataKey(record.userId);
+      if (!userDataKey) return [];
+      return [
+        DataCrypto.decryptRecord(tableName, record, record.userId, userDataKey),
+      ];
+    });
   }
 }

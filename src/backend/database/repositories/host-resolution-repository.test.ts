@@ -173,12 +173,13 @@ describe("HostResolutionRepository", () => {
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
       INSERT INTO ssh_data (
-        id, user_id, name, ip, port, username, auth_type, credential_id
+        id, user_id, name, ip, port, username, auth_type, credential_id,
+        tunnel_connections
       )
       VALUES
-        (1, 'user-1', 'web', '10.0.0.1', 22, 'root', 'password', 7),
-        (2, 'user-1', 'db', '10.0.0.2', 22, 'admin', 'none', NULL),
-        (3, 'user-2', 'other', '10.0.0.3', 22, 'root', 'none', NULL);
+        (1, 'user-1', 'web', '10.0.0.1', 22, 'root', 'password', 7, '[{"autoStart":true}]'),
+        (2, 'user-1', 'db', '10.0.0.2', 22, 'admin', 'none', NULL, NULL),
+        (3, 'user-2', 'other', '10.0.0.3', 22, 'root', 'none', NULL, '[{"autoStart":false}]');
       INSERT INTO ssh_credentials (
         id, user_id, name, auth_type, username, password, private_key, key_password
       )
@@ -248,6 +249,69 @@ describe("HostResolutionRepository", () => {
       expect.objectContaining({ id: 2 }),
       "user-1",
       Buffer.from("user-key"),
+    );
+  });
+
+  it("lists all hosts through each owner decryption boundary", async () => {
+    vi.mocked(DataCrypto.getUserDataKey).mockImplementation((userId) =>
+      Buffer.from(`${userId}-key`),
+    );
+    const repository = await createRepository();
+
+    const rows = await repository.listAllHosts();
+
+    expect(rows.map((row) => row.id)).toEqual([1, 2, 3]);
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 1 }),
+      "user-1",
+      Buffer.from("user-1-key"),
+    );
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 3 }),
+      "user-2",
+      Buffer.from("user-2-key"),
+    );
+  });
+
+  it("lists tunnel-enabled hosts with tunnel data through each owner decryption boundary", async () => {
+    vi.mocked(DataCrypto.getUserDataKey).mockImplementation((userId) =>
+      Buffer.from(`${userId}-key`),
+    );
+    const repository = await createRepository();
+
+    const rows = await repository.listHostsWithTunnelConnections();
+
+    expect(rows.map((row) => row.id)).toEqual([1, 3]);
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 1 }),
+      "user-1",
+      Buffer.from("user-1-key"),
+    );
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 3 }),
+      "user-2",
+      Buffer.from("user-2-key"),
+    );
+  });
+
+  it("skips owner-scoped host list rows when that user's data is locked", async () => {
+    vi.mocked(DataCrypto.getUserDataKey).mockImplementation((userId) =>
+      userId === "user-1" ? Buffer.from("user-1-key") : null,
+    );
+    const repository = await createRepository();
+
+    const rows = await repository.listAllHosts();
+
+    expect(rows.map((row) => row.id)).toEqual([1, 2]);
+    expect(DataCrypto.decryptRecord).not.toHaveBeenCalledWith(
+      "ssh_data",
+      expect.objectContaining({ id: 3 }),
+      expect.any(String),
+      expect.any(Buffer),
     );
   });
 
