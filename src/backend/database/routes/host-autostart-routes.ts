@@ -1,10 +1,8 @@
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { and, eq, isNotNull, or } from "drizzle-orm";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { sshLogger } from "../../utils/logger.js";
-import { db, DatabaseSaveTrigger } from "../db/index.js";
-import { hosts } from "../db/schema.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
 
 type HostAutostartRoutesDeps = {
   authenticateJWT: RequestHandler;
@@ -79,12 +77,13 @@ export function registerHostAutostartRoutes(
           });
         }
 
-        const sshConfig = await db
-          .select()
-          .from(hosts)
-          .where(and(eq(hosts.id, sshConfigId), eq(hosts.userId, userId)));
+        const hostRepository = createCurrentHostRepository();
+        const config = await hostRepository.findByIdForUser(
+          userId,
+          sshConfigId,
+        );
 
-        if (sshConfig.length === 0) {
+        if (!config) {
           sshLogger.warn("SSH config not found for autostart enable", {
             operation: "autostart_enable_failed",
             userId,
@@ -95,8 +94,6 @@ export function registerHostAutostartRoutes(
             error: "SSH configuration not found",
           });
         }
-
-        const config = sshConfig[0];
 
         const decryptedConfig = DataCrypto.decryptRecord(
           "ssh_data",
@@ -109,6 +106,7 @@ export function registerHostAutostartRoutes(
         if (config.tunnelConnections) {
           try {
             const tunnelConnections = JSON.parse(config.tunnelConnections);
+            const endpointHosts = await hostRepository.listByUserId(userId);
 
             const resolvedConnections = await Promise.all(
               tunnelConnections.map(async (tunnel: Record<string, unknown>) => {
@@ -118,11 +116,6 @@ export function registerHostAutostartRoutes(
                   !tunnel.endpointPassword &&
                   !tunnel.endpointKey
                 ) {
-                  const endpointHosts = await db
-                    .select()
-                    .from(hosts)
-                    .where(eq(hosts.userId, userId));
-
                   const endpointHost = endpointHosts.find(
                     (h) =>
                       h.name === tunnel.endpointHost ||
@@ -160,25 +153,12 @@ export function registerHostAutostartRoutes(
           }
         }
 
-        await db
-          .update(hosts)
-          .set({
-            autostartPassword: decryptedConfig.password || null,
-            autostartKey: decryptedConfig.key || null,
-            autostartKeyPassword: decryptedConfig.keyPassword || null,
-            tunnelConnections: updatedTunnelConnections,
-          })
-          .where(eq(hosts.id, sshConfigId));
-
-        try {
-          await DatabaseSaveTrigger.triggerSave();
-        } catch (saveError) {
-          sshLogger.warn("Database save failed after autostart", {
-            operation: "autostart_db_save_failed",
-            error:
-              saveError instanceof Error ? saveError.message : "Unknown error",
-          });
-        }
+        await hostRepository.updateForUser(userId, sshConfigId, {
+          autostartPassword: decryptedConfig.password || null,
+          autostartKey: decryptedConfig.key || null,
+          autostartKeyPassword: decryptedConfig.keyPassword || null,
+          tunnelConnections: updatedTunnelConnections,
+        });
 
         res.json({
           message: "AutoStart enabled successfully",
@@ -240,14 +220,11 @@ export function registerHostAutostartRoutes(
       }
 
       try {
-        await db
-          .update(hosts)
-          .set({
-            autostartPassword: null,
-            autostartKey: null,
-            autostartKeyPassword: null,
-          })
-          .where(and(eq(hosts.id, sshConfigId), eq(hosts.userId, userId)));
+        await createCurrentHostRepository().updateForUser(userId, sshConfigId, {
+          autostartPassword: null,
+          autostartKey: null,
+          autostartKeyPassword: null,
+        });
 
         res.json({
           message: "AutoStart disabled successfully",
@@ -285,18 +262,9 @@ export function registerHostAutostartRoutes(
       const userId = (req as AuthenticatedRequest).userId;
 
       try {
-        const autostartConfigs = await db
-          .select()
-          .from(hosts)
-          .where(
-            and(
-              eq(hosts.userId, userId),
-              or(
-                isNotNull(hosts.autostartPassword),
-                isNotNull(hosts.autostartKey),
-              ),
-            ),
-          );
+        const autostartConfigs = (
+          await createCurrentHostRepository().listByUserId(userId)
+        ).filter((config) => config.autostartPassword || config.autostartKey);
 
         const statusList = autostartConfigs.map((config) => ({
           sshConfigId: config.id,

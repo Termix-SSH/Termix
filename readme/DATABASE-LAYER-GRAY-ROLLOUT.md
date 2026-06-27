@@ -40,6 +40,8 @@ Allowed in gray rollout:
   migrated behind `HostRepository`.
 - Host bulk import overwrite lookup and credential fallback reads migrated behind
   current host resolution and credential repository boundaries.
+- Host autostart enable, disable, status, and endpoint-host resolution paths
+  migrated behind `HostRepository`.
 - Guacamole host token host and protocol credential reads migrated behind
   `HostResolutionRepository`.
 - Host user-cleanup delete paths migrated behind `HostRepository`.

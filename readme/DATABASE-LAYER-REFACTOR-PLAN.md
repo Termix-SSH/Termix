@@ -95,6 +95,8 @@ the current host repository boundary, and host bulk import overwrite lookup plus
 credential fallback reads now use current host resolution and credential
 repository boundaries while retaining encrypted host import writes in
 `SimpleDBOps`.
+Host autostart enable, disable, status, and endpoint-host resolution paths now
+use the current host repository boundary.
 Guacamole host token host and protocol credential reads now use the current
 host resolution repository boundary while preserving request-user decryption
 behavior for credential fallback.
