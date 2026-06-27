@@ -90,6 +90,8 @@ Credential delete host cleanup and apply-to-host writes now use the current host
 repository boundary.
 Credential system-key copy backfill migration now uses current credential and
 shared credential repository boundaries.
+Legacy user field-encryption migration SQL is now centralized behind
+`RawSqliteUserEncryptionMigrationStore`.
 Termix ID credential lookup, generated credential persistence, and generated
 credential cleanup now use the current credential repository boundary.
 Termix ID identity handle CRUD/resolution, public key publish/list/update/delete,

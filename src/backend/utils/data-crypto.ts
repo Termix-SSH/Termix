@@ -2,19 +2,11 @@ import { FieldCrypto } from "./field-crypto.js";
 import { LazyFieldEncryption } from "./lazy-field-encryption.js";
 import { UserCrypto } from "./user-crypto.js";
 import { databaseLogger } from "./logger.js";
-
-interface DatabaseInstance {
-  prepare: (sql: string) => {
-    all: (param?: unknown) => DatabaseRecord[];
-    get: (param?: unknown) => DatabaseRecord;
-    run: (...params: unknown[]) => unknown;
-  };
-}
-
-interface DatabaseRecord {
-  id: number | string;
-  [key: string]: unknown;
-}
+import {
+  RawSqliteUserEncryptionMigrationStore,
+  type LegacyDatabaseInstance,
+  type UserEncryptionMigrationRecord,
+} from "./user-encryption-migration-store.js";
 
 class DataCrypto {
   private static userCrypto: UserCrypto;
@@ -86,7 +78,7 @@ class DataCrypto {
   static async migrateUserSensitiveFields(
     userId: string,
     userDataKey: Buffer,
-    db: DatabaseInstance,
+    db: LegacyDatabaseInstance,
   ): Promise<{
     migrated: boolean;
     migratedTables: string[];
@@ -97,20 +89,19 @@ class DataCrypto {
     let migratedFieldsCount = 0;
 
     try {
+      const store = new RawSqliteUserEncryptionMigrationStore(db);
       const { needsMigration } =
         await LazyFieldEncryption.checkUserNeedsMigration(
           userId,
           userDataKey,
-          db,
+          store,
         );
 
       if (!needsMigration) {
         return { migrated: false, migratedTables: [], migratedFieldsCount: 0 };
       }
 
-      const sshDataRecords = db
-        .prepare("SELECT * FROM ssh_data WHERE user_id = ?")
-        .all(userId) as DatabaseRecord[];
+      const sshDataRecords = store.listHostRecords(userId);
       for (const record of sshDataRecords) {
         const sensitiveFields =
           LazyFieldEncryption.getSensitiveFieldsForTable("ssh_data");
@@ -123,22 +114,7 @@ class DataCrypto {
           );
 
         if (needsUpdate) {
-          const updateQuery = `
-            UPDATE ssh_data
-            SET password = ?, key = ?, key_password = ?, key_type = ?, autostart_password = ?, autostart_key = ?, autostart_key_password = ?, sudo_password = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-          `;
-          db.prepare(updateQuery).run(
-            updatedRecord.password || null,
-            updatedRecord.key || null,
-            updatedRecord.key_password || null,
-            updatedRecord.key_type || null,
-            updatedRecord.autostart_password || null,
-            updatedRecord.autostart_key || null,
-            updatedRecord.autostart_key_password || null,
-            updatedRecord.sudo_password || null,
-            record.id,
-          );
+          store.updateHostSensitiveFields(record.id, updatedRecord);
 
           migratedFieldsCount += migratedFields.length;
           if (!migratedTables.includes("ssh_data")) {
@@ -148,9 +124,7 @@ class DataCrypto {
         }
       }
 
-      const sshCredentialsRecords = db
-        .prepare("SELECT * FROM ssh_credentials WHERE user_id = ?")
-        .all(userId) as DatabaseRecord[];
+      const sshCredentialsRecords = store.listCredentialRecords(userId);
       for (const record of sshCredentialsRecords) {
         const sensitiveFields =
           LazyFieldEncryption.getSensitiveFieldsForTable("ssh_credentials");
@@ -163,20 +137,7 @@ class DataCrypto {
           );
 
         if (needsUpdate) {
-          const updateQuery = `
-            UPDATE ssh_credentials
-            SET password = ?, key = ?, key_password = ?, private_key = ?, public_key = ?, key_type = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-          `;
-          db.prepare(updateQuery).run(
-            updatedRecord.password || null,
-            updatedRecord.key || null,
-            updatedRecord.key_password || null,
-            updatedRecord.private_key || null,
-            updatedRecord.public_key || null,
-            updatedRecord.key_type || null,
-            record.id,
-          );
+          store.updateCredentialSensitiveFields(record.id, updatedRecord);
 
           migratedFieldsCount += migratedFields.length;
           if (!migratedTables.includes("ssh_credentials")) {
@@ -186,9 +147,7 @@ class DataCrypto {
         }
       }
 
-      const userRecord = db
-        .prepare("SELECT * FROM users WHERE id = ?")
-        .get(userId) as DatabaseRecord | undefined;
+      const userRecord = store.getUserRecord(userId);
       if (userRecord) {
         const sensitiveFields =
           LazyFieldEncryption.getSensitiveFieldsForTable("users");
@@ -201,18 +160,7 @@ class DataCrypto {
           );
 
         if (needsUpdate) {
-          const updateQuery = `
-            UPDATE users
-            SET totp_secret = ?, totp_backup_codes = ?, client_secret = ?, oidc_identifier = ?
-            WHERE id = ?
-          `;
-          db.prepare(updateQuery).run(
-            updatedRecord.totp_secret || null,
-            updatedRecord.totp_backup_codes || null,
-            updatedRecord.client_secret || null,
-            updatedRecord.oidc_identifier || null,
-            userId,
-          );
+          store.updateUserSensitiveFields(userId, updatedRecord);
 
           migratedFieldsCount += migratedFields.length;
           if (!migratedTables.includes("users")) {
@@ -241,7 +189,7 @@ class DataCrypto {
   static async reencryptUserDataAfterPasswordReset(
     userId: string,
     newUserDataKey: Buffer,
-    db: DatabaseInstance,
+    db: LegacyDatabaseInstance,
   ): Promise<{
     success: boolean;
     reencryptedTables: string[];
@@ -256,6 +204,7 @@ class DataCrypto {
     };
 
     try {
+      const store = new RawSqliteUserEncryptionMigrationStore(db);
       const tablesToReencrypt = [
         {
           table: "ssh_data",
@@ -292,17 +241,19 @@ class DataCrypto {
 
       for (const { table, fields } of tablesToReencrypt) {
         try {
-          const selectQuery =
-            table === "users"
-              ? `SELECT * FROM ${table} WHERE id = ?`
-              : `SELECT * FROM ${table} WHERE user_id = ?`;
-          const records = db
-            .prepare(selectQuery)
-            .all(userId) as DatabaseRecord[];
+          const records =
+            table === "ssh_data"
+              ? store.listHostRecords(userId)
+              : table === "ssh_credentials"
+                ? store.listCredentialRecords(userId)
+                : [store.getUserRecord(userId)].filter(
+                    (record): record is UserEncryptionMigrationRecord =>
+                      Boolean(record),
+                  );
 
           for (const record of records) {
             const recordId = record.id.toString();
-            const updatedRecord: DatabaseRecord = { ...record };
+            const updatedRecord: UserEncryptionMigrationRecord = { ...record };
             let needsUpdate = false;
 
             for (const fieldName of fields) {
@@ -350,19 +301,12 @@ class DataCrypto {
                 (field) => updatedRecord[field] !== record[field],
               );
               if (updateFields.length > 0) {
-                const setClause = updateFields
-                  .map((f) => `${f} = ?`)
-                  .join(", ");
-                const updateQuery =
-                  table === "users"
-                    ? `UPDATE ${table} SET ${setClause} WHERE id = ?`
-                    : `UPDATE ${table} SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
-                const updateValues = updateFields.map(
-                  (field) => updatedRecord[field],
+                store.updatePasswordResetFields(
+                  table,
+                  record.id,
+                  updateFields,
+                  updatedRecord,
                 );
-                updateValues.push(record.id);
-
-                db.prepare(updateQuery).run(...updateValues);
 
                 if (!result.reencryptedTables.includes(table)) {
                   result.reencryptedTables.push(table);

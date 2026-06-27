@@ -38,6 +38,8 @@ Allowed in gray rollout:
   `HostRepository`.
 - Credential system-key copy backfill migration migrated behind
   `CredentialRepository` and `SharedCredentialRepository`.
+- Legacy user field-encryption migration SQL centralized behind
+  `RawSqliteUserEncryptionMigrationStore`.
 - Termix ID credential lookup, generated credential persistence, and generated
   credential cleanup migrated behind `CredentialRepository`.
 - Host route update readback, single-host fetch, password-field fetch, and host
