@@ -80,8 +80,10 @@ Database import SQLite foreign-key toggling is isolated behind the
 `finally` path.
 Database import now uses the current SQLite foreign-key boundary without
 importing `getDb()` in the route handler.
-Settings, user, and host current repository factories now share
-`current-repository-runtime` for SQLite context and write-save hooks.
+Settings, user, host, API key, session, trusted device, audit log, user
+preference, open tab, dismissed alert, homepage layout/item, and network
+topology current repository factories now share `current-repository-runtime`
+for SQLite context and write-save hooks.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses
