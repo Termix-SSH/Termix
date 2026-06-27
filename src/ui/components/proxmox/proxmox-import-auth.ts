@@ -1,10 +1,5 @@
 const SECRET_BACKED_AUTH_TYPES = new Set(["password", "key"]);
-const SECRETLESS_AUTH_TYPES = new Set([
-  "none",
-  "opkssh",
-  "tailscale",
-  "vault",
-]);
+const SECRETLESS_AUTH_TYPES = new Set(["none", "opkssh", "tailscale", "vault"]);
 
 export type ProxmoxImportAuth = {
   authType: string;
