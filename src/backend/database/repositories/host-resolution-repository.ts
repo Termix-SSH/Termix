@@ -279,6 +279,25 @@ export class HostResolutionRepository {
     return this.decryptOne("ssh_credentials", rows[0], userId);
   }
 
+  async findCredentialByIdForOwnerDecryptedAs(
+    credentialId: number,
+    ownerUserId: string,
+    decryptUserId: string,
+  ): Promise<HostResolutionCredentialRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(sshCredentials)
+      .where(
+        and(
+          eq(sshCredentials.id, credentialId),
+          eq(sshCredentials.userId, ownerUserId),
+        ),
+      )
+      .limit(1);
+
+    return this.decryptOne("ssh_credentials", rows[0], decryptUserId);
+  }
+
   async findOverrideCredentialId(
     hostId: number,
     userId: string,

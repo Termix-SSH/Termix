@@ -36,6 +36,8 @@ Allowed in gray rollout:
   `HostResolutionRepository`.
 - Host route own/shared list assembly reads migrated behind
   `HostResolutionRepository` while preserving route-level own-host decryption.
+- Guacamole host token host and protocol credential reads migrated behind
+  `HostResolutionRepository`.
 - Host user-cleanup delete paths migrated behind `HostRepository`.
 - Snippet folder list/create/metadata/rename/delete, owned lookup, visible-list
   owned reads, reorder, create/update/delete, export reads, and bulk import

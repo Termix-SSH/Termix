@@ -228,6 +228,14 @@ describe("HostResolutionRepository", () => {
       username: "root",
       password: "secret",
     });
+    await expect(
+      repository.findCredentialByIdForOwnerDecryptedAs(7, "user-1", "user-2"),
+    ).resolves.toMatchObject({
+      id: 7,
+      userId: "user-1",
+      username: "root",
+      password: "secret",
+    });
     expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
       "ssh_data",
       expect.objectContaining({ id: 1 }),
@@ -238,6 +246,12 @@ describe("HostResolutionRepository", () => {
       "ssh_credentials",
       expect.objectContaining({ id: 7 }),
       "user-1",
+      Buffer.from("user-key"),
+    );
+    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+      "ssh_credentials",
+      expect.objectContaining({ id: 7 }),
+      "user-2",
       Buffer.from("user-key"),
     );
   });

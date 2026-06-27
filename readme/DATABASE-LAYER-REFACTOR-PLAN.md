@@ -90,6 +90,9 @@ Host route update-state and delete-audit host reads now use the current host
 resolution repository boundary.
 Host route own/shared list assembly reads now use the current host resolution
 repository boundary while preserving route-level own-host decryption.
+Guacamole host token host and protocol credential reads now use the current
+host resolution repository boundary while preserving request-user decryption
+behavior for credential fallback.
 Snippet folder list/create/metadata/rename/delete, owned lookup, visible-list
 owned reads, reorder, create/update/delete, export reads, and bulk import now
 use the current snippet repository boundary.
