@@ -1,6 +1,7 @@
 import { db } from "../database/db/index.js";
-import { sharedCredentials, sshCredentials } from "../database/db/schema.js";
+import { sharedCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
+import { createCurrentCredentialRepository } from "../database/repositories/current-credential-repository.js";
 import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
 import { DataCrypto } from "./data-crypto.js";
@@ -418,22 +419,14 @@ class SharedCredentialManager {
     ownerId: string,
     ownerDEK: Buffer,
   ): Promise<CredentialData> {
-    const creds = await db
-      .select()
-      .from(sshCredentials)
-      .where(
-        and(
-          eq(sshCredentials.id, credentialId),
-          eq(sshCredentials.userId, ownerId),
-        ),
-      )
-      .limit(1);
+    const cred = await createCurrentCredentialRepository().findByIdForUser(
+      ownerId,
+      credentialId,
+    );
 
-    if (creds.length === 0) {
+    if (!cred) {
       throw new Error(`Credential ${credentialId} not found`);
     }
-
-    const cred = creds[0];
 
     return {
       username: cred.username,
@@ -459,17 +452,12 @@ class SharedCredentialManager {
   private async getDecryptedCredentialViaSystemKey(
     credentialId: number,
   ): Promise<CredentialData> {
-    const creds = await db
-      .select()
-      .from(sshCredentials)
-      .where(eq(sshCredentials.id, credentialId))
-      .limit(1);
+    const cred =
+      await createCurrentCredentialRepository().findById(credentialId);
 
-    if (creds.length === 0) {
+    if (!cred) {
       throw new Error(`Credential ${credentialId} not found`);
     }
-
-    const cred = creds[0];
 
     if (!cred.systemPassword && !cred.systemKey && !cred.systemKeyPassword) {
       throw new Error(

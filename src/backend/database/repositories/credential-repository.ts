@@ -42,6 +42,16 @@ export class CredentialRepository {
     return rows[0] ?? null;
   }
 
+  async findById(credentialId: number): Promise<CredentialRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(sshCredentials)
+      .where(eq(sshCredentials.id, credentialId))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
   async listByUserId(userId: string): Promise<CredentialRecord[]> {
     return this.context.drizzle
       .select()

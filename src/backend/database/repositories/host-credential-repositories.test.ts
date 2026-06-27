@@ -218,6 +218,7 @@ describe("HostRepository and CredentialRepository", () => {
     expect(
       (await repo.credentials.findByIdForUser("user-1", created.id))?.name,
     ).toBe("primary");
+    expect((await repo.credentials.findById(created.id))?.name).toBe("primary");
 
     const updated = await repo.credentials.updateForUser("user-1", created.id, {
       folder: "ops",
