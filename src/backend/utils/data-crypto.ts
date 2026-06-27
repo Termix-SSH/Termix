@@ -182,6 +182,29 @@ class DataCrypto {
     }
   }
 
+  static async migrateCurrentUserSensitiveFields(
+    userId: string,
+    userDataKey: Buffer,
+  ): Promise<{
+    migrated: boolean;
+    migratedTables: string[];
+    migratedFieldsCount: number;
+  }> {
+    const { getSqlite, saveMemoryDatabaseToFile } =
+      await import("../database/db/index.js");
+    const result = await this.migrateUserSensitiveFields(
+      userId,
+      userDataKey,
+      getSqlite(),
+    );
+
+    if (result.migrated) {
+      await saveMemoryDatabaseToFile();
+    }
+
+    return result;
+  }
+
   static getUserDataKey(userId: string): Buffer | null {
     return this.userCrypto.getUserDataKey(userId);
   }

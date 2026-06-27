@@ -60,6 +60,9 @@ User encryption metadata in `utils/user-crypto.ts` now reads and writes KEK/DEK
 settings through the current settings repository boundary.
 Database import/export user unlock and admin checks now use the current user
 repository boundary.
+Auth login lazy user-field encryption migration now calls the `DataCrypto`
+current-runtime migration boundary instead of opening SQLite in
+`auth-manager.ts`.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses

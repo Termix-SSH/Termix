@@ -48,6 +48,9 @@ Allowed in gray rollout:
   `CredentialRepository` and `SharedCredentialRepository`.
 - Legacy user field-encryption migration SQL centralized behind
   `RawSqliteUserEncryptionMigrationStore`.
+- Auth login lazy user-field encryption migration now calls the `DataCrypto`
+  current-runtime migration boundary instead of opening SQLite in
+  `auth-manager.ts`.
 - Legacy unencrypted SQLite copy/verification path centralized behind
   `LegacySqliteDatabaseCopyStore`.
 - Termix ID credential lookup, generated credential persistence, and generated

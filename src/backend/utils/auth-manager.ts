@@ -167,20 +167,7 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-
-      const sqlite = getSqlite();
-
-      const migrationResult = await DataCrypto.migrateUserSensitiveFields(
-        userId,
-        userDataKey,
-        sqlite,
-      );
-
-      if (migrationResult.migrated) {
-        await saveMemoryDatabaseToFile();
-      }
+      await DataCrypto.migrateCurrentUserSensitiveFields(userId, userDataKey);
 
       try {
         const { CredentialSystemEncryptionMigration } =
@@ -189,6 +176,8 @@ class AuthManager {
         const credResult = await credMigration.migrateUserCredentials(userId);
 
         if (credResult.migrated > 0) {
+          const { saveMemoryDatabaseToFile } =
+            await import("../database/db/index.js");
           await saveMemoryDatabaseToFile();
         }
       } catch (error) {
