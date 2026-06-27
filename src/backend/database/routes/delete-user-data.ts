@@ -6,6 +6,7 @@ import { createCurrentCommandHistoryRepository } from "../repositories/current-c
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentHostFolderRepository } from "../repositories/current-host-folder-repository.js";
 import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
 import { createCurrentOpksshTokenRepository } from "../repositories/current-opkssh-token-repository.js";
@@ -16,15 +17,11 @@ import { createCurrentRoleRepository } from "../repositories/current-role-reposi
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
-import {
-  sharedCredentials,
-  snippetFolders,
-  snippets,
-  sshFolders,
-} from "../db/schema.js";
+import { sharedCredentials } from "../db/schema.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
@@ -53,10 +50,9 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentRecentActivityRepository().deleteByUserId(userId);
     await createCurrentDismissedAlertRepository().deleteByUserId(userId);
 
-    await db.delete(snippets).where(eq(snippets.userId, userId));
-    await db.delete(snippetFolders).where(eq(snippetFolders.userId, userId));
+    await createCurrentSnippetRepository().deleteByUserId(userId);
 
-    await db.delete(sshFolders).where(eq(sshFolders.userId, userId));
+    await createCurrentHostFolderRepository().deleteByUserId(userId);
 
     await createCurrentCommandHistoryRepository().deleteByUserId(userId);
 

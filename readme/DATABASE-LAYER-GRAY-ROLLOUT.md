@@ -39,7 +39,8 @@ Allowed in gray rollout:
 - Host user-cleanup delete paths migrated behind `HostRepository`.
 - Snippet folder list/create/metadata/rename/delete, owned lookup, visible-list
   owned reads, reorder, create/update/delete, export reads, and bulk import
-  migrated behind `SnippetRepository`.
+  plus user/password-reset cleanup migrated behind `SnippetRepository`.
+- Host folder metadata user cleanup migrated behind `HostFolderRepository`.
 - SSO provider listing, management, OIDC config loading, and LDAP provider
   validation migrated behind `SsoProviderRepository`.
 - Audit log writes, filtered reads, action lists, and user cleanup migrated

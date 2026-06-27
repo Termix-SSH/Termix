@@ -223,6 +223,30 @@ export class SnippetRepository {
     return existing;
   }
 
+  async deleteByUserId(userId: string): Promise<{
+    snippetsDeleted: number;
+    foldersDeleted: number;
+  }> {
+    const deletedSnippets = await this.context.drizzle
+      .delete(snippets)
+      .where(eq(snippets.userId, userId))
+      .returning({ id: snippets.id });
+
+    const deletedFolders = await this.context.drizzle
+      .delete(snippetFolders)
+      .where(eq(snippetFolders.userId, userId))
+      .returning({ id: snippetFolders.id });
+
+    if (deletedSnippets.length > 0 || deletedFolders.length > 0) {
+      await this.afterWrite();
+    }
+
+    return {
+      snippetsDeleted: deletedSnippets.length,
+      foldersDeleted: deletedFolders.length,
+    };
+  }
+
   async bulkImport(
     userId: string,
     snippetsToImport: unknown[] | undefined,

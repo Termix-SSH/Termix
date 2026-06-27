@@ -260,4 +260,21 @@ describe("HostFolderRepository", () => {
     ).toEqual([{ id: 3 }]);
     expect(writes).toBe(1);
   });
+
+  it("deletes folder records for a user", async () => {
+    let writes = 0;
+    const { repository, sqlite } = await createRepository(() => {
+      writes += 1;
+    });
+
+    await expect(repository.deleteByUserId("user-1")).resolves.toBe(2);
+
+    expect(sqlite.prepare("SELECT id FROM ssh_data ORDER BY id").all()).toEqual(
+      [{ id: 1 }, { id: 2 }, { id: 3 }],
+    );
+    expect(
+      sqlite.prepare("SELECT id FROM ssh_folders ORDER BY id").all(),
+    ).toEqual([{ id: 3 }]);
+    expect(writes).toBe(1);
+  });
 });

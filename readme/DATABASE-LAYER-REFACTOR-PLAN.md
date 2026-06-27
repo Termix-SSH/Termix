@@ -93,8 +93,8 @@ repository boundary while preserving route-level own-host decryption.
 Snippet folder list/create/metadata/rename/delete, owned lookup, visible-list
 owned reads, reorder, create/update/delete, export reads, and bulk import now
 use the current snippet repository boundary.
-User cleanup and password-reset data-discard host/credential deletes now use
-current host and credential repository boundaries.
+User cleanup and password-reset data-discard host, credential, snippet, snippet
+folder, and host folder deletes now use current repository boundaries.
 GitHub and standard OIDC callback user lookup/create/rollback/profile/admin
 sync writes now use the current user repository boundary, removing direct
 Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,

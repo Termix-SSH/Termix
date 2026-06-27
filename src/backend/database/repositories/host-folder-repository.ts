@@ -136,6 +136,19 @@ export class HostFolderRepository {
     await this.afterWrite();
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(sshFolders)
+      .where(eq(sshFolders.userId, userId))
+      .returning({ id: sshFolders.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   private async findFolder(
     userId: string,
     name: string,
