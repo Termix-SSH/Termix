@@ -168,6 +168,7 @@ export interface Host {
   security?: string;
   ignoreCert?: boolean;
   guacamoleConfig?: string | Record<string, unknown>;
+  dockerConfig?: Record<string, unknown> | null;
 
   enableSsh?: boolean;
   enableRdp?: boolean;
