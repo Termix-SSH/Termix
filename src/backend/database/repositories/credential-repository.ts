@@ -72,6 +72,29 @@ export class CredentialRepository {
     return [...new Set(rows.map((row) => row.folder).filter(Boolean))].sort();
   }
 
+  async renameFolder(
+    userId: string,
+    oldName: string,
+    newName: string,
+  ): Promise<number> {
+    const rows = await this.context.drizzle
+      .update(sshCredentials)
+      .set({ folder: newName })
+      .where(
+        and(
+          eq(sshCredentials.userId, userId),
+          eq(sshCredentials.folder, oldName),
+        ),
+      )
+      .returning({ id: sshCredentials.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   async updateForUser(
     userId: string,
     credentialId: number,

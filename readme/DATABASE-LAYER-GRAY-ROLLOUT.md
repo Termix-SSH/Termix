@@ -23,9 +23,9 @@ Allowed in gray rollout:
   `ApiKeyRepository`.
 - Trusted device check/add/remove and TOTP trusted-device cleanup migrated
   behind `TrustedDeviceRepository`.
-- Credential list, folder list, detail reads, apply usage writes, and
-  credential-host list reads migrated behind `CredentialRepository` and
-  `HostResolutionRepository`.
+- Credential list, folder list, detail reads, folder rename writes, apply usage
+  writes, and credential-host list reads migrated behind `CredentialRepository`
+  and `HostResolutionRepository`.
 - SSO provider listing, management, OIDC config loading, and LDAP provider
   validation migrated behind `SsoProviderRepository`.
 - Audit log writes, filtered reads, action lists, and user cleanup migrated

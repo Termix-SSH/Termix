@@ -987,15 +987,11 @@ router.put(
     }
 
     try {
-      await db
-        .update(sshCredentials)
-        .set({ folder: newName })
-        .where(
-          and(
-            eq(sshCredentials.userId, userId),
-            eq(sshCredentials.folder, oldName),
-          ),
-        );
+      await createCurrentCredentialRepository().renameFolder(
+        userId,
+        oldName,
+        newName,
+      );
 
       res.json({ success: true, message: "Folder renamed successfully" });
     } catch (error) {

@@ -15,7 +15,7 @@ describe("HostRepository and CredentialRepository", () => {
     }
   });
 
-  async function createRepositories(): Promise<{
+  async function createRepositories(onCredentialWrite?: () => void): Promise<{
     credentials: CredentialRepository;
     hosts: HostRepository;
     sqlite: NonNullable<
@@ -195,7 +195,7 @@ describe("HostRepository and CredentialRepository", () => {
     `);
 
     return {
-      credentials: new CredentialRepository(context),
+      credentials: new CredentialRepository(context, onCredentialWrite),
       hosts: new HostRepository(context),
       sqlite: context.sqlite!,
     };
@@ -275,6 +275,39 @@ describe("HostRepository and CredentialRepository", () => {
       "user-1",
       Buffer.from("user-key"),
     );
+  });
+
+  it("renames credential folders through the write boundary", async () => {
+    const onWrite = vi.fn();
+    const repo = await createRepositories(onWrite);
+
+    await repo.credentials.create({
+      userId: "user-1",
+      name: "primary",
+      authType: "password",
+      folder: "prod",
+    });
+    await repo.credentials.create({
+      userId: "user-1",
+      name: "secondary",
+      authType: "key",
+      folder: "prod",
+    });
+    await repo.credentials.create({
+      userId: "user-2",
+      name: "other",
+      authType: "password",
+      folder: "prod",
+    });
+    onWrite.mockClear();
+
+    await expect(
+      repo.credentials.renameFolder("user-1", "prod", "ops"),
+    ).resolves.toBe(2);
+
+    expect(await repo.credentials.listFolders("user-1")).toEqual(["ops"]);
+    expect(await repo.credentials.listFolders("user-2")).toEqual(["prod"]);
+    expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
   it("returns empty credential reads when user data is locked", async () => {
