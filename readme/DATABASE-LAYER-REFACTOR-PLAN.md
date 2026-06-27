@@ -219,8 +219,8 @@ use the current host folder repository boundary.
 Host, jump-host, Docker SSH, Proxmox discovery, Docker console jump-host,
 file-manager activity, host metrics, terminal SSH auth, and tunnel endpoint
 credential plus credential deployment and command history host-flag resolution
-plus snippet execution host, credential, and shared override read models now use
-the current host resolution repository boundary.
+plus snippet execution and terminal OPKSSH/activity host, credential, and shared
+override read models now use the current host resolution repository boundary.
 
 Gray rollout status: the branch is expanding the repository boundary slice while
 keeping every migrated domain behind `DATABASE_LAYER_REPOSITORY_ROLLOUT`, which

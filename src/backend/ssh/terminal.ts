@@ -7,12 +7,9 @@ import ssh2Pkg, {
 const { Client, utils: ssh2Utils } = ssh2Pkg;
 import { buildSSHAlgorithms } from "../utils/ssh-algorithms.js";
 import axios from "axios";
-import { getDb } from "../database/db/index.js";
-import { hosts } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { logAudit } from "../utils/audit-logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import {
@@ -782,13 +779,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
           const { startOPKSSHAuth } = await import("./opkssh-auth.js");
           const { getRequestOrigin } =
             await import("../utils/request-origin.js");
-          const db = getDb();
-          const hostRow = await db
-            .select()
-            .from(hosts)
-            .where(eq(hosts.id, opksshData.hostId))
-            .limit(1);
-          if (!hostRow || hostRow.length === 0) {
+          const host =
+            await createCurrentHostResolutionRepository().findHostById(
+              opksshData.hostId,
+              userId,
+            );
+          if (!host) {
             sshLogger.error(
               `Host ${opksshData.hostId} not found for OPKSSH auth`,
               {
@@ -806,7 +802,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
             break;
           }
-          const hostname = hostRow[0].name || hostRow[0].ip;
+          const hostname = host.name || host.ip;
           const requestOrigin = getRequestOrigin(req);
           await startOPKSSHAuth(
             userId,
@@ -1756,23 +1752,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
           if (id && hostConfig.userId) {
             (async () => {
               try {
-                const hostResults = await SimpleDBOps.select(
-                  getDb()
-                    .select()
-                    .from(hosts)
-                    .where(
-                      and(
-                        eq(hosts.id, id),
-                        eq(hosts.userId, hostConfig.userId!),
-                      ),
-                    ),
-                  "ssh_data",
-                  hostConfig.userId!,
-                );
+                const host =
+                  await createCurrentHostResolutionRepository().findHostById(
+                    id,
+                    hostConfig.userId!,
+                  );
 
                 const hostName =
-                  hostResults.length > 0 && hostResults[0].name
-                    ? hostResults[0].name
+                  host?.userId === hostConfig.userId && host.name
+                    ? host.name
                     : `${username}@${ip}:${port}`;
 
                 await axios.post(
