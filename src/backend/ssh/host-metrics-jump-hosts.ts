@@ -23,6 +23,12 @@ interface JumpHostConfig {
   keyType?: string;
   authType?: string;
   credentialId?: number;
+  useSocks5?: boolean | null;
+  socks5Host?: string | null;
+  socks5Port?: number | null;
+  socks5Username?: string | null;
+  socks5Password?: string | null;
+  socks5ProxyChain?: string | import("../../types/index.js").ProxyNode[] | null;
   [key: string]: unknown;
 }
 
