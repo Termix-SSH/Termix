@@ -317,7 +317,9 @@ export function parseSSHKey(
       keyType,
       success: keyType !== "unknown",
       error:
-        keyType === "unknown" ? getUnsupportedPrivateKeyError(cleanKey) : undefined,
+        keyType === "unknown"
+          ? getUnsupportedPrivateKeyError(cleanKey)
+          : undefined,
     };
   } catch (error) {
     try {
