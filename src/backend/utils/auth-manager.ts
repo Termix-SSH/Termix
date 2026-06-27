@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { UserCrypto } from "./user-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
+import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
@@ -176,9 +177,9 @@ class AuthManager {
         const credResult = await credMigration.migrateUserCredentials(userId);
 
         if (credResult.migrated > 0) {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
+          await DatabaseSaveTrigger.forceSave(
+            "login_credential_migration_explicit_save",
+          );
         }
       } catch (error) {
         databaseLogger.warn("Credential migration failed during login", {

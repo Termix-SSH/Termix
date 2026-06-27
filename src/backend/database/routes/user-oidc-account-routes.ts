@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { authLogger } from "../../utils/logger.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
@@ -158,8 +159,7 @@ export function registerUserOidcAccountRoutes(
       await deleteUserAndRelatedData(oidcUserId);
 
       try {
-        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("link_oidc_explicit_save");
       } catch (saveError) {
         authLogger.error(
           "Failed to persist account linking to disk",
@@ -300,8 +300,7 @@ export function registerUserOidcAccountRoutes(
         });
 
         try {
-          const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-          await saveMemoryDatabaseToFile();
+          await DatabaseSaveTrigger.forceSave("unlink_oidc_explicit_save");
         } catch (saveError) {
           authLogger.error(
             "Failed to save database after unlinking OIDC",

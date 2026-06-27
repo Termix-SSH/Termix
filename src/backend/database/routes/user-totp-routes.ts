@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import QRCode from "qrcode";
 import speakeasy from "speakeasy";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { FieldCrypto } from "../../utils/field-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 import { authLogger } from "../../utils/logger.js";
@@ -270,8 +271,7 @@ export function registerUserTotpRoutes(
       await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
       try {
-        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("totp_enable_explicit_save");
       } catch (saveError) {
         authLogger.error(
           "Failed to persist TOTP enablement to disk",

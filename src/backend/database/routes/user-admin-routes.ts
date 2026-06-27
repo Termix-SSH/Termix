@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -149,8 +150,7 @@ export function registerUserAdminRoutes(
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("make_admin_explicit_save");
       } catch (saveError) {
         authLogger.error(
           "Failed to persist admin promotion to disk",
@@ -287,8 +287,7 @@ export function registerUserAdminRoutes(
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("remove_admin_explicit_save");
       } catch (saveError) {
         authLogger.error("Failed to persist admin removal to disk", saveError, {
           operation: "remove_admin_save_failed",
@@ -441,8 +440,7 @@ export function registerUserAdminRoutes(
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("admin_create_user_explicit_save");
       } catch (saveError) {
         authLogger.error(
           "Failed to persist admin-created user to disk",

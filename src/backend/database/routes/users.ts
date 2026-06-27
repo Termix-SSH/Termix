@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
   parseUserAgent,
@@ -262,8 +263,7 @@ router.post("/create", async (req, res) => {
     }
 
     try {
-      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-      await saveMemoryDatabaseToFile();
+      await DatabaseSaveTrigger.forceSave("user_create_explicit_save");
     } catch (saveError) {
       authLogger.error("Failed to persist user to disk", saveError, {
         operation: "user_create_save_failed",
@@ -1243,8 +1243,7 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("oidc_user_create_explicit_save");
       } catch (saveError) {
         authLogger.error("Failed to persist OIDC user to disk", saveError, {
           operation: "oidc_user_create_save_failed",

@@ -51,6 +51,9 @@ Allowed in gray rollout:
 - Auth login lazy user-field encryption migration now calls the `DataCrypto`
   current-runtime migration boundary instead of opening SQLite in
   `auth-manager.ts`.
+- User, admin, TOTP, OIDC account, and credential migration explicit saves now
+  use `DatabaseSaveTrigger` instead of importing the SQLite snapshot save
+  function from routes.
 - Legacy unencrypted SQLite copy/verification path centralized behind
   `LegacySqliteDatabaseCopyStore`.
 - Termix ID credential lookup, generated credential persistence, and generated
