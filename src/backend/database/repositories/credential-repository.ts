@@ -114,6 +114,26 @@ export class CredentialRepository {
       );
   }
 
+  async existsForImportIdentity(
+    userId: string,
+    name: string,
+    username: string | null,
+  ): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .select({ id: sshCredentials.id })
+      .from(sshCredentials)
+      .where(
+        and(
+          eq(sshCredentials.userId, userId),
+          eq(sshCredentials.name, name),
+          eq(sshCredentials.username, username),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0;
+  }
+
   async findDecryptedByIdForUser(
     userId: string,
     credentialId: number,

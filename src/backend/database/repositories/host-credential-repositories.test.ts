@@ -418,6 +418,24 @@ describe("HostRepository and CredentialRepository", () => {
     ).resolves.toMatchObject({ systemPassword: "system-password" });
   });
 
+  it("checks credential import identity", async () => {
+    const repo = await createRepositories();
+
+    await repo.credentials.create({
+      userId: "user-1",
+      name: "primary",
+      authType: "password",
+      username: "root",
+    });
+
+    await expect(
+      repo.credentials.existsForImportIdentity("user-1", "primary", "root"),
+    ).resolves.toBe(true);
+    await expect(
+      repo.credentials.existsForImportIdentity("user-1", "primary", "admin"),
+    ).resolves.toBe(false);
+  });
+
   it("renames credential folders through the write boundary", async () => {
     const onWrite = vi.fn();
     const repo = await createRepositories(onWrite);
@@ -577,6 +595,26 @@ describe("HostRepository and CredentialRepository", () => {
       "user-1",
       Buffer.from("user-key"),
     );
+  });
+
+  it("checks host import identity", async () => {
+    const repo = await createRepositories();
+
+    await repo.hosts.create({
+      userId: "user-1",
+      name: "web-1",
+      ip: "10.0.0.10",
+      port: 22,
+      username: "root",
+      authType: "password",
+    });
+
+    await expect(
+      repo.hosts.existsForImportIdentity("user-1", "10.0.0.10", 22, "root"),
+    ).resolves.toBe(true);
+    await expect(
+      repo.hosts.existsForImportIdentity("user-1", "10.0.0.10", 2222, "root"),
+    ).resolves.toBe(false);
   });
 
   it("deletes user hosts through the cleanup boundary", async () => {

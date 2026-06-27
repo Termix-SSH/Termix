@@ -36,6 +36,8 @@ Allowed in gray rollout:
   `HostResolutionRepository`.
 - Database export host and credential read/decryption paths migrated behind
   `HostRepository` and `CredentialRepository`.
+- Database import host and credential duplicate checks plus encrypted creates
+  migrated behind `HostRepository` and `CredentialRepository`.
 - Credential create/update encrypted writes migrated behind
   `CredentialRepository`, including system-key copies for shared credentials.
 - Credential delete host cleanup and apply-to-host writes migrated behind

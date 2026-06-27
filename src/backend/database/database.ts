@@ -1294,19 +1294,15 @@ app.post(
             .all();
           for (const host of importedHosts) {
             try {
-              const existing = await mainDb
-                .select()
-                .from(hosts)
-                .where(
-                  and(
-                    eq(hosts.userId, userId),
-                    eq(hosts.ip, host.ip),
-                    eq(hosts.port, host.port),
-                    eq(hosts.username, host.username),
-                  ),
-                );
+              const hostRepository = createCurrentHostRepository();
+              const exists = await hostRepository.existsForImportIdentity(
+                userId,
+                host.ip,
+                host.port,
+                host.username,
+              );
 
-              if (existing.length > 0) {
+              if (exists) {
                 result.summary.skippedItems++;
                 continue;
               }
@@ -1364,13 +1360,7 @@ app.post(
                 updatedAt: new Date().toISOString(),
               };
 
-              const encrypted = DataCrypto.encryptRecord(
-                "ssh_data",
-                hostData,
-                userId,
-                userDataKey,
-              );
-              await mainDb.insert(hosts).values(encrypted);
+              await hostRepository.createEncryptedForUser(userId, hostData);
               result.summary.sshHostsImported++;
             } catch (hostError) {
               result.summary.errors.push(
@@ -1388,18 +1378,14 @@ app.post(
             .all();
           for (const cred of importedCreds) {
             try {
-              const existing = await mainDb
-                .select()
-                .from(sshCredentials)
-                .where(
-                  and(
-                    eq(sshCredentials.userId, userId),
-                    eq(sshCredentials.name, cred.name),
-                    eq(sshCredentials.username, cred.username),
-                  ),
-                );
+              const credentialRepository = createCurrentCredentialRepository();
+              const exists = await credentialRepository.existsForImportIdentity(
+                userId,
+                cred.name,
+                cred.username,
+              );
 
-              if (existing.length > 0) {
+              if (exists) {
                 result.summary.skippedItems++;
                 continue;
               }
@@ -1425,13 +1411,10 @@ app.post(
                 updatedAt: new Date().toISOString(),
               };
 
-              const encrypted = DataCrypto.encryptRecord(
-                "ssh_credentials",
-                credData,
+              await credentialRepository.createEncryptedForUser(
                 userId,
-                userDataKey,
+                credData,
               );
-              await mainDb.insert(sshCredentials).values(encrypted);
               result.summary.sshCredentialsImported++;
             } catch (credError) {
               result.summary.errors.push(

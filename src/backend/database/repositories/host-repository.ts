@@ -92,6 +92,28 @@ export class HostRepository {
     return DataCrypto.decryptRecords("ssh_data", rows, userId, userDataKey);
   }
 
+  async existsForImportIdentity(
+    userId: string,
+    ip: string,
+    port: number,
+    username: string,
+  ): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(
+        and(
+          eq(hosts.userId, userId),
+          eq(hosts.ip, ip),
+          eq(hosts.port, port),
+          eq(hosts.username, username),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0;
+  }
+
   async updateForUser(
     userId: string,
     hostId: number,
