@@ -49,6 +49,8 @@ Allowed in gray rollout:
   migrated behind `HostRepository`.
 - Host bulk import overwrite lookup and credential fallback reads migrated behind
   current host resolution and credential repository boundaries.
+- Host bulk JSON and SSH-config import encrypted create/update writes migrated
+  behind `HostRepository`.
 - Host autostart enable, disable, status, and endpoint-host resolution paths
   migrated behind `HostRepository`.
 - Guacamole host token host and protocol credential reads migrated behind

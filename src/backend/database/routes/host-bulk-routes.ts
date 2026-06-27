@@ -1,9 +1,6 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { eq } from "drizzle-orm";
 import { sshLogger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
-import { hosts } from "../db/schema.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
 import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
@@ -296,6 +293,7 @@ export function registerHostBulkRoutes(
       };
 
       let existingHostMap: Map<string, { id: number }> | undefined;
+      const hostRepository = createCurrentHostRepository();
       if (overwrite) {
         try {
           const allHosts =
@@ -540,17 +538,15 @@ export function registerHostBulkRoutes(
           const existing = existingHostMap?.get(lookupKey);
 
           if (existing) {
-            await SimpleDBOps.update(
-              hosts,
-              "ssh_data",
-              eq(hosts.id, existing.id),
-              sshDataObj,
+            await hostRepository.updateEncryptedForUser(
               userId,
+              existing.id,
+              sshDataObj,
             );
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
-            await SimpleDBOps.insert(hosts, "ssh_data", sshDataObj, userId);
+            await hostRepository.createEncryptedForUser(userId, sshDataObj);
             results.success++;
           }
         } catch (error) {
@@ -658,6 +654,7 @@ export function registerHostBulkRoutes(
       };
 
       let existingHostMap: Map<string, { id: number }> | undefined;
+      const hostRepository = createCurrentHostRepository();
       if (overwrite) {
         try {
           const allHosts =
@@ -747,17 +744,15 @@ export function registerHostBulkRoutes(
           const existing = existingHostMap?.get(lookupKey);
 
           if (existing) {
-            await SimpleDBOps.update(
-              hosts,
-              "ssh_data",
-              eq(hosts.id, existing.id),
-              sshDataObj,
+            await hostRepository.updateEncryptedForUser(
               userId,
+              existing.id,
+              sshDataObj,
             );
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
-            await SimpleDBOps.insert(hosts, "ssh_data", sshDataObj, userId);
+            await hostRepository.createEncryptedForUser(userId, sshDataObj);
             results.success++;
           }
         } catch (error) {
