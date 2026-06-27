@@ -117,6 +117,30 @@ export class HostHealthRepository {
       .limit(limit);
   }
 
+  async deleteByUserId(userId: string): Promise<{
+    checksDeleted: number;
+    historyDeleted: number;
+  }> {
+    const historyRows = await this.context.drizzle
+      .delete(hostHealthHistory)
+      .where(eq(hostHealthHistory.userId, userId))
+      .returning({ id: hostHealthHistory.id });
+
+    const checkRows = await this.context.drizzle
+      .delete(hostHealthChecks)
+      .where(eq(hostHealthChecks.userId, userId))
+      .returning({ id: hostHealthChecks.id });
+
+    if (historyRows.length > 0 || checkRows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return {
+      checksDeleted: checkRows.length,
+      historyDeleted: historyRows.length,
+    };
+  }
+
   private pruneHistory(userId: string, hostId: number, keep: number): void {
     this.context.sqlite
       ?.prepare(

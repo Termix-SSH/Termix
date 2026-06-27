@@ -9,7 +9,9 @@ import { createCurrentDismissedAlertRepository } from "../repositories/current-d
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentHomepageItemRepository } from "../repositories/current-homepage-item-repository.js";
 import { createCurrentHomepageLayoutRepository } from "../repositories/current-homepage-layout-repository.js";
+import { createCurrentHostHealthRepository } from "../repositories/current-host-health-repository.js";
 import { createCurrentHostFolderRepository } from "../repositories/current-host-folder-repository.js";
+import { createCurrentHostMetricsPreferenceRepository } from "../repositories/current-host-metrics-preference-repository.js";
 import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
 import { createCurrentOpksshTokenRepository } from "../repositories/current-opkssh-token-repository.js";
@@ -64,6 +66,8 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await createCurrentCommandHistoryRepository().deleteByUserId(userId);
 
+    await createCurrentHostHealthRepository().deleteByUserId(userId);
+    await createCurrentHostMetricsPreferenceRepository().deleteByUserId(userId);
     await createCurrentHostRepository().deleteByUserId(userId);
     await createCurrentCredentialRepository().deleteByUserId(userId);
 

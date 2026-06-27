@@ -153,4 +153,40 @@ describe("HostHealthRepository", () => {
     });
     expect(writeCount).toBe(2);
   });
+
+  it("deletes all health checks and history for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await repo.upsertChecks("user-2", 2, '[{"id":"tcp"}]', 120);
+    await repo.recordHistory(
+      "user-1",
+      1,
+      [{ checkId: "one", ok: true, latencyMs: 12, detail: "open" }],
+      10,
+    );
+    await repo.recordHistory(
+      "user-2",
+      2,
+      [{ checkId: "two", ok: false, latencyMs: null, detail: "closed" }],
+      10,
+    );
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toEqual({
+      checksDeleted: 1,
+      historyDeleted: 1,
+    });
+    await expect(repo.deleteByUserId("missing")).resolves.toEqual({
+      checksDeleted: 0,
+      historyDeleted: 0,
+    });
+
+    expect(await repo.findChecksByUserAndHost("user-1", 1)).toBeNull();
+    expect(await repo.listHistory("user-1", 1, 10)).toEqual([]);
+    expect((await repo.findChecksByUserAndHost("user-2", 2))?.hostId).toBe(2);
+    expect(await repo.listHistory("user-2", 2, 10)).toHaveLength(1);
+    expect(writeCount).toBe(4);
+  });
 });

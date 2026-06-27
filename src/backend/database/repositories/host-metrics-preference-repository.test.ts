@@ -124,4 +124,22 @@ describe("HostMetricsPreferenceRepository", () => {
 
     expect(writeCount).toBe(1);
   });
+
+  it("deletes all metric preferences for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await repo.upsertLayout("user-2", 2, '{"slots":["mem"]}');
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(1);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.findByUserAndHost("user-1", 1)).toBeNull();
+    expect((await repo.findByUserAndHost("user-2", 2))?.layout).toBe(
+      '{"slots":["mem"]}',
+    );
+    expect(writeCount).toBe(2);
+  });
 });

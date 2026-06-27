@@ -78,6 +78,19 @@ export class HostMetricsPreferenceRepository {
     return true;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(hostMetricsPreferences)
+      .where(eq(hostMetricsPreferences.userId, userId))
+      .returning({ id: hostMetricsPreferences.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   private async afterWrite(): Promise<void> {
     await this.onWrite?.();
   }
