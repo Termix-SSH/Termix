@@ -24,6 +24,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "snippets",
         "roles",
         "rbac_access",
+        "shared_credentials",
         "sso_providers",
         "audit_logs",
         "user_preferences",
@@ -71,7 +72,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,credential,host,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
+        "settings,user,api-key,credential,host,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,shared-credentials,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
     });
 
     expect(config).toEqual({
@@ -96,6 +97,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "user_data_exports",
         "host_folders",
         "host_resolution",
+        "shared_credentials",
         "file_manager_bookmarks",
         "c2s_tunnel_presets",
         "tmux_session_tags",
@@ -154,6 +156,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "snippets",
         "roles",
         "rbac_access",
+        "shared_credentials",
         "sso_providers",
         "audit_logs",
         "user_preferences",

@@ -120,6 +120,8 @@ Allowed in gray rollout:
   repository boundaries.
 - RBAC host/snippet access grant, revoke, and direct host-access credential
   override writes migrated behind `RbacAccessRepository`.
+- Shared credential material create/update/delete, pending re-encryption, and
+  user cleanup persistence migrated behind `SharedCredentialRepository`.
 - Permission manager host-access cleanup, shared-access lookup, and last-access
   touch migrated behind `RbacAccessRepository`.
 - Current field encryption behavior.
@@ -130,8 +132,7 @@ Not included in gray rollout:
 - New external database configuration UI.
 - New schema migration strategy.
 - Host and credential route migration beyond existing repository skeletons.
-- Remaining shared credential material creation, audit, preferences, file
-  manager, and metrics repository migration.
+- Remaining audit, preferences, file manager, and metrics repository migration.
 - Multi-instance backend deployment.
 
 ## 2. Required Preflight
@@ -153,7 +154,7 @@ Repository rollout is controlled by `DATABASE_LAYER_REPOSITORY_ROLLOUT`.
 Recommended gray value:
 
 ```bash
-DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,credentials,hosts,snippets,sso_providers,audit_logs,user_preferences,open_tabs,dismissed_alerts,homepage_layouts,homepage_items,network_topology,dashboard_service_links,session_recordings,command_history,recent_activity,ssh_credential_usage,transfer_recent,file_manager_bookmarks,c2s_tunnel_presets,tmux_session_tags,opkssh_tokens,vault_tokens,vault_profiles,host_metrics_preferences,host_health,host_metrics_history,alerts,user_data_exports,host_folders,host_resolution,roles,rbac_access
+DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,credentials,hosts,snippets,sso_providers,audit_logs,user_preferences,open_tabs,dismissed_alerts,homepage_layouts,homepage_items,network_topology,dashboard_service_links,session_recordings,command_history,recent_activity,ssh_credential_usage,transfer_recent,file_manager_bookmarks,c2s_tunnel_presets,tmux_session_tags,opkssh_tokens,vault_tokens,vault_profiles,host_metrics_preferences,host_health,host_metrics_history,alerts,user_data_exports,host_folders,host_resolution,roles,rbac_access,shared_credentials
 ```
 
 Accepted values:
@@ -205,6 +206,7 @@ Supported domains:
 - `host_resolution`
 - `roles`
 - `rbac_access`
+- `shared_credentials`
 
 The backend logs the parsed rollout mode at startup with operation
 `repository_rollout_config`. Use an explicit value in any staging or production

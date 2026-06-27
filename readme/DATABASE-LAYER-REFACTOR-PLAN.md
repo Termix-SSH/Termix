@@ -155,6 +155,9 @@ reads now use current host, snippet, and credential repository boundaries.
 RBAC host/snippet access grant, revoke, and direct host-access credential
 override writes now use the current RBAC access repository boundary while
 retaining shared credential material creation in the existing manager.
+Shared credential material create/update/delete, pending re-encryption, and
+user cleanup persistence now use the current shared credential repository
+boundary while keeping encryption/decryption logic in the existing manager.
 Permission manager host-access expiration cleanup, shared host-access lookup,
 and last-access timestamp updates now use the current RBAC access repository
 boundary.

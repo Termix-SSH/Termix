@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
@@ -17,18 +15,18 @@ import { createCurrentRoleRepository } from "../repositories/current-role-reposi
 import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
 import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSharedCredentialRepository } from "../repositories/current-shared-credential-repository.js";
 import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
-import { sharedCredentials } from "../db/schema.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
-    await db
-      .delete(sharedCredentials)
-      .where(eq(sharedCredentials.targetUserId, userId));
+    await createCurrentSharedCredentialRepository().deleteByTargetUserId(
+      userId,
+    );
 
     await createCurrentSessionRecordingRepository().deleteByUserId(userId);
 

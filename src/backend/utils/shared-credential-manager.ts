@@ -1,9 +1,8 @@
-import { db } from "../database/db/index.js";
-import { sharedCredentials } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
 import { createCurrentCredentialRepository } from "../database/repositories/current-credential-repository.js";
 import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
 import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
+import { createCurrentSharedCredentialRepository } from "../database/repositories/current-shared-credential-repository.js";
+import type { SharedCredentialRecord } from "../database/repositories/shared-credential-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";
 import { databaseLogger } from "./logger.js";
@@ -36,18 +35,15 @@ class SharedCredentialManager {
     ownerId: string,
   ): Promise<void> {
     try {
-      const existing = await db
-        .select({ id: sharedCredentials.id })
-        .from(sharedCredentials)
-        .where(
-          and(
-            eq(sharedCredentials.hostAccessId, hostAccessId),
-            eq(sharedCredentials.targetUserId, targetUserId),
-          ),
-        )
-        .limit(1);
+      const sharedCredentialRepository =
+        createCurrentSharedCredentialRepository();
+      const existing =
+        await sharedCredentialRepository.existsForHostAccessAndTargetUser(
+          hostAccessId,
+          targetUserId,
+        );
 
-      if (existing.length > 0) return;
+      if (existing) return;
 
       const ownerDEK = DataCrypto.getUserDataKey(ownerId);
 
@@ -75,7 +71,7 @@ class SharedCredentialManager {
           hostAccessId,
         );
 
-        await db.insert(sharedCredentials).values({
+        await sharedCredentialRepository.create({
           hostAccessId,
           originalCredentialId,
           targetUserId,
@@ -103,7 +99,7 @@ class SharedCredentialManager {
           hostAccessId,
         );
 
-        await db.insert(sharedCredentials).values({
+        await sharedCredentialRepository.create({
           hostAccessId,
           originalCredentialId,
           targetUserId,
@@ -263,13 +259,10 @@ class SharedCredentialManager {
       if (cred.needsReEncryption) {
         await this.reEncryptSharedCredential(cred.id, userId);
 
-        const refreshed = await db
-          .select()
-          .from(sharedCredentials)
-          .where(eq(sharedCredentials.id, cred.id))
-          .limit(1);
+        const refreshed =
+          await createCurrentSharedCredentialRepository().findById(cred.id);
 
-        if (refreshed.length === 0 || refreshed[0].needsReEncryption) {
+        if (!refreshed || refreshed.needsReEncryption) {
           databaseLogger.warn(
             "Shared credential needs re-encryption but cannot be accessed yet",
             {
@@ -281,7 +274,7 @@ class SharedCredentialManager {
           return null;
         }
 
-        return this.decryptSharedCredential(refreshed[0], userDEK);
+        return this.decryptSharedCredential(refreshed, userDEK);
       }
 
       return this.decryptSharedCredential(cred, userDEK);
@@ -300,10 +293,12 @@ class SharedCredentialManager {
     ownerId: string,
   ): Promise<void> {
     try {
-      const sharedCreds = await db
-        .select()
-        .from(sharedCredentials)
-        .where(eq(sharedCredentials.originalCredentialId, credentialId));
+      const sharedCredentialRepository =
+        createCurrentSharedCredentialRepository();
+      const sharedCreds =
+        await sharedCredentialRepository.listByOriginalCredentialId(
+          credentialId,
+        );
 
       const ownerDEK = DataCrypto.getUserDataKey(ownerId);
       let credentialData: CredentialData;
@@ -328,10 +323,9 @@ class SharedCredentialManager {
               error: error instanceof Error ? error.message : "Unknown error",
             },
           );
-          await db
-            .update(sharedCredentials)
-            .set({ needsReEncryption: true })
-            .where(eq(sharedCredentials.originalCredentialId, credentialId));
+          await sharedCredentialRepository.markNeedsReEncryptionByOriginalCredentialId(
+            credentialId,
+          );
           return;
         }
       }
@@ -340,10 +334,9 @@ class SharedCredentialManager {
         const targetDEK = DataCrypto.getUserDataKey(sharedCred.targetUserId);
 
         if (!targetDEK) {
-          await db
-            .update(sharedCredentials)
-            .set({ needsReEncryption: true })
-            .where(eq(sharedCredentials.id, sharedCred.id));
+          await sharedCredentialRepository.updateById(sharedCred.id, {
+            needsReEncryption: true,
+          });
           continue;
         }
 
@@ -354,14 +347,11 @@ class SharedCredentialManager {
           sharedCred.hostAccessId,
         );
 
-        await db
-          .update(sharedCredentials)
-          .set({
-            ...encryptedForTarget,
-            needsReEncryption: false,
-            updatedAt: new Date().toISOString(),
-          })
-          .where(eq(sharedCredentials.id, sharedCred.id));
+        await sharedCredentialRepository.updateById(sharedCred.id, {
+          ...encryptedForTarget,
+          needsReEncryption: false,
+          updatedAt: new Date().toISOString(),
+        });
       }
     } catch (error) {
       databaseLogger.error("Failed to update shared credentials", error, {
@@ -375,9 +365,9 @@ class SharedCredentialManager {
     credentialId: number,
   ): Promise<void> {
     try {
-      await db
-        .delete(sharedCredentials)
-        .where(eq(sharedCredentials.originalCredentialId, credentialId));
+      await createCurrentSharedCredentialRepository().deleteByOriginalCredentialId(
+        credentialId,
+      );
     } catch (error) {
       databaseLogger.error("Failed to delete shared credentials", error, {
         operation: "delete_shared_credentials",
@@ -393,14 +383,9 @@ class SharedCredentialManager {
         return;
       }
 
-      const pendingCreds = await db
-        .select()
-        .from(sharedCredentials)
-        .where(
-          and(
-            eq(sharedCredentials.targetUserId, userId),
-            eq(sharedCredentials.needsReEncryption, true),
-          ),
+      const pendingCreds =
+        await createCurrentSharedCredentialRepository().listPendingByTargetUserId(
+          userId,
         );
 
       for (const cred of pendingCreds) {
@@ -548,7 +533,7 @@ class SharedCredentialManager {
   }
 
   private decryptSharedCredential(
-    sharedCred: typeof sharedCredentials.$inferSelect,
+    sharedCred: SharedCredentialRecord,
     userDEK: Buffer,
   ): CredentialData {
     const recordId = `shared-${sharedCred.hostAccessId}-${sharedCred.targetUserId}`;
@@ -617,7 +602,7 @@ class SharedCredentialManager {
     originalCredentialId: number,
     targetUserId: string,
   ): Promise<void> {
-    await db.insert(sharedCredentials).values({
+    await createCurrentSharedCredentialRepository().create({
       hostAccessId,
       originalCredentialId,
       targetUserId,
@@ -638,21 +623,16 @@ class SharedCredentialManager {
     userId: string,
   ): Promise<void> {
     try {
-      const sharedCred = await db
-        .select()
-        .from(sharedCredentials)
-        .where(eq(sharedCredentials.id, sharedCredId))
-        .limit(1);
+      const cred =
+        await createCurrentSharedCredentialRepository().findById(sharedCredId);
 
-      if (sharedCred.length === 0) {
+      if (!cred) {
         databaseLogger.warn("Re-encrypt: shared credential not found", {
           operation: "reencrypt_not_found",
           sharedCredId,
         });
         return;
       }
-
-      const cred = sharedCred[0];
 
       const ownerId =
         await createCurrentRbacAccessRepository().findHostAccessOwnerId(
@@ -711,14 +691,11 @@ class SharedCredentialManager {
         cred.hostAccessId,
       );
 
-      await db
-        .update(sharedCredentials)
-        .set({
-          ...encryptedForTarget,
-          needsReEncryption: false,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(sharedCredentials.id, sharedCredId));
+      await createCurrentSharedCredentialRepository().updateById(sharedCredId, {
+        ...encryptedForTarget,
+        needsReEncryption: false,
+        updatedAt: new Date().toISOString(),
+      });
     } catch (error) {
       databaseLogger.error("Failed to re-encrypt shared credential", error, {
         operation: "reencrypt_shared_credential",
