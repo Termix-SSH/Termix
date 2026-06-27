@@ -16,6 +16,8 @@ Allowed in gray rollout:
 - Existing database file format.
 - Existing schema and migration flow.
 - Settings reads and writes migrated behind `SettingsRepository`.
+- Database import/export settings reads and admin upserts migrated behind
+  `SettingsRepository`.
 - Session create/read/update/revoke/list paths migrated behind
   `SessionRepository`.
 - User create/read/update/delete/auth paths migrated behind `UserRepository`.

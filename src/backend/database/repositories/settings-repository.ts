@@ -18,6 +18,12 @@ export class SettingsRepository {
     return rows[0]?.value ?? null;
   }
 
+  async listAll(): Promise<Array<{ key: string; value: string }>> {
+    return this.context.drizzle
+      .select({ key: settings.key, value: settings.value })
+      .from(settings);
+  }
+
   async getBoolean(key: string, fallback = false): Promise<boolean> {
     const value = await this.get(key);
     if (value === null) return fallback;
@@ -37,6 +43,10 @@ export class SettingsRepository {
       .set({ value })
       .where(eq(settings.key, key));
     await this.afterWrite();
+  }
+
+  async upsert(key: string, value: string): Promise<void> {
+    await this.set(key, value);
   }
 
   async delete(key: string): Promise<void> {

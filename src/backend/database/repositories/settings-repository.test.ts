@@ -38,6 +38,22 @@ describe("SettingsRepository", () => {
     expect(await repo.get("allow_registration")).toBe("false");
   });
 
+  it("lists and upserts settings", async () => {
+    const repo = await createRepository();
+
+    await repo.upsert("theme", "dark");
+    await repo.upsert("allow_registration", "true");
+    await repo.upsert("theme", "light");
+
+    expect(await repo.get("theme")).toBe("light");
+    expect(await repo.listAll()).toEqual(
+      expect.arrayContaining([
+        { key: "theme", value: "light" },
+        { key: "allow_registration", value: "true" },
+      ]),
+    );
+  });
+
   it("returns null or fallback when setting is missing", async () => {
     const repo = await createRepository();
 

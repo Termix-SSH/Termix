@@ -34,6 +34,7 @@ import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
+import { createCurrentSettingsRepository } from "./repositories/current-settings-repository.js";
 import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
 import { eq, and } from "drizzle-orm";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
@@ -47,7 +48,6 @@ import {
   fileManagerShortcuts,
   dismissedAlerts,
   sshCredentialUsage,
-  settings,
 } from "./db/schema.js";
 import type {
   CacheEntry,
@@ -71,7 +71,6 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
 app.use(createCorsMiddleware());
 
-type AppDatabase = ReturnType<typeof getDb>;
 type SettingData = {
   key: string;
   value: string;
@@ -82,9 +81,7 @@ function shouldExportSetting(key: string): boolean {
 }
 
 async function getExportableSettings(): Promise<SettingData[]> {
-  const settingsRows = await getDb()
-    .select({ key: settings.key, value: settings.value })
-    .from(settings);
+  const settingsRows = await createCurrentSettingsRepository().listAll();
 
   return settingsRows.filter((setting) => shouldExportSetting(setting.key));
 }
@@ -109,27 +106,8 @@ function readImportedSettings(importDb: Database.Database): SettingData[] {
     .all() as SettingData[];
 }
 
-async function upsertImportedSetting(
-  mainDb: AppDatabase,
-  setting: SettingData,
-): Promise<void> {
-  const existing = await mainDb
-    .select()
-    .from(settings)
-    .where(eq(settings.key, setting.key));
-
-  if (existing.length > 0) {
-    await mainDb
-      .update(settings)
-      .set({ value: setting.value })
-      .where(eq(settings.key, setting.key));
-    return;
-  }
-
-  await mainDb.insert(settings).values({
-    key: setting.key,
-    value: setting.value,
-  });
+async function upsertImportedSetting(setting: SettingData): Promise<void> {
+  await createCurrentSettingsRepository().upsert(setting.key, setting.value);
 }
 
 const uploadsDir = path.join(process.env.DATA_DIR || "./db/data", "uploads");
@@ -1601,7 +1579,7 @@ app.post(
             const importedSettings = readImportedSettings(importDb);
             for (const setting of importedSettings) {
               try {
-                await upsertImportedSetting(mainDb, setting);
+                await upsertImportedSetting(setting);
                 result.summary.settingsImported++;
               } catch (settingError) {
                 result.summary.errors.push(
