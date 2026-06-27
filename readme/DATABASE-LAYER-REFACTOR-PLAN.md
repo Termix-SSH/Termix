@@ -88,6 +88,8 @@ Credential create/update encrypted writes now use the current credential
 repository boundary, including system-key copies for shared credentials.
 Credential delete host cleanup and apply-to-host writes now use the current host
 repository boundary.
+Termix ID credential lookup, generated credential persistence, and generated
+credential cleanup now use the current credential repository boundary.
 Host route update readback, single-host fetch, password-field fetch, and host
 export reads now use the current host resolution repository boundary.
 Host route create/update encrypted writes now use the current host repository

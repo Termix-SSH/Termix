@@ -36,6 +36,8 @@ Allowed in gray rollout:
   `CredentialRepository`, including system-key copies for shared credentials.
 - Credential delete host cleanup and apply-to-host writes migrated behind
   `HostRepository`.
+- Termix ID credential lookup, generated credential persistence, and generated
+  credential cleanup migrated behind `CredentialRepository`.
 - Host route update readback, single-host fetch, password-field fetch, and host
   export reads migrated behind `HostResolutionRepository`.
 - Host route create/update encrypted writes migrated behind `HostRepository`.

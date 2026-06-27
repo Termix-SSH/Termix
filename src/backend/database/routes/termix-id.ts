@@ -5,9 +5,9 @@ import { db } from "../db/index.js";
 import {
   termixIdentities,
   termixIdentityKeys,
-  sshCredentials,
   termixIdentityCa,
 } from "../db/schema.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { and, eq, asc } from "drizzle-orm";
 // ssh2 is CommonJS; Node's cjs-module-lexer does not surface its `utils` named
@@ -37,17 +37,6 @@ const RESERVED_HANDLES = new Set(["u", "me", "keys", "check", "admin", "api"]);
 
 // Max stored length for a free-text description.
 const MAX_DESCRIPTION_LENGTH = 500;
-
-// Decrypted ssh_credentials fields this route reads. A type alias (not an
-// interface) so it satisfies the generic bound on SimpleDBOps.select.
-type CredentialRow = {
-  name?: string | null;
-  authType?: string | null;
-  publicKey?: string | null;
-  privateKey?: string | null;
-  key?: string | null;
-  keyPassword?: string | null;
-};
 
 function cleanDescription(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;
@@ -661,23 +650,14 @@ router.post(
       let resolvedLabel = label;
 
       if (credentialId) {
-        const credResult = await SimpleDBOps.select<CredentialRow>(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, credentialId),
-                eq(sshCredentials.userId, userId),
-              ),
-            ),
-          "ssh_credentials",
-          userId,
-        );
-        if (credResult.length === 0) {
+        const cred =
+          await createCurrentCredentialRepository().findDecryptedByIdForUser(
+            userId,
+            credentialId,
+          );
+        if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
         }
-        const cred = credResult[0];
         // The UI only offers key credentials, but the UI is not authoritative —
         // reject non-key credentials server-side before treating cred.key as a
         // private key.
@@ -859,17 +839,16 @@ router.post(
           usageCount: 0,
           lastUsed: null,
         };
-        const created = (await SimpleDBOps.insert(
-          sshCredentials,
-          "ssh_credentials",
-          credData,
-          userId,
-        )) as typeof credData & { id: number };
+        const created =
+          await createCurrentCredentialRepository().createEncryptedForUser(
+            userId,
+            credData,
+          );
         credentialId = created.id;
       }
 
-      // There is no single transaction here (SimpleDBOps.insert is async and
-      // better-sqlite3 transactions are sync), so if publishing the key fails
+      // There is no single transaction here because credential encryption is async,
+      // so if publishing the key fails
       // after the vault credential was created, compensate by deleting it to
       // avoid leaving an orphaned credential behind.
       const runInsert = () =>
@@ -894,14 +873,10 @@ router.post(
       } catch (insertErr) {
         if (credentialId !== null) {
           try {
-            await db
-              .delete(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, credentialId),
-                  eq(sshCredentials.userId, userId),
-                ),
-              );
+            await createCurrentCredentialRepository().deleteForUser(
+              userId,
+              credentialId,
+            );
           } catch {
             // best-effort cleanup
           }
