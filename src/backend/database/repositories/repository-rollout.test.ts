@@ -20,6 +20,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "trusted_devices",
         "credentials",
+        "termix_identity",
         "termix_identity_ca",
         "hosts",
         "snippets",
@@ -73,7 +74,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,credential,termix-ca,host,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,shared-credentials,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
+        "settings,user,api-key,credential,termix-id,termix-ca,host,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,shared-credentials,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
     });
 
     expect(config).toEqual({
@@ -83,6 +84,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "users",
         "api_keys",
         "credentials",
+        "termix_identity",
         "termix_identity_ca",
         "hosts",
         "dismissed_alerts",
@@ -154,6 +156,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "trusted_devices",
         "credentials",
+        "termix_identity",
         "termix_identity_ca",
         "hosts",
         "snippets",

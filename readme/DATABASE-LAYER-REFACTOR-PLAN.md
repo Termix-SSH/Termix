@@ -90,6 +90,9 @@ Credential delete host cleanup and apply-to-host writes now use the current host
 repository boundary.
 Termix ID credential lookup, generated credential persistence, and generated
 credential cleanup now use the current credential repository boundary.
+Termix ID identity handle CRUD/resolution, public key publish/list/update/delete,
+linked credential lookup, and certificate target key lookup now use the current
+Termix ID repository boundary.
 Termix ID CA public lookup, encrypted private-key create/rotate/delete, and
 certificate signing reads now use the current Termix ID CA repository boundary.
 Host route update readback, single-host fetch, password-field fetch, and host

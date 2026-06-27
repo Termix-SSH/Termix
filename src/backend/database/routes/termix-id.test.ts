@@ -63,6 +63,24 @@ vi.mock("../repositories/current-termix-identity-ca-repository.js", () => ({
   })),
 }));
 
+vi.mock("../repositories/current-termix-identity-repository.js", () => ({
+  createCurrentTermixIdentityRepository: vi.fn(() => ({
+    findIdentityForUser: vi.fn(),
+    findIdentityByHandle: vi.fn(),
+    isHandleTaken: vi.fn(),
+    createIdentity: vi.fn(),
+    updateIdentityForUser: vi.fn(),
+    deleteIdentityForUser: vi.fn(),
+    listKeysByIdentityId: vi.fn(),
+    listEnabledKeysByIdentityId: vi.fn(),
+    listLinkedCredentialIds: vi.fn(),
+    createKey: vi.fn(),
+    updateKeyForUser: vi.fn(),
+    deleteKeyForUser: vi.fn(),
+    findKeyForUser: vi.fn(),
+  })),
+}));
+
 vi.mock("./termix-id-keys.js", () => ({
   termixIdKeysRouter: { use: vi.fn() },
   matchesAlgoFilter: vi.fn(() => true),
