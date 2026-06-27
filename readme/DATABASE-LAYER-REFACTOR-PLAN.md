@@ -66,6 +66,9 @@ current-runtime migration boundary instead of opening SQLite in
 User, admin, TOTP, OIDC account, and credential migration explicit saves now
 use `DatabaseSaveTrigger` instead of importing the SQLite snapshot save function
 from routes.
+Current SQLite snapshot save trigger now initializes after database startup
+regardless of file-encryption mode, and backend shutdown uses that save
+boundary.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses

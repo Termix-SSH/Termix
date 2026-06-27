@@ -2108,20 +2108,22 @@ async function saveMemoryDatabaseToFile(): Promise<void> {
 }
 
 async function handlePostInitFileEncryption() {
-  if (!enableFileEncryption) return;
-
   try {
     if (memoryDatabase) {
-      await saveMemoryDatabaseToFile();
+      DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
+
+      if (enableFileEncryption) {
+        await saveMemoryDatabaseToFile();
+      }
 
       setInterval(() => {
         if (DatabaseSaveTrigger.isDirty) {
           saveMemoryDatabaseToFile();
         }
       }, 5 * 60 * 1000);
-
-      DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
     }
+
+    if (!enableFileEncryption) return;
 
     try {
       const migration = new DatabaseMigration(dataDir);

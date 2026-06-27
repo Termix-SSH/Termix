@@ -54,6 +54,9 @@ Allowed in gray rollout:
 - User, admin, TOTP, OIDC account, and credential migration explicit saves now
   use `DatabaseSaveTrigger` instead of importing the SQLite snapshot save
   function from routes.
+- Current SQLite snapshot save trigger now initializes after database startup
+  regardless of file-encryption mode, and backend shutdown uses that save
+  boundary.
 - Legacy unencrypted SQLite copy/verification path centralized behind
   `LegacySqliteDatabaseCopyStore`.
 - Termix ID credential lookup, generated credential persistence, and generated

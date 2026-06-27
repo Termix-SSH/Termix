@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
+import { DatabaseSaveTrigger } from "./utils/database-save-trigger.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
 import {
   systemLogger,
@@ -198,9 +199,7 @@ import {
         operation: "shutdown",
       });
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("./database/db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
         systemLogger.info("Database saved to disk before exit", {
           operation: "shutdown_db_saved",
         });
