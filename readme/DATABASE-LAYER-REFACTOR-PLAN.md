@@ -277,6 +277,8 @@ credential, and shared override read/write models now use the current host
 resolution repository boundary.
 Host metrics, host metrics viewer, tmux monitor, Docker, tunnel, and Proxmox
 unlock gates now use `DataCrypto` directly instead of `SimpleDBOps`.
+Legacy `SimpleDBOps` compatibility helper has been removed after migrated route
+and utility paths stopped importing it.
 Permission manager host owner checks now use the current host resolution
 repository boundary.
 
@@ -349,7 +351,8 @@ The refactor should keep Termix secure while moving persistence to real database
 
 ### 4.2 Save Behavior
 
-- `SimpleDBOps.insert/update/delete` triggers `DatabaseSaveTrigger`.
+- Historical `SimpleDBOps.insert/update/delete` writes used to trigger
+  `DatabaseSaveTrigger`; migrated write paths now use repository save hooks.
 - Some routes call `getDb().insert/update/delete` or raw SQLite directly.
 - Direct writes must manually call `DatabaseSaveTrigger.triggerSave()`.
 - This creates a persistence gap when direct writes forget to trigger saves.

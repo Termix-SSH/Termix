@@ -127,6 +127,8 @@ Allowed in gray rollout:
   models migrated behind `HostResolutionRepository`.
 - Host metrics, host metrics viewer, tmux monitor, Docker, tunnel, and Proxmox
   unlock gates now use `DataCrypto` directly instead of `SimpleDBOps`.
+- Legacy `SimpleDBOps` compatibility helper removed after migrated route and
+  utility paths stopped importing it.
 - RBAC role management and user-role assignment/listing paths migrated behind
   `RoleRepository`.
 - Permission manager role permission aggregation and admin-role checks migrated
