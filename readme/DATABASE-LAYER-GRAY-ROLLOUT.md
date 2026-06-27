@@ -15,6 +15,8 @@ Allowed in gray rollout:
 - Existing encrypted SQLite snapshot runtime.
 - Existing database file format.
 - Existing schema and migration flow.
+- Current repository factories are starting to share
+  `current-repository-runtime` for SQLite context and write-save hooks.
 - Settings reads and writes migrated behind `SettingsRepository`.
 - Database import/export settings reads and admin upserts migrated behind
   `SettingsRepository`.
