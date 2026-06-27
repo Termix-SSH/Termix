@@ -60,6 +60,9 @@ Allowed in gray rollout:
 - Direct SQLite snapshot save-function imports are now isolated inside
   `database/db/index.ts`; current user-field migration saves through
   `DatabaseSaveTrigger`.
+- Database import SQLite foreign-key toggling is isolated behind the
+  `withSqliteForeignKeysDisabled` runtime boundary and restores constraints in
+  a `finally` path.
 - Legacy unencrypted SQLite copy/verification path centralized behind
   `LegacySqliteDatabaseCopyStore`.
 - Termix ID credential lookup, generated credential persistence, and generated

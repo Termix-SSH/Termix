@@ -72,6 +72,9 @@ boundary.
 Direct SQLite snapshot save-function imports are now isolated inside
 `database/db/index.ts`; current user-field migration saves through
 `DatabaseSaveTrigger`.
+Database import SQLite foreign-key toggling is isolated behind the
+`withSqliteForeignKeysDisabled` runtime boundary and restores constraints in a
+`finally` path.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses

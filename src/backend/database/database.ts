@@ -42,6 +42,7 @@ import { createCurrentSettingsRepository } from "./repositories/current-settings
 import { createCurrentSshCredentialUsageRepository } from "./repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentUserRepository } from "./repositories/current-user-repository.js";
 import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
+import { withSqliteForeignKeysDisabled } from "./runtime/sqlite-foreign-key-boundary.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
 import type {
@@ -1271,281 +1272,287 @@ app.post(
       };
 
       try {
-        mainDb.$client.exec("PRAGMA foreign_keys = OFF");
-        try {
-          const importedHosts = importDb
-            .prepare("SELECT * FROM ssh_data")
-            .all();
-          for (const host of importedHosts) {
-            try {
-              const hostRepository = createCurrentHostRepository();
-              const exists = await hostRepository.existsForImportIdentity(
-                userId,
-                host.ip,
-                host.port,
-                host.username,
-              );
-
-              if (exists) {
-                result.summary.skippedItems++;
-                continue;
-              }
-
-              const hostData = {
-                userId: userId,
-                name: host.name,
-                ip: host.ip,
-                port: host.port,
-                username: host.username,
-                folder: host.folder,
-                tags: host.tags,
-                pin: Boolean(host.pin),
-                authType: host.auth_type,
-                forceKeyboardInteractive: host.force_keyboard_interactive,
-                password: host.password,
-                key: host.key,
-                keyPassword: host.key_password,
-                keyType: host.key_type,
-                sudoPassword: host.sudo_password,
-                autostartPassword: host.autostart_password,
-                autostartKey: host.autostart_key,
-                autostartKeyPassword: host.autostart_key_password,
-                credentialId: host.credential_id || null,
-                overrideCredentialUsername: Boolean(
-                  host.override_credential_username,
-                ),
-                enableTerminal: Boolean(host.enable_terminal),
-                enableTunnel: Boolean(host.enable_tunnel),
-                tunnelConnections: host.tunnel_connections,
-                jumpHosts: host.jump_hosts,
-                enableFileManager: Boolean(host.enable_file_manager),
-                enableDocker: Boolean(host.enable_docker),
-                showTerminalInSidebar: Boolean(host.show_terminal_in_sidebar),
-                showFileManagerInSidebar: Boolean(
-                  host.show_file_manager_in_sidebar,
-                ),
-                showTunnelInSidebar: Boolean(host.show_tunnel_in_sidebar),
-                showDockerInSidebar: Boolean(host.show_docker_in_sidebar),
-                showServerStatsInSidebar: Boolean(
-                  host.show_server_stats_in_sidebar,
-                ),
-                defaultPath: host.default_path,
-                statsConfig: host.stats_config,
-                terminalConfig: host.terminal_config,
-                quickActions: host.quick_actions,
-                notes: host.notes,
-                useSocks5: Boolean(host.use_socks5),
-                socks5Host: host.socks5_host,
-                socks5Port: host.socks5_port,
-                socks5Username: host.socks5_username,
-                socks5Password: host.socks5_password,
-                socks5ProxyChain: host.socks5_proxy_chain,
-                createdAt: host.created_at || new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
-
-              await hostRepository.createEncryptedForUser(userId, hostData);
-              result.summary.sshHostsImported++;
-            } catch (hostError) {
-              result.summary.errors.push(
-                `SSH host import error: ${hostError.message}`,
-              );
-            }
-          }
-        } catch {
-          apiLogger.info("ssh_data table not found in import file, skipping");
-        }
-
-        try {
-          const importedCreds = importDb
-            .prepare("SELECT * FROM ssh_credentials")
-            .all();
-          for (const cred of importedCreds) {
-            try {
-              const credentialRepository = createCurrentCredentialRepository();
-              const exists = await credentialRepository.existsForImportIdentity(
-                userId,
-                cred.name,
-                cred.username,
-              );
-
-              if (exists) {
-                result.summary.skippedItems++;
-                continue;
-              }
-
-              const credData = {
-                userId: userId,
-                name: cred.name,
-                description: cred.description,
-                folder: cred.folder,
-                tags: cred.tags,
-                authType: cred.auth_type,
-                username: cred.username,
-                password: cred.password,
-                key: cred.key,
-                privateKey: cred.private_key,
-                publicKey: cred.public_key,
-                keyPassword: cred.key_password,
-                keyType: cred.key_type,
-                detectedKeyType: cred.detected_key_type,
-                usageCount: cred.usage_count || 0,
-                lastUsed: cred.last_used,
-                createdAt: cred.created_at || new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              };
-
-              await credentialRepository.createEncryptedForUser(
-                userId,
-                credData,
-              );
-              result.summary.sshCredentialsImported++;
-            } catch (credError) {
-              result.summary.errors.push(
-                `SSH credential import error: ${credError.message}`,
-              );
-            }
-          }
-        } catch {
-          apiLogger.info(
-            "ssh_credentials table not found in import file, skipping",
-          );
-        }
-
-        const fileManagerTables = [
-          {
-            table: "file_manager_recent",
-            key: "fileManagerItemsImported",
-          },
-          {
-            table: "file_manager_pinned",
-            key: "fileManagerItemsImported",
-          },
-          {
-            table: "file_manager_shortcuts",
-            key: "fileManagerItemsImported",
-          },
-        ];
-
-        const fileManagerRepository =
-          createCurrentFileManagerBookmarkRepository();
-
-        for (const { table, key } of fileManagerTables) {
+        await withSqliteForeignKeysDisabled(mainDb.$client, async () => {
           try {
-            const importedItems = importDb
-              .prepare(`SELECT * FROM ${table}`)
+            const importedHosts = importDb
+              .prepare("SELECT * FROM ssh_data")
               .all();
-            for (const item of importedItems) {
+            for (const host of importedHosts) {
               try {
-                const bookmark = {
-                  hostId: item.host_id,
-                  name: item.name,
-                  path: item.path,
-                };
-                const created =
-                  table === "file_manager_recent"
-                    ? await fileManagerRepository.createRecentForImport(
-                        userId,
-                        bookmark,
-                        item.last_opened,
-                      )
-                    : table === "file_manager_pinned"
-                      ? await fileManagerRepository.createPinnedForImport(
-                          userId,
-                          bookmark,
-                          item.pinned_at,
-                        )
-                      : await fileManagerRepository.createShortcutForImport(
-                          userId,
-                          bookmark,
-                          item.created_at,
-                        );
+                const hostRepository = createCurrentHostRepository();
+                const exists = await hostRepository.existsForImportIdentity(
+                  userId,
+                  host.ip,
+                  host.port,
+                  host.username,
+                );
 
+                if (exists) {
+                  result.summary.skippedItems++;
+                  continue;
+                }
+
+                const hostData = {
+                  userId: userId,
+                  name: host.name,
+                  ip: host.ip,
+                  port: host.port,
+                  username: host.username,
+                  folder: host.folder,
+                  tags: host.tags,
+                  pin: Boolean(host.pin),
+                  authType: host.auth_type,
+                  forceKeyboardInteractive: host.force_keyboard_interactive,
+                  password: host.password,
+                  key: host.key,
+                  keyPassword: host.key_password,
+                  keyType: host.key_type,
+                  sudoPassword: host.sudo_password,
+                  autostartPassword: host.autostart_password,
+                  autostartKey: host.autostart_key,
+                  autostartKeyPassword: host.autostart_key_password,
+                  credentialId: host.credential_id || null,
+                  overrideCredentialUsername: Boolean(
+                    host.override_credential_username,
+                  ),
+                  enableTerminal: Boolean(host.enable_terminal),
+                  enableTunnel: Boolean(host.enable_tunnel),
+                  tunnelConnections: host.tunnel_connections,
+                  jumpHosts: host.jump_hosts,
+                  enableFileManager: Boolean(host.enable_file_manager),
+                  enableDocker: Boolean(host.enable_docker),
+                  showTerminalInSidebar: Boolean(host.show_terminal_in_sidebar),
+                  showFileManagerInSidebar: Boolean(
+                    host.show_file_manager_in_sidebar,
+                  ),
+                  showTunnelInSidebar: Boolean(host.show_tunnel_in_sidebar),
+                  showDockerInSidebar: Boolean(host.show_docker_in_sidebar),
+                  showServerStatsInSidebar: Boolean(
+                    host.show_server_stats_in_sidebar,
+                  ),
+                  defaultPath: host.default_path,
+                  statsConfig: host.stats_config,
+                  terminalConfig: host.terminal_config,
+                  quickActions: host.quick_actions,
+                  notes: host.notes,
+                  useSocks5: Boolean(host.use_socks5),
+                  socks5Host: host.socks5_host,
+                  socks5Port: host.socks5_port,
+                  socks5Username: host.socks5_username,
+                  socks5Password: host.socks5_password,
+                  socks5ProxyChain: host.socks5_proxy_chain,
+                  createdAt: host.created_at || new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                };
+
+                await hostRepository.createEncryptedForUser(userId, hostData);
+                result.summary.sshHostsImported++;
+              } catch (hostError) {
+                result.summary.errors.push(
+                  `SSH host import error: ${hostError.message}`,
+                );
+              }
+            }
+          } catch {
+            apiLogger.info("ssh_data table not found in import file, skipping");
+          }
+
+          try {
+            const importedCreds = importDb
+              .prepare("SELECT * FROM ssh_credentials")
+              .all();
+            for (const cred of importedCreds) {
+              try {
+                const credentialRepository =
+                  createCurrentCredentialRepository();
+                const exists =
+                  await credentialRepository.existsForImportIdentity(
+                    userId,
+                    cred.name,
+                    cred.username,
+                  );
+
+                if (exists) {
+                  result.summary.skippedItems++;
+                  continue;
+                }
+
+                const credData = {
+                  userId: userId,
+                  name: cred.name,
+                  description: cred.description,
+                  folder: cred.folder,
+                  tags: cred.tags,
+                  authType: cred.auth_type,
+                  username: cred.username,
+                  password: cred.password,
+                  key: cred.key,
+                  privateKey: cred.private_key,
+                  publicKey: cred.public_key,
+                  keyPassword: cred.key_password,
+                  keyType: cred.key_type,
+                  detectedKeyType: cred.detected_key_type,
+                  usageCount: cred.usage_count || 0,
+                  lastUsed: cred.last_used,
+                  createdAt: cred.created_at || new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                };
+
+                await credentialRepository.createEncryptedForUser(
+                  userId,
+                  credData,
+                );
+                result.summary.sshCredentialsImported++;
+              } catch (credError) {
+                result.summary.errors.push(
+                  `SSH credential import error: ${credError.message}`,
+                );
+              }
+            }
+          } catch {
+            apiLogger.info(
+              "ssh_credentials table not found in import file, skipping",
+            );
+          }
+
+          const fileManagerTables = [
+            {
+              table: "file_manager_recent",
+              key: "fileManagerItemsImported",
+            },
+            {
+              table: "file_manager_pinned",
+              key: "fileManagerItemsImported",
+            },
+            {
+              table: "file_manager_shortcuts",
+              key: "fileManagerItemsImported",
+            },
+          ];
+
+          const fileManagerRepository =
+            createCurrentFileManagerBookmarkRepository();
+
+          for (const { table, key } of fileManagerTables) {
+            try {
+              const importedItems = importDb
+                .prepare(`SELECT * FROM ${table}`)
+                .all();
+              for (const item of importedItems) {
+                try {
+                  const bookmark = {
+                    hostId: item.host_id,
+                    name: item.name,
+                    path: item.path,
+                  };
+                  const created =
+                    table === "file_manager_recent"
+                      ? await fileManagerRepository.createRecentForImport(
+                          userId,
+                          bookmark,
+                          item.last_opened,
+                        )
+                      : table === "file_manager_pinned"
+                        ? await fileManagerRepository.createPinnedForImport(
+                            userId,
+                            bookmark,
+                            item.pinned_at,
+                          )
+                        : await fileManagerRepository.createShortcutForImport(
+                            userId,
+                            bookmark,
+                            item.created_at,
+                          );
+
+                  if (created) {
+                    result.summary[key]++;
+                  } else {
+                    result.summary.skippedItems++;
+                  }
+                } catch (itemError) {
+                  result.summary.errors.push(
+                    `${table} import error: ${itemError.message}`,
+                  );
+                }
+              }
+            } catch {
+              apiLogger.info(
+                `${table} table not found in import file, skipping`,
+              );
+            }
+          }
+
+          const dismissedAlertRepository =
+            createCurrentDismissedAlertRepository();
+
+          try {
+            const importedAlerts = importDb
+              .prepare("SELECT * FROM dismissed_alerts")
+              .all();
+            for (const alert of importedAlerts) {
+              try {
+                const created = await dismissedAlertRepository.createForImport(
+                  userId,
+                  alert.alert_id,
+                  alert.dismissed_at,
+                );
                 if (created) {
-                  result.summary[key]++;
+                  result.summary.dismissedAlertsImported++;
                 } else {
                   result.summary.skippedItems++;
                 }
-              } catch (itemError) {
+              } catch (alertError) {
                 result.summary.errors.push(
-                  `${table} import error: ${itemError.message}`,
+                  `Dismissed alert import error: ${alertError.message}`,
                 );
               }
             }
           } catch {
-            apiLogger.info(`${table} table not found in import file, skipping`);
+            apiLogger.info(
+              "dismissed_alerts table not found in import file, skipping",
+            );
           }
-        }
 
-        const dismissedAlertRepository =
-          createCurrentDismissedAlertRepository();
-
-        try {
-          const importedAlerts = importDb
-            .prepare("SELECT * FROM dismissed_alerts")
-            .all();
-          for (const alert of importedAlerts) {
+          const targetUser = await userRepository.findById(userId);
+          if (targetUser?.isAdmin) {
             try {
-              const created = await dismissedAlertRepository.createForImport(
-                userId,
-                alert.alert_id,
-                alert.dismissed_at,
-              );
-              if (created) {
-                result.summary.dismissedAlertsImported++;
-              } else {
-                result.summary.skippedItems++;
+              const importedSettings = readImportedSettings(importDb);
+              for (const setting of importedSettings) {
+                try {
+                  await upsertImportedSetting(setting);
+                  result.summary.settingsImported++;
+                } catch (settingError) {
+                  result.summary.errors.push(
+                    `Setting import error (${setting.key}): ${settingError.message}`,
+                  );
+                }
               }
-            } catch (alertError) {
-              result.summary.errors.push(
-                `Dismissed alert import error: ${alertError.message}`,
+            } catch {
+              apiLogger.info(
+                "settings table not found in import file, skipping",
               );
             }
+          } else {
+            apiLogger.info(
+              "Settings import skipped - only admin users can import settings",
+            );
           }
-        } catch {
-          apiLogger.info(
-            "dismissed_alerts table not found in import file, skipping",
-          );
-        }
 
-        const targetUser = await userRepository.findById(userId);
-        if (targetUser?.isAdmin) {
+          result.success = true;
+
           try {
-            const importedSettings = readImportedSettings(importDb);
-            for (const setting of importedSettings) {
-              try {
-                await upsertImportedSetting(setting);
-                result.summary.settingsImported++;
-              } catch (settingError) {
-                result.summary.errors.push(
-                  `Setting import error (${setting.key}): ${settingError.message}`,
-                );
-              }
-            }
-          } catch {
-            apiLogger.info("settings table not found in import file, skipping");
+            await DatabaseSaveTrigger.forceSave("database_import");
+          } catch (saveError) {
+            apiLogger.error(
+              "Failed to persist imported data to disk",
+              saveError,
+              {
+                operation: "import_force_save_failed",
+                userId,
+              },
+            );
           }
-        } else {
-          apiLogger.info(
-            "Settings import skipped - only admin users can import settings",
-          );
-        }
-
-        mainDb.$client.exec("PRAGMA foreign_keys = ON");
-        result.success = true;
-
-        try {
-          await DatabaseSaveTrigger.forceSave("database_import");
-        } catch (saveError) {
-          apiLogger.error(
-            "Failed to persist imported data to disk",
-            saveError,
-            {
-              operation: "import_force_save_failed",
-              userId,
-            },
-          );
-        }
+        });
       } finally {
         if (importDb) {
           importDb.close();
