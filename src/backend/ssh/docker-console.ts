@@ -223,7 +223,9 @@ async function createJumpHostChain(
     } else if (resolvedCredentials.authType === "agent") {
       const result = await applyAgentAuth(
         config,
-        jumpHost.terminalConfig as Record<string, unknown> | undefined,
+        jumpHost.terminalConfig as unknown as
+          | Record<string, unknown>
+          | undefined,
       );
       if ("error" in result) {
         throw new Error(result.error);
@@ -439,7 +441,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             } else if (resolvedHost.authType === "agent") {
               const result = await applyAgentAuth(
                 config,
-                resolvedHost.terminalConfig as
+                resolvedHost.terminalConfig as unknown as
                   | Record<string, unknown>
                   | undefined,
               );

@@ -227,7 +227,7 @@ async function buildDedicatedTransferConnectConfig(
   } else if (authType === "agent") {
     const result = await applyAgentAuth(
       config,
-      host.terminalConfig as Record<string, unknown> | undefined,
+      host.terminalConfig as unknown as Record<string, unknown> | undefined,
     );
     if ("error" in result) {
       throw new Error(result.error);
@@ -761,7 +761,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
-        resolvedTerminalConfig = resolvedHost.terminalConfig as
+        resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           | Record<string, unknown>
           | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
@@ -820,7 +820,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
-        resolvedTerminalConfig = resolvedHost.terminalConfig as
+        resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           | Record<string, unknown>
           | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;

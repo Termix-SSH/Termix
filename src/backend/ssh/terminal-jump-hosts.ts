@@ -175,7 +175,8 @@ export async function createJumpHostChain(
         true,
       );
 
-      const connected = await new Promise<boolean>((resolve) => {
+      // eslint-disable-next-line no-async-promise-executor
+      const connected = await new Promise<boolean>(async (resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
         }, 30000);

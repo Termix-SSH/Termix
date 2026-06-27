@@ -98,7 +98,7 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
   } else if (host.authType === "agent") {
     const result = await applyAgentAuth(
       base as Record<string, unknown>,
-      host.terminalConfig as Record<string, unknown> | undefined,
+      host.terminalConfig as unknown as Record<string, unknown> | undefined,
     );
     if ("error" in result) {
       throw new Error(result.error);

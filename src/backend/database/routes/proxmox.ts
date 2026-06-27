@@ -362,7 +362,7 @@ router.post(
           await import("../../ssh/terminal-auth-helpers.js");
         const result = await applyAgentAuth(
           sshConfig,
-          host.terminalConfig as Record<string, unknown> | undefined,
+          host.terminalConfig as unknown as Record<string, unknown> | undefined,
         );
         if ("error" in result) {
           return res.status(400).json({ error: result.error });

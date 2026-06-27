@@ -774,11 +774,12 @@ router.post(
       let output = "";
       let errorOutput = "";
 
+      /* eslint-disable no-async-promise-executor */
       const executePromise = new Promise<{
         success: boolean;
         output: string;
         error?: string;
-      }>((resolve, reject) => {
+      }>(async (resolve, reject) => {
         const timeout = setTimeout(() => {
           conn.end();
           reject(new Error("Command execution timeout (30s)"));
@@ -910,6 +911,7 @@ router.post(
 
         conn.connect(config);
       });
+      /* eslint-enable no-async-promise-executor */
 
       const result = await executePromise;
 

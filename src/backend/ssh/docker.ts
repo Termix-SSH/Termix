@@ -280,7 +280,8 @@ async function createJumpHostChain(
         true,
       );
 
-      const connected = await new Promise<boolean>((resolve) => {
+      // eslint-disable-next-line no-async-promise-executor
+      const connected = await new Promise<boolean>(async (resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
         }, 30000);
@@ -982,7 +983,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
     } else if (resolvedCredentials.authType === "agent") {
       const result = await applyAgentAuth(
         config,
-        host.terminalConfig as Record<string, unknown> | undefined,
+        host.terminalConfig as unknown as Record<string, unknown> | undefined,
       );
       if ("error" in result) {
         connectionLogs.push(
