@@ -154,30 +154,18 @@ router.post(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(snippetFolders)
-        .where(
-          and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
-        );
+      const created = await createCurrentSnippetRepository().createFolder(
+        userId,
+        name,
+        color,
+        icon,
+      );
 
-      if (existing.length > 0) {
+      if (!created) {
         return res
           .status(409)
           .json({ error: "Folder with this name already exists" });
       }
-
-      const insertData = {
-        userId,
-        name: name.trim(),
-        color: color?.trim() || null,
-        icon: icon?.trim() || null,
-      };
-
-      const result = await db
-        .insert(snippetFolders)
-        .values(insertData)
-        .returning();
 
       authLogger.success(`Snippet folder created: ${name} by user ${userId}`, {
         operation: "snippet_folder_create_success",
@@ -185,7 +173,7 @@ router.post(
         name,
       });
 
-      res.status(201).json(result[0]);
+      res.status(201).json(created);
     } catch (err) {
       authLogger.error("Failed to create snippet folder", err);
       res.status(500).json({
@@ -250,50 +238,18 @@ router.put(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(snippetFolders)
-        .where(
-          and(
-            eq(snippetFolders.userId, userId),
-            eq(snippetFolders.name, decodeURIComponent(name)),
-          ),
+      const decodedName = decodeURIComponent(name);
+      const updated =
+        await createCurrentSnippetRepository().updateFolderMetadata(
+          userId,
+          decodedName,
+          color,
+          icon,
         );
 
-      if (existing.length === 0) {
+      if (!updated) {
         return res.status(404).json({ error: "Folder not found" });
       }
-
-      const updateFields: Partial<{
-        color: string | null;
-        icon: string | null;
-        updatedAt: ReturnType<typeof sql.raw>;
-      }> = {
-        updatedAt: sql`CURRENT_TIMESTAMP`,
-      };
-
-      if (color !== undefined) updateFields.color = color?.trim() || null;
-      if (icon !== undefined) updateFields.icon = icon?.trim() || null;
-
-      await db
-        .update(snippetFolders)
-        .set(updateFields)
-        .where(
-          and(
-            eq(snippetFolders.userId, userId),
-            eq(snippetFolders.name, decodeURIComponent(name)),
-          ),
-        );
-
-      const updated = await db
-        .select()
-        .from(snippetFolders)
-        .where(
-          and(
-            eq(snippetFolders.userId, userId),
-            eq(snippetFolders.name, decodeURIComponent(name)),
-          ),
-        );
 
       authLogger.success(
         `Snippet folder metadata updated: ${name} by user ${userId}`,
@@ -304,7 +260,7 @@ router.put(
         },
       );
 
-      res.json(updated[0]);
+      res.json(updated);
     } catch (err) {
       authLogger.error("Failed to update snippet folder metadata", err);
       res.status(500).json({
@@ -366,50 +322,21 @@ router.put(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(snippetFolders)
-        .where(
-          and(
-            eq(snippetFolders.userId, userId),
-            eq(snippetFolders.name, oldName),
-          ),
-        );
+      const result = await createCurrentSnippetRepository().renameFolder(
+        userId,
+        oldName,
+        newName,
+      );
 
-      if (existing.length === 0) {
+      if (result.status === "missing") {
         return res.status(404).json({ error: "Folder not found" });
       }
 
-      const nameExists = await db
-        .select()
-        .from(snippetFolders)
-        .where(
-          and(
-            eq(snippetFolders.userId, userId),
-            eq(snippetFolders.name, newName),
-          ),
-        );
-
-      if (nameExists.length > 0) {
+      if (result.status === "conflict") {
         return res
           .status(409)
           .json({ error: "Folder with new name already exists" });
       }
-
-      await db
-        .update(snippetFolders)
-        .set({ name: newName, updatedAt: sql`CURRENT_TIMESTAMP` })
-        .where(
-          and(
-            eq(snippetFolders.userId, userId),
-            eq(snippetFolders.name, oldName),
-          ),
-        );
-
-      await db
-        .update(snippets)
-        .set({ folder: newName })
-        .where(and(eq(snippets.userId, userId), eq(snippets.folder, oldName)));
 
       authLogger.success(
         `Snippet folder renamed: ${oldName} -> ${newName} by user ${userId}`,
@@ -474,21 +401,7 @@ router.delete(
     try {
       const folderName = decodeURIComponent(name);
 
-      await db
-        .update(snippets)
-        .set({ folder: null })
-        .where(
-          and(eq(snippets.userId, userId), eq(snippets.folder, folderName)),
-        );
-
-      await db
-        .delete(snippetFolders)
-        .where(
-          and(
-            eq(snippetFolders.userId, userId),
-            eq(snippetFolders.name, folderName),
-          ),
-        );
+      await createCurrentSnippetRepository().deleteFolder(userId, folderName);
 
       authLogger.success(
         `Snippet folder deleted: ${folderName} by user ${userId}`,

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
 import { SnippetRepository } from "./snippet-repository.js";
 
@@ -12,7 +12,12 @@ describe("SnippetRepository", () => {
     }
   });
 
-  async function createRepository(): Promise<SnippetRepository> {
+  async function createRepository(onWrite?: () => void): Promise<{
+    repository: SnippetRepository;
+    sqlite: NonNullable<
+      Awaited<ReturnType<SqliteDatabaseAdapter["connect"]>>["sqlite"]
+    >;
+  }> {
     adapter = new SqliteDatabaseAdapter({
       dialect: "sqlite",
       url: ":memory:",
@@ -58,11 +63,14 @@ describe("SnippetRepository", () => {
         (3, 'user-2', 'other', NULL, NULL);
     `);
 
-    return new SnippetRepository(context);
+    return {
+      repository: new SnippetRepository(context, onWrite),
+      sqlite: context.sqlite!,
+    };
   }
 
   it("finds owned snippets only", async () => {
-    const repository = await createRepository();
+    const { repository } = await createRepository();
 
     await expect(repository.findOwnedById("user-1", 1)).resolves.toMatchObject({
       id: 1,
@@ -74,7 +82,7 @@ describe("SnippetRepository", () => {
   });
 
   it("lists folders by name for a user", async () => {
-    const repository = await createRepository();
+    const { repository } = await createRepository();
 
     const rows = await repository.listFolders("user-1");
 
@@ -82,12 +90,105 @@ describe("SnippetRepository", () => {
   });
 
   it("lists export data for a user", async () => {
-    const repository = await createRepository();
+    const { repository } = await createRepository();
 
     const snippets = await repository.listSnippetsForExport("user-1");
     const folders = await repository.listFoldersForExport("user-1");
 
     expect(snippets.map((row) => row.name)).toEqual(["root", "deploy"]);
     expect(folders.map((row) => row.name)).toEqual(["db", "ops"]);
+  });
+
+  it("creates folders and rejects duplicate names", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    const created = await repository.createFolder(
+      "user-1",
+      "  new  ",
+      " #fff ",
+      " star ",
+    );
+    const duplicate = await repository.createFolder(
+      "user-1",
+      "ops",
+      null,
+      null,
+    );
+
+    expect(created).toMatchObject({
+      userId: "user-1",
+      name: "new",
+      color: "#fff",
+      icon: "star",
+    });
+    expect(duplicate).toBeNull();
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates folder metadata", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    const updated = await repository.updateFolderMetadata(
+      "user-1",
+      "ops",
+      " #abc ",
+      undefined,
+    );
+    const missing = await repository.updateFolderMetadata(
+      "user-1",
+      "missing",
+      null,
+      null,
+    );
+
+    expect(updated).toMatchObject({
+      name: "ops",
+      color: "#abc",
+      icon: "terminal",
+    });
+    expect(missing).toBeNull();
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("renames folders and attached snippets", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    await expect(
+      repository.renameFolder("user-1", "missing", "new"),
+    ).resolves.toEqual({ status: "missing" });
+    await expect(
+      repository.renameFolder("user-1", "ops", "db"),
+    ).resolves.toEqual({
+      status: "conflict",
+    });
+    await expect(
+      repository.renameFolder("user-1", "ops", "deploys"),
+    ).resolves.toEqual({ status: "renamed" });
+
+    await expect(repository.listFolders("user-1")).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "deploys" })]),
+    );
+    await expect(repository.findOwnedById("user-1", 2)).resolves.toMatchObject({
+      folder: "deploys",
+    });
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes folders and moves snippets to the root", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    await repository.deleteFolder("user-1", "ops");
+
+    expect(
+      (await repository.listFolders("user-1")).map((row) => row.name),
+    ).toEqual(["db"]);
+    await expect(repository.findOwnedById("user-1", 2)).resolves.toMatchObject({
+      folder: null,
+    });
+    expect(onWrite).toHaveBeenCalledTimes(1);
   });
 });

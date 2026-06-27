@@ -1,4 +1,5 @@
 import { getDb, getSqlite } from "../db/index.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { assertRepositoryRolloutDomainEnabled } from "./repository-rollout.js";
@@ -12,5 +13,7 @@ export function createCurrentSnippetRepository(): SnippetRepository {
     sqlite: getSqlite(),
   };
 
-  return new SnippetRepository(context);
+  return new SnippetRepository(context, () =>
+    DatabaseSaveTrigger.forceSave("snippet_repository_write"),
+  );
 }
