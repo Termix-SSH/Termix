@@ -103,4 +103,24 @@ describe("C2sTunnelPresetRepository", () => {
     expect(await repo.deleteForUser("user-1", preset.id)).toBe(true);
     expect(writeCount).toBe(3);
   });
+
+  it("deletes all presets for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await repo.createForUser("user-1", { name: "One", config: "[]" });
+    await repo.createForUser("user-1", { name: "Two", config: "[]" });
+    await repo.createForUser("user-2", { name: "Other", config: "[]" });
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(2);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.listByUserId("user-1")).toEqual([]);
+    expect(
+      (await repo.listByUserId("user-2")).map((preset) => preset.name),
+    ).toEqual(["Other"]);
+    expect(writeCount).toBe(4);
+  });
 });

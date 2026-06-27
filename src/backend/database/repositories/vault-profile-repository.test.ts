@@ -128,4 +128,19 @@ describe("VaultProfileRepository", () => {
     expect(await repo.findById(1)).toBeNull();
     expect(writeCount).toBe(2);
   });
+
+  it("deletes all profiles for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await expect(repo.deleteByUserId("user-2")).resolves.toBe(2);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.findById(2)).toBeNull();
+    expect(await repo.findById(3)).toBeNull();
+    expect((await repo.findById(1))?.userId).toBe("user-1");
+    expect(writeCount).toBe(1);
+  });
 });

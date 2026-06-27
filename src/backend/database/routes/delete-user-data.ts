@@ -1,6 +1,7 @@
 import { authLogger } from "../../utils/logger.js";
 import { createCurrentApiKeyRepository } from "../repositories/current-api-key-repository.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
+import { createCurrentC2sTunnelPresetRepository } from "../repositories/current-c2s-tunnel-preset-repository.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
@@ -23,6 +24,8 @@ import { createCurrentTrustedDeviceRepository } from "../repositories/current-tr
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
+import { createCurrentVaultProfileRepository } from "../repositories/current-vault-profile-repository.js";
+import { createCurrentVaultTokenRepository } from "../repositories/current-vault-token-repository.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
@@ -62,7 +65,10 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentCredentialRepository().deleteByUserId(userId);
 
     await createCurrentNetworkTopologyRepository().deleteByUserId(userId);
+    await createCurrentC2sTunnelPresetRepository().deleteByUserId(userId);
     await createCurrentOpksshTokenRepository().deleteByUserId(userId);
+    await createCurrentVaultTokenRepository().deleteByUserId(userId);
+    await createCurrentVaultProfileRepository().deleteByUserId(userId);
     await createCurrentOpenTabRepository().deleteByUserId(userId);
     await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 

@@ -109,4 +109,27 @@ describe("VaultTokenRepository", () => {
     expect(await repo.findByUserAndProfile("user-2", 2)).not.toBeNull();
     expect(writeCount).toBe(2);
   });
+
+  it("deletes all tokens for a user", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await repo.upsert({
+      userId: "user-1",
+      profileId: 2,
+      sshCert: "cert-extra",
+      privateKey: "key-extra",
+      expiresAt: "2099-03-01T00:00:00.000Z",
+    });
+
+    await expect(repo.deleteByUserId("user-1")).resolves.toBe(2);
+    await expect(repo.deleteByUserId("missing")).resolves.toBe(0);
+
+    expect(await repo.findByUserAndProfile("user-1", 1)).toBeNull();
+    expect(await repo.findByUserAndProfile("user-1", 2)).toBeNull();
+    expect(await repo.findByUserAndProfile("user-2", 2)).not.toBeNull();
+    expect(writeCount).toBe(2);
+  });
 });

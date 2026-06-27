@@ -181,9 +181,9 @@ Allowed in gray rollout:
 - Permission manager role permission aggregation and admin-role checks migrated
   behind `RoleRepository`.
 - User deletion role-assignment cleanup migrated behind `RoleRepository`.
-- User deletion API key, trusted device, audit, encrypted-data, UI state, and
-  related per-user cleanup now uses current repository boundaries before the
-  final user row delete.
+- User deletion API key, trusted device, C2S preset, Vault token/profile, audit,
+  encrypted-data, UI state, and related per-user cleanup now uses current
+  repository boundaries before the final user row delete.
 - User admin route role sync and admin-created default role assignment migrated
   behind `RoleRepository`.
 - LDAP login default role assignment and admin-role sync migrated behind

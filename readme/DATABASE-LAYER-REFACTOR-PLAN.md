@@ -196,9 +196,10 @@ current user repository boundary, removing direct `users` access from that route
 module.
 Password reset route user lookups, password hash updates, TOTP reset fields, and
 per-user encrypted-data cleanup now use current repository boundaries.
-User deletion helper now removes sessions, API keys, trusted devices, roles,
-audit logs, encrypted data, UI state, and related per-user rows through current
-repository boundaries before deleting the final user record.
+User deletion helper now removes sessions, API keys, trusted devices, C2S
+presets, Vault tokens/profiles, roles, audit logs, encrypted data, UI state, and
+related per-user rows through current repository boundaries before deleting the
+final user record.
 Snippet create/update/delete audit actor username lookups now use the current
 user repository boundary; the remaining snippet `users` usage is the shared
 snippet owner join.

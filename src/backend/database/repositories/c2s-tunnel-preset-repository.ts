@@ -117,6 +117,19 @@ export class C2sTunnelPresetRepository {
     return rows.length > 0;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(c2sTunnelPresets)
+      .where(eq(c2sTunnelPresets.userId, userId))
+      .returning({ id: c2sTunnelPresets.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   private async afterWrite(): Promise<void> {
     await this.onWrite?.();
   }
