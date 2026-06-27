@@ -1,6 +1,5 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
@@ -1752,10 +1751,7 @@ router.get("/me/token", authenticateJWT, (req: Request, res: Response) => {
  */
 router.get("/setup-required", async (req, res) => {
   try {
-    const countResult = db.$client
-      .prepare("SELECT COUNT(*) as count FROM users")
-      .get();
-    const count = (countResult as { count?: number })?.count || 0;
+    const count = await createCurrentUserRepository().countAll();
 
     res.json({
       setup_required: count === 0,
@@ -1790,10 +1786,7 @@ router.get("/count", authenticateJWT, async (req, res) => {
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    const countResult = db.$client
-      .prepare("SELECT COUNT(*) as count FROM users")
-      .get();
-    const count = (countResult as { count?: number })?.count || 0;
+    const count = await createCurrentUserRepository().countAll();
     res.json({ count });
   } catch (err) {
     authLogger.error("Failed to count users", err);
@@ -1817,7 +1810,7 @@ router.get("/count", authenticateJWT, async (req, res) => {
  */
 router.get("/db-health", requireAdmin, async (req, res) => {
   try {
-    db.$client.prepare("SELECT 1").get();
+    await createCurrentUserRepository().countAll();
     res.json({ status: "ok" });
   } catch (err) {
     authLogger.error("DB health check failed", err);
@@ -2080,10 +2073,9 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
     if (!allowed) {
-      const totpRow = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users WHERE totp_enabled = 1")
-        .get() as { count?: number };
-      if ((totpRow?.count || 0) > 0) {
+      const totpEnabledCount =
+        await createCurrentUserRepository().countTotpEnabled();
+      if (totpEnabledCount > 0) {
         return res.status(409).json({
           error:
             "Cannot disable password login while 2FA is enabled for one or more users. Disable 2FA first.",
@@ -2236,10 +2228,8 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
     }
 
     if (userRecord.isAdmin) {
-      const adminCount = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
-        .get();
-      if (((adminCount as { count?: number })?.count || 0) <= 1) {
+      const adminCount = await createCurrentUserRepository().countAdmins();
+      if (adminCount <= 1) {
         return res
           .status(403)
           .json({ error: "Cannot delete the last admin user" });

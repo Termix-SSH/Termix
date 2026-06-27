@@ -99,6 +99,8 @@ GitHub and standard OIDC callback user lookup/create/rollback/profile/admin
 sync writes now use the current user repository boundary, removing direct
 Drizzle `users` table access from `routes/users.ts`, `user-admin-routes.ts`,
 and `auth-manager.ts`.
+User setup/count/db-health checks, password-login TOTP guard reads, and
+last-admin delete guard reads now use the current user repository boundary.
 API key create/list/delete and API key authentication last-used updates now use
 the current API key repository boundary.
 Trusted device check/add/remove and TOTP trusted-device cleanup now use the

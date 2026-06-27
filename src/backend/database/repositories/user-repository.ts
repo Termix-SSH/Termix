@@ -119,6 +119,15 @@ export class UserRepository {
     return rows.length;
   }
 
+  async countTotpEnabled(): Promise<number> {
+    const rows = await this.context.drizzle
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.totpEnabled, true));
+
+    return rows.length;
+  }
+
   async countAll(): Promise<number> {
     const rows = await this.context.drizzle
       .select({ id: users.id })
