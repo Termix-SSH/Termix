@@ -208,8 +208,9 @@ Session recording create/list/read/content/delete/prune and host/folder/user
 cleanup now uses the current session recording repository boundary.
 Command history save/list/delete and host/user cleanup now use the current
 command history repository boundary.
-Recent activity host/user cleanup now uses the current recent activity
-repository boundary.
+Dashboard recent activity list/log/trim/reset and host/user cleanup now use the
+current recent activity repository boundary, with host ownership/share checks
+using current host resolution, role, and RBAC access repository boundaries.
 SSH credential usage writes and host/user cleanup now use the current SSH
 credential usage repository boundary.
 Transfer recent list/upsert/prune/export and host/folder/user cleanup now use

@@ -1,19 +1,15 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import { createCorsMiddleware } from "./utils/cors-config.js";
-import { getDb } from "./database/db/index.js";
-import {
-  recentActivity,
-  hosts,
-  hostAccess,
-  userRoles,
-} from "./database/db/schema.js";
-import { eq, and, desc, inArray, or, isNull, gte, sql } from "drizzle-orm";
 import { dashboardLogger } from "./utils/logger.js";
-import { SimpleDBOps } from "./utils/simple-db-ops.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../types/index.js";
 import { dashboardServiceLinksRouter } from "./database/routes/dashboard-service-links-routes.js";
+import { createCurrentHostResolutionRepository } from "./database/repositories/current-host-resolution-repository.js";
+import { createCurrentRbacAccessRepository } from "./database/repositories/current-rbac-access-repository.js";
+import { createCurrentRecentActivityRepository } from "./database/repositories/current-recent-activity-repository.js";
+import { createCurrentRoleRepository } from "./database/repositories/current-role-repository.js";
+import { DataCrypto } from "./utils/data-crypto.js";
 
 const app = express();
 const authManager = AuthManager.getInstance();
@@ -22,6 +18,10 @@ const serverStartTime = Date.now();
 
 const activityRateLimiter = new Map<string, number>();
 const RATE_LIMIT_MS = 1000;
+
+function isUserDataUnlocked(userId: string): boolean {
+  return DataCrypto.getUserDataKey(userId) !== null;
+}
 
 app.use(createCorsMiddleware());
 app.use(cookieParser());
@@ -103,7 +103,7 @@ app.get("/activity/recent", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
 
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (!isUserDataUnlocked(userId)) {
       return res.status(401).json({
         error: "Session expired - please log in again",
         code: "SESSION_EXPIRED",
@@ -112,16 +112,8 @@ app.get("/activity/recent", async (req, res) => {
 
     const limit = Number(req.query.limit) || 20;
 
-    const activities = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(recentActivity)
-        .where(eq(recentActivity.userId, userId))
-        .orderBy(desc(recentActivity.timestamp))
-        .limit(limit),
-      "recent_activity",
-      userId,
-    );
+    const activities =
+      await createCurrentRecentActivityRepository().listByUserId(userId, limit);
 
     res.json(activities);
   } catch (err) {
@@ -168,7 +160,7 @@ app.post("/activity/log", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
 
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (!isUserDataUnlocked(userId)) {
       return res.status(401).json({
         error: "Session expired - please log in again",
         code: "SESSION_EXPIRED",
@@ -223,97 +215,45 @@ app.post("/activity/log", async (req, res) => {
       entriesToDelete.forEach((key) => activityRateLimiter.delete(key));
     }
 
-    const ownedHosts = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId))),
-      "ssh_data",
-      userId,
-    );
+    const isOwnedHost =
+      await createCurrentHostResolutionRepository().isHostOwnedByUser(
+        hostId,
+        userId,
+      );
 
-    if (ownedHosts.length === 0) {
-      const userRoleIds = await getDb()
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
-      const roleIds = userRoleIds.map((r) => r.roleId);
-
-      const now = new Date().toISOString();
-      const sharedHosts = await getDb()
-        .select()
-        .from(hostAccess)
-        .where(
-          and(
-            eq(hostAccess.hostId, hostId),
-            or(
-              eq(hostAccess.userId, userId),
-              roleIds.length > 0
-                ? sql`${hostAccess.roleId} IN (${sql.join(
-                    roleIds.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})`
-                : sql`false`,
-            ),
-            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
-          ),
+    if (!isOwnedHost) {
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
+      const sharedHosts =
+        await createCurrentRbacAccessRepository().listVisibleHostAccessEntries(
+          userId,
+          roleIds,
         );
+      const hasSharedAccess = sharedHosts.some(
+        (access) => access.hostId === hostId,
+      );
 
-      if (sharedHosts.length === 0) {
+      if (!hasSharedAccess) {
         return res
           .status(404)
           .json({ error: "Host not found or access denied" });
       }
     }
 
-    const result = (await SimpleDBOps.insert(
-      recentActivity,
-      "recent_activity",
-      {
-        userId,
-        type,
-        hostId,
-        hostName,
-      },
+    const result = await createCurrentRecentActivityRepository().create({
       userId,
-    )) as unknown as { id: number };
+      type,
+      hostId,
+      hostName,
+    });
 
     // Best-effort trim of old activity entries; failures here should not
     // cause the primary /activity/log request to 500.
     try {
-      const allActivities = await SimpleDBOps.select<{
-        id: number;
-        timestamp: string;
-      }>(
-        getDb()
-          .select({
-            id: recentActivity.id,
-            timestamp: recentActivity.timestamp,
-          })
-          .from(recentActivity)
-          .where(eq(recentActivity.userId, userId))
-          .orderBy(desc(recentActivity.timestamp)),
-        "recent_activity",
+      await createCurrentRecentActivityRepository().trimUserActivity(
         userId,
+        100,
       );
-
-      if (allActivities.length > 100) {
-        const idsToDelete = allActivities
-          .slice(100)
-          .map((a) => a.id)
-          .filter((id) => typeof id === "number");
-
-        if (idsToDelete.length > 0) {
-          await SimpleDBOps.delete(
-            recentActivity,
-            "recent_activity",
-            and(
-              eq(recentActivity.userId, userId),
-              inArray(recentActivity.id, idsToDelete),
-            ),
-          );
-        }
-      }
     } catch (trimErr) {
       dashboardLogger.warn("Failed to trim recent_activity (non-fatal)", {
         operation: "trim_recent_activity",
@@ -349,18 +289,14 @@ app.delete("/activity/reset", async (req, res) => {
   try {
     const userId = (req as AuthenticatedRequest).userId;
 
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (!isUserDataUnlocked(userId)) {
       return res.status(401).json({
         error: "Session expired - please log in again",
         code: "SESSION_EXPIRED",
       });
     }
 
-    await SimpleDBOps.delete(
-      recentActivity,
-      "recent_activity",
-      eq(recentActivity.userId, userId),
-    );
+    await createCurrentRecentActivityRepository().deleteByUserId(userId);
 
     dashboardLogger.success("Recent activity cleared", {
       operation: "reset_recent_activity",

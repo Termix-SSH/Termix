@@ -63,8 +63,8 @@ Allowed in gray rollout:
   cleanup migrated behind `SessionRecordingRepository`.
 - Command history save/list/delete and host/user cleanup migrated behind
   `CommandHistoryRepository`.
-- Recent activity host/user cleanup migrated behind
-  `RecentActivityRepository`.
+- Dashboard recent activity list/log/trim/reset and host/user cleanup migrated
+  behind `RecentActivityRepository`.
 - SSH credential usage writes and host/user cleanup migrated behind
   `SshCredentialUsageRepository`.
 - Transfer recent list/upsert/prune/export and host/folder/user cleanup migrated
