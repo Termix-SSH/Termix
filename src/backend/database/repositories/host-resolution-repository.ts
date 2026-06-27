@@ -5,9 +5,19 @@ import { DataCrypto } from "../../utils/data-crypto.js";
 
 export type HostResolutionHostRecord = typeof hosts.$inferSelect;
 export type HostResolutionCredentialRecord = typeof sshCredentials.$inferSelect;
+export interface HostKeyVerificationRecord {
+  hostKeyFingerprint: string | null;
+  hostKeyType: string | null;
+  hostKeyAlgorithm: string | null;
+  hostKeyChangedCount: number | null;
+  name: string | null;
+}
 
 export class HostResolutionRepository {
-  constructor(private readonly context: DatabaseContext) {}
+  constructor(
+    private readonly context: DatabaseContext,
+    private readonly onWrite?: () => void | Promise<void>,
+  ) {}
 
   async findHostById(
     hostId: number,
@@ -46,6 +56,76 @@ export class HostResolutionRepository {
       );
 
     return this.decryptManyByOwner("ssh_data", rows);
+  }
+
+  async findHostKeyVerificationData(
+    hostId: number,
+  ): Promise<HostKeyVerificationRecord | null> {
+    const rows = await this.context.drizzle
+      .select({
+        hostKeyFingerprint: hosts.hostKeyFingerprint,
+        hostKeyType: hosts.hostKeyType,
+        hostKeyAlgorithm: hosts.hostKeyAlgorithm,
+        hostKeyChangedCount: hosts.hostKeyChangedCount,
+        name: hosts.name,
+      })
+      .from(hosts)
+      .where(eq(hosts.id, hostId))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async storeHostKey(
+    hostId: number,
+    fingerprint: string,
+    keyType: string,
+    algorithm: string,
+    now = new Date().toISOString(),
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(hosts)
+      .set({
+        hostKeyFingerprint: fingerprint,
+        hostKeyType: keyType,
+        hostKeyAlgorithm: algorithm,
+        hostKeyFirstSeen: now,
+        hostKeyLastVerified: now,
+      })
+      .where(eq(hosts.id, hostId));
+    await this.afterWrite();
+  }
+
+  async updateHostKey(
+    hostId: number,
+    fingerprint: string,
+    keyType: string,
+    algorithm: string,
+    currentChangeCount: number,
+    now = new Date().toISOString(),
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(hosts)
+      .set({
+        hostKeyFingerprint: fingerprint,
+        hostKeyType: keyType,
+        hostKeyAlgorithm: algorithm,
+        hostKeyLastVerified: now,
+        hostKeyChangedCount: currentChangeCount + 1,
+      })
+      .where(eq(hosts.id, hostId));
+    await this.afterWrite();
+  }
+
+  async touchHostKeyLastVerified(
+    hostId: number,
+    now = new Date().toISOString(),
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(hosts)
+      .set({ hostKeyLastVerified: now })
+      .where(eq(hosts.id, hostId));
+    await this.afterWrite();
   }
 
   async findCredentialByIdForUser(
@@ -112,5 +192,9 @@ export class HostResolutionRepository {
         DataCrypto.decryptRecord(tableName, record, record.userId, userDataKey),
       ];
     });
+  }
+
+  private async afterWrite(): Promise<void> {
+    await this.onWrite?.();
   }
 }

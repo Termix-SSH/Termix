@@ -22,7 +22,9 @@ describe("HostResolutionRepository", () => {
     }
   });
 
-  async function createRepository(): Promise<HostResolutionRepository> {
+  async function createRepository(
+    onWrite?: () => void | Promise<void>,
+  ): Promise<HostResolutionRepository> {
     adapter = new SqliteDatabaseAdapter({
       dialect: "sqlite",
       url: ":memory:",
@@ -192,7 +194,7 @@ describe("HostResolutionRepository", () => {
       VALUES (1, 'user-2', 'user-1', 'execute', 8);
     `);
 
-    return new HostResolutionRepository(context);
+    return new HostResolutionRepository(context, onWrite);
   }
 
   it("loads host and credential rows through the decryption boundary", async () => {
@@ -313,6 +315,62 @@ describe("HostResolutionRepository", () => {
       expect.any(String),
       expect.any(Buffer),
     );
+  });
+
+  it("loads host key verification metadata without decrypting credentials", async () => {
+    const repository = await createRepository();
+
+    const row = await repository.findHostKeyVerificationData(1);
+
+    expect(row).toMatchObject({
+      hostKeyFingerprint: null,
+      hostKeyType: null,
+      hostKeyAlgorithm: "sha256",
+      hostKeyChangedCount: 0,
+      name: "web",
+    });
+    expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();
+  });
+
+  it("stores and updates host key verification metadata through the write boundary", async () => {
+    const onWrite = vi.fn();
+    const repository = await createRepository(onWrite);
+
+    await repository.storeHostKey(
+      1,
+      "fingerprint-1",
+      "ssh-rsa",
+      "sha256",
+      "t1",
+    );
+    await expect(
+      repository.findHostKeyVerificationData(1),
+    ).resolves.toMatchObject({
+      hostKeyFingerprint: "fingerprint-1",
+      hostKeyType: "ssh-rsa",
+      hostKeyAlgorithm: "sha256",
+      hostKeyChangedCount: 0,
+    });
+
+    await repository.touchHostKeyLastVerified(1, "t2");
+    await repository.updateHostKey(
+      1,
+      "fingerprint-2",
+      "ssh-ed25519",
+      "sha256",
+      0,
+      "t3",
+    );
+
+    await expect(
+      repository.findHostKeyVerificationData(1),
+    ).resolves.toMatchObject({
+      hostKeyFingerprint: "fingerprint-2",
+      hostKeyType: "ssh-ed25519",
+      hostKeyAlgorithm: "sha256",
+      hostKeyChangedCount: 1,
+    });
+    expect(onWrite).toHaveBeenCalledTimes(3);
   });
 
   it("returns null when user data is locked", async () => {
