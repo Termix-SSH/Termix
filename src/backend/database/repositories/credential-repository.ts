@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { SystemCrypto } from "../../utils/system-crypto.js";
 
 export type CredentialRecord = typeof sshCredentials.$inferSelect;
 export type NewCredentialRecord = typeof sshCredentials.$inferInsert;
@@ -22,6 +23,37 @@ export class CredentialRepository {
       .returning();
     await this.afterWrite();
     return rows[0];
+  }
+
+  async createEncryptedForUser(
+    userId: string,
+    credential: NewCredentialRecord,
+  ): Promise<CredentialRecord> {
+    const userDataKey = DataCrypto.validateUserAccess(userId);
+    const tempId = credential.id ?? `temp-${userId}-${Date.now()}`;
+    const dataWithTempId = { ...credential, id: tempId };
+    const encryptedCredential = await this.encryptCredentialRecordForWrite(
+      dataWithTempId,
+      userId,
+      userDataKey,
+    );
+
+    if (!credential.id) {
+      delete (encryptedCredential as Partial<NewCredentialRecord>).id;
+    }
+
+    const rows = await this.context.drizzle
+      .insert(sshCredentials)
+      .values(encryptedCredential)
+      .returning();
+
+    await this.afterWrite();
+    return DataCrypto.decryptRecord(
+      "ssh_credentials",
+      rows[0],
+      userId,
+      userDataKey,
+    );
   }
 
   async findByIdForUser(
@@ -125,6 +157,33 @@ export class CredentialRepository {
     return rows[0] ?? null;
   }
 
+  async updateEncryptedForUser(
+    userId: string,
+    credentialId: number,
+    update: CredentialUpdate,
+  ): Promise<CredentialRecord | null> {
+    const userDataKey = DataCrypto.validateUserAccess(userId);
+    const encryptedUpdate = await this.encryptCredentialRecordForWrite(
+      update,
+      userId,
+      userDataKey,
+    );
+
+    const rows = await this.context.drizzle
+      .update(sshCredentials)
+      .set(encryptedUpdate)
+      .where(
+        and(
+          eq(sshCredentials.id, credentialId),
+          eq(sshCredentials.userId, userId),
+        ),
+      )
+      .returning();
+
+    await this.afterWrite();
+    return this.decryptOne(rows[0] ?? null, userId);
+  }
+
   async deleteForUser(userId: string, credentialId: number): Promise<boolean> {
     const rows = await this.context.drizzle
       .delete(sshCredentials)
@@ -208,6 +267,26 @@ export class CredentialRepository {
       userId,
       userDataKey,
     );
+  }
+
+  private async encryptCredentialRecordForWrite<
+    T extends Record<string, unknown>,
+  >(record: T, userId: string, userDataKey: Buffer): Promise<T> {
+    const encryptedRecord = DataCrypto.encryptRecord(
+      "ssh_credentials",
+      record,
+      userId,
+      userDataKey,
+    );
+    const systemKey =
+      await SystemCrypto.getInstance().getCredentialSharingKey();
+    const systemEncrypted = await DataCrypto.encryptRecordWithSystemKey(
+      "ssh_credentials",
+      record,
+      systemKey,
+    );
+
+    return { ...encryptedRecord, ...systemEncrypted };
   }
 
   private async afterWrite(): Promise<void> {

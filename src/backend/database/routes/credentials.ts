@@ -1,11 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { sshCredentials, hosts } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
@@ -14,6 +10,8 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
 
@@ -24,6 +22,11 @@ function isNonEmptyString(val: unknown): val is string {
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
+
+async function getAuditUsername(userId: string): Promise<string> {
+  const actor = await createCurrentUserRepository().findById(userId);
+  return actor?.username ?? userId;
+}
 
 /**
  * @openapi
@@ -180,23 +183,16 @@ router.post(
         lastUsed: null,
       };
 
-      const created = (await SimpleDBOps.insert(
-        sshCredentials,
-        "ssh_credentials",
-        credentialData,
-        userId,
-      )) as typeof credentialData & { id: number };
+      const created =
+        await createCurrentCredentialRepository().createEncryptedForUser(
+          userId,
+          credentialData,
+        );
 
       const { ipAddress: ccIp, userAgent: ccUa } = getRequestMeta(req);
-      const { users: usersTableCc } = await import("../db/schema.js");
-      const ccActor = await db
-        .select({ username: usersTableCc.username })
-        .from(usersTableCc)
-        .where(eq(usersTableCc.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: ccActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "create_credential",
         resourceType: "credential",
         resourceId: String(created.id),
@@ -512,22 +508,18 @@ router.put(
         return res.json(formatCredentialOutput(existingCredential));
       }
 
-      await SimpleDBOps.update(
-        sshCredentials,
-        "ssh_credentials",
-        and(
-          eq(sshCredentials.id, credentialId),
-          eq(sshCredentials.userId, userId),
-        ),
-        updateFields,
+      const credentialRepository = createCurrentCredentialRepository();
+      const updated = await credentialRepository.updateEncryptedForUser(
         userId,
+        credentialId,
+        updateFields,
       );
-
-      const updated =
-        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+      const updatedCredential =
+        updated ??
+        (await credentialRepository.findDecryptedByIdForUser(
           userId,
           credentialId,
-        );
+        ));
 
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
@@ -544,15 +536,9 @@ router.put(
       });
 
       const { ipAddress: cuIp, userAgent: cuUa } = getRequestMeta(req);
-      const { users: usersTableCu } = await import("../db/schema.js");
-      const cuActor = await db
-        .select({ username: usersTableCu.username })
-        .from(usersTableCu)
-        .where(eq(usersTableCu.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: cuActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "update_credential",
         resourceType: "credential",
         resourceId: id,
@@ -562,7 +548,7 @@ router.put(
         success: true,
       });
 
-      res.json(formatCredentialOutput(updated ?? existingCredential));
+      res.json(formatCredentialOutput(updatedCredential ?? existingCredential));
     } catch (err) {
       authLogger.error("Failed to update credential", err);
       res.status(500).json({
@@ -634,18 +620,17 @@ router.delete(
         );
 
       if (hostsUsingCredential.length > 0) {
-        await db
-          .update(hosts)
-          .set({
+        await createCurrentHostRepository().updateManyForUser(
+          userId,
+          hostsUsingCredential.map((host) => host.id),
+          {
             credentialId: null,
             password: null,
             key: null,
             keyPassword: null,
             authType: "password",
-          })
-          .where(
-            and(eq(hosts.credentialId, credentialId), eq(hosts.userId, userId)),
-          );
+          },
+        );
 
         for (const host of hostsUsingCredential) {
           const revokedCount =
@@ -685,15 +670,9 @@ router.delete(
       });
 
       const { ipAddress: cdIp, userAgent: cdUa } = getRequestMeta(req);
-      const { users: usersTableCd } = await import("../db/schema.js");
-      const cdActor = await db
-        .select({ username: usersTableCd.username })
-        .from(usersTableCd)
-        .where(eq(usersTableCd.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: cdActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "delete_credential",
         resourceType: "credential",
         resourceId: id,
@@ -771,9 +750,10 @@ router.post(
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      await db
-        .update(hosts)
-        .set({
+      await createCurrentHostRepository().updateForUser(
+        userId,
+        parseInt(hostId),
+        {
           credentialId: parseInt(credentialId),
           username: (credential.username as string) || "",
           authType: credential.authType as string,
@@ -782,8 +762,8 @@ router.post(
           keyPassword: null,
           keyType: null,
           updatedAt: new Date().toISOString(),
-        })
-        .where(and(eq(hosts.id, parseInt(hostId)), eq(hosts.userId, userId)));
+        },
+      );
 
       await createCurrentCredentialRepository().recordUsage(
         userId,

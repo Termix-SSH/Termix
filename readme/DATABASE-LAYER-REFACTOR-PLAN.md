@@ -84,6 +84,10 @@ credential resolution reads, folder rename writes, apply usage writes, shared
 credential source row reads, credential delete lookup/delete, and
 credential-host list reads now use current credential and host resolution
 repository boundaries.
+Credential create/update encrypted writes now use the current credential
+repository boundary, including system-key copies for shared credentials.
+Credential delete host cleanup and apply-to-host writes now use the current host
+repository boundary.
 Host route update readback, single-host fetch, password-field fetch, and host
 export reads now use the current host resolution repository boundary.
 Host route update-state and delete-audit host reads now use the current host

@@ -3,6 +3,7 @@ import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { SystemCrypto } from "../../utils/system-crypto.js";
 
 describe("HostRepository and CredentialRepository", () => {
   let adapter: SqliteDatabaseAdapter | null = null;
@@ -306,6 +307,68 @@ describe("HostRepository and CredentialRepository", () => {
       expect.objectContaining({ id: created.id }),
       "user-1",
       Buffer.from("user-key"),
+    );
+  });
+
+  it("encrypts credential writes with user and system keys", async () => {
+    const repo = await createRepositories();
+    vi.spyOn(DataCrypto, "validateUserAccess").mockReturnValue(
+      Buffer.from("user-key"),
+    );
+    vi.spyOn(DataCrypto, "getUserDataKey").mockReturnValue(
+      Buffer.from("user-key"),
+    );
+    vi.spyOn(DataCrypto, "encryptRecord").mockImplementation(
+      (_tableName, record) =>
+        ({
+          ...record,
+          password: "user-encrypted-password",
+        }) as typeof record,
+    );
+    vi.spyOn(DataCrypto, "encryptRecordWithSystemKey").mockResolvedValue({
+      systemPassword: "system-encrypted-password",
+    });
+    vi.spyOn(DataCrypto, "decryptRecord").mockImplementation(
+      (_tableName, record) => record,
+    );
+    vi.spyOn(
+      SystemCrypto.getInstance(),
+      "getCredentialSharingKey",
+    ).mockResolvedValue(Buffer.from("system-key"));
+
+    const created = await repo.credentials.createEncryptedForUser("user-1", {
+      userId: "user-1",
+      name: "primary",
+      authType: "password",
+      username: "root",
+      password: "secret",
+    });
+
+    const raw = repo.sqlite
+      .prepare(
+        "SELECT password, system_password FROM ssh_credentials WHERE id = ?",
+      )
+      .get(created.id) as { password: string; system_password: string };
+
+    expect(raw.password).toBe("user-encrypted-password");
+    expect(raw.system_password).toBe("system-encrypted-password");
+
+    await repo.credentials.updateEncryptedForUser("user-1", created.id, {
+      password: "updated-secret",
+    });
+
+    const updatedRaw = repo.sqlite
+      .prepare(
+        "SELECT password, system_password FROM ssh_credentials WHERE id = ?",
+      )
+      .get(created.id) as { password: string; system_password: string };
+
+    expect(updatedRaw.password).toBe("user-encrypted-password");
+    expect(updatedRaw.system_password).toBe("system-encrypted-password");
+    expect(DataCrypto.encryptRecordWithSystemKey).toHaveBeenCalledWith(
+      "ssh_credentials",
+      expect.objectContaining({ password: "updated-secret" }),
+      Buffer.from("system-key"),
     );
   });
 
