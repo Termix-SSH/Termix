@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import { execCommand } from "../widgets/common-utils.js";
 import { execElevated } from "./exec-elevated.js";
 import { managerHandler } from "./route-helpers.js";
 import { ManagerInputError } from "./route-helpers.js";
@@ -45,7 +44,8 @@ export function parseWireGuardData(output: string): WireGuardData {
 
   const dumpIdx = output.indexOf("__DUMP__");
   const ipLinkPart = dumpIdx >= 0 ? output.slice(0, dumpIdx) : "";
-  const dumpPart = dumpIdx >= 0 ? output.slice(dumpIdx + "__DUMP__".length) : "";
+  const dumpPart =
+    dumpIdx >= 0 ? output.slice(dumpIdx + "__DUMP__".length) : "";
 
   // Collect up interface names from `ip link show type wireguard`
   const upSet = new Set<string>();
@@ -77,8 +77,16 @@ export function parseWireGuardData(output: string): WireGuardData {
       });
     } else if (cols.length === 9) {
       // Peer row: iface public_key preshared_key endpoint allowed_ips latest_handshake rx_bytes tx_bytes persistent_keepalive
-      const [name, publicKey, , endpoint, allowedIPsStr, handshakeStr, rxStr, txStr] =
-        cols;
+      const [
+        name,
+        publicKey,
+        ,
+        endpoint,
+        allowedIPsStr,
+        handshakeStr,
+        rxStr,
+        txStr,
+      ] = cols;
       if (!name) continue;
 
       if (!ifaceMap.has(name)) {
@@ -138,10 +146,15 @@ export function registerWireGuardRoutes(
       "read",
       "wireguard_read",
       async (client, host) => {
-        const result = await execElevated(client, PROBE_CMD, host.sudoPassword, {
-          forceSudo: false,
-          timeoutMs: 15000,
-        });
+        const result = await execElevated(
+          client,
+          PROBE_CMD,
+          host.sudoPassword,
+          {
+            forceSudo: false,
+            timeoutMs: 15000,
+          },
+        );
         return parseWireGuardData(result.stdout);
       },
     ),
