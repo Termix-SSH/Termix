@@ -53,19 +53,19 @@ vi.mock("../../utils/user-crypto.js", () => ({
   UserCrypto: { getInstance: () => ({ getUserKey: vi.fn() }) },
 }));
 
+vi.mock("../repositories/current-termix-identity-ca-repository.js", () => ({
+  createCurrentTermixIdentityCaRepository: vi.fn(() => ({
+    findPublicByIdentityId: vi.fn(),
+    findDecryptedByIdentityId: vi.fn(),
+    createEncryptedForUser: vi.fn(),
+    updateEncryptedForIdentity: vi.fn(),
+    deleteByIdentityId: vi.fn(),
+  })),
+}));
+
 vi.mock("./termix-id-keys.js", () => ({
   termixIdKeysRouter: { use: vi.fn() },
   matchesAlgoFilter: vi.fn(() => true),
-}));
-
-vi.mock("../../utils/simple-db-ops.js", () => ({
-  SimpleDBOps: vi.fn().mockImplementation(() => ({
-    findOne: vi.fn(),
-    findAll: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    remove: vi.fn(),
-  })),
 }));
 
 // Chainable Drizzle stub — supports arbitrary method chains and resolves via .then()

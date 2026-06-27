@@ -2,12 +2,9 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { Request, Response } from "express";
 import { db } from "../db/index.js";
-import {
-  termixIdentities,
-  termixIdentityKeys,
-  termixIdentityCa,
-} from "../db/schema.js";
+import { termixIdentities, termixIdentityKeys } from "../db/schema.js";
 import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
+import { createCurrentTermixIdentityCaRepository } from "../repositories/current-termix-identity-ca-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { and, eq, asc } from "drizzle-orm";
 // ssh2 is CommonJS; Node's cjs-module-lexer does not surface its `utils` named
@@ -15,7 +12,6 @@ import { and, eq, asc } from "drizzle-orm";
 import ssh2 from "ssh2";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { parsePublicKey, matchesAlgoFilter } from "./termix-id-keys.js";
 import {
@@ -273,17 +269,16 @@ async function caResolver(req: Request, res: Response) {
     if (identity.length === 0) {
       return res.status(404).type("text/plain").send("Not found\n");
     }
-    const ca = await db
-      .select({ publicKey: termixIdentityCa.publicKey })
-      .from(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identity[0].id))
-      .limit(1);
+    const ca =
+      await createCurrentTermixIdentityCaRepository().findPublicByIdentityId(
+        identity[0].id,
+      );
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    if (ca.length === 0) {
+    if (!ca) {
       return res.status(404).send("No CA configured\n");
     }
-    return res.send(`${ca[0].publicKey} termix-id-ca@${handle}\n`);
+    return res.send(`${ca.publicKey} termix-id-ca@${handle}\n`);
   } catch (err) {
     authLogger.error("Termix ID CA resolve failed", err);
     return res.status(500).type("text/plain").send("Internal Server Error\n");
@@ -1093,15 +1088,12 @@ async function getCaForUser(
   userId: string,
   identityId: number,
 ): Promise<CaRow | undefined> {
-  const rows = await SimpleDBOps.select<CaRow>(
-    db
-      .select()
-      .from(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identityId)),
-    "termix_identity_ca",
-    userId,
+  return (
+    (await createCurrentTermixIdentityCaRepository().findDecryptedByIdentityId(
+      userId,
+      identityId,
+    )) ?? undefined
   );
-  return rows[0];
 }
 
 /**
@@ -1121,19 +1113,15 @@ router.get("/ca", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const identity = await getIdentityForUser(userId);
     if (!identity) return res.json({ ca: null });
-    const ca = await db
-      .select({
-        publicKey: termixIdentityCa.publicKey,
-        validityDays: termixIdentityCa.validityDays,
-      })
-      .from(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identity.id))
-      .limit(1);
-    if (ca.length === 0) return res.json({ ca: null });
+    const ca =
+      await createCurrentTermixIdentityCaRepository().findPublicByIdentityId(
+        identity.id,
+      );
+    if (!ca) return res.json({ ca: null });
     res.json({
       ca: {
-        publicKey: ca[0].publicKey,
-        validityDays: ca[0].validityDays,
+        publicKey: ca.publicKey,
+        validityDays: ca.validityDays,
         resolverPath: `/termix-id/u/${identity.handle}/ca`,
       },
     });
@@ -1176,29 +1164,21 @@ router.post(
           .status(400)
           .json({ error: "Create a Termix ID handle first" });
       }
-      const existing = await db
-        .select({ id: termixIdentityCa.id })
-        .from(termixIdentityCa)
-        .where(eq(termixIdentityCa.identityId, identity.id))
-        .limit(1);
-      if (existing.length > 0) {
+      const caRepository = createCurrentTermixIdentityCaRepository();
+      const existing = await caRepository.findPublicByIdentityId(identity.id);
+      if (existing) {
         return res.status(409).json({ error: "CA already exists" });
       }
 
       const validityDays = clampValidityDays(req.body?.validityDays, 90);
       const generated = generateCa();
-      await SimpleDBOps.insert(
-        termixIdentityCa,
-        "termix_identity_ca",
-        {
-          identityId: identity.id,
-          userId,
-          publicKey: generated.publicKeyLine,
-          privateKey: generated.privateKeyPem,
-          validityDays,
-        },
+      await caRepository.createEncryptedForUser(userId, {
+        identityId: identity.id,
         userId,
-      );
+        publicKey: generated.publicKeyLine,
+        privateKey: generated.privateKeyPem,
+        validityDays,
+      });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
@@ -1254,37 +1234,25 @@ router.post(
       const identity = await getIdentityForUser(userId);
       if (!identity)
         return res.status(404).json({ error: "No Termix ID found" });
-      const existing = await db
-        .select({
-          id: termixIdentityCa.id,
-          validityDays: termixIdentityCa.validityDays,
-        })
-        .from(termixIdentityCa)
-        .where(eq(termixIdentityCa.identityId, identity.id))
-        .limit(1);
-      if (existing.length === 0) {
+      const caRepository = createCurrentTermixIdentityCaRepository();
+      const existing = await caRepository.findPublicByIdentityId(identity.id);
+      if (!existing) {
         return res.status(404).json({ error: "No CA to rotate" });
       }
 
       const validityDays = clampValidityDays(
         req.body?.validityDays,
-        existing[0].validityDays,
+        existing.validityDays,
       );
       const generated = generateCa();
       // Rotating invalidates every previously issued certificate — this IS the
       // central revocation mechanism.
-      await SimpleDBOps.update(
-        termixIdentityCa,
-        "termix_identity_ca",
-        eq(termixIdentityCa.identityId, identity.id),
-        {
-          publicKey: generated.publicKeyLine,
-          privateKey: generated.privateKeyPem,
-          validityDays,
-          updatedAt: new Date().toISOString(),
-        },
-        userId,
-      );
+      await caRepository.updateEncryptedForIdentity(userId, identity.id, {
+        publicKey: generated.publicKeyLine,
+        privateKey: generated.privateKeyPem,
+        validityDays,
+        updatedAt: new Date().toISOString(),
+      });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
@@ -1327,11 +1295,11 @@ router.delete("/ca", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const identity = await getIdentityForUser(userId);
     if (!identity) return res.status(404).json({ error: "No Termix ID found" });
-    const deleted = await db
-      .delete(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identity.id))
-      .returning();
-    if (deleted.length === 0) {
+    const deleted =
+      await createCurrentTermixIdentityCaRepository().deleteByIdentityId(
+        identity.id,
+      );
+    if (!deleted) {
       return res.status(404).json({ error: "No CA to delete" });
     }
 

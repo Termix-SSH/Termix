@@ -147,6 +147,8 @@ Allowed in gray rollout:
   user cleanup persistence migrated behind `SharedCredentialRepository`.
 - Permission manager host-access cleanup, shared-access lookup, and last-access
   touch migrated behind `RbacAccessRepository`.
+- Termix ID CA public lookup, encrypted private-key create/rotate/delete, and
+  certificate signing reads migrated behind `TermixIdentityCaRepository`.
 - Current field encryption behavior.
 
 Not included in gray rollout:
@@ -177,7 +179,7 @@ Repository rollout is controlled by `DATABASE_LAYER_REPOSITORY_ROLLOUT`.
 Recommended gray value:
 
 ```bash
-DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,credentials,hosts,snippets,sso_providers,audit_logs,user_preferences,open_tabs,dismissed_alerts,homepage_layouts,homepage_items,network_topology,dashboard_service_links,session_recordings,command_history,recent_activity,ssh_credential_usage,transfer_recent,file_manager_bookmarks,c2s_tunnel_presets,tmux_session_tags,opkssh_tokens,vault_tokens,vault_profiles,host_metrics_preferences,host_health,host_metrics_history,alerts,user_data_exports,host_folders,host_resolution,roles,rbac_access,shared_credentials
+DATABASE_LAYER_REPOSITORY_ROLLOUT=settings,users,sessions,api_keys,trusted_devices,credentials,termix_identity_ca,hosts,snippets,sso_providers,audit_logs,user_preferences,open_tabs,dismissed_alerts,homepage_layouts,homepage_items,network_topology,dashboard_service_links,session_recordings,command_history,recent_activity,ssh_credential_usage,transfer_recent,file_manager_bookmarks,c2s_tunnel_presets,tmux_session_tags,opkssh_tokens,vault_tokens,vault_profiles,host_metrics_preferences,host_health,host_metrics_history,alerts,user_data_exports,host_folders,host_resolution,roles,rbac_access,shared_credentials
 ```
 
 Accepted values:
@@ -198,6 +200,7 @@ Supported domains:
 - `api_keys`
 - `trusted_devices`
 - `credentials`
+- `termix_identity_ca`
 - `hosts`
 - `snippets`
 - `sso_providers`
