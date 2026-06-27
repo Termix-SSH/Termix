@@ -3,10 +3,8 @@ import type {
   CredentialBackend,
 } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { eq } from "drizzle-orm";
 import ssh2Pkg from "ssh2";
-import { db } from "../db/index.js";
-import { hosts, sshCredentials } from "../db/schema.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 
 const { Client } = ssh2Pkg;
@@ -414,25 +412,20 @@ export function registerCredentialDeployRoutes(
           });
         }
 
-        const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
-        const credential = await SimpleDBOps.select(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(eq(sshCredentials.id, credentialId))
-            .limit(1),
-          "ssh_credentials",
+        const repository = createCurrentHostResolutionRepository();
+        const credential = await repository.findCredentialByIdForUser(
+          credentialId,
           userId,
         );
 
-        if (!credential || credential.length === 0) {
+        if (!credential) {
           return res.status(404).json({
             success: false,
             error: "Credential not found",
           });
         }
 
-        const credData = credential[0] as unknown as CredentialBackend;
+        const credData = credential as unknown as CredentialBackend;
 
         if (credData.authType !== "key") {
           return res.status(400).json({
@@ -448,20 +441,14 @@ export function registerCredentialDeployRoutes(
             error: "Public key is required for deployment",
           });
         }
-        const targetHost = await SimpleDBOps.select(
-          db.select().from(hosts).where(eq(hosts.id, targetHostId)).limit(1),
-          "ssh_data",
-          userId,
-        );
+        const hostData = await repository.findHostById(targetHostId, userId);
 
-        if (!targetHost || targetHost.length === 0) {
+        if (!hostData) {
           return res.status(404).json({
             success: false,
             error: "Target host not found",
           });
         }
-
-        const hostData = targetHost[0];
 
         const hostConfig = {
           ip: hostData.ip,
@@ -483,29 +470,21 @@ export function registerCredentialDeployRoutes(
           }
 
           try {
-            const { SimpleDBOps } =
-              await import("../../utils/simple-db-ops.js");
-            const hostCredential = await SimpleDBOps.select(
-              db
-                .select()
-                .from(sshCredentials)
-                .where(eq(sshCredentials.id, hostData.credentialId as number))
-                .limit(1),
-              "ssh_credentials",
+            const hostCredential = await repository.findCredentialByIdForUser(
+              hostData.credentialId as number,
               userId,
             );
 
-            if (hostCredential && hostCredential.length > 0) {
-              const cred = hostCredential[0];
+            if (hostCredential) {
+              hostConfig.authType = hostCredential.authType;
+              hostConfig.username = hostCredential.username;
 
-              hostConfig.authType = cred.authType;
-              hostConfig.username = cred.username;
-
-              if (cred.authType === "password") {
-                hostConfig.password = cred.password;
-              } else if (cred.authType === "key") {
-                hostConfig.privateKey = cred.privateKey || cred.key;
-                hostConfig.keyPassword = cred.keyPassword;
+              if (hostCredential.authType === "password") {
+                hostConfig.password = hostCredential.password;
+              } else if (hostCredential.authType === "key") {
+                hostConfig.privateKey =
+                  hostCredential.privateKey || hostCredential.key;
+                hostConfig.keyPassword = hostCredential.keyPassword;
               }
             } else {
               return res.status(400).json({
