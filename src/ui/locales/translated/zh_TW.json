@@ -440,6 +440,7 @@
     "tunnelModeDynamicDesc": "在本機連接埠上建立 SOCKS5 代理，用於動態連接埠轉送。",
     "sameHost": "此主機（直接隧道）",
     "endpointHost": "端點主機",
+    "endpointHostPlaceholder": "同一主機、SSH 主機，或可存取的主機/IP",
     "endpointPort": "Endpoint Port",
     "bindHost": "綁定主機",
     "sourcePort": "Source Port",
