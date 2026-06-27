@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Network, ArrowUp, ArrowDown } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Network,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useManagerData, useManagerAction } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
@@ -27,7 +33,8 @@ interface WireGuardData {
 }
 
 function fmtBytes(n: number): string {
-  if (n >= 1024 * 1024 * 1024) return `${(n / 1024 / 1024 / 1024).toFixed(1)}GB`;
+  if (n >= 1024 * 1024 * 1024)
+    return `${(n / 1024 / 1024 / 1024).toFixed(1)}GB`;
   if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)}MB`;
   if (n >= 1024) return `${(n / 1024).toFixed(1)}KB`;
   return `${n}B`;
@@ -78,7 +85,9 @@ export function WireGuardManagerCard({ hostId }: { hostId: number | null }) {
         successMsg:
           action === "up"
             ? t("hostMetrics.managers.wgInterfaceUpDone", { name: iface.name })
-            : t("hostMetrics.managers.wgInterfaceDownDone", { name: iface.name }),
+            : t("hostMetrics.managers.wgInterfaceDownDone", {
+                name: iface.name,
+              }),
         onDone: refresh,
       },
     );
@@ -103,7 +112,10 @@ export function WireGuardManagerCard({ hostId }: { hostId: number | null }) {
     >
       <div className="flex flex-col">
         {data?.interfaces.map((iface) => (
-          <div key={iface.name} className="border-b border-border/50 last:border-0">
+          <div
+            key={iface.name}
+            className="border-b border-border/50 last:border-0"
+          >
             <div className="flex items-center justify-between gap-2 py-1.5">
               <button
                 className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -118,7 +130,9 @@ export function WireGuardManagerCard({ hostId }: { hostId: number | null }) {
                   className={`size-1.5 shrink-0 rounded-full ${iface.up ? "bg-accent-brand" : "bg-muted-foreground/40"}`}
                 />
                 <div className="flex min-w-0 flex-col">
-                  <span className="text-xs font-semibold font-mono">{iface.name}</span>
+                  <span className="text-xs font-semibold font-mono">
+                    {iface.name}
+                  </span>
                   <span className="text-[10px] text-muted-foreground">
                     {iface.up ? "up" : "down"}
                     {iface.listenPort ? ` · :${iface.listenPort}` : ""}

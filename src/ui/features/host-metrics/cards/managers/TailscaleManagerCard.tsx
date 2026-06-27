@@ -88,7 +88,10 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
                   </span>
                 )}
                 {data.tailscaleIPs.map((ip) => (
-                  <span key={ip} className="truncate font-mono text-[10px] text-muted-foreground/60">
+                  <span
+                    key={ip}
+                    className="truncate font-mono text-[10px] text-muted-foreground/60"
+                  >
                     {ip}
                   </span>
                 ))}
@@ -145,7 +148,10 @@ export function TailscaleManagerCard({ hostId }: { hostId: number | null }) {
                     {peer.hostname}
                   </span>
                   {peer.tailscaleIPs.map((ip) => (
-                    <span key={ip} className="truncate font-mono text-[10px] text-muted-foreground">
+                    <span
+                      key={ip}
+                      className="truncate font-mono text-[10px] text-muted-foreground"
+                    >
                       {ip}
                     </span>
                   ))}
