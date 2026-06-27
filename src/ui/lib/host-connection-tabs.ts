@@ -29,7 +29,10 @@ export function getDefaultConnectionTab(host: Host): ConnectionTabType {
   return "terminal";
 }
 
-export function resolveHostTabType(host: Host, preferredType?: TabType): TabType {
+export function resolveHostTabType(
+  host: Host,
+  preferredType?: TabType,
+): TabType {
   if (!preferredType) return getDefaultConnectionTab(host);
   if (!isConnectionTabType(preferredType)) return preferredType;
   if (isConnectionEnabled(host, preferredType)) return preferredType;

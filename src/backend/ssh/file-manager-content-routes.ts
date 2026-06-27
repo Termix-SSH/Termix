@@ -1560,7 +1560,9 @@ export function registerFileContentRoutes(
       const sshConn = sshSessions[sessionId];
       if (!sshConn?.isConnected) {
         req.resume();
-        return res.status(400).json({ error: "SSH connection not established" });
+        return res
+          .status(400)
+          .json({ error: "SSH connection not established" });
       }
 
       if (!verifySessionOwnership(sshConn, userId)) {
@@ -1592,7 +1594,10 @@ export function registerFileContentRoutes(
           };
 
           writeStream.on("error", (err) => {
-            fileLogger.error("SFTP write stream error during chunk upload:", err);
+            fileLogger.error(
+              "SFTP write stream error during chunk upload:",
+              err,
+            );
             fail(500, `Upload failed: ${err.message}`);
           });
 
