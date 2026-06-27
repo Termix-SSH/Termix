@@ -140,3 +140,8 @@ export class RawSqliteUserEncryptionMigrationStore implements UserEncryptionMigr
     this.db.prepare(updateQuery).run(...updateValues);
   }
 }
+
+export async function createCurrentUserEncryptionMigrationStore(): Promise<UserEncryptionMigrationStore> {
+  const { getSqlite } = await import("../database/db/index.js");
+  return new RawSqliteUserEncryptionMigrationStore(getSqlite());
+}

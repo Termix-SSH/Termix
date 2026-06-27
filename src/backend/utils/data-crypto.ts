@@ -4,8 +4,10 @@ import { UserCrypto } from "./user-crypto.js";
 import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger } from "./logger.js";
 import {
+  createCurrentUserEncryptionMigrationStore,
   RawSqliteUserEncryptionMigrationStore,
   type LegacyDatabaseInstance,
+  type UserEncryptionMigrationStore,
   type UserEncryptionMigrationRecord,
 } from "./user-encryption-migration-store.js";
 
@@ -85,12 +87,38 @@ class DataCrypto {
     migratedTables: string[];
     migratedFieldsCount: number;
   }> {
+    try {
+      const store = new RawSqliteUserEncryptionMigrationStore(db);
+      return await this.migrateUserSensitiveFieldsInStore(
+        userId,
+        userDataKey,
+        store,
+      );
+    } catch (error) {
+      databaseLogger.error("User sensitive fields migration failed", error, {
+        operation: "user_sensitive_migration_failed",
+        userId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+
+      return { migrated: false, migratedTables: [], migratedFieldsCount: 0 };
+    }
+  }
+
+  private static async migrateUserSensitiveFieldsInStore(
+    userId: string,
+    userDataKey: Buffer,
+    store: UserEncryptionMigrationStore,
+  ): Promise<{
+    migrated: boolean;
+    migratedTables: string[];
+    migratedFieldsCount: number;
+  }> {
     let migrated = false;
     const migratedTables: string[] = [];
     let migratedFieldsCount = 0;
 
     try {
-      const store = new RawSqliteUserEncryptionMigrationStore(db);
       const { needsMigration } =
         await LazyFieldEncryption.checkUserNeedsMigration(
           userId,
@@ -191,11 +219,10 @@ class DataCrypto {
     migratedTables: string[];
     migratedFieldsCount: number;
   }> {
-    const { getSqlite } = await import("../database/db/index.js");
-    const result = await this.migrateUserSensitiveFields(
+    const result = await this.migrateUserSensitiveFieldsInStore(
       userId,
       userDataKey,
-      getSqlite(),
+      await createCurrentUserEncryptionMigrationStore(),
     );
 
     if (result.migrated) {

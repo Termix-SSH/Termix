@@ -63,6 +63,9 @@ repository boundary.
 Auth login lazy user-field encryption migration now calls the `DataCrypto`
 current-runtime migration boundary instead of opening SQLite in
 `auth-manager.ts`.
+Current user-field encryption migration now resolves SQLite through
+`createCurrentUserEncryptionMigrationStore`, keeping `DataCrypto` on the
+migration-store interface.
 User, admin, TOTP, OIDC account, and credential migration explicit saves now
 use `DatabaseSaveTrigger` instead of importing the SQLite snapshot save function
 from routes.
