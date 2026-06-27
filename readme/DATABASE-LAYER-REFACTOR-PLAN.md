@@ -90,6 +90,11 @@ Host route update-state and delete-audit host reads now use the current host
 resolution repository boundary.
 Host route own/shared list assembly reads now use the current host resolution
 repository boundary while preserving route-level own-host decryption.
+Host bulk-update state reads and non-sensitive bulk flag/config writes now use
+the current host repository boundary, and host bulk import overwrite lookup plus
+credential fallback reads now use current host resolution and credential
+repository boundaries while retaining encrypted host import writes in
+`SimpleDBOps`.
 Guacamole host token host and protocol credential reads now use the current
 host resolution repository boundary while preserving request-user decryption
 behavior for credential fallback.

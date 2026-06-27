@@ -428,6 +428,54 @@ describe("HostRepository and CredentialRepository", () => {
     expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
+  it("lists bulk update state and updates multiple owned hosts", async () => {
+    const onWrite = vi.fn();
+    const repo = await createRepositories(undefined, onWrite);
+
+    const first = await repo.hosts.create({
+      userId: "user-1",
+      name: "web-1",
+      ip: "10.0.0.10",
+      port: 22,
+      username: "root",
+      authType: "password",
+      statsConfig: JSON.stringify({ cpu: true }),
+    });
+    const second = await repo.hosts.create({
+      userId: "user-1",
+      name: "web-2",
+      ip: "10.0.0.11",
+      port: 22,
+      username: "root",
+      authType: "password",
+    });
+    const other = await repo.hosts.create({
+      userId: "user-2",
+      name: "other",
+      ip: "10.0.0.12",
+      port: 22,
+      username: "root",
+      authType: "password",
+    });
+    onWrite.mockClear();
+
+    const states = await repo.hosts.listBulkUpdateState("user-1", [
+      first.id,
+      second.id,
+      other.id,
+    ]);
+    expect(states.map((state) => state.id)).toEqual([first.id, second.id]);
+
+    await expect(
+      repo.hosts.updateManyForUser("user-1", [first.id, second.id, other.id], {
+        folder: "ops",
+      }),
+    ).resolves.toBe(2);
+    expect((await repo.hosts.findById(first.id))?.folder).toBe("ops");
+    expect((await repo.hosts.findById(other.id))?.folder).toBeNull();
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
   it("records credential usage and increments usage counters", async () => {
     const repo = await createRepositories();
     const credential = await repo.credentials.create({

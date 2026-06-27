@@ -1,10 +1,16 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { hostAccess, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 
 export type HostRecord = typeof hosts.$inferSelect;
 export type NewHostRecord = typeof hosts.$inferInsert;
 export type HostUpdate = Partial<Omit<NewHostRecord, "id" | "userId">>;
+export interface HostBulkUpdateState {
+  id: number;
+  statsConfig: string | null;
+  credentialId: number | null;
+  proxmoxConfig: string | null;
+}
 
 export class HostRepository {
   constructor(
@@ -64,6 +70,47 @@ export class HostRepository {
 
     await this.afterWrite();
     return rows[0] ?? null;
+  }
+
+  async listBulkUpdateState(
+    userId: string,
+    hostIds: number[],
+  ): Promise<HostBulkUpdateState[]> {
+    if (hostIds.length === 0) {
+      return [];
+    }
+
+    return this.context.drizzle
+      .select({
+        id: hosts.id,
+        statsConfig: hosts.statsConfig,
+        credentialId: hosts.credentialId,
+        proxmoxConfig: hosts.proxmoxConfig,
+      })
+      .from(hosts)
+      .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)));
+  }
+
+  async updateManyForUser(
+    userId: string,
+    hostIds: number[],
+    update: HostUpdate,
+  ): Promise<number> {
+    if (hostIds.length === 0 || Object.keys(update).length === 0) {
+      return 0;
+    }
+
+    const rows = await this.context.drizzle
+      .update(hosts)
+      .set(update)
+      .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)))
+      .returning({ id: hosts.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
   }
 
   async deleteForUser(userId: string, hostId: number): Promise<boolean> {
