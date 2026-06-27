@@ -20,6 +20,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "trusted_devices",
         "credentials",
+        "hosts",
         "roles",
         "rbac_access",
         "sso_providers",
@@ -69,7 +70,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("accepts a partial domain allowlist with aliases", () => {
     const config = parseRepositoryRolloutConfig({
       [REPOSITORY_ROLLOUT_ENV]:
-        "settings,user,api-key,credential,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
+        "settings,user,api-key,credential,host,dismissed,alerts,layout,items,topology,dashboard-link,recordings,history,activity,usage,transfer,user-data-export,ssh-folder,host-resolver,bookmarks,c2s,tmux,opkssh,vault-token,vault-profile,metrics-preferences,host-health,metrics-history",
     });
 
     expect(config).toEqual({
@@ -79,6 +80,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "users",
         "api_keys",
         "credentials",
+        "hosts",
         "dismissed_alerts",
         "alerts",
         "homepage_layouts",
@@ -118,7 +120,7 @@ describe("parseRepositoryRolloutConfig", () => {
   it("rejects unknown domains", () => {
     expect(() =>
       parseRepositoryRolloutConfig({
-        [REPOSITORY_ROLLOUT_ENV]: "settings,hosts",
+        [REPOSITORY_ROLLOUT_ENV]: "settings,unknown-domain",
       }),
     ).toThrow("Unsupported DATABASE_LAYER_REPOSITORY_ROLLOUT domain");
   });
@@ -147,6 +149,7 @@ describe("parseRepositoryRolloutConfig", () => {
         "api_keys",
         "trusted_devices",
         "credentials",
+        "hosts",
         "roles",
         "rbac_access",
         "sso_providers",

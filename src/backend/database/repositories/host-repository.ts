@@ -7,13 +7,17 @@ export type NewHostRecord = typeof hosts.$inferInsert;
 export type HostUpdate = Partial<Omit<NewHostRecord, "id" | "userId">>;
 
 export class HostRepository {
-  constructor(private readonly context: DatabaseContext) {}
+  constructor(
+    private readonly context: DatabaseContext,
+    private readonly onWrite?: () => void | Promise<void>,
+  ) {}
 
   async create(host: NewHostRecord): Promise<HostRecord> {
     const rows = await this.context.drizzle
       .insert(hosts)
       .values(host)
       .returning();
+    await this.afterWrite();
     return rows[0];
   }
 
@@ -58,6 +62,7 @@ export class HostRepository {
       .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
       .returning();
 
+    await this.afterWrite();
     return rows[0] ?? null;
   }
 
@@ -69,7 +74,21 @@ export class HostRepository {
       .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
       .returning({ id: hosts.id });
 
+    await this.afterWrite();
     return rows.length > 0;
+  }
+
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(hosts)
+      .where(eq(hosts.userId, userId))
+      .returning({ id: hosts.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
   }
 
   async deleteAccessForHost(hostId: number): Promise<number> {
@@ -78,6 +97,14 @@ export class HostRepository {
       .where(eq(hostAccess.hostId, hostId))
       .returning({ id: hostAccess.id });
 
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
     return rows.length;
+  }
+
+  private async afterWrite(): Promise<void> {
+    await this.onWrite?.();
   }
 }

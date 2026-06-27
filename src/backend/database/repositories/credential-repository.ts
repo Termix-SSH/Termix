@@ -140,6 +140,19 @@ export class CredentialRepository {
     return rows.length > 0;
   }
 
+  async deleteByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .delete(sshCredentials)
+      .where(eq(sshCredentials.userId, userId))
+      .returning({ id: sshCredentials.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   async recordUsage(
     userId: string,
     credentialId: number,

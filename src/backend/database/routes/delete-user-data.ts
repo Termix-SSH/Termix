@@ -3,8 +3,10 @@ import { authLogger } from "../../utils/logger.js";
 import { db } from "../db/index.js";
 import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
 import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
 import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
 import { createCurrentOpksshTokenRepository } from "../repositories/current-opkssh-token-repository.js";
 import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
@@ -18,11 +20,9 @@ import { createCurrentSshCredentialUsageRepository } from "../repositories/curre
 import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
 import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import {
-  hosts,
   sharedCredentials,
   snippetFolders,
   snippets,
-  sshCredentials,
   sshFolders,
 } from "../db/schema.js";
 import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
@@ -60,8 +60,8 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await createCurrentCommandHistoryRepository().deleteByUserId(userId);
 
-    await db.delete(hosts).where(eq(hosts.userId, userId));
-    await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
+    await createCurrentHostRepository().deleteByUserId(userId);
+    await createCurrentCredentialRepository().deleteByUserId(userId);
 
     await createCurrentNetworkTopologyRepository().deleteByUserId(userId);
     await createCurrentOpksshTokenRepository().deleteByUserId(userId);

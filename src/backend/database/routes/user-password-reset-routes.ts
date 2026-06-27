@@ -7,9 +7,11 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 import { db } from "../db/index.js";
-import { hosts, sshCredentials, snippets } from "../db/schema.js";
+import { snippets } from "../db/schema.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
 import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
 import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
@@ -401,10 +403,8 @@ export function registerUserPasswordResetRoutes(
           await createCurrentRecentActivityRepository().deleteByUserId(userId);
           await createCurrentDismissedAlertRepository().deleteByUserId(userId);
           await db.delete(snippets).where(eq(snippets.userId, userId));
-          await db.delete(hosts).where(eq(hosts.userId, userId));
-          await db
-            .delete(sshCredentials)
-            .where(eq(sshCredentials.userId, userId));
+          await createCurrentHostRepository().deleteByUserId(userId);
+          await createCurrentCredentialRepository().deleteByUserId(userId);
 
           await authManager.registerUser(userId, newPassword);
           authManager.logoutUser(userId);

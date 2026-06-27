@@ -15,7 +15,10 @@ describe("HostRepository and CredentialRepository", () => {
     }
   });
 
-  async function createRepositories(onCredentialWrite?: () => void): Promise<{
+  async function createRepositories(
+    onCredentialWrite?: () => void,
+    onHostWrite?: () => void,
+  ): Promise<{
     credentials: CredentialRepository;
     hosts: HostRepository;
     sqlite: NonNullable<
@@ -196,7 +199,7 @@ describe("HostRepository and CredentialRepository", () => {
 
     return {
       credentials: new CredentialRepository(context, onCredentialWrite),
-      hosts: new HostRepository(context),
+      hosts: new HostRepository(context, onHostWrite),
       sqlite: context.sqlite!,
     };
   }
@@ -235,6 +238,34 @@ describe("HostRepository and CredentialRepository", () => {
     expect(
       await repo.credentials.findByIdForUser("user-1", created.id),
     ).toBeNull();
+  });
+
+  it("deletes user credentials through the cleanup boundary", async () => {
+    const onWrite = vi.fn();
+    const repo = await createRepositories(onWrite);
+
+    await repo.credentials.create({
+      userId: "user-1",
+      name: "primary",
+      authType: "password",
+    });
+    await repo.credentials.create({
+      userId: "user-1",
+      name: "secondary",
+      authType: "key",
+    });
+    await repo.credentials.create({
+      userId: "user-2",
+      name: "other",
+      authType: "password",
+    });
+    onWrite.mockClear();
+
+    await expect(repo.credentials.deleteByUserId("user-1")).resolves.toBe(2);
+
+    expect(await repo.credentials.listByUserId("user-1")).toEqual([]);
+    expect((await repo.credentials.listByUserId("user-2")).length).toBe(1);
+    expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
   it("loads credentials through the decryption boundary", async () => {
@@ -358,6 +389,43 @@ describe("HostRepository and CredentialRepository", () => {
 
     expect(await repo.hosts.deleteForUser("user-1", host.id)).toBe(true);
     expect(await repo.hosts.findById(host.id)).toBeNull();
+  });
+
+  it("deletes user hosts through the cleanup boundary", async () => {
+    const onWrite = vi.fn();
+    const repo = await createRepositories(undefined, onWrite);
+
+    await repo.hosts.create({
+      userId: "user-1",
+      name: "web-1",
+      ip: "10.0.0.10",
+      port: 22,
+      username: "root",
+      authType: "password",
+    });
+    await repo.hosts.create({
+      userId: "user-1",
+      name: "web-2",
+      ip: "10.0.0.11",
+      port: 22,
+      username: "root",
+      authType: "password",
+    });
+    await repo.hosts.create({
+      userId: "user-2",
+      name: "other",
+      ip: "10.0.0.12",
+      port: 22,
+      username: "root",
+      authType: "password",
+    });
+    onWrite.mockClear();
+
+    await expect(repo.hosts.deleteByUserId("user-1")).resolves.toBe(2);
+
+    expect(await repo.hosts.listByUserId("user-1")).toEqual([]);
+    expect((await repo.hosts.listByUserId("user-2")).length).toBe(1);
+    expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
   it("records credential usage and increments usage counters", async () => {
