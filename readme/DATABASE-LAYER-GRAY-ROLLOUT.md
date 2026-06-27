@@ -28,6 +28,8 @@ Allowed in gray rollout:
   credential source row reads, credential delete lookup/delete, and
   credential-host list reads migrated behind `CredentialRepository` and
   `HostResolutionRepository`.
+- Host route update readback, single-host fetch, password-field fetch, and host
+  export reads migrated behind `HostResolutionRepository`.
 - Host user-cleanup delete paths migrated behind `HostRepository`.
 - SSO provider listing, management, OIDC config loading, and LDAP provider
   validation migrated behind `SsoProviderRepository`.

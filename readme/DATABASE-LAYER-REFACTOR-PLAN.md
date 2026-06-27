@@ -84,6 +84,8 @@ credential resolution reads, folder rename writes, apply usage writes, shared
 credential source row reads, credential delete lookup/delete, and
 credential-host list reads now use current credential and host resolution
 repository boundaries.
+Host route update readback, single-host fetch, password-field fetch, and host
+export reads now use the current host resolution repository boundary.
 User cleanup and password-reset data-discard host/credential deletes now use
 current host and credential repository boundaries.
 GitHub and standard OIDC callback user lookup/create/rollback/profile/admin

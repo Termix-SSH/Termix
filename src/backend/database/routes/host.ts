@@ -1060,16 +1060,13 @@ router.put(
         ownerId,
       );
 
-      const updatedHosts = await SimpleDBOps.select(
-        db
-          .select()
-          .from(hosts)
-          .where(eq(hosts.id, Number(hostId))),
-        "ssh_data",
-        ownerId,
-      );
+      const updatedHost =
+        await createCurrentHostResolutionRepository().findHostById(
+          Number(hostId),
+          ownerId,
+        );
 
-      if (updatedHosts.length === 0) {
+      if (!updatedHost) {
         sshLogger.warn("Updated host not found after update", {
           operation: "host_update",
           hostId: parseInt(hostId),
@@ -1078,7 +1075,6 @@ router.put(
         return res.status(404).json({ error: "Host not found after update" });
       }
 
-      const updatedHost = updatedHosts[0];
       const baseHost = transformHostResponse(updatedHost);
 
       const resolvedHost =
@@ -1310,16 +1306,13 @@ router.get(
       return res.status(400).json({ error: "Invalid userId or hostId" });
     }
     try {
-      const data = await SimpleDBOps.select(
-        db
-          .select()
-          .from(hosts)
-          .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId))),
-        "ssh_data",
-        userId,
-      );
+      const host =
+        await createCurrentHostResolutionRepository().findHostByIdForUser(
+          Number(hostId),
+          userId,
+        );
 
-      if (data.length === 0) {
+      if (!host) {
         sshLogger.warn("SSH host not found", {
           operation: "host_fetch_by_id",
           hostId: parseInt(hostId),
@@ -1328,7 +1321,6 @@ router.get(
         return res.status(404).json({ error: "SSH host not found" });
       }
 
-      const host = data[0];
       const result = transformHostResponse(host);
       const resolved = (await resolveHostCredentials(result, userId)) || result;
 
@@ -1383,17 +1375,15 @@ router.get(
     }
 
     try {
-      const data = await SimpleDBOps.select(
-        db.select().from(hosts).where(eq(hosts.id, hostId)),
-        "ssh_data",
+      const host = await createCurrentHostResolutionRepository().findHostById(
+        hostId,
         userId,
       );
 
-      if (data.length === 0) {
+      if (!host) {
         return res.status(404).json({ error: "Host not found" });
       }
 
-      const host = data[0];
       const resolved = (await resolveHostCredentials(host, userId)) || host;
       let value = resolved[field];
 
@@ -1464,20 +1454,15 @@ router.get(
     }
 
     try {
-      const hostResults = await SimpleDBOps.select(
-        db
-          .select()
-          .from(hosts)
-          .where(and(eq(hosts.id, Number(hostId)), eq(hosts.userId, userId))),
-        "ssh_data",
-        userId,
-      );
+      const host =
+        await createCurrentHostResolutionRepository().findHostByIdForUser(
+          Number(hostId),
+          userId,
+        );
 
-      if (hostResults.length === 0) {
+      if (!host) {
         return res.status(404).json({ error: "SSH host not found" });
       }
-
-      const host = hostResults[0];
 
       const resolvedHost = (await resolveHostCredentials(host, userId)) || host;
 
@@ -1632,11 +1617,8 @@ router.get(
     }
 
     try {
-      const allHosts = await SimpleDBOps.select(
-        db.select().from(hosts).where(eq(hosts.userId, userId)),
-        "ssh_data",
-        userId,
-      );
+      const allHosts =
+        await createCurrentHostResolutionRepository().findHostsByUserId(userId);
 
       const exportedHosts = [];
 

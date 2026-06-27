@@ -32,6 +32,19 @@ export class HostResolutionRepository {
     return this.decryptOne("ssh_data", rows[0], userId);
   }
 
+  async findHostByIdForUser(
+    hostId: number,
+    userId: string,
+  ): Promise<HostResolutionHostRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hosts)
+      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
+      .limit(1);
+
+    return this.decryptOne("ssh_data", rows[0], userId);
+  }
+
   async findHostsByUserId(userId: string): Promise<HostResolutionHostRecord[]> {
     const rows = await this.context.drizzle
       .select()

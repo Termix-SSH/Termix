@@ -210,6 +210,17 @@ describe("HostResolutionRepository", () => {
       credentialId: 7,
     });
     await expect(
+      repository.findHostByIdForUser(1, "user-1"),
+    ).resolves.toMatchObject({
+      id: 1,
+      userId: "user-1",
+      name: "web",
+      credentialId: 7,
+    });
+    await expect(
+      repository.findHostByIdForUser(3, "user-1"),
+    ).resolves.toBeNull();
+    await expect(
       repository.findCredentialByIdForUser(7, "user-1"),
     ).resolves.toMatchObject({
       id: 7,
@@ -407,6 +418,9 @@ describe("HostResolutionRepository", () => {
     const repository = await createRepository();
 
     await expect(repository.findHostById(1, "user-1")).resolves.toBeNull();
+    await expect(
+      repository.findHostByIdForUser(1, "user-1"),
+    ).resolves.toBeNull();
     await expect(repository.findHostsByUserId("user-1")).resolves.toEqual([]);
     await expect(
       repository.listHostsUsingCredentialForUser("user-1", 7),
