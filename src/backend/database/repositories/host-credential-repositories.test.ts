@@ -372,6 +372,52 @@ describe("HostRepository and CredentialRepository", () => {
     );
   });
 
+  it("finds and updates credential system encryption migration rows", async () => {
+    const repo = await createRepositories();
+
+    const complete = await repo.credentials.create({
+      userId: "user-1",
+      name: "complete",
+      authType: "password",
+      password: "encrypted-password",
+      systemPassword: "system-password",
+      systemKey: "system-key",
+      systemKeyPassword: "system-key-password",
+    });
+    const missing = await repo.credentials.create({
+      userId: "user-1",
+      name: "missing",
+      authType: "key",
+      key: "encrypted-key",
+      systemPassword: null,
+      systemKey: null,
+      systemKeyPassword: null,
+    });
+    await repo.credentials.create({
+      userId: "user-2",
+      name: "other",
+      authType: "password",
+      systemPassword: null,
+    });
+
+    await expect(
+      repo.credentials.listMissingSystemEncryptionByUserId("user-1"),
+    ).resolves.toMatchObject([{ id: missing.id }]);
+
+    await repo.credentials.updateSystemEncryptionForUser("user-1", missing.id, {
+      systemPassword: "new-system-password",
+      systemKey: "new-system-key",
+      systemKeyPassword: "new-system-key-password",
+    });
+
+    await expect(
+      repo.credentials.listMissingSystemEncryptionByUserId("user-1"),
+    ).resolves.toEqual([]);
+    await expect(
+      repo.credentials.findByIdForUser("user-1", complete.id),
+    ).resolves.toMatchObject({ systemPassword: "system-password" });
+  });
+
   it("renames credential folders through the write boundary", async () => {
     const onWrite = vi.fn();
     const repo = await createRepositories(onWrite);
