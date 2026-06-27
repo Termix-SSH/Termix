@@ -69,6 +69,9 @@ from routes.
 Current SQLite snapshot save trigger now initializes after database startup
 regardless of file-encryption mode, and backend shutdown uses that save
 boundary.
+Direct SQLite snapshot save-function imports are now isolated inside
+`database/db/index.ts`; current user-field migration saves through
+`DatabaseSaveTrigger`.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses

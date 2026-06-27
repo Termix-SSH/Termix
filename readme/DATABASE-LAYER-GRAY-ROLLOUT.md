@@ -57,6 +57,9 @@ Allowed in gray rollout:
 - Current SQLite snapshot save trigger now initializes after database startup
   regardless of file-encryption mode, and backend shutdown uses that save
   boundary.
+- Direct SQLite snapshot save-function imports are now isolated inside
+  `database/db/index.ts`; current user-field migration saves through
+  `DatabaseSaveTrigger`.
 - Legacy unencrypted SQLite copy/verification path centralized behind
   `LegacySqliteDatabaseCopyStore`.
 - Termix ID credential lookup, generated credential persistence, and generated

@@ -1,6 +1,7 @@
 import { FieldCrypto } from "./field-crypto.js";
 import { LazyFieldEncryption } from "./lazy-field-encryption.js";
 import { UserCrypto } from "./user-crypto.js";
+import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger } from "./logger.js";
 import {
   RawSqliteUserEncryptionMigrationStore,
@@ -190,8 +191,7 @@ class DataCrypto {
     migratedTables: string[];
     migratedFieldsCount: number;
   }> {
-    const { getSqlite, saveMemoryDatabaseToFile } =
-      await import("../database/db/index.js");
+    const { getSqlite } = await import("../database/db/index.js");
     const result = await this.migrateUserSensitiveFields(
       userId,
       userDataKey,
@@ -199,7 +199,9 @@ class DataCrypto {
     );
 
     if (result.migrated) {
-      await saveMemoryDatabaseToFile();
+      await DatabaseSaveTrigger.forceSave(
+        "user_sensitive_migration_explicit_save",
+      );
     }
 
     return result;
