@@ -90,8 +90,9 @@ Host route update-state and delete-audit host reads now use the current host
 resolution repository boundary.
 Host route own/shared list assembly reads now use the current host resolution
 repository boundary while preserving route-level own-host decryption.
-Snippet folder list/create/metadata/rename/delete, owned lookup, and export
-reads now use the current snippet repository boundary.
+Snippet folder list/create/metadata/rename/delete, owned lookup, visible-list
+owned reads, reorder, create/update/delete, and export reads now use the current
+snippet repository boundary.
 User cleanup and password-reset data-discard host/credential deletes now use
 current host and credential repository boundaries.
 GitHub and standard OIDC callback user lookup/create/rollback/profile/admin

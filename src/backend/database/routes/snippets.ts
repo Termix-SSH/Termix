@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { snippets, snippetFolders } from "../db/schema.js";
-import { eq, and, desc, asc, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -484,29 +484,10 @@ router.put(
     }
 
     try {
-      for (const update of snippetUpdates) {
-        const { id, order, folder } = update;
-
-        if (!id || order === undefined) {
-          continue;
-        }
-
-        const updateFields: Partial<{
-          order: number;
-          folder: string | null;
-        }> = {
-          order,
-        };
-
-        if (folder !== undefined) {
-          updateFields.folder = folder?.trim() || null;
-        }
-
-        await db
-          .update(snippets)
-          .set(updateFields)
-          .where(and(eq(snippets.id, id), eq(snippets.userId, userId)));
-      }
+      await createCurrentSnippetRepository().reorderSnippets(
+        userId,
+        snippetUpdates,
+      );
 
       authLogger.success(`Snippets reordered by user ${userId}`, {
         operation: "snippet_reorder_success",
@@ -1047,16 +1028,8 @@ router.get(
     }
 
     try {
-      const ownedSnippets = await db
-        .select()
-        .from(snippets)
-        .where(eq(snippets.userId, userId))
-        .orderBy(
-          sql`CASE WHEN ${snippets.folder} IS NULL OR ${snippets.folder} = '' THEN 0 ELSE 1 END`,
-          asc(snippets.folder),
-          asc(snippets.order),
-          desc(snippets.updatedAt),
-        );
+      const ownedSnippets =
+        await createCurrentSnippetRepository().listOwnedSnippets(userId);
 
       const roleIds = await getUserRoleIds(userId);
       const sharedSnippets =
@@ -1203,39 +1176,21 @@ router.post(
     }
 
     try {
-      let snippetOrder = order;
-      if (snippetOrder === undefined || snippetOrder === null) {
-        const folderValue = folder?.trim() || "";
-        const maxOrderResult = await db
-          .select({ maxOrder: sql<number>`MAX(${snippets.order})` })
-          .from(snippets)
-          .where(
-            and(
-              eq(snippets.userId, userId),
-              folderValue
-                ? eq(snippets.folder, folderValue)
-                : sql`(${snippets.folder} IS NULL OR ${snippets.folder} = '')`,
-            ),
-          );
-        const maxOrder = maxOrderResult[0]?.maxOrder ?? -1;
-        snippetOrder = maxOrder + 1;
-      }
-
-      const insertData = {
+      const result = await createCurrentSnippetRepository().createSnippet(
         userId,
-        name: name.trim(),
-        content: content.trim(),
-        description: description?.trim() || null,
-        folder: folder?.trim() || null,
-        order: snippetOrder,
-        hostFilter: hostFilter ? JSON.stringify(hostFilter) : null,
-      };
-
-      const result = await db.insert(snippets).values(insertData).returning();
+        {
+          name,
+          content,
+          description,
+          folder,
+          order,
+          hostFilter,
+        },
+      );
       databaseLogger.info("Command snippet created", {
         operation: "snippet_create",
         userId,
-        snippetId: result[0].id,
+        snippetId: result.id,
         name,
       });
 
@@ -1245,14 +1200,14 @@ router.post(
         username: await getActorUsername(userId),
         action: "create_snippet",
         resourceType: "snippet",
-        resourceId: String(result[0].id),
+        resourceId: String(result.id),
         resourceName: name,
         ipAddress: scIp,
         userAgent: scUa,
         success: true,
       });
 
-      res.status(201).json(result[0]);
+      res.status(201).json(result);
     } catch (err) {
       authLogger.error("Failed to create snippet", err);
       res.status(500).json({
@@ -1318,54 +1273,20 @@ router.put(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+      const snippetId = parseInt(id);
+      const result = await createCurrentSnippetRepository().updateSnippet(
+        userId,
+        snippetId,
+        updateData,
+      );
 
-      if (existing.length === 0) {
+      if (!result) {
         return res.status(404).json({ error: "Snippet not found" });
       }
-
-      const updateFields: Partial<{
-        updatedAt: ReturnType<typeof sql.raw>;
-        name: string;
-        content: string;
-        description: string | null;
-        folder: string | null;
-        order: number;
-        hostFilter: string | null;
-      }> = {
-        updatedAt: sql`CURRENT_TIMESTAMP`,
-      };
-
-      if (updateData.name !== undefined)
-        updateFields.name = updateData.name.trim();
-      if (updateData.content !== undefined)
-        updateFields.content = updateData.content.trim();
-      if (updateData.description !== undefined)
-        updateFields.description = updateData.description?.trim() || null;
-      if (updateData.folder !== undefined)
-        updateFields.folder = updateData.folder?.trim() || null;
-      if (updateData.order !== undefined) updateFields.order = updateData.order;
-      if (updateData.hostFilter !== undefined)
-        updateFields.hostFilter = updateData.hostFilter
-          ? JSON.stringify(updateData.hostFilter)
-          : null;
-
-      await db
-        .update(snippets)
-        .set(updateFields)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
-
-      const updated = await db
-        .select()
-        .from(snippets)
-        .where(eq(snippets.id, parseInt(id)));
       databaseLogger.info("Command snippet updated", {
         operation: "snippet_update",
         userId,
-        snippetId: parseInt(id),
+        snippetId,
       });
 
       const { ipAddress: suIp, userAgent: suUa } = getRequestMeta(req);
@@ -1375,13 +1296,13 @@ router.put(
         action: "update_snippet",
         resourceType: "snippet",
         resourceId: id,
-        resourceName: existing[0].name,
+        resourceName: result.existing.name,
         ipAddress: suIp,
         userAgent: suUa,
         success: true,
       });
 
-      res.json(updated[0]);
+      res.json(result.updated);
     } catch (err) {
       authLogger.error("Failed to update snippet", err);
       res.status(500).json({
@@ -1429,22 +1350,20 @@ router.delete(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
+      const snippetId = parseInt(id);
+      const existing = await createCurrentSnippetRepository().deleteSnippet(
+        userId,
+        snippetId,
+      );
 
-      if (existing.length === 0) {
+      if (!existing) {
         return res.status(404).json({ error: "Snippet not found" });
       }
 
-      await db
-        .delete(snippets)
-        .where(and(eq(snippets.id, parseInt(id)), eq(snippets.userId, userId)));
       databaseLogger.info("Command snippet deleted", {
         operation: "snippet_delete",
         userId,
-        snippetId: parseInt(id),
+        snippetId,
       });
 
       const { ipAddress: sdIp, userAgent: sdUa } = getRequestMeta(req);
@@ -1454,7 +1373,7 @@ router.delete(
         action: "delete_snippet",
         resourceType: "snippet",
         resourceId: id,
-        resourceName: existing[0].name,
+        resourceName: existing.name,
         ipAddress: sdIp,
         userAgent: sdUa,
         success: true,

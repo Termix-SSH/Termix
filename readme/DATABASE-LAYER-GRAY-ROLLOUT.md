@@ -35,8 +35,9 @@ Allowed in gray rollout:
 - Host route own/shared list assembly reads migrated behind
   `HostResolutionRepository` while preserving route-level own-host decryption.
 - Host user-cleanup delete paths migrated behind `HostRepository`.
-- Snippet folder list/create/metadata/rename/delete, owned lookup, and export
-  reads migrated behind `SnippetRepository`.
+- Snippet folder list/create/metadata/rename/delete, owned lookup, visible-list
+  owned reads, reorder, create/update/delete, and export reads migrated behind
+  `SnippetRepository`.
 - SSO provider listing, management, OIDC config loading, and LDAP provider
   validation migrated behind `SsoProviderRepository`.
 - Audit log writes, filtered reads, action lists, and user cleanup migrated

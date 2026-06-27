@@ -99,6 +99,96 @@ describe("SnippetRepository", () => {
     expect(folders.map((row) => row.name)).toEqual(["db", "ops"]);
   });
 
+  it("lists owned snippets for route merging", async () => {
+    const { repository } = await createRepository();
+
+    const rows = await repository.listOwnedSnippets("user-1");
+
+    expect(rows.map((row) => row.name)).toEqual(["root", "deploy"]);
+  });
+
+  it("reorders snippets", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    await repository.reorderSnippets("user-1", [
+      { id: 1, order: 9, folder: " ops " },
+      { id: 999, order: 1 },
+    ]);
+
+    await expect(repository.findOwnedById("user-1", 1)).resolves.toMatchObject({
+      order: 9,
+      folder: "ops",
+    });
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates snippets with the next folder order", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    const created = await repository.createSnippet("user-1", {
+      name: " new ",
+      content: " echo ok ",
+      description: " desc ",
+      folder: "ops",
+      hostFilter: { os: "linux" },
+    });
+
+    expect(created).toMatchObject({
+      userId: "user-1",
+      name: "new",
+      content: "echo ok",
+      description: "desc",
+      folder: "ops",
+      order: 2,
+      hostFilter: JSON.stringify({ os: "linux" }),
+    });
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates snippets and returns the original row for audit names", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    const result = await repository.updateSnippet("user-1", 2, {
+      name: " deploy new ",
+      content: " make deploy2 ",
+      description: null,
+      folder: null,
+      order: 7,
+      hostFilter: null,
+    });
+    const missing = await repository.updateSnippet("user-1", 3, {
+      name: "nope",
+    });
+
+    expect(result?.existing).toMatchObject({ name: "deploy" });
+    expect(result?.updated).toMatchObject({
+      name: "deploy new",
+      content: "make deploy2",
+      description: null,
+      folder: null,
+      order: 7,
+      hostFilter: null,
+    });
+    expect(missing).toBeNull();
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
+  it("deletes snippets and returns the deleted row for audit names", async () => {
+    const onWrite = vi.fn();
+    const { repository } = await createRepository(onWrite);
+
+    const deleted = await repository.deleteSnippet("user-1", 2);
+    const missing = await repository.deleteSnippet("user-1", 3);
+
+    expect(deleted).toMatchObject({ id: 2, name: "deploy" });
+    expect(missing).toBeNull();
+    await expect(repository.findOwnedById("user-1", 2)).resolves.toBeNull();
+    expect(onWrite).toHaveBeenCalledTimes(1);
+  });
+
   it("creates folders and rejects duplicate names", async () => {
     const onWrite = vi.fn();
     const { repository } = await createRepository(onWrite);
