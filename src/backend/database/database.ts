@@ -35,20 +35,14 @@ import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 import { createCurrentCredentialRepository } from "./repositories/current-credential-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "./repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentHostRepository } from "./repositories/current-host-repository.js";
 import { createCurrentSettingsRepository } from "./repositories/current-settings-repository.js";
 import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
 import { eq, and } from "drizzle-orm";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
-import {
-  users,
-  fileManagerRecent,
-  fileManagerPinned,
-  fileManagerShortcuts,
-  dismissedAlerts,
-  sshCredentialUsage,
-} from "./db/schema.js";
+import { users, dismissedAlerts, sshCredentialUsage } from "./db/schema.js";
 import type {
   CacheEntry,
   GitHubRelease,
@@ -1003,19 +997,12 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
+      const fileManagerRepository =
+        createCurrentFileManagerBookmarkRepository();
       const [recentFiles, pinnedFiles, shortcuts] = await Promise.all([
-        getDb()
-          .select()
-          .from(fileManagerRecent)
-          .where(eq(fileManagerRecent.userId, userId)),
-        getDb()
-          .select()
-          .from(fileManagerPinned)
-          .where(eq(fileManagerPinned.userId, userId)),
-        getDb()
-          .select()
-          .from(fileManagerShortcuts)
-          .where(eq(fileManagerShortcuts.userId, userId)),
+        fileManagerRepository.listRecentByUserId(userId),
+        fileManagerRepository.listPinnedByUserId(userId),
+        fileManagerRepository.listShortcutsByUserId(userId),
       ]);
 
       const insertRecent = exportDb.prepare(`
@@ -1431,62 +1418,57 @@ app.post(
         const fileManagerTables = [
           {
             table: "file_manager_recent",
-            schema: fileManagerRecent,
             key: "fileManagerItemsImported",
           },
           {
             table: "file_manager_pinned",
-            schema: fileManagerPinned,
             key: "fileManagerItemsImported",
           },
           {
             table: "file_manager_shortcuts",
-            schema: fileManagerShortcuts,
             key: "fileManagerItemsImported",
           },
         ];
 
-        for (const { table, schema, key } of fileManagerTables) {
+        const fileManagerRepository =
+          createCurrentFileManagerBookmarkRepository();
+
+        for (const { table, key } of fileManagerTables) {
           try {
             const importedItems = importDb
               .prepare(`SELECT * FROM ${table}`)
               .all();
             for (const item of importedItems) {
               try {
-                const existing = await mainDb
-                  .select()
-                  .from(schema)
-                  .where(
-                    and(
-                      eq(schema.userId, userId),
-                      eq(schema.path, item.path),
-                      eq(schema.name, item.name),
-                    ),
-                  );
-
-                if (existing.length > 0) {
-                  result.summary.skippedItems++;
-                  continue;
-                }
-
-                const itemData = {
-                  userId: userId,
+                const bookmark = {
                   hostId: item.host_id,
                   name: item.name,
                   path: item.path,
-                  ...(table === "file_manager_recent" && {
-                    lastOpened: item.last_opened,
-                  }),
-                  ...(table === "file_manager_pinned" && {
-                    pinnedAt: item.pinned_at,
-                  }),
-                  ...(table === "file_manager_shortcuts" && {
-                    createdAt: item.created_at,
-                  }),
                 };
+                const created =
+                  table === "file_manager_recent"
+                    ? await fileManagerRepository.createRecentForImport(
+                        userId,
+                        bookmark,
+                        item.last_opened,
+                      )
+                    : table === "file_manager_pinned"
+                      ? await fileManagerRepository.createPinnedForImport(
+                          userId,
+                          bookmark,
+                          item.pinned_at,
+                        )
+                      : await fileManagerRepository.createShortcutForImport(
+                          userId,
+                          bookmark,
+                          item.created_at,
+                        );
 
-                await mainDb.insert(schema).values(itemData);
-                result.summary[key]++;
+                if (created) {
+                  result.summary[key]++;
+                } else {
+                  result.summary.skippedItems++;
+                }
               } catch (itemError) {
                 result.summary.errors.push(
                   `${table} import error: ${itemError.message}`,

@@ -163,6 +163,55 @@ describe("FileManagerBookmarkRepository", () => {
     expect(writeCount).toBe(4);
   });
 
+  it("creates import bookmarks without duplicating user path/name pairs", async () => {
+    const repo = await createRepository();
+
+    await expect(
+      repo.createRecentForImport(
+        "user-1",
+        { hostId: 1, path: "/tmp/a.txt", name: "A" },
+        "2026-01-01T00:00:00.000Z",
+      ),
+    ).resolves.toBe(true);
+    await expect(
+      repo.createRecentForImport("user-1", {
+        hostId: 2,
+        path: "/tmp/a.txt",
+        name: "A",
+      }),
+    ).resolves.toBe(false);
+
+    await expect(
+      repo.createPinnedForImport("user-1", {
+        hostId: 1,
+        path: "/srv/www",
+        name: "Web",
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      repo.createPinnedForImport("user-1", {
+        hostId: 2,
+        path: "/srv/www",
+        name: "Web",
+      }),
+    ).resolves.toBe(false);
+
+    await expect(
+      repo.createShortcutForImport("user-1", {
+        hostId: 1,
+        path: "/etc/nginx",
+        name: "Nginx",
+      }),
+    ).resolves.toBe(true);
+    await expect(
+      repo.createShortcutForImport("user-1", {
+        hostId: 2,
+        path: "/etc/nginx",
+        name: "Nginx",
+      }),
+    ).resolves.toBe(false);
+  });
+
   it("deletes bookmarks by user, host, and host list", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

@@ -87,6 +87,27 @@ export class FileManagerBookmarkRepository {
     await this.afterWrite();
   }
 
+  async createRecentForImport(
+    userId: string,
+    input: FileManagerBookmarkInput,
+    lastOpened = new Date().toISOString(),
+  ): Promise<boolean> {
+    const exists = await this.existsRecentImportItem(userId, input);
+    if (exists) {
+      return false;
+    }
+
+    await this.context.drizzle.insert(fileManagerRecent).values({
+      userId,
+      hostId: input.hostId,
+      path: input.path,
+      name: resolveBookmarkName(input.path, input.name),
+      lastOpened,
+    });
+    await this.afterWrite();
+    return true;
+  }
+
   async deleteRecentForHostPath(
     userId: string,
     input: Pick<FileManagerBookmarkInput, "hostId" | "path">,
@@ -138,6 +159,27 @@ export class FileManagerBookmarkRepository {
     pinnedAt = new Date().toISOString(),
   ): Promise<boolean> {
     const exists = await this.existsPinned(userId, input.hostId, input.path);
+    if (exists) {
+      return false;
+    }
+
+    await this.context.drizzle.insert(fileManagerPinned).values({
+      userId,
+      hostId: input.hostId,
+      path: input.path,
+      name: resolveBookmarkName(input.path, input.name),
+      pinnedAt,
+    });
+    await this.afterWrite();
+    return true;
+  }
+
+  async createPinnedForImport(
+    userId: string,
+    input: FileManagerBookmarkInput,
+    pinnedAt = new Date().toISOString(),
+  ): Promise<boolean> {
+    const exists = await this.existsPinnedImportItem(userId, input);
     if (exists) {
       return false;
     }
@@ -206,6 +248,27 @@ export class FileManagerBookmarkRepository {
     createdAt = new Date().toISOString(),
   ): Promise<boolean> {
     const exists = await this.existsShortcut(userId, input.hostId, input.path);
+    if (exists) {
+      return false;
+    }
+
+    await this.context.drizzle.insert(fileManagerShortcuts).values({
+      userId,
+      hostId: input.hostId,
+      path: input.path,
+      name: resolveBookmarkName(input.path, input.name),
+      createdAt,
+    });
+    await this.afterWrite();
+    return true;
+  }
+
+  async createShortcutForImport(
+    userId: string,
+    input: FileManagerBookmarkInput,
+    createdAt = new Date().toISOString(),
+  ): Promise<boolean> {
+    const exists = await this.existsShortcutImportItem(userId, input);
     if (exists) {
       return false;
     }
@@ -299,6 +362,72 @@ export class FileManagerBookmarkRepository {
           eq(fileManagerPinned.userId, userId),
           eq(fileManagerPinned.hostId, hostId),
           eq(fileManagerPinned.path, path),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0;
+  }
+
+  private async existsRecentImportItem(
+    userId: string,
+    input: FileManagerBookmarkInput,
+  ): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .select({ id: fileManagerRecent.id })
+      .from(fileManagerRecent)
+      .where(
+        and(
+          eq(fileManagerRecent.userId, userId),
+          eq(fileManagerRecent.path, input.path),
+          eq(
+            fileManagerRecent.name,
+            resolveBookmarkName(input.path, input.name),
+          ),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0;
+  }
+
+  private async existsPinnedImportItem(
+    userId: string,
+    input: FileManagerBookmarkInput,
+  ): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .select({ id: fileManagerPinned.id })
+      .from(fileManagerPinned)
+      .where(
+        and(
+          eq(fileManagerPinned.userId, userId),
+          eq(fileManagerPinned.path, input.path),
+          eq(
+            fileManagerPinned.name,
+            resolveBookmarkName(input.path, input.name),
+          ),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0;
+  }
+
+  private async existsShortcutImportItem(
+    userId: string,
+    input: FileManagerBookmarkInput,
+  ): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .select({ id: fileManagerShortcuts.id })
+      .from(fileManagerShortcuts)
+      .where(
+        and(
+          eq(fileManagerShortcuts.userId, userId),
+          eq(fileManagerShortcuts.path, input.path),
+          eq(
+            fileManagerShortcuts.name,
+            resolveBookmarkName(input.path, input.name),
+          ),
         ),
       )
       .limit(1);

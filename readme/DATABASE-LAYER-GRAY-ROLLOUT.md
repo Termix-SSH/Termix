@@ -105,6 +105,8 @@ Allowed in gray rollout:
 - File manager recent/pinned/shortcut list/create/delete/export and
   host/folder/user/password-reset cleanup migrated behind
   `FileManagerBookmarkRepository`.
+- Database import/export file-manager recent/pinned/shortcut target reads and
+  writes migrated behind `FileManagerBookmarkRepository`.
 - C2S tunnel preset list/create/update/delete migrated behind
   `C2sTunnelPresetRepository`.
 - Tmux session tag list/rename/delete/replace migrated behind
