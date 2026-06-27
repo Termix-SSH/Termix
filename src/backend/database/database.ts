@@ -40,11 +40,10 @@ import { createCurrentFileManagerBookmarkRepository } from "./repositories/curre
 import { createCurrentHostRepository } from "./repositories/current-host-repository.js";
 import { createCurrentSettingsRepository } from "./repositories/current-settings-repository.js";
 import { createCurrentSshCredentialUsageRepository } from "./repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentUserRepository } from "./repositories/current-user-repository.js";
 import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
-import { eq } from "drizzle-orm";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
-import { users } from "./db/schema.js";
 import type {
   CacheEntry,
   GitHubRelease,
@@ -657,12 +656,13 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     const deviceInfo = parseUserAgent(req);
 
-    const user = await getDb().select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
+    const userRepository = createCurrentUserRepository();
+    const user = await userRepository.findById(userId);
+    if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isOidcUser = !!user[0].isOidc;
+    const isOidcUser = !!user.isOidc;
 
     if (!DataCrypto.getUserDataKey(userId)) {
       if (isOidcUser) {
@@ -1182,16 +1182,14 @@ app.post(
       const mainDb = getDb();
       const deviceInfo = parseUserAgent(req);
 
-      const userRecords = await mainDb
-        .select()
-        .from(users)
-        .where(eq(users.id, userId));
+      const userRepository = createCurrentUserRepository();
+      const userRecord = await userRepository.findById(userId);
 
-      if (!userRecords || userRecords.length === 0) {
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const isOidcUser = !!userRecords[0].isOidc;
+      const isOidcUser = !!userRecord.isOidc;
 
       if (!DataCrypto.getUserDataKey(userId)) {
         if (isOidcUser) {
@@ -1510,11 +1508,8 @@ app.post(
           );
         }
 
-        const targetUser = await mainDb
-          .select()
-          .from(users)
-          .where(eq(users.id, userId));
-        if (targetUser.length > 0 && targetUser[0].isAdmin) {
+        const targetUser = await userRepository.findById(userId);
+        if (targetUser?.isAdmin) {
           try {
             const importedSettings = readImportedSettings(importDb);
             for (const setting of importedSettings) {

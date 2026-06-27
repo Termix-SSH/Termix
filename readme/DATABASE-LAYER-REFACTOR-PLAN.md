@@ -58,6 +58,8 @@ User login settings reads now use the current settings repository boundary, so
 `routes/users.ts` no longer reads or writes `settings` directly.
 User encryption metadata in `utils/user-crypto.ts` now reads and writes KEK/DEK
 settings through the current settings repository boundary.
+Database import/export user unlock and admin checks now use the current user
+repository boundary.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses
