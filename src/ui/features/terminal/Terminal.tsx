@@ -83,6 +83,9 @@ interface SSHTerminalProps {
   disableAutoFocus?: boolean;
 }
 
+const TERMINAL_FONT_ZOOM_MIN = 8;
+const TERMINAL_FONT_ZOOM_MAX = 36;
+
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal(
     {
@@ -365,6 +368,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const lastFittedSizeRef = useRef<{ cols: number; rows: number } | null>(
       null,
     );
+    const terminalFontSizeRef = useRef(config.fontSize);
     const DEBOUNCE_MS = 140;
 
     const logTerminalActivity = async () => {
@@ -461,6 +465,27 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       } finally {
         isFittingRef.current = false;
       }
+    }
+
+    function zoomTerminalFont(deltaY: number) {
+      const direction = deltaY < 0 ? 1 : -1;
+      const currentFontSize =
+        terminal.options.fontSize ??
+        terminalFontSizeRef.current ??
+        DEFAULT_TERMINAL_CONFIG.fontSize;
+      const nextFontSize = Math.min(
+        TERMINAL_FONT_ZOOM_MAX,
+        Math.max(TERMINAL_FONT_ZOOM_MIN, currentFontSize + direction),
+      );
+
+      if (nextFontSize === currentFontSize) {
+        return;
+      }
+
+      terminalFontSizeRef.current = nextFontSize;
+      terminal.options.fontSize = nextFontSize;
+      performFit();
+      hardRefresh();
     }
 
     function handleTotpSubmit(code: string) {
@@ -1931,6 +1956,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.cursorStyle = config.cursorStyle;
       terminal.options.scrollback = config.scrollback;
       terminal.options.fontSize = config.fontSize;
+      terminalFontSizeRef.current = config.fontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
       terminal.options.fastScrollSensitivity = config.fastScrollSensitivity;
@@ -2097,6 +2123,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
 
       terminal.attachCustomWheelEventHandler((ev) => {
+        if (ev.ctrlKey || ev.metaKey) {
+          zoomTerminalFont(ev.deltaY);
+          return false;
+        }
+
         const cfg = {
           ...DEFAULT_TERMINAL_CONFIG,
           ...hostConfig.terminalConfig,
