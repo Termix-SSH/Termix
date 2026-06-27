@@ -85,6 +85,13 @@ export class HostRepository {
       .where(eq(hosts.userId, userId));
   }
 
+  async listDecryptedByUserId(userId: string): Promise<HostRecord[]> {
+    const rows = await this.listByUserId(userId);
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) return [];
+    return DataCrypto.decryptRecords("ssh_data", rows, userId, userDataKey);
+  }
+
   async updateForUser(
     userId: string,
     hostId: number,

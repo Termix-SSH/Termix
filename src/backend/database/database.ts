@@ -34,6 +34,8 @@ import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
+import { createCurrentCredentialRepository } from "./repositories/current-credential-repository.js";
+import { createCurrentHostRepository } from "./repositories/current-host-repository.js";
 import { createCurrentSettingsRepository } from "./repositories/current-settings-repository.js";
 import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
 import { eq, and } from "drizzle-orm";
@@ -41,8 +43,6 @@ import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
 import {
   users,
-  hosts,
-  sshCredentials,
   fileManagerRecent,
   fileManagerPinned,
   fileManagerShortcuts,
@@ -907,22 +907,14 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         userRecord.totpBackupCodes || null,
       );
 
-      const sshHosts = await getDb()
-        .select()
-        .from(hosts)
-        .where(eq(hosts.userId, userId));
+      const sshHosts =
+        await createCurrentHostRepository().listDecryptedByUserId(userId);
       const insertHost = exportDb.prepare(`
         INSERT INTO ssh_data (id, user_id, connection_type, name, ip, port, username, folder, tags, pin, auth_type, force_keyboard_interactive, password, key, key_password, key_type, sudo_password, autostart_password, autostart_key, autostart_key_password, credential_id, override_credential_username, enable_terminal, enable_tunnel, tunnel_connections, jump_hosts, enable_file_manager, enable_docker, show_terminal_in_sidebar, show_file_manager_in_sidebar, show_tunnel_in_sidebar, show_docker_in_sidebar, show_server_stats_in_sidebar, default_path, stats_config, docker_config, terminal_config, quick_actions, notes, use_socks5, socks5_host, socks5_port, socks5_username, socks5_password, socks5_proxy_chain, domain, security, ignore_cert, guacamole_config, mac_address, port_knock_sequence, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      for (const host of sshHosts) {
-        const decrypted = DataCrypto.decryptRecord(
-          "ssh_data",
-          host,
-          userId,
-          userDataKey,
-        );
+      for (const decrypted of sshHosts) {
         insertHost.run(
           decrypted.id,
           decrypted.userId,
@@ -980,22 +972,14 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      const credentials = await getDb()
-        .select()
-        .from(sshCredentials)
-        .where(eq(sshCredentials.userId, userId));
+      const credentials =
+        await createCurrentCredentialRepository().listDecryptedByUserId(userId);
       const insertCred = exportDb.prepare(`
         INSERT INTO ssh_credentials (id, user_id, name, description, folder, tags, auth_type, username, password, key, private_key, public_key, key_password, key_type, detected_key_type, usage_count, last_used, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      for (const cred of credentials) {
-        const decrypted = DataCrypto.decryptRecord(
-          "ssh_credentials",
-          cred,
-          userId,
-          userDataKey,
-        );
+      for (const decrypted of credentials) {
         insertCred.run(
           decrypted.id,
           decrypted.userId,

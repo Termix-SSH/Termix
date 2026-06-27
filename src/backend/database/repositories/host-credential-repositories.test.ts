@@ -549,6 +549,36 @@ describe("HostRepository and CredentialRepository", () => {
     );
   });
 
+  it("loads hosts through the decryption boundary", async () => {
+    const repo = await createRepositories();
+    vi.spyOn(DataCrypto, "getUserDataKey").mockReturnValue(
+      Buffer.from("user-key"),
+    );
+    vi.spyOn(DataCrypto, "decryptRecords").mockImplementation(
+      (_tableName, records) => records,
+    );
+
+    const host = await repo.hosts.create({
+      userId: "user-1",
+      name: "web-1",
+      ip: "10.0.0.10",
+      port: 22,
+      username: "root",
+      authType: "password",
+      password: "secret",
+    });
+
+    await expect(
+      repo.hosts.listDecryptedByUserId("user-1"),
+    ).resolves.toMatchObject([{ id: host.id, password: "secret" }]);
+    expect(DataCrypto.decryptRecords).toHaveBeenCalledWith(
+      "ssh_data",
+      expect.arrayContaining([expect.objectContaining({ id: host.id })]),
+      "user-1",
+      Buffer.from("user-key"),
+    );
+  });
+
   it("deletes user hosts through the cleanup boundary", async () => {
     const onWrite = vi.fn();
     const repo = await createRepositories(undefined, onWrite);

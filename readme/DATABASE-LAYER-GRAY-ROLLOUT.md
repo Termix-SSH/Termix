@@ -34,6 +34,8 @@ Allowed in gray rollout:
   credential source row reads, credential delete lookup/delete, and
   credential-host list reads migrated behind `CredentialRepository` and
   `HostResolutionRepository`.
+- Database export host and credential read/decryption paths migrated behind
+  `HostRepository` and `CredentialRepository`.
 - Credential create/update encrypted writes migrated behind
   `CredentialRepository`, including system-key copies for shared credentials.
 - Credential delete host cleanup and apply-to-host writes migrated behind
