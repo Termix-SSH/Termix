@@ -1,3 +1,5 @@
+import { getDb } from "../db/index.js";
+
 export interface SqliteForeignKeyClient {
   exec(sql: string): unknown;
 }
@@ -12,4 +14,10 @@ export async function withSqliteForeignKeysDisabled<T>(
   } finally {
     sqlite.exec("PRAGMA foreign_keys = ON");
   }
+}
+
+export async function withCurrentSqliteForeignKeysDisabled<T>(
+  operation: () => Promise<T>,
+): Promise<T> {
+  return withSqliteForeignKeysDisabled(getDb().$client, operation);
 }

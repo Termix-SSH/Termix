@@ -63,6 +63,8 @@ Allowed in gray rollout:
 - Database import SQLite foreign-key toggling is isolated behind the
   `withSqliteForeignKeysDisabled` runtime boundary and restores constraints in
   a `finally` path.
+- Database import now uses the current SQLite foreign-key boundary without
+  importing `getDb()` in the route handler.
 - Legacy unencrypted SQLite copy/verification path centralized behind
   `LegacySqliteDatabaseCopyStore`.
 - Termix ID credential lookup, generated credential persistence, and generated

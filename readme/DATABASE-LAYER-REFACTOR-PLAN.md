@@ -75,6 +75,8 @@ Direct SQLite snapshot save-function imports are now isolated inside
 Database import SQLite foreign-key toggling is isolated behind the
 `withSqliteForeignKeysDisabled` runtime boundary and restores constraints in a
 `finally` path.
+Database import now uses the current SQLite foreign-key boundary without
+importing `getDb()` in the route handler.
 Database startup and schema migration defaults in `database/db/index.ts` now use
 local raw settings helpers instead of scattered settings SQL.
 Database import/export settings handling in `database/database.ts` now uses

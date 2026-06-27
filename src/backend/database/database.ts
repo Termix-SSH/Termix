@@ -42,7 +42,7 @@ import { createCurrentSettingsRepository } from "./repositories/current-settings
 import { createCurrentSshCredentialUsageRepository } from "./repositories/current-ssh-credential-usage-repository.js";
 import { createCurrentUserRepository } from "./repositories/current-user-repository.js";
 import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
-import { withSqliteForeignKeysDisabled } from "./runtime/sqlite-foreign-key-boundary.js";
+import { withCurrentSqliteForeignKeysDisabled } from "./runtime/sqlite-foreign-key-boundary.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
 import type {
@@ -51,7 +51,7 @@ import type {
   GitHubAPIResponse,
   AuthenticatedRequest,
 } from "../../types/index.js";
-import { getDb, DatabaseSaveTrigger } from "./db/index.js";
+import { DatabaseSaveTrigger } from "./db/index.js";
 import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
 
@@ -1180,7 +1180,6 @@ app.post(
       }
 
       const userId = (req as AuthenticatedRequest).userId;
-      const mainDb = getDb();
       const deviceInfo = parseUserAgent(req);
 
       const userRepository = createCurrentUserRepository();
@@ -1272,7 +1271,7 @@ app.post(
       };
 
       try {
-        await withSqliteForeignKeysDisabled(mainDb.$client, async () => {
+        await withCurrentSqliteForeignKeysDisabled(async () => {
           try {
             const importedHosts = importDb
               .prepare("SELECT * FROM ssh_data")
