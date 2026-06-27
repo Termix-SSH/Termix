@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import { db } from "../db/index.js";
 import { hosts } from "../db/schema.js";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Request, Response } from "express";
 import axios from "axios";
 import multer from "multer";
@@ -1155,50 +1155,11 @@ router.get(
           now,
         );
 
-      const ownHostRows = await db
-        .select()
-        .from(hosts)
-        .where(eq(hosts.userId, userId));
-
-      const sharedHostIds = Array.from(
-        new Set(accessEntries.map((access) => access.hostId)),
-      );
-      const sharedHostRows =
-        sharedHostIds.length > 0
-          ? await db
-              .select()
-              .from(hosts)
-              .where(inArray(hosts.id, sharedHostIds))
-          : [];
-      const sharedHostsById = new Map(
-        sharedHostRows.map((host) => [host.id, host]),
-      );
-
-      const rawData = [
-        ...ownHostRows.map((host) => ({
-          ...host,
-          ownerId: host.userId,
-          isShared: false,
-          permissionLevel: undefined,
-          expiresAt: undefined,
-        })),
-        ...accessEntries.flatMap((access) => {
-          const host = sharedHostsById.get(access.hostId);
-          if (!host || host.userId === userId) {
-            return [];
-          }
-
-          return [
-            {
-              ...host,
-              ownerId: host.userId,
-              isShared: host.userId !== userId,
-              permissionLevel: access.permissionLevel,
-              expiresAt: access.expiresAt,
-            },
-          ];
-        }),
-      ];
+      const rawData =
+        await createCurrentHostResolutionRepository().listHostRowsForAccessList(
+          userId,
+          accessEntries,
+        );
 
       const ownHosts = rawData.filter((row) => row.userId === userId);
       const sharedHosts = rawData.filter((row) => row.userId !== userId);

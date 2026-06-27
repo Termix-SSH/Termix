@@ -265,6 +265,35 @@ describe("HostResolutionRepository", () => {
     );
   });
 
+  it("lists raw own and shared host rows for access list assembly", async () => {
+    const repository = await createRepository();
+
+    const rows = await repository.listHostRowsForAccessList("user-2", [
+      { hostId: 1, permissionLevel: "execute", expiresAt: null },
+      { hostId: 3, permissionLevel: "view", expiresAt: null },
+      { hostId: 999, permissionLevel: "view", expiresAt: null },
+    ]);
+
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      id: 3,
+      userId: "user-2",
+      ownerId: "user-2",
+      isShared: false,
+      permissionLevel: undefined,
+      expiresAt: undefined,
+    });
+    expect(rows[1]).toMatchObject({
+      id: 1,
+      userId: "user-1",
+      ownerId: "user-1",
+      isShared: true,
+      permissionLevel: "execute",
+      expiresAt: null,
+    });
+    expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();
+  });
+
   it("loads host owner metadata without decrypting host data", async () => {
     const repository = await createRepository();
 

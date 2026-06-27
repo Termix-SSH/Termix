@@ -1,4 +1,4 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { hostAccess, hosts, sshCredentials } from "../db/schema.js";
 import type { DatabaseContext } from "../runtime/adapter.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -19,6 +19,17 @@ export interface HostUpdateStateRecord {
   vncCredentialId: number | null;
   authType: string;
 }
+export interface HostListAccessEntry {
+  hostId: number;
+  permissionLevel: string;
+  expiresAt: string | null;
+}
+export type HostListRow = HostResolutionHostRecord & {
+  ownerId: string;
+  isShared: boolean;
+  permissionLevel?: string;
+  expiresAt?: string | null;
+};
 
 export class HostResolutionRepository {
   constructor(
@@ -77,6 +88,56 @@ export class HostResolutionRepository {
       .where(eq(hosts.userId, userId));
 
     return this.decryptMany("ssh_data", rows, userId);
+  }
+
+  async listHostRowsForAccessList(
+    userId: string,
+    accessEntries: HostListAccessEntry[],
+  ): Promise<HostListRow[]> {
+    const ownHostRows = await this.context.drizzle
+      .select()
+      .from(hosts)
+      .where(eq(hosts.userId, userId));
+
+    const sharedHostIds = Array.from(
+      new Set(accessEntries.map((access) => access.hostId)),
+    );
+    const sharedHostRows =
+      sharedHostIds.length > 0
+        ? await this.context.drizzle
+            .select()
+            .from(hosts)
+            .where(inArray(hosts.id, sharedHostIds))
+        : [];
+    const sharedHostsById = new Map(
+      sharedHostRows.map((host) => [host.id, host]),
+    );
+
+    return [
+      ...ownHostRows.map((host) => ({
+        ...host,
+        ownerId: host.userId,
+        isShared: false,
+        permissionLevel: undefined,
+        expiresAt: undefined,
+      })),
+      ...accessEntries.flatMap((access) => {
+        const host = sharedHostsById.get(access.hostId);
+        if (!host || host.userId === userId) {
+          return [];
+        }
+
+        return [
+          {
+            ...host,
+            ownerId: host.userId,
+            isShared: host.userId !== userId,
+            permissionLevel: access.permissionLevel,
+            expiresAt: access.expiresAt,
+          },
+        ];
+      }),
+    ];
   }
 
   async findHostOwnerId(hostId: number): Promise<string | null> {

@@ -32,6 +32,8 @@ Allowed in gray rollout:
   export reads migrated behind `HostResolutionRepository`.
 - Host route update-state and delete-audit host reads migrated behind
   `HostResolutionRepository`.
+- Host route own/shared list assembly reads migrated behind
+  `HostResolutionRepository` while preserving route-level own-host decryption.
 - Host user-cleanup delete paths migrated behind `HostRepository`.
 - SSO provider listing, management, OIDC config loading, and LDAP provider
   validation migrated behind `SsoProviderRepository`.
