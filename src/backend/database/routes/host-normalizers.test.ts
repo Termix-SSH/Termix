@@ -98,6 +98,15 @@ describe("normalizeImportedHost", () => {
     expect(host.port).toBe(2222);
   });
 
+  it("prefers sshPort over the legacy port field for ssh hosts", () => {
+    const host = normalizeImportedHost({
+      connectionType: "ssh",
+      port: 22,
+      sshPort: 2222,
+    });
+    expect(host.port).toBe(2222);
+  });
+
   it("resolves ip from common aliases", () => {
     expect(normalizeImportedHost({ address: "a.example" }).ip).toBe(
       "a.example",

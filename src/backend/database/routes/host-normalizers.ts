@@ -41,6 +41,25 @@ function asPort(value: unknown): number | undefined {
   return isValidPort(port) ? port : undefined;
 }
 
+export function resolvePrimaryPort(
+  hostData: Record<string, unknown>,
+  connectionType: string,
+): number {
+  const genericPort = asPort(hostData.port);
+
+  if (connectionType === "rdp") {
+    return asPort(hostData.rdpPort) || genericPort || 3389;
+  }
+  if (connectionType === "vnc") {
+    return asPort(hostData.vncPort) || genericPort || 5900;
+  }
+  if (connectionType === "telnet") {
+    return asPort(hostData.telnetPort) || genericPort || 23;
+  }
+
+  return asPort(hostData.sshPort) || genericPort || 22;
+}
+
 function asInteger(value: unknown): number | undefined {
   const number =
     typeof value === "number"
@@ -148,15 +167,7 @@ export function normalizeImportedHost(
           ? "telnet"
           : "ssh");
 
-  const port =
-    asPort(hostData.port) ||
-    (connectionType === "rdp"
-      ? asPort(hostData.rdpPort) || 3389
-      : connectionType === "vnc"
-        ? asPort(hostData.vncPort) || 5900
-        : connectionType === "telnet"
-          ? asPort(hostData.telnetPort) || 23
-          : asPort(hostData.sshPort) || 22);
+  const port = resolvePrimaryPort(hostData, connectionType);
 
   return {
     ...hostData,

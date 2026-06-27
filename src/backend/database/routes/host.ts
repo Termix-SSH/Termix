@@ -29,6 +29,7 @@ import { pickResolvedUsername } from "../../ssh/credential-username.js";
 import {
   isNonEmptyString,
   isValidPort,
+  resolvePrimaryPort,
   stripSensitiveFields,
   transformHostResponse,
 } from "./host-normalizers.js";
@@ -215,22 +216,25 @@ router.post(
       ip,
     });
 
+    const effectiveConnectionType =
+      typeof connectionType === "string" ? connectionType : "ssh";
+    const effectivePort = resolvePrimaryPort(hostData, effectiveConnectionType);
+
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
-      !isValidPort(port)
+      !isValidPort(effectivePort)
     ) {
       sshLogger.warn("Invalid SSH data input validation failed", {
         operation: "host_create",
         userId,
         hasIp: !!ip,
-        port,
-        isValidPort: isValidPort(port),
+        port: effectivePort,
+        isValidPort: isValidPort(effectivePort),
       });
       return res.status(400).json({ error: "Invalid SSH data" });
     }
 
-    const effectiveConnectionType = connectionType || "ssh";
     const effectiveAuthType =
       authType ||
       authMethod ||
@@ -246,7 +250,7 @@ router.post(
       folder: folder || null,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
-      port,
+      port: effectivePort,
       username: effectiveUsername,
       authType: effectiveAuthType,
       useWarpgate: useWarpgate ? 1 : 0,
@@ -318,7 +322,10 @@ router.post(
       enableRdp: enableRdp ? 1 : 0,
       enableVnc: enableVnc ? 1 : 0,
       enableTelnet: enableTelnet ? 1 : 0,
-      sshPort: sshPort || port || 22,
+      sshPort:
+        effectiveConnectionType === "ssh"
+          ? effectivePort
+          : sshPort || port || 22,
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
       telnetPort: telnetPort || 23,
@@ -791,10 +798,14 @@ router.put(
       changes: Object.keys(hostData),
     });
 
+    const effectiveConnectionType =
+      typeof connectionType === "string" ? connectionType : "ssh";
+    const effectivePort = resolvePrimaryPort(hostData, effectiveConnectionType);
+
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
-      !isValidPort(port) ||
+      !isValidPort(effectivePort) ||
       !hostId
     ) {
       sshLogger.warn("Invalid SSH data input validation failed for update", {
@@ -802,8 +813,8 @@ router.put(
         hostId: parseInt(hostId),
         userId,
         hasIp: !!ip,
-        port,
-        isValidPort: isValidPort(port),
+        port: effectivePort,
+        isValidPort: isValidPort(effectivePort),
       });
       return res.status(400).json({ error: "Invalid SSH data" });
     }
@@ -814,12 +825,12 @@ router.put(
     const effectiveName =
       name || (effectiveUsername ? `${effectiveUsername}@${ip}` : String(ip));
     const sshDataObj: Record<string, unknown> = {
-      connectionType: connectionType || "ssh",
+      connectionType: effectiveConnectionType,
       name: effectiveName,
       folder,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
-      port,
+      port: effectivePort,
       username: effectiveUsername,
       authType: effectiveAuthType,
       useWarpgate: useWarpgate ? 1 : 0,
@@ -891,7 +902,10 @@ router.put(
       enableRdp: enableRdp ? 1 : 0,
       enableVnc: enableVnc ? 1 : 0,
       enableTelnet: enableTelnet ? 1 : 0,
-      sshPort: sshPort || port || 22,
+      sshPort:
+        effectiveConnectionType === "ssh"
+          ? effectivePort
+          : sshPort || port || 22,
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
       telnetPort: telnetPort || 23,
