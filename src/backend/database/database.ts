@@ -35,14 +35,16 @@ import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
 import { createCurrentCredentialRepository } from "./repositories/current-credential-repository.js";
+import { createCurrentDismissedAlertRepository } from "./repositories/current-dismissed-alert-repository.js";
 import { createCurrentFileManagerBookmarkRepository } from "./repositories/current-file-manager-bookmark-repository.js";
 import { createCurrentHostRepository } from "./repositories/current-host-repository.js";
 import { createCurrentSettingsRepository } from "./repositories/current-settings-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "./repositories/current-ssh-credential-usage-repository.js";
 import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
-import { users, dismissedAlerts, sshCredentialUsage } from "./db/schema.js";
+import { users } from "./db/schema.js";
 import type {
   CacheEntry,
   GitHubRelease,
@@ -1050,10 +1052,8 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      const alerts = await getDb()
-        .select()
-        .from(dismissedAlerts)
-        .where(eq(dismissedAlerts.userId, userId));
+      const dismissedAlertRepository = createCurrentDismissedAlertRepository();
+      const alerts = await dismissedAlertRepository.listByUserId(userId);
       const insertAlert = exportDb.prepare(`
         INSERT INTO dismissed_alerts (id, user_id, alert_id, dismissed_at)
         VALUES (?, ?, ?, ?)
@@ -1067,10 +1067,9 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       }
 
-      const usage = await getDb()
-        .select()
-        .from(sshCredentialUsage)
-        .where(eq(sshCredentialUsage.userId, userId));
+      const sshCredentialUsageRepository =
+        createCurrentSshCredentialUsageRepository();
+      const usage = await sshCredentialUsageRepository.listByUserId(userId);
       const insertUsage = exportDb.prepare(`
         INSERT INTO ssh_credential_usage (id, credential_id, host_id, user_id, used_at)
         VALUES (?, ?, ?, ?, ?)
@@ -1480,33 +1479,25 @@ app.post(
           }
         }
 
+        const dismissedAlertRepository =
+          createCurrentDismissedAlertRepository();
+
         try {
           const importedAlerts = importDb
             .prepare("SELECT * FROM dismissed_alerts")
             .all();
           for (const alert of importedAlerts) {
             try {
-              const existing = await mainDb
-                .select()
-                .from(dismissedAlerts)
-                .where(
-                  and(
-                    eq(dismissedAlerts.userId, userId),
-                    eq(dismissedAlerts.alertId, alert.alert_id),
-                  ),
-                );
-
-              if (existing.length > 0) {
+              const created = await dismissedAlertRepository.createForImport(
+                userId,
+                alert.alert_id,
+                alert.dismissed_at,
+              );
+              if (created) {
+                result.summary.dismissedAlertsImported++;
+              } else {
                 result.summary.skippedItems++;
-                continue;
               }
-
-              await mainDb.insert(dismissedAlerts).values({
-                userId: userId,
-                alertId: alert.alert_id,
-                dismissedAt: alert.dismissed_at || new Date().toISOString(),
-              });
-              result.summary.dismissedAlertsImported++;
             } catch (alertError) {
               result.summary.errors.push(
                 `Dismissed alert import error: ${alertError.message}`,

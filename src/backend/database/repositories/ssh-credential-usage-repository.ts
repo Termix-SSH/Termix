@@ -10,6 +10,13 @@ export class SshCredentialUsageRepository {
     private readonly onWrite?: () => void | Promise<void>,
   ) {}
 
+  async listByUserId(userId: string): Promise<SshCredentialUsageRecord[]> {
+    return this.context.drizzle
+      .select()
+      .from(sshCredentialUsage)
+      .where(eq(sshCredentialUsage.userId, userId));
+  }
+
   async create(
     credentialId: number,
     hostId: number,

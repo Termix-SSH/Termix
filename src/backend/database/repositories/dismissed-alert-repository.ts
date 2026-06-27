@@ -52,6 +52,25 @@ export class DismissedAlertRepository {
     await this.afterWrite();
   }
 
+  async createForImport(
+    userId: string,
+    alertId: string,
+    dismissedAt = new Date().toISOString(),
+  ): Promise<boolean> {
+    const existing = await this.findForUser(userId, alertId);
+    if (existing) {
+      return false;
+    }
+
+    await this.context.drizzle.insert(dismissedAlerts).values({
+      userId,
+      alertId,
+      dismissedAt,
+    });
+    await this.afterWrite();
+    return true;
+  }
+
   async deleteForUser(userId: string, alertId: string): Promise<boolean> {
     const rows = await this.context.drizzle
       .delete(dismissedAlerts)

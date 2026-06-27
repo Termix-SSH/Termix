@@ -64,6 +64,28 @@ describe("DismissedAlertRepository", () => {
     ).toEqual(["alert-1", "alert-2"]);
   });
 
+  it("creates import alerts without duplicating user alert pairs", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    await expect(
+      repo.createForImport("user-1", "alert-1", "2026-01-01T00:00:00.000Z"),
+    ).resolves.toBe(true);
+    await expect(
+      repo.createForImport("user-1", "alert-1", "2026-01-02T00:00:00.000Z"),
+    ).resolves.toBe(false);
+
+    const alerts = await repo.listByUserId("user-1");
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toMatchObject({
+      alertId: "alert-1",
+      dismissedAt: "2026-01-01T00:00:00.000Z",
+    });
+    expect(writeCount).toBe(1);
+  });
+
   it("deletes dismissed alerts and only triggers writes for changed rows", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

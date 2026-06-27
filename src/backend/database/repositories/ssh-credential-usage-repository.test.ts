@@ -73,6 +73,18 @@ describe("SshCredentialUsageRepository", () => {
     });
   });
 
+  it("lists usage records by user", async () => {
+    const repo = await createRepository();
+
+    await repo.create(1, 1, "user-1");
+    await repo.create(1, 2, "user-1");
+    await repo.create(2, 3, "user-2");
+
+    expect(
+      (await repo.listByUserId("user-1")).map((row) => row.hostId),
+    ).toEqual([1, 2]);
+  });
+
   it("deletes usage records by user, host, and host list", async () => {
     let writeCount = 0;
     const repo = await createRepository(() => {

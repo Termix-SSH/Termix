@@ -262,6 +262,10 @@ Tmux session tag list/rename/delete/replace now uses the current tmux session
 tag repository boundary.
 OPKSSH token upsert/read/touch/delete and user cleanup now use the current
 OPKSSH token repository boundary.
+Database import/export dismissed alert reads and writes now use the current
+dismissed alert repository boundary.
+Database export SSH credential usage reads now use the current SSH credential
+usage repository boundary.
 Vault token upsert/read/touch/delete now uses the current Vault token repository
 boundary.
 Vault profile list/create/update/delete and profile lookup now use the current

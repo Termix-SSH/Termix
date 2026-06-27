@@ -84,6 +84,8 @@ Allowed in gray rollout:
   `OpenTabRepository`.
 - Dismissed alert read/dismiss/undismiss/export and user cleanup migrated behind
   `DismissedAlertRepository`.
+- Database import/export dismissed alert reads and writes migrated behind
+  `DismissedAlertRepository`.
 - Homepage layout read/write paths migrated behind
   `HomepageLayoutRepository`.
 - Homepage item list/create/update/delete migrated behind
@@ -99,6 +101,8 @@ Allowed in gray rollout:
 - Dashboard recent activity list/log/trim/reset and host/user cleanup migrated
   behind `RecentActivityRepository`.
 - SSH credential usage writes and host/user cleanup migrated behind
+  `SshCredentialUsageRepository`.
+- Database export SSH credential usage reads migrated behind
   `SshCredentialUsageRepository`.
 - Transfer recent list/upsert/prune/export and host/folder/user cleanup migrated
   behind `TransferRecentRepository`.
