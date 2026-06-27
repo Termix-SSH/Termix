@@ -774,6 +774,9 @@ If migration fails:
 
 - New app should not start with an empty database.
 - Old encrypted snapshot should remain untouched.
+- Database-layer gray startup creates a one-time pre-upgrade backup before
+  opening the existing SQLite snapshot, and fails closed if that backup cannot
+  be written unless `DATABASE_LAYER_SKIP_PREUPGRADE_BACKUP=1` is explicitly set.
 - Error logs should identify the failed stage.
 - User should get recovery instructions.
 - Retrying should be safe.

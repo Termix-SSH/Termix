@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
+import { ensureDatabaseLayerPreupgradeBackup } from "./utils/database-layer-preupgrade-backup.js";
 import { DatabaseSaveTrigger } from "./utils/database-save-trigger.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
 import {
@@ -105,6 +106,8 @@ import {
     await systemCrypto.initializeDatabaseKey();
     await systemCrypto.initializeEncryptionKey();
     await systemCrypto.initializeInternalAuthToken();
+
+    ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
 
     await AutoSSLSetup.initialize();
     systemLogger.success("SSL setup completed", {

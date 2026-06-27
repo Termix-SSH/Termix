@@ -226,7 +226,8 @@ Not included in gray rollout:
 Before enabling this branch for any gray target:
 
 1. Confirm the target is running from a full backup of the data directory.
-2. Copy the current encrypted database snapshot before first startup.
+2. Confirm the app can write to the data directory so the automatic
+   pre-upgrade backup can be created before first database startup.
 3. Record the exact source commit and container/image tag currently serving
    traffic.
 4. Confirm the gray build commit is known.
@@ -312,6 +313,28 @@ Minimum backup artifacts:
 - environment configuration
 - application version or image tag
 - logs from the last healthy startup on the previous version
+
+This branch also creates one automatic pre-upgrade backup before opening the
+database for the first time. If `db.sqlite.encrypted`, `db.sqlite.encrypted.meta`,
+or `db.sqlite` exists and `.database-layer-preupgrade-backup.json` is absent, the
+backend copies the database file(s) plus `.env` into:
+
+```text
+<DATA_DIR>/backups/pre-database-layer-refactor-<timestamp>/
+```
+
+The backup directory and marker both include a `manifest.json` payload with the
+app version, rollout config, source files, copied files, and backup reason. A
+successful marker prevents repeat backups on every restart. If the backup cannot
+be created, startup fails closed. Operators may bypass only when an external
+backup has already been verified:
+
+```bash
+DATABASE_LAYER_SKIP_PREUPGRADE_BACKUP=1
+```
+
+The app keeps the latest three automatic pre-upgrade backups by default. Override
+with `DATABASE_LAYER_PREUPGRADE_BACKUP_KEEP=<count>`.
 
 ## 3. Required Validation Commands
 
