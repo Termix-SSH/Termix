@@ -254,11 +254,9 @@ export function registerHostMetricsSettingsRoutes(
       metricsHistoryRetentionDays < 1 ||
       metricsHistoryRetentionDays > 90
     ) {
-      return res
-        .status(400)
-        .json({
-          error: "metricsHistoryRetentionDays must be between 1 and 90",
-        });
+      return res.status(400).json({
+        error: "metricsHistoryRetentionDays must be between 1 and 90",
+      });
     }
     try {
       const db = getDb();
