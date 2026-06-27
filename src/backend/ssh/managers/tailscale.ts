@@ -51,7 +51,12 @@ export function parseTailscaleData(output: string): TailscaleData {
       Self?: { HostName?: string; TailscaleIPs?: string[] };
       Peer?: Record<
         string,
-        { HostName?: string; TailscaleIPs?: string[]; Online?: boolean; ExitNode?: boolean }
+        {
+          HostName?: string;
+          TailscaleIPs?: string[];
+          Online?: boolean;
+          ExitNode?: boolean;
+        }
       >;
       CurrentExitNode?: string;
     };
