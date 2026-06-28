@@ -164,6 +164,7 @@ export function CommandPalette({
     action();
     setIsOpen(false);
   };
+  const showHostResultsFirst = search.trim().length > 0;
 
   if (!isOpen) return null;
 
@@ -197,7 +198,7 @@ export function CommandPalette({
             </div>
           </div>
 
-          <CommandList className="max-h-[60vh] thin-scrollbar">
+          <CommandList className="max-h-[60vh] thin-scrollbar flex flex-col">
             <CommandGroup
               heading={t("commandPalette.quickActions")}
               className="px-2"
@@ -348,159 +349,165 @@ export function CommandPalette({
               </>
             )}
 
-            <CommandSeparator className="my-2" />
+            <div className={cn(showHostResultsFirst && "order-first")}>
+              {!showHostResultsFirst && <CommandSeparator className="my-2" />}
 
-            <CommandGroup
-              heading={t("commandPalette.serversAndHosts")}
-              className="px-2"
-            >
-              {filteredHosts.length > 0 ? (
-                groupedHosts.map(({ folder, hosts: groupHosts }) => (
-                  <div key={folder ?? "__root__"}>
-                    {folder && (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide">
-                        <Folder className="size-3" />
-                        {folder}
-                      </div>
-                    )}
-                    {groupHosts.map((host, i) => (
-                      <CommandItem
-                        key={i}
-                        onSelect={() =>
-                          handleAction(() => {
-                            const type = host.enableSsh
-                              ? "terminal"
-                              : host.enableRdp
-                                ? "rdp"
-                                : host.enableVnc
-                                  ? "vnc"
-                                  : host.enableTelnet
-                                    ? "telnet"
-                                    : "terminal";
-                            onOpenTab(type, host.name);
-                          })
-                        }
-                        className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-                      >
-                        <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
-                          <Server
-                            className={cn(
-                              "size-4",
-                              host.online
-                                ? "text-accent-brand"
-                                : "text-muted-foreground",
-                            )}
-                          />
+              <CommandGroup
+                heading={t("commandPalette.serversAndHosts")}
+                className="px-2"
+              >
+                {filteredHosts.length > 0 ? (
+                  groupedHosts.map(({ folder, hosts: groupHosts }) => (
+                    <div key={folder ?? "__root__"}>
+                      {folder && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/60 uppercase tracking-wide">
+                          <Folder className="size-3" />
+                          {folder}
                         </div>
-                        <div className="flex flex-col flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold truncate">
-                              {host.name}
-                            </span>
-                            {host.online && (
-                              <span className="size-1.5 rounded-full bg-accent-brand animate-pulse shrink-0" />
-                            )}
+                      )}
+                      {groupHosts.map((host, i) => (
+                        <CommandItem
+                          key={i}
+                          onSelect={() =>
+                            handleAction(() => {
+                              const type = host.enableSsh
+                                ? "terminal"
+                                : host.enableRdp
+                                  ? "rdp"
+                                  : host.enableVnc
+                                    ? "vnc"
+                                    : host.enableTelnet
+                                      ? "telnet"
+                                      : "terminal";
+                              onOpenTab(type, host.name);
+                            })
+                          }
+                          className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                        >
+                          <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
+                            <Server
+                              className={cn(
+                                "size-4",
+                                host.online
+                                  ? "text-accent-brand"
+                                  : "text-muted-foreground",
+                              )}
+                            />
                           </div>
-                          <span className="text-xs text-muted-foreground font-mono">
-                            {host.username}@{host.ip}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {host.enableSsh &&
-                            getSshActions(host).map(
-                              ({ type, icon: Icon, label }) => (
-                                <button
-                                  key={type}
-                                  title={label}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAction(() =>
-                                      onOpenTab(type, host.name),
-                                    );
-                                  }}
-                                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                                >
-                                  <Icon className="size-3.5" />
-                                </button>
-                              ),
+                          <div className="flex flex-col flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold truncate">
+                                {host.name}
+                              </span>
+                              {host.online && (
+                                <span className="size-1.5 rounded-full bg-accent-brand animate-pulse shrink-0" />
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground font-mono">
+                              {host.username}@{host.ip}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {host.enableSsh &&
+                              getSshActions(host).map(
+                                ({ type, icon: Icon, label }) => (
+                                  <button
+                                    key={type}
+                                    title={label}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAction(() =>
+                                        onOpenTab(type, host.name),
+                                      );
+                                    }}
+                                    className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                                  >
+                                    <Icon className="size-3.5" />
+                                  </button>
+                                ),
+                              )}
+                            {host.enableSsh &&
+                              (host.enableRdp ||
+                                host.enableVnc ||
+                                host.enableTelnet) && (
+                                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                              )}
+                            {host.enableRdp && (
+                              <button
+                                title="RDP"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAction(() =>
+                                    onOpenTab("rdp", host.name),
+                                  );
+                                }}
+                                className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                              >
+                                <Monitor className="size-3" />
+                                RDP
+                              </button>
                             )}
-                          {host.enableSsh &&
-                            (host.enableRdp ||
-                              host.enableVnc ||
-                              host.enableTelnet) && (
-                              <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                            {host.enableVnc && (
+                              <button
+                                title="VNC"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAction(() =>
+                                    onOpenTab("vnc", host.name),
+                                  );
+                                }}
+                                className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                              >
+                                <MousePointerClick className="size-3" />
+                                VNC
+                              </button>
                             )}
-                          {host.enableRdp && (
+                            {host.enableTelnet && (
+                              <button
+                                title="Telnet"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAction(() =>
+                                    onOpenTab("telnet", host.name),
+                                  );
+                                }}
+                                className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                              >
+                                <Terminal className="size-3" />
+                                Telnet
+                              </button>
+                            )}
+                            <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
                             <button
-                              title="RDP"
+                              title="Edit Host"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleAction(() => onOpenTab("rdp", host.name));
+                                setIsOpen(false);
+                                onOpenTab("host-manager");
+                                setTimeout(() => {
+                                  window.dispatchEvent(
+                                    new CustomEvent("host-manager:edit-host", {
+                                      detail: host.id,
+                                    }),
+                                  );
+                                }, 100);
                               }}
-                              className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
+                              className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
                             >
-                              <Monitor className="size-3" />
-                              RDP
+                              <Pencil className="size-3.5" />
                             </button>
-                          )}
-                          {host.enableVnc && (
-                            <button
-                              title="VNC"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAction(() => onOpenTab("vnc", host.name));
-                              }}
-                              className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
-                            >
-                              <MousePointerClick className="size-3" />
-                              VNC
-                            </button>
-                          )}
-                          {host.enableTelnet && (
-                            <button
-                              title="Telnet"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAction(() =>
-                                  onOpenTab("telnet", host.name),
-                                );
-                              }}
-                              className="flex items-center gap-1 px-2 h-6 rounded text-xs font-medium text-muted-foreground/70 hover:text-foreground hover:bg-muted-foreground/10 transition-colors border border-border/40"
-                            >
-                              <Terminal className="size-3" />
-                              Telnet
-                            </button>
-                          )}
-                          <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
-                          <button
-                            title="Edit Host"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsOpen(false);
-                              onOpenTab("host-manager");
-                              setTimeout(() => {
-                                window.dispatchEvent(
-                                  new CustomEvent("host-manager:edit-host", {
-                                    detail: host.id,
-                                  }),
-                                );
-                              }, 100);
-                            }}
-                            className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                        </div>
-                      </CommandItem>
-                    ))}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    {t("commandPalette.noHostsFound", { search })}
                   </div>
-                ))
-              ) : (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  {t("commandPalette.noHostsFound", { search })}
-                </div>
-              )}
-            </CommandGroup>
+                )}
+              </CommandGroup>
+            </div>
 
             <CommandSeparator className="my-2" />
 
