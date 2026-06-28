@@ -1,7 +1,6 @@
 import axios from "axios";
 import { authApi, fileManagerApi, handleApiError } from "@/main-axios";
 import { fileLogger } from "@/lib/frontend-logger";
-import { isElectron } from "@/lib/electron";
 import type { SSHHost } from "@/types/index";
 
 type ApiConnectionLog = {
@@ -25,18 +24,6 @@ type ConnectErrorResponse = {
   reason?: string;
 };
 
-const LARGE_UPLOAD_THRESHOLD = 512 * 1024 * 1024;
-const UPLOAD_CHUNK_SIZE = 16 * 1024 * 1024;
-
-type ChunkUploadResponse = {
-  message: string;
-  path: string;
-  offset: number;
-  bytesWritten: number;
-  nextOffset: number;
-  complete: boolean;
-};
-
 function buildFileManagerUrl(path: string): string {
   const baseURL = String(fileManagerApi.defaults.baseURL || "");
   return `${baseURL.replace(/\/$/, "")}${path}`;
@@ -56,72 +43,6 @@ function triggerBlobDownload(blob: Blob, fileName: string): void {
     link.remove();
     URL.revokeObjectURL(url);
   }, 1000);
-}
-
-async function uploadSSHFileInChunks(
-  sessionId: string,
-  path: string,
-  fileName: string,
-  file: File,
-): Promise<ChunkUploadResponse> {
-  let offset = 0;
-  let lastResponse: ChunkUploadResponse | null = null;
-
-  while (offset < file.size || (file.size === 0 && offset === 0)) {
-    const end = Math.min(offset + UPLOAD_CHUNK_SIZE, file.size);
-    const chunk = file.slice(offset, end);
-    const params = new URLSearchParams({
-      sessionId,
-      path,
-      fileName,
-      offset: String(offset),
-      totalSize: String(file.size),
-    });
-    const headers: HeadersInit = {
-      "Content-Type": "application/octet-stream",
-    };
-
-    if (isElectron()) {
-      const jwt = localStorage.getItem("jwt");
-      if (jwt) headers.Authorization = `Bearer ${jwt}`;
-    }
-
-    const response = await fetch(
-      buildFileManagerUrl(`/ssh/uploadFileChunk?${params.toString()}`),
-      {
-        method: "POST",
-        body: chunk,
-        headers,
-        credentials: "include",
-      },
-    );
-    const data = (await response.json().catch(() => ({}))) as Partial<
-      ChunkUploadResponse & { error: string }
-    >;
-
-    if (!response.ok) {
-      throw new Error(data.error || `Chunk upload failed (${response.status})`);
-    }
-
-    if (
-      typeof data.nextOffset !== "number" ||
-      data.nextOffset <= offset ||
-      data.nextOffset > file.size
-    ) {
-      throw new Error("Chunk upload returned an invalid offset");
-    }
-
-    lastResponse = data as ChunkUploadResponse;
-    offset = data.nextOffset;
-
-    if (file.size === 0) break;
-  }
-
-  if (!lastResponse) {
-    throw new Error("Chunk upload did not complete");
-  }
-
-  return lastResponse;
 }
 
 // SSH FILE OPERATIONS
@@ -448,10 +369,72 @@ export async function uploadSSHFile(
   file: File,
   hostId?: number,
   userId?: string,
+  onChunkProgress?: (progress: {
+    chunkIndex: number;
+    totalChunks: number;
+    bytesSent: number;
+    totalBytes: number;
+  }) => void,
 ): Promise<Record<string, unknown>> {
+  // Browser-side safety: any single multipart body approaching 2^31 bytes (~2.14GB)
+  // crashes the XHR/ArrayBuffer pipeline in both Chromium (Electron) and Firefox,
+  // surfacing as "DOMException: File could not be read" inside FileManager-*.js.
+  // For larger files we slice into <=8MB chunks and upload each one separately,
+  // never materializing the whole file in JS memory.
+  const CHUNK_THRESHOLD_BYTES = 1.5 * 1024 * 1024 * 1024; // 1.5 GiB
+  const CHUNK_SIZE_BYTES = 8 * 1024 * 1024; // 8 MiB
+
   try {
-    if (file.size >= LARGE_UPLOAD_THRESHOLD) {
-      return await uploadSSHFileInChunks(sessionId, path, fileName, file);
+    if (file.size > CHUNK_THRESHOLD_BYTES) {
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE_BYTES);
+      fileLogger.info("Starting chunked upload", {
+        operation: "file_upload_chunked_start",
+        fileName,
+        fileSize: file.size,
+        totalChunks,
+        chunkSize: CHUNK_SIZE_BYTES,
+      });
+
+      let bytesSent = 0;
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE_BYTES;
+        const end = Math.min(start + CHUNK_SIZE_BYTES, file.size);
+        const chunkBlob = file.slice(start, end);
+
+        const form = new FormData();
+        form.append("sessionId", sessionId);
+        form.append("path", path);
+        form.append("fileName", fileName);
+        form.append("chunkIndex", String(i));
+        form.append("totalChunks", String(totalChunks));
+        form.append("totalSize", String(file.size));
+        form.append("chunk", chunkBlob, fileName);
+
+        const response = await fileManagerApi.post(
+          "/ssh/uploadFileChunk",
+          form,
+          { timeout: 0 },
+        );
+
+        bytesSent = end;
+        onChunkProgress?.({
+          chunkIndex: i,
+          totalChunks,
+          bytesSent,
+          totalBytes: file.size,
+        });
+
+        if (i === totalChunks - 1) {
+          fileLogger.success("Chunked upload completed", {
+            operation: "file_upload_chunked_complete",
+            fileName,
+            fileSize: file.size,
+            totalChunks,
+          });
+          return response.data;
+        }
+      }
+      return { message: "File uploaded successfully", chunked: true };
     }
 
     const form = new FormData();
