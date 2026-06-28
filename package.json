@@ -12,6 +12,8 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "biome:check": "biome check biome.json package.json",
+    "biome:fix": "biome check --write biome.json package.json",
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "eslint .",
@@ -72,6 +74,7 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.1",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/search": "^6.7.1",
