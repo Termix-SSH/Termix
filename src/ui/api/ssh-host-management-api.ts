@@ -88,6 +88,7 @@ export async function wakeOnLan(hostId: number): Promise<{ success: boolean }> {
 export async function bulkImportSSHHosts(
   hosts: SSHHostData[],
   overwrite = false,
+  credentials?: Record<string, unknown>[],
 ): Promise<{
   message: string;
   success: number;
@@ -100,6 +101,7 @@ export async function bulkImportSSHHosts(
     const response = await sshHostApi.post("/bulk-import", {
       hosts,
       overwrite,
+      ...(credentials ? { credentials } : {}),
     });
     return response.data;
   } catch (error) {
@@ -190,11 +192,27 @@ export async function exportSSHHostWithCredentials(
   }
 }
 
-export async function exportAllSSHHosts(): Promise<{
+export function exportAllSSHHosts(): Promise<{
+  hosts: SSHHost[];
+}>;
+export function exportAllSSHHosts(options: { share: true }): Promise<{
+  version: string;
+  exportedAt: string;
+  credentials: Record<string, unknown>[];
+  hosts: SSHHost[];
+}>;
+export async function exportAllSSHHosts(options?: {
+  share?: boolean;
+}): Promise<{
+  version?: string;
+  exportedAt?: string;
+  credentials?: Record<string, unknown>[];
   hosts: SSHHost[];
 }> {
   try {
-    const response = await sshHostApi.get("/db/hosts/export");
+    const response = await sshHostApi.get(
+      options?.share ? "/db/hosts/export?share=1" : "/db/hosts/export",
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "export all SSH hosts");

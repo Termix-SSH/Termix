@@ -29,6 +29,8 @@ interface DialogResult {
 export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
+  getSetting?: (key: string) => Promise<string | null | undefined>;
+  setSetting?: (key: string, value: string) => Promise<void>;
 
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
@@ -76,6 +78,32 @@ export interface ElectronAPI {
 
   showSaveDialog: (options: DialogOptions) => Promise<DialogResult>;
   showOpenDialog: (options: DialogOptions) => Promise<DialogResult>;
+
+  openExternalEditor: (fileData: {
+    fileName: string;
+    content: string;
+    encoding?: "utf8" | "base64";
+    editorPath?: string | null;
+  }) => Promise<{
+    success: boolean;
+    editId?: string;
+    path?: string;
+    error?: string;
+  }>;
+
+  closeExternalEditor: (editId: string) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+
+  onExternalEditorSaved?: (
+    callback: (payload: {
+      editId: string;
+      content: string;
+      encoding: "utf8";
+      path: string;
+    }) => void,
+  ) => () => void;
 
   onUpdateAvailable: (callback: () => void) => void;
   onUpdateDownloaded: (callback: () => void) => void;
