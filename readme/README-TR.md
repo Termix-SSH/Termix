@@ -28,6 +28,7 @@
   <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
   <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
 
 <br />
@@ -87,8 +88,8 @@ Uzak sunuculardaki dosyalari dogrudan yonetin; kod, goruntu, ses ve video gorunt
 <tr>
 <td width="50%" valign="top">
 
-**Docker Yonetimi:**
-Konteynerleri baslatın, durdurun, duraklatın, kaldirin. Konteyner istatistiklerini goruntuleyin. Docker exec terminali kullanarak konteyneri kontrol edin. Portainer veya Dockge'nin yerini almak icin degil, konteynerlerinizi olusturmak yerine basitce yonetmek icin tasarlanmistir.
+**Docker ve Podman Yonetimi:**
+Konteynerleri baslatın, durdurun, duraklatın, kaldirin. Konteyner istatistiklerini goruntuleyin. Docker exec terminali kullanarak konteyneri kontrol edin. Docker ve Podman'i konteyner calisma ortami olarak destekler. Portainer veya Dockge'nin yerini almak icin degil, konteynerlerinizi olusturmak yerine basitce yonetmek icin tasarlanmistir.
 
 </td>
 <td width="50%" valign="top">
@@ -115,38 +116,66 @@ Yonetici kontrolleri, OIDC/LDAP/SSO (erisim kontrollu) ve 2FA (TOTP) destegi ile
 <tr>
 <td width="50%" valign="top">
 
+**Tailscale Entegrasyonu:**
+Tailscale aginizdaki cihazlari listeleyerek hizlica ana bilgisayar olarak ekleyin ve kimlik dogrulama yontemi olarak Tailscale SSH kullanarak baglanin; bu sayede ag ACL'leriniz kimlik bilgileri depolamadan yetkilendirmeyi yonetir.
+
+</td>
+<td width="50%" valign="top">
+
 **RBAC:**
 Roller olusturun ve ana bilgisayarlari kullanicilar/roller arasinda paylasin.
 
 </td>
 <td width="50%" valign="top">
 
-**Veritabani Sifreleme:**
-Arka uc, sifrelenmis SQLite veritabani dosyalari olarak depolanir. Daha fazla bilgi icin [belgelere](https://docs.termix.site/security) bakin.
+**Seri Baglantilar:**
+Seri cihazlara (router, switch, mikrodenetleyici vb.) dogrudan tarayici veya masaustu uygulamasindan baglanin. Baud hizi, veri bitleri, durdurma bitleri ve parite yapilandirin. Desteklenen tarayicilarda Web Serial API, Electron uygulamasinda yerel arka ucu kullanir.
 
 </td>
 </tr>
 <tr>
+<td width="50%" valign="top">
+
+**Uyarilar:**
+Ana bilgisayar metrikleri (CPU, bellek, disk vb.) icin esik tabanli uyari kurallari belirleyin ve tetiklendiklerinde ntfy veya webhook araciligiyla bildirim alin. Gecmis gunlugunde tetiklenen ve cozulen uyarilari goruntuleyin.
+
+</td>
+<td width="50%" valign="top">
+
+**Ana Sayfa:**
+Surukleme ve birakma widget izgarasina sahip tamamen ozerlestirilebilir bir ana sayfa. Ana bilgisayar durumu, hizmet baglantilari, saatler, notlar, RSS besleme, hava durumu, Docker konteynerleri, ana bilgisayar metrik grafikleri, gomulu terminaller, iframe ve daha fazlasi icin widget ekleyin.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Veritabani Sifreleme:**
+Arka uc, sifrelenmis SQLite veritabani dosyalari olarak depolanir. Daha fazla bilgi icin [belgelere](https://docs.termix.site/security) bakin.
+
+</td>
 <td width="50%" valign="top">
 
 **Ag Grafigi:**
 Kontrol panelinizi, SSH baglantilariniza dayali olarak ev laboratuvarinizi durum destegi ile gorselletirmek icin ozellestirin.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **SSH Araclari:**
 Tek tiklamayla calistirilan yeniden kullanilabilir komut parcaciklari olusturun. Birden fazla acik terminalde ayni anda tek bir komut calistirin.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Kalici Sekmeler:**
 Kullanici profilinde etkinlestirilmisse SSH oturumlari ve sekmeler cihazlar/yenilemeler arasinda acik kalir.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Diller:**
@@ -303,6 +332,10 @@ Termix, abonelik veya ücretli plan olmayan ücretsiz ve açık kaynaklı bir pr
 <td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
 <td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
 </tr>
+<tr>
+<td><img src="../repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
+<td><img src="../repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
+</tr>
 </table>
 
 <sub>Bazi videolar ve gorseller guncel olmayabilir veya ozellikleri tam olarak yansitmayabilir.</sub>
@@ -313,7 +346,7 @@ Termix, abonelik veya ücretli plan olmayan ücretsiz ve açık kaynaklı bir pr
 
 ## Planlanan Ozellikler
 
-Tum planlanan ozellikler icin [Projeler](https://github.com/orgs/Termix-SSH/projects/2) sayfasina bakin. Katkida bulunmak istiyorsaniz, [Katkida Bulunma](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) sayfasina bakin.
+Tum planlanan ozellikler icin [Projeler](https://github.com/orgs/Termix-SSH/projects/5) sayfasina bakin. Katkida bulunmak istiyorsaniz, [Katkida Bulunma](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) sayfasina bakin.
 
 <br />
 

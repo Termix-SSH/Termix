@@ -28,6 +28,7 @@
   <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
   <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
 
 <br />
@@ -87,8 +88,8 @@ Gestione archivos directamente en servidores remotos con soporte para visualizar
 <tr>
 <td width="50%" valign="top">
 
-**Gestion de Docker:**
-Inicie, detenga, pause, elimine contenedores. Vea estadisticas de contenedores. Controle contenedores usando el terminal docker exec. No fue creado para reemplazar Portainer o Dockge, sino para simplemente gestionar sus contenedores en lugar de crearlos.
+**Gestion de Docker y Podman:**
+Inicie, detenga, pause, elimine contenedores. Vea estadisticas de contenedores. Controle contenedores usando el terminal docker exec. Compatible con Docker y Podman como entorno de ejecucion de contenedores. No fue creado para reemplazar Portainer o Dockge, sino para simplemente gestionar sus contenedores en lugar de crearlos.
 
 </td>
 <td width="50%" valign="top">
@@ -115,38 +116,66 @@ Gestion segura de usuarios con controles de administrador y soporte para OIDC/LD
 <tr>
 <td width="50%" valign="top">
 
+**Integracion con Tailscale:**
+Liste dispositivos de su red Tailscale para agregarlos rapidamente como hosts y conectese usando Tailscale SSH como metodo de autenticacion, permitiendo que las ACL de Tailscale gestionen la autorizacion sin almacenar credenciales.
+
+</td>
+<td width="50%" valign="top">
+
 **RBAC:**
 Cree roles y comparta hosts entre usuarios/roles.
 
 </td>
 <td width="50%" valign="top">
 
-**Cifrado de Base de Datos:**
-Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentacion](https://docs.termix.site/security) para mas informacion.
+**Conexiones Serie:**
+Conectese a dispositivos serie (routers, switches, microcontroladores, etc.) directamente desde el navegador o la aplicacion de escritorio. Configure la tasa de baudios, bits de datos, bits de parada y paridad. Utiliza la Web Serial API en navegadores compatibles o un backend nativo en la aplicacion Electron.
 
 </td>
 </tr>
 <tr>
+<td width="50%" valign="top">
+
+**Alertas:**
+Configure reglas de alerta basadas en umbrales para metricas del host (CPU, memoria, disco, etc.) y reciba notificaciones a traves de ntfy o webhooks cuando se activen. Vea las alertas activas y resueltas en un historial de registros.
+
+</td>
+<td width="50%" valign="top">
+
+**Pagina de Inicio:**
+Una pagina de inicio completamente personalizable con una cuadricula de widgets de arrastrar y soltar. Agregue widgets para estado del host, enlaces de servicios, relojes, notas, feeds RSS, clima, contenedores Docker, graficos de metricas del host, terminales integrados, iframes y mas.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Cifrado de Base de Datos:**
+Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentacion](https://docs.termix.site/security) para mas informacion.
+
+</td>
 <td width="50%" valign="top">
 
 **Grafico de Red:**
 Personalice su Dashboard para visualizar su homelab basado en sus conexiones SSH con soporte de estado.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Herramientas SSH:**
 Cree fragmentos de comandos reutilizables que se ejecutan con un solo clic. Ejecute un comando simultaneamente en multiples terminales abiertos.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Pestanas Persistentes:**
 Las sesiones SSH y pestanas permanecen abiertas entre dispositivos/actualizaciones si esta habilitado en el perfil de usuario.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Idiomas:**
@@ -303,6 +332,10 @@ Termix es gratuito y de código abierto sin suscripciones ni planes de pago. Si 
 <td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
 <td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
 </tr>
+<tr>
+<td><img src="../repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
+<td><img src="../repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
+</tr>
 </table>
 
 <sub>Algunos videos e imagenes pueden estar desactualizados o no mostrar perfectamente las caracteristicas.</sub>
@@ -313,7 +346,7 @@ Termix es gratuito y de código abierto sin suscripciones ni planes de pago. Si 
 
 ## Caracteristicas Planeadas
 
-Consulte [Proyectos](https://github.com/orgs/Termix-SSH/projects/2) para todas las caracteristicas planeadas. Si desea contribuir, consulte [Contribuir](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+Consulte [Proyectos](https://github.com/orgs/Termix-SSH/projects/5) para todas las caracteristicas planeadas. Si desea contribuir, consulte [Contribuir](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
 

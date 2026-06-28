@@ -28,6 +28,7 @@
   <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
   <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
 
 <br />
@@ -87,8 +88,8 @@ Quan ly tep truc tiep tren may chu tu xa voi ho tro xem va chinh sua ma, hinh an
 <tr>
 <td width="50%" valign="top">
 
-**Quan Ly Docker:**
-Khoi dong, dung, tam dung, xoa container. Xem thong ke container. Dieu khien container bang terminal docker exec. Khong duoc tao ra de thay the Portainer hay Dockge ma don gian la de quan ly container cua ban thay vi tao moi chung.
+**Quan Ly Docker va Podman:**
+Khoi dong, dung, tam dung, xoa container. Xem thong ke container. Dieu khien container bang terminal docker exec. Ho tro ca Docker va Podman lam moi truong chay container. Khong duoc tao ra de thay the Portainer hay Dockge ma don gian la de quan ly container cua ban thay vi tao moi chung.
 
 </td>
 <td width="50%" valign="top">
@@ -115,38 +116,66 @@ Quan ly nguoi dung an toan voi quyen quan tri va ho tro OIDC/LDAP/SSO (co kiem s
 <tr>
 <td width="50%" valign="top">
 
+**Tich Hop Tailscale:**
+Liet ke cac thiet bi trong mang Tailscale de nhanh chong them vao lam may chu, va ket noi bang Tailscale SSH lam phuong thuc xac thuc, de cac ACL mang xu ly uy quyen ma khong can luu tru thong tin xac thuc.
+
+</td>
+<td width="50%" valign="top">
+
 **RBAC:**
 Tao vai tro va chia se may chu giua nguoi dung/vai tro.
 
 </td>
 <td width="50%" valign="top">
 
-**Ma Hoa Co So Du Lieu:**
-Backend duoc luu tru duoi dang tep co so du lieu SQLite duoc ma hoa. Xem [tai lieu](https://docs.termix.site/security) de biet them.
+**Ket Noi Noi Tiep:**
+Ket noi voi cac thiet bi noi tiep (router, switch, vi dieu khien, v.v.) truc tiep tu trinh duyet hoac ung dung may tinh. Cau hinh toc do baud, bit du lieu, bit dung va chan le. Su dung Web Serial API tren trinh duyet duoc ho tro hoac backend ban dia trong ung dung Electron.
 
 </td>
 </tr>
 <tr>
+<td width="50%" valign="top">
+
+**Canh Bao:**
+Dat cac quy tac canh bao dua tren nguong cho chi so may chu (CPU, bo nho, o dia, v.v.) va nhan thong bao qua ntfy hoac webhook khi chung khi toa. Xem canh bao dang kich hoat va da giai quyet trong nhat ky lich su.
+
+</td>
+<td width="50%" valign="top">
+
+**Trang Chu:**
+Trang chu co the tuy chinh hoan toan voi luoi widget keo va tha. Them widget cho trang thai may chu, lien ket dich vu, dong ho, ghi chu, feed RSS, thoi tiet, container Docker, bieu do chi so may chu, terminal nhung, iframe va nhieu hon nua.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Ma Hoa Co So Du Lieu:**
+Backend duoc luu tru duoi dang tep co so du lieu SQLite duoc ma hoa. Xem [tai lieu](https://docs.termix.site/security) de biet them.
+
+</td>
 <td width="50%" valign="top">
 
 **Bieu Do Mang:**
 Tuy chinh Bang Dieu Khien de truc quan hoa homelab cua ban dua tren cac ket noi SSH voi ho tro trang thai.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Cong Cu SSH:**
 Tao doan lenh co the tai su dung, thuc thi chi voi mot cu nhap chuot. Chay mot lenh dong thoi tren nhieu terminal dang mo.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Tab Lien Tuc:**
 Cac phien SSH va tab van mo tren cac thiet bi/lan lam moi neu duoc bat trong ho so nguoi dung.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Ngon Ngu:**
@@ -303,6 +332,10 @@ Termix là dự án miễn phí và mã nguồn mở, không có gói đăng ký
 <td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
 <td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
 </tr>
+<tr>
+<td><img src="../repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
+<td><img src="../repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
+</tr>
 </table>
 
 <sub>Mot so video va hinh anh co the da loi thoi hoac khong the hien chinh xac hoan toan cac tinh nang.</sub>
@@ -313,7 +346,7 @@ Termix là dự án miễn phí và mã nguồn mở, không có gói đăng ký
 
 ## Tinh Nang Du Kien
 
-Xem [Du An](https://github.com/orgs/Termix-SSH/projects/2) de biet tat ca cac tinh nang du kien. Neu ban muon dong gop, xem [Dong Gop](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+Xem [Du An](https://github.com/orgs/Termix-SSH/projects/5) de biet tat ca cac tinh nang du kien. Neu ban muon dong gop, xem [Dong Gop](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
 

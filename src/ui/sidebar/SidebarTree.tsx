@@ -676,9 +676,7 @@ export function HostItem({
 
           {/* Hover tray (non-click-tray mode) */}
           {!shouldUseClickTray && !selectionMode && (
-            <div
-              className={`absolute left-[3px] right-0 top-full z-20 overflow-hidden border-b border-border bg-background/95 shadow-lg opacity-0 pointer-events-none transition-opacity duration-150 ease-out group-hover:opacity-100 group-hover:pointer-events-auto ${isMenuOpen ? "!opacity-100 !pointer-events-auto" : ""}`}
-            >
+            <div className="max-h-0 opacity-0 overflow-hidden transition-all duration-150 ease-out group-hover:max-h-[200px] group-hover:opacity-100">
               <div className="flex items-center flex-wrap gap-1 px-2 pb-1">
                 {getSshActions(host).map(({ type, icon: Icon, label }) => (
                   <button
@@ -1079,13 +1077,9 @@ export function HostItem({
           </div>
         )}
 
-        {/* Action tray — floats on hover or expands via chevron in click-tray mode */}
+        {/* Action tray — slides open on hover (default) or via chevron in click-tray mode */}
         <div
-          className={
-            shouldUseClickTray
-              ? `overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || isTrayOpen) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`
-              : `absolute left-[3px] right-0 top-full z-20 overflow-hidden border-b border-border bg-background/95 shadow-lg opacity-0 pointer-events-none transition-opacity duration-150 ease-out group-hover:opacity-100 group-hover:pointer-events-auto ${selectionMode ? "!opacity-0 !pointer-events-none" : ""} ${isMenuOpen && !selectionMode ? "!opacity-100 !pointer-events-auto" : ""}`
-          }
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!shouldUseClickTray ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (shouldUseClickTray && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
         >
           {isOnline &&
             ((host.cpu != null && host.cpu > 0) ||
