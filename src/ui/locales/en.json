@@ -567,6 +567,7 @@
     "tunnelModeDynamicDesc": "Create a SOCKS5 proxy on a local port for dynamic port forwarding.",
     "sameHost": "This host (direct tunnel)",
     "endpointHost": "Endpoint Host",
+    "endpointHostPlaceholder": "Same host, SSH host, or reachable host/IP",
     "endpointPort": "Endpoint Port",
     "bindHost": "Bind Host",
     "sourcePort": "Source Port",

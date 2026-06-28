@@ -440,6 +440,7 @@
     "tunnelModeDynamicDesc": "Create a SOCKS5 proxy on a local port for dynamic port forwarding.",
     "sameHost": "此主机（直接隧道）",
     "endpointHost": "Endpoint Host",
+    "endpointHostPlaceholder": "同一主机、SSH 主机，或可访问的主机/IP",
     "endpointPort": "Endpoint Port",
     "bindHost": "Bind Host",
     "sourcePort": "Source Port",
