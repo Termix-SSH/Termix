@@ -95,6 +95,66 @@ const activeTunnelProcesses = new Map<string, ChildProcess>();
 const pendingTunnelOperations = new Map<string, Promise<void>>();
 const tunnelStatusClients = new Set<Response>();
 
+const INTERNAL_HOST_API_BASE_URL = "http://localhost:30001/host/db/host";
+const AUTOSTART_FETCH_RETRIES = 6;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function describeAxiosError(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    return error.response
+      ? `${error.response.status} ${error.response.statusText}`
+      : error.message;
+  }
+
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
+async function fetchInternalHosts(
+  path: "internal" | "internal/all",
+  internalAuthToken: string,
+): Promise<SSHHost[]> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= AUTOSTART_FETCH_RETRIES; attempt++) {
+    try {
+      const response = await axios.get(
+        `${INTERNAL_HOST_API_BASE_URL}/${path}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Internal-Auth-Token": internalAuthToken,
+          },
+          timeout: 5000,
+        },
+      );
+      return response.data || [];
+    } catch (error) {
+      lastError = error;
+      if (attempt === AUTOSTART_FETCH_RETRIES) {
+        break;
+      }
+
+      const retryDelayMs = Math.min(500 * 2 ** (attempt - 1), 5000);
+      tunnelLogger.warn("Internal host API unavailable, retrying", {
+        operation: "tunnel_autostart_fetch_retry",
+        path,
+        attempt,
+        maxAttempts: AUTOSTART_FETCH_RETRIES,
+        retryDelayMs,
+        error: describeAxiosError(error),
+      });
+      await sleep(retryDelayMs);
+    }
+  }
+
+  throw new Error(
+    `Failed to fetch ${path} hosts after ${AUTOSTART_FETCH_RETRIES} attempts: ${describeAxiosError(lastError)}`,
+  );
+}
+
 type ActiveTunnelRuntime = {
   sourceClient: Client;
   endpointClient?: Client;
@@ -2269,28 +2329,14 @@ async function initializeAutoStartTunnels(): Promise<void> {
     const systemCrypto = SystemCrypto.getInstance();
     const internalAuthToken = await systemCrypto.getInternalAuthToken();
 
-    const autostartResponse = await axios.get(
-      "http://localhost:30001/host/db/host/internal",
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Internal-Auth-Token": internalAuthToken,
-        },
-      },
+    const autostartHosts = await fetchInternalHosts(
+      "internal",
+      internalAuthToken,
     );
-
-    const allHostsResponse = await axios.get(
-      "http://localhost:30001/host/db/host/internal/all",
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Internal-Auth-Token": internalAuthToken,
-        },
-      },
+    const allHosts = await fetchInternalHosts(
+      "internal/all",
+      internalAuthToken,
     );
-
-    const autostartHosts: SSHHost[] = autostartResponse.data || [];
-    const allHosts: SSHHost[] = allHostsResponse.data || [];
     const autoStartTunnels: TunnelConfig[] = [];
     tunnelLogger.info(
       `Found ${autostartHosts.length} autostart hosts and ${allHosts.length} total hosts for endpointHost resolution`,
