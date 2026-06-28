@@ -64,6 +64,10 @@ import {
 import { useServerStatus } from "@/lib/ServerStatusContext";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { getDefaultConnectionTab } from "@/lib/host-connection-tabs";
+import {
+  isValidServiceLinkUrl,
+  normalizeServiceLinkUrl,
+} from "@/lib/service-link-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -653,28 +657,29 @@ function ServiceLinksCard({
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState(false);
+  const [addError, setAddError] = useState("");
   const [adding, setAdding] = useState(false);
 
   const handleAdd = async () => {
-    let valid = true;
-    try {
-      const parsed = new URL(url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-        valid = false;
-      }
-    } catch {
-      valid = false;
-    }
-    if (!valid) {
+    const normalizedUrl = normalizeServiceLinkUrl(url);
+    if (!isValidServiceLinkUrl(normalizedUrl)) {
       setUrlError(true);
+      setAddError("");
       return;
     }
     setUrlError(false);
+    setAddError("");
     setAdding(true);
     try {
-      await onAdd(label.trim(), url.trim());
+      await onAdd(label.trim(), normalizedUrl);
       setLabel("");
       setUrl("");
+    } catch (error) {
+      setAddError(
+        error instanceof Error
+          ? error.message
+          : t("dashboardTab.serviceLinksAddFailed"),
+      );
     } finally {
       setAdding(false);
     }
@@ -736,6 +741,7 @@ function ServiceLinksCard({
           onChange={(e) => {
             setUrl(e.target.value);
             setUrlError(false);
+            setAddError("");
           }}
           placeholder={t("dashboardTab.serviceLinksUrlPlaceholder")}
           className={`flex-[2] min-w-0 text-xs bg-transparent border px-2 py-1 focus:outline-none ${urlError ? "border-destructive" : "border-border focus:border-accent-brand/60"}`}
@@ -752,6 +758,11 @@ function ServiceLinksCard({
       {urlError && (
         <div className="px-4 pb-2 text-[10px] text-destructive shrink-0">
           {t("dashboardTab.serviceLinksInvalidUrl")}
+        </div>
+      )}
+      {addError && (
+        <div className="px-4 pb-2 text-[10px] text-destructive shrink-0">
+          {addError}
         </div>
       )}
     </Card>

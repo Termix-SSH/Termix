@@ -2076,7 +2076,8 @@
     "serviceLinksAdd": "Add",
     "serviceLinksLabelPlaceholder": "My Service",
     "serviceLinksUrlPlaceholder": "http://192.168.1.10:8080",
-    "serviceLinksInvalidUrl": "Must be a valid http or https URL",
+    "serviceLinksInvalidUrl": "Enter a valid web address",
+    "serviceLinksAddFailed": "Failed to add service link",
     "disk": "Disk",
     "viewServerDetails": "View server details"
   },
