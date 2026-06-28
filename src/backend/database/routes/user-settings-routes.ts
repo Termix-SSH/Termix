@@ -10,10 +10,10 @@ import {
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-
-function getDefaultGuacUrl(): string {
-  return `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
-}
+import {
+  formatGuacdOptions,
+  resolveGuacdOptions,
+} from "../../utils/guacd-config.js";
 
 export type HostDefaults = {
   useSocks5?: boolean;
@@ -70,7 +70,7 @@ export function registerUserSettingsRoutes(
         .get() as { value: string } | undefined;
       res.json({
         enabled: enabledRow ? enabledRow.value !== "false" : true,
-        url: urlRow ? urlRow.value : getDefaultGuacUrl(),
+        url: formatGuacdOptions(resolveGuacdOptions(urlRow?.value)),
       });
     } catch (err) {
       authLogger.error("Failed to get guacamole settings", err);
@@ -161,7 +161,7 @@ export function registerUserSettingsRoutes(
 
       res.json({
         enabled: enabledRow ? enabledRow.value !== "false" : true,
-        url: urlRow ? urlRow.value : getDefaultGuacUrl(),
+        url: formatGuacdOptions(resolveGuacdOptions(urlRow?.value)),
       });
     } catch (err) {
       authLogger.error("Failed to update guacamole settings", err);
