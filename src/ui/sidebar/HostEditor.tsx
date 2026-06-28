@@ -446,6 +446,17 @@ export function HostEditor({
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.password")} ({t("common.optional")})
+                        </label>
+                        <PasswordInput
+                          className="h-8 text-xs pr-8"
+                          placeholder="••••••••"
+                          value={form.password}
+                          onChange={(e) => setField("password", e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           {t("hosts.keyTypeLabel")}
                         </label>
                         <select

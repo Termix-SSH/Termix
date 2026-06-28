@@ -39,6 +39,7 @@ export function CredentialEditorView({
     tagInput: "",
     type: credential?.type ?? "password",
     value: credential?.value ?? "",
+    password: credential?.password ?? "",
     publicKey: credential?.publicKey ?? "",
     passphrase: credential?.passphrase ?? "",
     certPublicKey:
@@ -69,7 +70,10 @@ export function CredentialEditorView({
         description: credForm.description || null,
         tags: credForm.tags,
         authType: credForm.type,
-        password: credForm.type === "password" ? credForm.value : null,
+        password:
+          credForm.type === "password"
+            ? credForm.value || null
+            : credForm.password || null,
         key:
           credForm.type === "key"
             ? credForm.value === "existing_key"
@@ -378,6 +382,17 @@ export function CredentialEditorView({
                         setCredField("passphrase", "");
                     }}
                     onChange={(e) => setCredField("passphrase", e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("hosts.password")} ({t("common.optional")})
+                  </label>
+                  <PasswordInput
+                    className="h-8 text-xs pr-8"
+                    placeholder="••••••••"
+                    value={credForm.password}
+                    onChange={(e) => setCredField("password", e.target.value)}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">

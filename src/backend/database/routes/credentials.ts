@@ -137,8 +137,7 @@ router.post(
           .status(400)
           .json({ error: "SSH key is required for key authentication" });
       }
-      const plainPassword =
-        authType === "password" && password ? password : null;
+      const plainPassword = password ? password : null;
       const plainKey = authType === "key" && key ? key : null;
       const plainKeyPassword =
         authType === "key" && keyPassword ? keyPassword : null;
@@ -514,10 +513,11 @@ router.put(
       if (updateData.password !== undefined) {
         updateFields.password = updateData.password || null;
       }
+      const nextAuthType = updateData.authType ?? existing[0].authType;
       if (updateData.key !== undefined) {
         updateFields.key = updateData.key || null;
 
-        if (updateData.key && existing[0].authType === "key") {
+        if (updateData.key && nextAuthType === "key") {
           const keyInfo = parseSSHKey(updateData.key, updateData.keyPassword);
           if (!keyInfo.success) {
             authLogger.warn("SSH key parsing failed during update", {

@@ -61,7 +61,7 @@ describe("buildHostEditorPayload auth field isolation", () => {
     expect(payload.key).toBeNull();
   });
 
-  it("only sends key fields when authType is key", () => {
+  it("sends key fields and optional password when authType is key", () => {
     const form = {
       ...createHostEditorForm(null),
       authType: "key" as const,
@@ -75,7 +75,7 @@ describe("buildHostEditorPayload auth field isolation", () => {
 
     expect(payload.key).toBe("MY KEY");
     expect(payload.keyType).toBe("ssh-ed25519");
-    expect(payload.password).toBeNull();
+    expect(payload.password).toBe("leftover");
     expect(payload.credentialId).toBeNull();
   });
 
