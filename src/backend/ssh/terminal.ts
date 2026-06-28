@@ -1103,9 +1103,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isConnecting = true;
     sshConn = new Client();
 
-    sendLog("dns", "info", `Starting address resolution of ${ip}`);
-    sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
-
     const connectionTimeout = setTimeout(() => {
       if (sshConn && isConnecting && !isConnected) {
         sshLogger.error("SSH connection timeout", undefined, {
@@ -1157,6 +1154,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         )) as unknown as typeof resolvedHostData;
 
         if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
+
           if (
             (!hostConfig.jumpHosts || hostConfig.jumpHosts.length === 0) &&
             resolvedHostData.jumpHosts &&
@@ -1206,11 +1207,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (id && userId && !password && !key) {
       try {
         if (resolvedHostData) {
-          ip = resolvedHostData.ip || ip;
-          port = resolvedHostData.port || port;
-          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username: resolvedHostData.username || username,
+            username,
             password: resolvedHostData.password,
             key: resolvedHostData.key,
             keyPassword: keyPassword || resolvedHostData.keyPassword,
@@ -1234,11 +1232,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else if (credentialId && id && userId) {
       try {
         if (resolvedHostData) {
-          ip = resolvedHostData.ip || ip;
-          port = resolvedHostData.port || port;
-          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username: resolvedHostData.username || username,
+            username,
             password: resolvedHostData.password,
             key: resolvedHostData.key,
             // Preserve user-supplied keyPassword (e.g. from passphrase dialog) over the empty DB value
@@ -1257,6 +1252,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
         });
       }
     }
+
+    sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
