@@ -340,6 +340,9 @@ export function HostCredentialList({
                 password?: string;
               }
             ).password ?? ""),
+        password:
+          (full as CredentialWithCertificate & { password?: string })
+            .password ?? "",
         passphrase: (
           full as CredentialWithCertificate & {
             hasKeyPassword?: boolean;

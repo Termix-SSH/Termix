@@ -163,6 +163,7 @@ export type Credential = {
   username: string;
   type: "password" | "key";
   value?: string;
+  password?: string;
   publicKey?: string;
   passphrase?: string;
   description?: string;

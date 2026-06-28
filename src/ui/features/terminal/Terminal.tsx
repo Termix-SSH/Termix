@@ -360,7 +360,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [autocompleteSelectedIndex]);
 
     const activityLoggingRef = useRef(false);
-    const sudoPromptShownRef = useRef(false);
+    const passwordPromptShownRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -627,6 +627,68 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           lastSentSizeRef.current = next;
         }
       }, DEBOUNCE_MS);
+    }
+
+    async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
+      let passwordToFill = isSudoPrompt
+        ? hostConfig.terminalConfig?.sudoPassword || hostConfig.password
+        : hostConfig.password || hostConfig.terminalConfig?.sudoPassword;
+
+      if (!passwordToFill && hostConfig.id) {
+        passwordToFill = isSudoPrompt
+          ? (await getHostPassword(hostConfig.id, "sudoPassword")) ||
+            (await getHostPassword(hostConfig.id, "password")) ||
+            undefined
+          : (await getHostPassword(hostConfig.id, "password")) ||
+            (await getHostPassword(hostConfig.id, "sudoPassword")) ||
+            undefined;
+      }
+
+      return passwordToFill;
+    }
+
+    function maybeOfferPasswordFill(strippedData: string) {
+      const passwordPromptPattern =
+        /(?:\[sudo\][^\n\r]*:\s*$|sudo:[^\n\r]*password[^\n\r]*required|password for [^\n\r]*:\s*$|Password:\s*$|password:\s*$)/im;
+      if (!passwordPromptPattern.test(strippedData)) return;
+
+      const hasStoredPassword =
+        hostConfig.terminalConfig?.sudoPassword ||
+        hostConfig.password ||
+        hostConfig.hasSudoPassword ||
+        hostConfig.hasPassword;
+      if (!hasStoredPassword || passwordPromptShownRef.current) return;
+
+      passwordPromptShownRef.current = true;
+      const isSudoPrompt = /(?:\[sudo\]|sudo:)/i.test(strippedData);
+
+      confirmWithToast(
+        t("terminal.passwordPromptFillTitle"),
+        async () => {
+          const passwordToFill = await resolvePasswordForPrompt(isSudoPrompt);
+          if (
+            passwordToFill &&
+            webSocketRef.current &&
+            webSocketRef.current.readyState === WebSocket.OPEN
+          ) {
+            webSocketRef.current.send(
+              JSON.stringify({
+                type: "input",
+                data: passwordToFill + "\n",
+              }),
+            );
+          }
+          setTimeout(() => {
+            passwordPromptShownRef.current = false;
+          }, 3000);
+        },
+        t("common.confirm"),
+        t("common.cancel"),
+        { confirmOnEnter: true },
+      );
+      setTimeout(() => {
+        passwordPromptShownRef.current = false;
+      }, 15000);
     }
 
     useImperativeHandle(
@@ -1064,66 +1126,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 : msg.data;
 
               terminal.write(outputData);
-              const sudoPasswordPattern =
-                /(?:\[sudo\][^\n\r]*:\s*$|sudo:[^\n\r]*password[^\n\r]*required|password for [^\n\r]*:\s*$|Password:\s*$)/im;
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
               const strippedData = msg.data.replace(
                 /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g,
                 "",
               );
-              const hasSudoPw =
-                hostConfig.terminalConfig?.sudoPassword ||
-                hostConfig.password ||
-                hostConfig.hasSudoPassword ||
-                hostConfig.hasPassword;
-              if (
-                config.sudoPasswordAutoFill &&
-                sudoPasswordPattern.test(strippedData) &&
-                hasSudoPw &&
-                !sudoPromptShownRef.current
-              ) {
-                sudoPromptShownRef.current = true;
-                confirmWithToast(
-                  t("terminal.sudoPasswordPopupTitle"),
-                  async () => {
-                    // Fetch password on-demand from server
-                    let passwordToFill =
-                      hostConfig.terminalConfig?.sudoPassword ||
-                      hostConfig.password;
-                    if (!passwordToFill && hostConfig.id) {
-                      passwordToFill =
-                        (await getHostPassword(
-                          hostConfig.id,
-                          "sudoPassword",
-                        )) ||
-                        (await getHostPassword(hostConfig.id, "password")) ||
-                        undefined;
-                    }
-                    if (
-                      passwordToFill &&
-                      webSocketRef.current &&
-                      webSocketRef.current.readyState === WebSocket.OPEN
-                    ) {
-                      webSocketRef.current.send(
-                        JSON.stringify({
-                          type: "input",
-                          data: passwordToFill + "\n",
-                        }),
-                      );
-                    }
-                    setTimeout(() => {
-                      sudoPromptShownRef.current = false;
-                    }, 3000);
-                  },
-                  t("common.confirm"),
-                  t("common.cancel"),
-                  { confirmOnEnter: true },
-                );
-                setTimeout(() => {
-                  sudoPromptShownRef.current = false;
-                }, 15000);
-              }
+              maybeOfferPasswordFill(strippedData);
             } else {
               const syntaxHighlightingEnabled =
                 hostConfig.terminalConfig?.syntaxHighlighting !== false;

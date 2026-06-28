@@ -55,6 +55,8 @@ interface ConnectToHostData {
     credentialId?: number;
     userId?: string;
     forceKeyboardInteractive?: boolean;
+    passwordFallbackOnly?: boolean;
+    passwordFallbackAttempted?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
     useSocks5?: boolean;
     socks5Host?: string;
@@ -1253,6 +1255,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     }
 
+    if (hostConfig.passwordFallbackOnly && resolvedCredentials.password) {
+      resolvedCredentials = {
+        ...resolvedCredentials,
+        key: undefined,
+        keyPassword: undefined,
+        keyType: undefined,
+        certPublicKey: undefined,
+        authType: "password",
+      };
+    }
+
     sendLog("dns", "info", `Starting address resolution of ${ip}`);
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
@@ -1818,6 +1831,72 @@ wss.on("connection", async (ws: WebSocket, req) => {
         hasKeyboardInteractiveFinish: !!keyboardInteractiveFinish,
         keyboardInteractiveResponded,
       });
+
+      const isAuthFailure =
+        err.message.includes("All configured authentication methods failed") ||
+        err.message.includes("authentication failed") ||
+        err.message.includes("Authentication failed") ||
+        err.message.includes("Permission denied");
+
+      if (
+        resolvedCredentials.authType === "key" &&
+        resolvedCredentials.password &&
+        isAuthFailure &&
+        !hostConfig.passwordFallbackAttempted
+      ) {
+        sendLog(
+          "auth",
+          "warning",
+          "SSH key authentication failed; retrying with stored password",
+        );
+        sshLogger.warn("Retrying SSH connection with stored password", {
+          operation: "terminal_key_password_fallback",
+          hostId: id,
+          userId,
+        });
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+        sshConn = null;
+        sshStream = null;
+        handleConnectToHost({
+          ...data,
+          hostConfig: {
+            ...hostConfig,
+            authType: "password",
+            password: resolvedCredentials.password,
+            key: undefined,
+            keyPassword: undefined,
+            keyType: undefined,
+            passwordFallbackOnly: true,
+            passwordFallbackAttempted: true,
+          },
+        }).catch((fallbackError) => {
+          const fallbackMessage =
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : "Unknown error";
+          sshLogger.error(
+            "Password fallback connection failed",
+            fallbackError,
+            {
+              operation: "terminal_key_password_fallback_error",
+              hostId: id,
+              userId,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to retry with stored password: " + fallbackMessage,
+            }),
+          );
+        });
+        return;
+      }
 
       if (
         resolvedCredentials.authType === "opkssh" &&
