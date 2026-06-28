@@ -444,6 +444,7 @@ export function HostManager({
                     username: saved.username ?? "",
                     type: saved.authType === "key" ? "key" : "password",
                     value: saved.value,
+                    password: saved.password,
                     publicKey: saved.publicKey,
                     passphrase: saved.passphrase,
                     description: saved.description,
