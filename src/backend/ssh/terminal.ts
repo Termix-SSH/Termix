@@ -780,7 +780,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         const opksshData = data as { hostId: number };
         try {
           const { startOPKSSHAuth } = await import("./opkssh-auth.js");
-          const { getRequestOrigin } =
+          const { getRequestBaseUrl } =
             await import("../utils/request-origin.js");
           const db = getDb();
           const hostRow = await db
@@ -807,7 +807,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             break;
           }
           const hostname = hostRow[0].name || hostRow[0].ip;
-          const requestOrigin = getRequestOrigin(req);
+          const requestOrigin = getRequestBaseUrl(req);
           await startOPKSSHAuth(
             userId,
             opksshData.hostId,
@@ -898,7 +898,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         try {
           const { loadVaultProfileForHost, startVaultAuth } =
             await import("./vault-oidc-auth.js");
-          const { getRequestOrigin } =
+          const { getRequestBaseUrl } =
             await import("../utils/request-origin.js");
           const profile = await loadVaultProfileForHost(vaultData.hostId);
           if (!profile) {
@@ -911,7 +911,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
             break;
           }
-          const requestOrigin = getRequestOrigin(req);
+          const requestOrigin = getRequestBaseUrl(req);
           await startVaultAuth(
             userId,
             vaultData.hostId,
