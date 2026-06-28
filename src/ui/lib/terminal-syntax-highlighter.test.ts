@@ -222,6 +222,17 @@ describe("highlightTerminalOutput", () => {
     expect(out).toBe(prompt);
   });
 
+  it("does not highlight log keywords inside bracketed SSH headings", () => {
+    const out = highlightTerminalOutput("[info@archlinux] command output");
+    expect(out).toBe("[info@archlinux] command output");
+  });
+
+  it("still highlights log keywords after a bracketed SSH heading", () => {
+    const out = highlightTerminalOutput("[warning@host] command ERROR");
+    expect(out).not.toContain(`${ESC}[93mwarning`);
+    expect(out).toContain(`${ESC}[91mERROR`);
+  });
+
   it("does not highlight 'success' when immediately followed by a path (cd output)", () => {
     // Some shells print "success~/new/dir" or "success/path" after a cd command
     const out = highlightTerminalOutput("success~/home/user/projects");
