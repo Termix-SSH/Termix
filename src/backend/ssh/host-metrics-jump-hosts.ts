@@ -10,6 +10,7 @@ import {
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
+import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
 
 interface JumpHostConfig {
   id: number;
@@ -22,6 +23,12 @@ interface JumpHostConfig {
   keyType?: string;
   authType?: string;
   credentialId?: number;
+  useSocks5?: boolean | null;
+  socks5Host?: string | null;
+  socks5Port?: number | null;
+  socks5Username?: string | null;
+  socks5Password?: string | null;
+  socks5ProxyChain?: string | import("../../types/index.js").ProxyNode[] | null;
   [key: string]: unknown;
 }
 
@@ -145,13 +152,17 @@ export async function createJumpHostChain(
       }
     }
 
+    const firstHopSocks5Config = getJumpHostSocks5Config(
+      jumpHostConfigs[0],
+      socks5Config,
+    );
     let proxySocket: import("net").Socket | null = null;
-    if (socks5Config?.useSocks5) {
+    if (firstHopSocks5Config?.useSocks5) {
       const firstHop = jumpHostConfigs[0]!;
       proxySocket = await createSocks5Connection(
         firstHop.ip,
         firstHop.port || 22,
-        socks5Config,
+        firstHopSocks5Config,
       );
     }
 
