@@ -531,6 +531,7 @@ let isQuitting = false;
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
+const windowsAppUserModelId = "com.karmaa.termix";
 const electronCacheBuildPath = path.join(
   app.getPath("userData"),
   "client-cache-build.json",
@@ -928,7 +929,11 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: "Termix",
-    icon: path.join(appRoot, "public", "icon.png"),
+    icon: path.join(
+      appRoot,
+      "public",
+      process.platform === "win32" ? "icon.ico" : "icon.png",
+    ),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -2717,6 +2722,9 @@ app.whenReady().then(async () => {
     "arch:",
     process.arch,
   );
+  if (process.platform === "win32") {
+    app.setAppUserModelId(windowsAppUserModelId);
+  }
   createMenu();
   await clearElectronClientCacheIfBuildChanged();
   await clearElectronJwtCookiesAtStartup();
