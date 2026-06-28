@@ -1,5 +1,4 @@
 import type { Express } from "express";
-import { execCommand } from "../widgets/common-utils.js";
 import { execElevated } from "./exec-elevated.js";
 import { managerHandler } from "./route-helpers.js";
 import { ManagerInputError } from "./route-helpers.js";
