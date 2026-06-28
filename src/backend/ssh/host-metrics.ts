@@ -1952,6 +1952,20 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       return res.status(404).json({ error: "Host not found", connectionLogs });
     }
 
+    if (!supportsMetrics(host)) {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "stats_connecting",
+          "Metrics collection is only supported for SSH hosts",
+          {
+            connectionType: host.connectionType || "ssh",
+          },
+        ),
+      );
+      return res.json({ success: true, skipped: true, connectionLogs });
+    }
+
     connectionLogs.push(
       createConnectionLog(
         "info",

@@ -19,6 +19,7 @@ describe("supportsMetrics", () => {
   it("rejects non-ssh connection types", () => {
     expect(supportsMetrics({ connectionType: "rdp" })).toBe(false);
     expect(supportsMetrics({ connectionType: "vnc" })).toBe(false);
+    expect(supportsMetrics({ connectionType: "telnet" })).toBe(false);
   });
 
   it("rejects ssh hosts that cannot run shell commands", () => {
