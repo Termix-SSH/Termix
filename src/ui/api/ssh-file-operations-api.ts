@@ -42,6 +42,22 @@ function buildFileManagerUrl(path: string): string {
   return `${baseURL.replace(/\/$/, "")}${path}`;
 }
 
+function triggerBlobDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.style.display = "none";
+
+  document.body.appendChild(link);
+  link.click();
+
+  window.setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
 async function uploadSSHFileInChunks(
   sessionId: string,
   path: string,
@@ -492,12 +508,7 @@ export async function downloadSSHFileStream(
   );
   const blob = response.data as Blob;
   const fileName = filePath.split("/").pop() || "download";
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
+  triggerBlobDownload(blob, fileName);
 }
 
 export async function createSSHFile(
