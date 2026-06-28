@@ -253,6 +253,14 @@ networks:
 
 <br />
 
+## Bağış Yapın
+
+Termix, abonelik veya ücretli plan olmayan ücretsiz ve açık kaynaklı bir projedir. Faydalı buluyorsanız, sunucu maliyetleri, alan adları ve geliştirme süresini karşılamaya yardımcı olmak için bağış yapmayı düşünebilirsiniz.
+
+[Bağış Yap](https://donate.termix.site/)
+
+<br />
+
 ## Ekran Goruntuleri
 
 <div align="center">

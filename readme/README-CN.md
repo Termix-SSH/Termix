@@ -253,6 +253,14 @@ networks:
 
 <br />
 
+## 捐赠
+
+Termix 是免费且开源的，没有订阅或付费计划。如果您觉得它有用，请考虑捐赠以帮助支付服务器费用、域名费用和开发时间。
+
+[捐赠](https://donate.termix.site/)
+
+<br />
+
 ## 展示
 
 <div align="center">

@@ -253,6 +253,14 @@ networks:
 
 <br />
 
+## Faire un don
+
+Termix est gratuit et open source sans abonnements ni plans payants. Si vous le trouvez utile, pensez à faire un don pour aider à couvrir les coûts de serveur, les noms de domaine et le temps de développement.
+
+[Faire un don](https://donate.termix.site/)
+
+<br />
+
 ## Captures d'ecran
 
 <div align="center">

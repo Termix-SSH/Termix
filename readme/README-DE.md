@@ -253,6 +253,14 @@ networks:
 
 <br />
 
+## Spenden
+
+Termix ist kostenlos und Open Source ohne Abonnements oder kostenpflichtige Pläne. Wenn Sie es nützlich finden, erwägen Sie eine Spende, um Serverkosten, Domains und Entwicklungszeit zu decken.
+
+[Spenden](https://donate.termix.site/)
+
+<br />
+
 ## Screenshots
 
 <div align="center">

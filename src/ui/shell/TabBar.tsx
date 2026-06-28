@@ -562,7 +562,7 @@ export function TabBar({
                 }}
               >
                 <X className="size-3" />
-                {t("nav.closeTab")}
+                {t("nav.close")}
               </button>
             </div>
           );

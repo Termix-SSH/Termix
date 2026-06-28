@@ -253,6 +253,14 @@ networks:
 
 <br />
 
+## Dona
+
+Termix è gratuito e open source senza abbonamenti o piani a pagamento. Se lo trovi utile, considera di fare una donazione per aiutare a coprire i costi del server, i domini e il tempo di sviluppo.
+
+[Dona](https://donate.termix.site/)
+
+<br />
+
 ## Screenshot
 
 <div align="center">
