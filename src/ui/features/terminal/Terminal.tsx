@@ -85,6 +85,21 @@ interface SSHTerminalProps {
 
 const TERMINAL_FONT_ZOOM_MIN = 8;
 const TERMINAL_FONT_ZOOM_MAX = 36;
+const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
+
+function updateAlternateScreenMode(output: string, currentMode: boolean) {
+  ALTERNATE_SCREEN_SEQUENCE.lastIndex = 0;
+  let isActive = currentMode;
+  let sawSequence = false;
+  let match: RegExpExecArray | null;
+
+  while ((match = ALTERNATE_SCREEN_SEQUENCE.exec(output)) !== null) {
+    sawSequence = true;
+    isActive = match[2] === "h";
+  }
+
+  return { isActive, sawSequence };
+}
 
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal(
@@ -361,6 +376,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const activityLoggingRef = useRef(false);
     const passwordPromptShownRef = useRef(false);
+    const alternateScreenModeRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -627,6 +643,29 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           lastSentSizeRef.current = next;
         }
       }, DEBOUNCE_MS);
+    }
+
+    function formatTerminalOutput(output: string): string {
+      const alternateScreen = updateAlternateScreenMode(
+        output,
+        alternateScreenModeRef.current,
+      );
+      alternateScreenModeRef.current = alternateScreen.isActive;
+
+      const syntaxHighlightingEnabled =
+        hostConfig.terminalConfig?.syntaxHighlighting !== false;
+      if (
+        !syntaxHighlightingEnabled ||
+        alternateScreen.sawSequence ||
+        alternateScreen.isActive
+      ) {
+        return output;
+      }
+
+      return highlightTerminalOutput(
+        output,
+        hostConfig.terminalConfig?.syntaxHighlightingOptions,
+      );
     }
 
     async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
@@ -993,6 +1032,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       rows: number,
     ) {
       ws.addEventListener("open", () => {
+        alternateScreenModeRef.current = false;
         connectionTimeoutRef.current = setTimeout(() => {
           if (
             !isConnected &&
@@ -1115,17 +1155,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 currentAutocompleteCommand.current = "";
               }
 
-              const syntaxHighlightingEnabled =
-                hostConfig.terminalConfig?.syntaxHighlighting !== false;
-
-              const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(
-                    msg.data,
-                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
-                  )
-                : msg.data;
-
-              terminal.write(outputData);
+              terminal.write(formatTerminalOutput(msg.data));
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
               const strippedData = msg.data.replace(
@@ -1134,18 +1164,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               );
               maybeOfferPasswordFill(strippedData);
             } else {
-              const syntaxHighlightingEnabled =
-                hostConfig.terminalConfig?.syntaxHighlighting !== false;
-
               const stringData = String(msg.data);
-              const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(
-                    stringData,
-                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
-                  )
-                : stringData;
-
-              terminal.write(outputData);
+              terminal.write(formatTerminalOutput(stringData));
             }
           } else if (msg.type === "error") {
             const errorMessage = msg.message || t("terminal.unknownError");

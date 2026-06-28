@@ -57,9 +57,10 @@ interface ProtectedRange {
 
 const MAX_LINE_LENGTH = 2000;
 
-// Cursor-positioning and erase sequences used by TUI apps (nano, vim, htop).
-// If a chunk contains these, we skip highlighting entirely.
-const TUI_SEQUENCE = /\x1b\[[\d;]*[ABCDEFGHJKST]/;
+// Cursor-positioning, erase, and private mode sequences used by TUI apps
+// (mc, nano, vim, htop). If a chunk contains these, highlighting can inject
+// extra SGR bytes into a full-screen redraw and corrupt xterm's cursor state.
+const TUI_SEQUENCE = /\x1b\[(?:[\d;]*[ABCDEFGHJKST]|\?[\d;]*[hl])/;
 
 // A bare \r (not immediately followed by \n) means the terminal is overwriting
 // the current line (shell prompts, progress bars). Highlighting mid-rewrite
