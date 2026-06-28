@@ -2596,6 +2596,8 @@
         "statusColorsDesc": "Use green/red for online/offline status instead of the accent color",
         "pinAppRail": "Pin App Rail",
         "pinAppRailDesc": "保持左側邊欄應用導軌始終展開，而不是滑鼠懸停時才展開。",
+        "expandAppRailOnHover": "懸停時展開應用導軌",
+        "expandAppRailOnHoverDesc": "滑鼠移入左側應用導軌時允許自動展開。",
         "settingsNavigation": "Navigation",
         "navigationTabsDesc": "Choose which tabs appear in the app rail",
         "settingsSnippets": "Snippets",
