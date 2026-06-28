@@ -94,6 +94,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   keyPassword?: string;
   keyType?: string;
   credentialId?: number;
+  credentialAlias?: string;
   pin?: unknown;
   enableTerminal?: unknown;
   enableTunnel?: unknown;
@@ -138,6 +139,8 @@ export type NormalizedImportedHost = Record<string, unknown> & {
 export function normalizeImportedHost(
   hostData: Record<string, unknown>,
 ): NormalizedImportedHost {
+  const credentialAlias =
+    asString(hostData.credentialAlias) || asString(hostData.credentialName);
   const connectionType =
     asString(hostData.connectionType) ||
     (asBoolean(hostData.enableRdp)
@@ -172,10 +175,15 @@ export function normalizeImportedHost(
     folder: asString(hostData.folder) || asString(hostData.group),
     tags: normalizeImportTags(hostData.tags),
     credentialId: asInteger(hostData.credentialId),
+    credentialAlias,
     authType:
       asString(hostData.authType) ||
       asString(hostData.authMethod) ||
-      (hostData.credentialId ? "credential" : hostData.key ? "key" : undefined),
+      (hostData.credentialId || credentialAlias
+        ? "credential"
+        : hostData.key
+          ? "key"
+          : undefined),
     enableSsh:
       hostData.enableSsh === undefined
         ? connectionType === "ssh"

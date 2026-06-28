@@ -347,20 +347,24 @@ export function HostsPanel({
     }
   }
 
-  async function handleExportHosts() {
+  async function handleExportHosts(share = false) {
     try {
-      const result = await exportAllSSHHosts();
+      const result = await exportAllSSHHosts(
+        share ? { share: true } : undefined,
+      );
       const data = JSON.stringify(result, null, 2);
       const blob = new Blob([data], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "termix-hosts.json";
+      a.download = share ? "termix-hosts-share.json" : "termix-hosts.json";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast.success(t("hosts.hostsExported"));
+      toast.success(
+        t(share ? "hosts.hostsShareExported" : "hosts.hostsExported"),
+      );
     } catch {
       toast.error(t("hosts.exportFailed"));
     }
@@ -464,6 +468,10 @@ export function HostsPanel({
                 const hostsArray = Array.isArray(parsed)
                   ? parsed
                   : (parsed.hosts ?? []);
+                const credentialsArray =
+                  !Array.isArray(parsed) && Array.isArray(parsed.credentials)
+                    ? parsed.credentials
+                    : undefined;
                 if (!Array.isArray(hostsArray) || hostsArray.length === 0) {
                   toast.error("No hosts found in file");
                   return;
@@ -486,6 +494,7 @@ export function HostsPanel({
                 const result = await bulkImportSSHHosts(
                   normalized,
                   importOverwriteRef.current,
+                  credentialsArray,
                 );
                 const hosts = await getSSHHosts();
                 setRawHosts(hosts);
@@ -610,11 +619,18 @@ export function HostsPanel({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={handleExportHosts}
+                  onClick={() => handleExportHosts(false)}
                   disabled={rawHosts.length === 0}
                 >
                   <Download className="size-3.5 mr-2" />
                   {t("hosts.exportAll")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleExportHosts(true)}
+                  disabled={rawHosts.length === 0}
+                >
+                  <Download className="size-3.5 mr-2" />
+                  {t("hosts.exportForSharing")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDownloadSample}>
                   <Download className="size-3.5 mr-2" />
@@ -959,11 +975,18 @@ export function HostsPanel({
                       {t("hosts.importSSHConfig")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={handleExportHosts}
+                      onClick={() => handleExportHosts(false)}
                       disabled={rawHosts.length === 0}
                     >
                       <Download className="size-3.5 mr-2" />
                       {t("hosts.exportAll")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleExportHosts(true)}
+                      disabled={rawHosts.length === 0}
+                    >
+                      <Download className="size-3.5 mr-2" />
+                      {t("hosts.exportForSharing")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleDownloadSample}>
                       <Download className="size-3.5 mr-2" />
