@@ -14,7 +14,10 @@ import {
   generateDeviceFingerprint,
 } from "../../utils/user-agent-parser.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
-import { getRequestOriginWithForceHTTPS } from "../../utils/request-origin.js";
+import {
+  getRequestBasePath,
+  getRequestBaseUrlWithForceHTTPS,
+} from "../../utils/request-origin.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
   getOIDCConfigFromEnv,
@@ -630,9 +633,8 @@ router.get("/oidc/authorize", async (req, res) => {
       appCallbackUrl,
       providerId: providerIdStr,
     } = req.query;
-    const origin = getRequestOriginWithForceHTTPS(req);
-    const basePath = (process.env.BASE_PATH || "").replace(/\/+$/, "");
-    const backendCallbackUri = `${origin}${basePath}/users/oidc/callback`;
+    const publicBaseUrl = getRequestBaseUrlWithForceHTTPS(req);
+    const backendCallbackUri = `${publicBaseUrl}/users/oidc/callback`;
 
     const resolvedProviderId = providerIdStr
       ? parseInt(providerIdStr as string, 10)
@@ -664,9 +666,9 @@ router.get("/oidc/authorize", async (req, res) => {
       frontendOrigin = callbackUrl.toString();
     } else if (referer) {
       const refererUrl = new URL(referer);
-      frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
+      frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}${getRequestBasePath(req)}`;
     } else {
-      frontendOrigin = origin;
+      frontendOrigin = publicBaseUrl;
     }
 
     db.$client
