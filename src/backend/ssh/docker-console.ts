@@ -8,6 +8,7 @@ import { getDb } from "../database/db/index.js";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { systemLogger } from "../utils/logger.js";
 import type { SSHHost } from "../../types/index.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 
 const sshLogger = systemLogger;
 
@@ -219,6 +220,16 @@ async function createJumpHostChain(
       if (resolvedCredentials.keyPassword) {
         config.passphrase = resolvedCredentials.keyPassword;
       }
+    } else if (resolvedCredentials.authType === "agent") {
+      const result = await applyAgentAuth(
+        config,
+        jumpHost.terminalConfig as unknown as
+          | Record<string, unknown>
+          | undefined,
+      );
+      if ("error" in result) {
+        throw new Error(result.error);
+      }
     }
 
     client.on(
@@ -426,6 +437,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
               config.privateKey = Buffer.from(cleanKey, "utf8");
               if (resolvedHost.keyPassword) {
                 config.passphrase = resolvedHost.keyPassword;
+              }
+            } else if (resolvedHost.authType === "agent") {
+              const result = await applyAgentAuth(
+                config,
+                resolvedHost.terminalConfig as unknown as
+                  | Record<string, unknown>
+                  | undefined,
+              );
+              if ("error" in result) {
+                ws.send(
+                  JSON.stringify({
+                    type: "error",
+                    message: result.error,
+                  }),
+                );
+                return;
               }
             }
 

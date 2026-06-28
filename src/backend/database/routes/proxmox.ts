@@ -357,6 +357,16 @@ router.post(
         sshConfig.privateKey = resolvedCredentials.sshKey;
         if (resolvedCredentials.keyPassword)
           sshConfig.passphrase = resolvedCredentials.keyPassword;
+      } else if (authType === "agent") {
+        const { applyAgentAuth } =
+          await import("../../ssh/terminal-auth-helpers.js");
+        const result = await applyAgentAuth(
+          sshConfig,
+          host.terminalConfig as unknown as Record<string, unknown> | undefined,
+        );
+        if ("error" in result) {
+          return res.status(400).json({ error: result.error });
+        }
       } else if (resolvedCredentials.password) {
         sshConfig.password = resolvedCredentials.password;
       }

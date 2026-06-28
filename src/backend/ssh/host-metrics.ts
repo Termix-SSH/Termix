@@ -46,6 +46,7 @@ import {
   isTcpPingEnabled,
   supportsMetrics,
 } from "./host-metrics-helpers.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 import {
   cleanupMetricsSession,
   getSessionKey,
@@ -844,6 +845,15 @@ async function resolveHostCredentials(
           : [],
       pin: !!host.pin,
       authType: host.authType,
+      terminalConfig: (() => {
+        try {
+          return typeof host.terminalConfig === "string"
+            ? JSON.parse(host.terminalConfig as string)
+            : host.terminalConfig || undefined;
+        } catch {
+          return undefined;
+        }
+      })(),
       enableTerminal: !!host.enableTerminal,
       enableTunnel: !!host.enableTunnel,
       enableFileManager: !!host.enableFileManager,
@@ -1135,6 +1145,14 @@ async function buildSshConfig(
       }
     } else {
       throw new Error(`Credential for host ${host.ip} could not be resolved`);
+    }
+  } else if (host.authType === "agent") {
+    const result = await applyAgentAuth(
+      base as Record<string, unknown>,
+      (host as { terminalConfig?: Record<string, unknown> }).terminalConfig,
+    );
+    if ("error" in result) {
+      throw new Error(result.error);
     }
   } else {
     throw new Error(

@@ -21,6 +21,7 @@ import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { registerDockerContainerRoutes } from "./docker-container-routes.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 
 const sshLogger = logger;
 
@@ -290,7 +291,8 @@ async function createJumpHostChain(
         true,
       );
 
-      const connected = await new Promise<boolean>((resolve) => {
+      // eslint-disable-next-line no-async-promise-executor
+      const connected = await new Promise<boolean>(async (resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
         }, 30000);
@@ -382,6 +384,16 @@ async function createJumpHostChain(
           connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
           if (jumpHostConfig.keyPassword) {
             connectConfig.passphrase = jumpHostConfig.keyPassword;
+          }
+        } else if (jumpHostConfig.authType === "agent") {
+          const result = await applyAgentAuth(
+            connectConfig,
+            jumpHostConfig.terminalConfig as
+              | Record<string, unknown>
+              | undefined,
+          );
+          if ("error" in result) {
+            throw new Error(result.error);
           }
         }
 
@@ -979,6 +991,24 @@ app.post("/docker/ssh/connect", async (req, res) => {
         error: "SSH key authentication requested but no key provided",
         connectionLogs,
       });
+    } else if (resolvedCredentials.authType === "agent") {
+      const result = await applyAgentAuth(
+        config,
+        host.terminalConfig as unknown as Record<string, unknown> | undefined,
+      );
+      if ("error" in result) {
+        connectionLogs.push(
+          createConnectionLog("error", "docker_auth", result.error),
+        );
+        return res.status(400).json({ error: result.error, connectionLogs });
+      }
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "docker_auth",
+          "Using SSH agent authentication",
+        ),
+      );
     }
 
     let responseSent = false;
@@ -1005,6 +1035,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
     } else if (resolvedCredentials.authType === "key") {
       connectionLogs.push(
         createConnectionLog("info", "auth", "Authenticating with SSH key"),
+      );
+    } else if (resolvedCredentials.authType === "agent") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with SSH agent"),
       );
     } else if (
       resolvedCredentials.authType === "none" ||

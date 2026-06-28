@@ -15,6 +15,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { applyAgentAuth } from "../../ssh/terminal-auth-helpers.js";
 
 const router = express.Router();
 
@@ -773,11 +774,12 @@ router.post(
       let output = "";
       let errorOutput = "";
 
+      /* eslint-disable no-async-promise-executor */
       const executePromise = new Promise<{
         success: boolean;
         output: string;
         error?: string;
-      }>((resolve, reject) => {
+      }>(async (resolve, reject) => {
         const timeout = setTimeout(() => {
           conn.end();
           reject(new Error("Command execution timeout (30s)"));
@@ -886,6 +888,14 @@ router.post(
           if (passphrase) {
             config.passphrase = passphrase;
           }
+        } else if (authType === "agent") {
+          const result = await applyAgentAuth(
+            config,
+            host.terminalConfig as Record<string, unknown> | string | undefined,
+          );
+          if ("error" in result) {
+            throw new Error(result.error);
+          }
         } else if (password) {
           config.password = password;
         } else if (privateKey) {
@@ -901,6 +911,7 @@ router.post(
 
         conn.connect(config);
       });
+      /* eslint-enable no-async-promise-executor */
 
       const result = await executePromise;
 

@@ -11,6 +11,7 @@ import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 
 interface JumpHostConfig {
   id: number;
@@ -181,7 +182,8 @@ export async function createJumpHostChain(
         true,
       );
 
-      const connected = await new Promise<boolean>((resolve) => {
+      // eslint-disable-next-line no-async-promise-executor
+      const connected = await new Promise<boolean>(async (resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
         }, 30000);
@@ -271,6 +273,16 @@ export async function createJumpHostChain(
           connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
           if (jumpHostConfig.keyPassword) {
             connectConfig.passphrase = jumpHostConfig.keyPassword;
+          }
+        } else if (jumpHostConfig.authType === "agent") {
+          const result = await applyAgentAuth(
+            connectConfig,
+            jumpHostConfig.terminalConfig as
+              | Record<string, unknown>
+              | undefined,
+          );
+          if ("error" in result) {
+            throw new Error(result.error);
           }
         }
 
