@@ -24,6 +24,7 @@ import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
+import { collectTemperatureMetrics } from "./widgets/temperature-collector.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -132,6 +133,7 @@ const DEFAULT_STATS_CONFIG: StatsConfig = {
     "processes",
     "ports",
     "firewall",
+    "temperature",
   ],
   statusCheckEnabled: true,
   statusCheckInterval: 60,
@@ -1373,6 +1375,14 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     kernel: string | null;
     os: string | null;
   };
+  temperature: {
+    source: "sysfs" | "sensors" | "none";
+    highestCelsius: number | null;
+    sensors: Array<{
+      label: string;
+      celsius: number;
+    }>;
+  };
 }> {
   if (!supportsMetrics(host)) {
     throw new Error("Metrics collection only supported for SSH hosts");
@@ -1403,6 +1413,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         const uptime = await collectUptimeMetrics(client);
         const processes = await collectProcessesMetrics(client);
         const system = await collectSystemMetrics(client);
+        const temperature = await collectTemperatureMetrics(client);
 
         let login_stats = {
           recentLogins: [],
@@ -1474,6 +1485,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           uptime,
           processes,
           system,
+          temperature,
           login_stats,
           ports,
           firewall,

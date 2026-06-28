@@ -53,6 +53,7 @@ export const METRIC_CARD_IDS: HostMetricCardId[] = [
   "processes",
   "ports",
   "firewall",
+  "temperature",
 ];
 
 export const MANAGER_CARD_IDS: HostMetricManagerId[] = [
@@ -100,6 +101,7 @@ const DEFAULT_COLSPAN: Partial<Record<HostMetricsCardId, HostMetricsColSpan>> =
     uptime: 1,
     system: 1,
     network: 1,
+    temperature: 1,
     processes: 2,
     ports: 2,
     firewall: 2,

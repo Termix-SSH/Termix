@@ -1690,7 +1690,9 @@
       "logGrep": "Filter lines...",
       "firewallPersist": "Persist rules",
       "firewallPersisted": "Firewall rules persisted"
-    }
+    },
+    "temperature": "Temperature",
+    "highestTemperature": "Highest temperature"
   },
   "auth": {
     "tagline": "자체 호스팅 SSH 및 원격 데스크톱 관리",

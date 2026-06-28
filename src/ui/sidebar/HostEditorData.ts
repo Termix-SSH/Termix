@@ -229,6 +229,7 @@ export function createHostEditorForm(
         "processes",
         "ports",
         "firewall",
+        "temperature",
       ],
     },
   };

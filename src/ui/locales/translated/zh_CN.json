@@ -1691,7 +1691,9 @@
       "logGrep": "Filter lines...",
       "firewallPersist": "Persist rules",
       "firewallPersisted": "Firewall rules persisted"
-    }
+    },
+    "temperature": "温度",
+    "highestTemperature": "最高温度"
   },
   "auth": {
     "tagline": "自托管 SSH 和远程桌面管理",

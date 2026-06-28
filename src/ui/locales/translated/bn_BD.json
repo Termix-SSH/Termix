@@ -1690,7 +1690,9 @@
       "logGrep": "Filter lines...",
       "firewallPersist": "Persist rules",
       "firewallPersisted": "Firewall rules persisted"
-    }
+    },
+    "temperature": "Temperature",
+    "highestTemperature": "Highest temperature"
   },
   "auth": {
     "tagline": "সেলফ-হোস্টেড SSH এবং রিমোট ডেস্কটপ ম্যানেজমেন্ট",

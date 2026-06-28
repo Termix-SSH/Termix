@@ -170,6 +170,14 @@ export type ServerMetrics = {
     status?: "active" | "inactive" | "unknown";
     chains?: FirewallChain[];
   };
+  temperature?: {
+    source?: "sysfs" | "sensors" | "none";
+    highestCelsius?: number | null;
+    sensors?: Array<{
+      label: string;
+      celsius: number;
+    }>;
+  };
   lastChecked: string;
 };
 
