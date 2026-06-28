@@ -744,28 +744,6 @@ export function HostEditor({
                     onChange={(v) => setField("allowLegacyAlgorithms", v)}
                   />
                 </SettingRow>
-                <SettingRow
-                  label={t("hosts.sudoPasswordAutoFillLabel")}
-                  description={t("hosts.sudoPasswordAutoFillDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.sudoPasswordAutoFill}
-                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
-                  />
-                </SettingRow>
-                {form.sudoPasswordAutoFill && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.sudoPasswordLabel")}
-                    </label>
-                    <PasswordInput
-                      className="h-8 text-xs pr-8"
-                      placeholder="••••••••"
-                      value={form.sudoPassword}
-                      onChange={(e) => setField("sudoPassword", e.target.value)}
-                    />
-                  </div>
-                )}
               </div>
             </SectionCard>
           </>
