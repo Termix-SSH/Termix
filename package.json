@@ -41,6 +41,8 @@
     "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "@types/ldapjs": "^3.0.6",
     "axios": "^1.18.0",
     "bcryptjs": "^3.0.3",

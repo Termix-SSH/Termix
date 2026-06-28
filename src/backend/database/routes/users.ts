@@ -33,6 +33,7 @@ import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
+import { registerUserWebAuthnRoutes } from "./user-webauthn-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
@@ -2527,6 +2528,12 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 registerUserAdminRoutes(router, authenticateJWT);
 
 registerUserTotpRoutes(router, {
+  authenticateJWT,
+  authManager,
+  isNativeAppRequest,
+});
+
+registerUserWebAuthnRoutes(router, {
   authenticateJWT,
   authManager,
   isNativeAppRequest,

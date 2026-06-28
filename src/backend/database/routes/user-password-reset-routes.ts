@@ -18,6 +18,7 @@ import {
   sshCredentialUsage,
   recentActivity,
   snippets,
+  webauthnCredentials,
 } from "../db/schema.js";
 
 interface UserPasswordResetRoutesDeps {
@@ -440,6 +441,9 @@ export function registerUserPasswordResetRoutes(
           await db
             .delete(sshCredentials)
             .where(eq(sshCredentials.userId, userId));
+          await db
+            .delete(webauthnCredentials)
+            .where(eq(webauthnCredentials.userId, userId));
 
           await authManager.registerUser(userId, newPassword);
           authManager.logoutUser(userId);

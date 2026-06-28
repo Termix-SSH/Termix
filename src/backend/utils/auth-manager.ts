@@ -147,6 +147,31 @@ class AuthManager {
     return authenticated;
   }
 
+  async setupWebAuthnUserEncryption(userId: string): Promise<void> {
+    await this.userCrypto.setupWebAuthnUserEncryption(userId);
+  }
+
+  async authenticateWebAuthnUser(
+    userId: string,
+    deviceType?: DeviceType,
+  ): Promise<boolean> {
+    const sessionDurationMs =
+      deviceType === "desktop" || deviceType === "mobile"
+        ? 30 * 24 * 60 * 60 * 1000
+        : 24 * 60 * 60 * 1000;
+
+    const authenticated = await this.userCrypto.authenticateWebAuthnUser(
+      userId,
+      sessionDurationMs,
+    );
+
+    if (authenticated) {
+      await this.performLazyEncryptionMigration(userId);
+    }
+
+    return authenticated;
+  }
+
   async convertToOIDCEncryption(userId: string): Promise<void> {
     await this.userCrypto.convertToOIDCEncryption(userId);
   }
