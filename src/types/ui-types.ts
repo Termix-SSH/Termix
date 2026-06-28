@@ -105,6 +105,9 @@ export type Host = {
   defaultPath?: string;
 
   enableDocker: boolean;
+  dockerConfig?: {
+    runtime?: "docker" | "podman";
+  } | null;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   proxmoxConfig?: {

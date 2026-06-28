@@ -168,6 +168,7 @@ export interface Host {
   security?: string;
   ignoreCert?: boolean;
   guacamoleConfig?: string | Record<string, unknown>;
+  dockerConfig?: Record<string, unknown> | null;
 
   enableSsh?: boolean;
   enableRdp?: boolean;
@@ -1085,6 +1086,7 @@ export interface DockerLogOptions {
 export interface DockerValidation {
   available: boolean;
   version?: string;
+  runtime?: "docker" | "podman";
   error?: string;
   code?: string;
 }

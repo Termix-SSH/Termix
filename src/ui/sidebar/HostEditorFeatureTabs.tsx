@@ -20,6 +20,11 @@ export function HostDockerTab({
   setField: SetHostField;
 }) {
   const { t } = useTranslation();
+  const dockerConfig = form.dockerConfig ?? { runtime: "docker" as const };
+  const runtime =
+    dockerConfig.runtime === "podman"
+      ? ("podman" as const)
+      : ("docker" as const);
 
   return (
     <SectionCard
@@ -36,6 +41,30 @@ export function HostDockerTab({
             onChange={(v) => setField("enableDocker", v)}
           />
         </SettingRow>
+        {form.enableDocker && (
+          <SettingRow
+            label={t("hosts.containerRuntime")}
+            description={t("hosts.containerRuntimeDesc")}
+          >
+            <select
+              value={runtime}
+              onChange={(e) =>
+                setField("dockerConfig", {
+                  ...dockerConfig,
+                  runtime: e.target.value as "docker" | "podman",
+                })
+              }
+              className="h-7 w-44 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="docker">
+                {t("hosts.containerRuntimeDocker")}
+              </option>
+              <option value="podman">
+                {t("hosts.containerRuntimePodman")}
+              </option>
+            </select>
+          </SettingRow>
+        )}
       </div>
     </SectionCard>
   );

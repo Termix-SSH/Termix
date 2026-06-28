@@ -1,5 +1,9 @@
 import type express from "express";
 import { logger } from "../utils/logger.js";
+import {
+  containerCommand,
+  type ContainerRuntime,
+} from "./container-runtime.js";
 
 const sshLogger = logger;
 
@@ -9,6 +13,7 @@ type DockerSession = {
   activeOperations: number;
   hostId?: number;
   isWindows?: boolean;
+  containerRuntime?: ContainerRuntime;
 };
 
 type PendingDockerTotpSession = unknown;
@@ -39,6 +44,9 @@ export function registerDockerContainerRoutes(
     dockerTimestampPattern: DOCKER_TIMESTAMP_RE,
   }: DockerContainerRoutesDeps,
 ): void {
+  const getRuntime = (session: DockerSession) =>
+    session.containerRuntime ?? "docker";
+
   /**
    * @openapi
    * /docker/containers/{sessionId}:
@@ -97,7 +105,10 @@ export function registerDockerContainerRoutes(
       const formatStr = session.isWindows
         ? `"{\\"id\\":\\"{{.ID}}\\",\\"name\\":\\"{{.Names}}\\",\\"image\\":\\"{{.Image}}\\",\\"status\\":\\"{{.Status}}\\",\\"state\\":\\"{{.State}}\\",\\"ports\\":\\"{{.Ports}}\\",\\"created\\":\\"{{.CreatedAt}}\\"}"`
         : `'{"id":"{{.ID}}","name":"{{.Names}}","image":"{{.Image}}","status":"{{.Status}}","state":"{{.State}}","ports":"{{.Ports}}","created":"{{.CreatedAt}}"}' `;
-      const command = `docker ps ${allFlag}--format ${formatStr}`;
+      const command = containerCommand(
+        getRuntime(session),
+        `ps ${allFlag}--format ${formatStr}`,
+      );
 
       const output = await executeDockerCommand(
         session,
@@ -190,7 +201,10 @@ export function registerDockerContainerRoutes(
     session.activeOperations++;
 
     try {
-      const command = `docker inspect ${containerId}`;
+      const command = containerCommand(
+        getRuntime(session),
+        `inspect ${containerId}`,
+      );
       const output = await executeDockerCommand(
         session,
         command,
@@ -295,7 +309,7 @@ export function registerDockerContainerRoutes(
         });
         await executeDockerCommand(
           session,
-          `docker start ${containerId}`,
+          containerCommand(getRuntime(session), `start ${containerId}`),
           sessionId,
           userId,
           session.hostId,
@@ -395,7 +409,7 @@ export function registerDockerContainerRoutes(
         });
         await executeDockerCommand(
           session,
-          `docker stop ${containerId}`,
+          containerCommand(getRuntime(session), `stop ${containerId}`),
           sessionId,
           userId,
           session.hostId,
@@ -495,7 +509,7 @@ export function registerDockerContainerRoutes(
         });
         await executeDockerCommand(
           session,
-          `docker restart ${containerId}`,
+          containerCommand(getRuntime(session), `restart ${containerId}`),
           sessionId,
           userId,
           session.hostId,
@@ -595,7 +609,7 @@ export function registerDockerContainerRoutes(
         });
         await executeDockerCommand(
           session,
-          `docker pause ${containerId}`,
+          containerCommand(getRuntime(session), `pause ${containerId}`),
           sessionId,
           userId,
           session.hostId,
@@ -695,7 +709,7 @@ export function registerDockerContainerRoutes(
         });
         await executeDockerCommand(
           session,
-          `docker unpause ${containerId}`,
+          containerCommand(getRuntime(session), `unpause ${containerId}`),
           sessionId,
           userId,
           session.hostId,
@@ -801,7 +815,10 @@ export function registerDockerContainerRoutes(
         const forceFlag = force ? "-f " : "";
         await executeDockerCommand(
           session,
-          `docker rm ${forceFlag}${containerId}`,
+          containerCommand(
+            getRuntime(session),
+            `rm ${forceFlag}${containerId}`,
+          ),
           sessionId,
           userId,
           session.hostId,
@@ -920,7 +937,10 @@ export function registerDockerContainerRoutes(
       session.activeOperations++;
 
       try {
-        let command = `docker logs ${containerId}`;
+        let command = containerCommand(
+          getRuntime(session),
+          `logs ${containerId}`,
+        );
 
         if (tail && tail > 0) {
           command += ` --tail ${Math.floor(tail)}`;
@@ -1035,7 +1055,10 @@ export function registerDockerContainerRoutes(
         const statsFormatStr = session.isWindows
           ? `"{\\"cpu\\":\\"{{.CPUPerc}}\\",\\"memory\\":\\"{{.MemUsage}}\\",\\"memoryPercent\\":\\"{{.MemPerc}}\\",\\"netIO\\":\\"{{.NetIO}}\\",\\"blockIO\\":\\"{{.BlockIO}}\\",\\"pids\\":\\"{{.PIDs}}\\"}"`
           : `'{"cpu":"{{.CPUPerc}}","memory":"{{.MemUsage}}","memoryPercent":"{{.MemPerc}}","netIO":"{{.NetIO}}","blockIO":"{{.BlockIO}}","pids":"{{.PIDs}}"}' `;
-        const command = `docker stats ${containerId} --no-stream --format ${statsFormatStr}`;
+        const command = containerCommand(
+          getRuntime(session),
+          `stats ${containerId} --no-stream --format ${statsFormatStr}`,
+        );
 
         const output = await executeDockerCommand(
           session,
