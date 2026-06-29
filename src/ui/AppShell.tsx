@@ -169,6 +169,9 @@ export function AppShell({
   });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
+  const [isAppFullscreen, setIsAppFullscreen] = useState(
+    () => !!document.fullscreenElement,
+  );
 
   useEffect(() => {
     localStorage.setItem("termix_sidebarWidth", String(sidebarWidth));
@@ -201,6 +204,34 @@ export function AppShell({
         setUserId(info.userId);
       })
       .catch(() => setIsAdmin(false));
+  }, []);
+
+  const toggleAppFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      if (!document.fullscreenEnabled) {
+        toast.error("Fullscreen is not supported by this browser");
+        return;
+      }
+
+      await document.documentElement.requestFullscreen();
+    } catch {
+      toast.error("Unable to toggle fullscreen mode");
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsAppFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const lastShiftTime = useRef(0);
@@ -306,6 +337,14 @@ export function AppShell({
   // without going through synthetic DOM events (which are unreliable).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
+        if (e.code === "KeyF") {
+          e.preventDefault();
+          toggleAppFullscreen();
+          return;
+        }
+      }
+
       // Ctrl+Shift+\ — toggle 2-way split (side by side)
       if (e.ctrlKey && e.shiftKey && !e.altKey && e.code === "Backslash") {
         e.preventDefault();
@@ -1661,6 +1700,8 @@ export function AppShell({
               onAddToSplit={addTabToSplit}
               onRemoveFromSplit={removeTabFromSplit}
               onRenameTab={renameTab}
+              isAppFullscreen={isAppFullscreen}
+              onToggleAppFullscreen={toggleAppFullscreen}
             />
             <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
