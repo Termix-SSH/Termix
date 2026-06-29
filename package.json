@@ -58,7 +58,7 @@
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "ldapjs": "^3.0.7",
-    "motion": "^12.38.0",
+    "motion": "^12.42.0",
     "multer": "^2.2.0",
     "nanoid": "^5.1.9",
     "qrcode": "^1.5.4",
