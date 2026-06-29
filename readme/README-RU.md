@@ -33,6 +33,12 @@
 
 <br />
 
+Termix — бесплатный проект с открытым исходным кодом. Если он вам полезен, рассмотрите возможность [пожертвования](https://donate.termix.site/) для покрытия расходов на серверы и время разработки.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## Пожертвование
 
-Termix — бесплатный проект с открытым исходным кодом без подписок и платных планов. Если вы находите его полезным, рассмотрите возможность пожертвования для покрытия расходов на серверы, домены и время разработки.
+Termix — бесплатный проект с открытым исходным кодом. Если он вам полезен, рассмотрите возможность [пожертвования](https://donate.termix.site/) для покрытия расходов на серверы и время разработки.
 
-[Пожертвовать](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 

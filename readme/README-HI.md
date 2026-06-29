@@ -33,6 +33,12 @@
 
 <br />
 
+Termix मुफ़्त और ओपन सोर्स है। यदि आपको यह उपयोगी लगता है, तो सर्वर लागत और विकास समय में मदद के लिए [दान करें](https://donate.termix.site/)।
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## दान करें
 
-Termix मुफ़्त और ओपन सोर्स है, इसमें कोई सदस्यता या भुगतान योजना नहीं है। यदि आपको यह उपयोगी लगता है, तो सर्वर लागत, डोमेन और विकास समय को कवर करने में मदद के लिए दान करने पर विचार करें।
+Termix मुफ़्त और ओपन सोर्स है। यदि आपको यह उपयोगी लगता है, तो सर्वर लागत और विकास समय में मदद के लिए [दान करें](https://donate.termix.site/)।
 
-[दान करें](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 

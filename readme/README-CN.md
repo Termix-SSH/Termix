@@ -33,6 +33,12 @@
 
 <br />
 
+Termix 免费且开源。如果您觉得它有用，请考虑[捐赠](https://donate.termix.site/)以帮助支付服务器费用和开发时间。
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## 捐赠
 
-Termix 是免费且开源的，没有订阅或付费计划。如果您觉得它有用，请考虑捐赠以帮助支付服务器费用、域名费用和开发时间。
+Termix 免费且开源。如果您觉得它有用，请考虑[捐赠](https://donate.termix.site/)以帮助支付服务器费用和开发时间。
 
-[捐赠](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 

@@ -33,6 +33,12 @@
 
 <br />
 
+Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https://donate.termix.site/) per aiutare a coprire i costi del server e il tempo di sviluppo.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## Dona
 
-Termix è gratuito e open source senza abbonamenti o piani a pagamento. Se lo trovi utile, considera di fare una donazione per aiutare a coprire i costi del server, i domini e il tempo di sviluppo.
+Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https://donate.termix.site/) per aiutare a coprire i costi del server e il tempo di sviluppo.
 
-[Dona](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 

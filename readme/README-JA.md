@@ -33,6 +33,12 @@
 
 <br />
 
+Termix は無料のオープンソースプロジェクトです。便利だと感じた場合は、サーバーコストと開発時間のために[寄付](https://donate.termix.site/)をご検討ください。
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## 寄付
 
-Termix はサブスクリプションや有料プランのない、無料のオープンソースプロジェクトです。便利だと感じた場合は、サーバーコスト、ドメイン、開発時間をカバーするための寄付をご検討ください。
+Termix は無料のオープンソースプロジェクトです。便利だと感じた場合は、サーバーコストと開発時間のために[寄付](https://donate.termix.site/)をご検討ください。
 
-[寄付する](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 

@@ -33,6 +33,12 @@
 
 <br />
 
+Termix مجاني ومفتوح المصدر. إذا وجدته مفيدًا، فكّر في [التبرع](https://donate.termix.site/) للمساعدة في تغطية تكاليف الخادم ووقت التطوير.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## التبرع
 
-Termix مجاني ومفتوح المصدر بدون اشتراكات أو خطط مدفوعة. إذا وجدته مفيدًا، فكّر في التبرع للمساعدة في تغطية تكاليف الخادم والنطاقات ووقت التطوير.
+Termix مجاني ومفتوح المصدر. إذا وجدته مفيدًا، فكّر في [التبرع](https://donate.termix.site/) للمساعدة في تغطية تكاليف الخادم ووقت التطوير.
 
-[تبرع](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 

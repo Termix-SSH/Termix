@@ -33,6 +33,12 @@
 
 <br />
 
+Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyetleri ve geliştirme süresine katkıda bulunmak için [bağış yapmayı](https://donate.termix.site/) düşünebilirsiniz.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## Bağış Yapın
 
-Termix, abonelik veya ücretli plan olmayan ücretsiz ve açık kaynaklı bir projedir. Faydalı buluyorsanız, sunucu maliyetleri, alan adları ve geliştirme süresini karşılamaya yardımcı olmak için bağış yapmayı düşünebilirsiniz.
+Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyetleri ve geliştirme süresine katkıda bulunmak için [bağış yapmayı](https://donate.termix.site/) düşünebilirsiniz.
 
-[Bağış Yap](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 

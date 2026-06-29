@@ -33,6 +33,12 @@
 
 <br />
 
+Termix is free and open source. If you find it useful, consider [donating](https://donate.termix.site/) to help cover server costs and development time.
+
+<a href="https://donate.termix.site/"><img src="./repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="./repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -282,14 +288,6 @@ networks:
   termix-net:
     driver: bridge
 ```
-
-<br />
-
-## Donate
-
-Termix is free and open source with no subscriptions or paid plans. If you find it useful, consider donating to help cover server costs, domains, and development time.
-
-[Donate](https://donate.termix.site/)
 
 <br />
 

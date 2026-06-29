@@ -33,6 +33,12 @@
 
 <br />
 
+Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu ích, hãy cân nhắc [quyên góp](https://donate.termix.site/) để giúp trang trải chi phí máy chủ và thời gian phát triển.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 <img src="../repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
@@ -284,9 +290,9 @@ networks:
 
 ## Quyên góp
 
-Termix là dự án miễn phí và mã nguồn mở, không có gói đăng ký hay trả phí. Nếu bạn thấy hữu ích, hãy cân nhắc quyên góp để giúp trang trải chi phí máy chủ, tên miền và thời gian phát triển.
+Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu ích, hãy cân nhắc [quyên góp](https://donate.termix.site/) để giúp trang trải chi phí máy chủ và thời gian phát triển.
 
-[Quyên góp](https://donate.termix.site/)
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
