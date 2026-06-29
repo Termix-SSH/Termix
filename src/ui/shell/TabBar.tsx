@@ -20,6 +20,7 @@ import {
   Minimize2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
+import { isElectron } from "@/lib/electron";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
 
@@ -443,27 +444,31 @@ export function TabBar({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Separator orientation="vertical" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-full w-12.5 rounded-none border-y-0 border-border text-muted-foreground hover:text-foreground"
-            title={
-              isAppFullscreen
-                ? "Exit fullscreen (Ctrl+Shift+F)"
-                : "Enter fullscreen (Ctrl+Shift+F)"
-            }
-            aria-label={
-              isAppFullscreen ? "Exit fullscreen" : "Enter fullscreen"
-            }
-            onClick={onToggleAppFullscreen}
-          >
-            {isAppFullscreen ? (
-              <Minimize2 className="size-4" />
-            ) : (
-              <Maximize2 className="size-4" />
-            )}
-          </Button>
+          {!isElectron() && (
+            <>
+              <Separator orientation="vertical" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-full w-12.5 rounded-none border-y-0 border-border text-muted-foreground hover:text-foreground"
+                title={
+                  isAppFullscreen
+                    ? "Exit fullscreen (Ctrl+Shift+F)"
+                    : "Enter fullscreen (Ctrl+Shift+F)"
+                }
+                aria-label={
+                  isAppFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+                }
+                onClick={onToggleAppFullscreen}
+              >
+                {isAppFullscreen ? (
+                  <Minimize2 className="size-4" />
+                ) : (
+                  <Maximize2 className="size-4" />
+                )}
+              </Button>
+            </>
+          )}
           <Separator orientation="vertical" />
           <Button
             variant="ghost"
