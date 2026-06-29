@@ -291,6 +291,14 @@ networks:
 
 <br />
 
+## Donate
+
+Termix is free and open source with no subscriptions or paid plans. If you find it useful, consider donating to help cover server costs, domains, and development time.
+
+[Donate](https://donate.termix.site/)
+
+<br />
+
 ## Screenshots
 
 <div align="center">
