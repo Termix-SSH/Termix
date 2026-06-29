@@ -12,6 +12,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PUSH_TOKEN }}
 
       - name: Generate donation goal SVG
         run: |
@@ -109,19 +111,18 @@ jobs:
           PYEOF
       - name: Commit SVG
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "LukeGus"
+          git config user.email "bugattiguy527@gmail.com"
           git add repo-images/donation-goal.svg
           if git diff --cached --quiet; then
             exit 0
           fi
           # Amend the previous bot commit if it exists, otherwise create a new one
           LAST_AUTHOR=$(git log -1 --format='%ae')
-          REMOTE="https://x-access-token:${{ secrets.PUSH_TOKEN }}@github.com/${{ github.repository }}.git"
-          if [ "$LAST_AUTHOR" = "github-actions[bot]@users.noreply.github.com" ]; then
+          if [ "$LAST_AUTHOR" = "bugattiguy527@gmail.com" ]; then
             git commit --amend --no-edit
-            git push --force-with-lease "$REMOTE" HEAD:main
+            git push --force-with-lease origin HEAD:main
           else
             git commit -m "chore: update donation goal badge"
-            git push "$REMOTE" HEAD:main
+            git push origin HEAD:main
           fi
