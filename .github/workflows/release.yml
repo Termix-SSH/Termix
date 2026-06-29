@@ -483,11 +483,16 @@ jobs:
 
           PR_NUMBER=$(gh pr list --repo Termix-SSH/Docs --head "$BRANCH" --base main --state open --json number -q '.[0].number' || true)
           if [ -z "$PR_NUMBER" ]; then
-            PR_NUMBER=$(gh pr create --repo Termix-SSH/Docs \
+            PR_URL=$(gh pr create --repo Termix-SSH/Docs \
               --base main --head "$BRANCH" \
               --title "release-${{ needs.prep.outputs.version }}" \
-              --body "API docs for ${{ needs.prep.outputs.version }}" \
-              | grep -oE '[0-9]+$')
+              --body "API docs for ${{ needs.prep.outputs.version }}")
+            PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          fi
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "Failed to find or create a PR for $BRANCH."
+            exit 1
           fi
 
           gh pr merge "$PR_NUMBER" --repo Termix-SSH/Docs --squash --admin
