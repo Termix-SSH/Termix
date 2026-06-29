@@ -297,6 +297,8 @@ class PollingManager {
       viewerUserId,
     };
 
+    this.pollingConfigs.set(host.id, config);
+
     if (isTcpPingEnabled(statsConfig)) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
@@ -338,8 +340,6 @@ class PollingManager {
     } else {
       this.metricsStore.delete(host.id);
     }
-
-    this.pollingConfigs.set(host.id, config);
   }
 
   private async pollHostStatus(
@@ -1997,7 +1997,11 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
           "Using existing metrics session",
         ),
       );
-      return res.json({ success: true, connectionLogs });
+
+      const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      pollingManager.registerViewer(host.id, viewerSessionId, userId);
+
+      return res.json({ success: true, viewerSessionId, connectionLogs });
     }
 
     const config = await buildSshConfig(host);
