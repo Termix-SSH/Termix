@@ -22,6 +22,10 @@ Major new features including serial connections, Tailscale/WireGuard support, Ha
 - Grafana-style server stats history graphs
 - Alert system with ntfy and webhook notification support
 - Host temperature metrics card
+- App fullscreen mode
+- External editor support for file manager (desktop app)
+- Safe host sharing export
+- SSH credential password fallback for key-based auth
 - Open all sessions in a folder at once
 - Custom terminal theme color support
 - Custom tunnel endpoints configuration
@@ -53,6 +57,10 @@ Major new features including serial connections, Tailscale/WireGuard support, Ha
 - File path case not preserved in file manager UI
 - File downloads unreliable in the desktop app
 - Tmux detection path handling incorrect
+- Host metrics startup polling incorrect
+- TUI terminal output highlighting incorrect
+- Runtime base path for auth callbacks incorrect
+- Windows app icon unstable
 - SSH heading syntax highlighting broken
 - Terminal link dialog layering issue
 - Electron OIDC browser authentication failures
