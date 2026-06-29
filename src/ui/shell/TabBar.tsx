@@ -16,6 +16,8 @@ import {
   Plus,
   Minus,
   Pencil,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
@@ -37,6 +39,8 @@ export function TabBar({
   onAddToSplit,
   onRemoveFromSplit,
   onRenameTab,
+  isAppFullscreen,
+  onToggleAppFullscreen,
 }: {
   tabs: Tab[];
   activeTabId: string;
@@ -51,6 +55,8 @@ export function TabBar({
   onAddToSplit: (tabId: string) => void;
   onRemoveFromSplit: (tabId: string) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
+  isAppFullscreen: boolean;
+  onToggleAppFullscreen: () => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
@@ -437,6 +443,27 @@ export function TabBar({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <Separator orientation="vertical" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-full w-12.5 rounded-none border-y-0 border-border text-muted-foreground hover:text-foreground"
+            title={
+              isAppFullscreen
+                ? "Exit fullscreen (Ctrl+Shift+F)"
+                : "Enter fullscreen (Ctrl+Shift+F)"
+            }
+            aria-label={
+              isAppFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+            }
+            onClick={onToggleAppFullscreen}
+          >
+            {isAppFullscreen ? (
+              <Minimize2 className="size-4" />
+            ) : (
+              <Maximize2 className="size-4" />
+            )}
+          </Button>
           <Separator orientation="vertical" />
           <Button
             variant="ghost"
