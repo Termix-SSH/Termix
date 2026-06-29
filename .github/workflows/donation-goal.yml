@@ -80,7 +80,7 @@ jobs:
           pct   = min(total / goal * 100, 100) if goal > 0 else 0
 
           if total < 1:
-              display = '< $1'
+              display = '&lt; $1'
           else:
               display = f'${math.floor(total):,}'
 
