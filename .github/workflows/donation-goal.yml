@@ -13,6 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: badges
           token: ${{ secrets.PUSH_TOKEN }}
 
       - name: Generate donation goal SVG
@@ -86,7 +87,6 @@ jobs:
 
           goal_display = f'${int(goal):,}'
 
-          # SVG dimensions
           W = 400
           BAR_W = 360
           BAR_X = 20
@@ -105,24 +105,18 @@ jobs:
             <text x="{W//2}" y="44" font-family="sans-serif" font-size="10" fill="#F3904499" text-anchor="middle">{pct_label}</text>
           </svg>'''
 
-          with open('repo-images/donation-goal.svg', 'w') as f:
+          with open('donation-goal.svg', 'w') as f:
               f.write(svg)
           print(f'SVG written: {display} / {goal_display} ({round(pct)}%)')
           PYEOF
+
       - name: Commit SVG
         run: |
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
-          git add repo-images/donation-goal.svg
+          git add donation-goal.svg
           if git diff --cached --quiet; then
             exit 0
           fi
-          # Amend the previous bot commit if it exists, otherwise create a new one
-          LAST_AUTHOR=$(git log -1 --format='%ae')
-          if [ "$LAST_AUTHOR" = "bugattiguy527@gmail.com" ]; then
-            git commit --amend --no-edit
-            git push --force-with-lease origin HEAD:main
-          else
-            git commit -m "chore: update donation goal badge"
-            git push origin HEAD:main
-          fi
+          git commit -m "chore: update donation goal badge"
+          git push origin HEAD:badges
