@@ -117,7 +117,7 @@ jobs:
           fi
           # Amend the previous bot commit if it exists, otherwise create a new one
           LAST_AUTHOR=$(git log -1 --format='%ae')
-          REMOTE="https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/${{ github.repository }}.git"
+          REMOTE="https://x-access-token:${{ secrets.PUSH_TOKEN }}@github.com/${{ github.repository }}.git"
           if [ "$LAST_AUTHOR" = "github-actions[bot]@users.noreply.github.com" ]; then
             git commit --amend --no-edit
             git push --force-with-lease "$REMOTE" HEAD:main
