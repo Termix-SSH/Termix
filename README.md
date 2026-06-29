@@ -35,7 +35,7 @@
 
 Termix is free and open source. If you find it useful, consider [donating](https://donate.termix.site/) to help cover server costs and development time.
 
-<a href="https://donate.termix.site/"><img src="./repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+<a href="https://donate.termix.site/"><img src="https://raw.githubusercontent.com/Termix-SSH/Termix/badges/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
