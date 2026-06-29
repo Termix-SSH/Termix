@@ -6,6 +6,8 @@ Major new features including serial connections, Tailscale/WireGuard support, Ha
 
 <!-- YOUTUBE -->
 
+https://youtu.be/c3UD4q2jW_8
+
 <!-- /YOUTUBE -->
 
 <!-- UPDATE_LOG -->
