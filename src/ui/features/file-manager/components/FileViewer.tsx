@@ -16,6 +16,8 @@ import {
   Save,
   RotateCcw,
   Keyboard,
+  ExternalLink,
+  Settings,
   Search,
   ZoomIn,
   ZoomOut,
@@ -92,6 +94,8 @@ interface FileViewerProps {
   onSave?: (content: string) => void;
   onRevert?: () => void;
   onDownload?: () => void;
+  onOpenExternal?: () => void;
+  onChooseExternalEditor?: () => void;
   onMediaDimensionsChange?: (dimensions: {
     width: number;
     height: number;
@@ -273,6 +277,8 @@ export function FileViewer({
   onSave,
   onRevert,
   onDownload,
+  onOpenExternal,
+  onChooseExternalEditor,
   onMediaDimensionsChange,
 }: FileViewerProps) {
   const { t } = useTranslation();
@@ -510,6 +516,30 @@ export function FileViewer({
                 <Download className="w-4 h-4" />
                 {t("fileManager.download")}
               </Button>
+            )}
+            {isEditable && onOpenExternal && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onOpenExternal}
+                  className="flex items-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  {t("fileManager.openExternalEditor")}
+                </Button>
+                {onChooseExternalEditor && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onChooseExternalEditor}
+                    className="h-8 w-8 p-0"
+                    title={t("fileManager.chooseExternalEditor")}
+                  >
+                    <Settings className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>

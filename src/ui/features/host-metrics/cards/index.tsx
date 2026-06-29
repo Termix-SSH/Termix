@@ -12,6 +12,7 @@ import { LoginStatsCard } from "./LoginStatsCard";
 import { PortsCard } from "./PortsCard";
 import { ProcessesCard } from "./ProcessesCard";
 import { FirewallCard } from "./FirewallCard";
+import { TemperatureCard } from "./TemperatureCard";
 import { ServiceManagerCard } from "./managers/ServiceManagerCard";
 import { ProcessInspectorCard } from "./managers/ProcessInspectorCard";
 import { PackageManagerCard } from "./managers/PackageManagerCard";
@@ -26,6 +27,8 @@ import {
   SystemdTimersCard,
   DiskBreakdownCard,
 } from "./managers/SimpleManagerCards";
+import { WireGuardManagerCard } from "./managers/WireGuardManagerCard";
+import { TailscaleManagerCard } from "./managers/TailscaleManagerCard";
 
 export interface MetricCardHistories {
   cpu: number[];
@@ -47,10 +50,14 @@ export interface CardDefinition {
   render: (ctx: CardRenderContext) => ReactNode;
 }
 
-type SimpleMetricCard = ComponentType<{ metrics: ServerMetrics | null }>;
+type SimpleMetricCard = ComponentType<{
+  metrics: ServerMetrics | null;
+  hostId: number | null;
+}>;
 type HistoryMetricCard = ComponentType<{
   metrics: ServerMetrics | null;
   history: number[];
+  hostId: number | null;
 }>;
 
 function metricCard(
@@ -62,7 +69,7 @@ function metricCard(
     id,
     labelKey,
     kind: "metric",
-    render: ({ metrics }) => <Comp metrics={metrics} />,
+    render: ({ metrics, hostId }) => <Comp metrics={metrics} hostId={hostId} />,
   };
 }
 
@@ -76,8 +83,8 @@ function historyCard(
     id,
     labelKey,
     kind: "metric",
-    render: ({ metrics, histories }) => (
-      <Comp metrics={metrics} history={histories[series]} />
+    render: ({ metrics, histories, hostId }) => (
+      <Comp metrics={metrics} history={histories[series]} hostId={hostId} />
     ),
   };
 }
@@ -117,6 +124,11 @@ export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
   ports: metricCard("ports", "hostMetrics.ports.title", PortsCard),
   processes: metricCard("processes", "hostMetrics.processes", ProcessesCard),
   firewall: metricCard("firewall", "hostMetrics.firewall.title", FirewallCard),
+  temperature: metricCard(
+    "temperature",
+    "hostMetrics.temperature",
+    TemperatureCard,
+  ),
   service_manager: managerCard(
     "service_manager",
     "hostMetrics.managers.services",
@@ -176,6 +188,16 @@ export const CARD_DEFINITIONS: Record<string, CardDefinition> = {
     "top_memory",
     "hostMetrics.managers.topMemory",
     TopMemoryCard,
+  ),
+  wireguard_manager: managerCard(
+    "wireguard_manager",
+    "hostMetrics.managers.wireguard",
+    WireGuardManagerCard,
+  ),
+  tailscale_manager: managerCard(
+    "tailscale_manager",
+    "hostMetrics.managers.tailscale",
+    TailscaleManagerCard,
   ),
 };
 

@@ -55,7 +55,7 @@ export function createHostEditorForm(
       rawTheme,
     )
       ? "termix"
-      : TERMINAL_THEMES[rawTheme]
+      : rawTheme === "custom" || TERMINAL_THEMES[rawTheme]
         ? rawTheme
         : "termix";
 
@@ -79,6 +79,7 @@ export function createHostEditorForm(
     credentialId:
       host?.credentialId ??
       (d?.credentialId != null ? String(d.credentialId) : ""),
+    vaultProfileId: host?.vaultProfileId ?? "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
     tags: host?.tags ?? ([] as string[]),
@@ -104,6 +105,7 @@ export function createHostEditorForm(
     enableFileManager: host?.enableFileManager ?? false,
     scpLegacy: host?.scpLegacy ?? false,
     enableDocker: host?.enableDocker ?? false,
+    dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
@@ -156,9 +158,11 @@ export function createHostEditorForm(
     backgroundImage: host?.terminalConfig?.backgroundImage ?? "",
     backgroundImageOpacity:
       host?.terminalConfig?.backgroundImageOpacity ?? 0.15,
+    customThemeColors: host?.terminalConfig?.customThemeColors ?? null,
     allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
     linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
       "default") as "default" | "confirm" | "direct",
+    agentSocketPath: host?.terminalConfig?.agentSocketPath ?? "",
     useSSHTitle: host?.terminalConfig?.useSSHTitle ?? false,
     syntaxHighlighting: host?.terminalConfig?.syntaxHighlighting ?? true,
     syntaxHighlightingOptions: {
@@ -226,6 +230,7 @@ export function createHostEditorForm(
         "processes",
         "ports",
         "firewall",
+        "temperature",
       ],
     },
   };
@@ -243,6 +248,7 @@ export function buildHostEditorPayload(
   const usesCredential = form.authType === "credential";
   const usesKey = form.authType === "key";
   const usesPassword = form.authType === "password";
+  const usesAgent = form.authType === "agent";
 
   return {
     connectionType: protocols.enableSsh
@@ -267,7 +273,7 @@ export function buildHostEditorPayload(
     pin: form.pin,
     authType: form.authType,
     useWarpgate: form.useWarpgate,
-    password: usesPassword ? form.password || null : null,
+    password: usesPassword || usesKey ? form.password || null : null,
     key: usesKey
       ? form.key === "existing_key"
         ? undefined
@@ -281,6 +287,7 @@ export function buildHostEditorPayload(
     keyType: usesKey && form.keyType !== "auto" ? form.keyType : null,
     credentialId:
       usesCredential && form.credentialId ? Number(form.credentialId) : null,
+    vaultProfileId: form.vaultProfileId ? Number(form.vaultProfileId) : null,
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
     macAddress: form.macAddress || null,
@@ -292,6 +299,7 @@ export function buildHostEditorPayload(
     enableFileManager: form.enableFileManager,
     scpLegacy: form.scpLegacy,
     enableDocker: form.enableDocker,
+    dockerConfig: form.enableDocker ? form.dockerConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
     enableProxmox: form.enableProxmox,
     proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
@@ -398,7 +406,7 @@ export function buildHostEditorPayload(
           agentForwarding: form.agentForwarding,
           autoMosh: form.autoMosh,
           autoTmux: form.autoTmux,
-          sudoPasswordAutoFill: form.sudoPasswordAutoFill,
+          sudoPasswordAutoFill: false,
           sudoPassword: form.sudoPassword || null,
           keepaliveInterval: Number(form.keepaliveInterval),
           keepaliveCountMax: Number(form.keepaliveCountMax),
@@ -408,11 +416,14 @@ export function buildHostEditorPayload(
           syntaxHighlightingOptions: form.syntaxHighlightingOptions,
           backgroundImage: form.backgroundImage || null,
           backgroundImageOpacity: Number(form.backgroundImageOpacity),
+          customThemeColors:
+            form.theme === "custom" ? form.customThemeColors : null,
           allowLegacyAlgorithms: form.allowLegacyAlgorithms,
           linkClickBehavior:
             form.linkClickBehavior !== "default"
               ? form.linkClickBehavior
               : undefined,
+          agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
         }
       : null,
   };

@@ -170,6 +170,14 @@ export type ServerMetrics = {
     status?: "active" | "inactive" | "unknown";
     chains?: FirewallChain[];
   };
+  temperature?: {
+    source?: "sysfs" | "sensors" | "none";
+    highestCelsius?: number | null;
+    sensors?: Array<{
+      label: string;
+      celsius: number;
+    }>;
+  };
   lastChecked: string;
 };
 
@@ -867,6 +875,9 @@ function initializeApiInstances() {
     getApiUrl("/tmux_monitor", 30010),
     "TMUX_MONITOR",
   );
+
+  // Homepage API (port 30012)
+  homepageApi = createApiInstance(getApiUrl("/homepage", 30012), "HOMEPAGE");
 }
 
 // Host Management API (port 30001) - supports SSH, RDP, VNC, Telnet
@@ -897,6 +908,9 @@ export let dockerApi: AxiosInstance;
 
 // Tmux Monitor API (port 30010) --- tmux-monitor ---
 export let tmuxMonitorApi: AxiosInstance;
+
+// Homepage API (port 30012)
+export let homepageApi: AxiosInstance;
 
 // Pre-initialize with default values to avoid undefined errors during early mounting
 initializeApiInstances();
@@ -1986,6 +2000,14 @@ export {
   deployCredentialToHost,
 } from "@/api/credentials-api";
 
+export {
+  getVaultProfiles,
+  createVaultProfile,
+  updateVaultProfile,
+  deleteVaultProfile,
+  type VaultProfilePayload,
+} from "@/api/vault-profiles-api";
+
 // ============================================================================
 // SNIPPETS API
 // ============================================================================
@@ -2113,3 +2135,31 @@ export {
   type ActiveSessionInfo,
   type UserPreferences,
 } from "@/api/open-tabs-api";
+
+// ============================================================================
+// TERMIX ID API
+// ============================================================================
+
+export {
+  getMyTermixId,
+  checkTermixIdHandle,
+  createTermixId,
+  updateTermixId,
+  deleteTermixId,
+  addTermixIdKey,
+  generateTermixIdKey,
+  setTermixIdKeyEnabled,
+  deleteTermixIdKey,
+  getMyCa,
+  createCa,
+  rotateCa,
+  deleteCa,
+  issueCertificate,
+  getLinkedCredentialIds,
+  type TermixIdentity,
+  type TermixIdentityKey,
+  type TermixIdMe,
+  type GeneratedKey,
+  type TermixIdCa,
+  type IssuedCertificate,
+} from "@/api/termix-id-api";

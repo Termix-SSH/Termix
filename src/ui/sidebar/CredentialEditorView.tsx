@@ -16,7 +16,6 @@ import {
 } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
 
-type CredentialAuthType = Credential["type"];
 type CredentialWithCertificate = Credential & { certPublicKey?: string };
 
 export function CredentialEditorView({
@@ -38,7 +37,11 @@ export function CredentialEditorView({
     tags: credential?.tags ?? ([] as string[]),
     tagInput: "",
     type: credential?.type ?? "password",
-    value: credential?.value ?? "",
+    value: credential?.type === "key" ? (credential?.value ?? "") : "",
+    password:
+      credential?.type === "password"
+        ? (credential?.value ?? "")
+        : (credential?.password ?? ""),
     publicKey: credential?.publicKey ?? "",
     passphrase: credential?.passphrase ?? "",
     certPublicKey:
@@ -60,6 +63,12 @@ export function CredentialEditorView({
       toast.error(t("hosts.credentialNameRequired"));
       return;
     }
+    const hasKey =
+      credForm.value === "existing_key" || credForm.value.trim() !== "";
+    if (!hasKey && !credForm.password) {
+      toast.error(t("hosts.credentialAuthRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const data = {
@@ -68,23 +77,20 @@ export function CredentialEditorView({
         folder: credForm.folder || null,
         description: credForm.description || null,
         tags: credForm.tags,
-        authType: credForm.type,
-        password: credForm.type === "password" ? credForm.value : null,
-        key:
-          credForm.type === "key"
-            ? credForm.value === "existing_key"
-              ? undefined
-              : credForm.value || null
-            : null,
-        publicKey: credForm.type === "key" ? credForm.publicKey : null,
-        certPublicKey:
-          credForm.type === "key" ? credForm.certPublicKey || null : null,
-        keyPassword:
-          credForm.type === "key"
-            ? credForm.passphrase === "existing_key_password"
-              ? undefined
-              : credForm.passphrase || null
-            : null,
+        authType: hasKey ? "key" : "password",
+        password: credForm.password || null,
+        key: hasKey
+          ? credForm.value === "existing_key"
+            ? undefined
+            : credForm.value || null
+          : null,
+        publicKey: hasKey ? credForm.publicKey : null,
+        certPublicKey: hasKey ? credForm.certPublicKey || null : null,
+        keyPassword: hasKey
+          ? credForm.passphrase === "existing_key_password"
+            ? undefined
+            : credForm.passphrase || null
+          : null,
       };
       const saved = credential
         ? await updateCredential(Number(credential.id), data)
@@ -103,8 +109,6 @@ export function CredentialEditorView({
       setSaving(false);
     }
   };
-
-  const type = credForm.type;
 
   return (
     <div className="flex flex-col gap-3">
@@ -211,26 +215,6 @@ export function CredentialEditorView({
           <div className="flex flex-col gap-4 py-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.credTypeLabel")}
-              </label>
-              <div className="flex gap-2">
-                {["password", "key"].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() =>
-                      setCredField("type", m as CredentialAuthType)
-                    }
-                    className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${type === m ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                  >
-                    {m === "key"
-                      ? t("hosts.sshPrivateKey")
-                      : t("hosts.password")}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.username")}
               </label>
               <Input
@@ -239,261 +223,257 @@ export function CredentialEditorView({
                 onChange={(e) => setCredField("username", e.target.value)}
               />
             </div>
-            {type === "password" && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("hosts.password")}
-                </label>
-                <PasswordInput
-                  className="h-8 text-xs pr-8"
-                  placeholder="••••••••"
-                  value={credForm.value}
-                  onChange={(e) => setCredField("value", e.target.value)}
-                />
-              </div>
-            )}
-            {type === "key" && (
-              <div className="flex flex-col gap-4">
-                <div className="p-3 border border-border bg-muted/20">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                    {t("hosts.generateKeyPairTitle")}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mb-2">
-                    {t("hosts.generateKeyPairDescription")}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { label: "Ed25519", type: "ssh-ed25519" },
-                      {
-                        label: "ECDSA (nistp256)",
-                        type: "ecdsa-sha2-nistp256",
-                      },
-                      { label: "RSA (2048)", type: "ssh-rsa", bits: 2048 },
-                    ].map(({ label, type: keyType, bits }) => (
-                      <Button
-                        key={label}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-[10px] px-2"
-                        disabled={generatingKey}
-                        onClick={async () => {
-                          setGeneratingKey(true);
-                          try {
-                            const result = await generateKeyPair(
-                              keyType as
-                                | "ssh-ed25519"
-                                | "ssh-rsa"
-                                | "ecdsa-sha2-nistp256",
-                              bits,
-                              credForm.passphrase === "existing_key_password"
-                                ? undefined
-                                : credForm.passphrase || undefined,
-                            );
-                            if (result.success) {
-                              setCredField("value", result.privateKey);
-                              setCredField("publicKey", result.publicKey);
-                              toast.success(
-                                t("hosts.keyPairGenerated", { label }),
-                              );
-                            } else {
-                              toast.error(
-                                result.error ??
-                                  t("hosts.failedToGenerateKeyPair"),
-                              );
-                            }
-                          } catch {
-                            toast.error(t("hosts.failedToGenerateKeyPair"));
-                          } finally {
-                            setGeneratingKey(false);
-                          }
-                        }}
-                      >
-                        {generatingKey
-                          ? t("hosts.generatingKey")
-                          : t("hosts.generateLabel", { label })}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.sshPrivateKey")}
-                    </label>
-                    <button
-                      type="button"
-                      className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1"
-                      onClick={() => credFileInputRef.current?.click()}
-                    >
-                      <Upload className="size-3" /> {t("hosts.uploadFileBtn")}
-                    </button>
-                  </div>
-                  <input
-                    ref={credFileInputRef}
-                    type="file"
-                    accept=".pem,.key,.txt"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const text = await file.text();
-                      setCredField("value", text.trim());
-                      e.target.value = "";
-                    }}
-                  />
-                  {credForm.value === "existing_key" && (
-                    <div className="px-3 py-2 text-[10px] border border-accent-brand/30 bg-accent-brand/5 text-accent-brand">
-                      {t("hosts.keySaved")} — {t("hosts.keyReplaceNotice")}
-                    </div>
-                  )}
-                  <textarea
-                    placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
-                    rows={8}
-                    value={
-                      credForm.value === "existing_key" ? "" : credForm.value
-                    }
-                    onChange={(e) => setCredField("value", e.target.value)}
-                    className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hosts.keyPassphraseOptional")}
-                  </label>
-                  <PasswordInput
-                    className="h-8 text-xs pr-8"
-                    placeholder={
-                      credForm.passphrase === "existing_key_password"
-                        ? t("hosts.keyPassphraseSaved")
-                        : "••••••••"
-                    }
-                    value={
-                      credForm.passphrase === "existing_key_password"
-                        ? ""
-                        : credForm.passphrase
-                    }
-                    onFocus={() => {
-                      if (credForm.passphrase === "existing_key_password")
-                        setCredField("passphrase", "");
-                    }}
-                    onChange={(e) => setCredField("passphrase", e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.sshPublicKeyOptional")}
-                    </label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("hosts.password")} ({t("common.optional")})
+              </label>
+              <PasswordInput
+                className="h-8 text-xs pr-8"
+                placeholder="••••••••"
+                value={credForm.password}
+                onChange={(e) => setCredField("password", e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-4">
+              <div className="p-3 border border-border bg-muted/20">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  {t("hosts.generateKeyPairTitle")}
+                </p>
+                <p className="text-[10px] text-muted-foreground mb-2">
+                  {t("hosts.generateKeyPairDescription")}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "Ed25519", type: "ssh-ed25519" },
+                    {
+                      label: "ECDSA (nistp256)",
+                      type: "ecdsa-sha2-nistp256",
+                    },
+                    { label: "RSA (2048)", type: "ssh-rsa", bits: 2048 },
+                  ].map(({ label, type: keyType, bits }) => (
                     <Button
+                      key={label}
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
-                      disabled={
-                        !credForm.value ||
-                        credForm.value === "existing_key" ||
-                        generatingPublicKey
-                      }
+                      className="h-7 text-[10px] px-2"
+                      disabled={generatingKey}
                       onClick={async () => {
-                        setGeneratingPublicKey(true);
+                        setGeneratingKey(true);
                         try {
-                          const result = await generatePublicKeyFromPrivate(
-                            credForm.value,
+                          const result = await generateKeyPair(
+                            keyType as
+                              | "ssh-ed25519"
+                              | "ssh-rsa"
+                              | "ecdsa-sha2-nistp256",
+                            bits,
                             credForm.passphrase === "existing_key_password"
                               ? undefined
                               : credForm.passphrase || undefined,
                           );
-                          if (result?.publicKey) {
+                          if (result.success) {
+                            setCredField("value", result.privateKey);
                             setCredField("publicKey", result.publicKey);
-                            toast.success(t("hosts.publicKeyGenerated"));
+                            toast.success(
+                              t("hosts.keyPairGenerated", { label }),
+                            );
                           } else {
-                            toast.error(t("hosts.failedToGeneratePublicKey"));
+                            toast.error(
+                              result.error ??
+                                t("hosts.failedToGenerateKeyPair"),
+                            );
                           }
                         } catch {
-                          toast.error(t("hosts.failedToGeneratePublicKey"));
+                          toast.error(t("hosts.failedToGenerateKeyPair"));
                         } finally {
-                          setGeneratingPublicKey(false);
+                          setGeneratingKey(false);
                         }
                       }}
                     >
-                      {generatingPublicKey
+                      {generatingKey
                         ? t("hosts.generatingKey")
-                        : t("hosts.generateFromPrivateKey")}
+                        : t("hosts.generateLabel", { label })}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[10px] px-2"
-                      disabled={!credForm.publicKey}
-                      onClick={() => {
-                        copyToClipboard(credForm.publicKey ?? "");
-                        toast.success(t("hosts.publicKeyCopied"));
-                      }}
-                    >
-                      <Copy className="size-3 mr-1" /> {t("common.copy")}
-                    </Button>
-                  </div>
-                  <textarea
-                    placeholder="ssh-rsa AAAAB3Nza..."
-                    rows={3}
-                    value={credForm.publicKey}
-                    onChange={(e) => setCredField("publicKey", e.target.value)}
-                    className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5 p-3 border border-border bg-muted/20">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("credentials.caCertificate")}
-                    </label>
-                    {credForm.certPublicKey && (
-                      <button
-                        type="button"
-                        className="text-[10px] text-destructive hover:text-destructive/80"
-                        onClick={() => setCredField("certPublicKey", "")}
-                      >
-                        {t("credentials.clearCert")}
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    {t("credentials.caCertificateDescription")}
-                  </p>
-                  <button
-                    type="button"
-                    className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1 self-start"
-                    onClick={() => certFileInputRef.current?.click()}
-                  >
-                    <Upload className="size-3" />{" "}
-                    {t("credentials.uploadCertFile")}
-                  </button>
-                  <input
-                    ref={certFileInputRef}
-                    type="file"
-                    accept=".pub,.txt"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      const text = await file.text();
-                      setCredField("certPublicKey", text.trim());
-                      e.target.value = "";
-                    }}
-                  />
-                  <textarea
-                    placeholder={t("credentials.pasteOrUploadCert")}
-                    rows={2}
-                    value={credForm.certPublicKey}
-                    onChange={(e) =>
-                      setCredField("certPublicKey", e.target.value)
-                    }
-                    className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
-                  />
+                  ))}
                 </div>
               </div>
-            )}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("hosts.sshPrivateKey")}
+                  </label>
+                  <button
+                    type="button"
+                    className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1"
+                    onClick={() => credFileInputRef.current?.click()}
+                  >
+                    <Upload className="size-3" /> {t("hosts.uploadFileBtn")}
+                  </button>
+                </div>
+                <input
+                  ref={credFileInputRef}
+                  type="file"
+                  accept=".pem,.key,.ppk,.txt"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const text = await file.text();
+                    setCredField("value", text.trim());
+                    e.target.value = "";
+                  }}
+                />
+                {credForm.value === "existing_key" && (
+                  <div className="px-3 py-2 text-[10px] border border-accent-brand/30 bg-accent-brand/5 text-accent-brand">
+                    {t("hosts.keySaved")} — {t("hosts.keyReplaceNotice")}
+                  </div>
+                )}
+                <textarea
+                  placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                  rows={8}
+                  value={
+                    credForm.value === "existing_key" ? "" : credForm.value
+                  }
+                  onChange={(e) => setCredField("value", e.target.value)}
+                  className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("hosts.keyPassphraseOptional")}
+                </label>
+                <PasswordInput
+                  className="h-8 text-xs pr-8"
+                  placeholder={
+                    credForm.passphrase === "existing_key_password"
+                      ? t("hosts.keyPassphraseSaved")
+                      : "••••••••"
+                  }
+                  value={
+                    credForm.passphrase === "existing_key_password"
+                      ? ""
+                      : credForm.passphrase
+                  }
+                  onFocus={() => {
+                    if (credForm.passphrase === "existing_key_password")
+                      setCredField("passphrase", "");
+                  }}
+                  onChange={(e) => setCredField("passphrase", e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("hosts.sshPublicKeyOptional")}
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+                    disabled={
+                      !credForm.value ||
+                      credForm.value === "existing_key" ||
+                      generatingPublicKey
+                    }
+                    onClick={async () => {
+                      setGeneratingPublicKey(true);
+                      try {
+                        const result = await generatePublicKeyFromPrivate(
+                          credForm.value,
+                          credForm.passphrase === "existing_key_password"
+                            ? undefined
+                            : credForm.passphrase || undefined,
+                        );
+                        if (result?.publicKey) {
+                          setCredField("publicKey", result.publicKey);
+                          toast.success(t("hosts.publicKeyGenerated"));
+                        } else {
+                          toast.error(t("hosts.failedToGeneratePublicKey"));
+                        }
+                      } catch {
+                        toast.error(t("hosts.failedToGeneratePublicKey"));
+                      } finally {
+                        setGeneratingPublicKey(false);
+                      }
+                    }}
+                  >
+                    {generatingPublicKey
+                      ? t("hosts.generatingKey")
+                      : t("hosts.generateFromPrivateKey")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                    disabled={!credForm.publicKey}
+                    onClick={() => {
+                      copyToClipboard(credForm.publicKey ?? "");
+                      toast.success(t("hosts.publicKeyCopied"));
+                    }}
+                  >
+                    <Copy className="size-3 mr-1" /> {t("common.copy")}
+                  </Button>
+                </div>
+                <textarea
+                  placeholder="ssh-rsa AAAAB3Nza..."
+                  rows={3}
+                  value={credForm.publicKey}
+                  onChange={(e) => setCredField("publicKey", e.target.value)}
+                  className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 p-3 border border-border bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("credentials.caCertificate")}
+                  </label>
+                  {credForm.certPublicKey && (
+                    <button
+                      type="button"
+                      className="text-[10px] text-destructive hover:text-destructive/80"
+                      onClick={() => setCredField("certPublicKey", "")}
+                    >
+                      {t("credentials.clearCert")}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {t("credentials.caCertificateDescription")}
+                </p>
+                <button
+                  type="button"
+                  className="text-[10px] text-accent-brand hover:text-accent-brand/80 flex items-center gap-1 self-start"
+                  onClick={() => certFileInputRef.current?.click()}
+                >
+                  <Upload className="size-3" />{" "}
+                  {t("credentials.uploadCertFile")}
+                </button>
+                <input
+                  ref={certFileInputRef}
+                  type="file"
+                  accept=".pub,.txt"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const text = await file.text();
+                    setCredField("certPublicKey", text.trim());
+                    e.target.value = "";
+                  }}
+                />
+                <textarea
+                  placeholder={t("credentials.pasteOrUploadCert")}
+                  rows={2}
+                  value={credForm.certPublicKey}
+                  onChange={(e) =>
+                    setCredField("certPublicKey", e.target.value)
+                  }
+                  className="w-full px-3 py-2 text-[10px] bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
+                />
+              </div>
+            </div>
           </div>
         </SectionCard>
       )}

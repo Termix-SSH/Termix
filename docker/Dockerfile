@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM node:26-slim AS deps
+FROM node:24-slim AS deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -36,7 +36,7 @@ RUN npm rebuild better-sqlite3
 RUN npm run build:backend
 
 # Stage 4: Production dependencies only
-FROM node:26-slim AS production-deps
+FROM node:24-slim AS production-deps
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
@@ -53,7 +53,7 @@ RUN npm ci --omit=dev --ignore-scripts && \
     npm cache clean --force
 
 # Stage 5: Final optimized image
-FROM node:26-slim
+FROM node:24-slim
 WORKDIR /app
 
 ENV DATA_DIR=/app/data \
@@ -78,7 +78,7 @@ COPY --chown=node:node package.json ./
 
 VOLUME ["/app/data"]
 
-EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006
+EXPOSE ${PORT} 30001 30002 30003 30004 30005 30006 30007 30008 30009 30010 30011 30012
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD wget -q -O /dev/null http://localhost:30001/health || exit 1

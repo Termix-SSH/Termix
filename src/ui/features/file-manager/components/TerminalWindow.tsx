@@ -9,6 +9,7 @@ import { useWindowManager } from "./WindowManager.tsx";
 import { useTranslation } from "react-i18next";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 import type { SSHHost } from "@/types/index.ts";
+import { ExternalLink } from "lucide-react";
 
 interface TerminalWindowProps {
   windowId: string;
@@ -17,6 +18,7 @@ interface TerminalWindowProps {
   initialX?: number;
   initialY?: number;
   executeCommand?: string;
+  onPromoteToTab?: (path?: string) => void;
 }
 
 export function TerminalWindow({
@@ -26,6 +28,7 @@ export function TerminalWindow({
   initialX = 200,
   initialY = 150,
   executeCommand,
+  onPromoteToTab,
 }: TerminalWindowProps) {
   const { t } = useTranslation();
   const { closeWindow, maximizeWindow, focusWindow, windows } =
@@ -78,6 +81,11 @@ export function TerminalWindow({
     }, 100);
   };
 
+  const handlePromoteToTab = () => {
+    onPromoteToTab?.(initialPath);
+    closeWindow(windowId);
+  };
+
   const terminalTitle = executeCommand
     ? t("terminal.runTitle", { host: hostConfig.name, command: executeCommand })
     : initialPath
@@ -103,6 +111,20 @@ export function TerminalWindow({
         onResize={handleResize}
         isMaximized={currentWindow.isMaximized}
         zIndex={currentWindow.zIndex}
+        titleActions={
+          onPromoteToTab ? (
+            <button
+              className="size-6 flex items-center justify-center rounded-none hover:bg-accent-brand/10 hover:text-accent-brand text-muted-foreground transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePromoteToTab();
+              }}
+              title={t("common.openInNewTab")}
+            >
+              <ExternalLink className="size-3.5" />
+            </button>
+          ) : null
+        }
       >
         <Terminal
           ref={terminalRef}

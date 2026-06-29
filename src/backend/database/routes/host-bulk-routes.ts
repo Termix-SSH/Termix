@@ -20,6 +20,35 @@ type SSHConfigHost = {
   proxyJump?: string;
 };
 
+type ShareCredential = {
+  alias?: unknown;
+  name?: unknown;
+  description?: unknown;
+  folder?: unknown;
+  tags?: unknown;
+  authType?: unknown;
+  username?: unknown;
+  keyType?: unknown;
+};
+
+function textValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function tagString(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .map((tag) => textValue(tag))
+      .filter((tag): tag is string => !!tag)
+      .join(",");
+  }
+  return textValue(value) || "";
+}
+
+function normalizeCredentialAuthType(value: unknown): "password" | "key" {
+  return value === "key" ? "key" : "password";
+}
+
 export function parseSSHConfig(content: string): SSHConfigHost[] {
   const results: SSHConfigHost[] = [];
   let current: SSHConfigHost | null = null;
@@ -280,7 +309,11 @@ export function registerHostBulkRoutes(
     authenticateJWT,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
-      const { hosts: hostsToImport, overwrite } = req.body;
+      const {
+        hosts: hostsToImport,
+        overwrite,
+        credentials: credentialsToImport,
+      } = req.body;
 
       if (!Array.isArray(hostsToImport) || hostsToImport.length === 0) {
         return res
@@ -301,6 +334,80 @@ export function registerHostBulkRoutes(
         failed: 0,
         errors: [] as string[],
       };
+
+      const credentialAliasMap = new Map<string, number>();
+      const addCredentialAlias = (alias: unknown, id: number) => {
+        const key = textValue(alias);
+        if (key) credentialAliasMap.set(key.toLowerCase(), id);
+      };
+
+      try {
+        const existingCredentials = await SimpleDBOps.select<
+          Record<string, unknown>
+        >(
+          db
+            .select()
+            .from(sshCredentials)
+            .where(eq(sshCredentials.userId, userId)),
+          "ssh_credentials",
+          userId,
+        );
+
+        for (const credential of existingCredentials) {
+          addCredentialAlias(credential.name, credential.id as number);
+        }
+
+        if (Array.isArray(credentialsToImport)) {
+          for (const rawCredential of credentialsToImport as ShareCredential[]) {
+            const alias = textValue(rawCredential.alias);
+            const name = textValue(rawCredential.name) || alias;
+            if (!alias || !name) continue;
+
+            const existingId = credentialAliasMap.get(name.toLowerCase());
+            if (existingId) {
+              addCredentialAlias(alias, existingId);
+              continue;
+            }
+
+            const now = new Date().toISOString();
+            const created = await SimpleDBOps.insert(
+              sshCredentials,
+              "ssh_credentials",
+              {
+                userId,
+                name,
+                description:
+                  textValue(rawCredential.description) ||
+                  "Imported placeholder. Add the secret before connecting.",
+                folder: textValue(rawCredential.folder),
+                tags: tagString(rawCredential.tags),
+                authType: normalizeCredentialAuthType(rawCredential.authType),
+                username: textValue(rawCredential.username),
+                password: null,
+                key: null,
+                privateKey: null,
+                publicKey: null,
+                keyPassword: null,
+                keyType: textValue(rawCredential.keyType),
+                detectedKeyType: null,
+                usageCount: 0,
+                lastUsed: null,
+                createdAt: now,
+                updatedAt: now,
+              },
+              userId,
+            );
+
+            const createdCredential = created as Record<string, unknown>;
+            addCredentialAlias(alias, createdCredential.id as number);
+            addCredentialAlias(name, createdCredential.id as number);
+          }
+        }
+      } catch (error) {
+        results.errors.push(
+          `Credential placeholders: ${error instanceof Error ? error.message : "failed to prepare credential aliases"}`,
+        );
+      }
 
       let existingHostMap: Map<string, { id: number }> | undefined;
       if (overwrite) {
@@ -325,6 +432,17 @@ export function registerHostBulkRoutes(
 
         try {
           const effectiveConnectionType = hostData.connectionType || "ssh";
+
+          if (
+            effectiveConnectionType === "ssh" &&
+            hostData.authType === "credential" &&
+            !hostData.credentialId &&
+            hostData.credentialAlias
+          ) {
+            hostData.credentialId = credentialAliasMap.get(
+              hostData.credentialAlias.toLowerCase(),
+            );
+          }
 
           if (!isNonEmptyString(hostData.ip) || !isValidPort(hostData.port)) {
             results.failed++;
@@ -355,11 +473,12 @@ export function registerHostBulkRoutes(
               "none",
               "opkssh",
               "tailscale",
+              "vault",
             ].includes(hostData.authType)
           ) {
             results.failed++;
             results.errors.push(
-              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', or 'tailscale'`,
+              `Host ${i + 1}: Invalid authType. Must be 'password', 'key', 'credential', 'none', 'opkssh', 'tailscale', or 'vault'`,
             );
             continue;
           }

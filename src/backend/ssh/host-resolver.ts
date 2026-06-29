@@ -1,5 +1,5 @@
 import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
+import { hosts, sshCredentials, vaultProfiles } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { logger } from "../utils/logger.js";
@@ -218,6 +218,28 @@ export async function resolveHostById(
     host.username as string | undefined,
     userId,
   );
+
+  // Resolve a Vault SSH signer profile (shared settings, no secrets). The
+  // certificate itself is obtained per-user at connect time via Vault OIDC.
+  if (host.vaultProfileId) {
+    try {
+      const profiles = await db
+        .select()
+        .from(vaultProfiles)
+        .where(eq(vaultProfiles.id, host.vaultProfileId as number))
+        .limit(1);
+      if (profiles.length > 0) {
+        (host as Record<string, unknown>).vaultProfile = profiles[0];
+        host.authType = "vault";
+      }
+    } catch (e) {
+      sshLogger.warn("Failed to resolve vault profile for host", {
+        operation: "host_resolver_vault_profile",
+        hostId,
+        error: e instanceof Error ? e.message : "Unknown",
+      });
+    }
+  }
 
   return host as unknown as SSHHost;
 }

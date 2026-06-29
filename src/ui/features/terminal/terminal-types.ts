@@ -20,6 +20,7 @@ export interface TerminalHostConfig {
 export interface TerminalHandle {
   disconnect: () => void;
   reconnect: () => void;
+  isConnected: () => boolean;
   fit: () => void;
   focus: () => void;
   sendInput: (data: string) => void;

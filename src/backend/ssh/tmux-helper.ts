@@ -14,6 +14,21 @@ export interface TmuxDetectionResult {
   sessions: TmuxSessionInfo[];
 }
 
+const TMUX_PATH_DIRS = [
+  "/opt/homebrew/bin",
+  "/usr/local/bin",
+  "/opt/bin",
+  "/usr/pkg/bin",
+];
+
+export function withTmuxPath(command: string): string {
+  return `PATH=${TMUX_PATH_DIRS.join(":")}:$PATH; ${command}`;
+}
+
+export function tmuxCommand(args: string): string {
+  return withTmuxPath(`tmux ${args}`);
+}
+
 /**
  * Run a command on the remote host via a separate exec channel.
  * Returns stdout as a string. Does not pollute the interactive shell.
@@ -54,7 +69,7 @@ export function execCommand(conn: Client, command: string): Promise<string> {
  */
 export async function detectTmux(conn: Client): Promise<TmuxDetectionResult> {
   try {
-    await execCommand(conn, "command -v tmux");
+    await execCommand(conn, withTmuxPath("command -v tmux"));
   } catch {
     return { available: false, sessions: [] };
   }
@@ -63,7 +78,9 @@ export async function detectTmux(conn: Client): Promise<TmuxDetectionResult> {
   try {
     const output = await execCommand(
       conn,
-      `tmux list-sessions -F "#{session_name}|#{session_created}|#{session_activity}|#{session_windows}|#{session_attached}" 2>/dev/null`,
+      tmuxCommand(
+        `list-sessions -F "#{session_name}|#{session_created}|#{session_activity}|#{session_windows}|#{session_attached}" 2>/dev/null`,
+      ),
     );
     if (output) {
       sessions = output
@@ -126,7 +143,7 @@ export async function waitForTmuxSession(
     try {
       await execCommand(
         conn,
-        `tmux has-session -t ${shellEscape(sessionName)} 2>/dev/null`,
+        tmuxCommand(`has-session -t ${shellEscape(sessionName)} 2>/dev/null`),
       );
       return sessionName;
     } catch {
@@ -148,10 +165,10 @@ export function attachOrCreateTmuxSession(
 ): void {
   let command: string;
   if (existingSessionName) {
-    command = `tmux ${TMUX_OPTS} \\; attach-session -t ${shellEscape(existingSessionName)} && exit\r`;
+    command = `${tmuxCommand(`${TMUX_OPTS} \\; attach-session -t ${shellEscape(existingSessionName)}`)} && exit\r`;
   } else {
     const nameFlag = newSessionName ? ` -s ${shellEscape(newSessionName)}` : "";
-    command = `tmux ${TMUX_OPTS} \\; new-session${nameFlag} && exit\r`;
+    command = `${tmuxCommand(`${TMUX_OPTS} \\; new-session${nameFlag}`)} && exit\r`;
   }
 
   sshLogger.info("Writing tmux command to shell", {
@@ -172,7 +189,9 @@ export async function queryNewestTmuxSession(
   try {
     const output = await execCommand(
       conn,
-      `tmux list-sessions -F "#{session_created}:#{session_name}" 2>/dev/null | sort -rn | head -1 | cut -d: -f2-`,
+      tmuxCommand(
+        `list-sessions -F "#{session_created}:#{session_name}" 2>/dev/null | sort -rn | head -1 | cut -d: -f2-`,
+      ),
     );
     return output || null;
   } catch {

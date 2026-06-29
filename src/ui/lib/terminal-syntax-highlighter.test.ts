@@ -56,6 +56,16 @@ describe("highlightTerminalOutput", () => {
     expect(highlightTerminalOutput(tuiFrame)).toBe(tuiFrame);
   });
 
+  it("skips private TUI mode sequences", () => {
+    const tuiFrame = `${ESC}[?1049h${ESC}[?25lERROR at /var/log/app.log`;
+    expect(highlightTerminalOutput(tuiFrame)).toBe(tuiFrame);
+  });
+
+  it("skips bracketed paste mode sequences", () => {
+    const chunk = `${ESC}[?2004hERROR: enabled paste mode`;
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
   it("highlights text that already has ANSI codes", () => {
     let heavy = "";
     for (let i = 0; i < 12; i++) heavy += `${ESC}[32mgreen${ESC}[0m `;
@@ -220,6 +230,17 @@ describe("highlightTerminalOutput", () => {
     const prompt = "pi@raspberrypi:/home/pi$ ";
     const out = highlightTerminalOutput(prompt);
     expect(out).toBe(prompt);
+  });
+
+  it("does not highlight log keywords inside bracketed SSH headings", () => {
+    const out = highlightTerminalOutput("[info@archlinux] command output");
+    expect(out).toBe("[info@archlinux] command output");
+  });
+
+  it("still highlights log keywords after a bracketed SSH heading", () => {
+    const out = highlightTerminalOutput("[warning@host] command ERROR");
+    expect(out).not.toContain(`${ESC}[93mwarning`);
+    expect(out).toContain(`${ESC}[91mERROR`);
   });
 
   it("does not highlight 'success' when immediately followed by a path (cd output)", () => {

@@ -361,24 +361,21 @@ function HostMetricsInner({
             setViewerSessionId(result.viewerSessionId);
         }
 
+        // Poll until first metrics arrive. The backend's initial SSH collection
+        // can take up to ~60s (queue timeout), so we wait up to 90s total.
         let retry = 0;
         let data: ServerMetrics | null = null;
-        const maxRetries = 15;
+        const maxRetries = 30;
         while (retry < maxRetries && !cancelled) {
           try {
             data = await getServerMetricsById(currentHostConfig.id);
-            break;
-          } catch (error) {
-            retry++;
-            if (retry === 1) {
-              await new Promise((r) =>
-                setTimeout(r, totpVerified ? 3000 : 5000),
-              );
-            } else if (retry < maxRetries && !cancelled) {
-              await new Promise((r) => setTimeout(r, 2000));
-            } else {
-              throw error;
-            }
+            if (data) break;
+          } catch {
+            // non-404 error — keep retrying
+          }
+          retry++;
+          if (retry < maxRetries && !cancelled) {
+            await new Promise((r) => setTimeout(r, 3000));
           }
         }
         if (cancelled) return;
@@ -390,6 +387,8 @@ function HostMetricsInner({
             setIsLoadingMetrics(false);
             logServerActivity();
           }
+        } else {
+          throw new Error(t("hostMetrics.connectionFailed"));
         }
 
         pollingId = window.setInterval(async () => {

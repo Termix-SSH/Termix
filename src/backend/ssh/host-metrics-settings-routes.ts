@@ -186,4 +186,94 @@ export function registerHostMetricsSettingsRoutes(
       });
     }
   });
+
+  /**
+   * @openapi
+   * /global-settings/history:
+   *   get:
+   *     summary: Get metrics history retention setting
+   *     tags:
+   *       - Host Metrics
+   *     responses:
+   *       200:
+   *         description: Retention setting in days.
+   *       403:
+   *         description: Requires admin privileges.
+   */
+  app.get("/global-settings/history", requireAdmin, (_req, res) => {
+    try {
+      const db = getDb();
+      const row = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'metrics_history_retention_days'",
+        )
+        .get() as { value: string } | undefined;
+      const days = row ? parseInt(row.value, 10) : 7;
+      res.json({ metricsHistoryRetentionDays: isNaN(days) ? 7 : days });
+    } catch (error) {
+      statsLogger.error("Failed to fetch history retention setting", {
+        operation: "history_retention_fetch_error",
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res
+        .status(500)
+        .json({ error: "Failed to fetch history retention setting" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /global-settings/history:
+   *   post:
+   *     summary: Update metrics history retention setting
+   *     tags:
+   *       - Host Metrics
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               metricsHistoryRetentionDays:
+   *                 type: integer
+   *                 minimum: 1
+   *                 maximum: 90
+   *     responses:
+   *       200:
+   *         description: Setting saved.
+   *       400:
+   *         description: Invalid value.
+   *       403:
+   *         description: Requires admin privileges.
+   */
+  app.post("/global-settings/history", requireAdmin, (req, res) => {
+    const { metricsHistoryRetentionDays } = req.body;
+    if (
+      typeof metricsHistoryRetentionDays !== "number" ||
+      metricsHistoryRetentionDays < 1 ||
+      metricsHistoryRetentionDays > 90
+    ) {
+      return res.status(400).json({
+        error: "metricsHistoryRetentionDays must be between 1 and 90",
+      });
+    }
+    try {
+      const db = getDb();
+      db.$client
+        .prepare(
+          "INSERT OR REPLACE INTO settings (key, value) VALUES ('metrics_history_retention_days', ?)",
+        )
+        .run(String(Math.floor(metricsHistoryRetentionDays)));
+      res.json({ success: true });
+    } catch (error) {
+      statsLogger.error("Failed to save history retention setting", {
+        operation: "history_retention_save_error",
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res
+        .status(500)
+        .json({ error: "Failed to save history retention setting" });
+    }
+  });
 }

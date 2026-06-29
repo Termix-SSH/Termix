@@ -7,6 +7,7 @@ import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import { shellSingleQuote } from "./exec-elevated.js";
 import { isValidPort } from "./validation.js";
 import type { ManagerRoutesDeps } from "./types.js";
+import { AlertEngine } from "../alert-engine.js";
 
 export interface HealthCheck {
   id: string;
@@ -178,7 +179,20 @@ export function registerHealthRoutes(
         const userId = (req as AuthenticatedRequest).userId;
         const checks = loadChecks(userId, host.id);
         const results = checks.length ? await runChecks(client, checks) : [];
-        if (results.length) recordHistory(userId, host.id, results);
+        if (results.length) {
+          recordHistory(userId, host.id, results);
+          for (const r of results) {
+            AlertEngine.getInstance()
+              .evaluateHealthCheck(
+                host.id,
+                userId,
+                r.checkId,
+                r.ok,
+                r.detail ?? undefined,
+              )
+              .catch(() => {});
+          }
+        }
 
         const history = getDb()
           .$client.prepare(
@@ -249,7 +263,20 @@ export function registerHealthRoutes(
         const userId = (req as AuthenticatedRequest).userId;
         const checks = loadChecks(userId, host.id);
         const results = await runChecks(client, checks);
-        if (results.length) recordHistory(userId, host.id, results);
+        if (results.length) {
+          recordHistory(userId, host.id, results);
+          for (const r of results) {
+            AlertEngine.getInstance()
+              .evaluateHealthCheck(
+                host.id,
+                userId,
+                r.checkId,
+                r.ok,
+                r.detail ?? undefined,
+              )
+              .catch(() => {});
+          }
+        }
         return { results };
       },
     ),

@@ -79,11 +79,14 @@ import type {
 } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
 
+const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
+
 function FileManagerContent({
   initialHost,
   initialFilePath,
   initialPath,
   onClose,
+  onOpenTerminalTab,
 }: FileManagerProps) {
   const { openWindow } = useWindowManager();
   const { t } = useTranslation();
@@ -165,6 +168,8 @@ function FileManagerContent({
   const [clipboard, setClipboard] = useState<{
     files: FileItem[];
     operation: "copy" | "cut";
+    sourceHostId: number | null;
+    sourceSessionId: string | null;
   } | null>(null);
 
   interface UndoAction {
@@ -798,6 +803,23 @@ function FileManagerContent({
   }, [currentHost?.id, handleRefreshDirectory]);
 
   useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (
+        event as CustomEvent<{
+          files: FileItem[];
+          operation: "copy" | "cut";
+          sourceHostId: number | null;
+          sourceSessionId: string | null;
+        }>
+      ).detail;
+      if (!detail) return;
+      setClipboard(detail);
+    };
+    window.addEventListener("file-manager:clipboard", handler);
+    return () => window.removeEventListener("file-manager:clipboard", handler);
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const activeElement = document.activeElement;
       if (
@@ -844,12 +866,15 @@ function FileManagerContent({
         files.push({ file, relativePath: path });
       } else if (entry.isDirectory) {
         const reader = (entry as FileSystemDirectoryEntry).createReader();
-        const dirEntries = await new Promise<FileSystemEntry[]>(
-          (resolve, reject) => reader.readEntries(resolve, reject),
-        );
-        for (const child of dirEntries) {
-          await readEntry(child, `${path}/${child.name}`);
-        }
+        let batch: FileSystemEntry[];
+        do {
+          batch = await new Promise<FileSystemEntry[]>((resolve, reject) =>
+            reader.readEntries(resolve, reject),
+          );
+          for (const child of batch) {
+            await readEntry(child, `${path}/${child.name}`);
+          }
+        } while (batch.length > 0);
       }
     }
 
@@ -947,6 +972,22 @@ function FileManagerContent({
       { duration: Infinity },
     );
 
+    const updateProgress = (p: {
+      chunkIndex: number;
+      totalChunks: number;
+      bytesSent: number;
+      totalBytes: number;
+    }) => {
+      const percent = Math.min(
+        100,
+        Math.round((p.bytesSent / p.totalBytes) * 100),
+      );
+      toast.loading(
+        `Uploading ${file.name} — ${percent}% (chunk ${p.chunkIndex + 1}/${p.totalChunks})`,
+        { id: progressToast, duration: Infinity },
+      );
+    };
+
     try {
       await ensureSSHConnection();
 
@@ -957,6 +998,7 @@ function FileManagerContent({
         file,
         currentHost?.id,
         undefined,
+        updateProgress,
       );
 
       toast.dismiss(progressToast);
@@ -1281,55 +1323,81 @@ function FileManagerContent({
     }
   };
 
+  function openFileWindow(file: FileItem, sessionId: string) {
+    const windowCount = Date.now() % 10;
+    const baseOffsetX = 120 + windowCount * 30;
+    const baseOffsetY = 120 + windowCount * 30;
+
+    const maxOffsetX = Math.max(0, window.innerWidth - 800 - 100);
+    const maxOffsetY = Math.max(0, window.innerHeight - 600 - 100);
+
+    const offsetX = Math.min(baseOffsetX, maxOffsetX);
+    const offsetY = Math.min(baseOffsetY, maxOffsetY);
+
+    const createWindowComponent = (windowId: string) => (
+      <FileWindow
+        windowId={windowId}
+        file={file}
+        sshSessionId={sessionId}
+        sshHost={currentHost}
+        initialX={offsetX}
+        initialY={offsetY}
+        onFileNotFound={handleFileNotFound}
+      />
+    );
+
+    openWindow({
+      title: file.name,
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 600,
+      isMaximized: false,
+      isMinimized: false,
+      component: createWindowComponent,
+    });
+  }
+
+  async function confirmLargeFileOpen(file: FileItem) {
+    if (!file.size || file.size <= LARGE_FILE_WARNING_SIZE) return true;
+
+    return confirmWithToast(
+      {
+        title: t("fileManager.largeFileWarning"),
+        description: t("fileManager.largeFileWarningDesc", {
+          size: formatFileSize(file.size),
+        }),
+        confirmText: t("fileManager.confirm"),
+        cancelText: t("common.cancel"),
+      },
+      undefined,
+      "default",
+      t("common.cancel"),
+      { duration: 12000 },
+    );
+  }
+
   async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
       if (sshSessionId) setIsLoading(true);
       setCurrentPath(file.path);
-    } else if (file.type === "link") {
-      await handleSymlinkClick(file);
-    } else {
-      if (!sshSessionId) {
-        toast.error(t("fileManager.noSSHConnection"));
-        return;
-      }
-
-      await recordRecentFile(file);
-
-      const windowCount = Date.now() % 10;
-      const baseOffsetX = 120 + windowCount * 30;
-      const baseOffsetY = 120 + windowCount * 30;
-
-      const maxOffsetX = Math.max(0, window.innerWidth - 800 - 100);
-      const maxOffsetY = Math.max(0, window.innerHeight - 600 - 100);
-
-      const offsetX = Math.min(baseOffsetX, maxOffsetX);
-      const offsetY = Math.min(baseOffsetY, maxOffsetY);
-
-      const windowTitle = file.name;
-
-      const createWindowComponent = (windowId: string) => (
-        <FileWindow
-          windowId={windowId}
-          file={file}
-          sshSessionId={sshSessionId}
-          sshHost={currentHost}
-          initialX={offsetX}
-          initialY={offsetY}
-          onFileNotFound={handleFileNotFound}
-        />
-      );
-
-      openWindow({
-        title: windowTitle,
-        x: offsetX,
-        y: offsetY,
-        width: 800,
-        height: 600,
-        isMaximized: false,
-        isMinimized: false,
-        component: createWindowComponent,
-      });
+      return;
     }
+
+    if (file.type === "link") {
+      await handleSymlinkClick(file);
+      return;
+    }
+
+    if (!sshSessionId) {
+      toast.error(t("fileManager.noSSHConnection"));
+      return;
+    }
+
+    if (!(await confirmLargeFileOpen(file))) return;
+
+    await recordRecentFile(file);
+    openFileWindow(file, sshSessionId);
   }
 
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
@@ -1365,14 +1433,32 @@ function FileManagerContent({
   }
 
   function handleCopyFiles(files: FileItem[]) {
-    setClipboard({ files, operation: "copy" });
+    const entry = {
+      files,
+      operation: "copy" as const,
+      sourceHostId: currentHost?.id ?? null,
+      sourceSessionId: sshSessionId,
+    };
+    setClipboard(entry);
+    window.dispatchEvent(
+      new CustomEvent("file-manager:clipboard", { detail: entry }),
+    );
     toast.success(
       t("fileManager.filesCopiedToClipboard", { count: files.length }),
     );
   }
 
   function handleCutFiles(files: FileItem[]) {
-    setClipboard({ files, operation: "cut" });
+    const entry = {
+      files,
+      operation: "cut" as const,
+      sourceHostId: currentHost?.id ?? null,
+      sourceSessionId: sshSessionId,
+    };
+    setClipboard(entry);
+    window.dispatchEvent(
+      new CustomEvent("file-manager:clipboard", { detail: entry }),
+    );
     toast.success(
       t("fileManager.filesCutToClipboard", { count: files.length }),
     );
@@ -1413,8 +1499,63 @@ function FileManagerContent({
     });
   }
 
+  async function handleCrossHostPaste() {
+    if (!clipboard || !sshSessionId || !currentHost) return;
+
+    const { files, operation, sourceSessionId } = clipboard;
+    if (!sourceSessionId) return;
+
+    const sourcePaths = files.map((f) => f.path);
+
+    try {
+      const { transferId } = await transferToHost(
+        sourceSessionId,
+        sourcePaths,
+        sshSessionId,
+        currentPath,
+        operation === "cut",
+        "auto",
+        2,
+      );
+
+      const monitorHandle = beginTransferProgressMonitoring(transferId, t, {
+        formatTransferMetrics,
+      });
+      if (!monitorHandle) return;
+
+      const finalStatus = await monitorHandle.waitForCompletion;
+
+      if (
+        finalStatus.status !== "success" &&
+        finalStatus.status !== "partial"
+      ) {
+        return;
+      }
+
+      if (operation === "cut") {
+        setClipboard(null);
+      }
+
+      handleRefreshDirectory();
+      clearSelection();
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      toast.error(
+        `${t("transfer.transferError")}: ${err.message || t("fileManager.unknownError")}`,
+      );
+    }
+  }
+
   async function handlePasteFiles() {
     if (!clipboard || !sshSessionId) return;
+
+    if (
+      clipboard.sourceHostId !== null &&
+      clipboard.sourceHostId !== currentHost?.id
+    ) {
+      await handleCrossHostPaste();
+      return;
+    }
 
     try {
       await ensureSSHConnection();
@@ -2455,6 +2596,7 @@ function FileManagerContent({
         initialPath={path}
         initialX={offsetX}
         initialY={offsetY}
+        onPromoteToTab={onOpenTerminalTab}
       />
     );
 
@@ -2501,6 +2643,7 @@ function FileManagerContent({
         initialX={offsetX}
         initialY={offsetY}
         executeCommand={executeCmd}
+        onPromoteToTab={onOpenTerminalTab}
       />
     );
 
@@ -2676,7 +2819,7 @@ function FileManagerContent({
               });
               break;
             case "modified":
-              result = (a.modified || "").localeCompare(b.modified || "");
+              result = (a.modifiedTimestamp || 0) - (b.modifiedTimestamp || 0);
               break;
             case "size":
               result = (a.size || 0) - (b.size || 0);
@@ -2961,6 +3104,7 @@ function FileManagerInner({
   initialFilePath,
   initialPath,
   onClose,
+  onOpenTerminalTab,
 }: FileManagerProps) {
   return (
     <WindowManager>
@@ -2969,6 +3113,7 @@ function FileManagerInner({
         initialFilePath={initialFilePath}
         initialPath={initialPath}
         onClose={onClose}
+        onOpenTerminalTab={onOpenTerminalTab}
       />
     </WindowManager>
   );

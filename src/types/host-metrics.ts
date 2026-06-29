@@ -21,7 +21,9 @@ export type HostMetricManagerId =
   | "health_check"
   | "disk_breakdown"
   | "systemd_timers"
-  | "top_memory";
+  | "top_memory"
+  | "wireguard_manager"
+  | "tailscale_manager";
 
 export type HostMetricsCardId = HostMetricCardId | HostMetricManagerId;
 
@@ -51,6 +53,7 @@ export const METRIC_CARD_IDS: HostMetricCardId[] = [
   "processes",
   "ports",
   "firewall",
+  "temperature",
 ];
 
 export const MANAGER_CARD_IDS: HostMetricManagerId[] = [
@@ -66,6 +69,8 @@ export const MANAGER_CARD_IDS: HostMetricManagerId[] = [
   "disk_breakdown",
   "systemd_timers",
   "top_memory",
+  "wireguard_manager",
+  "tailscale_manager",
 ];
 
 export function isMetricCardId(id: string): id is HostMetricCardId {
@@ -96,6 +101,7 @@ const DEFAULT_COLSPAN: Partial<Record<HostMetricsCardId, HostMetricsColSpan>> =
     uptime: 1,
     system: 1,
     network: 1,
+    temperature: 1,
     processes: 2,
     ports: 2,
     firewall: 2,

@@ -44,6 +44,56 @@ export class MemoryAgent extends BaseAgent {
   }
 }
 
+export async function resolveAgentSocket(
+  terminalConfig: Record<string, unknown> | string | undefined,
+): Promise<{ socketPath: string } | { error: string }> {
+  let parsedConfig: Record<string, unknown> | undefined;
+  if (typeof terminalConfig === "string") {
+    try {
+      parsedConfig = JSON.parse(terminalConfig) as Record<string, unknown>;
+    } catch {
+      return { error: "Invalid terminal configuration for SSH agent auth." };
+    }
+  } else {
+    parsedConfig = terminalConfig;
+  }
+  const explicit = (
+    parsedConfig?.agentSocketPath as string | undefined
+  )?.trim();
+  const resolved = explicit || process.env.SSH_AUTH_SOCK;
+
+  if (!resolved) {
+    return {
+      error: "SSH_AUTH_SOCK is not set and no socket path was provided.",
+    };
+  }
+
+  if (process.platform !== "win32") {
+    const { access } = await import("fs/promises");
+    try {
+      await access(resolved);
+    } catch {
+      return {
+        error: `SSH agent socket not found at ${resolved}. Make sure your agent is running.`,
+      };
+    }
+  }
+
+  return { socketPath: resolved };
+}
+
+export async function applyAgentAuth(
+  connectConfig: Record<string, unknown>,
+  terminalConfig: Record<string, unknown> | string | undefined,
+): Promise<{ socketPath: string } | { error: string }> {
+  const result = await resolveAgentSocket(terminalConfig);
+  if ("error" in result) return result;
+
+  const { createAgent } = ssh2Pkg;
+  connectConfig.agent = createAgent(result.socketPath);
+  return result;
+}
+
 export async function performPortKnocking(
   host: string,
   sequence: Array<{ port: number; protocol?: string; delay?: number }>,

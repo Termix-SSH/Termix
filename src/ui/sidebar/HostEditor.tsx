@@ -33,9 +33,11 @@ import {
   connectTunnel,
   disconnectTunnel,
   getUserInfo,
+  getVaultProfiles,
+  getHostPassword,
 } from "@/main-axios";
 import { getTailscaleDevices, getHostDefaults } from "@/api/settings-api";
-import type { Host } from "@/types/ui-types";
+import type { Host, VaultProfile } from "@/types/ui-types";
 import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
 import {
@@ -61,6 +63,8 @@ import {
   HostEditorVncTab,
 } from "./HostEditorGuacamoleTabs";
 import { HostStatsTab } from "./HostEditorStatsTab";
+import { VaultProfileManager } from "./VaultProfileManager";
+import { findHostByTunnelEndpoint } from "@/features/tunnel/tunnel-endpoints";
 
 export function HostEditor({
   host,
@@ -112,6 +116,14 @@ export function HostEditor({
   const [tailscaleLoading, setTailscaleLoading] = useState(false);
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
   const [isOidcUser, setIsOidcUser] = useState(false);
+  const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
+  const [showVaultManager, setShowVaultManager] = useState(false);
+
+  const reloadVaultProfiles = () => {
+    getVaultProfiles()
+      .then((res) => setVaultProfiles(res as unknown as VaultProfile[]))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     getUserInfo()
@@ -123,6 +135,7 @@ export function HostEditor({
     getSnippets()
       .then((res) => setSnippets(mapSnippetResponse(res)))
       .catch(() => {});
+    reloadVaultProfiles();
   }, []);
 
   useEffect(() => {
@@ -131,6 +144,22 @@ export function HostEditor({
       .then((d) => setForm(createHostEditorForm(null, d)))
       .catch(() => {});
   }, [host]);
+
+  useEffect(() => {
+    if (!host?.id || form.vncAuthType !== "direct" || form.vncPassword) return;
+
+    let cancelled = false;
+    getHostPassword(Number(host.id), "vncPassword").then((password) => {
+      if (cancelled || !password) return;
+      setForm((prev) =>
+        prev.vncPassword ? prev : { ...prev, vncPassword: password },
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [form.vncAuthType, form.vncPassword, host?.id]);
 
   useEffect(() => {
     if (activeTab !== "tunnels") return;
@@ -252,9 +281,11 @@ export function HostEditor({
                       "password",
                       "key",
                       "credential",
+                      "vault",
                       "none",
                       "opkssh",
                       "tailscale",
+                      "agent",
                     ].map((m) => (
                       <button
                         key={m}
@@ -363,7 +394,7 @@ export function HostEditor({
                               </span>
                               <input
                                 type="file"
-                                accept=".pem,.key,.txt"
+                                accept=".pem,.key,.ppk,.txt"
                                 className="hidden"
                                 onChange={async (e) => {
                                   const file = e.target.files?.[0];
@@ -415,6 +446,17 @@ export function HostEditor({
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.password")} ({t("common.optional")})
+                        </label>
+                        <PasswordInput
+                          className="h-8 text-xs pr-8"
+                          placeholder="••••••••"
+                          value={form.password}
+                          onChange={(e) => setField("password", e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           {t("hosts.keyTypeLabel")}
                         </label>
                         <select
@@ -440,6 +482,58 @@ export function HostEditor({
                         </select>
                       </div>
                     </>
+                  )}
+                  {authMethod === "vault" && (
+                    <div className="flex flex-col gap-1.5 col-span-2">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.vaultProfile")}
+                      </label>
+                      <select
+                        value={form.vaultProfileId}
+                        onChange={(e) =>
+                          setField("vaultProfileId", e.target.value)
+                        }
+                        className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        <option value="">
+                          {t("hosts.selectAVaultProfile")}
+                        </option>
+                        {vaultProfiles.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.shared ? `${p.name} (shared)` : p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.vaultProfileHint")}
+                        </p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a
+                            href="https://docs.termix.site/features/authentication/vault"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-accent-brand hover:underline"
+                          >
+                            {t("hosts.docsLink")}
+                          </a>
+                          <button
+                            type="button"
+                            className="text-[10px] text-accent-brand hover:text-accent-brand/80"
+                            onClick={() => setShowVaultManager((v) => !v)}
+                          >
+                            {t("hosts.vaultManageProfiles")}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  {authMethod === "vault" && showVaultManager && (
+                    <VaultProfileManager
+                      profiles={vaultProfiles}
+                      onChanged={reloadVaultProfiles}
+                      onClose={() => setShowVaultManager(false)}
+                    />
                   )}
                   {authMethod === "credential" && (
                     <>
@@ -604,6 +698,31 @@ export function HostEditor({
                     </p>
                   </div>
                 )}
+                {authMethod === "agent" && (
+                  <div className="flex flex-col gap-2 border-t border-border pt-3">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.agentLabel")}
+                    </span>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.agentDesc")}
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.agentSocketPathLabel")}
+                      </label>
+                      <Input
+                        placeholder={t("hosts.agentSocketPathPlaceholder")}
+                        value={form.agentSocketPath}
+                        onChange={(e) =>
+                          setField("agentSocketPath", e.target.value)
+                        }
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        {t("hosts.agentSocketPathHint")}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <SettingRow
                   label={t("hosts.forceKeyboardInteractiveLabel")}
                   description={t("hosts.forceKeyboardInteractiveShortDesc")}
@@ -625,28 +744,6 @@ export function HostEditor({
                     onChange={(v) => setField("allowLegacyAlgorithms", v)}
                   />
                 </SettingRow>
-                <SettingRow
-                  label={t("hosts.sudoPasswordAutoFillLabel")}
-                  description={t("hosts.sudoPasswordAutoFillDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.sudoPasswordAutoFill}
-                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
-                  />
-                </SettingRow>
-                {form.sudoPasswordAutoFill && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.sudoPasswordLabel")}
-                    </label>
-                    <PasswordInput
-                      className="h-8 text-xs pr-8"
-                      placeholder="••••••••"
-                      value={form.sudoPassword}
-                      onChange={(e) => setField("sudoPassword", e.target.value)}
-                    />
-                  </div>
-                )}
               </div>
             </SectionCard>
           </>
@@ -671,6 +768,7 @@ export function HostEditor({
                     cursorBlink={form.cursorBlink}
                     letterSpacing={form.letterSpacing}
                     lineHeight={form.lineHeight}
+                    customThemeColors={form.customThemeColors ?? undefined}
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -681,8 +779,14 @@ export function HostEditor({
                     <select
                       value={form.theme}
                       onChange={(e) => {
-                        setField("theme", e.target.value);
-                        setPreviewTerminalTheme(e.target.value);
+                        const newTheme = e.target.value;
+                        setField("theme", newTheme);
+                        setPreviewTerminalTheme(newTheme);
+                        if (newTheme === "custom" && !form.customThemeColors) {
+                          setField("customThemeColors", {
+                            ...TERMINAL_THEMES.termixDark.colors,
+                          });
+                        }
                       }}
                       className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                     >
@@ -823,6 +927,121 @@ export function HostEditor({
                     </select>
                   </div>
                 </div>
+                {form.theme === "custom" && (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("hosts.customThemeColors")}
+                      </label>
+                      <button
+                        type="button"
+                        title={t("hosts.customThemeResetTooltip")}
+                        onClick={() =>
+                          setField("customThemeColors", {
+                            ...TERMINAL_THEMES.termixDark.colors,
+                          })
+                        }
+                        className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {t("hosts.customThemeResetTooltip")}
+                      </button>
+                    </div>
+                    {(
+                      [
+                        ["background", "customThemeBackground"],
+                        ["foreground", "customThemeForeground"],
+                        ["cursor", "customThemeCursor"],
+                        ["cursorAccent", "customThemeCursorAccent"],
+                        ["selectionBackground", "customThemeSelection"],
+                      ] as const
+                    ).map(([key, labelKey]) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <label className="text-xs text-muted-foreground min-w-0 flex-1">
+                          {t(`hosts.${labelKey}`)}
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="color"
+                            value={
+                              form.customThemeColors?.[key] ??
+                              TERMINAL_THEMES.termixDark.colors[key]
+                            }
+                            onChange={(e) =>
+                              setField("customThemeColors", {
+                                ...(form.customThemeColors ??
+                                  TERMINAL_THEMES.termixDark.colors),
+                                [key]: e.target.value,
+                              })
+                            }
+                            className="h-7 w-10 cursor-pointer border border-border bg-background p-0.5"
+                          />
+                          <span className="text-[10px] font-mono text-muted-foreground w-16 tabular-nums">
+                            {form.customThemeColors?.[key] ??
+                              TERMINAL_THEMES.termixDark.colors[key]}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+                      {t("hosts.customThemeAnsiColors")}
+                    </label>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                      {(
+                        [
+                          ["black", "customThemeBlack"],
+                          ["brightBlack", "customThemeBrightBlack"],
+                          ["red", "customThemeRed"],
+                          ["brightRed", "customThemeBrightRed"],
+                          ["green", "customThemeGreen"],
+                          ["brightGreen", "customThemeBrightGreen"],
+                          ["yellow", "customThemeYellow"],
+                          ["brightYellow", "customThemeBrightYellow"],
+                          ["blue", "customThemeBlue"],
+                          ["brightBlue", "customThemeBrightBlue"],
+                          ["magenta", "customThemeMagenta"],
+                          ["brightMagenta", "customThemeBrightMagenta"],
+                          ["cyan", "customThemeCyan"],
+                          ["brightCyan", "customThemeBrightCyan"],
+                          ["white", "customThemeWhite"],
+                          ["brightWhite", "customThemeBrightWhite"],
+                        ] as const
+                      ).map(([key, labelKey]) => (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between gap-2"
+                        >
+                          <label className="text-xs text-muted-foreground min-w-0 flex-1 truncate">
+                            {t(`hosts.${labelKey}`)}
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="color"
+                              value={
+                                form.customThemeColors?.[key] ??
+                                TERMINAL_THEMES.termixDark.colors[key]
+                              }
+                              onChange={(e) =>
+                                setField("customThemeColors", {
+                                  ...(form.customThemeColors ??
+                                    TERMINAL_THEMES.termixDark.colors),
+                                  [key]: e.target.value,
+                                })
+                              }
+                              className="h-7 w-10 cursor-pointer border border-border bg-background p-0.5"
+                            />
+                            <span className="text-[10px] font-mono text-muted-foreground w-16 tabular-nums">
+                              {form.customThemeColors?.[key] ??
+                                TERMINAL_THEMES.termixDark.colors[key]}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <SettingRow
                   label={t("hosts.cursorBlinking")}
                   description={t("hosts.cursorBlinkingDesc")}
@@ -1364,7 +1583,20 @@ export function HostEditor({
                   </p>
                 )}
                 {form.serverTunnels.map((tun, i) => {
-                  const tunnelName = `${host?.id ?? "new"}-${i}-${tun.sourcePort}`;
+                  const endpointValue = (tun.endpointHost ?? "").trim();
+                  const selectedEndpointHost = findHostByTunnelEndpoint(
+                    hosts,
+                    endpointValue,
+                  );
+                  const directEndpoint =
+                    !endpointValue ||
+                    endpointValue === "127.0.0.1" ||
+                    endpointValue === "localhost";
+                  const endpointInputId = `server-tunnel-endpoint-${host?.id ?? "new"}-${i}`;
+                  const hostLabel =
+                    host?.name ||
+                    (host ? `${host.username}@${host.ip}` : "new");
+                  const tunnelName = `${host?.id ?? "new"}::${i}::${hostLabel}::${tun.sourcePort}::${endpointValue}::${tun.endpointPort}`;
                   const tunnelStatus = tunnelStatuses[tunnelName]?.status as
                     | string
                     | undefined;
@@ -1422,12 +1654,32 @@ export function HostEditor({
                                       sourceCredentialId: form.credentialId
                                         ? Number(form.credentialId)
                                         : undefined,
-                                      endpointIP: host.ip,
+                                      endpointIP: directEndpoint
+                                        ? host.ip
+                                        : (selectedEndpointHost?.ip ??
+                                          endpointValue),
                                       endpointSSHPort:
-                                        host.sshPort ?? host.port,
-                                      endpointHost: tun.endpointHost ?? "",
-                                      endpointUsername: form.username,
-                                      endpointAuthMethod: form.authType,
+                                        directEndpoint || selectedEndpointHost
+                                          ? directEndpoint
+                                            ? (host.sshPort ?? host.port)
+                                            : (selectedEndpointHost?.sshPort ??
+                                              selectedEndpointHost?.port ??
+                                              22)
+                                          : 22,
+                                      endpointHost: endpointValue,
+                                      endpointUsername: directEndpoint
+                                        ? form.username
+                                        : (selectedEndpointHost?.username ??
+                                          ""),
+                                      endpointAuthMethod:
+                                        selectedEndpointHost?.authType ??
+                                        "none",
+                                      endpointCredentialId:
+                                        selectedEndpointHost?.credentialId
+                                          ? Number(
+                                              selectedEndpointHost.credentialId,
+                                            )
+                                          : undefined,
                                       sourcePort: tun.sourcePort,
                                       endpointPort: tun.endpointPort ?? 0,
                                       bindHost: tun.bindHost ?? "127.0.0.1",
@@ -1506,8 +1758,10 @@ export function HostEditor({
                             <label className="text-[10px] font-bold text-muted-foreground">
                               {t("hosts.endpointHost")}
                             </label>
-                            <select
+                            <Input
                               className="h-7 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+                              list={endpointInputId}
+                              placeholder={t("hosts.endpointHostPlaceholder")}
                               value={tun.endpointHost ?? ""}
                               onChange={(e) => {
                                 const updated = [...form.serverTunnels];
@@ -1517,8 +1771,8 @@ export function HostEditor({
                                 };
                                 setField("serverTunnels", updated);
                               }}
-                            >
-                              <option value="">{t("hosts.sameHost")}</option>
+                            />
+                            <datalist id={endpointInputId}>
                               {hosts
                                 .filter((h) => h.enableSsh)
                                 .map((h) => (
@@ -1526,7 +1780,7 @@ export function HostEditor({
                                     {h.name || h.ip} ({h.ip})
                                   </option>
                                 ))}
-                            </select>
+                            </datalist>
                           </div>
                         )}
                         {tun.mode !== "dynamic" && (

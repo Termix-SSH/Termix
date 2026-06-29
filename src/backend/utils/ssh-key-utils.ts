@@ -225,20 +225,53 @@ export interface KeyPairValidationResult {
   error?: string;
 }
 
+const PUTTY_PRIVATE_KEY_RE = /^PuTTY-User-Key-File-(\d+):\s*(.+)$/m;
+
+export function normalizePrivateKeyText(privateKeyData: string): string {
+  return privateKeyData.trim().replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+function getUnsupportedPrivateKeyError(privateKeyData: string): string {
+  const puttyMatch = PUTTY_PRIVATE_KEY_RE.exec(privateKeyData.trim());
+  if (puttyMatch) {
+    const [, version, type] = puttyMatch;
+    return `Unsupported PuTTY PPK v${version} private key format (${type}). Convert the key to OpenSSH format with PuTTYgen, or use a PuTTY PPK v2 RSA/DSA key.`;
+  }
+
+  return "Unsupported private key format. Use an OpenSSH, PEM, or PuTTY PPK v2 RSA/DSA private key.";
+}
+
+export function preparePrivateKeyForSSH2(
+  privateKeyData: string,
+  passphrase?: string,
+): Buffer {
+  const cleanKey = normalizePrivateKeyText(privateKeyData);
+  const keyInfo = parseSSHKey(cleanKey, passphrase);
+
+  if (!keyInfo.success) {
+    throw new Error(keyInfo.error || getUnsupportedPrivateKeyError(cleanKey));
+  }
+
+  return Buffer.from(cleanKey, "utf8");
+}
+
 export function parseSSHKey(
   privateKeyData: string,
   passphrase?: string,
 ): KeyInfo {
   try {
+    const cleanKey = normalizePrivateKeyText(privateKeyData);
     let keyType = "unknown";
     let publicKey = "";
     let useSSH2 = false;
 
     if (ssh2Utils && typeof ssh2Utils.parseKey === "function") {
       try {
-        const parsedKey = ssh2Utils.parseKey(privateKeyData, passphrase);
+        const parsedKey = ssh2Utils.parseKey(cleanKey, passphrase);
 
-        if (!(parsedKey instanceof Error)) {
+        if (parsedKey instanceof Error) {
+          throw parsedKey;
+        } else {
           if (parsedKey.type) {
             keyType = parsedKey.type;
           }
@@ -273,23 +306,28 @@ export function parseSSHKey(
     }
 
     if (!useSSH2) {
-      keyType = detectKeyTypeFromContent(privateKeyData);
+      keyType = detectKeyTypeFromContent(cleanKey);
 
       publicKey = "";
     }
 
     return {
-      privateKey: privateKeyData,
+      privateKey: cleanKey,
       publicKey,
       keyType,
       success: keyType !== "unknown",
+      error:
+        keyType === "unknown"
+          ? getUnsupportedPrivateKeyError(cleanKey)
+          : undefined,
     };
   } catch (error) {
     try {
-      const fallbackKeyType = detectKeyTypeFromContent(privateKeyData);
+      const cleanKey = normalizePrivateKeyText(privateKeyData);
+      const fallbackKeyType = detectKeyTypeFromContent(cleanKey);
       if (fallbackKeyType !== "unknown") {
         return {
-          privateKey: privateKeyData,
+          privateKey: cleanKey,
           publicKey: "",
           keyType: fallbackKeyType,
           success: true,
@@ -299,13 +337,18 @@ export function parseSSHKey(
       // expected - fallback key type detection may fail
     }
 
+    const parserError = error instanceof Error ? error.message : "";
+    const isPuttyKey = PUTTY_PRIVATE_KEY_RE.test(privateKeyData.trim());
+
     return {
       privateKey: privateKeyData,
       publicKey: "",
       keyType: "unknown",
       success: false,
       error:
-        error instanceof Error ? error.message : "Unknown error parsing key",
+        isPuttyKey && /unsupported|parse|format/i.test(parserError)
+          ? getUnsupportedPrivateKeyError(privateKeyData)
+          : parserError || getUnsupportedPrivateKeyError(privateKeyData),
     };
   }
 }

@@ -12,6 +12,8 @@ import { registerFirewallRoutes } from "./firewall.js";
 import { registerUserRoutes } from "./users.js";
 import { registerHealthRoutes } from "./health.js";
 import { registerLogRoutes } from "./logs.js";
+import { registerWireGuardRoutes } from "./wireguard.js";
+import { registerTailscaleRoutes } from "./tailscale.js";
 
 /**
  * Registers every Host Metrics manager route under the `/host-metrics/managers`
@@ -58,4 +60,6 @@ export function registerManagerRoutes(
   registerUserRoutes(app, deps);
   registerHealthRoutes(app, deps);
   registerLogRoutes(app, deps);
+  registerWireGuardRoutes(app, deps);
+  registerTailscaleRoutes(app, deps);
 }

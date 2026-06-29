@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Bell,
   Clock,
+  Fingerprint,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
@@ -12,24 +14,30 @@ import {
   ScrollText,
   Server,
   Settings,
+  Usb,
   User,
   Zap,
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
+import { getAlertFirings } from "@/api/alerts-api";
 
 export type RailView =
   | "hosts"
   | "credentials"
+  | "termix-id"
   | "quick-connect"
+  | "serial"
   | ToolsTab
   | "connections"
   | "session-logs"
   | "user-profile"
-  | "admin-settings";
+  | "admin-settings"
+  | "alerts";
 
 export type HideableRailView =
   | Exclude<RailView, "user-profile" | "admin-settings">
-  | "network_graph";
+  | "network_graph"
+  | "homepage";
 
 type RailItem =
   | {
@@ -56,6 +64,12 @@ function buildRailButtons(
     },
     { kind: "separator" },
     {
+      view: "termix-id",
+      icon: <Fingerprint size={16} />,
+      title: t("nav.termixId"),
+    },
+    { kind: "separator" },
+    {
       view: "connections",
       icon: <Plug size={16} />,
       title: t("nav.connections"),
@@ -65,6 +79,12 @@ function buildRailButtons(
       view: "quick-connect",
       icon: <Zap size={16} />,
       title: t("nav.quickConnect"),
+    },
+    { kind: "separator" },
+    {
+      view: "serial",
+      icon: <Usb size={16} />,
+      title: t("nav.serial"),
     },
     { kind: "separator" },
     { view: "ssh-tools", icon: <Hammer size={16} />, title: t("nav.sshTools") },
@@ -144,6 +164,27 @@ export function AppRail({
   const [pinned, setPinned] = useState(
     () => localStorage.getItem("pinAppRail") === "true",
   );
+  const [expandOnHover, setExpandOnHover] = useState(
+    () => localStorage.getItem("expandAppRailOnHover") !== "false",
+  );
+  const [unreadAlerts, setUnreadAlerts] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = () => {
+      getAlertFirings({ acknowledged: false, limit: 50 })
+        .then((firings) => {
+          if (!cancelled) setUnreadAlerts(firings.length);
+        })
+        .catch(() => {});
+    };
+    poll();
+    const iv = setInterval(poll, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(iv);
+    };
+  }, []);
   const [hiddenTabs, setHiddenTabs] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("hiddenRailTabs");
@@ -154,10 +195,18 @@ export function AppRail({
   });
 
   useEffect(() => {
-    const handler = () =>
+    const pinHandler = () =>
       setPinned(localStorage.getItem("pinAppRail") === "true");
-    window.addEventListener("pinAppRailChanged", handler);
-    return () => window.removeEventListener("pinAppRailChanged", handler);
+    const hoverHandler = () =>
+      setExpandOnHover(
+        localStorage.getItem("expandAppRailOnHover") !== "false",
+      );
+    window.addEventListener("pinAppRailChanged", pinHandler);
+    window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    return () => {
+      window.removeEventListener("pinAppRailChanged", pinHandler);
+      window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    };
   }, []);
 
   useEffect(() => {
@@ -173,7 +222,7 @@ export function AppRail({
     return () => window.removeEventListener("hiddenRailTabsChanged", handler);
   }, []);
 
-  const railExpanded = pinned || hovered;
+  const railExpanded = pinned || (expandOnHover && hovered);
   const railButtons = buildRailButtons(splitMode, t, hiddenTabs);
 
   return (
@@ -247,6 +296,11 @@ export function AppRail({
       <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
         {[
           {
+            view: "alerts" as RailView,
+            icon: <Bell size={16} />,
+            title: t("nav.alerts"),
+          },
+          {
             view: "user-profile" as RailView,
             icon: <User size={16} />,
             title: t("nav.userProfile"),
@@ -272,10 +326,15 @@ export function AppRail({
             }`}
           >
             <span
-              className="shrink-0 flex items-center justify-center"
+              className="relative shrink-0 flex items-center justify-center"
               style={{ width: 16, height: 16 }}
             >
               {item.icon}
+              {item.view === "alerts" && unreadAlerts > 0 && (
+                <span className="absolute -top-1 -right-1 flex size-3 items-center justify-center rounded-full bg-destructive text-[8px] font-bold text-white leading-none">
+                  {unreadAlerts > 9 ? "9+" : unreadAlerts}
+                </span>
+              )}
             </span>
             <span
               className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0"}`}

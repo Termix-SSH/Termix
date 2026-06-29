@@ -29,8 +29,14 @@ import {
   attachOrCreateTmuxSession,
   waitForTmuxSession,
 } from "./tmux-helper.js";
-import { MemoryAgent, performPortKnocking } from "./terminal-auth-helpers.js";
+import {
+  applyAgentAuth,
+  MemoryAgent,
+  performPortKnocking,
+} from "./terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
+import { triggerLoginAlert } from "../utils/alert-trigger.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -49,6 +55,8 @@ interface ConnectToHostData {
     credentialId?: number;
     userId?: string;
     forceKeyboardInteractive?: boolean;
+    passwordFallbackOnly?: boolean;
+    passwordFallbackAttempted?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
     useSocks5?: boolean;
     socks5Host?: string;
@@ -774,7 +782,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         const opksshData = data as { hostId: number };
         try {
           const { startOPKSSHAuth } = await import("./opkssh-auth.js");
-          const { getRequestOrigin } =
+          const { getRequestBaseUrl } =
             await import("../utils/request-origin.js");
           const db = getDb();
           const hostRow = await db
@@ -801,7 +809,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             break;
           }
           const hostname = hostRow[0].name || hostRow[0].ip;
-          const requestOrigin = getRequestOrigin(req);
+          const requestOrigin = getRequestBaseUrl(req);
           await startOPKSSHAuth(
             userId,
             opksshData.hostId,
@@ -872,6 +880,110 @@ wss.on("connection", async (ws: WebSocket, req) => {
         handleConnectToHost(reconnectConfig).catch((error) => {
           sshLogger.error("Failed to reconnect after OPKSSH auth", error, {
             operation: "opkssh_reconnect_error",
+            userId,
+            hostId: completedData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to connect after authentication: " +
+                (error instanceof Error ? error.message : "Unknown error"),
+            }),
+          );
+        });
+        break;
+      }
+
+      case "vault_start_auth": {
+        const vaultData = data as { hostId: number };
+        try {
+          const { loadVaultProfileForHost, startVaultAuth } =
+            await import("./vault-oidc-auth.js");
+          const { getRequestBaseUrl } =
+            await import("../utils/request-origin.js");
+          const profile = await loadVaultProfileForHost(vaultData.hostId);
+          if (!profile) {
+            ws.send(
+              JSON.stringify({
+                type: "vault_error",
+                hostId: vaultData.hostId,
+                error: "No Vault signer profile configured for this host",
+              }),
+            );
+            break;
+          }
+          const requestOrigin = getRequestBaseUrl(req);
+          await startVaultAuth(
+            userId,
+            vaultData.hostId,
+            profile,
+            ws,
+            requestOrigin,
+          );
+        } catch (error) {
+          sshLogger.error("Failed to start Vault auth", error, {
+            operation: "vault_start_auth_error",
+            userId,
+            hostId: vaultData.hostId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "vault_error",
+              hostId: vaultData.hostId,
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "Failed to start Vault authentication",
+            }),
+          );
+        }
+        break;
+      }
+
+      case "vault_cancel": {
+        const cancelData = data as { hostId: number };
+        try {
+          const { cancelVaultAuthByHost } =
+            await import("./vault-oidc-auth.js");
+          cancelVaultAuthByHost(userId, cancelData.hostId);
+          resetConnectionState();
+        } catch (error) {
+          sshLogger.error("Failed to cancel Vault auth", error, {
+            operation: "vault_cancel_error",
+            userId,
+          });
+        }
+        break;
+      }
+
+      case "vault_auth_completed": {
+        const completedData = data as {
+          hostId: number;
+          cols?: number;
+          rows?: number;
+          hostConfig?: ConnectToHostData["hostConfig"];
+        };
+
+        resetConnectionState();
+
+        const reconnectConfig: ConnectToHostData = {
+          cols: completedData.cols || 80,
+          rows: completedData.rows || 24,
+          hostConfig:
+            completedData.hostConfig ||
+            ({
+              id: completedData.hostId,
+              ip: "",
+              port: 22,
+              username: "",
+              userId,
+            } as ConnectToHostData["hostConfig"]),
+        };
+
+        handleConnectToHost(reconnectConfig).catch((error) => {
+          sshLogger.error("Failed to reconnect after Vault auth", error, {
+            operation: "vault_reconnect_error",
             userId,
             hostId: completedData.hostId,
           });
@@ -993,9 +1105,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isConnecting = true;
     sshConn = new Client();
 
-    sendLog("dns", "info", `Starting address resolution of ${ip}`);
-    sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
-
     const connectionTimeout = setTimeout(() => {
       if (sshConn && isConnecting && !isConnected) {
         sshLogger.error("SSH connection timeout", undefined, {
@@ -1047,6 +1156,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
         )) as unknown as typeof resolvedHostData;
 
         if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
+
           if (
             (!hostConfig.jumpHosts || hostConfig.jumpHosts.length === 0) &&
             resolvedHostData.jumpHosts &&
@@ -1096,11 +1209,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (id && userId && !password && !key) {
       try {
         if (resolvedHostData) {
-          ip = resolvedHostData.ip || ip;
-          port = resolvedHostData.port || port;
-          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username: resolvedHostData.username || username,
+            username,
             password: resolvedHostData.password,
             key: resolvedHostData.key,
             keyPassword: keyPassword || resolvedHostData.keyPassword,
@@ -1124,11 +1234,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else if (credentialId && id && userId) {
       try {
         if (resolvedHostData) {
-          ip = resolvedHostData.ip || ip;
-          port = resolvedHostData.port || port;
-          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username: resolvedHostData.username || username,
+            username,
             password: resolvedHostData.password,
             key: resolvedHostData.key,
             // Preserve user-supplied keyPassword (e.g. from passphrase dialog) over the empty DB value
@@ -1147,6 +1254,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
         });
       }
     }
+
+    if (hostConfig.passwordFallbackOnly && resolvedCredentials.password) {
+      resolvedCredentials = {
+        ...resolvedCredentials,
+        key: undefined,
+        keyPassword: undefined,
+        keyType: undefined,
+        certPublicKey: undefined,
+        authType: "password",
+      };
+    }
+
+    sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
@@ -1635,6 +1756,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
 
           if (id && hostConfig.userId) {
+            triggerLoginAlert(
+              id,
+              hostConfig.userId,
+              username,
+              req.socket.remoteAddress ?? "unknown",
+            ).catch(() => {});
+          }
+
+          if (id && hostConfig.userId) {
             (async () => {
               try {
                 const hostResults = await SimpleDBOps.select(
@@ -1702,6 +1832,72 @@ wss.on("connection", async (ws: WebSocket, req) => {
         keyboardInteractiveResponded,
       });
 
+      const isAuthFailure =
+        err.message.includes("All configured authentication methods failed") ||
+        err.message.includes("authentication failed") ||
+        err.message.includes("Authentication failed") ||
+        err.message.includes("Permission denied");
+
+      if (
+        resolvedCredentials.authType === "key" &&
+        resolvedCredentials.password &&
+        isAuthFailure &&
+        !hostConfig.passwordFallbackAttempted
+      ) {
+        sendLog(
+          "auth",
+          "warning",
+          "SSH key authentication failed; retrying with stored password",
+        );
+        sshLogger.warn("Retrying SSH connection with stored password", {
+          operation: "terminal_key_password_fallback",
+          hostId: id,
+          userId,
+        });
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+        sshConn = null;
+        sshStream = null;
+        handleConnectToHost({
+          ...data,
+          hostConfig: {
+            ...hostConfig,
+            authType: "password",
+            password: resolvedCredentials.password,
+            key: undefined,
+            keyPassword: undefined,
+            keyType: undefined,
+            passwordFallbackOnly: true,
+            passwordFallbackAttempted: true,
+          },
+        }).catch((fallbackError) => {
+          const fallbackMessage =
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : "Unknown error";
+          sshLogger.error(
+            "Password fallback connection failed",
+            fallbackError,
+            {
+              operation: "terminal_key_password_fallback_error",
+              hostId: id,
+              userId,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Failed to retry with stored password: " + fallbackMessage,
+            }),
+          );
+        });
+        return;
+      }
+
       if (
         resolvedCredentials.authType === "opkssh" &&
         err.message.includes("All configured authentication methods failed")
@@ -1745,6 +1941,60 @@ wss.on("connection", async (ws: WebSocket, req) => {
             hostId: id,
             message:
               "OPKSSH authentication failed or expired. Please authenticate again.",
+          }),
+        );
+        return;
+      }
+
+      if (
+        resolvedCredentials.authType === "vault" &&
+        err.message.includes("All configured authentication methods failed")
+      ) {
+        sshLogger.warn("Vault certificate authentication failed", {
+          operation: "vault_auth_failed",
+          hostId: id,
+          userId,
+          error: err.message,
+        });
+
+        (async () => {
+          try {
+            const profileId = (
+              resolvedHostData?.vaultProfile as { id?: number } | undefined
+            )?.id;
+            if (profileId) {
+              const { deleteVaultCert } =
+                await import("./vault-signer-auth.js");
+              await deleteVaultCert(userId, profileId);
+            }
+          } catch (invalidateError) {
+            sshLogger.error("Failed to invalidate Vault certificate", {
+              operation: "vault_cert_invalidation_error",
+              userId,
+              hostId: id,
+              error: invalidateError,
+            });
+          }
+        })();
+
+        if (currentSessionId) {
+          sessionManager.destroySession(currentSessionId);
+          currentSessionId = null;
+        }
+        cleanupAuthState(connectionTimeout);
+
+        sendLog(
+          "auth",
+          "error",
+          "Vault certificate authentication failed. Please authenticate again.",
+        );
+
+        ws.send(
+          JSON.stringify({
+            type: "vault_auth_required",
+            hostId: id,
+            message:
+              "Vault authentication failed or expired. Please authenticate again.",
           }),
         );
         return;
@@ -2127,19 +2377,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
     ) {
       sendLog("auth", "info", "Using SSH key authentication");
       try {
-        if (
-          !resolvedCredentials.key.includes("-----BEGIN") ||
-          !resolvedCredentials.key.includes("-----END")
-        ) {
-          throw new Error("Invalid private key format");
-        }
-
-        const cleanKey = resolvedCredentials.key
-          .trim()
-          .replace(/\r\n/g, "\n")
-          .replace(/\r/g, "\n");
-
-        connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
+        connectConfig.privateKey = preparePrivateKeyForSSH2(
+          resolvedCredentials.key,
+          resolvedCredentials.keyPassword,
+        );
 
         if (resolvedCredentials.keyPassword) {
           connectConfig.passphrase = resolvedCredentials.keyPassword;
@@ -2188,11 +2429,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
         }
       } catch (keyError) {
-        sshLogger.error("SSH key format error: " + keyError.message);
+        const message =
+          keyError instanceof Error
+            ? keyError.message
+            : "Invalid private key format";
+        sshLogger.error("SSH key format error: " + message);
         ws.send(
           JSON.stringify({
             type: "error",
-            message: "SSH key format error: Invalid private key format",
+            message: `SSH key format error: ${message}`,
           }),
         );
         return;
@@ -2254,6 +2499,76 @@ wss.on("connection", async (ws: WebSocket, req) => {
         );
         return;
       }
+    } else if (resolvedCredentials.authType === "vault") {
+      sendLog("auth", "info", "Using Vault SSH signer authentication");
+      try {
+        const vaultProfile = resolvedHostData?.vaultProfile as
+          | { id: number }
+          | undefined;
+        if (!vaultProfile?.id) {
+          throw new Error("Host has no Vault signer profile configured");
+        }
+
+        const { getVaultCert } = await import("./vault-signer-auth.js");
+        const cert = await getVaultCert(userId, vaultProfile.id);
+
+        if (!cert) {
+          sendLog(
+            "auth",
+            "info",
+            "No valid Vault certificate found, requesting authentication",
+          );
+          ws.send(
+            JSON.stringify({
+              type: "vault_auth_required",
+              hostId: id,
+            }),
+          );
+          return;
+        }
+
+        sendLog("auth", "info", "Using cached Vault-signed certificate");
+
+        const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
+        await setupOPKSSHCertAuth(
+          connectConfig,
+          sshConn,
+          { privateKey: cert.privateKey, sshCert: cert.sshCert },
+          username,
+        );
+      } catch (vaultError) {
+        sshLogger.error("Vault SSH signer authentication error", vaultError, {
+          operation: "vault_auth_error",
+          userId,
+          hostId: id,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message:
+              "Vault SSH signer authentication failed: " +
+              (vaultError instanceof Error
+                ? vaultError.message
+                : "Unknown error"),
+          }),
+        );
+        return;
+      }
+    } else if (resolvedCredentials.authType === "agent") {
+      sendLog("auth", "info", "Using SSH agent authentication");
+      const result = await applyAgentAuth(
+        connectConfig as Record<string, unknown>,
+        hostConfig.terminalConfig as Record<string, unknown> | undefined,
+      );
+      if ("error" in result) {
+        ws.send(JSON.stringify({ type: "error", message: result.error }));
+        return;
+      }
+      sendLog(
+        "auth",
+        "info",
+        `SSH agent configured (socket: ${result.socketPath})`,
+      );
     } else {
       sendLog("auth", "info", "Using keyboard-interactive authentication");
       sshLogger.error("No valid authentication method provided");
@@ -2266,25 +2581,34 @@ wss.on("connection", async (ws: WebSocket, req) => {
       return;
     }
 
-    if (
-      hostConfig.terminalConfig?.agentForwarding &&
-      connectConfig.privateKey
-    ) {
-      try {
-        const parsed = ssh2Utils.parseKey(
-          connectConfig.privateKey as Buffer,
-          connectConfig.passphrase as string | undefined,
-        );
-        if (parsed && !(parsed instanceof Error)) {
-          connectConfig.agent = new MemoryAgent(parsed);
-          connectConfig.agentForward = true;
-          sendLog("auth", "info", "SSH agent forwarding enabled");
+    if (hostConfig.terminalConfig?.agentForwarding) {
+      if (connectConfig.privateKey) {
+        try {
+          const parsed = ssh2Utils.parseKey(
+            connectConfig.privateKey as Buffer,
+            connectConfig.passphrase as string | undefined,
+          );
+          if (parsed && !(parsed instanceof Error)) {
+            connectConfig.agent = new MemoryAgent(parsed);
+            connectConfig.agentForward = true;
+            sendLog("auth", "info", "SSH agent forwarding enabled");
+          }
+        } catch {
+          sshLogger.warn("Failed to set up agent forwarding", {
+            operation: "agent_forward_setup",
+            hostId: id,
+          });
         }
-      } catch {
-        sshLogger.warn("Failed to set up agent forwarding", {
-          operation: "agent_forward_setup",
-          hostId: id,
-        });
+      } else if (
+        resolvedCredentials.authType === "agent" &&
+        connectConfig.agent
+      ) {
+        connectConfig.agentForward = true;
+        sendLog(
+          "auth",
+          "info",
+          "SSH agent forwarding enabled (external agent)",
+        );
       }
     }
 

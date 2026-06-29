@@ -102,7 +102,14 @@ export interface Host {
   folder: string;
   tags: string[];
   pin: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "agent";
   useWarpgate?: boolean;
   password?: string;
   key?: string;
@@ -161,6 +168,7 @@ export interface Host {
   security?: string;
   ignoreCert?: boolean;
   guacamoleConfig?: string | Record<string, unknown>;
+  dockerConfig?: Record<string, unknown> | null;
 
   enableSsh?: boolean;
   enableRdp?: boolean;
@@ -221,7 +229,14 @@ export interface HostData {
   folder?: string;
   tags?: string[];
   pin?: boolean;
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "agent";
   useWarpgate?: boolean;
   password?: string;
   key?: File | null;
@@ -530,6 +545,7 @@ export interface FileItem {
   sshSessionId?: string;
   size?: number;
   modified?: string;
+  modifiedTimestamp?: number;
   permissions?: string;
   owner?: string;
   group?: string;
@@ -622,6 +638,30 @@ export interface TerminalConfig {
   allowLegacyAlgorithms?: boolean;
   linkClickBehavior?: "confirm" | "direct";
   useSSHTitle?: boolean;
+  agentSocketPath?: string;
+  customThemeColors?: {
+    background: string;
+    foreground: string;
+    cursor: string;
+    cursorAccent: string;
+    selectionBackground: string;
+    black: string;
+    red: string;
+    green: string;
+    yellow: string;
+    blue: string;
+    magenta: string;
+    cyan: string;
+    white: string;
+    brightBlack: string;
+    brightRed: string;
+    brightGreen: string;
+    brightYellow: string;
+    brightBlue: string;
+    brightMagenta: string;
+    brightCyan: string;
+    brightWhite: string;
+  };
 }
 
 // ============================================================================
@@ -656,6 +696,7 @@ export interface TabContextTab {
 export interface TerminalRefHandle {
   disconnect?: () => void;
   reconnect?: () => void;
+  isConnected?: () => boolean;
   fit?: () => void;
   sendInput?: (data: string) => void;
   notifyResize?: () => void;
@@ -1045,6 +1086,7 @@ export interface DockerLogOptions {
 export interface DockerValidation {
   available: boolean;
   version?: string;
+  runtime?: "docker" | "podman";
   error?: string;
   code?: string;
 }

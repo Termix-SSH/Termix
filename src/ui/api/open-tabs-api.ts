@@ -89,6 +89,7 @@ export interface UserPreferences {
   showHostTags?: boolean | null;
   hostTrayOnClick?: boolean | null;
   pinAppRail?: boolean | null;
+  expandAppRailOnHover?: boolean | null;
   foldersCollapsed?: boolean | null;
   confirmSnippetExecution?: boolean | null;
   disableUpdateCheck?: boolean | null;

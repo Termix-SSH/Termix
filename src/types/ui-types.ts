@@ -10,9 +10,18 @@ export type Host = {
   ram: number | null;
   lastAccess: string;
   tags?: string[];
-  authType: "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
+  authType:
+    | "password"
+    | "key"
+    | "credential"
+    | "none"
+    | "opkssh"
+    | "tailscale"
+    | "vault"
+    | "agent";
   useWarpgate?: boolean;
   credentialId?: string;
+  vaultProfileId?: string;
   overrideCredentialUsername?: boolean;
   password?: string;
   hasPassword?: boolean;
@@ -56,6 +65,7 @@ export type Host = {
     environmentVariables: { key: string; value: string }[];
     startupSnippetId?: number | null;
     linkClickBehavior?: "confirm" | "direct";
+    agentSocketPath?: string;
   };
 
   useSocks5?: boolean;
@@ -95,6 +105,9 @@ export type Host = {
   defaultPath?: string;
 
   enableDocker: boolean;
+  dockerConfig?: {
+    runtime?: "docker" | "podman";
+  } | null;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   proxmoxConfig?: {
@@ -150,11 +163,32 @@ export type Credential = {
   username: string;
   type: "password" | "key";
   value?: string;
+  password?: string;
   publicKey?: string;
   passphrase?: string;
   description?: string;
   folder?: string;
   tags?: string[];
+};
+
+// HashiCorp Vault SSH signer profile — shareable connection settings only
+// (no secrets). Users authenticate to Vault via OIDC at connect time.
+export type VaultProfile = {
+  id: string;
+  name: string;
+  description?: string;
+  folder?: string;
+  tags?: string[];
+  vaultAddr: string;
+  vaultNamespace?: string;
+  oidcMount?: string;
+  oidcRole?: string;
+  sshMount?: string;
+  sshRole: string;
+  validPrincipals?: string;
+  keyType?: string;
+  shared: boolean;
+  owned: boolean;
 };
 
 export type HostFolder = {
@@ -179,7 +213,17 @@ export type TabType =
   | "docker"
   | "tunnel"
   | "network_graph"
-  | "tmux_monitor"; // --- tmux-monitor ---
+  | "tmux_monitor" // --- tmux-monitor ---
+  | "serial"
+  | "homepage";
+
+export type SerialConfig = {
+  path: string;
+  baudRate: number;
+  dataBits: 5 | 6 | 7 | 8;
+  stopBits: 1 | 2;
+  parity: "none" | "even" | "odd";
+};
 
 export type TunnelStatusValue =
   | "CONNECTED"
@@ -213,7 +257,10 @@ export type Tab = {
   openedAt: number;
   restoredSessionId?: string | null;
   initialFilePath?: string;
+  serialConfig?: SerialConfig;
   terminalRef?: import("react").RefObject<{
+    disconnect?: () => void;
+    isConnected?: () => boolean;
     sendInput?: (data: string) => void;
     reconnect?: () => void;
     fit?: () => void;
@@ -247,7 +294,8 @@ export type DashboardCardId =
   | "host_status"
   | "recent_activity"
   | "network_graph"
-  | "service_links";
+  | "service_links"
+  | "homepage_preview";
 
 export type DashboardCardConfig = {
   id: DashboardCardId;

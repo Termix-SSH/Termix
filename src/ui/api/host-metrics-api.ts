@@ -1,6 +1,43 @@
 import { handleApiError, statsApi } from "@/main-axios";
 import type { HostMetricsLayout } from "@/types/host-metrics";
 
+export interface MetricsHistoryRow {
+  ts: string;
+  cpu_percent: number | null;
+  mem_percent: number | null;
+  disk_percent: number | null;
+  net_rx_bytes: number | null;
+  net_tx_bytes: number | null;
+}
+
+export interface MetricsHistoryResponse {
+  rows: MetricsHistoryRow[];
+  fromTs: string;
+  toTs: string;
+}
+
+export async function getMetricsHistory(
+  hostId: number,
+  opts: { range?: string; from?: string; to?: string },
+): Promise<MetricsHistoryResponse> {
+  const res = await statsApi.get(`/metrics/history/${hostId}`, {
+    params: opts,
+  });
+  return res.data as MetricsHistoryResponse;
+}
+
+export async function getMetricsHistoryRetention(): Promise<number> {
+  const res = await statsApi.get("/global-settings/history");
+  return (res.data as { metricsHistoryRetentionDays: number })
+    .metricsHistoryRetentionDays;
+}
+
+export async function saveMetricsHistoryRetention(days: number): Promise<void> {
+  await statsApi.post("/global-settings/history", {
+    metricsHistoryRetentionDays: days,
+  });
+}
+
 /**
  * Host Metrics layout persistence (server-synced per user/host) + the manager
  * card endpoints. All routes live under the `/host-metrics/*` prefix on the

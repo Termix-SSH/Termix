@@ -7,6 +7,7 @@ type TableName =
   | "users"
   | "ssh_data"
   | "ssh_credentials"
+  | "termix_identity_ca"
   | "recent_activity"
   | "socks5_proxy_presets";
 

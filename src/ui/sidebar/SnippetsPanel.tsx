@@ -1199,6 +1199,101 @@ function ExecutionResultDialog({
   );
 }
 
+function VirtualFolderGroup({
+  folderName,
+  snippets: folderSnippets,
+  selectedTabIds,
+  terminalTabs,
+  activeTabId,
+  onDelete,
+  onEdit,
+  onShare,
+  onConfirmRun,
+  onDirectExecute,
+  draggedSnippet,
+  dropTarget,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDrop,
+  availableHosts,
+  t,
+  defaultOpen,
+}: {
+  folderName: string;
+  snippets: Snippet[];
+  selectedTabIds: Set<string>;
+  terminalTabs: Tab[];
+  activeTabId: string;
+  onDelete: (id: number) => void;
+  onEdit: (snippet: Snippet) => void;
+  onShare: (snippet: Snippet) => void;
+  onConfirmRun: (snippet: Snippet, execute: () => void) => void;
+  onDirectExecute: (snippet: Snippet) => void;
+  draggedSnippet: Snippet | null;
+  dropTarget: { id: number; position: "above" | "below" } | null;
+  onDragStart: (snippet: Snippet) => void;
+  onDragEnd: () => void;
+  onDragOver: (e: React.DragEvent, id: number) => void;
+  onDrop: (folder: string | null) => void;
+  availableHosts: SSHHost[];
+  t: (key: string, opts?: Record<string, unknown>) => string;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 w-full text-left"
+      >
+        <ChevronDown
+          className={`size-3 text-muted-foreground shrink-0 transition-transform ${open ? "" : "-rotate-90"}`}
+        />
+        <Folder className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="text-xs font-semibold flex-1 truncate text-muted-foreground">
+          {folderName}
+        </span>
+        <span className="text-xs text-muted-foreground shrink-0">
+          {folderSnippets.length}
+        </span>
+      </button>
+      {open && (
+        <div
+          className="flex flex-col gap-2 ml-1"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop(folderName)}
+        >
+          {folderSnippets.map((snippet) => (
+            <SnippetCard
+              key={snippet.id}
+              snippet={snippet}
+              selectedTabIds={selectedTabIds}
+              terminalTabs={terminalTabs}
+              activeTabId={activeTabId}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              onShare={onShare}
+              onConfirmRun={onConfirmRun}
+              onDirectExecute={onDirectExecute}
+              onDragStart={() => onDragStart(snippet)}
+              onDragEnd={onDragEnd}
+              onDragOver={(e) => onDragOver(e, snippet.id)}
+              dropIndicator={
+                dropTarget?.id === snippet.id ? dropTarget.position : null
+              }
+              isDragging={draggedSnippet?.id === snippet.id}
+              availableHosts={availableHosts}
+              t={t}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SnippetsPanel({
   terminalTabs,
   activeTabId,
@@ -1612,6 +1707,15 @@ export function SnippetsPanel({
 
   const uncategorizedSnippets = filtered.filter((s) => s.folder === null);
 
+  const ownedFolderNames = new Set(folders.map((f) => f.name));
+  const virtualFolderNames = Array.from(
+    new Set(
+      filtered
+        .filter((s) => s.folder !== null && !ownedFolderNames.has(s.folder!))
+        .map((s) => s.folder!),
+    ),
+  ).sort();
+
   return (
     <>
       <div className="flex flex-col gap-3 p-3">
@@ -1899,6 +2003,36 @@ export function SnippetsPanel({
                   </div>
                 )}
               </div>
+            );
+          })}
+          {virtualFolderNames.map((folderName) => {
+            const folderSnippets = filtered.filter(
+              (s) => s.folder === folderName,
+            );
+            if (folderSnippets.length === 0) return null;
+            return (
+              <VirtualFolderGroup
+                key={`virtual-${folderName}`}
+                folderName={folderName}
+                snippets={folderSnippets}
+                selectedTabIds={selectedTabIds}
+                terminalTabs={terminalTabs}
+                activeTabId={activeTabId}
+                onDelete={handleDeleteSnippet}
+                onEdit={handleEditSnippet}
+                onShare={setShareSnippet}
+                onConfirmRun={handleConfirmRun}
+                onDirectExecute={handleDirectExecute}
+                draggedSnippet={draggedSnippet}
+                dropTarget={dropTarget}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                availableHosts={availableHosts}
+                t={t}
+                defaultOpen={!getFoldersCollapsed()}
+              />
             );
           })}
         </div>

@@ -33,6 +33,7 @@ import {
 import { registerFileContentRoutes } from "./file-manager-content-routes.js";
 import { createConnectionLog } from "./file-manager-log.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import {
   ChannelOpenSerializer,
   execChannel,
@@ -44,6 +45,7 @@ import { registerFileListingRoutes } from "./file-manager-list-routes.js";
 import { registerFileOperationRoutes } from "./file-manager-operation-routes.js";
 import { registerFileDownloadRoutes } from "./file-manager-download-routes.js";
 import { registerFileActionRoutes } from "./file-manager-action-routes.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 
 const app = express();
 
@@ -222,6 +224,14 @@ async function buildDedicatedTransferConnectConfig(
       token,
       username,
     );
+  } else if (authType === "agent") {
+    const result = await applyAgentAuth(
+      config,
+      host.terminalConfig as unknown as Record<string, unknown> | undefined,
+    );
+    if ("error" in result) {
+      throw new Error(result.error);
+    }
   } else if (authType !== "none" && authType !== "tailscale") {
     throw new Error(`Unsupported auth type for transfer: ${authType}`);
   }
@@ -727,6 +737,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedIp = ip;
   let resolvedPort = port;
   let resolvedUsername = username;
+  let resolvedTerminalConfig: Record<string, unknown> | undefined;
   let resolvedJumpHosts = jumpHosts;
   let resolvedScpLegacy = false;
   let resolvedUseSocks5 = useSocks5;
@@ -750,6 +761,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
+        resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
+          | Record<string, unknown>
+          | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
@@ -806,6 +820,9 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
+        resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
+          | Record<string, unknown>
+          | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
@@ -929,19 +946,10 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     resolvedCredentials.sshKey.trim()
   ) {
     try {
-      if (
-        !resolvedCredentials.sshKey.includes("-----BEGIN") ||
-        !resolvedCredentials.sshKey.includes("-----END")
-      ) {
-        throw new Error("Invalid private key format");
-      }
-
-      const cleanKey = resolvedCredentials.sshKey
-        .trim()
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-
-      config.privateKey = Buffer.from(cleanKey, "utf8");
+      config.privateKey = preparePrivateKeyForSSH2(
+        resolvedCredentials.sshKey,
+        resolvedCredentials.keyPassword,
+      );
 
       if (resolvedCredentials.keyPassword)
         config.passphrase = resolvedCredentials.keyPassword;
@@ -1044,6 +1052,21 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         connectionLogs,
       });
     }
+  } else if (resolvedCredentials.authType === "agent") {
+    const result = await applyAgentAuth(config, resolvedTerminalConfig);
+    if ("error" in result) {
+      connectionLogs.push(
+        createConnectionLog("error", "sftp_auth", result.error),
+      );
+      return res.status(400).json({ error: result.error, connectionLogs });
+    }
+    connectionLogs.push(
+      createConnectionLog(
+        "info",
+        "sftp_auth",
+        "Using SSH agent authentication",
+      ),
+    );
   } else if (
     resolvedCredentials.authType === "none" ||
     resolvedCredentials.authType === "tailscale" ||

@@ -29,7 +29,18 @@ export function getStatusClasses(
   online: boolean,
   scheme: StatusColorScheme,
   variant: "dot" | "stripe" | "badge",
+  loading = false,
 ): string {
+  if (loading) {
+    if (scheme === "status") {
+      if (variant === "dot") return "bg-yellow-400 animate-pulse";
+      if (variant === "stripe") return "bg-yellow-400/40 animate-pulse";
+      return "border-yellow-400/40 text-yellow-400 bg-yellow-400/10 animate-pulse";
+    }
+    if (variant === "dot") return "bg-muted-foreground/40 animate-pulse";
+    if (variant === "stripe") return "bg-muted-foreground/20 animate-pulse";
+    return "border-border/50 text-muted-foreground/50 bg-muted/20 animate-pulse";
+  }
   if (scheme === "status") {
     if (variant === "dot") return online ? "bg-emerald-500" : "bg-red-500";
     if (variant === "stripe")

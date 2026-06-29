@@ -1507,4 +1507,269 @@ export function registerFileContentRoutes(
       req.pipe(bb);
     },
   );
+
+  /**
+   * @openapi
+   * /ssh/file_manager/ssh/uploadFileChunk:
+   *   post:
+   *     summary: Upload a single chunk of a large file
+   *     description: Receives one chunk of a large file upload via multipart form data and either creates a new remote file (chunkIndex=0) or appends to the existing file (chunkIndex>0). Used by the client to upload files larger than ~2GB that would otherwise hit browser-side ArrayBuffer limits.
+   *     tags:
+   *       - File Manager
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - sessionId
+   *               - path
+   *               - fileName
+   *               - chunkIndex
+   *               - totalChunks
+   *               - totalSize
+   *               - chunk
+   *             properties:
+   *               sessionId:
+   *                 type: string
+   *               path:
+   *                 type: string
+   *               fileName:
+   *                 type: string
+   *               chunkIndex:
+   *                 type: integer
+   *               totalChunks:
+   *                 type: integer
+   *               totalSize:
+   *                 type: integer
+   *               chunk:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: Chunk accepted. When chunkIndex === totalChunks - 1 the full file is complete.
+   *       400:
+   *         description: Missing required parameters, invalid chunk metadata, or SSH connection not established.
+   *       403:
+   *         description: Session access denied.
+   *       500:
+   *         description: Failed to write chunk to remote filesystem.
+   */
+  app.post(
+    "/ssh/file_manager/ssh/uploadFileChunk",
+    (req: Request, res: Response) => {
+      const userId = (req as AuthenticatedRequest).userId;
+
+      const contentType = req.headers["content-type"] || "";
+      if (!contentType.includes("multipart/form-data")) {
+        return res
+          .status(400)
+          .json({ error: "Expected multipart/form-data request" });
+      }
+
+      let sessionId: string | undefined;
+      let remotePath: string | undefined;
+      let fileName: string | undefined;
+      let chunkIndex = -1;
+      let totalChunks = 0;
+      let totalSize = 0;
+      let resolved = false;
+      let chunkStartTime = Date.now();
+
+      const bb = Busboy({
+        headers: req.headers,
+        limits: {
+          fileSize: 32 * 1024 * 1024,
+        },
+      });
+
+      bb.on("field", (name: string, value: string) => {
+        if (name === "sessionId") sessionId = value;
+        else if (name === "path") remotePath = value;
+        else if (name === "fileName") fileName = value;
+        else if (name === "chunkIndex") {
+          const n = Number.parseInt(value, 10);
+          if (Number.isFinite(n) && n >= 0) chunkIndex = n;
+        } else if (name === "totalChunks") {
+          const n = Number.parseInt(value, 10);
+          if (Number.isFinite(n) && n > 0) totalChunks = n;
+        } else if (name === "totalSize") {
+          const n = Number.parseInt(value, 10);
+          if (Number.isFinite(n) && n >= 0) totalSize = n;
+        }
+      });
+
+      bb.on(
+        "file",
+        (
+          fieldname: string,
+          fileStream: NodeJS.ReadableStream,
+          _info: { filename: string; encoding: string; mimeType: string },
+        ) => {
+          if (
+            !sessionId ||
+            !remotePath ||
+            !fileName ||
+            chunkIndex < 0 ||
+            totalChunks <= 0 ||
+            chunkIndex >= totalChunks
+          ) {
+            fileStream.resume();
+            if (!resolved) {
+              resolved = true;
+              res.status(400).json({
+                error:
+                  "Missing or invalid chunk metadata (sessionId, path, fileName, chunkIndex, totalChunks required)",
+              });
+            }
+            return;
+          }
+
+          const sshConn = sshSessions[sessionId];
+          if (!sshConn?.isConnected) {
+            fileStream.resume();
+            if (!resolved) {
+              resolved = true;
+              res.status(400).json({ error: "SSH connection not established" });
+            }
+            return;
+          }
+
+          if (!verifySessionOwnership(sshConn, userId)) {
+            fileStream.resume();
+            if (!resolved) {
+              resolved = true;
+              res.status(403).json({ error: "Session access denied" });
+            }
+            return;
+          }
+
+          sshConn.lastActive = Date.now();
+          chunkStartTime = Date.now();
+
+          const fullPath = remotePath.endsWith("/")
+            ? remotePath + fileName
+            : remotePath + "/" + fileName;
+
+          const flags = chunkIndex === 0 ? "w" : "a";
+
+          fileLogger.info("Chunk upload started", {
+            operation: "file_upload_chunk_start",
+            sessionId,
+            userId,
+            path: fullPath,
+            chunkIndex,
+            totalChunks,
+            totalSize,
+          });
+
+          getSessionSftp(sshConn)
+            .then((sftp) => {
+              const writeStream = sftp.createWriteStream(fullPath, {
+                flags,
+              });
+
+              let chunkBytes = 0;
+
+              fileStream.on("data", (data: Buffer) => {
+                chunkBytes += data.length;
+              });
+
+              writeStream.on("error", (err) => {
+                fileLogger.error(
+                  "SFTP write stream error during chunk upload:",
+                  err,
+                );
+                fileStream.resume();
+                if (!resolved) {
+                  resolved = true;
+                  res
+                    .status(500)
+                    .json({ error: `Chunk upload failed: ${err.message}` });
+                }
+              });
+
+              writeStream.on("finish", () => {
+                if (resolved) return;
+                resolved = true;
+                const isFinalChunk = chunkIndex === totalChunks - 1;
+                fileLogger.success(
+                  isFinalChunk
+                    ? "Chunked file upload completed"
+                    : "Chunk upload completed",
+                  {
+                    operation: isFinalChunk
+                      ? "file_upload_chunked_complete"
+                      : "file_upload_chunk_complete",
+                    sessionId,
+                    userId,
+                    path: fullPath,
+                    chunkIndex,
+                    totalChunks,
+                    chunkBytes,
+                    totalSize,
+                    duration: Date.now() - chunkStartTime,
+                  },
+                );
+                res.json({
+                  message: isFinalChunk
+                    ? "File uploaded successfully"
+                    : "Chunk accepted",
+                  path: fullPath,
+                  chunkIndex,
+                  totalChunks,
+                  chunkBytes,
+                  complete: isFinalChunk,
+                  toast: isFinalChunk
+                    ? {
+                        type: "success",
+                        message: `File uploaded: ${fullPath}`,
+                      }
+                    : undefined,
+                });
+              });
+
+              fileStream.on("error", (err) => {
+                fileLogger.error(
+                  "File read stream error during chunk upload:",
+                  err,
+                );
+                writeStream.destroy();
+                if (!resolved) {
+                  resolved = true;
+                  res.status(500).json({
+                    error: `Chunk upload stream error: ${err.message}`,
+                  });
+                }
+              });
+
+              (fileStream as NodeJS.ReadableStream).pipe(
+                writeStream as unknown as NodeJS.WritableStream,
+              );
+            })
+            .catch((err: Error) => {
+              fileStream.resume();
+              fileLogger.error("SFTP session error during chunk upload:", err);
+              if (!resolved) {
+                resolved = true;
+                res.status(500).json({ error: `SFTP error: ${err.message}` });
+              }
+            });
+        },
+      );
+
+      bb.on("error", (err: Error) => {
+        fileLogger.error("Busboy parse error during chunk upload:", err);
+        if (!resolved) {
+          resolved = true;
+          res
+            .status(500)
+            .json({ error: `Chunk upload parse error: ${err.message}` });
+        }
+      });
+
+      req.pipe(bb);
+    },
+  );
 }

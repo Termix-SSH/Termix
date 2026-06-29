@@ -79,6 +79,69 @@ const permissionManager = PermissionManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
+type ShareCredentialExport = {
+  alias: string;
+  name: string;
+  authType: "password" | "key";
+  username: string | null;
+  description: string | null;
+  folder: string | null;
+  tags: string[];
+  keyType: string | null;
+};
+
+function parseJsonField(value: unknown, fallback: unknown) {
+  if (!value || typeof value !== "string") return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function splitTags(value: unknown): string[] {
+  if (Array.isArray(value))
+    return value.filter((tag) => typeof tag === "string");
+  if (typeof value !== "string") return [];
+  return value.split(",").filter(Boolean);
+}
+
+function uniqueAlias(base: string, used: Set<string>): string {
+  const normalized =
+    base
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "credential";
+  let alias = normalized;
+  let suffix = 2;
+  while (used.has(alias)) {
+    alias = `${normalized}-${suffix++}`;
+  }
+  used.add(alias);
+  return alias;
+}
+
+function safeCredentialExport(
+  credential: Record<string, unknown>,
+  alias: string,
+): ShareCredentialExport {
+  return {
+    alias,
+    name: String(credential.name || alias),
+    authType: credential.authType === "key" ? "key" : "password",
+    username:
+      typeof credential.username === "string" ? credential.username : null,
+    description:
+      typeof credential.description === "string"
+        ? credential.description
+        : null,
+    folder: typeof credential.folder === "string" ? credential.folder : null,
+    tags: splitTags(credential.tags),
+    keyType: typeof credential.keyType === "string" ? credential.keyType : null,
+  };
+}
+
 registerHostInternalRoutes(router);
 
 /**
@@ -146,6 +209,7 @@ router.post(
       authType,
       useWarpgate,
       credentialId,
+      vaultProfileId,
       key,
       keyPassword,
       keyType,
@@ -200,6 +264,8 @@ router.post(
       rdpDomain,
       rdpSecurity,
       rdpIgnoreCert,
+      vncAuthType,
+      vncCredentialId,
       vncPassword,
       vncUser,
       telnetUser,
@@ -248,6 +314,7 @@ router.post(
       authType: effectiveAuthType,
       useWarpgate: useWarpgate ? 1 : 0,
       credentialId: credentialId || null,
+      vaultProfileId: vaultProfileId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
@@ -322,6 +389,11 @@ router.post(
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
       rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncAuthType: enableVnc ? vncAuthType || null : null,
+      vncCredentialId:
+        enableVnc && vncAuthType === "credential" && vncCredentialId
+          ? vncCredentialId
+          : null,
       vncUser: vncUser || null,
       telnetUser: telnetUser || null,
     };
@@ -339,19 +411,6 @@ router.post(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
-          sshLogger.warn("Invalid SSH key format provided", {
-            operation: "host_create",
-            userId,
-            name,
-            ip,
-            port,
-          });
-          return res.status(400).json({
-            error: "Invalid SSH key format. Key must be in PEM format.",
-          });
-        }
-
         const keyValidation = parseSSHKey(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
@@ -375,6 +434,11 @@ router.post(
       sshDataObj.keyPassword = keyPassword || null;
       sshDataObj.keyType = keyType;
       sshDataObj.password = null;
+    } else if (effectiveAuthType === "agent") {
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
@@ -721,6 +785,7 @@ router.put(
       authType,
       useWarpgate,
       credentialId,
+      vaultProfileId,
       key,
       keyPassword,
       keyType,
@@ -775,6 +840,8 @@ router.put(
       rdpDomain,
       rdpSecurity,
       rdpIgnoreCert,
+      vncAuthType,
+      vncCredentialId,
       vncPassword,
       vncUser,
       telnetUser,
@@ -820,6 +887,7 @@ router.put(
       authType: effectiveAuthType,
       useWarpgate: useWarpgate ? 1 : 0,
       credentialId: credentialId || null,
+      vaultProfileId: vaultProfileId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
@@ -894,6 +962,11 @@ router.put(
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
       rdpIgnoreCert: rdpIgnoreCert ? 1 : 0,
+      vncAuthType: enableVnc ? vncAuthType || null : null,
+      vncCredentialId:
+        enableVnc && vncAuthType === "credential" && vncCredentialId
+          ? vncCredentialId
+          : null,
       vncUser: vncUser || null,
       telnetUser: telnetUser || null,
     };
@@ -915,20 +988,6 @@ router.put(
       sshDataObj.keyType = null;
     } else if (effectiveAuthType === "key") {
       if (key && typeof key === "string") {
-        if (!key.includes("-----BEGIN") || !key.includes("-----END")) {
-          sshLogger.warn("Invalid SSH key format provided", {
-            operation: "host_update",
-            hostId: parseInt(hostId),
-            userId,
-            name,
-            ip,
-            port,
-          });
-          return res.status(400).json({
-            error: "Invalid SSH key format. Key must be in PEM format.",
-          });
-        }
-
         const keyValidation = parseSSHKey(
           key,
           typeof keyPassword === "string" ? keyPassword : undefined,
@@ -957,6 +1016,11 @@ router.put(
         sshDataObj.keyType = keyType;
       }
       sshDataObj.password = null;
+    } else if (effectiveAuthType === "agent") {
+      sshDataObj.password = null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else {
       sshDataObj.password = null;
       sshDataObj.key = null;
@@ -1209,6 +1273,7 @@ router.get(
           createdAt: hosts.createdAt,
           updatedAt: hosts.updatedAt,
           credentialId: hosts.credentialId,
+          vaultProfileId: hosts.vaultProfileId,
           overrideCredentialUsername: hosts.overrideCredentialUsername,
           quickActions: hosts.quickActions,
           notes: hosts.notes,
@@ -1249,6 +1314,7 @@ router.get(
           rdpDomain: hosts.rdpDomain,
           rdpSecurity: hosts.rdpSecurity,
           rdpIgnoreCert: hosts.rdpIgnoreCert,
+          vncAuthType: hosts.vncAuthType,
           vncCredentialId: hosts.vncCredentialId,
           vncUser: hosts.vncUser,
           vncPassword: hosts.vncPassword,
@@ -1444,7 +1510,7 @@ router.get(
  *         name: field
  *         schema:
  *           type: string
- *           enum: [password, sudoPassword]
+ *           enum: [password, sudoPassword, vncPassword]
  *     responses:
  *       200:
  *         description: The requested password value.
@@ -1460,7 +1526,7 @@ router.get(
     const userId = (req as AuthenticatedRequest).userId;
     const field = (req.query.field as string) || "password";
 
-    if (!["password", "sudoPassword"].includes(field)) {
+    if (!["password", "sudoPassword", "vncPassword"].includes(field)) {
       return res.status(400).json({ error: "Invalid field" });
     }
 
@@ -1599,6 +1665,8 @@ router.get(
             rdpDomain: resolvedHost.rdpDomain || null,
             rdpSecurity: resolvedHost.rdpSecurity || null,
             rdpIgnoreCert: !!resolvedHost.rdpIgnoreCert,
+            vncAuthType: resolvedHost.vncAuthType || null,
+            vncCredentialId: resolvedHost.vncCredentialId || null,
             vncUser: resolvedHost.vncUser || null,
             vncPassword: resolvedHost.vncPassword || null,
             telnetUser: resolvedHost.telnetUser || null,
@@ -1706,6 +1774,11 @@ router.get(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
+    const shareExport =
+      req.query.share === "1" ||
+      req.query.share === "true" ||
+      req.query.safe === "1" ||
+      req.query.safe === "true";
 
     if (!isNonEmptyString(userId)) {
       return res.status(400).json({ error: "Invalid userId" });
@@ -1717,6 +1790,192 @@ router.get(
         "ssh_data",
         userId,
       );
+
+      if (shareExport) {
+        const credentials = await SimpleDBOps.select<Record<string, unknown>>(
+          db
+            .select()
+            .from(sshCredentials)
+            .where(eq(sshCredentials.userId, userId)),
+          "ssh_credentials",
+          userId,
+        );
+        const credentialsById = new Map<number, Record<string, unknown>>();
+        for (const credential of credentials) {
+          if (typeof credential.id === "number") {
+            credentialsById.set(credential.id, credential);
+          }
+        }
+
+        const usedAliases = new Set<string>();
+        const exportedCredentials = new Map<string, ShareCredentialExport>();
+        const credentialIdAliases = new Map<number, string>();
+        const directCredentialAliases = new Map<string, string>();
+
+        const addCredential = (
+          credential: Record<string, unknown>,
+          fallbackName: string,
+        ) => {
+          if (typeof credential.id === "number") {
+            const existing = credentialIdAliases.get(credential.id);
+            if (existing) return existing;
+          }
+
+          const alias = uniqueAlias(
+            String(credential.name || fallbackName),
+            usedAliases,
+          );
+          exportedCredentials.set(
+            alias,
+            safeCredentialExport(credential, alias),
+          );
+          if (typeof credential.id === "number") {
+            credentialIdAliases.set(credential.id, alias);
+          }
+          return alias;
+        };
+
+        const addDirectCredential = (
+          authType: "password" | "key",
+          username: unknown,
+          keyType?: unknown,
+        ) => {
+          const usernameText =
+            typeof username === "string" && username.trim()
+              ? username.trim()
+              : "user";
+          const key = `${authType}:${usernameText}:${typeof keyType === "string" ? keyType : ""}`;
+          const existing = directCredentialAliases.get(key);
+          if (existing) return existing;
+
+          const alias = uniqueAlias(`${usernameText}-${authType}`, usedAliases);
+          directCredentialAliases.set(key, alias);
+          exportedCredentials.set(
+            alias,
+            safeCredentialExport(
+              {
+                name: `${usernameText} ${authType}`,
+                authType,
+                username: usernameText,
+                keyType,
+              },
+              alias,
+            ),
+          );
+          return alias;
+        };
+
+        const exportedHosts = allHosts.map((host) => {
+          const exportedConnectionType =
+            (host.connectionType as string) || "ssh";
+          const isRemoteDesktop = ["rdp", "vnc", "telnet"].includes(
+            exportedConnectionType,
+          );
+
+          const baseExportData: Record<string, unknown> = {
+            connectionType: exportedConnectionType,
+            name: host.name,
+            ip: host.ip,
+            port: host.port,
+            username: host.username,
+            folder: host.folder,
+            tags: splitTags(host.tags),
+            notes: host.notes || null,
+          };
+
+          if (isRemoteDesktop) {
+            return {
+              ...baseExportData,
+              domain: host.domain || null,
+              security: host.security || null,
+              ignoreCert: !!host.ignoreCert,
+              guacamoleConfig: parseJsonField(host.guacamoleConfig, null),
+            };
+          }
+
+          const exportData: Record<string, unknown> = {
+            ...baseExportData,
+            authType: host.authType || "none",
+            enableTerminal: !!host.enableTerminal,
+            enableTunnel: !!host.enableTunnel,
+            enableFileManager: host.enableFileManager !== false,
+            enableDocker: !!host.enableDocker,
+            enableProxmox: !!host.enableProxmox,
+            enableTmuxMonitor: !!host.enableTmuxMonitor,
+            showTerminalInSidebar: !!host.showTerminalInSidebar,
+            showFileManagerInSidebar: !!host.showFileManagerInSidebar,
+            showTunnelInSidebar: !!host.showTunnelInSidebar,
+            showDockerInSidebar: !!host.showDockerInSidebar,
+            showServerStatsInSidebar: !!host.showServerStatsInSidebar,
+            defaultPath: host.defaultPath,
+            tunnelConnections: parseJsonField(host.tunnelConnections, []),
+            jumpHosts: parseJsonField(host.jumpHosts, null),
+            quickActions: parseJsonField(host.quickActions, null),
+            statsConfig: parseJsonField(host.statsConfig, null),
+            dockerConfig: parseJsonField(host.dockerConfig, null),
+            proxmoxConfig: parseJsonField(host.proxmoxConfig, null),
+            forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
+            useSocks5: !!host.useSocks5,
+            socks5Host: host.socks5Host || null,
+            socks5Port: host.socks5Port || null,
+            socks5Username: host.socks5Username || null,
+            socks5ProxyChain: parseJsonField(host.socks5ProxyChain, null),
+            portKnockSequence: parseJsonField(host.portKnockSequence, null),
+            overrideCredentialUsername: !!host.overrideCredentialUsername,
+          };
+
+          if (typeof host.credentialId === "number") {
+            const credential = credentialsById.get(host.credentialId);
+            if (credential) {
+              exportData.authType = "credential";
+              exportData.credentialAlias = addCredential(
+                credential,
+                String(host.username || "credential"),
+              );
+              return exportData;
+            }
+          }
+
+          if (host.authType === "password") {
+            exportData.authType = "credential";
+            exportData.credentialAlias = addDirectCredential(
+              "password",
+              host.username,
+            );
+            return exportData;
+          }
+
+          if (host.authType === "key") {
+            exportData.authType = "credential";
+            exportData.credentialAlias = addDirectCredential(
+              "key",
+              host.username,
+              host.keyType,
+            );
+            return exportData;
+          }
+
+          if (host.authType === "credential") {
+            exportData.authType = "none";
+          }
+
+          return exportData;
+        });
+
+        sshLogger.success("All hosts exported for sharing", {
+          operation: "hosts_export_share",
+          count: exportedHosts.length,
+          credentialCount: exportedCredentials.size,
+          userId,
+        });
+
+        return res.json({
+          version: "termix-host-share-v1",
+          exportedAt: new Date().toISOString(),
+          credentials: Array.from(exportedCredentials.values()),
+          hosts: exportedHosts,
+        });
+      }
 
       const exportedHosts = [];
 

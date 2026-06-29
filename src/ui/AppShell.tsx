@@ -15,6 +15,7 @@ import { AppRail } from "@/sidebar/AppRail";
 import type { RailView } from "@/sidebar/AppRail";
 import { HostsPanel } from "@/sidebar/HostsPanel";
 import { QuickConnectPanel } from "@/sidebar/QuickConnectPanel";
+import { SerialPanel } from "@/sidebar/SerialPanel";
 import { SshToolsPanel } from "@/sidebar/SshToolsPanel";
 import { SnippetsPanel } from "@/sidebar/SnippetsPanel";
 import { HistoryPanel } from "@/sidebar/HistoryPanel";
@@ -22,7 +23,9 @@ import { SessionLogsPanel } from "@/sidebar/SessionLogsPanel";
 import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
 import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
+import { AlertsPanel } from "@/sidebar/AlertsPanel";
 import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
+import { TermixIdPanel } from "@/sidebar/TermixIdPanel";
 import { SplitView } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { AlertManager } from "@/dashboard/panels/alerts/AlertManager";
@@ -35,6 +38,7 @@ import type {
   HostFolder,
   ThemeId,
   FontSizeId,
+  SerialConfig,
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
@@ -54,67 +58,11 @@ import {
 } from "@/main-axios";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
+import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
 import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
-
-function sshHostToHost(h: SSHHostWithStatus): Host {
-  return {
-    id: String(h.id),
-    name: h.name,
-    username: h.username,
-    ip: h.ip,
-    port: h.port,
-    folder: h.folder ?? "",
-    online: h.status === "online",
-    cpu: 0,
-    ram: 0,
-    lastAccess: "",
-    tags: h.tags ?? [],
-    authType: h.authType,
-    password: h.password,
-    key: typeof h.key === "string" ? h.key : undefined,
-    keyPassword: h.keyPassword,
-    keyType: h.keyType,
-    credentialId: h.credentialId != null ? String(h.credentialId) : undefined,
-    notes: h.notes,
-    pin: h.pin ?? false,
-    macAddress: h.macAddress,
-    enableSsh: h.enableSsh ?? (h.connectionType === "ssh" || !h.connectionType),
-    enableTerminal: h.enableTerminal ?? true,
-    enableTunnel: h.enableTunnel ?? false,
-    enableFileManager: h.enableFileManager ?? true,
-    enableDocker: h.enableDocker ?? false,
-    enableProxmox: h.enableProxmox ?? false,
-    enableTmuxMonitor: h.enableTmuxMonitor ?? false, // --- tmux-monitor ---
-    proxmoxConfig: (h.proxmoxConfig as Host["proxmoxConfig"]) ?? null,
-    enableRdp: h.enableRdp ?? h.connectionType === "rdp",
-    enableVnc: h.enableVnc ?? h.connectionType === "vnc",
-    enableTelnet: h.enableTelnet ?? h.connectionType === "telnet",
-    sshPort: h.port,
-    rdpPort: 3389,
-    vncPort: 5900,
-    telnetPort: 23,
-    quickActions: (h.quickActions ?? []).map((a) => ({
-      name: a.name,
-      snippetId: String(a.snippetId),
-    })),
-    jumpHosts: (h.jumpHosts ?? []).map((j) => ({
-      hostId: String(j.hostId),
-    })),
-    serverTunnels: [],
-    defaultPath: h.defaultPath,
-    terminalConfig: h.terminalConfig as Host["terminalConfig"],
-    useSocks5: h.useSocks5,
-    socks5Host: h.socks5Host,
-    socks5Port: h.socks5Port,
-    socks5Username: h.socks5Username,
-    socks5Password: h.socks5Password,
-    socks5ProxyChain: h.socks5ProxyChain ?? [],
-    statsConfig: (typeof h.statsConfig === "string"
-      ? JSON.parse(h.statsConfig)
-      : h.statsConfig) as Host["statsConfig"],
-  };
-}
+import { sshHostToHost } from "@/sidebar/HostManagerData";
+import { resolveHostTabType } from "@/lib/host-connection-tabs";
 
 function buildHostTree(
   hosts: SSHHostWithStatus[],
@@ -221,6 +169,9 @@ export function AppShell({
   });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
+  const [isAppFullscreen, setIsAppFullscreen] = useState(
+    () => !!document.fullscreenElement,
+  );
 
   useEffect(() => {
     localStorage.setItem("termix_sidebarWidth", String(sidebarWidth));
@@ -253,6 +204,34 @@ export function AppShell({
         setUserId(info.userId);
       })
       .catch(() => setIsAdmin(false));
+  }, []);
+
+  const toggleAppFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      if (!document.fullscreenEnabled) {
+        toast.error("Fullscreen is not supported by this browser");
+        return;
+      }
+
+      await document.documentElement.requestFullscreen();
+    } catch {
+      toast.error("Unable to toggle fullscreen mode");
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsAppFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   const lastShiftTime = useRef(0);
@@ -325,7 +304,9 @@ export function AppShell({
   const sidebarTitle: Record<RailView, string> = {
     hosts: "Hosts",
     credentials: "Credentials",
+    "termix-id": t("nav.termixId"),
     "quick-connect": "Quick Connect",
+    serial: t("nav.serial"),
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
     history: "History",
@@ -334,6 +315,7 @@ export function AppShell({
     connections: t("nav.connections"),
     "user-profile": "User Profile",
     "admin-settings": "Admin Settings",
+    alerts: t("nav.alerts"),
   };
 
   // Double-shift opens command palette
@@ -355,6 +337,14 @@ export function AppShell({
   // without going through synthetic DOM events (which are unreliable).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && !e.altKey && !e.metaKey) {
+        if (e.code === "KeyF") {
+          e.preventDefault();
+          toggleAppFullscreen();
+          return;
+        }
+      }
+
       // Ctrl+Shift+\ — toggle 2-way split (side by side)
       if (e.ctrlKey && e.shiftKey && !e.altKey && e.code === "Backslash") {
         e.preventDefault();
@@ -607,6 +597,7 @@ export function AppShell({
               "showHostTags",
               "hostTrayOnClick",
               "pinAppRail",
+              "expandAppRailOnHover",
               "defaultSnippetFoldersCollapsed",
               "confirmSnippetExecution",
               "disableUpdateCheck",
@@ -658,8 +649,20 @@ export function AppShell({
               "hostTrayOnClick",
               String(prefs.hostTrayOnClick),
             );
-          if (prefs.pinAppRail !== null && prefs.pinAppRail !== undefined)
+          if (prefs.pinAppRail !== null && prefs.pinAppRail !== undefined) {
             localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+            window.dispatchEvent(new Event("pinAppRailChanged"));
+          }
+          if (
+            prefs.expandAppRailOnHover !== null &&
+            prefs.expandAppRailOnHover !== undefined
+          ) {
+            localStorage.setItem(
+              "expandAppRailOnHover",
+              String(prefs.expandAppRailOnHover),
+            );
+            window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
+          }
           if (
             prefs.foldersCollapsed !== null &&
             prefs.foldersCollapsed !== undefined
@@ -841,8 +844,11 @@ export function AppShell({
                 host,
                 openedAt: new Date(saved.createdAt).getTime(),
                 restoredSessionId,
-                terminalRef:
-                  saved.tabType === "terminal" ? createRef() : undefined,
+                terminalRef: SESSION_TAB_TYPES.includes(
+                  saved.tabType as TabType,
+                )
+                  ? createRef()
+                  : undefined,
               });
             }
 
@@ -909,6 +915,7 @@ export function AppShell({
       restoredSessionId: string | null;
       savedLabel?: string;
       initialFilePath?: string;
+      serialConfig?: SerialConfig;
     },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
@@ -918,12 +925,13 @@ export function AppShell({
         ? crypto.randomUUID()
         : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
     const openedAt = Date.now();
-    const ref = type === "terminal" ? createRef() : undefined;
+    const ref = SESSION_TAB_TYPES.includes(type) ? createRef() : undefined;
     if (ref) terminalRefs.current.set(tabId, ref);
 
     let finalLabel = host.name;
     const savedLabel = restore?.savedLabel;
     const initialFilePath = restore?.initialFilePath;
+    const serialConfig = restore?.serialConfig;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
     const isCustomLabel =
       savedLabel != null &&
@@ -946,6 +954,7 @@ export function AppShell({
             terminalRef: ref,
             restoredSessionId: restore?.restoredSessionId ?? null,
             initialFilePath,
+            serialConfig,
           },
         ];
       }
@@ -977,6 +986,7 @@ export function AppShell({
           terminalRef: ref,
           restoredSessionId: restore?.restoredSessionId ?? null,
           initialFilePath,
+          serialConfig,
         },
       ];
     });
@@ -994,23 +1004,57 @@ export function AppShell({
   }, []);
 
   function connectHost(host: Host, preferredType?: TabType) {
-    const type: TabType =
-      preferredType ??
-      (host.enableSsh
-        ? "terminal"
-        : host.enableRdp
-          ? "rdp"
-          : host.enableVnc
-            ? "vnc"
-            : host.enableTelnet
-              ? "telnet"
-              : "terminal");
+    const type = resolveHostTabType(host, preferredType);
     // --- tmux-monitor --- singleton tab, not a per-host tab
     if (type === "tmux_monitor") {
       openSingletonTab(type, undefined, host);
       return;
     }
     openTab(host, type);
+  }
+
+  function openSerialTab(config: SerialConfig) {
+    const pseudoHost: Host = {
+      id: `serial-${Date.now()}`,
+      name: config.path
+        ? `${config.path} (${config.baudRate})`
+        : `Serial (${config.baudRate})`,
+      username: "",
+      ip: "",
+      port: 0,
+      folder: "",
+      online: false,
+      cpu: null,
+      ram: null,
+      lastAccess: new Date().toISOString(),
+      authType: "none",
+      enableTerminal: false,
+      enableCommandHistory: false,
+      enableTunnel: false,
+      enableFileManager: false,
+      enableDocker: false,
+      enableProxmox: false,
+      enableTmuxMonitor: false,
+      enableSsh: false,
+      enableRdp: false,
+      enableVnc: false,
+      enableTelnet: false,
+      sshPort: 22,
+      rdpPort: 3389,
+      vncPort: 5900,
+      telnetPort: 23,
+      serverTunnels: [],
+      quickActions: [],
+    };
+    const instanceId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    openTab(pseudoHost, "serial", {
+      instanceId,
+      restoredSessionId: null,
+      serialConfig: config,
+    });
   }
 
   const openSingletonTab = useCallback(
@@ -1060,6 +1104,7 @@ export function AppShell({
         tunnel: t("nav.tunnels"),
         network_graph: t("nav.networkGraph"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
+        homepage: t("nav.homepage"),
       };
       setTabs((prev) => {
         const existing = prev.find((t) => t.id === id);
@@ -1094,7 +1139,42 @@ export function AppShell({
     [t],
   );
 
-  const SESSION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
+  const SESSION_TAB_TYPES: TabType[] = [
+    "terminal",
+    "rdp",
+    "vnc",
+    "telnet",
+    "serial",
+  ];
+  const ACTIVE_CLOSE_CONFIRM_TYPES: TabType[] = SESSION_TAB_TYPES;
+
+  const getTabCloseLabel = useCallback((tab: Tab) => {
+    return tab.customLabel || tab.label || tab.host?.name || String(tab.id);
+  }, []);
+
+  const isActiveConnectionTab = useCallback((tab: Tab) => {
+    if (!ACTIVE_CLOSE_CONFIRM_TYPES.includes(tab.type)) return false;
+    return tab.terminalRef?.current?.isConnected?.() === true;
+  }, []);
+
+  const hasActiveConnection = useCallback(() => {
+    return tabsRef.current.some(isActiveConnectionTab);
+  }, [isActiveConnectionTab]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!hasActiveConnection()) return;
+
+      event.preventDefault();
+      event.returnValue = "";
+      return "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasActiveConnection]);
 
   function doCloseTab(id: string) {
     const tabToClose = tabs.find((t) => t.id === id);
@@ -1148,20 +1228,37 @@ export function AppShell({
   function closeTab(id: string) {
     const tab = tabs.find((t) => t.id === id);
     const confirmEnabled = localStorage.getItem("confirmTabClose") === "true";
-    if (tab && SESSION_TAB_TYPES.includes(tab.type) && confirmEnabled) {
-      toast(t("nav.confirmClose"), {
-        duration: 5000,
-        action: {
-          label: t("nav.close"),
-          onClick: () => doCloseTab(id),
+    if (tab && confirmEnabled && isActiveConnectionTab(tab)) {
+      const closeLabel = getTabCloseLabel(tab);
+      const toastId = `close-tab-${id}`;
+      toast(
+        t("nav.confirmCloseHost", {
+          host: closeLabel,
+          defaultValue: `Close ${closeLabel}?`,
+        }),
+        {
+          id: toastId,
+          duration: 8000,
+          action: {
+            label: t("nav.close"),
+            onClick: () => {
+              toast.dismiss(toastId);
+              doCloseTab(id);
+            },
+          },
+          cancel: {
+            label: t("nav.cancel"),
+            onClick: () => toast.dismiss(toastId),
+          },
         },
-        cancel: {
-          label: t("nav.cancel"),
-          onClick: () => {},
-        },
-      });
+      );
       return;
     }
+
+    if (tab && SESSION_TAB_TYPES.includes(tab.type) && confirmEnabled) {
+      toast.dismiss(`close-tab-${id}`);
+    }
+
     doCloseTab(id);
   }
 
@@ -1366,6 +1463,21 @@ export function AppShell({
         />
       </div>
 
+      {railView === "termix-id" && (
+        <div className="flex flex-col flex-1 min-h-0">
+          <TermixIdPanel />
+        </div>
+      )}
+
+      {railView === "serial" && (
+        <SerialPanel
+          onConnect={(config) => {
+            openSerialTab(config);
+            if (isMobile) setSidebarOpen(false);
+          }}
+        />
+      )}
+
       {railView === "quick-connect" && (
         <QuickConnectPanel
           onConnect={(host, type) => {
@@ -1481,6 +1593,12 @@ export function AppShell({
           <AdminSettingsPanel />
         </div>
       )}
+
+      {railView === "alerts" && (
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          <AlertsPanel />
+        </div>
+      )}
     </div>
   );
 
@@ -1517,7 +1635,7 @@ export function AppShell({
   );
 
   return (
-    <>
+    <ServerStatusProvider isAuthenticated={!!username}>
       <div className="flex w-screen bg-background" style={{ height: "100dvh" }}>
         {/* Skinny icon rail — desktop only, hidden on mobile */}
         <AppRail
@@ -1595,6 +1713,8 @@ export function AppShell({
               onAddToSplit={addTabToSplit}
               onRemoveFromSplit={removeTabFromSplit}
               onRenameTab={renameTab}
+              isAppFullscreen={isAppFullscreen}
+              onToggleAppFullscreen={toggleAppFullscreen}
             />
             <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
               {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
@@ -1658,7 +1778,16 @@ export function AppShell({
                           restoredSessionId: null,
                           initialFilePath: filePath,
                         }),
-                      (host, path) => openTab(host, "files"),
+                      (host, _path) => openTab(host, "files"),
+                      (host, path) =>
+                        openTab(host, "terminal", {
+                          instanceId:
+                            typeof crypto.randomUUID === "function"
+                              ? crypto.randomUUID()
+                              : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                          restoredSessionId: null,
+                          initialFilePath: path,
+                        }),
                       renameTab,
                     ),
                     tabNode,
@@ -1708,6 +1837,6 @@ export function AppShell({
       />
       <TransferMonitor />
       <AlertManager userId={userId} loggedIn={!!username} />
-    </>
+    </ServerStatusProvider>
   );
 }

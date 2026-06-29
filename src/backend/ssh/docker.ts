@@ -19,6 +19,15 @@ import type { SSHHost, ProxyNode } from "../../types/index.js";
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { registerDockerContainerRoutes } from "./docker-container-routes.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
+import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
+import {
+  containerCommand,
+  getContainerRuntimeConfig,
+  getRuntimeLabel,
+  type ContainerRuntime,
+} from "./container-runtime.js";
 
 const sshLogger = logger;
 
@@ -45,6 +54,7 @@ interface SSHSession {
   hostId?: number;
   userId?: string;
   isWindows?: boolean;
+  containerRuntime?: ContainerRuntime;
 }
 
 interface PendingTOTPSession {
@@ -63,6 +73,7 @@ interface PendingTOTPSession {
   resolvedPassword?: string;
   totpAttempts: number;
   isWarpgate?: boolean;
+  containerRuntime?: ContainerRuntime;
 }
 
 const sshSessions: Record<string, SSHSession> = {};
@@ -133,6 +144,12 @@ interface JumpHostConfig {
   keyType?: string;
   authType?: string;
   credentialId?: number;
+  useSocks5?: boolean | null;
+  socks5Host?: string | null;
+  socks5Port?: number | null;
+  socks5Username?: string | null;
+  socks5Password?: string | null;
+  socks5ProxyChain?: string | import("../../types/index.js").ProxyNode[] | null;
   [key: string]: unknown;
 }
 
@@ -253,13 +270,17 @@ async function createJumpHostChain(
       }
     }
 
+    const firstHopSocks5Config = getJumpHostSocks5Config(
+      jumpHostConfigs[0],
+      socks5Config,
+    );
     let proxySocket: import("net").Socket | null = null;
-    if (socks5Config?.useSocks5) {
+    if (firstHopSocks5Config?.useSocks5) {
       const firstHop = jumpHostConfigs[0]!;
       proxySocket = await createSocks5Connection(
         firstHop.ip,
         firstHop.port || 22,
-        socks5Config,
+        firstHopSocks5Config,
       );
     }
 
@@ -278,7 +299,8 @@ async function createJumpHostChain(
         true,
       );
 
-      const connected = await new Promise<boolean>((resolve) => {
+      // eslint-disable-next-line no-async-promise-executor
+      const connected = await new Promise<boolean>(async (resolve) => {
         const timeout = setTimeout(() => {
           resolve(false);
         }, 30000);
@@ -370,6 +392,16 @@ async function createJumpHostChain(
           connectConfig.privateKey = Buffer.from(cleanKey, "utf8");
           if (jumpHostConfig.keyPassword) {
             connectConfig.passphrase = jumpHostConfig.keyPassword;
+          }
+        } else if (jumpHostConfig.authType === "agent") {
+          const result = await applyAgentAuth(
+            connectConfig,
+            jumpHostConfig.terminalConfig as
+              | Record<string, unknown>
+              | undefined,
+          );
+          if ("error" in result) {
+            throw new Error(result.error);
           }
         }
 
@@ -700,6 +732,9 @@ app.post("/docker/ssh/connect", async (req, res) => {
         host.terminalConfig = undefined;
       }
     }
+    const { runtime: containerRuntime } = getContainerRuntimeConfig(
+      host.dockerConfig,
+    );
 
     if (!host.enableDocker) {
       sshLogger.warn("Docker not enabled for host", {
@@ -923,37 +958,16 @@ app.post("/docker/ssh/connect", async (req, res) => {
       resolvedCredentials.sshKey
     ) {
       try {
-        if (
-          !resolvedCredentials.sshKey.includes("-----BEGIN") ||
-          !resolvedCredentials.sshKey.includes("-----END")
-        ) {
-          sshLogger.error("Invalid SSH key format", {
-            operation: "docker_connect",
-            sessionId,
-            hostId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "docker_auth",
-              "Invalid SSH private key format",
-            ),
-          );
-          return res.status(400).json({
-            error: "Invalid private key format",
-            connectionLogs,
-          });
-        }
-
-        const cleanKey = resolvedCredentials.sshKey
-          .trim()
-          .replace(/\r\n/g, "\n")
-          .replace(/\r/g, "\n");
-        config.privateKey = Buffer.from(cleanKey, "utf8");
+        config.privateKey = preparePrivateKeyForSSH2(
+          resolvedCredentials.sshKey,
+          resolvedCredentials.keyPassword,
+        );
         if (resolvedCredentials.keyPassword) {
           config.passphrase = resolvedCredentials.keyPassword;
         }
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Invalid private key format";
         sshLogger.error("SSH key processing error", error, {
           operation: "docker_connect",
           sessionId,
@@ -963,11 +977,11 @@ app.post("/docker/ssh/connect", async (req, res) => {
           createConnectionLog(
             "error",
             "docker_auth",
-            "SSH key processing error",
+            `SSH key processing error: ${message}`,
           ),
         );
         return res.status(400).json({
-          error: "SSH key format error: Invalid private key format",
+          error: `SSH key format error: ${message}`,
           connectionLogs,
         });
       }
@@ -988,6 +1002,24 @@ app.post("/docker/ssh/connect", async (req, res) => {
         error: "SSH key authentication requested but no key provided",
         connectionLogs,
       });
+    } else if (resolvedCredentials.authType === "agent") {
+      const result = await applyAgentAuth(
+        config,
+        host.terminalConfig as unknown as Record<string, unknown> | undefined,
+      );
+      if ("error" in result) {
+        connectionLogs.push(
+          createConnectionLog("error", "docker_auth", result.error),
+        );
+        return res.status(400).json({ error: result.error, connectionLogs });
+      }
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "docker_auth",
+          "Using SSH agent authentication",
+        ),
+      );
     }
 
     let responseSent = false;
@@ -1014,6 +1046,10 @@ app.post("/docker/ssh/connect", async (req, res) => {
     } else if (resolvedCredentials.authType === "key") {
       connectionLogs.push(
         createConnectionLog("info", "auth", "Authenticating with SSH key"),
+      );
+    } else if (resolvedCredentials.authType === "agent") {
+      connectionLogs.push(
+        createConnectionLog("info", "auth", "Authenticating with SSH agent"),
       );
     } else if (
       resolvedCredentials.authType === "none" ||
@@ -1047,6 +1083,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         activeOperations: 0,
         hostId,
         userId,
+        containerRuntime,
       };
 
       sshSessions[sessionId] = session;
@@ -1244,6 +1281,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
               resolvedPassword: resolvedCredentials.password,
               totpAttempts: 0,
               isWarpgate: true,
+              containerRuntime,
             };
 
             connectionLogs.push(
@@ -1310,6 +1348,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
             totpPromptIndex,
             resolvedPassword: resolvedCredentials.password,
             totpAttempts: 0,
+            containerRuntime,
           };
 
           connectionLogs.push(
@@ -1400,6 +1439,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
               totpPromptIndex: passwordPromptIndex,
               resolvedPassword: resolvedCredentials.password,
               totpAttempts: 0,
+              containerRuntime,
             };
 
             res.json({
@@ -1753,6 +1793,7 @@ app.post("/docker/ssh/connect-totp", async (req, res) => {
         activeOperations: 0,
         hostId: session.hostId,
         userId,
+        containerRuntime: session.containerRuntime,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -1939,6 +1980,7 @@ app.post("/docker/ssh/connect-warpgate", async (req, res) => {
         activeOperations: 0,
         hostId: session.hostId,
         userId,
+        containerRuntime: session.containerRuntime,
       };
       scheduleSessionCleanup(sessionId);
 
@@ -2154,20 +2196,24 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
 
   try {
     try {
+      const runtime = session.containerRuntime ?? "docker";
+      const runtimeLabel = getRuntimeLabel(runtime);
       const versionOutput = await executeDockerCommand(
         session,
-        "docker --version",
+        containerCommand(runtime, "--version"),
         sessionId,
         userId,
         session.hostId,
       );
-      const versionMatch = versionOutput.match(/Docker version ([^\s,]+)/);
+      const versionMatch = versionOutput.match(
+        /(?:Docker|podman) version ([^\s,]+)/i,
+      );
       const version = versionMatch ? versionMatch[1] : "unknown";
 
       try {
         await executeDockerCommand(
           session,
-          "docker ps",
+          containerCommand(runtime, "ps"),
           sessionId,
           userId,
           session.hostId,
@@ -2177,6 +2223,7 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
         return res.json({
           available: true,
           version,
+          runtime,
         });
       } catch (daemonError) {
         session.activeOperations--;
@@ -2186,18 +2233,18 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
         if (errorMsg.includes("Cannot connect to the Docker daemon")) {
           return res.json({
             available: false,
-            error:
-              "Docker daemon is not running. Start it with: sudo systemctl start docker",
+            error: `${runtimeLabel} daemon is not running or accessible`,
             code: "DAEMON_NOT_RUNNING",
+            runtime,
           });
         }
 
         if (errorMsg.includes("permission denied")) {
           return res.json({
             available: false,
-            error:
-              "Permission denied. Add your user to the docker group: sudo usermod -aG docker $USER",
+            error: `Permission denied accessing ${runtimeLabel}`,
             code: "PERMISSION_DENIED",
+            runtime,
           });
         }
 
@@ -2205,15 +2252,18 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
           available: false,
           error: errorMsg,
           code: "DOCKER_ERROR",
+          runtime,
         });
       }
     } catch {
       session.activeOperations--;
+      const runtime = session.containerRuntime ?? "docker";
+      const runtimeLabel = getRuntimeLabel(runtime);
       return res.json({
         available: false,
-        error:
-          "Docker is not installed on this host. Please install Docker to use this feature.",
+        error: `${runtimeLabel} is not installed on this host.`,
         code: "NOT_INSTALLED",
+        runtime,
       });
     }
   } catch (error) {

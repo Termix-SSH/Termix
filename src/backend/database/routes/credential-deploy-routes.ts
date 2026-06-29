@@ -7,6 +7,8 @@ import { eq } from "drizzle-orm";
 import ssh2Pkg from "ssh2";
 import { db } from "../db/index.js";
 import { hosts, sshCredentials } from "../db/schema.js";
+import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
+import { applyAgentAuth } from "../../ssh/terminal-auth-helpers.js";
 
 const { Client } = ssh2Pkg;
 
@@ -263,97 +265,100 @@ async function deploySSHKeyToHost(
       resolve({ success: false, error: errorMessage });
     });
 
-    try {
-      const connectionConfig: Record<string, unknown> = {
-        host: hostConfig.ip,
-        port: hostConfig.port || 22,
-        username: hostConfig.username,
-        readyTimeout: 60000,
-        keepaliveInterval: 30000,
-        keepaliveCountMax: 3,
-        tcpKeepAlive: true,
-        tcpKeepAliveInitialDelay: 30000,
-        algorithms: {
-          kex: [
-            "diffie-hellman-group14-sha256",
-            "diffie-hellman-group14-sha1",
-            "diffie-hellman-group1-sha1",
-            "diffie-hellman-group-exchange-sha256",
-            "diffie-hellman-group-exchange-sha1",
-            "ecdh-sha2-nistp256",
-            "ecdh-sha2-nistp384",
-            "ecdh-sha2-nistp521",
-          ],
-          cipher: [
-            "aes128-ctr",
-            "aes192-ctr",
-            "aes256-ctr",
-            "aes128-gcm@openssh.com",
-            "aes256-gcm@openssh.com",
-            "aes128-cbc",
-            "aes192-cbc",
-            "aes256-cbc",
-            "3des-cbc",
-          ],
-          hmac: [
-            "hmac-sha2-256-etm@openssh.com",
-            "hmac-sha2-512-etm@openssh.com",
-            "hmac-sha2-256",
-            "hmac-sha2-512",
-            "hmac-sha1",
-            "hmac-md5",
-          ],
-          compress: ["none", "zlib@openssh.com", "zlib"],
-        },
-      };
+    void (async () => {
+      try {
+        const connectionConfig: Record<string, unknown> = {
+          host: hostConfig.ip,
+          port: hostConfig.port || 22,
+          username: hostConfig.username,
+          readyTimeout: 60000,
+          keepaliveInterval: 30000,
+          keepaliveCountMax: 3,
+          tcpKeepAlive: true,
+          tcpKeepAliveInitialDelay: 30000,
+          algorithms: {
+            kex: [
+              "diffie-hellman-group14-sha256",
+              "diffie-hellman-group14-sha1",
+              "diffie-hellman-group1-sha1",
+              "diffie-hellman-group-exchange-sha256",
+              "diffie-hellman-group-exchange-sha1",
+              "ecdh-sha2-nistp256",
+              "ecdh-sha2-nistp384",
+              "ecdh-sha2-nistp521",
+            ],
+            cipher: [
+              "aes128-ctr",
+              "aes192-ctr",
+              "aes256-ctr",
+              "aes128-gcm@openssh.com",
+              "aes256-gcm@openssh.com",
+              "aes128-cbc",
+              "aes192-cbc",
+              "aes256-cbc",
+              "3des-cbc",
+            ],
+            hmac: [
+              "hmac-sha2-256-etm@openssh.com",
+              "hmac-sha2-512-etm@openssh.com",
+              "hmac-sha2-256",
+              "hmac-sha2-512",
+              "hmac-sha1",
+              "hmac-md5",
+            ],
+            compress: ["none", "zlib@openssh.com", "zlib"],
+          },
+        };
 
-      if (hostConfig.authType === "password" && hostConfig.password) {
-        connectionConfig.password = hostConfig.password;
-      } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
-        try {
-          const privateKey = hostConfig.privateKey as string;
-          if (
-            !privateKey.includes("-----BEGIN") ||
-            !privateKey.includes("-----END")
-          ) {
-            throw new Error("Invalid private key format");
+        if (hostConfig.authType === "password" && hostConfig.password) {
+          connectionConfig.password = hostConfig.password;
+        } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
+          try {
+            const privateKey = hostConfig.privateKey as string;
+            connectionConfig.privateKey = preparePrivateKeyForSSH2(
+              privateKey,
+              hostConfig.keyPassword as string | undefined,
+            );
+
+            if (hostConfig.keyPassword) {
+              connectionConfig.passphrase = hostConfig.keyPassword;
+            }
+          } catch (keyError) {
+            clearTimeout(connectionTimeout);
+            resolve({
+              success: false,
+              error: `Invalid SSH key format: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
+            });
+            return;
           }
-
-          const cleanKey = privateKey
-            .trim()
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n");
-
-          connectionConfig.privateKey = Buffer.from(cleanKey, "utf8");
-
-          if (hostConfig.keyPassword) {
-            connectionConfig.passphrase = hostConfig.keyPassword;
+        } else if (hostConfig.authType === "agent") {
+          const result = await applyAgentAuth(
+            connectionConfig,
+            hostConfig.terminalConfig as Record<string, unknown> | undefined,
+          );
+          if ("error" in result) {
+            clearTimeout(connectionTimeout);
+            resolve({ success: false, error: result.error });
+            return;
           }
-        } catch (keyError) {
+        } else {
           clearTimeout(connectionTimeout);
           resolve({
             success: false,
-            error: `Invalid SSH key format: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
+            error: `Invalid authentication configuration. Auth type: ${hostConfig.authType}, has password: ${!!hostConfig.password}, has key: ${!!hostConfig.privateKey}`,
           });
           return;
         }
-      } else {
+
+        conn.connect(connectionConfig);
+      } catch (error) {
         clearTimeout(connectionTimeout);
         resolve({
           success: false,
-          error: `Invalid authentication configuration. Auth type: ${hostConfig.authType}, has password: ${!!hostConfig.password}, has key: ${!!hostConfig.privateKey}`,
+          error: error instanceof Error ? error.message : "Connection failed",
         });
-        return;
       }
-
-      conn.connect(connectionConfig);
-    } catch (error) {
-      clearTimeout(connectionTimeout);
-      resolve({
-        success: false,
-        error: error instanceof Error ? error.message : "Connection failed",
-      });
-    }
+    })();
   });
 }
 
@@ -479,6 +484,7 @@ export function registerCredentialDeployRoutes(
           password: hostData.password,
           privateKey: hostData.key,
           keyPassword: hostData.keyPassword,
+          terminalConfig: hostData.terminalConfig,
         };
 
         if (hostData.authType === "credential" && hostData.credentialId) {

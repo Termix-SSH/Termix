@@ -14,7 +14,10 @@ import {
   generateDeviceFingerprint,
 } from "../../utils/user-agent-parser.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
-import { getRequestOriginWithForceHTTPS } from "../../utils/request-origin.js";
+import {
+  getRequestBasePath,
+  getRequestBaseUrlWithForceHTTPS,
+} from "../../utils/request-origin.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
   getOIDCConfigFromEnv,
@@ -33,6 +36,7 @@ import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
+import { registerUserWebAuthnRoutes } from "./user-webauthn-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
@@ -40,6 +44,25 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 const authManager = AuthManager.getInstance();
 
 const router = express.Router();
+
+async function syncSharedCredentialsForUserRoles(
+  userId: string,
+  operation: string,
+) {
+  try {
+    const { SharedCredentialManager } =
+      await import("../../utils/shared-credential-manager.js");
+    const sharedCredManager = SharedCredentialManager.getInstance();
+    await sharedCredManager.createSharedCredentialsForUserRoles(userId);
+    await sharedCredManager.reEncryptPendingCredentialsForUser(userId);
+  } catch (error) {
+    authLogger.warn("Failed to sync role shared credentials", {
+      operation,
+      userId,
+      error,
+    });
+  }
+}
 
 function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
@@ -610,8 +633,8 @@ router.get("/oidc/authorize", async (req, res) => {
       appCallbackUrl,
       providerId: providerIdStr,
     } = req.query;
-    const origin = getRequestOriginWithForceHTTPS(req);
-    const backendCallbackUri = `${origin}/users/oidc/callback`;
+    const publicBaseUrl = getRequestBaseUrlWithForceHTTPS(req);
+    const backendCallbackUri = `${publicBaseUrl}/users/oidc/callback`;
 
     const resolvedProviderId = providerIdStr
       ? parseInt(providerIdStr as string, 10)
@@ -643,9 +666,9 @@ router.get("/oidc/authorize", async (req, res) => {
       frontendOrigin = callbackUrl.toString();
     } else if (referer) {
       const refererUrl = new URL(referer);
-      frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
+      frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}${getRequestBasePath(req)}`;
     } else {
-      frontendOrigin = origin;
+      frontendOrigin = publicBaseUrl;
     }
 
     db.$client
@@ -946,7 +969,7 @@ router.get("/oidc/callback", async (req, res) => {
               ? 30 * 24 * 60 * 60 * 1000
               : 24 * 60 * 60 * 1000;
           await authManager.registerOIDCUser(ghId, sessionDurationMs);
-        } catch (encryptionError) {
+        } catch {
           await db.delete(users).where(eq(users.id, ghId));
           return res.status(500).json({
             error: "Failed to setup user security - user creation cancelled",
@@ -965,6 +988,10 @@ router.get("/oidc/callback", async (req, res) => {
       } catch {
         /* */
       }
+      await syncSharedCredentialsForUserRoles(
+        ghUserRecord.id,
+        "github_oidc_role_shared_credentials",
+      );
       const ghToken = await authManager.generateJWTToken(ghUserRecord.id, {
         deviceType: deviceInfo.type,
         deviceInfo: deviceInfo.deviceInfo,
@@ -1432,14 +1459,10 @@ router.get("/oidc/callback", async (req, res) => {
       });
     }
 
-    try {
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
-      const sharedCredManager = SharedCredentialManager.getInstance();
-      await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
-    } catch {
-      // expected - re-encryption may fail if no pending credentials
-    }
+    await syncSharedCredentialsForUserRoles(
+      userRecord.id,
+      "oidc_role_shared_credentials",
+    );
 
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
@@ -1642,18 +1665,10 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    try {
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
-      const sharedCredManager = SharedCredentialManager.getInstance();
-      await sharedCredManager.reEncryptPendingCredentialsForUser(userRecord.id);
-    } catch (error) {
-      authLogger.warn("Failed to re-encrypt pending shared credentials", {
-        operation: "reencrypt_pending_credentials",
-        userId: userRecord.id,
-        error,
-      });
-    }
+    await syncSharedCredentialsForUserRoles(
+      userRecord.id,
+      "login_role_shared_credentials",
+    );
 
     if (userRecord.totpEnabled) {
       const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
@@ -2515,6 +2530,12 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 registerUserAdminRoutes(router, authenticateJWT);
 
 registerUserTotpRoutes(router, {
+  authenticateJWT,
+  authManager,
+  isNativeAppRequest,
+});
+
+registerUserWebAuthnRoutes(router, {
   authenticateJWT,
   authManager,
   isNativeAppRequest,

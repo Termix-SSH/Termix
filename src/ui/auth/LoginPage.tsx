@@ -32,6 +32,7 @@ import {
   getOidcSilentLoginDefault,
 } from "@/main-axios";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
+import { authenticateWithWebAuthn } from "@/api/webauthn-api";
 import type { SSOProviderPublic } from "@/types/index";
 import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig.tsx";
 import { ElectronLoginForm } from "@/auth/ElectronLoginForm.tsx";
@@ -117,6 +118,7 @@ export function Auth({
     }
   });
   const [loading, setLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [oidcLoading, setOidcLoading] = useState(false);
   const [internalLoggedIn, setInternalLoggedIn] = useState(false);
   const [firstUser, setFirstUser] = useState(false);
@@ -654,6 +656,73 @@ export function Auth({
       }
     } finally {
       setTotpLoading(false);
+    }
+  }
+
+  async function handlePasskeyLogin() {
+    setPasskeyLoading(true);
+    try {
+      const res = await authenticateWithWebAuthn(
+        localUsername,
+        rememberMe,
+        "preferred",
+      );
+
+      if (res.requires_totp) {
+        setTotpRequired(true);
+        setTotpTempToken(res.temp_token || "");
+        return;
+      }
+
+      if (!res || !res.success) {
+        throw new Error(t("errors.loginFailed"));
+      }
+
+      if (isInMobileWebView()) {
+        postMobileAuthSuccess(res.token || "");
+        return;
+      }
+
+      if (isInElectronWebView()) {
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            source: "passkey_auth_component",
+            platform: "desktop",
+            token: res.token || null,
+            timestamp: Date.now(),
+          },
+          "*",
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
+
+      const meRes = await getUserInfo();
+      setInternalLoggedIn(true);
+      setLoggedIn(true);
+      setIsAdmin(!!meRes.is_admin);
+      setUsername(meRes.username || null);
+      setUserId(meRes.userId || null);
+      setDbError(null);
+      onAuthSuccess({
+        isAdmin: !!meRes.is_admin,
+        username: meRes.username || null,
+        userId: meRes.userId || null,
+      });
+      toast.success(t("messages.loginSuccess"));
+    } catch (err: unknown) {
+      const error = err as {
+        message?: string;
+        response?: { data?: { error?: string } };
+      };
+      toast.error(
+        error?.response?.data?.error ||
+          error?.message ||
+          t("auth.passkeyLoginFailed"),
+      );
+    } finally {
+      setPasskeyLoading(false);
     }
   }
 
@@ -1320,8 +1389,10 @@ export function Auth({
                     const hasSignup =
                       (passwordLoginAllowed || firstUser) &&
                       registrationAllowed;
+                    const hasPasskey = !firstUser;
                     const hasSso = ssoProviders.length > 0;
-                    const hasAnyAuth = hasLogin || hasSignup || hasSso;
+                    const hasAnyAuth =
+                      hasLogin || hasSignup || hasPasskey || hasSso;
 
                     if (!hasAnyAuth) {
                       return (
@@ -1569,9 +1640,38 @@ export function Auth({
                             {!passwordLoginAllowed &&
                             !firstUser &&
                             tab === "login" ? (
-                              <p className="text-center text-muted-foreground text-sm">
-                                {t("auth.passwordLoginDisabledDesc")}
-                              </p>
+                              <div className="flex flex-col gap-4">
+                                <p className="text-center text-muted-foreground text-sm">
+                                  {t("auth.passwordLoginDisabledDesc")}
+                                </p>
+                                <div className="flex flex-col gap-2">
+                                  <Label htmlFor="username">
+                                    {t("common.username")}
+                                  </Label>
+                                  <Input
+                                    id="username"
+                                    type="text"
+                                    className="h-11 text-base"
+                                    value={localUsername}
+                                    onChange={(e) =>
+                                      setLocalUsername(e.target.value)
+                                    }
+                                    disabled={passkeyLoading || loggedIn}
+                                    autoComplete="username webauthn"
+                                  />
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full h-11 text-base font-semibold"
+                                  disabled={passkeyLoading || loggedIn}
+                                  onClick={handlePasskeyLogin}
+                                >
+                                  {passkeyLoading
+                                    ? Spinner
+                                    : t("auth.signInWithPasskey")}
+                                </Button>
+                              </div>
                             ) : (
                               <>
                                 <div className="flex flex-col gap-2">
@@ -1588,6 +1688,7 @@ export function Auth({
                                       setLocalUsername(e.target.value)
                                     }
                                     disabled={loading || loggedIn}
+                                    autoComplete="username webauthn"
                                   />
                                 </div>
                                 <div className="flex flex-col gap-2">
@@ -1664,6 +1765,21 @@ export function Auth({
                                     }}
                                   >
                                     {t("auth.resetPasswordButton")}
+                                  </Button>
+                                )}
+                                {tab === "login" && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="w-full h-11 text-base font-semibold"
+                                    disabled={
+                                      loading || passkeyLoading || loggedIn
+                                    }
+                                    onClick={handlePasskeyLogin}
+                                  >
+                                    {passkeyLoading
+                                      ? Spinner
+                                      : t("auth.signInWithPasskey")}
                                   </Button>
                                 )}
                               </>

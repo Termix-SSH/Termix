@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const users = sqliteTable("users", {
@@ -80,6 +80,25 @@ export const trustedDevices = sqliteTable("trusted_devices", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const webauthnCredentials = sqliteTable("webauthn_credentials", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  credentialId: text("credential_id").notNull(),
+  publicKey: text("public_key").notNull(),
+  counter: integer("counter").notNull().default(0),
+  deviceType: text("device_type"),
+  backedUp: integer("backed_up", { mode: "boolean" }).notNull().default(false),
+  transports: text("transports"),
+  userVerification: text("user_verification").notNull().default("preferred"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  lastUsedAt: text("last_used_at"),
+});
+
 export const hosts = sqliteTable("ssh_data", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -111,6 +130,13 @@ export const hosts = sqliteTable("ssh_data", {
   overrideCredentialUsername: integer("override_credential_username", {
     mode: "boolean",
   }),
+  // When authType is "vault", the host authenticates via a Vault SSH signer
+  // profile (shared settings, no secrets). The signing certificate is obtained
+  // per-user at connect time via an interactive Vault OIDC flow.
+  vaultProfileId: integer("vault_profile_id").references(
+    () => vaultProfiles.id,
+    { onDelete: "set null" },
+  ),
   enableTerminal: integer("enable_terminal", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -661,6 +687,63 @@ export const opksshTokens = sqliteTable("opkssh_tokens", {
   lastUsed: text("last_used"),
 });
 
+// Vault SSH signer profiles. These hold ONLY non-secret connection settings and
+// are intended to be shared across users (shared === true makes a profile
+// visible to every user on the server). Each user authenticates to Vault via an
+// interactive OIDC flow at connect time; no tokens or keys are stored here.
+export const vaultProfiles = sqliteTable("vault_profiles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  folder: text("folder"),
+  tags: text("tags"),
+  // Vault server connection (non-secret)
+  vaultAddr: text("vault_addr").notNull(),
+  vaultNamespace: text("vault_namespace"),
+  // OIDC auth method mount + role used to obtain a Vault token interactively
+  oidcMount: text("oidc_mount"),
+  oidcRole: text("oidc_role"),
+  // SSH secrets engine mount + signer role used to sign the ephemeral key
+  sshMount: text("ssh_mount"),
+  sshRole: text("ssh_role").notNull(),
+  validPrincipals: text("valid_principals"),
+  // Ephemeral keypair algorithm to generate per connection
+  keyType: text("key_type"),
+  // When true the profile is visible/usable by all users on the server
+  shared: integer("shared", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Per-user cache of the ephemeral SSH private key + Vault-signed certificate.
+// Transient: rows live only until the certificate expires. Secret fields are
+// encrypted under the user's data-encryption key (see field-crypto.ts).
+export const vaultTokens = sqliteTable("vault_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  profileId: integer("profile_id")
+    .notNull()
+    .references(() => vaultProfiles.id, { onDelete: "cascade" }),
+
+  sshCert: text("ssh_cert", { length: 8192 }).notNull(),
+  privateKey: text("private_key", { length: 8192 }).notNull(),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  lastUsed: text("last_used"),
+});
+
 export const apiKeys = sqliteTable("api_keys", {
   id: text("id").primaryKey(),
   userId: text("user_id")
@@ -710,6 +793,9 @@ export const userPreferences = sqliteTable("user_preferences", {
   showHostTags: integer("show_host_tags", { mode: "boolean" }),
   hostTrayOnClick: integer("host_tray_on_click", { mode: "boolean" }),
   pinAppRail: integer("pin_app_rail", { mode: "boolean" }),
+  expandAppRailOnHover: integer("expand_app_rail_on_hover", {
+    mode: "boolean",
+  }),
   foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
   confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
@@ -788,6 +874,79 @@ export const dashboardServiceLinks = sqliteTable("dashboard_service_links", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- termix-id begin ---
+// A user claims a unique public handle. Their published SSH public keys are
+// served at an unauthenticated resolver endpoint in authorized_keys format,
+// so any server can be provisioned with `curl <host>/termix-id/u/<handle> >> ~/.ssh/authorized_keys`.
+export const termixIdentities = sqliteTable("termix_identities", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // One Termix ID per user — enforced in schema, not just in code.
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  handle: text("handle").notNull().unique(),
+  description: text("description"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const termixIdentityKeys = sqliteTable("termix_identity_keys", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  identityId: integer("identity_id")
+    .notNull()
+    .references(() => termixIdentities.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // Public keys are non-secret, so they are stored in plaintext (no field-level
+  // encryption). This is what lets the unauthenticated resolver serve them.
+  publicKey: text("public_key", { length: 8192 }).notNull(),
+  // Raw algorithm token (e.g. "ssh-ed25519"), and a normalized group used for
+  // the /<ALGO> resolver filter (RSA / ED25519 / ECDSA / ...).
+  keyType: text("key_type").notNull(),
+  algorithm: text("algorithm").notNull(),
+  label: text("label"),
+  comment: text("comment"),
+  // "manual" (pasted) or "credential" (imported from an ssh_credentials entry).
+  source: text("source").notNull().default("manual"),
+  credentialId: integer("credential_id").references(() => sshCredentials.id, {
+    onDelete: "set null",
+  }),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// Per-identity certificate authority. Servers that trust this CA (via
+// TrustedUserCAKeys / @cert-authority) accept any user certificate it signs,
+// giving central revocation (rotate the CA) and expiry (cert validity).
+export const termixIdentityCa = sqliteTable("termix_identity_ca", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  identityId: integer("identity_id")
+    .notNull()
+    .unique()
+    .references(() => termixIdentities.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // CA public key (plaintext — it is published); CA private key is field-encrypted.
+  publicKey: text("public_key", { length: 4096 }).notNull(),
+  privateKey: text("private_key", { length: 8192 }).notNull(),
+  validityDays: integer("validity_days").notNull().default(90),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- termix-id end ---
+
 // --- tmux-monitor begin ---
 export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -804,3 +963,118 @@ export const tmuxSessionTags = sqliteTable("tmux_session_tags", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- tmux-monitor end ---
+
+// --- metrics-history begin ---
+export const hostMetricsHistory = sqliteTable("host_metrics_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  ts: text("ts")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  cpuPercent: real("cpu_percent"),
+  memPercent: real("mem_percent"),
+  diskPercent: real("disk_percent"),
+  netRxBytes: integer("net_rx_bytes"),
+  netTxBytes: integer("net_tx_bytes"),
+});
+// --- metrics-history end ---
+
+// --- alerts begin ---
+export const alertRules = sqliteTable("alert_rules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id").references(() => hosts.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  triggerType: text("trigger_type").notNull(),
+  thresholdValue: real("threshold_value"),
+  thresholdDurationSeconds: integer("threshold_duration_seconds"),
+  cooldownMinutes: integer("cooldown_minutes").notNull().default(15),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const notificationChannels = sqliteTable("notification_channels", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  config: text("config").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const alertRuleChannels = sqliteTable("alert_rule_channels", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ruleId: integer("rule_id")
+    .notNull()
+    .references(() => alertRules.id, { onDelete: "cascade" }),
+  channelId: integer("channel_id")
+    .notNull()
+    .references(() => notificationChannels.id, { onDelete: "cascade" }),
+});
+
+export const alertFirings = sqliteTable("alert_firings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  ruleId: integer("rule_id")
+    .notNull()
+    .references(() => alertRules.id, { onDelete: "cascade" }),
+  hostId: integer("host_id").notNull(),
+  hostName: text("host_name").notNull(),
+  firedAt: text("fired_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  resolvedAt: text("resolved_at"),
+  value: real("value"),
+  message: text("message").notNull(),
+  severity: text("severity").notNull().default("warning"),
+  acknowledged: integer("acknowledged", { mode: "boolean" }).notNull().default(false),
+});
+// --- alerts end ---
+
+// --- homepage begin ---
+export const homepageItems = sqliteTable("homepage_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  typeId: text("type_id").notNull(),
+  title: text("title"),
+  config: text("config").notNull().default("{}"),
+  folderId: integer("folder_id"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const homepageLayouts = sqliteTable("homepage_layouts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // JSON: { entries: HomepageLayoutEntry[], pan: {x,y}, zoom: number }
+  layout: text("layout").notNull().default("{}"),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- homepage end ---

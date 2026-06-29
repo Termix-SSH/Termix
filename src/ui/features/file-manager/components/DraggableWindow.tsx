@@ -20,6 +20,7 @@ interface DraggableWindowProps {
   zIndex?: number;
   onFocus?: () => void;
   targetSize?: { width: number; height: number };
+  titleActions?: React.ReactNode;
 }
 
 export function DraggableWindow({
@@ -39,6 +40,7 @@ export function DraggableWindow({
   zIndex = 1000,
   onFocus,
   targetSize,
+  titleActions,
 }: DraggableWindowProps) {
   const { t } = useTranslation();
   const [position, setPosition] = useState({ x: initialX, y: initialY });
@@ -284,12 +286,14 @@ export function DraggableWindow({
             {t("fileManager.editor")}
           </span>
           <div className="h-4 w-px bg-border/50 shrink-0" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground truncate">
+          <span className="text-[10px] font-bold tracking-tight text-muted-foreground truncate">
             {title}
           </span>
         </div>
 
         <div className="flex items-center gap-0.5">
+          {titleActions}
+
           {onMinimize && (
             <button
               className="size-6 flex items-center justify-center rounded-none hover:bg-accent-brand/10 hover:text-accent-brand text-muted-foreground transition-colors"

@@ -24,6 +24,27 @@ type ConnectErrorResponse = {
   reason?: string;
 };
 
+function buildFileManagerUrl(path: string): string {
+  const baseURL = String(fileManagerApi.defaults.baseURL || "");
+  return `${baseURL.replace(/\/$/, "")}${path}`;
+}
+
+function triggerBlobDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.style.display = "none";
+
+  document.body.appendChild(link);
+  link.click();
+
+  window.setTimeout(() => {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
 // SSH FILE OPERATIONS
 // ============================================================================
 
@@ -348,8 +369,74 @@ export async function uploadSSHFile(
   file: File,
   hostId?: number,
   userId?: string,
+  onChunkProgress?: (progress: {
+    chunkIndex: number;
+    totalChunks: number;
+    bytesSent: number;
+    totalBytes: number;
+  }) => void,
 ): Promise<Record<string, unknown>> {
+  // Browser-side safety: any single multipart body approaching 2^31 bytes (~2.14GB)
+  // crashes the XHR/ArrayBuffer pipeline in both Chromium (Electron) and Firefox,
+  // surfacing as "DOMException: File could not be read" inside FileManager-*.js.
+  // For larger files we slice into <=8MB chunks and upload each one separately,
+  // never materializing the whole file in JS memory.
+  const CHUNK_THRESHOLD_BYTES = 1.5 * 1024 * 1024 * 1024; // 1.5 GiB
+  const CHUNK_SIZE_BYTES = 8 * 1024 * 1024; // 8 MiB
+
   try {
+    if (file.size > CHUNK_THRESHOLD_BYTES) {
+      const totalChunks = Math.ceil(file.size / CHUNK_SIZE_BYTES);
+      fileLogger.info("Starting chunked upload", {
+        operation: "file_upload_chunked_start",
+        fileName,
+        fileSize: file.size,
+        totalChunks,
+        chunkSize: CHUNK_SIZE_BYTES,
+      });
+
+      let bytesSent = 0;
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE_BYTES;
+        const end = Math.min(start + CHUNK_SIZE_BYTES, file.size);
+        const chunkBlob = file.slice(start, end);
+
+        const form = new FormData();
+        form.append("sessionId", sessionId);
+        form.append("path", path);
+        form.append("fileName", fileName);
+        form.append("chunkIndex", String(i));
+        form.append("totalChunks", String(totalChunks));
+        form.append("totalSize", String(file.size));
+        form.append("chunk", chunkBlob, fileName);
+
+        const response = await fileManagerApi.post(
+          "/ssh/uploadFileChunk",
+          form,
+          { timeout: 0 },
+        );
+
+        bytesSent = end;
+        onChunkProgress?.({
+          chunkIndex: i,
+          totalChunks,
+          bytesSent,
+          totalBytes: file.size,
+        });
+
+        if (i === totalChunks - 1) {
+          fileLogger.success("Chunked upload completed", {
+            operation: "file_upload_chunked_complete",
+            fileName,
+            fileSize: file.size,
+            totalChunks,
+          });
+          return response.data;
+        }
+      }
+      return { message: "File uploaded successfully", chunked: true };
+    }
+
     const form = new FormData();
     form.append("sessionId", sessionId);
     form.append("path", path);
@@ -357,9 +444,13 @@ export async function uploadSSHFile(
     if (userId !== undefined) form.append("userId", userId);
     form.append("file", file, fileName);
 
-    const response = await fileManagerApi.post("/ssh/uploadFileStream", form, {
-      timeout: 0,
-    });
+    const response = await fileManagerApi.postForm(
+      "/ssh/uploadFileStream",
+      form,
+      {
+        timeout: 0,
+      },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "upload SSH file");
@@ -400,12 +491,7 @@ export async function downloadSSHFileStream(
   );
   const blob = response.data as Blob;
   const fileName = filePath.split("/").pop() || "download";
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
+  triggerBlobDownload(blob, fileName);
 }
 
 export async function createSSHFile(

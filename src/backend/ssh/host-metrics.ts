@@ -24,15 +24,19 @@ import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
+import { collectTemperatureMetrics } from "./widgets/temperature-collector.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
+import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { connectionPool, withConnection } from "./ssh-connection-pool.js";
 import { registerHostMetricsSettingsRoutes } from "./host-metrics-settings-routes.js";
 import { registerHostMetricsViewerRoutes } from "./host-metrics-viewer-routes.js";
 import { registerHostMetricsPreferencesRoutes } from "./host-metrics-preferences-routes.js";
+import { registerHostMetricsHistoryRoutes } from "./host-metrics-history-routes.js";
+import { AlertEngine } from "./alert-engine.js";
 import { registerManagerRoutes } from "./managers/index.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
@@ -42,6 +46,7 @@ import {
   isTcpPingEnabled,
   supportsMetrics,
 } from "./host-metrics-helpers.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 import {
   cleanupMetricsSession,
   getSessionKey,
@@ -129,6 +134,7 @@ const DEFAULT_STATS_CONFIG: StatsConfig = {
     "processes",
     "ports",
     "firewall",
+    "temperature",
   ],
   statusCheckEnabled: true,
   statusCheckInterval: 60,
@@ -294,6 +300,8 @@ class PollingManager {
       viewerUserId,
     };
 
+    this.pollingConfigs.set(host.id, config);
+
     if (isTcpPingEnabled(statsConfig)) {
       const intervalMs = statsConfig.statusCheckInterval * 1000;
 
@@ -335,8 +343,6 @@ class PollingManager {
     } else {
       this.metricsStore.delete(host.id);
     }
-
-    this.pollingConfigs.set(host.id, config);
   }
 
   private async pollHostStatus(
@@ -373,12 +379,18 @@ class PollingManager {
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
+      AlertEngine.getInstance()
+        .evaluateStatus(refreshedHost.id, isOnline)
+        .catch(() => {});
     } catch {
       const statusEntry: StatusEntry = {
         status: "offline",
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
+      AlertEngine.getInstance()
+        .evaluateStatus(refreshedHost.id, false)
+        .catch(() => {});
     }
   }
 
@@ -420,6 +432,10 @@ class PollingManager {
         data: metrics,
         timestamp: Date.now(),
       });
+      this.insertMetricsHistory(refreshedHost.id, metrics);
+      AlertEngine.getInstance()
+        .evaluateMetrics(refreshedHost.id, metrics)
+        .catch(() => {});
       pollingBackoff.reset(refreshedHost.id);
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
@@ -455,6 +471,68 @@ class PollingManager {
           hostId: refreshedHost.id,
         });
       }
+    }
+  }
+
+  private getRetentionDays(): number {
+    try {
+      const db = getDb();
+      const row = db.$client
+        .prepare(
+          "SELECT value FROM settings WHERE key = 'metrics_history_retention_days'",
+        )
+        .get() as { value: string } | undefined;
+      const days = row ? parseInt(row.value, 10) : 7;
+      return isNaN(days) || days < 1 ? 7 : Math.min(days, 90);
+    } catch {
+      return 7;
+    }
+  }
+
+  private insertMetricsHistory(
+    hostId: number,
+    metrics: {
+      cpu: { percent: number | null };
+      memory: { percent: number | null };
+      disk: { percent: number | null };
+      network: {
+        interfaces: Array<{ rxBytes: string | null; txBytes: string | null }>;
+      };
+    },
+  ): void {
+    try {
+      const db = getDb();
+      const iface = metrics.network?.interfaces?.[0];
+      const rxRaw = iface?.rxBytes ? parseInt(iface.rxBytes, 10) : null;
+      const txRaw = iface?.txBytes ? parseInt(iface.txBytes, 10) : null;
+
+      db.$client
+        .prepare(
+          `INSERT INTO host_metrics_history
+             (host_id, cpu_percent, mem_percent, disk_percent, net_rx_bytes, net_tx_bytes)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          hostId,
+          metrics.cpu?.percent ?? null,
+          metrics.memory?.percent ?? null,
+          metrics.disk?.percent ?? null,
+          isNaN(rxRaw as number) ? null : rxRaw,
+          isNaN(txRaw as number) ? null : txRaw,
+        );
+
+      const retentionDays = this.getRetentionDays();
+      db.$client
+        .prepare(
+          `DELETE FROM host_metrics_history WHERE host_id = ? AND ts < datetime('now', ?)`,
+        )
+        .run(hostId, `-${retentionDays} days`);
+    } catch (err) {
+      statsLogger.warn("Failed to write metrics history", {
+        operation: "insert_metrics_history",
+        hostId,
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 
@@ -767,6 +845,15 @@ async function resolveHostCredentials(
           : [],
       pin: !!host.pin,
       authType: host.authType,
+      terminalConfig: (() => {
+        try {
+          return typeof host.terminalConfig === "string"
+            ? JSON.parse(host.terminalConfig as string)
+            : host.terminalConfig || undefined;
+        } catch {
+          return undefined;
+        }
+      })(),
       enableTerminal: !!host.enableTerminal,
       enableTunnel: !!host.enableTunnel,
       enableFileManager: !!host.enableFileManager,
@@ -1017,18 +1104,9 @@ async function buildSshConfig(
     }
 
     try {
-      if (!host.key.includes("-----BEGIN") || !host.key.includes("-----END")) {
-        throw new Error("Invalid private key format");
-      }
-
-      const cleanKey = host.key
-        .trim()
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n");
-
-      (base as Record<string, unknown>).privateKey = Buffer.from(
-        cleanKey,
-        "utf8",
+      (base as Record<string, unknown>).privateKey = preparePrivateKeyForSSH2(
+        host.key,
+        host.keyPassword,
       );
 
       if (host.keyPassword) {
@@ -1067,6 +1145,14 @@ async function buildSshConfig(
       }
     } else {
       throw new Error(`Credential for host ${host.ip} could not be resolved`);
+    }
+  } else if (host.authType === "agent") {
+    const result = await applyAgentAuth(
+      base as Record<string, unknown>,
+      (host as { terminalConfig?: Record<string, unknown> }).terminalConfig,
+    );
+    if ("error" in result) {
+      throw new Error(result.error);
     }
   } else {
     throw new Error(
@@ -1154,6 +1240,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
     return new Promise<Client>((resolve, reject) => {
       const timeout = setTimeout(() => {
         client.end();
+        jumpClient?.end();
         reject(new Error("SSH connection timeout"));
       }, 30000);
 
@@ -1162,8 +1249,13 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
         resolve(client);
       });
 
+      client.on("close", () => {
+        jumpClient?.end();
+      });
+
       client.on("error", (err) => {
         clearTimeout(timeout);
+        jumpClient?.end();
         reject(err);
       });
 
@@ -1301,6 +1393,14 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     kernel: string | null;
     os: string | null;
   };
+  temperature: {
+    source: "sysfs" | "sensors" | "none";
+    highestCelsius: number | null;
+    sensors: Array<{
+      label: string;
+      celsius: number;
+    }>;
+  };
 }> {
   if (!supportsMetrics(host)) {
     throw new Error("Metrics collection only supported for SSH hosts");
@@ -1331,6 +1431,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         const uptime = await collectUptimeMetrics(client);
         const processes = await collectProcessesMetrics(client);
         const system = await collectSystemMetrics(client);
+        const temperature = await collectTemperatureMetrics(client);
 
         let login_stats = {
           recentLogins: [],
@@ -1402,6 +1503,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           uptime,
           processes,
           system,
+          temperature,
           login_stats,
           ports,
           firewall,
@@ -1880,6 +1982,20 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       return res.status(404).json({ error: "Host not found", connectionLogs });
     }
 
+    if (!supportsMetrics(host)) {
+      connectionLogs.push(
+        createConnectionLog(
+          "info",
+          "stats_connecting",
+          "Metrics collection is only supported for SSH hosts",
+          {
+            connectionType: host.connectionType || "ssh",
+          },
+        ),
+      );
+      return res.json({ success: true, skipped: true, connectionLogs });
+    }
+
     connectionLogs.push(
       createConnectionLog(
         "info",
@@ -1925,7 +2041,11 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
           "Using existing metrics session",
         ),
       );
-      return res.json({ success: true, connectionLogs });
+
+      const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      pollingManager.registerViewer(host.id, viewerSessionId, userId);
+
+      return res.json({ success: true, viewerSessionId, connectionLogs });
     }
 
     const config = await buildSshConfig(host);
@@ -2542,6 +2662,12 @@ registerHostMetricsPreferencesRoutes(app, {
     (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
 });
 
+registerHostMetricsHistoryRoutes(app, {
+  validateHostId,
+  canAccessHost: async (userId, hostId, level) =>
+    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
+});
+
 registerManagerRoutes(app, {
   validateHostId,
   runOnHost: async (hostId, userId, level, fn) => {
@@ -2568,6 +2694,35 @@ registerManagerRoutes(app, {
     };
     return withSshConnection(host, (client) => fn(client, managerHost));
   },
+});
+
+// Internal endpoint — only accepts calls from localhost.
+// Used by the main backend to notify the metrics service of SSH login events.
+app.post("/internal/login-alert", async (req, res) => {
+  const remoteIp = req.socket.remoteAddress;
+  if (
+    remoteIp !== "127.0.0.1" &&
+    remoteIp !== "::1" &&
+    remoteIp !== "::ffff:127.0.0.1"
+  ) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const systemCrypto = (await import("../utils/system-crypto.js")).SystemCrypto;
+  const expectedToken = await systemCrypto.getInstance().getInternalAuthToken();
+  const token = req.headers["x-internal-auth"];
+  if (!token || token !== expectedToken) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const { hostId, userId, sshUser, fromIp } = req.body as {
+    hostId: number;
+    userId: string;
+    sshUser: string;
+    fromIp: string;
+  };
+  AlertEngine.getInstance()
+    .evaluateUserLogin(hostId, userId, sshUser, fromIp)
+    .catch(() => {});
+  res.json({ ok: true });
 });
 
 process.on("SIGINT", () => {

@@ -96,6 +96,7 @@ export function SSHAuthDialog({
       } else {
         if (sshKey.trim()) {
           credentials.sshKey = sshKey;
+          if (password !== "") credentials.password = password;
           if (keyPassword.trim()) credentials.keyPassword = keyPassword;
         }
       }
@@ -210,7 +211,7 @@ export function SSHAuthDialog({
                     <input
                       id="key-upload"
                       type="file"
-                      accept="*,.pem,.key,.txt"
+                      accept="*,.pem,.key,.ppk,.txt"
                       onChange={handleKeyFileUpload}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
@@ -268,6 +269,17 @@ export function SSHAuthDialog({
                   <p className="text-[10px] text-muted-foreground">
                     {t("auth.sshKeyPasswordDescription")}
                   </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("credentials.password")} ({t("common.optional")})
+                  </Label>
+                  <PasswordInput
+                    placeholder={t("placeholders.enterPassword")}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="rounded-none bg-muted/50 border-border text-xs"
+                  />
                 </div>
               </TabsContent>
             </Tabs>

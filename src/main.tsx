@@ -52,6 +52,12 @@ const TmuxMonitorApp = lazy(() =>
   })),
 );
 
+const HomepageApp = lazy(() =>
+  import("@/features/homepage/HomepageApp").then((m) => ({
+    default: m.default,
+  })),
+);
+
 const ElectronVersionCheck = lazy(() =>
   import("@/user/ElectronVersionCheck").then((module) => ({
     default: module.ElectronVersionCheck,
@@ -106,9 +112,59 @@ function FullscreenApp() {
     case "tmux-monitor": // --- tmux-monitor ---
     case "tmux_monitor": // tab type spelling, so copied links also resolve
       return <TmuxMonitorApp hostId={hostId || undefined} />;
+    case "homepage":
+      return <HomepageApp />;
     default:
       return null;
   }
+}
+
+function FullscreenAppGate() {
+  const { t } = useTranslation();
+  const [ready, setReady] = useState(false);
+  const [authFailed, setAuthFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    appReadyPromise
+      .then(() => getUserInfo())
+      .then(async () => {
+        if (isElectron()) {
+          try {
+            const token = await getCurrentToken();
+            if (token) localStorage.setItem("jwt", token);
+          } catch {
+            // WebSocket connections can still fall back to cookie auth.
+          }
+        }
+        if (!cancelled) setReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (authFailed) {
+    return <FullscreenApp />;
+  }
+
+  if (!ready) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <FullscreenApp />;
 }
 
 function App() {
@@ -118,6 +174,10 @@ function App() {
   );
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether fading-in came from a fresh login (vs. session verification on page load).
+  // When session-verified, Auth must not mount during the transition — it would trigger
+  // silent OIDC redirect and cause an infinite refresh loop.
+  const fadingInFromLoginRef = useRef(false);
 
   useEffect(() => {
     const savedAccent = localStorage.getItem("termix-accent");
@@ -139,14 +199,16 @@ function App() {
     if (phase !== "verifying") return;
     appReadyPromise
       .then(() => getUserInfo())
-      .then(() => {
+      .then(async () => {
         if (isElectron()) {
-          getCurrentToken()
-            .then((token) => {
-              if (token) localStorage.setItem("jwt", token);
-            })
-            .catch(() => {});
+          try {
+            const token = await getCurrentToken();
+            if (token) localStorage.setItem("jwt", token);
+          } catch {
+            // Non-fatal: WebSocket connections will fall back to cookie auth
+          }
         }
+        fadingInFromLoginRef.current = false;
         setPhase("fading-in");
         timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
       })
@@ -158,6 +220,7 @@ function App() {
 
   function handleLogin(u: string) {
     setAuthUsername(u);
+    fadingInFromLoginRef.current = true;
     setPhase("fading-in");
     timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
     if (isElectron()) {
@@ -182,7 +245,9 @@ function App() {
   const showApp =
     phase === "idle-app" || phase === "fading-in" || phase === "fading-out";
   const showAuth =
-    phase === "idle-auth" || phase === "fading-in" || phase === "fading-out";
+    phase === "idle-auth" ||
+    (phase === "fading-in" && fadingInFromLoginRef.current) ||
+    phase === "fading-out";
   const appOpacity = phase === "idle-app" ? 1 : 0;
   const authOpacity = phase === "idle-auth" ? 1 : 0;
 
@@ -259,7 +324,7 @@ function RootApp() {
   if (isFullscreen) {
     return (
       <Suspense fallback={null}>
-        <FullscreenApp />
+        <FullscreenAppGate />
       </Suspense>
     );
   }

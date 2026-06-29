@@ -50,11 +50,17 @@ interface TextSegment {
   activeSgr?: string;
 }
 
+interface ProtectedRange {
+  start: number;
+  end: number;
+}
+
 const MAX_LINE_LENGTH = 2000;
 
-// Cursor-positioning and erase sequences used by TUI apps (nano, vim, htop).
-// If a chunk contains these, we skip highlighting entirely.
-const TUI_SEQUENCE = /\x1b\[[\d;]*[ABCDEFGHJKST]/;
+// Cursor-positioning, erase, and private mode sequences used by TUI apps
+// (mc, nano, vim, htop). If a chunk contains these, highlighting can inject
+// extra SGR bytes into a full-screen redraw and corrupt xterm's cursor state.
+const TUI_SEQUENCE = /\x1b\[(?:[\d;]*[ABCDEFGHJKST]|\?[\d;]*[hl])/;
 
 // A bare \r (not immediately followed by \n) means the terminal is overwriting
 // the current line (shell prompts, progress bars). Highlighting mid-rewrite
@@ -65,6 +71,8 @@ const MID_LINE_CR = /\r(?!\n)/;
 // These should not be highlighted — the server already colored them, and injecting
 // additional ANSI codes into the prompt fragments causes display corruption.
 const STRIP_ANSI_RE = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
+const SSH_BRACKET_HEADING_RE =
+  /(?:(?<=^)|(?<=\s))\[[\w.-]+@[\w.-]+(?:[^\]\r\n]*)?\]/g;
 
 function isShellPromptLine(bare: string): boolean {
   const plain = bare.replace(STRIP_ANSI_RE, "");
@@ -250,6 +258,7 @@ function highlightPlainText(
   if (text.length > MAX_LINE_LENGTH || !text.trim()) return text;
 
   const matches: MatchResult[] = [];
+  const protectedRanges = getProtectedRanges(text);
 
   for (const pattern of activePatterns) {
     pattern.regex.lastIndex = 0;
@@ -260,6 +269,9 @@ function highlightPlainText(
         const captureOffset = m[0].indexOf(m[1], m[0].search(/\d/));
         const captureStart = m.index + captureOffset;
         const captureEnd = captureStart + m[1].length;
+        if (isProtectedRange(captureStart, captureEnd, protectedRanges)) {
+          continue;
+        }
         matches.push({
           start: m.index,
           end: m.index + m[0].length,
@@ -269,6 +281,9 @@ function highlightPlainText(
           captureEnd,
         });
       } else {
+        if (isProtectedRange(m.index, m.index + m[0].length, protectedRanges)) {
+          continue;
+        }
         matches.push({
           start: m.index,
           end: m.index + m[0].length,
@@ -322,6 +337,29 @@ function highlightPlainText(
   }
 
   return result;
+}
+
+function getProtectedRanges(text: string): ProtectedRange[] {
+  const ranges: ProtectedRange[] = [];
+  SSH_BRACKET_HEADING_RE.lastIndex = 0;
+
+  let match;
+  while ((match = SSH_BRACKET_HEADING_RE.exec(text)) !== null) {
+    ranges.push({
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+
+  return ranges;
+}
+
+function isProtectedRange(
+  start: number,
+  end: number,
+  ranges: ProtectedRange[],
+): boolean {
+  return ranges.some((range) => start < range.end && end > range.start);
 }
 
 function buildActivePatterns(

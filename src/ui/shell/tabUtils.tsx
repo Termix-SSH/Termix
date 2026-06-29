@@ -3,11 +3,13 @@ import {
   Box,
   FolderSearch,
   LayoutDashboard,
+  LayoutGrid,
   Monitor,
   Network,
   Server,
   Settings,
   Terminal,
+  Usb,
   User,
   Activity,
   TerminalSquare,
@@ -15,6 +17,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
+import { Serial } from "@/features/serial/Serial";
+import type { SerialHandle } from "@/features/serial/serial-types";
 import { Terminal as TerminalFeature } from "@/features/terminal/Terminal";
 import type {
   TerminalHandle,
@@ -28,7 +32,9 @@ import { HostMetricsTab } from "@/features/host-metrics/HostMetricsTab";
 // --- tmux-monitor ---
 import { TmuxMonitor } from "@/features/tmux-monitor/TmuxMonitor";
 import GuacamoleApp from "@/features/guacamole/GuacamoleApp";
+import type { GuacamoleAppHandle } from "@/features/guacamole/GuacamoleApp";
 import { DashboardTab } from "@/dashboard/DashboardTab";
+import { HomepageCanvas } from "@/features/homepage/HomepageCanvas";
 import { TunnelTab } from "@/features/tunnel/TunnelTab";
 import { NetworkGraphCard } from "@/dashboard/cards/NetworkGraphCard";
 import type { Tab, TabType, Host } from "@/types/ui-types";
@@ -120,6 +126,10 @@ export function tabIcon(type: TabType) {
     // --- tmux-monitor ---
     case "tmux_monitor":
       return <Layers className="size-3.5" />;
+    case "serial":
+      return <Usb className="size-3.5" />;
+    case "homepage":
+      return <LayoutGrid className="size-3.5" />;
   }
 }
 
@@ -159,6 +169,7 @@ function TerminalTabContent({
               } as TerminalHostConfig
             }
             isVisible={isVisible}
+            initialPath={tab.initialFilePath}
             title={label}
             showTitle={false}
             splitScreen={false}
@@ -193,6 +204,7 @@ export function renderTabContent(
   isVisible = true,
   onOpenFileInEditor?: (host: Host, filePath: string) => void,
   onOpenFileManager?: (host: Host, path?: string) => void,
+  onOpenTerminalTab?: (host: Host, path?: string) => void,
   onRenameTab?: (tabId: string, newLabel: string) => void,
 ) {
   const { host, label } = tab;
@@ -245,6 +257,11 @@ export function renderTabContent(
         <FileManager
           initialHost={hostToSSHHost(host)}
           initialFilePath={tab.initialFilePath}
+          onOpenTerminalTab={
+            onOpenTerminalTab
+              ? (path) => onOpenTerminalTab(host, path)
+              : undefined
+          }
         />
       );
 
@@ -288,6 +305,7 @@ export function renderTabContent(
         );
       return (
         <GuacamoleApp
+          ref={tab.terminalRef as React.Ref<GuacamoleAppHandle>}
           hostId={host.id}
           tabId={tab.id}
           protocol={tab.type as "rdp" | "vnc" | "telnet"}
@@ -305,6 +323,21 @@ export function renderTabContent(
           isVisible={isVisible}
         />
       );
+
+    case "serial":
+      if (!tab.serialConfig)
+        return <EmptyState icon={Usb} messageKey="serial.notSupportedTitle" />;
+      return (
+        <Serial
+          ref={tab.terminalRef as React.Ref<SerialHandle>}
+          config={tab.serialConfig}
+          isVisible={isVisible}
+          instanceId={tab.instanceId}
+        />
+      );
+
+    case "homepage":
+      return <HomepageCanvas />;
 
     case "host-manager":
     case "user-profile":

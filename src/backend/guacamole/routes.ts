@@ -10,6 +10,7 @@ import { eq, and } from "drizzle-orm";
 import { Client } from "ssh2";
 import net from "net";
 import type { AuthenticatedRequest } from "../../types/index.js";
+import { resolveGuacdOptions } from "../utils/guacd-config.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -589,21 +590,17 @@ router.post(
  */
 router.get("/status", async (req, res) => {
   try {
-    let guacdHost = process.env.GUACD_HOST || "localhost";
-    let guacdPort = parseInt(process.env.GUACD_PORT || "4822", 10);
+    let dbUrl: string | undefined;
     try {
       const db = getDb();
       const urlRow = db.$client
         .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
         .get() as { value: string } | undefined;
-      if (urlRow?.value) {
-        const parts = urlRow.value.split(":");
-        guacdHost = parts[0] || guacdHost;
-        guacdPort = parseInt(parts[1] || String(guacdPort), 10);
-      }
+      dbUrl = urlRow?.value;
     } catch {
       // Fall back to env vars
     }
+    const { host: guacdHost, port: guacdPort } = resolveGuacdOptions(dbUrl);
 
     const net = await import("net");
 

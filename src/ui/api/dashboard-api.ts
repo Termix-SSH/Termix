@@ -1,4 +1,5 @@
 import { dashboardApi, handleApiError } from "@/main-axios";
+import { normalizeServiceLinkUrl } from "@/lib/service-link-url";
 
 // DASHBOARD API
 // ============================================================================
@@ -105,7 +106,10 @@ export async function createServiceLink(
   url: string,
 ): Promise<ServiceLink> {
   try {
-    const response = await dashboardApi.post("/service-links", { label, url });
+    const response = await dashboardApi.post("/service-links", {
+      label,
+      url: normalizeServiceLinkUrl(url),
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "create service link");
@@ -128,7 +132,13 @@ export async function updateServiceLink(
   updates: { label?: string; url?: string },
 ): Promise<ServiceLink> {
   try {
-    const response = await dashboardApi.put(`/service-links/${id}`, updates);
+    const response = await dashboardApi.put(`/service-links/${id}`, {
+      ...updates,
+      url:
+        updates.url !== undefined
+          ? normalizeServiceLinkUrl(updates.url)
+          : undefined,
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update service link");

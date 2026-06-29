@@ -9,6 +9,7 @@ const {
   safeStorage,
   Tray,
   clipboard,
+  nativeImage,
 } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -17,7 +18,7 @@ const https = require("https");
 const http = require("http");
 const net = require("net");
 const { URL } = require("url");
-const { fork } = require("child_process");
+const { fork, spawn } = require("child_process");
 const WebSocket = require("ws");
 
 // Portable mode: if a `.portable` marker exists next to the executable,
@@ -528,14 +529,116 @@ let backendProcess = null;
 let backendStartFailed = false;
 let tray = null;
 let isQuitting = false;
+const tempFiles = new Map();
+const externalEditorSessions = new Map();
 
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
 const appRoot = isDev ? process.cwd() : path.join(__dirname, "..");
+const windowsAppUserModelId = "com.karmaa.termix";
 const electronCacheBuildPath = path.join(
   app.getPath("userData"),
   "client-cache-build.json",
 );
 const termixSessionPartition = "persist:termix";
+
+function getTempRoot() {
+  const tempRoot = path.join(app.getPath("temp"), "termix");
+  fs.mkdirSync(tempRoot, { recursive: true });
+  return tempRoot;
+}
+
+function sanitizeFileName(fileName) {
+  const baseName = path.basename(String(fileName || "file"));
+  return baseName.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_") || "file";
+}
+
+function decodeFileContent(content, encoding) {
+  if (encoding === "base64") {
+    return Buffer.from(String(content || ""), "base64");
+  }
+  return Buffer.from(String(content || ""), "utf8");
+}
+
+function createManagedTempFile(fileName, content, encoding = "utf8") {
+  const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const tempDir = fs.mkdtempSync(path.join(getTempRoot(), `${tempId}-`));
+  const filePath = path.join(tempDir, sanitizeFileName(fileName));
+  fs.writeFileSync(filePath, decodeFileContent(content, encoding));
+  tempFiles.set(tempId, { path: filePath, dir: tempDir });
+  return { tempId, path: filePath };
+}
+
+function cleanupManagedTempFile(tempId) {
+  const temp = tempFiles.get(tempId);
+  if (!temp) return;
+  try {
+    fs.rmSync(temp.dir, { recursive: true, force: true });
+  } catch (error) {
+    logToFile("Failed to clean up temporary file:", error.message);
+  }
+  tempFiles.delete(tempId);
+}
+
+function closeExternalEditorSession(editId) {
+  const session = externalEditorSessions.get(editId);
+  if (!session) return;
+  if (session.timer) clearTimeout(session.timer);
+  try {
+    session.watcher.close();
+  } catch {
+    // watcher may already be closed
+  }
+  externalEditorSessions.delete(editId);
+  cleanupManagedTempFile(editId);
+}
+
+function notifyExternalEditorSaved(editId) {
+  const session = externalEditorSessions.get(editId);
+  if (!session || !mainWindow || mainWindow.isDestroyed()) return;
+
+  try {
+    const stat = fs.statSync(session.path);
+    if (stat.mtimeMs === session.lastMtimeMs) return;
+    session.lastMtimeMs = stat.mtimeMs;
+
+    const content = fs.readFileSync(session.path, "utf8");
+    mainWindow.webContents.send("external-editor-saved", {
+      editId,
+      content,
+      encoding: "utf8",
+      path: session.path,
+    });
+  } catch (error) {
+    logToFile("Failed to read external editor file:", error.message);
+  }
+}
+
+function openPathWithEditor(filePath, editorPath) {
+  if (!editorPath) {
+    return shell.openPath(filePath);
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const child = spawn(editorPath, [filePath], {
+      detached: true,
+      stdio: "ignore",
+    });
+
+    child.once("error", (error) => {
+      if (settled) return;
+      settled = true;
+      resolve(error.message);
+    });
+
+    setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.unref();
+      resolve("");
+    }, 500);
+  });
+}
 
 app.on(
   "certificate-error",
@@ -690,9 +793,11 @@ function getBackendPaths() {
       backendCwd: backendDir,
     };
   }
-  // fork() does not go through Electron's asar redirector — use the unpacked path
+  // fork() does not go through Electron's asar redirector — use the unpacked path.
+  // On macOS multi-arch builds (mergeASARs: false), electron-builder names the ASAR
+  // app-arm64.asar / app-x64.asar instead of app.asar, so match all variants.
   const unpackedRoot = appRoot.replace(
-    /app\.asar(?!\.unpacked)/,
+    /app(-[a-z0-9]+)?\.asar(?!\.unpacked)/,
     "app.asar.unpacked",
   );
   const backendDir = path.join(unpackedRoot, "dist", "backend", "backend");
@@ -850,7 +955,13 @@ function createTray() {
     // use the unpacked path so the OS sees a real file.
     const publicRoot = isDev
       ? path.join(appRoot, "public")
-      : path.join(appRoot.replace("app.asar", "app.asar.unpacked"), "public");
+      : path.join(
+          appRoot.replace(
+            /app(-[a-z0-9]+)?\.asar(?!\.unpacked)/,
+            "app.asar.unpacked",
+          ),
+          "public",
+        );
 
     let trayIcon;
     if (process.platform === "darwin") {
@@ -920,7 +1031,11 @@ function createWindow() {
     minWidth: 800,
     minHeight: 600,
     title: "Termix",
-    icon: path.join(appRoot, "public", "icon.png"),
+    icon: path.join(
+      appRoot,
+      "public",
+      process.platform === "win32" ? "icon.ico" : "icon.png",
+    ),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -1231,9 +1346,11 @@ ipcMain.handle(
   async (_event, authUrl, callbackPort) => {
     const http = require("http");
 
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
+      let timeout;
+      let settled = false;
       const server = http.createServer((req, res) => {
-        const url = new URL(req.url, `http://localhost:${callbackPort}`);
+        const url = new URL(req.url || "/", `http://localhost:${callbackPort}`);
         if (url.pathname === "/oidc-callback") {
           const success = url.searchParams.get("success");
           const error = url.searchParams.get("error");
@@ -1244,27 +1361,54 @@ ipcMain.handle(
             `<html><body><h2>${success === "true" ? "Authentication successful!" : "Authentication failed."}</h2><p>You can close this tab and return to Termix.</p><script>window.close()</script></body></html>`,
           );
 
-          server.close();
           if (success === "true") {
-            resolve({ success: true, token });
+            finish({ success: true, token });
           } else {
-            resolve({
+            finish({
               success: false,
               error: error || "Authentication failed",
             });
           }
+          return;
+        }
+
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Not found");
+      });
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        if (timeout) clearTimeout(timeout);
+        try {
+          server.close();
+        } catch {
+          // Server may not have started yet.
+        }
+        resolve(result);
+      };
+
+      const fail = (error) => {
+        finish({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      };
+
+      server.once("error", fail);
+
+      server.listen(callbackPort, "127.0.0.1", async () => {
+        try {
+          await shell.openExternal(authUrl);
+        } catch (error) {
+          fail(error);
         }
       });
 
-      server.listen(callbackPort, "127.0.0.1", () => {
-        shell.openExternal(authUrl);
-      });
-
       // Timeout after 5 minutes
-      setTimeout(
+      timeout = setTimeout(
         () => {
-          server.close();
-          reject(new Error("OIDC authentication timed out"));
+          fail(new Error("OIDC authentication timed out"));
         },
         5 * 60 * 1000,
       );
@@ -2500,6 +2644,131 @@ ipcMain.handle("clipboard-write-text", (_event, text) => {
 
 ipcMain.handle("clipboard-read-text", () => clipboard.readText());
 
+ipcMain.handle("show-save-dialog", async (_event, options) => {
+  return dialog.showSaveDialog(mainWindow, options || {});
+});
+
+ipcMain.handle("show-open-dialog", async (_event, options) => {
+  return dialog.showOpenDialog(mainWindow, options || {});
+});
+
+ipcMain.handle("create-temp-file", async (_event, fileData) => {
+  try {
+    const result = createManagedTempFile(
+      fileData?.fileName,
+      fileData?.content,
+      fileData?.encoding,
+    );
+    return { success: true, ...result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("create-temp-folder", async (_event, folderData) => {
+  try {
+    const tempId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const tempDir = fs.mkdtempSync(path.join(getTempRoot(), `${tempId}-`));
+    const folderPath = path.join(
+      tempDir,
+      sanitizeFileName(folderData?.folderName || "files"),
+    );
+    fs.mkdirSync(folderPath, { recursive: true });
+
+    for (const file of folderData?.files || []) {
+      const relativePath = String(file.relativePath || "")
+        .split(/[\\/]+/)
+        .map(sanitizeFileName)
+        .filter(Boolean)
+        .join(path.sep);
+      if (!relativePath) continue;
+      const targetPath = path.join(folderPath, relativePath);
+      fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+      fs.writeFileSync(
+        targetPath,
+        decodeFileContent(file.content, file.encoding),
+      );
+    }
+
+    tempFiles.set(tempId, { path: folderPath, dir: tempDir });
+    return { success: true, tempId, path: folderPath };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("start-drag-to-desktop", (event, dragData) => {
+  try {
+    const temp = tempFiles.get(dragData?.tempId);
+    if (!temp) return { success: false, error: "Temporary file not found" };
+
+    event.sender.startDrag({
+      file: temp.path,
+      icon: nativeImage.createEmpty(),
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("cleanup-temp-file", (_event, tempId) => {
+  try {
+    cleanupManagedTempFile(tempId);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("open-external-editor", async (_event, fileData) => {
+  try {
+    const result = createManagedTempFile(
+      fileData?.fileName,
+      fileData?.content,
+      fileData?.encoding,
+    );
+    const editId = result.tempId;
+    const stat = fs.statSync(result.path);
+    const watcher = fs.watch(result.path, { persistent: false }, () => {
+      const session = externalEditorSessions.get(editId);
+      if (!session) return;
+      if (session.timer) clearTimeout(session.timer);
+      session.timer = setTimeout(() => notifyExternalEditorSaved(editId), 500);
+    });
+
+    externalEditorSessions.set(editId, {
+      path: result.path,
+      watcher,
+      timer: null,
+      lastMtimeMs: stat.mtimeMs,
+    });
+
+    const editorPath =
+      typeof fileData?.editorPath === "string" && fileData.editorPath.trim()
+        ? fileData.editorPath.trim()
+        : null;
+    const openError = await openPathWithEditor(result.path, editorPath);
+    if (openError) {
+      closeExternalEditorSession(editId);
+      return { success: false, error: openError };
+    }
+
+    return { success: true, editId, path: result.path };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle("close-external-editor", (_event, editId) => {
+  try {
+    closeExternalEditorSession(editId);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
     const normalizedServerUrl = serverUrl.replace(/\/$/, "");
@@ -2680,6 +2949,9 @@ app.whenReady().then(async () => {
     "arch:",
     process.arch,
   );
+  if (process.platform === "win32") {
+    app.setAppUserModelId(windowsAppUserModelId);
+  }
   createMenu();
   await clearElectronClientCacheIfBuildChanged();
   await clearElectronJwtCookiesAtStartup();
@@ -2719,6 +2991,12 @@ app.on("before-quit", () => {
 
 app.on("will-quit", () => {
   console.log("App will quit...");
+  for (const editId of externalEditorSessions.keys()) {
+    closeExternalEditorSession(editId);
+  }
+  for (const tempId of tempFiles.keys()) {
+    cleanupManagedTempFile(tempId);
+  }
   stopAllC2STunnels();
   stopBackendServer();
 });

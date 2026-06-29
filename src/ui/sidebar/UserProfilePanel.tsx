@@ -17,6 +17,13 @@ import {
   saveUserPreferences,
   getUserPreferences,
 } from "@/main-axios";
+import {
+  deleteWebAuthnCredential,
+  listWebAuthnCredentials,
+  registerWebAuthnCredential,
+  type WebAuthnCredentialSummary,
+  type WebAuthnUserVerification,
+} from "@/api/webauthn-api";
 import type { UserRole } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
@@ -55,6 +62,7 @@ import {
   ShieldCheck,
   Trash2,
   Type,
+  Usb,
   User,
   X,
   Zap,
@@ -429,6 +437,7 @@ export function UserProfilePanel({
     hostTrayOnClick?: boolean | null;
     compactHostView?: boolean | null;
     pinAppRail?: boolean | null;
+    expandAppRailOnHover?: boolean | null;
     foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
@@ -478,6 +487,11 @@ export function UserProfilePanel({
   const [totpLoading, setTotpLoading] = useState(false);
   const [showDisableTotp, setShowDisableTotp] = useState(false);
   const [disableTotpInput, setDisableTotpInput] = useState("");
+  const [passkeys, setPasskeys] = useState<WebAuthnCredentialSummary[]>([]);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyName, setPasskeyName] = useState("");
+  const [passkeyUserVerification, setPasskeyUserVerification] =
+    useState<WebAuthnUserVerification>("preferred");
 
   // Delete account
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -535,6 +549,9 @@ export function UserProfilePanel({
   const [pinAppRail, setPinAppRail] = useState(
     () => localStorage.getItem("pinAppRail") === "true",
   );
+  const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(
+    () => localStorage.getItem("expandAppRailOnHover") !== "false",
+  );
   const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
   );
@@ -589,6 +606,9 @@ export function UserProfilePanel({
     getApiKeys()
       .then(({ apiKeys: keys }) => setApiKeys(keys))
       .catch(() => {});
+    listWebAuthnCredentials()
+      .then(({ credentials }) => setPasskeys(credentials ?? []))
+      .catch(() => {});
     getVersionInfo()
       .then((info) => {
         setVersion(info.localVersion);
@@ -615,6 +635,7 @@ export function UserProfilePanel({
         "hostTrayOnClick",
         "compactHostView",
         "pinAppRail",
+        "expandAppRailOnHover",
         "defaultSnippetFoldersCollapsed",
         "confirmSnippetExecution",
         "disableUpdateCheck",
@@ -682,6 +703,15 @@ export function UserProfilePanel({
         if (prefs.pinAppRail != null) {
           setPinAppRail(prefs.pinAppRail);
           localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
+          window.dispatchEvent(new Event("pinAppRailChanged"));
+        }
+        if (prefs.expandAppRailOnHover != null) {
+          setExpandAppRailOnHover(prefs.expandAppRailOnHover);
+          localStorage.setItem(
+            "expandAppRailOnHover",
+            String(prefs.expandAppRailOnHover),
+          );
+          window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
         }
         if (prefs.foldersCollapsed != null) {
           setFoldersCollapsed(prefs.foldersCollapsed);
@@ -758,6 +788,10 @@ export function UserProfilePanel({
     window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
     setPinAppRail(false);
     localStorage.setItem("pinAppRail", "false");
+    window.dispatchEvent(new Event("pinAppRailChanged"));
+    setExpandAppRailOnHover(true);
+    localStorage.setItem("expandAppRailOnHover", "true");
+    window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
     setFoldersCollapsed(true);
     localStorage.removeItem("defaultSnippetFoldersCollapsed");
     setConfirmSnippetExecution(false);
@@ -784,6 +818,7 @@ export function UserProfilePanel({
         hostTrayOnClick: false,
         compactHostView: false,
         pinAppRail: false,
+        expandAppRailOnHover: true,
         foldersCollapsed: true,
         confirmSnippetExecution: false,
         disableUpdateCheck: false,
@@ -863,6 +898,16 @@ export function UserProfilePanel({
     const restoredPinRail = restore("pinAppRail", "false") === "true";
     setPinAppRail(restoredPinRail);
     localStorage.setItem("pinAppRail", String(restoredPinRail));
+    window.dispatchEvent(new Event("pinAppRailChanged"));
+
+    const restoredExpandRailOnHover =
+      restore("expandAppRailOnHover", "true") !== "false";
+    setExpandAppRailOnHover(restoredExpandRailOnHover);
+    localStorage.setItem(
+      "expandAppRailOnHover",
+      String(restoredExpandRailOnHover),
+    );
+    window.dispatchEvent(new Event("expandAppRailOnHoverChanged"));
 
     const restoredFolders =
       restore("defaultSnippetFoldersCollapsed", null) !== "false";
@@ -1003,6 +1048,41 @@ export function UserProfilePanel({
       );
     } finally {
       setTotpLoading(false);
+    }
+  }
+
+  async function handleRegisterPasskey() {
+    setPasskeyLoading(true);
+    try {
+      await registerWebAuthnCredential(
+        passkeyName || "Passkey",
+        passkeyUserVerification,
+      );
+      const { credentials } = await listWebAuthnCredentials();
+      setPasskeys(credentials ?? []);
+      setPasskeyName("");
+      toast.success(t("newUi.sidebar.userProfile.passkeyAdded"));
+    } catch (e: unknown) {
+      toast.error(
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.passkeyAddFailed")),
+      );
+    } finally {
+      setPasskeyLoading(false);
+    }
+  }
+
+  async function handleDeletePasskey(credentialId: string) {
+    setPasskeyLoading(true);
+    try {
+      await deleteWebAuthnCredential(credentialId);
+      setPasskeys((prev) => prev.filter((item) => item.id !== credentialId));
+      toast.success(t("newUi.sidebar.userProfile.passkeyDeleted"));
+    } catch (e: unknown) {
+      toast.error(
+        apiErrorMessage(e, t("newUi.sidebar.userProfile.passkeyDeleteFailed")),
+      );
+    } finally {
+      setPasskeyLoading(false);
     }
   }
 
@@ -1546,6 +1626,25 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.expandAppRailOnHover")}
+              description={t(
+                "newUi.sidebar.userProfile.expandAppRailOnHoverDesc",
+              )}
+            >
+              <FakeSwitch
+                checked={expandAppRailOnHover}
+                onChange={(v) => {
+                  setExpandAppRailOnHover(v);
+                  localStorage.setItem("expandAppRailOnHover", v.toString());
+                  window.dispatchEvent(
+                    new Event("expandAppRailOnHoverChanged"),
+                  );
+                  if (storageMode === "cloud")
+                    saveToCloud({ expandAppRailOnHover: v });
+                }}
+              />
+            </SettingRow>
           </div>
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
@@ -1576,6 +1675,11 @@ export function UserProfilePanel({
                   id: "quick-connect",
                   icon: <Zap size={12} />,
                   label: t("nav.quickConnect"),
+                },
+                {
+                  id: "serial",
+                  icon: <Usb size={12} />,
+                  label: t("nav.serial"),
                 },
                 {
                   id: "ssh-tools",
@@ -1931,6 +2035,93 @@ export function UserProfilePanel({
                 </Button>
               </div>
             )}
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-border pt-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium">
+                  {t("newUi.sidebar.userProfile.passkeys")}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.passkeysDesc")}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <Input
+                placeholder={t("newUi.sidebar.userProfile.passkeyName")}
+                value={passkeyName}
+                onChange={(e) => setPasskeyName(e.target.value)}
+                className="h-8 text-xs"
+                disabled={passkeyLoading}
+              />
+              <select
+                value={passkeyUserVerification}
+                onChange={(e) =>
+                  setPasskeyUserVerification(
+                    e.target.value as WebAuthnUserVerification,
+                  )
+                }
+                className="h-8 w-28 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+                disabled={passkeyLoading}
+              >
+                <option value="preferred">
+                  {t("newUi.sidebar.userProfile.passkeyUvPreferred")}
+                </option>
+                <option value="required">
+                  {t("newUi.sidebar.userProfile.passkeyUvRequired")}
+                </option>
+                <option value="discouraged">
+                  {t("newUi.sidebar.userProfile.passkeyUvDiscouraged")}
+                </option>
+              </select>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+              onClick={handleRegisterPasskey}
+              disabled={passkeyLoading}
+            >
+              <KeyRound className="size-3" />
+              {t("newUi.sidebar.userProfile.addPasskey")}
+            </Button>
+
+            <div className="flex flex-col divide-y divide-border border border-border">
+              {passkeys.length === 0 ? (
+                <div className="py-4 text-center text-[10px] text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.noPasskeys")}
+                </div>
+              ) : (
+                passkeys.map((passkey) => (
+                  <div
+                    key={passkey.id}
+                    className="flex items-center justify-between gap-2 px-2 py-2"
+                  >
+                    <div className="min-w-0 flex flex-col">
+                      <span className="text-xs font-medium truncate">
+                        {passkey.name}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground truncate">
+                        {passkey.deviceType || "unknown"}
+                        {passkey.backedUp ? " / synced" : ""}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-6 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeletePasskey(passkey.id)}
+                      disabled={passkeyLoading}
+                    >
+                      <Trash2 className="size-3" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
           {canChangePasword && (

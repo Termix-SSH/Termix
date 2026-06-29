@@ -53,6 +53,10 @@ import {
   updateSSOProvider,
   deleteSSOProvider,
 } from "@/api/sso-provider-api";
+import {
+  getMetricsHistoryRetention,
+  saveMetricsHistoryRetention,
+} from "@/api/host-metrics-api";
 import type { SSOProvider } from "@/types/index";
 import type { ApiKey, CreatedApiKey, UserRole } from "@/main-axios";
 import type { AdminSection } from "@/types/ui-types";
@@ -106,6 +110,7 @@ export function AdminSettingsPanel() {
   const [sessionTimeout, setSessionTimeout] = useState("24");
   const [statusInterval, setStatusInterval] = useState("60");
   const [metricsInterval, setMetricsInterval] = useState("30");
+  const [metricsHistoryRetention, setMetricsHistoryRetention] = useState("7");
   const [guacEnabled, setGuacEnabled] = useState(false);
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
@@ -287,6 +292,10 @@ export function AdminSettingsPanel() {
         setStatusInterval(String(monitoring.value.statusCheckInterval));
         setMetricsInterval(String(monitoring.value.metricsInterval));
       }
+
+      getMetricsHistoryRetention()
+        .then((days) => setMetricsHistoryRetention(String(days)))
+        .catch(() => {});
       if (level.status === "fulfilled") setLogLevel(level.value.level);
       if (guac.status === "fulfilled") {
         setGuacEnabled(guac.value.enabled);
@@ -417,15 +426,25 @@ export function AdminSettingsPanel() {
   async function handleSaveMonitoring() {
     const status = parseInt(statusInterval, 10);
     const metrics = parseInt(metricsInterval, 10);
+    const retention = parseInt(metricsHistoryRetention, 10);
     if (isNaN(status) || isNaN(metrics)) {
       toast.error(t("admin.monitoringIntervalInvalid"));
       return;
     }
+    if (!isNaN(retention) && (retention < 1 || retention > 90)) {
+      toast.error(t("admin.metricsHistoryRetentionRange"));
+      return;
+    }
     try {
-      await updateGlobalMonitoringSettings({
-        statusCheckInterval: status,
-        metricsInterval: metrics,
-      });
+      await Promise.all([
+        updateGlobalMonitoringSettings({
+          statusCheckInterval: status,
+          metricsInterval: metrics,
+        }),
+        !isNaN(retention)
+          ? saveMetricsHistoryRetention(retention)
+          : Promise.resolve(),
+      ]);
       toast.success(t("admin.monitoringSaved"));
     } catch {
       toast.error(t("admin.monitoringSaveFailed"));
@@ -828,6 +847,8 @@ export function AdminSettingsPanel() {
         setStatusInterval={setStatusInterval}
         metricsInterval={metricsInterval}
         setMetricsInterval={setMetricsInterval}
+        metricsHistoryRetention={metricsHistoryRetention}
+        setMetricsHistoryRetention={setMetricsHistoryRetention}
         handleSaveMonitoring={handleSaveMonitoring}
         guacEnabled={guacEnabled}
         handleToggleGuacamole={handleToggleGuacamole}

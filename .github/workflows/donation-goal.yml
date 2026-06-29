@@ -1,0 +1,126 @@
+name: Donation Goal Badge
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate donation goal SVG
+        run: |
+          set -e
+
+          EVM_ADDRESS="0x83eA1Db55cc6E34fCD11Da2b7849621af67b6E34"
+          BTC_ADDRESS="bc1qrxc3vpnl6qhh9p8akjmjukcgmgmq852ua64h05"
+          SOL_ADDRESS="T4BF5ioySVUjwaPNw4Sdu7oK8SXLxgQRcMaTQ6YJ2UJ"
+          DOCS_SNAPSHOT_URL="https://raw.githubusercontent.com/Termix-SSH/Termix-Docs/main/static/donation-snapshot.json"
+          MONTHLY_GOAL=750
+
+          # Fetch crypto prices
+          PRICES=$(curl -sf "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin,solana&vs_currencies=usd" || echo '{}')
+          ETH_PRICE=$(echo "$PRICES" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethereum',{}).get('usd',0))" 2>/dev/null || echo 0)
+          BTC_PRICE=$(echo "$PRICES" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('bitcoin',{}).get('usd',0))" 2>/dev/null || echo 0)
+          SOL_PRICE=$(echo "$PRICES" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('solana',{}).get('usd',0))" 2>/dev/null || echo 0)
+
+          # Fetch live balances
+          ETH_RAW=$(curl -sf "https://eth.blockscout.com/api/v2/addresses/${EVM_ADDRESS}" || echo '{"coin_balance":"0"}')
+          ETH_BAL=$(echo "$ETH_RAW" | python3 -c "import sys,json; d=json.load(sys.stdin); print(int(d.get('coin_balance','0')) / 1e18)" 2>/dev/null || echo 0)
+
+          BASE_RAW=$(curl -sf "https://base.blockscout.com/api/v2/addresses/${EVM_ADDRESS}" || echo '{"coin_balance":"0"}')
+          BASE_BAL=$(echo "$BASE_RAW" | python3 -c "import sys,json; d=json.load(sys.stdin); print(int(d.get('coin_balance','0')) / 1e18)" 2>/dev/null || echo 0)
+
+          BTC_RAW=$(curl -sf "https://blockstream.info/api/address/${BTC_ADDRESS}" || echo '{"chain_stats":{"funded_txo_sum":0,"spent_txo_sum":0}}')
+          BTC_BAL=$(echo "$BTC_RAW" | python3 -c "import sys,json; d=json.load(sys.stdin); s=d.get('chain_stats',{}); print((s.get('funded_txo_sum',0)-s.get('spent_txo_sum',0))/1e8)" 2>/dev/null || echo 0)
+
+          SOL_RAW=$(curl -sf -X POST "https://api.mainnet-beta.solana.com" \
+            -H "Content-Type: application/json" \
+            -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getBalance\",\"params\":[\"${SOL_ADDRESS}\"]}" || echo '{"result":{"value":0}}')
+          SOL_BAL=$(echo "$SOL_RAW" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('value',0)/1e9)" 2>/dev/null || echo 0)
+
+          # Fetch snapshot baseline from docs repo
+          SNAPSHOT=$(curl -sf "$DOCS_SNAPSHOT_URL" || echo '{"ethBal":0,"baseBal":0,"btcBal":0,"solBal":0}')
+          SNAP_ETH=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethBal',0))" 2>/dev/null || echo 0)
+          SNAP_BASE=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('baseBal',0))" 2>/dev/null || echo 0)
+          SNAP_BTC=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('btcBal',0))" 2>/dev/null || echo 0)
+          SNAP_SOL=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('solBal',0))" 2>/dev/null || echo 0)
+
+          export ETH_BAL BASE_BAL BTC_BAL SOL_BAL SNAP_ETH SNAP_BASE SNAP_BTC SNAP_SOL ETH_PRICE BTC_PRICE SOL_PRICE MONTHLY_GOAL
+
+          python3 - <<'PYEOF'
+          import os, math
+
+          eth_bal   = float(os.environ.get('ETH_BAL', 0))
+          base_bal  = float(os.environ.get('BASE_BAL', 0))
+          btc_bal   = float(os.environ.get('BTC_BAL', 0))
+          sol_bal   = float(os.environ.get('SOL_BAL', 0))
+          snap_eth  = float(os.environ.get('SNAP_ETH', 0))
+          snap_base = float(os.environ.get('SNAP_BASE', 0))
+          snap_btc  = float(os.environ.get('SNAP_BTC', 0))
+          snap_sol  = float(os.environ.get('SNAP_SOL', 0))
+          eth_price = float(os.environ.get('ETH_PRICE', 0))
+          btc_price = float(os.environ.get('BTC_PRICE', 0))
+          sol_price = float(os.environ.get('SOL_PRICE', 0))
+          goal      = float(os.environ.get('MONTHLY_GOAL', 750))
+
+          delta_eth  = max(0, eth_bal  - snap_eth)
+          delta_base = max(0, base_bal - snap_base)
+          delta_btc  = max(0, btc_bal  - snap_btc)
+          delta_sol  = max(0, sol_bal  - snap_sol)
+
+          total = delta_eth * eth_price + delta_base * eth_price + delta_btc * btc_price + delta_sol * sol_price
+          pct   = min(total / goal * 100, 100) if goal > 0 else 0
+
+          if total < 1:
+              display = '< $1'
+          else:
+              display = f'${math.floor(total):,}'
+
+          goal_display = f'${int(goal):,}'
+
+          # SVG dimensions
+          W = 400
+          BAR_W = 360
+          BAR_X = 20
+          BAR_H = 8
+          FILL_W = round(BAR_W * pct / 100)
+
+          label = f'Monthly Donation Goal  {display} / {goal_display}'
+          pct_label = f'{round(pct)}% of monthly goal' if pct < 100 else 'Goal reached this month. Thank you!'
+
+          svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="52" role="img" aria-label="Monthly donation goal">
+            <title>Monthly donation goal</title>
+            <rect width="{W}" height="52" rx="6" fill="#0c0d0b"/>
+            <text x="{W//2}" y="13" font-family="sans-serif" font-size="11" fill="#F39044" text-anchor="middle">{label}</text>
+            <rect x="{BAR_X}" y="20" width="{BAR_W}" height="{BAR_H}" rx="4" fill="#F3904433"/>
+            <rect x="{BAR_X}" y="20" width="{FILL_W}" height="{BAR_H}" rx="4" fill="#F39044"/>
+            <text x="{W//2}" y="44" font-family="sans-serif" font-size="10" fill="#F3904499" text-anchor="middle">{pct_label}</text>
+          </svg>'''
+
+          with open('repo-images/donation-goal.svg', 'w') as f:
+              f.write(svg)
+          print(f'SVG written: {display} / {goal_display} ({round(pct)}%)')
+          PYEOF
+      - name: Commit SVG
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add repo-images/donation-goal.svg
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          # Amend the previous bot commit if it exists, otherwise create a new one
+          LAST_AUTHOR=$(git log -1 --format='%ae')
+          if [ "$LAST_AUTHOR" = "github-actions[bot]@users.noreply.github.com" ]; then
+            git commit --amend --no-edit
+            git push --force-with-lease
+          else
+            git commit -m "chore: update donation goal badge"
+            git push
+          fi

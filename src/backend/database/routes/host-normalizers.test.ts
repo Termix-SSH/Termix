@@ -122,6 +122,16 @@ describe("normalizeImportedHost", () => {
     expect(host.credentialId).toBe(7);
     expect(host.authType).toBe("credential");
   });
+
+  it("infers credential auth from share aliases", () => {
+    const aliasHost = normalizeImportedHost({ credentialAlias: "prod-admin" });
+    expect(aliasHost.credentialAlias).toBe("prod-admin");
+    expect(aliasHost.authType).toBe("credential");
+
+    const nameHost = normalizeImportedHost({ credentialName: "ops-key" });
+    expect(nameHost.credentialAlias).toBe("ops-key");
+    expect(nameHost.authType).toBe("credential");
+  });
 });
 
 describe("stripSensitiveFields", () => {

@@ -10,6 +10,7 @@ import {
   formatMtime,
   isExecutableFile,
   modeToPermissions,
+  parseLsDateToTimestamp,
 } from "./file-manager-utils.js";
 
 type FileListingRoutesDeps = {
@@ -111,6 +112,7 @@ export function registerFileListingRoutes(
                 type: string;
                 size: number | undefined;
                 modified: string;
+                modifiedTimestamp: number;
                 permissions: string;
                 owner: string;
                 group: string;
@@ -132,6 +134,7 @@ export function registerFileListingRoutes(
                   type: isDirectory ? "directory" : isLink ? "link" : "file",
                   size: isDirectory ? undefined : attrs.size,
                   modified: formatMtime(attrs.mtime),
+                  modifiedTimestamp: attrs.mtime,
                   permissions,
                   owner: String(attrs.uid),
                   group: String(attrs.gid),
@@ -306,6 +309,7 @@ export function registerFileListingRoutes(
                     type: isDirectory ? "directory" : isLink ? "link" : "file",
                     size: isDirectory ? undefined : size,
                     modified: dateStr,
+                    modifiedTimestamp: parseLsDateToTimestamp(dateStr),
                     permissions,
                     owner,
                     group,
@@ -392,6 +396,7 @@ export function registerFileListingRoutes(
               type: string;
               size: number | undefined;
               modified: string;
+              modifiedTimestamp: number;
               permissions: string;
               owner: string;
               group: string;
@@ -435,6 +440,7 @@ export function registerFileListingRoutes(
                   type: isDirectory ? "directory" : isLink ? "link" : "file",
                   size: isDirectory ? undefined : size,
                   modified: dateStr,
+                  modifiedTimestamp: parseLsDateToTimestamp(dateStr),
                   permissions,
                   owner,
                   group,

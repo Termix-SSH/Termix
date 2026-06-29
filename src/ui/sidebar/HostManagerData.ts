@@ -32,6 +32,7 @@ function parseJson<T>(v: unknown): T | undefined {
 
 export function sshHostToHost(h: SSHHostWithStatus): Host {
   const host = h as RawSSHHost;
+  const isSshHost = h.connectionType === "ssh" || !h.connectionType;
   return {
     id: String(h.id),
     name: h.name,
@@ -52,13 +53,16 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     keyPassword: h.keyPassword,
     keyType: h.keyType,
     credentialId: h.credentialId != null ? String(h.credentialId) : undefined,
+    vaultProfileId:
+      (h as { vaultProfileId?: number | string | null }).vaultProfileId != null
+        ? String((h as { vaultProfileId?: number | string }).vaultProfileId)
+        : undefined,
     notes: h.notes,
     pin: h.pin ?? false,
     macAddress: h.macAddress,
-    enableSsh: h.enableSsh != null ? h.enableSsh : h.connectionType === "ssh",
+    enableSsh: h.enableSsh != null ? h.enableSsh : isSshHost,
     enableTerminal:
-      h.enableTerminal ??
-      (h.enableSsh != null ? h.enableSsh : h.connectionType === "ssh"),
+      h.enableTerminal ?? (h.enableSsh != null ? h.enableSsh : isSshHost),
     enableSessionLogging: h.enableSessionLogging ?? true,
     enableCommandHistory: h.enableCommandHistory ?? true,
     enableTunnel: h.enableTunnel ?? false,
@@ -82,6 +86,8 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     domain: h.rdpDomain,
     security: h.rdpSecurity,
     ignoreCert: h.rdpIgnoreCert ?? false,
+    vncAuthType: h.vncAuthType ?? (h.vncCredentialId ? "credential" : "direct"),
+    vncCredentialId: h.vncCredentialId ?? null,
     vncPassword: h.vncPassword ?? "",
     vncUser: h.vncUser,
     telnetUser: h.telnetUser,
