@@ -63,7 +63,7 @@ async function resolveFileId(projectId) {
 }
 
 async function pollPreTranslation(projectId, preTranslationId) {
-  for (let i = 0; i < 120; i++) {
+  for (;;) {
     const { data } = await request(
       "GET",
       `/projects/${projectId}/pre-translations/${preTranslationId}`,
@@ -76,7 +76,6 @@ async function pollPreTranslation(projectId, preTranslationId) {
     }
     await new Promise((r) => setTimeout(r, 5000));
   }
-  throw new Error("pre-translation timed out after 10 minutes");
 }
 
 async function main() {
