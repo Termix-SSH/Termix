@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@types/ldapjs": "^3.0.6",
-    "axios": "^1.18.0",
+    "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "body-parser": "^2.3.0",
@@ -60,7 +60,7 @@
     "ldapjs": "^3.0.7",
     "motion": "^12.38.0",
     "multer": "^2.2.0",
-    "nanoid": "^5.1.9",
+    "nanoid": "^5.1.16",
     "qrcode": "^1.5.4",
     "socks": "^2.8.7",
     "speakeasy": "^2.0.0",
