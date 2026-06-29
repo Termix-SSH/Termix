@@ -132,56 +132,56 @@ List devices from your tailnet to quickly add them as hosts, and connect using T
 Create roles and share hosts across users/roles.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Serial Connections:**
 Connect to serial devices (routers, switches, microcontrollers, etc.) directly from the browser or desktop app. Configure baud rate, data bits, stop bits, and parity. Uses the Web Serial API in supported browsers or a native backend in the Electron app.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Alerts:**
 Set threshold-based alert rules on host metrics (CPU, memory, disk, etc.) and get notified via ntfy or webhooks when they fire. View firing and resolved alerts in a history log.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Homepage:**
 A fully customizable homepage with a drag-and-drop widget grid. Add widgets for host status, service links, clocks, notes, RSS feeds, weather, Docker containers, host metrics charts, embedded terminals, iframes, and more.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Database Encryption:**
 Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Network Graph:**
 Customize your Dashboard to visualize your homelab based off your SSH connections with status support.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **SSH Tools:**
 Create reusable command snippets that execute with a single click. Run one command simultaneously across multiple open terminals.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Persistent Tabs:**
 SSH sessions and tabs stay open across devices/refreshes if enabled in user profile.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Languages:**

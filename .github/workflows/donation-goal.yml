@@ -88,19 +88,19 @@ jobs:
           W = 400
           BAR_W = 360
           BAR_X = 20
-          BAR_H = 10
+          BAR_H = 8
           FILL_W = round(BAR_W * pct / 100)
 
           label = f'Monthly Donation Goal  {display} / {goal_display}'
           pct_label = f'{round(pct)}% of monthly goal' if pct < 100 else 'Goal reached this month. Thank you!'
 
-          svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="60" role="img" aria-label="Monthly donation goal">
+          svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="52" role="img" aria-label="Monthly donation goal">
             <title>Monthly donation goal</title>
-            <rect width="{W}" height="60" rx="6" fill="#1a1a1a"/>
-            <text x="{W//2}" y="18" font-family="sans-serif" font-size="11" fill="#aaaaaa" text-anchor="middle">{label}</text>
-            <rect x="{BAR_X}" y="26" width="{BAR_W}" height="{BAR_H}" rx="5" fill="#333333"/>
-            <rect x="{BAR_X}" y="26" width="{FILL_W}" height="{BAR_H}" rx="5" fill="#F39044"/>
-            <text x="{W//2}" y="52" font-family="sans-serif" font-size="10" fill="#888888" text-anchor="middle">{pct_label}</text>
+            <rect width="{W}" height="52" rx="6" fill="#0c0d0b"/>
+            <text x="{W//2}" y="13" font-family="sans-serif" font-size="11" fill="#F39044" text-anchor="middle">{label}</text>
+            <rect x="{BAR_X}" y="20" width="{BAR_W}" height="{BAR_H}" rx="4" fill="#F3904433"/>
+            <rect x="{BAR_X}" y="20" width="{FILL_W}" height="{BAR_H}" rx="4" fill="#F39044"/>
+            <text x="{W//2}" y="44" font-family="sans-serif" font-size="10" fill="#F3904499" text-anchor="middle">{pct_label}</text>
           </svg>'''
 
           with open('repo-images/donation-goal.svg', 'w') as f:
@@ -112,5 +112,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add repo-images/donation-goal.svg
-          git diff --cached --quiet || git commit -m "chore: update donation goal badge"
-          git push
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          # Amend the previous bot commit if it exists, otherwise create a new one
+          LAST_AUTHOR=$(git log -1 --format='%ae')
+          if [ "$LAST_AUTHOR" = "github-actions[bot]@users.noreply.github.com" ]; then
+            git commit --amend --no-edit
+            git push --force-with-lease
+          else
+            git commit -m "chore: update donation goal badge"
+            git push
+          fi

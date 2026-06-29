@@ -132,56 +132,56 @@ Listez les appareils de votre reseau Tailscale pour les ajouter rapidement comme
 Creez des roles et partagez des hotes entre utilisateurs/roles.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Connexions Serie:**
 Connectez-vous a des appareils serie (routeurs, commutateurs, microcontroleurs, etc.) directement depuis le navigateur ou l'application bureau. Configurez le debit en bauds, les bits de donnees, les bits d'arret et la parite. Utilise l'API Web Serial dans les navigateurs compatibles ou un backend natif dans l'application Electron.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Alertes:**
 Definissez des regles d'alerte basees sur des seuils pour les metriques d'hote (CPU, memoire, disque, etc.) et recevez des notifications via ntfy ou webhooks lorsqu'elles se declenchent. Consultez les alertes actives et resolues dans un journal d'historique.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Page d'accueil:**
 Une page d'accueil entierement personnalisable avec une grille de widgets glisser-deposer. Ajoutez des widgets pour l'etat des hotes, les liens de services, les horloges, les notes, les flux RSS, la meteo, les conteneurs Docker, les graphiques de metriques d'hote, les terminaux integres, les iframes et plus encore.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Chiffrement de la base de donnees:**
 Le backend est stocke sous forme de fichiers de base de donnees SQLite chiffres. Consultez la [documentation](https://docs.termix.site/security) pour plus de details.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Graphe reseau:**
 Personnalisez votre tableau de bord pour visualiser votre homelab base sur vos connexions SSH avec support des statuts.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Outils SSH:**
 Creez des extraits de commandes reutilisables executables en un seul clic. Executez une commande simultanement sur plusieurs terminaux ouverts.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Onglets Persistants:**
 Les sessions SSH et les onglets restent ouverts sur tous les appareils/actualisations si active dans le profil utilisateur.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Langues:**

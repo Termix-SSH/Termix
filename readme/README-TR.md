@@ -132,56 +132,56 @@ Tailscale aginizdaki cihazlari listeleyerek hizlica ana bilgisayar olarak ekleyi
 Roller olusturun ve ana bilgisayarlari kullanicilar/roller arasinda paylasin.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Seri Baglantilar:**
 Seri cihazlara (router, switch, mikrodenetleyici vb.) dogrudan tarayici veya masaustu uygulamasindan baglanin. Baud hizi, veri bitleri, durdurma bitleri ve parite yapilandirin. Desteklenen tarayicilarda Web Serial API, Electron uygulamasinda yerel arka ucu kullanir.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Uyarilar:**
 Ana bilgisayar metrikleri (CPU, bellek, disk vb.) icin esik tabanli uyari kurallari belirleyin ve tetiklendiklerinde ntfy veya webhook araciligiyla bildirim alin. Gecmis gunlugunde tetiklenen ve cozulen uyarilari goruntuleyin.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Ana Sayfa:**
 Surukleme ve birakma widget izgarasina sahip tamamen ozerlestirilebilir bir ana sayfa. Ana bilgisayar durumu, hizmet baglantilari, saatler, notlar, RSS besleme, hava durumu, Docker konteynerleri, ana bilgisayar metrik grafikleri, gomulu terminaller, iframe ve daha fazlasi icin widget ekleyin.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Veritabani Sifreleme:**
 Arka uc, sifrelenmis SQLite veritabani dosyalari olarak depolanir. Daha fazla bilgi icin [belgelere](https://docs.termix.site/security) bakin.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Ag Grafigi:**
 Kontrol panelinizi, SSH baglantilariniza dayali olarak ev laboratuvarinizi durum destegi ile gorselletirmek icin ozellestirin.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **SSH Araclari:**
 Tek tiklamayla calistirilan yeniden kullanilabilir komut parcaciklari olusturun. Birden fazla acik terminalde ayni anda tek bir komut calistirin.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Kalici Sekmeler:**
 Kullanici profilinde etkinlestirilmisse SSH oturumlari ve sekmeler cihazlar/yenilemeler arasinda acik kalir.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Diller:**

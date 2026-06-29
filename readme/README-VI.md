@@ -132,56 +132,56 @@ Liet ke cac thiet bi trong mang Tailscale de nhanh chong them vao lam may chu, v
 Tao vai tro va chia se may chu giua nguoi dung/vai tro.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Ket Noi Noi Tiep:**
 Ket noi voi cac thiet bi noi tiep (router, switch, vi dieu khien, v.v.) truc tiep tu trinh duyet hoac ung dung may tinh. Cau hinh toc do baud, bit du lieu, bit dung va chan le. Su dung Web Serial API tren trinh duyet duoc ho tro hoac backend ban dia trong ung dung Electron.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Canh Bao:**
 Dat cac quy tac canh bao dua tren nguong cho chi so may chu (CPU, bo nho, o dia, v.v.) va nhan thong bao qua ntfy hoac webhook khi chung khi toa. Xem canh bao dang kich hoat va da giai quyet trong nhat ky lich su.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Trang Chu:**
 Trang chu co the tuy chinh hoan toan voi luoi widget keo va tha. Them widget cho trang thai may chu, lien ket dich vu, dong ho, ghi chu, feed RSS, thoi tiet, container Docker, bieu do chi so may chu, terminal nhung, iframe va nhieu hon nua.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Ma Hoa Co So Du Lieu:**
 Backend duoc luu tru duoi dang tep co so du lieu SQLite duoc ma hoa. Xem [tai lieu](https://docs.termix.site/security) de biet them.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Bieu Do Mang:**
 Tuy chinh Bang Dieu Khien de truc quan hoa homelab cua ban dua tren cac ket noi SSH voi ho tro trang thai.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Cong Cu SSH:**
 Tao doan lenh co the tai su dung, thuc thi chi voi mot cu nhap chuot. Chay mot lenh dong thoi tren nhieu terminal dang mo.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Tab Lien Tuc:**
 Cac phien SSH va tab van mo tren cac thiet bi/lan lam moi neu duoc bat trong ho so nguoi dung.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Ngon Ngu:**

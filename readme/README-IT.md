@@ -132,56 +132,56 @@ Elenca i dispositivi della tua rete Tailscale per aggiungerli rapidamente come h
 Crea ruoli e condividi host tra utenti/ruoli.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Connessioni Seriali:**
 Connettiti a dispositivi seriali (router, switch, microcontrollori, ecc.) direttamente dal browser o dall'app desktop. Configura baud rate, bit di dati, bit di stop e parita. Utilizza la Web Serial API nei browser supportati o un backend nativo nell'app Electron.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Avvisi:**
 Imposta regole di avviso basate su soglie per le metriche dell'host (CPU, memoria, disco, ecc.) e ricevi notifiche tramite ntfy o webhook quando si attivano. Visualizza gli avvisi attivi e risolti in un registro storico.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Homepage:**
 Una homepage completamente personalizzabile con una griglia di widget drag-and-drop. Aggiungi widget per lo stato dell'host, link ai servizi, orologi, note, feed RSS, meteo, container Docker, grafici delle metriche dell'host, terminali incorporati, iframe e altro ancora.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Crittografia Database:**
 Il backend e archiviato come file di database SQLite crittografati. Consulta la [documentazione](https://docs.termix.site/security) per maggiori informazioni.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Grafico di Rete:**
 Personalizza la tua Dashboard per visualizzare il tuo homelab basato sulle connessioni SSH con supporto dello stato.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Strumenti SSH:**
 Crea snippet di comandi riutilizzabili che si eseguono con un singolo clic. Esegui un comando simultaneamente su piu terminali aperti.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Schede Persistenti:**
 Le sessioni SSH e le schede rimangono aperte tra dispositivi/aggiornamenti se abilitato nel profilo utente.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Lingue:**

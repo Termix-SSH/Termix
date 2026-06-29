@@ -132,56 +132,56 @@ Liste dispositivos de su red Tailscale para agregarlos rapidamente como hosts y 
 Cree roles y comparta hosts entre usuarios/roles.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Conexiones Serie:**
 Conectese a dispositivos serie (routers, switches, microcontroladores, etc.) directamente desde el navegador o la aplicacion de escritorio. Configure la tasa de baudios, bits de datos, bits de parada y paridad. Utiliza la Web Serial API en navegadores compatibles o un backend nativo en la aplicacion Electron.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Alertas:**
 Configure reglas de alerta basadas en umbrales para metricas del host (CPU, memoria, disco, etc.) y reciba notificaciones a traves de ntfy o webhooks cuando se activen. Vea las alertas activas y resueltas en un historial de registros.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Pagina de Inicio:**
 Una pagina de inicio completamente personalizable con una cuadricula de widgets de arrastrar y soltar. Agregue widgets para estado del host, enlaces de servicios, relojes, notas, feeds RSS, clima, contenedores Docker, graficos de metricas del host, terminales integrados, iframes y mas.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Cifrado de Base de Datos:**
 Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentacion](https://docs.termix.site/security) para mas informacion.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Grafico de Red:**
 Personalice su Dashboard para visualizar su homelab basado en sus conexiones SSH con soporte de estado.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Herramientas SSH:**
 Cree fragmentos de comandos reutilizables que se ejecutan con un solo clic. Ejecute un comando simultaneamente en multiples terminales abiertos.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Pestanas Persistentes:**
 Las sesiones SSH y pestanas permanecen abiertas entre dispositivos/actualizaciones si esta habilitado en el perfil de usuario.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Idiomas:**

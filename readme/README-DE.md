@@ -132,56 +132,56 @@ Gerate aus Ihrem Tailnet auflisten, um sie schnell als Hosts hinzuzufugen, und m
 Rollen erstellen und Hosts uber Benutzer/Rollen teilen.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Serielle Verbindungen:**
 Verbinden Sie sich direkt vom Browser oder der Desktop-App aus mit seriellen Geraten (Router, Switches, Mikrocontroller usw.). Konfigurieren Sie Baudrate, Datenbits, Stoppbits und Paritat. Verwendet die Web Serial API in unterstutzten Browsern oder ein natives Backend in der Electron-App.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Warnmeldungen:**
 Legen Sie schwellenwertbasierte Warnregeln fur Host-Metriken (CPU, Arbeitsspeicher, Festplatte usw.) fest und erhalten Sie Benachrichtigungen uber ntfy oder Webhooks, wenn diese ausgelost werden. Zeigen Sie ausgeloste und aufgeloste Warnmeldungen in einem Verlaufsprotokoll an.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Startseite:**
 Eine vollstandig anpassbare Startseite mit einem Drag-and-Drop-Widget-Raster. Fugen Sie Widgets fur Hoststatus, Service-Links, Uhren, Notizen, RSS-Feeds, Wetter, Docker-Container, Host-Metrik-Diagramme, eingebettete Terminals, iFrames und mehr hinzu.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Datenbankverschlusselung:**
 Backend gespeichert als verschlusselte SQLite-Datenbankdateien. Weitere Informationen in der [Dokumentation](https://docs.termix.site/security).
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Netzwerkgraph:**
 Passen Sie Ihr Dashboard an, um Ihr Homelab basierend auf Ihren SSH-Verbindungen mit Statusunterstutzung zu visualisieren.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **SSH-Werkzeuge:**
 Erstellen Sie wiederverwendbare Befehlsvorlagen, die mit einem einzigen Klick ausgefuhrt werden. Fuhren Sie einen Befehl gleichzeitig in mehreren geoffneten Terminals aus.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Persistente Tabs:**
 SSH-Sitzungen und Tabs bleiben uber Gerate/Aktualisierungen hinweg offen, wenn im Benutzerprofil aktiviert.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Sprachen:**

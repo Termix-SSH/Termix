@@ -132,56 +132,56 @@ Liste dispositivos da sua rede Tailscale para adicioná-los rapidamente como hos
 Crie funcoes e compartilhe hosts entre usuarios/funcoes.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Conexoes Seriais:**
 Conecte-se a dispositivos seriais (roteadores, switches, microcontroladores, etc.) diretamente do navegador ou do aplicativo desktop. Configure taxa de baud, bits de dados, bits de parada e paridade. Usa a Web Serial API em navegadores suportados ou um backend nativo no aplicativo Electron.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Alertas:**
 Defina regras de alerta baseadas em limites para metricas do host (CPU, memoria, disco, etc.) e receba notificacoes via ntfy ou webhooks quando forem ativadas. Visualize alertas ativos e resolvidos em um historico de registros.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Pagina Inicial:**
 Uma pagina inicial totalmente personalizavel com uma grade de widgets de arrastar e soltar. Adicione widgets para status do host, links de servicos, relogios, notas, feeds RSS, clima, conteineres Docker, graficos de metricas do host, terminais incorporados, iframes e mais.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Criptografia de Banco de Dados:**
 Backend armazenado como arquivos de banco de dados SQLite criptografados. Consulte a [documentacao](https://docs.termix.site/security) para mais informacoes.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Grafico de Rede:**
 Personalize seu Dashboard para visualizar seu homelab baseado nas suas conexoes SSH com suporte de status.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Ferramentas SSH:**
 Crie trechos de comandos reutilizaveis que sao executados com um unico clique. Execute um comando simultaneamente em multiplos terminais abertos.
 
 </td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Abas Persistentes:**
 Sessoes SSH e abas permanecem abertas entre dispositivos/atualizacoes se habilitado no perfil do usuario.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Idiomas:**
