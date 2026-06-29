@@ -113,8 +113,10 @@ jobs:
         run: |
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
-          git add donation-goal.svg
+          git add -f donation-goal.svg
+          git diff --cached --stat
           if git diff --cached --quiet; then
+            echo "No changes to commit"
             exit 0
           fi
           git commit -m "chore: update donation goal badge"
