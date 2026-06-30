@@ -531,6 +531,10 @@ function HostStatusCard({
   );
 }
 
+function isStatusCheckEnabled(host: Host): boolean {
+  return host.statsConfig?.statusCheckEnabled !== false;
+}
+
 function RecentActivityCard({
   activity,
   hosts,
@@ -1283,6 +1287,7 @@ export function DashboardTab({
     Map<string, { cpu: number | null; ram: number | null; disk: number | null }>
   >(new Map());
   const viewerSessionsRef = useRef<Map<number, string>>(new Map());
+  const statusCheckHosts = hosts.filter(isStatusCheckEnabled);
 
   const fetchMetrics = useCallback(async (hostList: Host[]) => {
     let statuses: Record<number, { status?: string }> = {};
@@ -1342,8 +1347,9 @@ export function DashboardTab({
     const load = async () => {
       const raw = await getSSHHosts().catch(() => []);
       const mapped = raw.map(sshHostToHost);
+      const statusHosts = mapped.filter(isStatusCheckEnabled);
       if (mounted) setHosts(mapped);
-      fetchMetrics(mapped).catch(() => {});
+      fetchMetrics(statusHosts).catch(() => {});
     };
     load();
 
@@ -1396,8 +1402,9 @@ export function DashboardTab({
     const metricsInterval = setInterval(async () => {
       const raw = await getSSHHosts().catch(() => []);
       const mapped = raw.map(sshHostToHost);
+      const statusHosts = mapped.filter(isStatusCheckEnabled);
       if (mounted) setHosts(mapped);
-      fetchMetrics(mapped).catch(() => {});
+      fetchMetrics(statusHosts).catch(() => {});
     }, 30000);
 
     return () => {
@@ -1707,7 +1714,7 @@ export function DashboardTab({
               )}
               {slot.id === "host_status" && (
                 <HostStatusCard
-                  hosts={hosts}
+                  hosts={statusCheckHosts}
                   hostMetrics={hostMetrics}
                   onOpenTab={onOpenTab}
                   isAdmin={isAdmin}
