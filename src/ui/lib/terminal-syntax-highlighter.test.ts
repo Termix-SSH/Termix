@@ -66,6 +66,16 @@ describe("highlightTerminalOutput", () => {
     expect(highlightTerminalOutput(chunk)).toBe(chunk);
   });
 
+  it("skips TUI frames with box-drawing characters", () => {
+    const chunk = `┌─ /var/log ─┐\n│ ERROR file │`;
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
+  it("skips DEC line-drawing charset frames", () => {
+    const chunk = `${ESC}(0lqq /var/log qk${ESC}(B`;
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
   it("highlights text that already has ANSI codes", () => {
     let heavy = "";
     for (let i = 0; i < 12; i++) heavy += `${ESC}[32mgreen${ESC}[0m `;
