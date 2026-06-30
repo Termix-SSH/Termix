@@ -61,6 +61,7 @@ const MAX_LINE_LENGTH = 2000;
 // (mc, nano, vim, htop). If a chunk contains these, highlighting can inject
 // extra SGR bytes into a full-screen redraw and corrupt xterm's cursor state.
 const TUI_SEQUENCE = /\x1b\[(?:[\d;]*[ABCDEFGHJKST]|\?[\d;]*[hl])/;
+const CONTROL_STRING_SEQUENCE = /\x1b[\]P^_]/;
 
 // A bare \r (not immediately followed by \n) means the terminal is overwriting
 // the current line (shell prompts, progress bars). Highlighting mid-rewrite
@@ -398,6 +399,7 @@ export function highlightTerminalOutput(
   if (hasIncompleteAnsiSequence(text)) return text;
 
   if (TUI_SEQUENCE.test(text)) return text;
+  if (CONTROL_STRING_SEQUENCE.test(text)) return text;
   if (MID_LINE_CR.test(text)) return text;
 
   const activePatterns = buildActivePatterns(options);
