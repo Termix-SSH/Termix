@@ -392,6 +392,10 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/5) for all planned fe
 <a href="https://aws.amazon.com/">
   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
 </a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://rackgenius.com/">
+  <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="AWS" />
+</a>
 
 </div>
 
