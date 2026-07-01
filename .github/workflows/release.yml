@@ -278,7 +278,7 @@ jobs:
 
           MAIN_SHA=$(gh api repos/${{ github.repository }}/commits/main -q .sha)
           echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
-          echo "build_ref=main" >> "$GITHUB_OUTPUT"
+          echo "build_ref=$MAIN_SHA" >> "$GITHUB_OUTPUT"
 
   docker:
     needs: [prep, merge-to-main]
@@ -287,6 +287,7 @@ jobs:
       version: ${{ needs.prep.outputs.version }}
       build_type: Production
       dry_run: ${{ inputs.mode == 'Dry run' }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
     secrets: inherit
 
   create-release:
@@ -351,15 +352,17 @@ jobs:
       build_type: all
       artifact_destination: ${{ inputs.mode == 'Dry run' && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
     secrets: inherit
 
   electron-submit:
-    needs: [prep, electron-release]
+    needs: [prep, merge-to-main, electron-release]
     if: ${{ inputs.mode != 'Dry run' && inputs.mode != 'Skip submit' }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
       artifact_destination: submit
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
     secrets: inherit
 
   cask-commit-back:
