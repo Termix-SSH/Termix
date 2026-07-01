@@ -61,6 +61,7 @@ import {
   handleC2SRelayTest,
   type C2SOpenMessage,
 } from "./tunnel-c2s-relay.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 import { handleSocks5Connect } from "./tunnel-socks5-relay.js";
 
 const app = express();
@@ -1507,6 +1508,27 @@ async function connectSSHTunnel(
     }
   }
 
+  try {
+    await resolveSshConnectConfigHost(connOptions);
+  } catch (error) {
+    tunnelLogger.error("Tunnel source hostname resolution failed", error, {
+      operation: "tunnel_dns_resolve",
+      tunnelName,
+      sourceHost: `${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
+      retryAttempt,
+    });
+    broadcastTunnelStatus(tunnelName, {
+      connected: false,
+      status: CONNECTION_STATES.FAILED,
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Failed to resolve tunnel source hostname",
+    });
+    tunnelConnecting.delete(tunnelName);
+    return;
+  }
+
   conn.connect(connOptions);
 }
 
@@ -1691,6 +1713,10 @@ async function killRemoteTunnelByMarker(
           { cause: socks5Error },
         );
       }
+    }
+
+    if (!connOptions.sock) {
+      await resolveSshConnectConfigHost(connOptions);
     }
 
     return new Promise<Client>((resolve, reject) => {

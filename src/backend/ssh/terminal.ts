@@ -37,10 +37,7 @@ import {
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../utils/alert-trigger.js";
-import {
-  isRetriableDnsError,
-  resolveHostForSshConnect,
-} from "./terminal-dns.js";
+import { isRetriableDnsError, resolveHostForSshConnect } from "./ssh-dns.js";
 
 interface ConnectToHostData {
   cols: number;

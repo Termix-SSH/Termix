@@ -38,6 +38,7 @@ import { registerHostMetricsPreferencesRoutes } from "./host-metrics-preferences
 import { registerHostMetricsHistoryRoutes } from "./host-metrics-history-routes.js";
 import { AlertEngine } from "./alert-engine.js";
 import { registerManagerRoutes } from "./managers/index.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
 import { createJumpHostChain } from "./host-metrics-jump-hosts.js";
@@ -1331,8 +1332,18 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
             client.connect(config);
           },
         );
-      } else {
+      } else if (config.sock) {
         client.connect(config);
+      } else {
+        resolveSshConnectConfigHost(config)
+          .then(() => {
+            client.connect(config);
+          })
+          .catch((error) => {
+            clearTimeout(timeout);
+            reject(error);
+          });
+        return;
       }
     });
   };
@@ -2357,7 +2368,17 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
             }
           });
       } else {
-        client.connect(config);
+        resolveSshConnectConfigHost(config)
+          .then(() => {
+            client.connect(config);
+          })
+          .catch((error) => {
+            if (!isResolved) {
+              isResolved = true;
+              clearTimeout(timeout);
+              reject(error);
+            }
+          });
       }
     });
 

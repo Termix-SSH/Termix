@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   isRetriableDnsError,
   resolveHostForSshConnect,
+  resolveSshConnectConfigHost,
   shouldResolveBeforeSshConnect,
-} from "./terminal-dns.js";
+} from "./ssh-dns.js";
 
-describe("terminal DNS resolution", () => {
+describe("SSH DNS resolution", () => {
   it("retries transient EAI_AGAIN errors before returning an address", async () => {
     const lookup = vi
       .fn()
@@ -60,5 +61,19 @@ describe("terminal DNS resolution", () => {
     expect(shouldResolveBeforeSshConnect("alp")).toBe(true);
     expect(shouldResolveBeforeSshConnect("127.0.0.1")).toBe(false);
     expect(shouldResolveBeforeSshConnect("[2001:db8::1]")).toBe(false);
+  });
+
+  it("updates SSH connect config hosts in place", async () => {
+    const lookup = vi
+      .fn()
+      .mockResolvedValue({ address: "10.0.0.6", family: 4 });
+    const config = { host: "alp", port: 22 };
+
+    await expect(resolveSshConnectConfigHost(config, lookup)).resolves.toEqual({
+      host: "10.0.0.6",
+      port: 22,
+      originalHost: "alp",
+      resolvedHost: "10.0.0.6",
+    });
   });
 });
