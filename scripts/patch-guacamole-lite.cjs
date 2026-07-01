@@ -26,10 +26,31 @@ if (!fs.existsSync(guacdClientPath) || !fs.existsSync(cryptPath)) {
 let guacdClientContent = fs.readFileSync(guacdClientPath, "utf8");
 let cryptContent = fs.readFileSync(cryptPath, "utf8");
 
-// Patch 1: version acceptance list
-const oldVersionCheck = "if (version === '1_0_0' || version === '1_1_0') {";
-const newVersionCheck =
-  "if (version === '1_0_0' || version === '1_1_0' || version === '1_3_0' || version === '1_5_0') {";
+// Patch 1: protocol version negotiation.
+// guacamole-lite originally only accepted 1.0.0/1.1.0. Support the protocol
+// versions Termix can handle, and conservatively answer future 1.x versions as
+// VERSION_1_5_0 so guacd still sees support for `require`/`name` without us
+// claiming support for unknown instructions.
+const oldVersionBlock =
+  "                if (version === '1_0_0' || version === '1_1_0') {\n" +
+  "                    protocolVersion = version;\n" +
+  "                } else {\n" +
+  "                    protocolVersion = '1_1_0';\n" +
+  "                }";
+const oldPatchedVersionBlock =
+  "                if (version === '1_0_0' || version === '1_1_0' || version === '1_3_0' || version === '1_5_0') {\n" +
+  "                    protocolVersion = version;\n" +
+  "                } else {\n" +
+  "                    protocolVersion = '1_1_0';\n" +
+  "                }";
+const newVersionBlock =
+  "                if (version === '1_0_0' || version === '1_1_0' || version === '1_3_0' || version === '1_5_0') {\n" +
+  "                    protocolVersion = version;\n" +
+  "                } else if (/^1_\\d+_0$/.test(version)) {\n" +
+  "                    protocolVersion = '1_5_0';\n" +
+  "                } else {\n" +
+  "                    protocolVersion = '1_1_0';\n" +
+  "                }";
 
 // Patch 2: timezone instruction must be sent for all protocols >= 1.1.0, not just 1.1.0
 const oldTimezone = "if (protocolVersion === '1_1_0') {";
@@ -105,17 +126,23 @@ const newReadyHandler =
 
 let patched = false;
 
-if (!guacdClientContent.includes(newVersionCheck)) {
-  if (!guacdClientContent.includes(oldVersionCheck)) {
+if (!guacdClientContent.includes("} else if (/^1_\\d+_0$/.test(version)) {")) {
+  if (guacdClientContent.includes(oldPatchedVersionBlock)) {
+    guacdClientContent = guacdClientContent.replace(
+      oldPatchedVersionBlock,
+      newVersionBlock,
+    );
+  } else if (guacdClientContent.includes(oldVersionBlock)) {
+    guacdClientContent = guacdClientContent.replace(
+      oldVersionBlock,
+      newVersionBlock,
+    );
+  } else {
     console.log(
       "[patch-guacamole-lite] Version check target not found, skipping",
     );
     process.exit(0);
   }
-  guacdClientContent = guacdClientContent.replace(
-    oldVersionCheck,
-    newVersionCheck,
-  );
   patched = true;
 }
 
