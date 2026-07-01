@@ -22,7 +22,7 @@ jobs:
           EVM_ADDRESS="0x83eA1Db55cc6E34fCD11Da2b7849621af67b6E34"
           BTC_ADDRESS="bc1qrxc3vpnl6qhh9p8akjmjukcgmgmq852ua64h05"
           SOL_ADDRESS="T4BF5ioySVUjwaPNw4Sdu7oK8SXLxgQRcMaTQ6YJ2UJ"
-          DOCS_SNAPSHOT_URL="https://raw.githubusercontent.com/Termix-SSH/Termix-Docs/main/static/donation-snapshot.json"
+          DOCS_SNAPSHOT_URL="https://raw.githubusercontent.com/Termix-SSH/Docs/main/static/donation-snapshot.json"
           MONTHLY_GOAL=750
 
           # Ethereum mainnet stablecoin contracts
