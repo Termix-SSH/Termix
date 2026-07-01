@@ -104,6 +104,7 @@ interface SSHHostWithCredentials {
   rdpPort?: number;
   vncPort?: number;
   telnetPort?: number;
+  vaultProfile?: { id?: number | null } | null;
 }
 
 type StatusEntry = {
@@ -1128,6 +1129,8 @@ async function buildSshConfig(
     // no credentials needed
   } else if (host.authType === "opkssh") {
     // cert auth setup happens in createSshFactory (needs client instance)
+  } else if (host.authType === "vault") {
+    // cert auth setup happens in createSshFactory (needs client instance)
   } else if (host.authType === "credential") {
     if (host.password) {
       base.password = host.password;
@@ -1186,6 +1189,10 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
       }
       const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
       await setupOPKSSHCertAuth(config, client, token, host.username);
+    } else if (host.authType === "vault") {
+      const { setupVaultSshSignerAuth } =
+        await import("./vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config, client, host);
     }
 
     const proxyConfig: SOCKS5Config | null =
@@ -2070,6 +2077,10 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       }
       const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
       await setupOPKSSHCertAuth(config, client, token, host.username);
+    } else if (host.authType === "vault") {
+      const { setupVaultSshSignerAuth } =
+        await import("./vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config, client, host);
     }
 
     const connectionPromise = new Promise<{

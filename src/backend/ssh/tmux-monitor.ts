@@ -95,6 +95,8 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
     }
   } else if (host.authType === "none") {
     // no credentials needed
+  } else if (host.authType === "vault") {
+    // cert auth setup happens in connectToHost (needs client instance)
   } else if (host.authType === "agent") {
     const result = await applyAgentAuth(
       base as Record<string, unknown>,
@@ -117,6 +119,12 @@ export function connectToHost(host: SSHHost): () => Promise<Client> {
   return async () => {
     const config = await buildSshConfig(host);
     const client = new Client();
+
+    if (host.authType === "vault") {
+      const { setupVaultSshSignerAuth } =
+        await import("./vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config, client, host);
+    }
 
     const proxyConfig: SOCKS5Config | null =
       host.useSocks5 &&
