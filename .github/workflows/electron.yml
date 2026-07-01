@@ -23,6 +23,10 @@ on:
           - file
           - release
           - submit
+      source_ref:
+        description: "Git ref/SHA to build (defaults to the workflow ref)"
+        required: false
+        default: ""
   workflow_call:
     inputs:
       build_type:
@@ -35,6 +39,11 @@ on:
         type: string
       release_tag:
         description: "Explicit release tag to upload assets to (defaults to latest release when empty)"
+        required: false
+        type: string
+        default: ""
+      source_ref:
+        description: "Git ref/SHA to build"
         required: false
         type: string
         default: ""
@@ -54,6 +63,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -144,6 +154,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -354,6 +365,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -580,6 +592,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Get version from package.json
@@ -686,6 +699,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Get version from package.json
@@ -823,6 +837,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Get version from package.json
@@ -933,6 +948,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
