@@ -109,7 +109,8 @@ export interface Host {
     | "none"
     | "opkssh"
     | "tailscale"
-    | "agent";
+    | "agent"
+    | "vault";
   useWarpgate?: boolean;
   password?: string;
   key?: string;
@@ -123,6 +124,8 @@ export interface Host {
   autostartKeyPassword?: string;
 
   credentialId?: number;
+  vaultProfileId?: number | null;
+  vaultProfile?: { id?: number | null };
   overrideCredentialUsername?: boolean;
   userId?: string;
   enableTerminal: boolean;
