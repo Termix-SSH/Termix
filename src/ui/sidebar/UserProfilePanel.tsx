@@ -78,7 +78,7 @@ import type { ApiKey } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
 import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
-import i18n from "@/i18n/i18n";
+import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 
 type UserProfileSection =
   | "account"
@@ -515,8 +515,8 @@ export function UserProfilePanel({
   const [fontSize, setFontSize] = useState<FontSizeId>(
     () => (localStorage.getItem("termix-font-size") as FontSizeId) ?? "md",
   );
-  const [language, setLanguage] = useState(
-    () => localStorage.getItem("i18nextLng") ?? "en",
+  const [language, setLanguage] = useState(() =>
+    normalizeLanguageCode(localStorage.getItem("i18nextLng")),
   );
   const [storageMode, setStorageMode] = useState<"local" | "cloud">(() =>
     userPrefs?.storageMode === "cloud" ? "cloud" : "local",
@@ -662,9 +662,8 @@ export function UserProfilePanel({
           applyAccentColor(prefs.accentColor);
         }
         if (prefs.language) {
-          setLanguage(prefs.language);
-          localStorage.setItem("i18nextLng", prefs.language);
-          void i18n.changeLanguage(prefs.language);
+          const language = await changeAppLanguage(prefs.language);
+          setLanguage(language);
         }
         if (prefs.commandAutocomplete != null) {
           setCommandAutocomplete(prefs.commandAutocomplete);
@@ -772,8 +771,7 @@ export function UserProfilePanel({
     localStorage.setItem("termix-accent", DEFAULT_ACCENT);
     applyAccentColor(DEFAULT_ACCENT);
     setLanguage("en");
-    localStorage.setItem("i18nextLng", "en");
-    void i18n.changeLanguage("en");
+    void changeAppLanguage("en");
     setCommandAutocomplete(false);
     localStorage.setItem("commandAutocomplete", "false");
     setCommandPaletteEnabled(true);
@@ -862,10 +860,9 @@ export function UserProfilePanel({
     localStorage.setItem("termix-accent", restoredAccent);
     applyAccentColor(restoredAccent);
 
-    const restoredLang = restore("i18nextLng", "en") ?? "en";
+    const restoredLang = normalizeLanguageCode(restore("i18nextLng", "en"));
     setLanguage(restoredLang);
-    localStorage.setItem("i18nextLng", restoredLang);
-    void i18n.changeLanguage(restoredLang);
+    void changeAppLanguage(restoredLang);
 
     const restoredAutocomplete =
       restore("commandAutocomplete", "false") === "true";
@@ -984,10 +981,12 @@ export function UserProfilePanel({
   }
 
   function handleLanguageChange(code: string) {
-    setLanguage(code);
-    localStorage.setItem("i18nextLng", code);
-    i18n.changeLanguage(code);
-    if (storageMode === "cloud") saveToCloud({ language: code });
+    void changeAppLanguage(code)
+      .then((language) => {
+        setLanguage(language);
+        if (storageMode === "cloud") saveToCloud({ language });
+      })
+      .catch(() => {});
   }
 
   function toggle(id: UserProfileSection) {
