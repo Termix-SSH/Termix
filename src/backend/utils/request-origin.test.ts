@@ -3,6 +3,7 @@ import {
   getRequestBasePath,
   getRequestBaseUrl,
   getRequestBaseUrlWithForceHTTPS,
+  getRequestOrigin,
   normalizeBasePath,
 } from "./request-origin.js";
 
@@ -104,5 +105,54 @@ describe("getRequestBasePath", () => {
         }),
       ),
     ).toBe("https://example.com/termix");
+  });
+});
+
+describe("getRequestOrigin", () => {
+  it("ignores non-numeric forwarded ports", () => {
+    expect(
+      getRequestOrigin(
+        request({
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "termix.test.de",
+          "x-forwarded-port": "{server_port}",
+        }),
+      ),
+    ).toBe("https://termix.test.de");
+  });
+
+  it("drops invalid ports embedded in forwarded hosts", () => {
+    expect(
+      getRequestOrigin(
+        request({
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "termix.test.de:{server_port}",
+        }),
+      ),
+    ).toBe("https://termix.test.de");
+  });
+
+  it("keeps valid non-default forwarded ports", () => {
+    expect(
+      getRequestOrigin(
+        request({
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "termix.test.de",
+          "x-forwarded-port": "8443",
+        }),
+      ),
+    ).toBe("https://termix.test.de:8443");
+  });
+
+  it("omits default forwarded ports", () => {
+    expect(
+      getRequestOrigin(
+        request({
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "termix.test.de",
+          "x-forwarded-port": "443",
+        }),
+      ),
+    ).toBe("https://termix.test.de");
   });
 });
