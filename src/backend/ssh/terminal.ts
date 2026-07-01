@@ -37,6 +37,10 @@ import {
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../utils/alert-trigger.js";
+import {
+  isRetriableDnsError,
+  resolveHostForSshConnect,
+} from "./terminal-dns.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -1267,6 +1271,39 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    let connectHost = ip;
+    try {
+      const resolution = await resolveHostForSshConnect(ip);
+      connectHost = resolution.host;
+      if (resolution.resolvedAddress && resolution.resolvedAddress !== ip) {
+        sendLog(
+          "dns",
+          "success",
+          `Resolved ${ip} to ${resolution.resolvedAddress}`,
+          { attempts: resolution.attempts },
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      sshLogger.error("SSH hostname resolution failed", error, {
+        operation: "terminal_dns_resolve",
+        hostId: id,
+        ip,
+        port,
+        transient: isRetriableDnsError(error),
+      });
+      sendLog("dns", "error", `DNS resolution failed for ${ip}: ${message}`);
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: isRetriableDnsError(error)
+            ? "SSH error: DNS lookup temporarily failed. Check the Docker/container DNS configuration or try again."
+            : "SSH error: Could not resolve hostname from the Termix server container.",
+        }),
+      );
+      cleanupAuthState(connectionTimeout);
+      return;
+    }
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
     sshConn.on("ready", () => {
@@ -2305,7 +2342,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(id);
 
     const connectConfig: Record<string, unknown> = {
-      host: ip,
+      host: connectHost,
       port,
       username,
       tryKeyboard: resolvedCredentials.authType !== "tailscale",
