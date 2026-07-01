@@ -60,24 +60,7 @@ jobs:
           fetch_token_balance() {
             local base_url="$1"
             local contract="$2"
-            curl -sf "${base_url}/api/v2/addresses/${EVM_ADDRESS}/tokens?type=ERC-20" \
-              | python3 -c "
-import sys, json
-contract = '$contract'.lower()
-try:
-    d = json.load(sys.stdin)
-except Exception:
-    print(0)
-    sys.exit()
-for item in d.get('items', []):
-    token = item.get('token', {})
-    if token.get('address', '').lower() == contract:
-        decimals = int(token.get('decimals') or 18)
-        value = int(item.get('value') or 0)
-        print(value / (10 ** decimals))
-        sys.exit()
-print(0)
-" 2>/dev/null || echo 0
+            curl -sf "${base_url}/api/v2/addresses/${EVM_ADDRESS}/tokens?type=ERC-20" | CONTRACT="$contract" python3 -c "import sys, json, os; contract = os.environ['CONTRACT'].lower(); d = json.load(sys.stdin); match = next((i for i in d.get('items', []) if i.get('token', {}).get('address', '').lower() == contract), None); decimals = int((match or {}).get('token', {}).get('decimals') or 18); value = int((match or {}).get('value') or 0); print(value / (10 ** decimals) if match else 0)" 2>/dev/null || echo 0
           }
 
           ETH_USDC_BAL=$(fetch_token_balance "https://eth.blockscout.com" "$ETH_USDC")
