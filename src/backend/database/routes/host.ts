@@ -259,6 +259,8 @@ router.post(
       rdpPort,
       vncPort,
       telnetPort,
+      rdpAuthType,
+      rdpCredentialId,
       rdpUser,
       rdpPassword,
       rdpDomain,
@@ -268,6 +270,8 @@ router.post(
       vncCredentialId,
       vncPassword,
       vncUser,
+      telnetAuthType,
+      telnetCredentialId,
       telnetUser,
       telnetPassword,
     } = hostData;
@@ -385,6 +389,11 @@ router.post(
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
       telnetPort: telnetPort || 23,
+      rdpAuthType: enableRdp ? rdpAuthType || null : null,
+      rdpCredentialId:
+        enableRdp && rdpAuthType === "credential" && rdpCredentialId
+          ? rdpCredentialId
+          : null,
       rdpUser: rdpUser || null,
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
@@ -395,6 +404,11 @@ router.post(
           ? vncCredentialId
           : null,
       vncUser: vncUser || null,
+      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
+      telnetCredentialId:
+        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
+          ? telnetCredentialId
+          : null,
       telnetUser: telnetUser || null,
     };
 
@@ -835,6 +849,8 @@ router.put(
       rdpPort,
       vncPort,
       telnetPort,
+      rdpAuthType,
+      rdpCredentialId,
       rdpUser,
       rdpPassword,
       rdpDomain,
@@ -844,6 +860,8 @@ router.put(
       vncCredentialId,
       vncPassword,
       vncUser,
+      telnetAuthType,
+      telnetCredentialId,
       telnetUser,
       telnetPassword,
     } = hostData;
@@ -958,6 +976,11 @@ router.put(
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
       telnetPort: telnetPort || 23,
+      rdpAuthType: enableRdp ? rdpAuthType || null : null,
+      rdpCredentialId:
+        enableRdp && rdpAuthType === "credential" && rdpCredentialId
+          ? rdpCredentialId
+          : null,
       rdpUser: rdpUser || null,
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
@@ -968,6 +991,11 @@ router.put(
           ? vncCredentialId
           : null,
       vncUser: vncUser || null,
+      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
+      telnetCredentialId:
+        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
+          ? telnetCredentialId
+          : null,
       telnetUser: telnetUser || null,
     };
 
@@ -1065,6 +1093,7 @@ router.put(
           credentialId: hosts.credentialId,
           rdpCredentialId: hosts.rdpCredentialId,
           vncCredentialId: hosts.vncCredentialId,
+          telnetCredentialId: hosts.telnetCredentialId,
           authType: hosts.authType,
         })
         .from(hosts)
@@ -1115,12 +1144,20 @@ router.put(
           sshDataObj.vncCredentialId !== undefined
             ? sshDataObj.vncCredentialId
             : hostRecord[0].vncCredentialId;
+        const newTelnetCredId =
+          sshDataObj.telnetCredentialId !== undefined
+            ? sshDataObj.telnetCredentialId
+            : hostRecord[0].telnetCredentialId;
         const hadCredential =
           hostRecord[0].credentialId !== null ||
           hostRecord[0].rdpCredentialId !== null ||
-          hostRecord[0].vncCredentialId !== null;
+          hostRecord[0].vncCredentialId !== null ||
+          hostRecord[0].telnetCredentialId !== null;
         const willHaveCredential =
-          newCredId !== null || newRdpCredId !== null || newVncCredId !== null;
+          newCredId !== null ||
+          newRdpCredId !== null ||
+          newVncCredId !== null ||
+          newTelnetCredId !== null;
         if (hadCredential && !willHaveCredential) {
           await db
             .delete(hostAccess)
@@ -1308,6 +1345,7 @@ router.get(
           rdpPort: hosts.rdpPort,
           vncPort: hosts.vncPort,
           telnetPort: hosts.telnetPort,
+          rdpAuthType: hosts.rdpAuthType,
           rdpCredentialId: hosts.rdpCredentialId,
           rdpUser: hosts.rdpUser,
           rdpPassword: hosts.rdpPassword,
@@ -1318,6 +1356,8 @@ router.get(
           vncCredentialId: hosts.vncCredentialId,
           vncUser: hosts.vncUser,
           vncPassword: hosts.vncPassword,
+          telnetAuthType: hosts.telnetAuthType,
+          telnetCredentialId: hosts.telnetCredentialId,
           telnetUser: hosts.telnetUser,
           telnetPassword: hosts.telnetPassword,
 
@@ -1660,6 +1700,8 @@ router.get(
             rdpPort: resolvedHost.rdpPort || 3389,
             vncPort: resolvedHost.vncPort || 5900,
             telnetPort: resolvedHost.telnetPort || 23,
+            rdpAuthType: resolvedHost.rdpAuthType || null,
+            rdpCredentialId: resolvedHost.rdpCredentialId || null,
             rdpUser: resolvedHost.rdpUser || null,
             rdpPassword: resolvedHost.rdpPassword || null,
             rdpDomain: resolvedHost.rdpDomain || null,
@@ -1669,6 +1711,8 @@ router.get(
             vncCredentialId: resolvedHost.vncCredentialId || null,
             vncUser: resolvedHost.vncUser || null,
             vncPassword: resolvedHost.vncPassword || null,
+            telnetAuthType: resolvedHost.telnetAuthType || null,
+            telnetCredentialId: resolvedHost.telnetCredentialId || null,
             telnetUser: resolvedHost.telnetUser || null,
             telnetPassword: resolvedHost.telnetPassword || null,
             guacamoleConfig: resolvedHost.guacamoleConfig
