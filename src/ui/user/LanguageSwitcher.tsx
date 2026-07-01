@@ -9,6 +9,7 @@ import {
 } from "@/components/select.tsx";
 import { Globe } from "lucide-react";
 import { saveUserPreferences } from "@/main-axios";
+import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 
 const languages = [
   { code: "en", name: "English", nativeName: "English" },
@@ -60,15 +61,18 @@ export function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
 
   const handleLanguageChange = (value: string) => {
-    i18n.changeLanguage(value);
-    localStorage.setItem("i18nextLng", value);
-    saveUserPreferences({ language: value }).catch(() => {});
+    void changeAppLanguage(value)
+      .then((language) => saveUserPreferences({ language }))
+      .catch(() => {});
   };
 
   return (
     <div className="flex items-center gap-2 relative z-[99999]">
       <Globe className="h-4 w-4 text-muted-foreground" />
-      <Select value={i18n.language} onValueChange={handleLanguageChange}>
+      <Select
+        value={normalizeLanguageCode(i18n.resolvedLanguage || i18n.language)}
+        onValueChange={handleLanguageChange}
+      >
         <SelectTrigger className="w-[120px]">
           <SelectValue placeholder={t("placeholders.language")} />
         </SelectTrigger>
