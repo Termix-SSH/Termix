@@ -28,6 +28,7 @@ import {
   getRuntimeLabel,
   type ContainerRuntime,
 } from "./container-runtime.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 
 const sshLogger = logger;
 
@@ -1617,6 +1618,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         return;
       }
     } else {
+      await resolveSshConnectConfigHost(config);
       client.connect(config);
     }
   } catch (error) {

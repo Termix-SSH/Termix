@@ -20,6 +20,7 @@ import {
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
 import { withConnection } from "./ssh-connection-pool.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 import { execCommand, tmuxCommand, withTmuxPath } from "./tmux-helper.js";
 import {
   SEP,
@@ -201,8 +202,17 @@ export function connectToHost(host: SSHHost): () => Promise<Client> {
             client.connect(config);
           },
         );
-      } else {
+      } else if (config.sock) {
         client.connect(config);
+      } else {
+        resolveSshConnectConfigHost(config)
+          .then(() => {
+            client.connect(config);
+          })
+          .catch((error) => {
+            clearTimeout(timeout);
+            reject(error);
+          });
       }
     });
   };
