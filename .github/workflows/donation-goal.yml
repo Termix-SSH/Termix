@@ -25,6 +25,16 @@ jobs:
           DOCS_SNAPSHOT_URL="https://raw.githubusercontent.com/Termix-SSH/Termix-Docs/main/static/donation-snapshot.json"
           MONTHLY_GOAL=750
 
+          # Ethereum mainnet stablecoin contracts
+          ETH_USDC="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+          ETH_USDT="0xdAC17F958D2ee523a2206206994597C13D831ec7"
+          ETH_DAI="0x6B175474E89094C44Da98b954EedeAC495271d0F"
+
+          # Base stablecoin contracts
+          BASE_USDC="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+          BASE_USDT="0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"
+          BASE_DAI="0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb"
+
           # Fetch crypto prices
           PRICES=$(curl -sf "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin,solana&vs_currencies=usd" || echo '{}')
           ETH_PRICE=$(echo "$PRICES" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethereum',{}).get('usd',0))" 2>/dev/null || echo 0)
@@ -46,14 +56,54 @@ jobs:
             -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getBalance\",\"params\":[\"${SOL_ADDRESS}\"]}" || echo '{"result":{"value":0}}')
           SOL_BAL=$(echo "$SOL_RAW" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('value',0)/1e9)" 2>/dev/null || echo 0)
 
+          # Helper: fetch an ERC-20 token balance from Blockscout token-balances endpoint
+          fetch_token_balance() {
+            local base_url="$1"
+            local contract="$2"
+            curl -sf "${base_url}/api/v2/addresses/${EVM_ADDRESS}/tokens?type=ERC-20" \
+              | python3 -c "
+import sys, json
+contract = '$contract'.lower()
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print(0)
+    sys.exit()
+for item in d.get('items', []):
+    token = item.get('token', {})
+    if token.get('address', '').lower() == contract:
+        decimals = int(token.get('decimals') or 18)
+        value = int(item.get('value') or 0)
+        print(value / (10 ** decimals))
+        sys.exit()
+print(0)
+" 2>/dev/null || echo 0
+          }
+
+          ETH_USDC_BAL=$(fetch_token_balance "https://eth.blockscout.com" "$ETH_USDC")
+          ETH_USDT_BAL=$(fetch_token_balance "https://eth.blockscout.com" "$ETH_USDT")
+          ETH_DAI_BAL=$(fetch_token_balance "https://eth.blockscout.com" "$ETH_DAI")
+
+          BASE_USDC_BAL=$(fetch_token_balance "https://base.blockscout.com" "$BASE_USDC")
+          BASE_USDT_BAL=$(fetch_token_balance "https://base.blockscout.com" "$BASE_USDT")
+          BASE_DAI_BAL=$(fetch_token_balance "https://base.blockscout.com" "$BASE_DAI")
+
           # Fetch snapshot baseline from docs repo
           SNAPSHOT=$(curl -sf "$DOCS_SNAPSHOT_URL" || echo '{"ethBal":0,"baseBal":0,"btcBal":0,"solBal":0}')
           SNAP_ETH=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethBal',0))" 2>/dev/null || echo 0)
           SNAP_BASE=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('baseBal',0))" 2>/dev/null || echo 0)
           SNAP_BTC=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('btcBal',0))" 2>/dev/null || echo 0)
           SNAP_SOL=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('solBal',0))" 2>/dev/null || echo 0)
+          SNAP_ETH_USDC=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethUsdcBal',0))" 2>/dev/null || echo 0)
+          SNAP_ETH_USDT=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethUsdtBal',0))" 2>/dev/null || echo 0)
+          SNAP_ETH_DAI=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethDaiBal',0))" 2>/dev/null || echo 0)
+          SNAP_BASE_USDC=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('baseUsdcBal',0))" 2>/dev/null || echo 0)
+          SNAP_BASE_USDT=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('baseUsdtBal',0))" 2>/dev/null || echo 0)
+          SNAP_BASE_DAI=$(echo "$SNAPSHOT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('baseDaiBal',0))" 2>/dev/null || echo 0)
 
           export ETH_BAL BASE_BAL BTC_BAL SOL_BAL SNAP_ETH SNAP_BASE SNAP_BTC SNAP_SOL ETH_PRICE BTC_PRICE SOL_PRICE MONTHLY_GOAL
+          export ETH_USDC_BAL ETH_USDT_BAL ETH_DAI_BAL BASE_USDC_BAL BASE_USDT_BAL BASE_DAI_BAL
+          export SNAP_ETH_USDC SNAP_ETH_USDT SNAP_ETH_DAI SNAP_BASE_USDC SNAP_BASE_USDT SNAP_BASE_DAI
 
           python3 - <<'PYEOF'
           import os, math
@@ -71,12 +121,37 @@ jobs:
           sol_price = float(os.environ.get('SOL_PRICE', 0))
           goal      = float(os.environ.get('MONTHLY_GOAL', 750))
 
+          eth_usdc_bal   = float(os.environ.get('ETH_USDC_BAL', 0))
+          eth_usdt_bal   = float(os.environ.get('ETH_USDT_BAL', 0))
+          eth_dai_bal    = float(os.environ.get('ETH_DAI_BAL', 0))
+          base_usdc_bal  = float(os.environ.get('BASE_USDC_BAL', 0))
+          base_usdt_bal  = float(os.environ.get('BASE_USDT_BAL', 0))
+          base_dai_bal   = float(os.environ.get('BASE_DAI_BAL', 0))
+          snap_eth_usdc  = float(os.environ.get('SNAP_ETH_USDC', 0))
+          snap_eth_usdt  = float(os.environ.get('SNAP_ETH_USDT', 0))
+          snap_eth_dai   = float(os.environ.get('SNAP_ETH_DAI', 0))
+          snap_base_usdc = float(os.environ.get('SNAP_BASE_USDC', 0))
+          snap_base_usdt = float(os.environ.get('SNAP_BASE_USDT', 0))
+          snap_base_dai  = float(os.environ.get('SNAP_BASE_DAI', 0))
+
           delta_eth  = max(0, eth_bal  - snap_eth)
           delta_base = max(0, base_bal - snap_base)
           delta_btc  = max(0, btc_bal  - snap_btc)
           delta_sol  = max(0, sol_bal  - snap_sol)
 
-          total = delta_eth * eth_price + delta_base * eth_price + delta_btc * btc_price + delta_sol * sol_price
+          delta_eth_usdc  = max(0, eth_usdc_bal  - snap_eth_usdc)
+          delta_eth_usdt  = max(0, eth_usdt_bal  - snap_eth_usdt)
+          delta_eth_dai   = max(0, eth_dai_bal   - snap_eth_dai)
+          delta_base_usdc = max(0, base_usdc_bal - snap_base_usdc)
+          delta_base_usdt = max(0, base_usdt_bal - snap_base_usdt)
+          delta_base_dai  = max(0, base_dai_bal  - snap_base_dai)
+
+          total = (
+              delta_eth * eth_price + delta_base * eth_price +
+              delta_btc * btc_price + delta_sol * sol_price +
+              delta_eth_usdc + delta_eth_usdt + delta_eth_dai +
+              delta_base_usdc + delta_base_usdt + delta_base_dai
+          )
           pct   = min(total / goal * 100, 100) if goal > 0 else 0
 
           if total < 1:
