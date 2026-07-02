@@ -8,6 +8,19 @@ import ssh2Pkg, {
 } from "ssh2";
 
 const { BaseAgent } = ssh2Pkg;
+const DEFAULT_PORT_KNOCK_TIMEOUT_MS = 1000;
+
+type Sleep = (ms: number) => Promise<void>;
+
+type PortKnockingOptions = {
+  tcpTimeoutMs?: number;
+  udpTimeoutMs?: number;
+  createTcpSocket?: () => net.Socket;
+  createUdpSocket?: () => dgram.Socket;
+  wait?: Sleep;
+};
+
+const sleep: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export class MemoryAgent extends BaseAgent {
   private key: ParsedKey;
@@ -97,34 +110,59 @@ export async function applyAgentAuth(
 export async function performPortKnocking(
   host: string,
   sequence: Array<{ port: number; protocol?: string; delay?: number }>,
+  options: PortKnockingOptions = {},
 ): Promise<void> {
+  const createTcpSocket = options.createTcpSocket ?? (() => new net.Socket());
+  const createUdpSocket =
+    options.createUdpSocket ?? (() => dgram.createSocket("udp4"));
+  const wait = options.wait ?? sleep;
+  const tcpTimeoutMs = options.tcpTimeoutMs ?? DEFAULT_PORT_KNOCK_TIMEOUT_MS;
+  const udpTimeoutMs = options.udpTimeoutMs ?? DEFAULT_PORT_KNOCK_TIMEOUT_MS;
+
   for (const knock of sequence) {
-    const protocol = knock.protocol || "tcp";
-    const delay = knock.delay ?? 100;
+    const port = Number(knock.port);
+    if (!Number.isInteger(port) || port <= 0 || port > 65535) continue;
+
+    const protocol = (knock.protocol || "tcp").toLowerCase();
+    const delay = Number(knock.delay ?? 100);
 
     await new Promise<void>((resolve) => {
       if (protocol === "udp") {
-        const client = dgram.createSocket("udp4");
-        client.send(Buffer.alloc(0), knock.port, host, () => {
+        const client = createUdpSocket();
+        let settled = false;
+        const timeout = setTimeout(() => finish(), udpTimeoutMs);
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
           client.close();
           resolve();
+        };
+        client.once("error", finish);
+        client.send(Buffer.alloc(0), port, host, () => {
+          finish();
         });
       } else {
-        const socket = new net.Socket();
-        socket.once("connect", () => {
+        const socket = createTcpSocket();
+        let settled = false;
+        const timeout = setTimeout(() => finish(), tcpTimeoutMs);
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          socket.removeAllListeners("connect");
+          socket.removeAllListeners("error");
           socket.destroy();
           resolve();
-        });
-        socket.once("error", () => {
-          socket.destroy();
-          resolve();
-        });
-        socket.connect(knock.port, host);
+        };
+        socket.once("connect", finish);
+        socket.once("error", finish);
+        socket.connect(port, host);
       }
     });
 
     if (delay > 0) {
-      await new Promise<void>((r) => setTimeout(r, delay));
+      await wait(delay);
     }
   }
 }
