@@ -70,9 +70,23 @@ export type GuacamoleAuthType = "password" | "credential";
 
 export interface ProxmoxConfig {
   defaultCredentialId: number | null;
+  defaultAuthType?: string;
   windowsPatterns: string;
   dockerPatterns: string;
   preferredPrefixes: string;
+  autoSyncEnabled?: boolean;
+  syncIntervalMinutes?: number;
+  markMissingGuests?: boolean;
+  lastSyncAt?: string;
+  lastSyncStatus?: "success" | "error";
+  lastSyncError?: string | null;
+  lastSyncResult?: {
+    created: number;
+    updated: number;
+    markedMissing: number;
+    skipped: number;
+    errors: string[];
+  };
 }
 
 export interface HostFeatureFlags {
