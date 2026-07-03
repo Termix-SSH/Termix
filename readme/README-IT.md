@@ -28,7 +28,14 @@
   <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
   <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
+
+<br />
+
+Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https://donate.termix.site/) per aiutare a coprire i costi del server e il tempo di sviluppo.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -87,8 +94,8 @@ Gestisci i file direttamente sui server remoti con supporto per la visualizzazio
 <tr>
 <td width="50%" valign="top">
 
-**Gestione Docker:**
-Avvia, ferma, metti in pausa, rimuovi container. Visualizza le statistiche dei container. Controlla i container tramite terminale docker exec. Non e stato creato per sostituire Portainer o Dockge, ma piuttosto per gestire semplicemente i tuoi container rispetto alla loro creazione.
+**Gestione Docker e Podman:**
+Avvia, ferma, metti in pausa, rimuovi container. Visualizza le statistiche dei container. Controlla i container tramite terminale docker exec. Supporta sia Docker che Podman come runtime dei container. Non e stato creato per sostituire Portainer o Dockge, ma piuttosto per gestire semplicemente i tuoi container rispetto alla loro creazione.
 
 </td>
 <td width="50%" valign="top">
@@ -115,8 +122,36 @@ Gestione utenti sicura con controlli amministrativi e supporto OIDC/LDAP/SSO (co
 <tr>
 <td width="50%" valign="top">
 
+**Integrazione Tailscale:**
+Elenca i dispositivi della tua rete Tailscale per aggiungerli rapidamente come host, e connettiti utilizzando Tailscale SSH come metodo di autenticazione, lasciando che le ACL della tua rete gestiscano l'autorizzazione senza memorizzare credenziali.
+
+</td>
+<td width="50%" valign="top">
+
 **RBAC:**
 Crea ruoli e condividi host tra utenti/ruoli.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Connessioni Seriali:**
+Connettiti a dispositivi seriali (router, switch, microcontrollori, ecc.) direttamente dal browser o dall'app desktop. Configura baud rate, bit di dati, bit di stop e parita. Utilizza la Web Serial API nei browser supportati o un backend nativo nell'app Electron.
+
+</td>
+<td width="50%" valign="top">
+
+**Avvisi:**
+Imposta regole di avviso basate su soglie per le metriche dell'host (CPU, memoria, disco, ecc.) e ricevi notifiche tramite ntfy o webhook quando si attivano. Visualizza gli avvisi attivi e risolti in un registro storico.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Homepage:**
+Una homepage completamente personalizzabile con una griglia di widget drag-and-drop. Aggiungi widget per lo stato dell'host, link ai servizi, orologi, note, feed RSS, meteo, container Docker, grafici delle metriche dell'host, terminali incorporati, iframe e altro ancora.
 
 </td>
 <td width="50%" valign="top">
@@ -253,6 +288,14 @@ networks:
 
 <br />
 
+## Dona
+
+Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https://donate.termix.site/) per aiutare a coprire i costi del server e il tempo di sviluppo.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 ## Screenshot
 
 <div align="center">
@@ -295,6 +338,10 @@ networks:
 <td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
 <td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
 </tr>
+<tr>
+<td><img src="../repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
+<td><img src="../repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
+</tr>
 </table>
 
 <sub>Alcuni video e immagini potrebbero non essere aggiornati o potrebbero non mostrare perfettamente le funzionalita.</sub>
@@ -305,7 +352,7 @@ networks:
 
 ## Funzionalita Pianificate
 
-Consulta [Progetti](https://github.com/orgs/Termix-SSH/projects/2) per tutte le funzionalita pianificate. Se desideri contribuire, consulta [Contribuire](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+Consulta [Progetti](https://github.com/orgs/Termix-SSH/projects/5) per tutte le funzionalita pianificate. Se desideri contribuire, consulta [Contribuire](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
 

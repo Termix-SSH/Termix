@@ -28,7 +28,14 @@
   <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
   <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
+
+<br />
+
+Termix मुफ़्त और ओपन सोर्स है। यदि आपको यह उपयोगी लगता है, तो सर्वर लागत और विकास समय में मदद के लिए [दान करें](https://donate.termix.site/)।
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -87,8 +94,8 @@ Termix एक ओपन-सोर्स, हमेशा के लिए मु
 <tr>
 <td width="50%" valign="top">
 
-**Docker प्रबंधन:**
-कंटेनर शुरू, बंद, पॉज़, हटाएँ। कंटेनर स्टैट्स देखें। docker exec टर्मिनल का उपयोग करके कंटेनर को नियंत्रित करें। इसे Portainer या Dockge की जगह लेने के लिए नहीं बनाया गया बल्कि कंटेनर बनाने की तुलना में उन्हें सरलता से प्रबंधित करने के लिए बनाया गया है।
+**Docker और Podman प्रबंधन:**
+कंटेनर शुरू, बंद, पॉज़, हटाएँ। कंटेनर स्टैट्स देखें। docker exec टर्मिनल का उपयोग करके कंटेनर को नियंत्रित करें। Docker और Podman दोनों को कंटेनर रनटाइम के रूप में सपोर्ट करता है। इसे Portainer या Dockge की जगह लेने के लिए नहीं बनाया गया बल्कि कंटेनर बनाने की तुलना में उन्हें सरलता से प्रबंधित करने के लिए बनाया गया है।
 
 </td>
 <td width="50%" valign="top">
@@ -115,8 +122,36 @@ Termix एक ओपन-सोर्स, हमेशा के लिए मु
 <tr>
 <td width="50%" valign="top">
 
+**Tailscale एकीकरण:**
+अपने Tailscale नेटवर्क के डिवाइस सूचीबद्ध करें ताकि उन्हें जल्दी से होस्ट के रूप में जोड़ा जा सके, और Tailscale SSH को प्रमाणीकरण विधि के रूप में उपयोग करके कनेक्ट करें, जिससे आपके Tailscale ACL क्रेडेंशियल संग्रहीत किए बिना प्राधिकरण संभाल सकें।
+
+</td>
+<td width="50%" valign="top">
+
 **RBAC:**
 भूमिकाएँ बनाएँ और उपयोगकर्ताओं/भूमिकाओं में होस्ट साझा करें।
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**सीरियल कनेक्शन:**
+सीरियल डिवाइस (राउटर, स्विच, माइक्रोकंट्रोलर आदि) से सीधे ब्राउज़र या डेस्कटॉप ऐप से कनेक्ट करें। बॉड रेट, डेटा बिट्स, स्टॉप बिट्स और पैरिटी कॉन्फ़िगर करें। समर्थित ब्राउज़र में Web Serial API या Electron ऐप में नेटिव बैकएंड का उपयोग करता है।
+
+</td>
+<td width="50%" valign="top">
+
+**अलर्ट:**
+होस्ट मेट्रिक्स (CPU, मेमोरी, डिस्क आदि) पर थ्रेशोल्ड-आधारित अलर्ट नियम सेट करें और जब वे ट्रिगर हों तो ntfy या webhooks के माध्यम से सूचना पाएँ। इतिहास लॉग में सक्रिय और हल किए गए अलर्ट देखें।
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**होमपेज:**
+ड्रैग-एंड-ड्रॉप विजेट ग्रिड के साथ पूरी तरह से कस्टमाइज़ करने योग्य होमपेज। होस्ट स्टेटस, सर्विस लिंक, घड़ियाँ, नोट्स, RSS फ़ीड, मौसम, Docker कंटेनर, होस्ट मेट्रिक्स चार्ट, एम्बेडेड टर्मिनल, iframes और अन्य के लिए विजेट जोड़ें।
 
 </td>
 <td width="50%" valign="top">
@@ -253,6 +288,14 @@ networks:
 
 <br />
 
+## दान करें
+
+Termix मुफ़्त और ओपन सोर्स है। यदि आपको यह उपयोगी लगता है, तो सर्वर लागत और विकास समय में मदद के लिए [दान करें](https://donate.termix.site/)।
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 ## स्क्रीनशॉट
 
 <div align="center">
@@ -295,6 +338,10 @@ networks:
 <td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
 <td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
 </tr>
+<tr>
+<td><img src="../repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
+<td><img src="../repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
+</tr>
 </table>
 
 <sub>कुछ वीडियो और छवियाँ पुरानी हो सकती हैं या विशेषताओं को पूरी तरह से प्रदर्शित नहीं कर सकती हैं।</sub>
@@ -305,7 +352,7 @@ networks:
 
 ## नियोजित विशेषताएँ
 
-सभी नियोजित विशेषताओं के लिए [प्रोजेक्ट्स](https://github.com/orgs/Termix-SSH/projects/2) देखें। यदि आप योगदान देना चाहते हैं, तो [योगदान](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) देखें।
+सभी नियोजित विशेषताओं के लिए [प्रोजेक्ट्स](https://github.com/orgs/Termix-SSH/projects/5) देखें। यदि आप योगदान देना चाहते हैं, तो [योगदान](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) देखें।
 
 <br />
 

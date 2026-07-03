@@ -14,7 +14,7 @@ if [ "$(id -u)" = "0" ]; then
         groupmod -o -g "$PGID" node 2>/dev/null || true
         usermod -o -u "$PUID" node 2>/dev/null || true
 
-        chown -R node:node /app/data /app/uploads /tmp/nginx 2>/dev/null || true
+        chown -R node:node /app/data /app/uploads /app/html /tmp/nginx 2>/dev/null || true
 
         echo "User node is now UID: $PUID, GID: $PGID"
 

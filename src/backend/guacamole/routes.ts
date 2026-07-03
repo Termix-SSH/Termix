@@ -8,6 +8,7 @@ import net from "net";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
+import { resolveGuacdOptions } from "../utils/guacd-config.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -558,18 +559,14 @@ router.post(
  */
 router.get("/status", async (req, res) => {
   try {
-    let guacdHost = process.env.GUACD_HOST || "localhost";
-    let guacdPort = parseInt(process.env.GUACD_PORT || "4822", 10);
+    let dbUrl: string | undefined;
     try {
-      const url = await createCurrentSettingsRepository().get("guac_url");
-      if (url) {
-        const parts = url.split(":");
-        guacdHost = parts[0] || guacdHost;
-        guacdPort = parseInt(parts[1] || String(guacdPort), 10);
-      }
+      dbUrl =
+        (await createCurrentSettingsRepository().get("guac_url")) ?? undefined;
     } catch {
       // Fall back to env vars
     }
+    const { host: guacdHost, port: guacdPort } = resolveGuacdOptions(dbUrl);
 
     const net = await import("net");
 

@@ -2,31 +2,18 @@ import GuacamoleLite from "guacamole-lite";
 import { guacLogger } from "../utils/logger.js";
 import { GuacamoleTokenService } from "./token-service.js";
 import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
+import { resolveGuacdOptions } from "../utils/guacd-config.js";
 
 const tokenService = GuacamoleTokenService.getInstance();
 
-function parseGuacUrl(url: string): { host: string; port: number } {
-  const parts = url.split(":");
-  return {
-    host: parts[0] || "localhost",
-    port: parseInt(parts[1] || "4822", 10),
-  };
-}
-
 function readGuacdOptions(): { host: string; port: number } {
-  let host = process.env.GUACD_HOST || "localhost";
-  let port = parseInt(process.env.GUACD_PORT || "4822", 10);
+  let dbUrl: string | undefined;
   try {
-    const url = getCurrentSettingValue("guac_url");
-    if (url) {
-      const parsed = parseGuacUrl(url);
-      host = parsed.host;
-      port = parsed.port;
-    }
+    dbUrl = getCurrentSettingValue("guac_url") ?? undefined;
   } catch {
     // DB not available yet, use env var defaults
   }
-  return { host, port };
+  return resolveGuacdOptions(dbUrl);
 }
 
 const GUAC_WS_PORT = 30008;

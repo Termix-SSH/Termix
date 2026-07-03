@@ -80,6 +80,25 @@ export const trustedDevices = sqliteTable("trusted_devices", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const webauthnCredentials = sqliteTable("webauthn_credentials", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  credentialId: text("credential_id").notNull(),
+  publicKey: text("public_key").notNull(),
+  counter: integer("counter").notNull().default(0),
+  deviceType: text("device_type"),
+  backedUp: integer("backed_up", { mode: "boolean" }).notNull().default(false),
+  transports: text("transports"),
+  userVerification: text("user_verification").notNull().default("preferred"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  lastUsedAt: text("last_used_at"),
+});
+
 export const hosts = sqliteTable("ssh_data", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -774,6 +793,9 @@ export const userPreferences = sqliteTable("user_preferences", {
   showHostTags: integer("show_host_tags", { mode: "boolean" }),
   hostTrayOnClick: integer("host_tray_on_click", { mode: "boolean" }),
   pinAppRail: integer("pin_app_rail", { mode: "boolean" }),
+  expandAppRailOnHover: integer("expand_app_rail_on_hover", {
+    mode: "boolean",
+  }),
   foldersCollapsed: integer("folders_collapsed", { mode: "boolean" }),
   confirmSnippetExecution: integer("confirm_snippet_execution", { mode: "boolean" }),
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),

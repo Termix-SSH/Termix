@@ -105,6 +105,9 @@ export type Host = {
   defaultPath?: string;
 
   enableDocker: boolean;
+  dockerConfig?: {
+    runtime?: "docker" | "podman";
+  } | null;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
   proxmoxConfig?: {
@@ -160,6 +163,7 @@ export type Credential = {
   username: string;
   type: "password" | "key";
   value?: string;
+  password?: string;
   publicKey?: string;
   passphrase?: string;
   description?: string;

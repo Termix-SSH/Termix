@@ -446,6 +446,17 @@ export function HostEditor({
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.password")} ({t("common.optional")})
+                        </label>
+                        <PasswordInput
+                          className="h-8 text-xs pr-8"
+                          placeholder="••••••••"
+                          value={form.password}
+                          onChange={(e) => setField("password", e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           {t("hosts.keyTypeLabel")}
                         </label>
                         <select
@@ -733,28 +744,6 @@ export function HostEditor({
                     onChange={(v) => setField("allowLegacyAlgorithms", v)}
                   />
                 </SettingRow>
-                <SettingRow
-                  label={t("hosts.sudoPasswordAutoFillLabel")}
-                  description={t("hosts.sudoPasswordAutoFillDesc")}
-                >
-                  <FakeSwitch
-                    checked={form.sudoPasswordAutoFill}
-                    onChange={(v) => setField("sudoPasswordAutoFill", v)}
-                  />
-                </SettingRow>
-                {form.sudoPasswordAutoFill && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.sudoPasswordLabel")}
-                    </label>
-                    <PasswordInput
-                      className="h-8 text-xs pr-8"
-                      placeholder="••••••••"
-                      value={form.sudoPassword}
-                      onChange={(e) => setField("sudoPassword", e.target.value)}
-                    />
-                  </div>
-                )}
               </div>
             </SectionCard>
           </>
@@ -1594,18 +1583,20 @@ export function HostEditor({
                   </p>
                 )}
                 {form.serverTunnels.map((tun, i) => {
+                  const endpointValue = (tun.endpointHost ?? "").trim();
                   const selectedEndpointHost = findHostByTunnelEndpoint(
                     hosts,
-                    tun.endpointHost,
+                    endpointValue,
                   );
                   const directEndpoint =
-                    !tun.endpointHost ||
-                    tun.endpointHost === "127.0.0.1" ||
-                    tun.endpointHost === "localhost";
+                    !endpointValue ||
+                    endpointValue === "127.0.0.1" ||
+                    endpointValue === "localhost";
+                  const endpointInputId = `server-tunnel-endpoint-${host?.id ?? "new"}-${i}`;
                   const hostLabel =
                     host?.name ||
                     (host ? `${host.username}@${host.ip}` : "new");
-                  const tunnelName = `${host?.id ?? "new"}::${i}::${hostLabel}::${tun.sourcePort}::${tun.endpointHost ?? ""}::${tun.endpointPort}`;
+                  const tunnelName = `${host?.id ?? "new"}::${i}::${hostLabel}::${tun.sourcePort}::${endpointValue}::${tun.endpointPort}`;
                   const tunnelStatus = tunnelStatuses[tunnelName]?.status as
                     | string
                     | undefined;
@@ -1666,14 +1657,16 @@ export function HostEditor({
                                       endpointIP: directEndpoint
                                         ? host.ip
                                         : (selectedEndpointHost?.ip ??
-                                          tun.endpointHost ??
-                                          ""),
-                                      endpointSSHPort: directEndpoint
-                                        ? (host.sshPort ?? host.port)
-                                        : (selectedEndpointHost?.sshPort ??
-                                          selectedEndpointHost?.port ??
-                                          22),
-                                      endpointHost: tun.endpointHost ?? "",
+                                          endpointValue),
+                                      endpointSSHPort:
+                                        directEndpoint || selectedEndpointHost
+                                          ? directEndpoint
+                                            ? (host.sshPort ?? host.port)
+                                            : (selectedEndpointHost?.sshPort ??
+                                              selectedEndpointHost?.port ??
+                                              22)
+                                          : 22,
+                                      endpointHost: endpointValue,
                                       endpointUsername: directEndpoint
                                         ? form.username
                                         : (selectedEndpointHost?.username ??
@@ -1765,8 +1758,10 @@ export function HostEditor({
                             <label className="text-[10px] font-bold text-muted-foreground">
                               {t("hosts.endpointHost")}
                             </label>
-                            <select
+                            <Input
                               className="h-7 text-xs border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+                              list={endpointInputId}
+                              placeholder={t("hosts.endpointHostPlaceholder")}
                               value={tun.endpointHost ?? ""}
                               onChange={(e) => {
                                 const updated = [...form.serverTunnels];
@@ -1776,8 +1771,8 @@ export function HostEditor({
                                 };
                                 setField("serverTunnels", updated);
                               }}
-                            >
-                              <option value="">{t("hosts.sameHost")}</option>
+                            />
+                            <datalist id={endpointInputId}>
                               {hosts
                                 .filter((h) => h.enableSsh)
                                 .map((h) => (
@@ -1785,7 +1780,7 @@ export function HostEditor({
                                     {h.name || h.ip} ({h.ip})
                                   </option>
                                 ))}
-                            </select>
+                            </datalist>
                           </div>
                         )}
                         {tun.mode !== "dynamic" && (

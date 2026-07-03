@@ -116,27 +116,14 @@ export function LineChart({
 
   const xTickIndices: number[] = [];
   if (timestamps.length > 1 && chartW > 0) {
-    const MIN_PX = 80;
     const n = timestamps.length;
-    // Always include first and last, then greedily add middle ticks if they fit
-    const candidates = [0];
-    const maxMid = Math.floor(chartW / MIN_PX) - 1;
-    if (maxMid > 0) {
-      const step = (n - 1) / (maxMid + 1);
-      for (let k = 1; k <= maxMid; k++) candidates.push(Math.round(k * step));
-    }
-    candidates.push(n - 1);
-    // Dedupe and filter by minimum pixel distance
-    const seen = new Set<number>();
-    let lastX = -Infinity;
-    for (const ci of candidates) {
-      if (seen.has(ci)) continue;
-      const px = Y_LABEL_W + (ci / (n - 1)) * chartW;
-      if (px - lastX >= MIN_PX || ci === 0 || ci === n - 1) {
-        xTickIndices.push(ci);
-        seen.add(ci);
-        lastX = px;
-      }
+    // Long labels ("Jun 28 14:30") are ~80px; short ("14:30") are ~40px.
+    // Use at most 3 ticks for long labels, 5 for short, so they never crowd.
+    const longLabel = rangeMs > 25 * 60 * 60 * 1000;
+    const maxTicks = longLabel ? 3 : 5;
+    const count = Math.min(maxTicks, n);
+    for (let k = 0; k < count; k++) {
+      xTickIndices.push(Math.round((k / (count - 1)) * (n - 1)));
     }
   }
 
@@ -158,19 +145,6 @@ export function LineChart({
       ref={containerRef}
       className={cn("relative select-none w-full", className)}
     >
-      {/* Legend */}
-      <div className="mb-3 flex flex-wrap gap-3">
-        {series.map((s) => (
-          <div key={s.key} className="flex items-center gap-1.5 text-xs">
-            <span
-              className="inline-block h-2 w-4 rounded-full shrink-0"
-              style={{ background: s.color }}
-            />
-            <span className="text-muted-foreground">{s.label}</span>
-          </div>
-        ))}
-      </div>
-
       {width > 0 && (
         <svg
           width={width}
@@ -270,7 +244,7 @@ export function LineChart({
             return (
               <text
                 key={i}
-                x={isFirst ? Y_LABEL_W : isLast ? width : x}
+                x={x}
                 y={svgH - 4}
                 fontSize={10}
                 textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
@@ -286,7 +260,7 @@ export function LineChart({
       {/* Tooltip */}
       {tooltip !== null && timestamps[tooltip.index] && (
         <div
-          className="pointer-events-none absolute z-10 rounded border border-border bg-popover px-2 py-1.5 text-xs shadow-md"
+          className="pointer-events-none absolute z-10 border border-border bg-popover px-2 py-1.5 text-xs shadow-md"
           style={{
             left: tooltip.x > width / 2 ? tooltip.x - 8 : tooltip.x + 8,
             top: 28,

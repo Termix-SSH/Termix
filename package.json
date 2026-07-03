@@ -12,6 +12,8 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "biome:check": "biome check biome.json package.json",
+    "biome:fix": "biome check --write biome.json package.json",
     "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "eslint .",
@@ -41,6 +43,8 @@
     "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "@types/ldapjs": "^3.0.6",
     "axios": "^1.18.0",
     "bcryptjs": "^3.0.3",
@@ -70,6 +74,7 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.1",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.3",
     "@codemirror/search": "^6.7.1",

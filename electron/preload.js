@@ -46,6 +46,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
   oidcSystemBrowserAuth: (authUrl, callbackPort) =>
     ipcRenderer.invoke("oidc-system-browser-auth", authUrl, callbackPort),
 
+  openExternalEditor: (fileData) =>
+    ipcRenderer.invoke("open-external-editor", fileData),
+  closeExternalEditor: (editId) =>
+    ipcRenderer.invoke("close-external-editor", editId),
+  onExternalEditorSaved: (callback) => {
+    const listener = (_event, payload) => callback(payload);
+    ipcRenderer.on("external-editor-saved", listener);
+    return () => ipcRenderer.removeListener("external-editor-saved", listener);
+  },
+
+  showSaveDialog: (options) => ipcRenderer.invoke("show-save-dialog", options),
+  showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
+  createTempFile: (fileData) =>
+    ipcRenderer.invoke("create-temp-file", fileData),
+  createTempFolder: (folderData) =>
+    ipcRenderer.invoke("create-temp-folder", folderData),
+  startDragToDesktop: (dragData) =>
+    ipcRenderer.invoke("start-drag-to-desktop", dragData),
+  cleanupTempFile: (tempId) => ipcRenderer.invoke("cleanup-temp-file", tempId),
+
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 });
 

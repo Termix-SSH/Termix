@@ -348,7 +348,9 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
             endpointSsh?.authType === "password"
               ? endpointSsh.password
               : undefined,
-          endpointAuthMethod: endpointSsh?.authType ?? "none",
+          endpointAuthMethod: isDirect
+            ? sshHost.authType
+            : (endpointSsh?.authType ?? "password"),
           endpointSSHKey:
             endpointSsh?.authType === "key" ? endpointSsh.key : undefined,
           endpointKeyPassword:

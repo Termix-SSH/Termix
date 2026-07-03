@@ -972,6 +972,22 @@ function FileManagerContent({
       { duration: Infinity },
     );
 
+    const updateProgress = (p: {
+      chunkIndex: number;
+      totalChunks: number;
+      bytesSent: number;
+      totalBytes: number;
+    }) => {
+      const percent = Math.min(
+        100,
+        Math.round((p.bytesSent / p.totalBytes) * 100),
+      );
+      toast.loading(
+        `Uploading ${file.name} — ${percent}% (chunk ${p.chunkIndex + 1}/${p.totalChunks})`,
+        { id: progressToast, duration: Infinity },
+      );
+    };
+
     try {
       await ensureSSHConnection();
 
@@ -982,6 +998,7 @@ function FileManagerContent({
         file,
         currentHost?.id,
         undefined,
+        updateProgress,
       );
 
       toast.dismiss(progressToast);

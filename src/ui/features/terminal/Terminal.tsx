@@ -83,6 +83,24 @@ interface SSHTerminalProps {
   disableAutoFocus?: boolean;
 }
 
+const TERMINAL_FONT_ZOOM_MIN = 8;
+const TERMINAL_FONT_ZOOM_MAX = 36;
+const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
+
+function updateAlternateScreenMode(output: string, currentMode: boolean) {
+  ALTERNATE_SCREEN_SEQUENCE.lastIndex = 0;
+  let isActive = currentMode;
+  let sawSequence = false;
+  let match: RegExpExecArray | null;
+
+  while ((match = ALTERNATE_SCREEN_SEQUENCE.exec(output)) !== null) {
+    sawSequence = true;
+    isActive = match[2] === "h";
+  }
+
+  return { isActive, sawSequence };
+}
+
 const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
   function SSHTerminal(
     {
@@ -357,7 +375,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [autocompleteSelectedIndex]);
 
     const activityLoggingRef = useRef(false);
-    const sudoPromptShownRef = useRef(false);
+    const passwordPromptShownRef = useRef(false);
+    const alternateScreenModeRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -365,6 +384,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const lastFittedSizeRef = useRef<{ cols: number; rows: number } | null>(
       null,
     );
+    const terminalFontSizeRef = useRef(config.fontSize);
     const DEBOUNCE_MS = 140;
 
     const logTerminalActivity = async () => {
@@ -461,6 +481,27 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       } finally {
         isFittingRef.current = false;
       }
+    }
+
+    function zoomTerminalFont(deltaY: number) {
+      const direction = deltaY < 0 ? 1 : -1;
+      const currentFontSize =
+        terminal.options.fontSize ??
+        terminalFontSizeRef.current ??
+        DEFAULT_TERMINAL_CONFIG.fontSize;
+      const nextFontSize = Math.min(
+        TERMINAL_FONT_ZOOM_MAX,
+        Math.max(TERMINAL_FONT_ZOOM_MIN, currentFontSize + direction),
+      );
+
+      if (nextFontSize === currentFontSize) {
+        return;
+      }
+
+      terminalFontSizeRef.current = nextFontSize;
+      terminal.options.fontSize = nextFontSize;
+      performFit();
+      hardRefresh();
     }
 
     function handleTotpSubmit(code: string) {
@@ -602,6 +643,91 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           lastSentSizeRef.current = next;
         }
       }, DEBOUNCE_MS);
+    }
+
+    function formatTerminalOutput(output: string): string {
+      const alternateScreen = updateAlternateScreenMode(
+        output,
+        alternateScreenModeRef.current,
+      );
+      alternateScreenModeRef.current = alternateScreen.isActive;
+
+      const syntaxHighlightingEnabled =
+        hostConfig.terminalConfig?.syntaxHighlighting !== false;
+      if (
+        !syntaxHighlightingEnabled ||
+        alternateScreen.sawSequence ||
+        alternateScreen.isActive
+      ) {
+        return output;
+      }
+
+      return highlightTerminalOutput(
+        output,
+        hostConfig.terminalConfig?.syntaxHighlightingOptions,
+      );
+    }
+
+    async function resolvePasswordForPrompt(isSudoPrompt: boolean) {
+      let passwordToFill = isSudoPrompt
+        ? hostConfig.terminalConfig?.sudoPassword || hostConfig.password
+        : hostConfig.password || hostConfig.terminalConfig?.sudoPassword;
+
+      if (!passwordToFill && hostConfig.id) {
+        passwordToFill = isSudoPrompt
+          ? (await getHostPassword(hostConfig.id, "sudoPassword")) ||
+            (await getHostPassword(hostConfig.id, "password")) ||
+            undefined
+          : (await getHostPassword(hostConfig.id, "password")) ||
+            (await getHostPassword(hostConfig.id, "sudoPassword")) ||
+            undefined;
+      }
+
+      return passwordToFill;
+    }
+
+    function maybeOfferPasswordFill(strippedData: string) {
+      const passwordPromptPattern =
+        /(?:\[sudo\][^\n\r]*:\s*$|sudo:[^\n\r]*password[^\n\r]*required|password for [^\n\r]*:\s*$|Password:\s*$|password:\s*$)/im;
+      if (!passwordPromptPattern.test(strippedData)) return;
+
+      const hasStoredPassword =
+        hostConfig.terminalConfig?.sudoPassword ||
+        hostConfig.password ||
+        hostConfig.hasSudoPassword ||
+        hostConfig.hasPassword;
+      if (!hasStoredPassword || passwordPromptShownRef.current) return;
+
+      passwordPromptShownRef.current = true;
+      const isSudoPrompt = /(?:\[sudo\]|sudo:)/i.test(strippedData);
+
+      confirmWithToast(
+        t("terminal.passwordPromptFillTitle"),
+        async () => {
+          const passwordToFill = await resolvePasswordForPrompt(isSudoPrompt);
+          if (
+            passwordToFill &&
+            webSocketRef.current &&
+            webSocketRef.current.readyState === WebSocket.OPEN
+          ) {
+            webSocketRef.current.send(
+              JSON.stringify({
+                type: "input",
+                data: passwordToFill + "\n",
+              }),
+            );
+          }
+          setTimeout(() => {
+            passwordPromptShownRef.current = false;
+          }, 3000);
+        },
+        t("common.confirm"),
+        t("common.cancel"),
+        { confirmOnEnter: true },
+      );
+      setTimeout(() => {
+        passwordPromptShownRef.current = false;
+      }, 15000);
     }
 
     useImperativeHandle(
@@ -906,6 +1032,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       rows: number,
     ) {
       ws.addEventListener("open", () => {
+        alternateScreenModeRef.current = false;
         connectionTimeoutRef.current = setTimeout(() => {
           if (
             !isConnected &&
@@ -1028,90 +1155,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 currentAutocompleteCommand.current = "";
               }
 
-              const syntaxHighlightingEnabled =
-                hostConfig.terminalConfig?.syntaxHighlighting !== false;
-
-              const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(
-                    msg.data,
-                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
-                  )
-                : msg.data;
-
-              terminal.write(outputData);
-              const sudoPasswordPattern =
-                /(?:\[sudo\][^\n\r]*:\s*$|sudo:[^\n\r]*password[^\n\r]*required|password for [^\n\r]*:\s*$|Password:\s*$)/im;
+              terminal.write(formatTerminalOutput(msg.data));
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
               const strippedData = msg.data.replace(
                 /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g,
                 "",
               );
-              const hasSudoPw =
-                hostConfig.terminalConfig?.sudoPassword ||
-                hostConfig.password ||
-                hostConfig.hasSudoPassword ||
-                hostConfig.hasPassword;
-              if (
-                config.sudoPasswordAutoFill &&
-                sudoPasswordPattern.test(strippedData) &&
-                hasSudoPw &&
-                !sudoPromptShownRef.current
-              ) {
-                sudoPromptShownRef.current = true;
-                confirmWithToast(
-                  t("terminal.sudoPasswordPopupTitle"),
-                  async () => {
-                    // Fetch password on-demand from server
-                    let passwordToFill =
-                      hostConfig.terminalConfig?.sudoPassword ||
-                      hostConfig.password;
-                    if (!passwordToFill && hostConfig.id) {
-                      passwordToFill =
-                        (await getHostPassword(
-                          hostConfig.id,
-                          "sudoPassword",
-                        )) ||
-                        (await getHostPassword(hostConfig.id, "password")) ||
-                        undefined;
-                    }
-                    if (
-                      passwordToFill &&
-                      webSocketRef.current &&
-                      webSocketRef.current.readyState === WebSocket.OPEN
-                    ) {
-                      webSocketRef.current.send(
-                        JSON.stringify({
-                          type: "input",
-                          data: passwordToFill + "\n",
-                        }),
-                      );
-                    }
-                    setTimeout(() => {
-                      sudoPromptShownRef.current = false;
-                    }, 3000);
-                  },
-                  t("common.confirm"),
-                  t("common.cancel"),
-                  { confirmOnEnter: true },
-                );
-                setTimeout(() => {
-                  sudoPromptShownRef.current = false;
-                }, 15000);
-              }
+              maybeOfferPasswordFill(strippedData);
             } else {
-              const syntaxHighlightingEnabled =
-                hostConfig.terminalConfig?.syntaxHighlighting !== false;
-
               const stringData = String(msg.data);
-              const outputData = syntaxHighlightingEnabled
-                ? highlightTerminalOutput(
-                    stringData,
-                    hostConfig.terminalConfig?.syntaxHighlightingOptions,
-                  )
-                : stringData;
-
-              terminal.write(outputData);
+              terminal.write(formatTerminalOutput(stringData));
             }
           } else if (msg.type === "error") {
             const errorMessage = msg.message || t("terminal.unknownError");
@@ -1931,6 +1985,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.cursorStyle = config.cursorStyle;
       terminal.options.scrollback = config.scrollback;
       terminal.options.fontSize = config.fontSize;
+      terminalFontSizeRef.current = config.fontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
       terminal.options.fastScrollSensitivity = config.fastScrollSensitivity;
@@ -2097,6 +2152,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
 
       terminal.attachCustomWheelEventHandler((ev) => {
+        if (ev.ctrlKey || ev.metaKey) {
+          zoomTerminalFont(ev.deltaY);
+          return false;
+        }
+
         const cfg = {
           ...DEFAULT_TERMINAL_CONFIG,
           ...hostConfig.terminalConfig,

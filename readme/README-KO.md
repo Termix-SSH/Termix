@@ -28,7 +28,14 @@
   <img src="https://img.shields.io/github/forks/Termix-SSH/Termix?style=flat&label=Forks&color=F39044&labelColor=1a1a1a" />
   <img src="https://img.shields.io/github/v/release/Termix-SSH/Termix?style=flat&label=Release&color=F39044&labelColor=1a1a1a&v=1" />
   <a href="https://discord.gg/jVQGdvHDrf"><img alt="Discord" src="https://img.shields.io/discord/1347374268253470720?color=F39044&labelColor=1a1a1a" /></a>
+  <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
+
+<br />
+
+Termix는 무료 오픈소스 프로젝트입니다. 유용하게 사용하고 있다면 서버 비용과 개발 시간을 위해 [후원](https://donate.termix.site/)을 고려해 주세요.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -87,8 +94,8 @@ Termix는 오픈 소스이며 영구 무료인 셀프 호스팅 올인원 서버
 <tr>
 <td width="50%" valign="top">
 
-**Docker 관리:**
-컨테이너 시작, 중지, 일시 정지, 제거. 컨테이너 통계 보기. docker exec 터미널로 컨테이너 제어. Portainer나 Dockge를 대체하기 위한 것이 아니라 컨테이너 생성보다는 간편한 관리를 목적으로 합니다.
+**Docker 및 Podman 관리:**
+컨테이너 시작, 중지, 일시 정지, 제거. 컨테이너 통계 보기. docker exec 터미널로 컨테이너 제어. Docker와 Podman을 모두 컨테이너 런타임으로 지원. Portainer나 Dockge를 대체하기 위한 것이 아니라 컨테이너 생성보다는 간편한 관리를 목적으로 합니다.
 
 </td>
 <td width="50%" valign="top">
@@ -115,8 +122,36 @@ Termix는 오픈 소스이며 영구 무료인 셀프 호스팅 올인원 서버
 <tr>
 <td width="50%" valign="top">
 
+**Tailscale 통합:**
+Tailscale 네트워크의 기기를 나열하여 호스트로 빠르게 추가하고, Tailscale SSH를 인증 방법으로 사용하여 연결함으로써 자격 증명을 저장하지 않고도 네트워크 ACL이 권한 부여를 처리하도록 합니다.
+
+</td>
+<td width="50%" valign="top">
+
 **RBAC:**
 역할을 생성하고 사용자/역할 간에 호스트 공유.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**시리얼 연결:**
+브라우저 또는 데스크톱 앱에서 직접 시리얼 장치(라우터, 스위치, 마이크로컨트롤러 등)에 연결. 보드레이트, 데이터 비트, 스톱 비트, 패리티 구성. 지원 브라우저에서는 Web Serial API를, Electron 앱에서는 네이티브 백엔드를 사용합니다.
+
+</td>
+<td width="50%" valign="top">
+
+**알림:**
+호스트 메트릭(CPU, 메모리, 디스크 등)에 대한 임계값 기반 알림 규칙을 설정하고 트리거될 때 ntfy 또는 웹훅을 통해 알림 수신. 기록 로그에서 발생 중인 알림과 해결된 알림 확인.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**홈페이지:**
+드래그 앤 드롭 위젯 그리드를 갖춘 완전 맞춤형 홈페이지. 호스트 상태, 서비스 링크, 시계, 메모, RSS 피드, 날씨, Docker 컨테이너, 호스트 메트릭 차트, 임베디드 터미널, iframe 등의 위젯 추가 가능.
 
 </td>
 <td width="50%" valign="top">
@@ -253,6 +288,14 @@ networks:
 
 <br />
 
+## 후원
+
+Termix는 무료 오픈소스 프로젝트입니다. 유용하게 사용하고 있다면 서버 비용과 개발 시간을 위해 [후원](https://donate.termix.site/)을 고려해 주세요.
+
+<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+
+<br />
+
 ## 스크린샷
 
 <div align="center">
@@ -295,6 +338,10 @@ networks:
 <td><img src="../repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
 <td><img src="../repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
 </tr>
+<tr>
+<td><img src="../repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
+<td><img src="../repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
+</tr>
 </table>
 
 <sub>일부 비디오 및 이미지는 최신이 아니거나 기능을 완벽하게 보여주지 않을 수 있습니다.</sub>
@@ -305,7 +352,7 @@ networks:
 
 ## 계획된 기능
 
-모든 계획된 기능은 [Projects](https://github.com/orgs/Termix-SSH/projects/2)를 참조하세요. 기여를 원하시면 [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md)을 참조하세요.
+모든 계획된 기능은 [Projects](https://github.com/orgs/Termix-SSH/projects/5)를 참조하세요. 기여를 원하시면 [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md)을 참조하세요.
 
 <br />
 

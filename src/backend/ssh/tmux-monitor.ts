@@ -13,12 +13,13 @@ import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { resolveHostById, checkHostAccess } from "./host-resolver.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
+import { applyAgentAuth } from "./terminal-auth-helpers.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
 import { withConnection } from "./ssh-connection-pool.js";
-import { execCommand } from "./tmux-helper.js";
+import { execCommand, tmuxCommand, withTmuxPath } from "./tmux-helper.js";
 import {
   SEP,
   parseSessions,
@@ -93,6 +94,14 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
     }
   } else if (host.authType === "none") {
     // no credentials needed
+  } else if (host.authType === "agent") {
+    const result = await applyAgentAuth(
+      base as Record<string, unknown>,
+      host.terminalConfig as unknown as Record<string, unknown> | undefined,
+    );
+    if ("error" in result) {
+      throw new Error(result.error);
+    }
   } else {
     // opkssh and other interactive flows are not supported by this module
     throw new Error(
@@ -218,7 +227,7 @@ async function withHostConnection<T>(
 
 async function tmuxAvailable(conn: Client): Promise<boolean> {
   try {
-    await execCommand(conn, "command -v tmux");
+    await execCommand(conn, withTmuxPath("command -v tmux"));
     return true;
   } catch {
     return false;
@@ -234,15 +243,21 @@ async function runTmuxList(conn: Client, command: string): Promise<string> {
 }
 
 function listSessionsCmd(): string {
-  return `tmux list-sessions -F "#{session_name}${SEP}#{session_created}${SEP}#{session_activity}${SEP}#{session_attached}" 2>/dev/null`;
+  return tmuxCommand(
+    `list-sessions -F "#{session_name}${SEP}#{session_created}${SEP}#{session_activity}${SEP}#{session_attached}" 2>/dev/null`,
+  );
 }
 
 function listWindowsCmd(): string {
-  return `tmux list-windows -a -F "#{session_name}${SEP}#{window_index}${SEP}#{window_active}${SEP}#{window_name}" 2>/dev/null`;
+  return tmuxCommand(
+    `list-windows -a -F "#{session_name}${SEP}#{window_index}${SEP}#{window_active}${SEP}#{window_name}" 2>/dev/null`,
+  );
 }
 
 function listPanesCmd(): string {
-  return `tmux list-panes -a -F "#{session_name}${SEP}#{window_index}${SEP}#{pane_id}${SEP}#{pane_index}${SEP}#{pane_pid}${SEP}#{pane_active}${SEP}#{pane_width}${SEP}#{pane_height}${SEP}#{pane_current_command}${SEP}#{pane_current_path}${SEP}#{pane_title}" 2>/dev/null`;
+  return tmuxCommand(
+    `list-panes -a -F "#{session_name}${SEP}#{window_index}${SEP}#{pane_id}${SEP}#{pane_index}${SEP}#{pane_pid}${SEP}#{pane_active}${SEP}#{pane_width}${SEP}#{pane_height}${SEP}#{pane_current_command}${SEP}#{pane_current_path}${SEP}#{pane_title}" 2>/dev/null`,
+  );
 }
 
 async function listPanesRaw(conn: Client): Promise<RawPane[]> {
@@ -488,7 +503,9 @@ app.post("/tmux_monitor/:hostId/focus", async (req, res) => {
       // containing the pane.
       execCommand(
         conn,
-        `tmux select-window -t ${shellEscape(paneId)} \\; select-pane -t ${shellEscape(paneId)}`,
+        tmuxCommand(
+          `select-window -t ${shellEscape(paneId)} \\; select-pane -t ${shellEscape(paneId)}`,
+        ),
       ),
     );
     res.json({ ok: true });
@@ -509,7 +526,7 @@ app.post("/tmux_monitor/:hostId/sessions", async (req, res) => {
 
   try {
     await withHostConnection(host, (conn) =>
-      execCommand(conn, `tmux new-session -d -s ${shellEscape(name)}`),
+      execCommand(conn, tmuxCommand(`new-session -d -s ${shellEscape(name)}`)),
     );
     sshLogger.info("tmux session created", {
       operation: "tmux_session_create",
@@ -544,7 +561,10 @@ app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
 
   try {
     await withHostConnection(host, (conn) =>
-      execCommand(conn, `tmux new-window -t ${shellEscape(`=${sessionName}`)}`),
+      execCommand(
+        conn,
+        tmuxCommand(`new-window -t ${shellEscape(`=${sessionName}`)}`),
+      ),
     );
     sshLogger.info("tmux window created", {
       operation: "tmux_window_create",
@@ -580,7 +600,9 @@ app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
     await withHostConnection(host, (conn) =>
       execCommand(
         conn,
-        `tmux rename-session -t ${shellEscape(`=${sessionName}`)} ${shellEscape(newName)}`,
+        tmuxCommand(
+          `rename-session -t ${shellEscape(`=${sessionName}`)} ${shellEscape(newName)}`,
+        ),
       ),
     );
     await createCurrentTmuxSessionTagRepository().renameSessionForHost(
@@ -627,7 +649,7 @@ app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
     await withHostConnection(host, (conn) =>
       execCommand(
         conn,
-        `tmux kill-session -t ${shellEscape(`=${sessionName}`)}`,
+        tmuxCommand(`kill-session -t ${shellEscape(`=${sessionName}`)}`),
       ),
     );
     await createCurrentTmuxSessionTagRepository().deleteSessionForHost(
@@ -669,7 +691,9 @@ app.post("/tmux_monitor/:hostId/kill-window", async (req, res) => {
     await withHostConnection(host, (conn) =>
       execCommand(
         conn,
-        `tmux kill-window -t ${shellEscape(`=${sessionName}:${windowIndex}`)}`,
+        tmuxCommand(
+          `kill-window -t ${shellEscape(`=${sessionName}:${windowIndex}`)}`,
+        ),
       ),
     );
     sshLogger.info("tmux window killed", {
@@ -707,7 +731,7 @@ app.post("/tmux_monitor/:hostId/kill-pane", async (req, res) => {
 
   try {
     await withHostConnection(host, (conn) =>
-      execCommand(conn, `tmux kill-pane -t ${shellEscape(paneId)}`),
+      execCommand(conn, tmuxCommand(`kill-pane -t ${shellEscape(paneId)}`)),
     );
     sshLogger.info("tmux pane killed", {
       operation: "tmux_pane_kill",
@@ -745,7 +769,9 @@ app.post("/tmux_monitor/:hostId/split", async (req, res) => {
     await withHostConnection(host, (conn) =>
       execCommand(
         conn,
-        `tmux split-window ${direction} -t ${shellEscape(paneId)} -c ${shellEscape("#{pane_current_path}")}`,
+        tmuxCommand(
+          `split-window ${direction} -t ${shellEscape(paneId)} -c ${shellEscape("#{pane_current_path}")}`,
+        ),
       ),
     );
     sshLogger.info("tmux pane split", {
@@ -793,7 +819,9 @@ app.get("/tmux_monitor/:hostId/search", async (req, res) => {
             try {
               const output = await execCommand(
                 conn,
-                `tmux capture-pane -p -J -t ${shellEscape(pane.id)} -S -${SEARCH_HISTORY_LINES} 2>/dev/null | grep -n -i -F -- ${shellEscape(query)} | head -${MAX_MATCHES_PER_PANE}`,
+                tmuxCommand(
+                  `capture-pane -p -J -t ${shellEscape(pane.id)} -S -${SEARCH_HISTORY_LINES} 2>/dev/null | grep -n -i -F -- ${shellEscape(query)} | head -${MAX_MATCHES_PER_PANE}`,
+                ),
               );
               const lines = output.split("\n").filter(Boolean);
               if (lines.length >= MAX_MATCHES_PER_PANE) truncated = true;

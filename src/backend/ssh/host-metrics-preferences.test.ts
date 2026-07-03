@@ -37,7 +37,7 @@ describe("deriveEnabledWidgets", () => {
     ]);
     const out = deriveEnabledWidgets(slots);
     expect(out).toEqual(METRIC_CARD_IDS);
-    expect(out.length).toBe(10);
+    expect(out.length).toBe(METRIC_CARD_IDS.length);
   });
 
   it("empty slots -> empty widgets", () => {

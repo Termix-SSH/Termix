@@ -72,6 +72,18 @@ export async function resolveAgentSocket(
   return { socketPath: resolved };
 }
 
+export async function applyAgentAuth(
+  connectConfig: Record<string, unknown>,
+  terminalConfig: Record<string, unknown> | undefined,
+): Promise<{ socketPath: string } | { error: string }> {
+  const result = await resolveAgentSocket(terminalConfig);
+  if ("error" in result) return result;
+
+  const { createAgent } = ssh2Pkg;
+  connectConfig.agent = createAgent(result.socketPath);
+  return result;
+}
+
 export async function performPortKnocking(
   host: string,
   sequence: Array<{ port: number; protocol?: string; delay?: number }>,

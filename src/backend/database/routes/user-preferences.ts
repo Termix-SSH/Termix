@@ -25,6 +25,7 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   showHostTags: row?.showHostTags ?? null,
   hostTrayOnClick: row?.hostTrayOnClick ?? null,
   pinAppRail: row?.pinAppRail ?? null,
+  expandAppRailOnHover: row?.expandAppRailOnHover ?? null,
   foldersCollapsed: row?.foldersCollapsed ?? null,
   confirmSnippetExecution: row?.confirmSnippetExecution ?? null,
   disableUpdateCheck: row?.disableUpdateCheck ?? null,
@@ -79,6 +80,9 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
  *                   type: boolean
  *                   nullable: true
  *                 pinAppRail:
+ *                   type: boolean
+ *                   nullable: true
+ *                 expandAppRailOnHover:
  *                   type: boolean
  *                   nullable: true
  *                 foldersCollapsed:
@@ -155,6 +159,8 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 type: boolean
  *               pinAppRail:
  *                 type: boolean
+ *               expandAppRailOnHover:
+ *                 type: boolean
  *               foldersCollapsed:
  *                 type: boolean
  *               confirmSnippetExecution:
@@ -187,6 +193,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     showHostTags,
     hostTrayOnClick,
     pinAppRail,
+    expandAppRailOnHover,
     foldersCollapsed,
     confirmSnippetExecution,
     disableUpdateCheck,
@@ -206,6 +213,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     showHostTags?: boolean | null;
     hostTrayOnClick?: boolean | null;
     pinAppRail?: boolean | null;
+    expandAppRailOnHover?: boolean | null;
     foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
@@ -248,6 +256,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     showHostTags,
     hostTrayOnClick,
     pinAppRail,
+    expandAppRailOnHover,
     foldersCollapsed,
     confirmSnippetExecution,
     disableUpdateCheck,
@@ -273,6 +282,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (showHostTags !== undefined) updates.showHostTags = showHostTags;
   if (hostTrayOnClick !== undefined) updates.hostTrayOnClick = hostTrayOnClick;
   if (pinAppRail !== undefined) updates.pinAppRail = pinAppRail;
+  if (expandAppRailOnHover !== undefined)
+    updates.expandAppRailOnHover = expandAppRailOnHover;
   if (foldersCollapsed !== undefined)
     updates.foldersCollapsed = foldersCollapsed;
   if (confirmSnippetExecution !== undefined)
