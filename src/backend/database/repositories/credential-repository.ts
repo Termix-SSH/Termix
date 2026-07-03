@@ -31,10 +31,10 @@ export class CredentialRepository {
 
   async createEncryptedForUser(
     userId: string,
-    credential: NewCredentialRecord,
+    credential: NewCredentialRecord | Record<string, unknown>,
   ): Promise<CredentialRecord> {
     const userDataKey = DataCrypto.validateUserAccess(userId);
-    const tempId = credential.id ?? `temp-${userId}-${Date.now()}`;
+    const tempId = credential.id ?? Date.now();
     const dataWithTempId = { ...credential, id: tempId };
     const encryptedCredential = await this.encryptCredentialRecordForWrite(
       dataWithTempId,
@@ -48,7 +48,7 @@ export class CredentialRepository {
 
     const rows = await this.context.drizzle
       .insert(sshCredentials)
-      .values(encryptedCredential)
+      .values(encryptedCredential as NewCredentialRecord)
       .returning();
 
     await this.afterWrite();

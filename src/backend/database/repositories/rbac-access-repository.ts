@@ -83,18 +83,18 @@ export type RbacAccessTarget =
   | { targetType: "user"; targetUserId: string }
   | { targetType: "role"; targetRoleId: number };
 
-export interface UpsertHostAccessInput extends RbacAccessTarget {
+export type UpsertHostAccessInput = RbacAccessTarget & {
   hostId: number;
   grantedBy: string;
   permissionLevel: string;
   expiresAt: string | null;
-}
+};
 
-export interface UpsertSnippetAccessInput extends RbacAccessTarget {
+export type UpsertSnippetAccessInput = RbacAccessTarget & {
   snippetId: number;
   grantedBy: string;
   expiresAt: string | null;
-}
+};
 
 type RawAccessListItem = Omit<RbacAccessListItem, "targetType">;
 

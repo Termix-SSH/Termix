@@ -25,14 +25,14 @@ class DataCrypto {
     userDataKey: Buffer,
   ): T {
     const encryptedRecord: Record<string, unknown> = { ...record };
-    const recordId = record.id || "temp-" + Date.now();
+    const recordId = String(record.id || "temp-" + Date.now());
 
     for (const [fieldName, value] of Object.entries(record)) {
       if (FieldCrypto.shouldEncryptField(tableName, fieldName) && value) {
         encryptedRecord[fieldName] = FieldCrypto.encryptField(
           value as string,
           userDataKey,
-          recordId as string,
+          recordId,
           fieldName,
         );
       }
@@ -50,14 +50,14 @@ class DataCrypto {
     if (!record) return record;
 
     const decryptedRecord: Record<string, unknown> = { ...record };
-    const recordId = record.id;
+    const recordId = String(record.id);
 
     for (const [fieldName, value] of Object.entries(record)) {
       if (FieldCrypto.shouldEncryptField(tableName, fieldName) && value) {
         decryptedRecord[fieldName] = LazyFieldEncryption.safeGetFieldValue(
           value as string,
           userDataKey,
-          recordId as string,
+          recordId,
           fieldName,
         );
       }
@@ -257,7 +257,13 @@ class DataCrypto {
 
     try {
       const store = new RawSqliteUserEncryptionMigrationStore(db);
-      const tablesToReencrypt = [
+      type PasswordResetTable = Parameters<
+        UserEncryptionMigrationStore["updatePasswordResetFields"]
+      >[0];
+      const tablesToReencrypt: Array<{
+        table: PasswordResetTable;
+        fields: string[];
+      }> = [
         {
           table: "ssh_data",
           fields: [

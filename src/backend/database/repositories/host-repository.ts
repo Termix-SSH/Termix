@@ -30,10 +30,10 @@ export class HostRepository {
 
   async createEncryptedForUser(
     userId: string,
-    host: NewHostRecord,
+    host: NewHostRecord | Record<string, unknown>,
   ): Promise<HostRecord> {
     const userDataKey = DataCrypto.validateUserAccess(userId);
-    const tempId = host.id ?? `temp-${userId}-${Date.now()}`;
+    const tempId = host.id ?? Date.now();
     const dataWithTempId = { ...host, id: tempId };
     const encryptedHost = DataCrypto.encryptRecord(
       "ssh_data",
@@ -48,7 +48,7 @@ export class HostRepository {
 
     const rows = await this.context.drizzle
       .insert(hosts)
-      .values(encryptedHost)
+      .values(encryptedHost as NewHostRecord)
       .returning();
 
     await this.afterWrite();

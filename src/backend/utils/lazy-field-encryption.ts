@@ -445,9 +445,11 @@ export class LazyFieldEncryption {
 
         for (const field of sensitiveFields) {
           const column = this.propertyToColumn(field);
+          const value = user[column];
           if (
-            user[column] &&
-            this.fieldNeedsMigration(user[column], userKEK, userId, field)
+            typeof value === "string" &&
+            value &&
+            this.fieldNeedsMigration(value, userKEK, userId, field)
           ) {
             userPlaintextFields.push(field);
             needsMigration = true;
