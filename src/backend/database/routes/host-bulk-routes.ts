@@ -276,6 +276,9 @@ export function registerHostBulkRoutes(
                 dockerPatterns: existing.dockerPatterns ?? "docker",
                 preferredPrefixes:
                   existing.preferredPrefixes ?? "10., 192.168.",
+                autoSyncEnabled: existing.autoSyncEnabled ?? false,
+                syncIntervalMinutes: existing.syncIntervalMinutes ?? 15,
+                markMissingGuests: existing.markMissingGuests ?? true,
               };
               await db
                 .update(hosts)
