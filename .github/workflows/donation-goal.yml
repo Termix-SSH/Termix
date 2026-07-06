@@ -36,7 +36,7 @@ jobs:
           BASE_DAI="0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb"
 
           # Fetch crypto prices
-          PRICES=$(curl -sf "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin,solana&vs_currencies=usd" || echo '{}')
+          PRICES=$(curl -sf -A "TermixDonationBar/1.0" "https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin,solana&vs_currencies=usd" || echo '{}')
           ETH_PRICE=$(echo "$PRICES" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('ethereum',{}).get('usd',0))" 2>/dev/null || echo 0)
           BTC_PRICE=$(echo "$PRICES" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('bitcoin',{}).get('usd',0))" 2>/dev/null || echo 0)
           SOL_PRICE=$(echo "$PRICES" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('solana',{}).get('usd',0))" 2>/dev/null || echo 0)
@@ -60,7 +60,7 @@ jobs:
           fetch_token_balance() {
             local base_url="$1"
             local contract="$2"
-            curl -sf "${base_url}/api/v2/addresses/${EVM_ADDRESS}/tokens?type=ERC-20" | CONTRACT="$contract" python3 -c "import sys, json, os; contract = os.environ['CONTRACT'].lower(); d = json.load(sys.stdin); match = next((i for i in d.get('items', []) if i.get('token', {}).get('address', '').lower() == contract), None); decimals = int((match or {}).get('token', {}).get('decimals') or 18); value = int((match or {}).get('value') or 0); print(value / (10 ** decimals) if match else 0)" 2>/dev/null || echo 0
+            curl -sf "${base_url}/api/v2/addresses/${EVM_ADDRESS}/tokens?type=ERC-20" | CONTRACT="$contract" python3 -c "import sys, json, os; contract = os.environ['CONTRACT'].lower(); d = json.load(sys.stdin); match = next((i for i in d.get('items', []) if (i.get('token', {}).get('address_hash') or i.get('token', {}).get('address') or '').lower() == contract), None); decimals = int((match or {}).get('token', {}).get('decimals') or 18); value = int((match or {}).get('value') or 0); print(value / (10 ** decimals) if match else 0)" 2>/dev/null || echo 0
           }
 
           ETH_USDC_BAL=$(fetch_token_balance "https://eth.blockscout.com" "$ETH_USDC")
