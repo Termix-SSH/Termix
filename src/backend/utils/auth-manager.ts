@@ -345,6 +345,9 @@ class AuthManager {
       rememberMe?: boolean;
       deviceType?: DeviceType;
       deviceInfo?: string;
+      oidcSub?: string | null;
+      oidcSid?: string | null;
+      ssoProviderId?: number | null;
     } = {},
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
@@ -391,6 +394,9 @@ class AuthManager {
           jwtToken: token,
           deviceType: options.deviceType,
           deviceInfo: options.deviceInfo,
+          oidcSub: options.oidcSub ?? null,
+          oidcSid: options.oidcSid ?? null,
+          ssoProviderId: options.ssoProviderId ?? null,
           createdAt,
           expiresAt,
           lastActiveAt: createdAt,
@@ -646,6 +652,76 @@ class AuthManager {
       databaseLogger.error("Failed to delete user sessions", error, {
         operation: "user_sessions_delete_failed",
         userId,
+      });
+      return 0;
+    }
+  }
+
+  async revokeSessionsByOidc(params: {
+    ssoProviderId?: number | null;
+    sub?: string | null;
+    sid?: string | null;
+  }): Promise<number> {
+    const { ssoProviderId, sub, sid } = params;
+    if (!sub && !sid) return 0;
+
+    try {
+      const conditions = [];
+      if (sid) {
+        conditions.push(eq(sessions.oidcSid, sid));
+      } else if (sub) {
+        conditions.push(eq(sessions.oidcSub, sub));
+      }
+      if (ssoProviderId != null) {
+        conditions.push(eq(sessions.ssoProviderId, ssoProviderId));
+      }
+
+      const matched = await db
+        .select()
+        .from(sessions)
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions));
+
+      if (matched.length === 0) return 0;
+
+      const matchedIds = matched.map((s) => s.id);
+      const affectedUsers = new Set(matched.map((s) => s.userId));
+
+      for (const id of matchedIds) {
+        await db.delete(sessions).where(eq(sessions.id, id));
+      }
+
+      authLogger.info("Sessions revoked via OIDC back-channel logout", {
+        operation: "oidc_backchannel_logout",
+        ssoProviderId,
+        sessionCount: matchedIds.length,
+      });
+
+      for (const userId of affectedUsers) {
+        const remaining = await db
+          .select()
+          .from(sessions)
+          .where(eq(sessions.userId, userId));
+        if (remaining.length === 0) {
+          this.userCrypto.logoutUser(userId);
+        }
+      }
+
+      try {
+        const { saveMemoryDatabaseToFile } =
+          await import("../database/db/index.js");
+        await saveMemoryDatabaseToFile();
+      } catch (saveError) {
+        databaseLogger.error(
+          "Failed to save database after OIDC back-channel logout",
+          saveError,
+          { operation: "oidc_backchannel_logout_db_save_failed" },
+        );
+      }
+
+      return matchedIds.length;
+    } catch (error) {
+      databaseLogger.error("Failed to revoke sessions via OIDC", error, {
+        operation: "oidc_backchannel_logout_failed",
       });
       return 0;
     }

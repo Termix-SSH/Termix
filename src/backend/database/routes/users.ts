@@ -26,6 +26,8 @@ import {
   extractOidcGroups,
   loadProviderConfig,
   buildFetchOptions,
+  resolveProviderByIssuer,
+  validateLogoutToken,
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
@@ -1464,10 +1466,18 @@ router.get("/oidc/callback", async (req, res) => {
       "oidc_role_shared_credentials",
     );
 
+    const oidcSub =
+      typeof userInfo.sub === "string" ? userInfo.sub : null;
+    const oidcSid =
+      typeof userInfo.sid === "string" ? userInfo.sid : null;
+
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
       rememberMe: storedRememberMe,
+      oidcSub,
+      oidcSid,
+      ssoProviderId: callbackProviderDbId ?? null,
     });
 
     authLogger.success("OIDC login successful", {
@@ -1785,6 +1795,69 @@ router.post("/logout", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Logout failed", err);
     return res.status(500).json({ error: "Logout failed" });
+  }
+});
+
+const seenLogoutJti = new Map<string, number>();
+const LOGOUT_JTI_TTL_MS = 5 * 60 * 1000;
+
+function isReplayedJti(jti: string): boolean {
+  const now = Date.now();
+  for (const [key, expiry] of seenLogoutJti) {
+    if (expiry <= now) seenLogoutJti.delete(key);
+  }
+  if (seenLogoutJti.has(jti)) return true;
+  seenLogoutJti.set(jti, now + LOGOUT_JTI_TTL_MS);
+  return false;
+}
+
+router.post("/oidc/backchannel-logout", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+
+  try {
+    const logoutToken = (req.body as Record<string, unknown> | undefined)
+      ?.logout_token;
+    if (typeof logoutToken !== "string" || !logoutToken) {
+      return res.status(400).json({ error: "missing logout_token" });
+    }
+
+    let issuer: string | null = null;
+    try {
+      const parts = logoutToken.split(".");
+      if (parts.length === 3) {
+        const claims = JSON.parse(Buffer.from(parts[1], "base64").toString());
+        issuer = typeof claims.iss === "string" ? claims.iss : null;
+      }
+    } catch {
+      issuer = null;
+    }
+
+    if (!issuer) {
+      return res.status(400).json({ error: "invalid logout_token" });
+    }
+
+    const provider = await resolveProviderByIssuer(issuer);
+    if (!provider) {
+      authLogger.warn("Back-channel logout for unknown issuer", { issuer });
+      return res.status(400).json({ error: "unknown issuer" });
+    }
+
+    const claims = await validateLogoutToken(logoutToken, provider.config);
+
+    if (claims.jti && isReplayedJti(claims.jti)) {
+      return res.status(200).json({ ok: true });
+    }
+
+    await authManager.revokeSessionsByOidc({
+      ssoProviderId: provider.providerDbId,
+      sub: claims.sub,
+      sid: claims.sid,
+    });
+
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    authLogger.error("OIDC back-channel logout failed", err);
+    return res.status(400).json({ error: "invalid logout_token" });
   }
 });
 

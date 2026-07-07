@@ -765,6 +765,10 @@ const migrateSchema = () => {
   addColumnIfNotExists("users", "totp_enabled", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("users", "totp_backup_codes", "TEXT");
 
+  addColumnIfNotExists("sessions", "oidc_sub", "TEXT");
+  addColumnIfNotExists("sessions", "oidc_sid", "TEXT");
+  addColumnIfNotExists("sessions", "sso_provider_id", "INTEGER");
+
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS webauthn_credentials (
       id TEXT PRIMARY KEY,
