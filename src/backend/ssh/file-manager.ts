@@ -43,6 +43,7 @@ import {
 } from "./file-manager-session.js";
 import { registerFileListingRoutes } from "./file-manager-list-routes.js";
 import { registerFileOperationRoutes } from "./file-manager-operation-routes.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 import { registerFileDownloadRoutes } from "./file-manager-download-routes.js";
 import { registerFileActionRoutes } from "./file-manager-action-routes.js";
 import { applyAgentAuth } from "./terminal-auth-helpers.js";
@@ -194,6 +195,7 @@ async function buildDedicatedTransferConnectConfig(
       compress: ["none", "zlib@openssh.com", "zlib"],
     },
   };
+  await resolveSshConnectConfigHost(config);
 
   const authType = host.authType;
 
@@ -1759,6 +1761,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       });
     }
   } else {
+    await resolveSshConnectConfigHost(config);
     client.connect(config);
   }
 });
