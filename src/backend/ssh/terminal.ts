@@ -1142,6 +1142,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           socks5Username?: string;
           socks5Password?: string;
           socks5ProxyChain?: unknown;
+          portKnockSequence?: ConnectToHostData["hostConfig"]["portKnockSequence"];
           terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
           enableSessionLogging?: boolean;
         })
@@ -1184,6 +1185,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           if (!hostConfig.terminalConfig && resolvedHostData.terminalConfig) {
             hostConfig.terminalConfig = resolvedHostData.terminalConfig;
+          }
+
+          if (
+            (!hostConfig.portKnockSequence ||
+              hostConfig.portKnockSequence.length === 0) &&
+            resolvedHostData.portKnockSequence &&
+            resolvedHostData.portKnockSequence.length > 0
+          ) {
+            hostConfig.portKnockSequence = resolvedHostData.portKnockSequence;
+            sendLog(
+              "port_knock",
+              "info",
+              `Loaded ${resolvedHostData.portKnockSequence.length} port knock(s) from server-side host data`,
+            );
           }
         }
       } catch (error) {
