@@ -564,12 +564,30 @@ async function initializeCompleteDatabase(): Promise<void> {
 `);
 
   try {
-    sqlite.prepare("DELETE FROM user_open_tabs").run();
-    databaseLogger.info("Open tabs cleared on startup", {
-      operation: "db_init_open_tabs_cleanup",
-    });
+    const timeoutRow = sqlite
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
+      )
+      .get() as { value: string } | undefined;
+    const timeoutMinutes = timeoutRow
+      ? parseInt(timeoutRow.value, 10)
+      : 30;
+    const ttlMs =
+      !isNaN(timeoutMinutes) && timeoutMinutes > 0
+        ? timeoutMinutes * 60_000
+        : 30 * 60_000;
+    const cutoff = new Date(Date.now() - ttlMs).toISOString();
+    const result = sqlite
+      .prepare("DELETE FROM user_open_tabs WHERE updated_at <= ?")
+      .run(cutoff);
+    if (result.changes > 0) {
+      databaseLogger.info("Expired open tabs cleared on startup", {
+        operation: "db_init_open_tabs_cleanup",
+        count: result.changes,
+      });
+    }
   } catch (e) {
-    databaseLogger.warn("Could not clear open tabs on startup", {
+    databaseLogger.warn("Could not clear expired open tabs on startup", {
       operation: "db_init_open_tabs_cleanup_failed",
       error: e,
     });
