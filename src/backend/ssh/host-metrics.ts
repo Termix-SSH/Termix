@@ -4,7 +4,10 @@ import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
-import { pickResolvedUsername } from "./credential-username.js";
+import {
+  pickResolvedPassword,
+  pickResolvedUsername,
+} from "./credential-username.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
@@ -961,9 +964,10 @@ async function resolveHostCredentials(
               host.overrideCredentialUsername,
             );
 
-            if (credential.password) {
-              baseHost.password = credential.password;
-            }
+            baseHost.password = pickResolvedPassword(
+              host.password,
+              credential.password,
+            );
             if (
               credential.key ||
               (credential as Record<string, unknown>).privateKey

@@ -25,7 +25,10 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
-import { pickResolvedUsername } from "../../ssh/credential-username.js";
+import {
+  pickResolvedPassword,
+  pickResolvedUsername,
+} from "../../ssh/credential-username.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -447,7 +450,12 @@ router.post(
       sshDataObj.key = key || null;
       sshDataObj.keyPassword = keyPassword || null;
       sshDataObj.keyType = keyType;
-      sshDataObj.password = null;
+      sshDataObj.password = password || null;
+    } else if (effectiveAuthType === "credential") {
+      sshDataObj.password = password || null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else if (effectiveAuthType === "agent") {
       sshDataObj.password = null;
       sshDataObj.key = null;
@@ -656,7 +664,7 @@ router.post(
 
         const cred = credentials[0];
 
-        resolvedPassword = cred.password as string | undefined;
+        resolvedPassword = pickResolvedPassword(password, cred.password);
         resolvedKey = cred.privateKey as string | undefined;
         resolvedKeyPassword = cred.keyPassword as string | undefined;
         resolvedKeyType = cred.keyType as string | undefined;
@@ -1043,7 +1051,12 @@ router.put(
       if (keyType) {
         sshDataObj.keyType = keyType;
       }
-      sshDataObj.password = null;
+      sshDataObj.password = password || null;
+    } else if (effectiveAuthType === "credential") {
+      sshDataObj.password = password || null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else if (effectiveAuthType === "agent") {
       sshDataObj.password = null;
       sshDataObj.key = null;
@@ -2489,7 +2502,7 @@ async function resolveHostCredentials(
         const credential = credentials[0];
         const resolvedHost: Record<string, unknown> = {
           ...host,
-          password: credential.password,
+          password: pickResolvedPassword(host.password, credential.password),
           key: credential.key,
           keyPassword: credential.keyPassword,
           keyType: credential.keyType,
