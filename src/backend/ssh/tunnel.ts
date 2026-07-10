@@ -1937,6 +1937,7 @@ app.post(
     }
 
     const tunnelName = tunnelConfig.name;
+    tunnelConfig.requestingUserId = userId;
 
     try {
       if (!validateTunnelConfig(tunnelName, tunnelConfig)) {
@@ -1966,10 +1967,6 @@ app.post(
             tunnelName,
           });
           return res.status(403).json({ error: "Access denied to this host" });
-        }
-
-        if (accessInfo.isShared && !accessInfo.isOwner) {
-          tunnelConfig.requestingUserId = userId;
         }
       }
 
