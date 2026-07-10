@@ -12,6 +12,11 @@ import { getGuacamoleToken, isElectron, isEmbeddedMode } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { getBasePath } from "@/lib/base-path.ts";
 import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
+import {
+  isFirefoxBrowser,
+  isPasteShortcut,
+  pasteTextToRemote,
+} from "./guacamole-clipboard.ts";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -338,6 +343,32 @@ export const GuacamoleDisplay = forwardRef<
     displayElement.setAttribute("tabindex", "0");
     displayElement.style.outline = "none";
 
+    const useNativePasteFallback = isFirefoxBrowser();
+    if (useNativePasteFallback) {
+      displayElement.addEventListener(
+        "keydown",
+        (event) => {
+          if (isPasteShortcut(event)) {
+            event.stopImmediatePropagation();
+          }
+        },
+        true,
+      );
+      displayElement.addEventListener(
+        "paste",
+        (event) => {
+          if (clientRef.current !== client) return;
+          const text = event.clipboardData?.getData("text/plain");
+          if (!text) return;
+
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          pasteTextToRemote(client, text);
+        },
+        true,
+      );
+    }
+
     display.onresize = () => {
       if (!isMountedRef.current) return;
       rescaleDisplay(true);
@@ -576,7 +607,7 @@ export const GuacamoleDisplay = forwardRef<
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;
-    if (!client || !navigator.clipboard?.readText) return;
+    if (!client || isFirefoxBrowser() || !navigator.clipboard?.readText) return;
     navigator.clipboard
       .readText()
       .then((text) => {
