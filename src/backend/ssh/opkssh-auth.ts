@@ -11,7 +11,7 @@ import { FieldCrypto } from "../utils/field-crypto.js";
 import { promises as fs } from "fs";
 import path from "path";
 import axios from "axios";
-import yaml from "js-yaml";
+import { load as loadYaml } from "js-yaml";
 
 const AUTH_TIMEOUT = 60 * 1000;
 
@@ -131,7 +131,7 @@ async function checkOPKConfigExists(): Promise<{
 
     let providers: ProviderRedirectInfo[] = [];
     try {
-      const parsed = yaml.load(content) as {
+      const parsed = loadYaml(content) as {
         providers?: Array<{
           alias?: string;
           issuer?: string;
