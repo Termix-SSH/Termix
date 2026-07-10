@@ -223,6 +223,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       url: string;
     } | null>(null);
 
+    useEffect(() => {
+      if (!linkClickDialog) return;
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        setLinkClickDialog(null);
+      };
+
+      window.addEventListener("keydown", handleKeyDown, true);
+      return () => window.removeEventListener("keydown", handleKeyDown, true);
+    }, [linkClickDialog]);
+
     const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
       sessions: Array<{
         name: string;
@@ -3092,10 +3106,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             <div
               className="fixed inset-0 flex items-center justify-center z-[10000]"
               style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+              onClick={() => setLinkClickDialog(null)}
             >
               <div
                 className="flex flex-col gap-3 p-4 rounded shadow-lg max-w-sm w-full mx-4"
                 style={{ backgroundColor }}
+                onClick={(event) => event.stopPropagation()}
               >
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                   {t("terminal.linkDialogTitle")}
