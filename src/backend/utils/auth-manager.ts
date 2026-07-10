@@ -8,7 +8,7 @@ import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "../database/db/index.js";
 import { sessions, trustedDevices, apiKeys } from "../database/db/schema.js";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { DeviceType } from "./user-agent-parser.js";
 
@@ -666,15 +666,11 @@ class AuthManager {
     if (!sub && !sid) return 0;
 
     try {
-      const conditions = [];
-      if (sid) {
-        conditions.push(eq(sessions.oidcSid, sid));
-      } else if (sub) {
-        conditions.push(eq(sessions.oidcSub, sub));
-      }
-      if (ssoProviderId != null) {
+      const conditions = [
+        sid ? eq(sessions.oidcSid, sid) : eq(sessions.oidcSub, sub!),
+      ];
+      if (ssoProviderId != null)
         conditions.push(eq(sessions.ssoProviderId, ssoProviderId));
-      }
 
       const matched = await db
         .select()
@@ -686,9 +682,7 @@ class AuthManager {
       const matchedIds = matched.map((s) => s.id);
       const affectedUsers = new Set(matched.map((s) => s.userId));
 
-      for (const id of matchedIds) {
-        await db.delete(sessions).where(eq(sessions.id, id));
-      }
+      await db.delete(sessions).where(inArray(sessions.id, matchedIds));
 
       authLogger.info("Sessions revoked via OIDC back-channel logout", {
         operation: "oidc_backchannel_logout",
@@ -706,24 +700,16 @@ class AuthManager {
         }
       }
 
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after OIDC back-channel logout",
-          saveError,
-          { operation: "oidc_backchannel_logout_db_save_failed" },
-        );
-      }
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
+      await saveMemoryDatabaseToFile();
 
       return matchedIds.length;
     } catch (error) {
       databaseLogger.error("Failed to revoke sessions via OIDC", error, {
         operation: "oidc_backchannel_logout_failed",
       });
-      return 0;
+      throw error;
     }
   }
 

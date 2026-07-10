@@ -1466,10 +1466,8 @@ router.get("/oidc/callback", async (req, res) => {
       "oidc_role_shared_credentials",
     );
 
-    const oidcSub =
-      typeof userInfo.sub === "string" ? userInfo.sub : null;
-    const oidcSid =
-      typeof userInfo.sid === "string" ? userInfo.sid : null;
+    const oidcSub = typeof userInfo.sub === "string" ? userInfo.sub : null;
+    const oidcSid = typeof userInfo.sid === "string" ? userInfo.sid : null;
 
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
@@ -1801,14 +1799,22 @@ router.post("/logout", authenticateJWT, async (req, res) => {
 const seenLogoutJti = new Map<string, number>();
 const LOGOUT_JTI_TTL_MS = 5 * 60 * 1000;
 
-function isReplayedJti(jti: string): boolean {
-  const now = Date.now();
+function pruneLogoutJti(now: number): void {
   for (const [key, expiry] of seenLogoutJti) {
     if (expiry <= now) seenLogoutJti.delete(key);
   }
-  if (seenLogoutJti.has(jti)) return true;
+}
+
+function isReplayedJti(jti: string): boolean {
+  const now = Date.now();
+  pruneLogoutJti(now);
+  return seenLogoutJti.has(jti);
+}
+
+function markLogoutJti(jti: string): void {
+  const now = Date.now();
+  pruneLogoutJti(now);
   seenLogoutJti.set(jti, now + LOGOUT_JTI_TTL_MS);
-  return false;
 }
 
 router.post("/oidc/backchannel-logout", async (req, res) => {
@@ -1848,11 +1854,18 @@ router.post("/oidc/backchannel-logout", async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    await authManager.revokeSessionsByOidc({
-      ssoProviderId: provider.providerDbId,
-      sub: claims.sub,
-      sid: claims.sid,
-    });
+    try {
+      await authManager.revokeSessionsByOidc({
+        ssoProviderId: provider.providerDbId,
+        sub: claims.sub,
+        sid: claims.sid,
+      });
+    } catch (err) {
+      authLogger.error("OIDC back-channel session revocation failed", err);
+      return res.status(500).json({ error: "logout processing failed" });
+    }
+
+    if (claims.jti) markLogoutJti(claims.jti);
 
     return res.status(200).json({ ok: true });
   } catch (err) {

@@ -475,8 +475,40 @@ export async function resolveProviderByIssuer(issuer: string): Promise<{
 export type LogoutTokenClaims = {
   sub: string | null;
   sid: string | null;
-  jti: string | null;
+  jti: string;
 };
+
+export function validateLogoutTokenClaims(
+  payload: Record<string, unknown>,
+): LogoutTokenClaims {
+  if ("nonce" in payload) {
+    throw new Error("logout_token must not contain a nonce claim");
+  }
+
+  const event = (payload.events as Record<string, unknown> | undefined)?.[
+    BACKCHANNEL_LOGOUT_EVENT
+  ];
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    throw new Error("logout_token missing back-channel logout event");
+  }
+
+  if (!Number.isInteger(payload.iat)) {
+    throw new Error("logout_token missing iat claim");
+  }
+
+  const jti = typeof payload.jti === "string" ? payload.jti.trim() : "";
+  if (!jti) {
+    throw new Error("logout_token missing jti claim");
+  }
+
+  const sub = typeof payload.sub === "string" ? payload.sub : null;
+  const sid = typeof payload.sid === "string" ? payload.sid : null;
+  if (!sub && !sid) {
+    throw new Error("logout_token must contain sub and/or sid");
+  }
+
+  return { sub, sid, jti };
+}
 
 export async function validateLogoutToken(
   logoutToken: string,
@@ -489,28 +521,5 @@ export async function validateLogoutToken(
     config.ca_cert,
   );
 
-  if ("nonce" in payload) {
-    throw new Error("logout_token must not contain a nonce claim");
-  }
-
-  const events = payload.events as Record<string, unknown> | undefined;
-  if (
-    !events ||
-    typeof events !== "object" ||
-    !(BACKCHANNEL_LOGOUT_EVENT in events)
-  ) {
-    throw new Error("logout_token missing back-channel logout event");
-  }
-
-  const sub = typeof payload.sub === "string" ? payload.sub : null;
-  const sid = typeof payload.sid === "string" ? payload.sid : null;
-  if (!sub && !sid) {
-    throw new Error("logout_token must contain sub and/or sid");
-  }
-
-  return {
-    sub,
-    sid,
-    jti: typeof payload.jti === "string" ? payload.jti : null,
-  };
+  return validateLogoutTokenClaims(payload);
 }
