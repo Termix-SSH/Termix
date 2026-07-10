@@ -63,6 +63,7 @@ import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
 import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
+import { changeAppLanguage } from "@/i18n/i18n";
 
 function buildHostTree(
   hosts: SSHHostWithStatus[],
@@ -618,8 +619,7 @@ export function AppShell({
             applyAccentColor(prefs.accentColor);
           }
           if (prefs.language && prefs.language !== i18n.language) {
-            localStorage.setItem("i18nextLng", prefs.language);
-            void i18n.changeLanguage(prefs.language);
+            void changeAppLanguage(prefs.language);
           }
           if (
             prefs.commandAutocomplete !== null &&
