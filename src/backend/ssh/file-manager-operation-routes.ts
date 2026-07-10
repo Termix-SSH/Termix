@@ -6,7 +6,7 @@ import {
   execWithSudo,
   type SSHSession,
 } from "./file-manager-session.js";
-import { isWindowsSftpPath } from "./transfer-paths.js";
+import { buildDeleteCommand } from "./file-manager-operation-commands.js";
 
 type FileOperationRoutesDeps = {
   sshSessions: Record<string, SSHSession>;
@@ -375,22 +375,10 @@ export function registerFileOperationRoutes(
     });
     sshConn.lastActive = Date.now();
 
-    const isWindowsPath = isWindowsSftpPath(itemPath);
-    let deleteCommand: string;
-    if (isWindowsPath) {
-      const winPath = itemPath
-        .replace(/\//g, "\\")
-        .replace(/^\\([A-Za-z]:\\)/, "$1");
-      const escapedWinPath = winPath.replace(/"/g, '""');
-      deleteCommand = isDirectory
-        ? `rd /s /q "${escapedWinPath}"`
-        : `del /f /q "${escapedWinPath}"`;
-    } else {
-      const escapedPath = itemPath.replace(/'/g, "'\"'\"'");
-      deleteCommand = isDirectory
-        ? `rm -rf '${escapedPath}'`
-        : `rm -f '${escapedPath}'`;
-    }
+    const { command: deleteCommand, commandWithSuccess } = buildDeleteCommand(
+      itemPath,
+      Boolean(isDirectory),
+    );
 
     const executeDelete = (useSudo: boolean): Promise<void> => {
       return new Promise((resolve) => {
@@ -421,89 +409,85 @@ export function registerFileOperationRoutes(
           return;
         }
 
-        execChannel(
-          sshConn,
-          `${deleteCommand} && echo "SUCCESS"`,
-          (err, stream) => {
-            if (err) {
-              fileLogger.error("SSH deleteItem error:", err);
-              res.status(500).json({ error: err.message });
+        execChannel(sshConn, commandWithSuccess, (err, stream) => {
+          if (err) {
+            fileLogger.error("SSH deleteItem error:", err);
+            res.status(500).json({ error: err.message });
+            resolve();
+            return;
+          }
+
+          let outputData = "";
+          let errorData = "";
+          let permissionDenied = false;
+
+          stream.on("data", (chunk: Buffer) => {
+            outputData += chunk.toString();
+          });
+
+          stream.stderr.on("data", (chunk: Buffer) => {
+            errorData += chunk.toString();
+            if (chunk.toString().includes("Permission denied")) {
+              permissionDenied = true;
+            }
+          });
+
+          stream.on("close", (code) => {
+            if (permissionDenied) {
+              if (sshConn.sudoPassword) {
+                executeDelete(true).then(resolve);
+                return;
+              }
+              fileLogger.error(`Permission denied deleting: ${itemPath}`);
+              res.status(403).json({
+                error: `Permission denied: Cannot delete ${itemPath}.`,
+                needsSudo: true,
+              });
               resolve();
               return;
             }
 
-            let outputData = "";
-            let errorData = "";
-            let permissionDenied = false;
+            if (outputData.includes("SUCCESS")) {
+              fileLogger.success("Item deleted successfully", {
+                operation: "file_delete_success",
+                sessionId,
+                userId,
+                path: itemPath,
+              });
+              res.json({
+                message: "Item deleted successfully",
+                path: itemPath,
+                toast: {
+                  type: "success",
+                  message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
+                },
+              });
+            } else {
+              const detail =
+                errorData.trim() ||
+                outputData.trim() ||
+                `command exited with code ${code} and produced no output (the remote shell may not support the delete command)`;
+              fileLogger.error(`Delete failed for ${itemPath}: ${detail}`, {
+                operation: "file_delete_failed",
+                sessionId,
+                userId,
+                path: itemPath,
+              });
+              res.status(500).json({
+                error: `Delete failed: ${detail}`,
+              });
+            }
+            resolve();
+          });
 
-            stream.on("data", (chunk: Buffer) => {
-              outputData += chunk.toString();
-            });
-
-            stream.stderr.on("data", (chunk: Buffer) => {
-              errorData += chunk.toString();
-              if (chunk.toString().includes("Permission denied")) {
-                permissionDenied = true;
-              }
-            });
-
-            stream.on("close", (code) => {
-              if (permissionDenied) {
-                if (sshConn.sudoPassword) {
-                  executeDelete(true).then(resolve);
-                  return;
-                }
-                fileLogger.error(`Permission denied deleting: ${itemPath}`);
-                res.status(403).json({
-                  error: `Permission denied: Cannot delete ${itemPath}.`,
-                  needsSudo: true,
-                });
-                resolve();
-                return;
-              }
-
-              if (outputData.includes("SUCCESS")) {
-                fileLogger.success("Item deleted successfully", {
-                  operation: "file_delete_success",
-                  sessionId,
-                  userId,
-                  path: itemPath,
-                });
-                res.json({
-                  message: "Item deleted successfully",
-                  path: itemPath,
-                  toast: {
-                    type: "success",
-                    message: `${isDirectory ? "Directory" : "File"} deleted: ${itemPath}`,
-                  },
-                });
-              } else {
-                const detail =
-                  errorData.trim() ||
-                  outputData.trim() ||
-                  `command exited with code ${code} and produced no output (the remote shell may not support the delete command)`;
-                fileLogger.error(`Delete failed for ${itemPath}: ${detail}`, {
-                  operation: "file_delete_failed",
-                  sessionId,
-                  userId,
-                  path: itemPath,
-                });
-                res.status(500).json({
-                  error: `Delete failed: ${detail}`,
-                });
-              }
-              resolve();
-            });
-
-            stream.on("error", (streamErr) => {
-              fileLogger.error("SSH deleteItem stream error:", streamErr);
-              res
-                .status(500)
-                .json({ error: `Stream error: ${streamErr.message}` });
-              resolve();
-            });
-          },
-        );
+          stream.on("error", (streamErr) => {
+            fileLogger.error("SSH deleteItem stream error:", streamErr);
+            res
+              .status(500)
+              .json({ error: `Stream error: ${streamErr.message}` });
+            resolve();
+          });
+        });
       });
     };
 
