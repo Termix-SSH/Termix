@@ -18,6 +18,10 @@ import {
   getRequestBasePath,
   getRequestBaseUrlWithForceHTTPS,
 } from "../../utils/request-origin.js";
+import {
+  getDesktopOidcCallbackUrl,
+  isOidcTokenCallback,
+} from "../../utils/oidc-desktop-callback.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
   getOIDCConfigFromEnv,
@@ -654,7 +658,10 @@ router.get("/oidc/authorize", async (req, res) => {
     const referer = req.get("Referer");
     let frontendOrigin;
     if (desktopCallbackPort) {
-      frontendOrigin = `http://127.0.0.1:${desktopCallbackPort}/oidc-callback`;
+      frontendOrigin = getDesktopOidcCallbackUrl(desktopCallbackPort);
+      if (!frontendOrigin) {
+        return res.status(400).json({ error: "Invalid desktop callback port" });
+      }
     } else if (typeof appCallbackUrl === "string" && appCallbackUrl) {
       let callbackUrl: URL;
       try {
@@ -1001,9 +1008,7 @@ router.get("/oidc/callback", async (req, res) => {
       });
       const ghRedirectUrl = new URL(frontendOrigin);
       ghRedirectUrl.searchParams.set("success", "true");
-      const ghIsTokenCallback =
-        frontendOrigin.startsWith("http://127.0.0.1:") ||
-        frontendOrigin.startsWith("termix-mobile:");
+      const ghIsTokenCallback = isOidcTokenCallback(frontendOrigin);
       const ghMaxAge =
         deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
           ? 30 * 24 * 60 * 60 * 1000
@@ -1487,9 +1492,7 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
-    const isTokenCallback =
-      frontendOrigin.startsWith("http://127.0.0.1:") ||
-      frontendOrigin.startsWith("termix-mobile:");
+    const isTokenCallback = isOidcTokenCallback(frontendOrigin);
 
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
