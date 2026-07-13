@@ -239,7 +239,14 @@ function TunnelCard({
   );
 }
 
-export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
+export function TunnelTab({
+  host,
+  isVisible = true,
+}: {
+  label: string;
+  host?: DemoHost;
+  isVisible?: boolean;
+}) {
   const { t } = useTranslation();
   const [sshHost, setSshHost] = useState<SSHHost | null>(null);
   const [tunnelStatuses, setTunnelStatuses] = useState<
@@ -264,6 +271,8 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
   }, [host]);
 
   useEffect(() => {
+    if (!isVisible) return;
+
     fetchHost();
     window.addEventListener("ssh-hosts:changed", fetchHost);
 
@@ -295,7 +304,7 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("ssh-hosts:changed", fetchHost);
     };
-  }, [fetchHost]);
+  }, [fetchHost, isVisible]);
 
   useEffect(() => {
     return subscribeTunnelStatuses(setTunnelStatuses, () => {});

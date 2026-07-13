@@ -281,6 +281,7 @@ export function renderTabContent(
         <DashboardTab
           onOpenSingletonTab={onOpenSingletonTab!}
           onOpenTab={onOpenTab!}
+          isVisible={isVisible}
         />,
       );
 
@@ -323,6 +324,7 @@ export function renderTabContent(
         <FileManager
           initialHost={hostToSSHHost(host)}
           initialFilePath={tab.initialFilePath}
+          isVisible={isVisible}
           onOpenTerminalTab={
             onOpenTerminalTab
               ? (path) => onOpenTerminalTab(host, path)
@@ -360,7 +362,9 @@ export function renderTabContent(
       );
 
     case "tunnel":
-      return withTabSuspense(<TunnelTab label={label} host={host} />);
+      return withTabSuspense(
+        <TunnelTab label={label} host={host} isVisible={isVisible} />,
+      );
 
     case "rdp":
     case "vnc":
@@ -379,7 +383,9 @@ export function renderTabContent(
       );
 
     case "network_graph":
-      return withTabSuspense(<NetworkGraphCard embedded={false} />);
+      return withTabSuspense(
+        <NetworkGraphCard embedded={false} isVisible={isVisible} />,
+      );
 
     // --- tmux-monitor ---
     case "tmux_monitor":

@@ -18,17 +18,39 @@ import {
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
-import { CommandPalette } from "@/shell/CommandPalette";
 import { AppRail } from "@/sidebar/AppRail";
 import type { RailView } from "@/sidebar/AppRail";
-import { HostsPanel } from "@/sidebar/HostsPanel";
-import { QuickConnectPanel } from "@/sidebar/QuickConnectPanel";
-import { SerialPanel } from "@/sidebar/SerialPanel";
-import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
 import { SplitView } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
-import { AlertManager } from "@/dashboard/panels/alerts/AlertManager";
 import { TabBar } from "@/shell/TabBar";
+
+// Shell surfaces that are not needed for first paint.
+const CommandPalette = lazy(() =>
+  import("@/shell/CommandPalette").then((m) => ({
+    default: m.CommandPalette,
+  })),
+);
+const HostsPanel = lazy(() =>
+  import("@/sidebar/HostsPanel").then((m) => ({ default: m.HostsPanel })),
+);
+const QuickConnectPanel = lazy(() =>
+  import("@/sidebar/QuickConnectPanel").then((m) => ({
+    default: m.QuickConnectPanel,
+  })),
+);
+const SerialPanel = lazy(() =>
+  import("@/sidebar/SerialPanel").then((m) => ({ default: m.SerialPanel })),
+);
+const SplitScreenPanel = lazy(() =>
+  import("@/sidebar/SplitScreenPanel").then((m) => ({
+    default: m.SplitScreenPanel,
+  })),
+);
+const AlertManager = lazy(() =>
+  import("@/dashboard/panels/alerts/AlertManager").then((m) => ({
+    default: m.AlertManager,
+  })),
+);
 
 // Secondary rail panels — load on first open, not with the shell critical path.
 const SshToolsPanel = lazy(() =>
@@ -1862,35 +1884,41 @@ export function AppShell({
         </div>
       </div>
 
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        setIsOpen={setCommandPaletteOpen}
-        hosts={allHosts}
-        onOpenTab={(type, label, pendingEvent) => {
-          if (
-            [
-              "dashboard",
-              "host-manager",
-              "user-profile",
-              "admin-settings",
-            ].includes(type)
-          ) {
-            openSingletonTab(type, pendingEvent);
-          } else if (type === "tmux_monitor") {
-            // --- tmux-monitor --- singleton tab, optionally preselecting a host
-            openSingletonTab(
-              type,
-              undefined,
-              label ? allHosts.find((h) => h.name === label) : undefined,
-            );
-          } else if (label) {
-            const host = allHosts.find((h) => h.name === label);
-            if (host) openTab(host, type);
-          }
-        }}
-      />
+      {commandPaletteOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={commandPaletteOpen}
+            setIsOpen={setCommandPaletteOpen}
+            hosts={allHosts}
+            onOpenTab={(type, label, pendingEvent) => {
+              if (
+                [
+                  "dashboard",
+                  "host-manager",
+                  "user-profile",
+                  "admin-settings",
+                ].includes(type)
+              ) {
+                openSingletonTab(type, pendingEvent);
+              } else if (type === "tmux_monitor") {
+                // --- tmux-monitor --- singleton tab, optionally preselecting a host
+                openSingletonTab(
+                  type,
+                  undefined,
+                  label ? allHosts.find((h) => h.name === label) : undefined,
+                );
+              } else if (label) {
+                const host = allHosts.find((h) => h.name === label);
+                if (host) openTab(host, type);
+              }
+            }}
+          />
+        </Suspense>
+      )}
       <TransferMonitor />
-      <AlertManager userId={userId} loggedIn={!!username} />
+      <Suspense fallback={null}>
+        <AlertManager userId={userId} loggedIn={!!username} />
+      </Suspense>
     </ServerStatusProvider>
   );
 }
