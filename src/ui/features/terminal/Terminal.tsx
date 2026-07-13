@@ -57,6 +57,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
+import {
+  getNextTerminalFontSize,
+  getTerminalFontZoomDirection,
+} from "./terminal-font-zoom.ts";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
 type HostKeyVerificationData = Omit<
@@ -83,8 +87,6 @@ interface SSHTerminalProps {
   disableAutoFocus?: boolean;
 }
 
-const TERMINAL_FONT_ZOOM_MIN = 8;
-const TERMINAL_FONT_ZOOM_MAX = 36;
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
 
 function updateAlternateScreenMode(output: string, currentMode: boolean) {
@@ -497,16 +499,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }
 
-    function zoomTerminalFont(deltaY: number) {
-      const direction = deltaY < 0 ? 1 : -1;
+    function changeTerminalFontSize(direction: -1 | 1) {
       const currentFontSize =
         terminal.options.fontSize ??
         terminalFontSizeRef.current ??
         DEFAULT_TERMINAL_CONFIG.fontSize;
-      const nextFontSize = Math.min(
-        TERMINAL_FONT_ZOOM_MAX,
-        Math.max(TERMINAL_FONT_ZOOM_MIN, currentFontSize + direction),
-      );
+      const nextFontSize = getNextTerminalFontSize(currentFontSize, direction);
 
       if (nextFontSize === currentFontSize) {
         return;
@@ -2167,7 +2165,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.attachCustomWheelEventHandler((ev) => {
         if (ev.ctrlKey || ev.metaKey) {
-          zoomTerminalFont(ev.deltaY);
+          changeTerminalFontSize(ev.deltaY < 0 ? 1 : -1);
           return false;
         }
 
@@ -2396,6 +2394,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             globalShortcutHandler.current?.(e);
             return false;
           }
+        }
+
+        const fontZoomDirection = getTerminalFontZoomDirection(e);
+        if (fontZoomDirection !== 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          changeTerminalFontSize(fontZoomDirection);
+          return false;
         }
 
         if (
