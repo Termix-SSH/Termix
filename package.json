@@ -45,6 +45,7 @@
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",
+    "@tanstack/react-virtual": "^3.14.6",
     "@types/ldapjs": "^3.0.6",
     "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
