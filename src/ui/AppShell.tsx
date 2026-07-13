@@ -1713,6 +1713,10 @@ export function AppShell({
               onAddToSplit={addTabToSplit}
               onRemoveFromSplit={removeTabFromSplit}
               onRenameTab={renameTab}
+              onOpenFileManager={(tabId) => {
+                const targetTab = tabs.find((t) => t.id === tabId);
+                if (targetTab?.host) openTab(targetTab.host, "files");
+              }}
               isAppFullscreen={isAppFullscreen}
               onToggleAppFullscreen={toggleAppFullscreen}
             />
