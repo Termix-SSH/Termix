@@ -1397,7 +1397,7 @@ ipcMain.handle(
 
       server.once("error", fail);
 
-      server.listen(callbackPort, "127.0.0.1", async () => {
+      server.listen(callbackPort, "localhost", async () => {
         try {
           await shell.openExternal(authUrl);
         } catch (error) {
