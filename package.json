@@ -46,7 +46,7 @@
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",
     "@types/ldapjs": "^3.0.6",
-    "axios": "^1.18.0",
+    "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "body-parser": "^2.3.0",
