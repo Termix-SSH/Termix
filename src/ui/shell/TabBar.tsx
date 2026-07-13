@@ -18,7 +18,6 @@ import {
   Pencil,
   Maximize2,
   Minimize2,
-  FolderOpen,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
 import { isElectron } from "@/lib/electron";
@@ -41,7 +40,6 @@ export function TabBar({
   onAddToSplit,
   onRemoveFromSplit,
   onRenameTab,
-  onOpenFileManager,
   isAppFullscreen,
   onToggleAppFullscreen,
 }: {
@@ -58,7 +56,6 @@ export function TabBar({
   onAddToSplit: (tabId: string) => void;
   onRemoveFromSplit: (tabId: string) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
-  onOpenFileManager?: (tabId: string) => void;
   isAppFullscreen: boolean;
   onToggleAppFullscreen: () => void;
 }) {
@@ -530,20 +527,6 @@ export function TabBar({
                   {t("nav.refreshTab")}
                 </button>
               )}
-              {ctxTab.type === "terminal" &&
-                ctxTab.host &&
-                onOpenFileManager && (
-                  <button
-                    className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => {
-                      onOpenFileManager(contextTabId);
-                      setContextTabId(null);
-                    }}
-                  >
-                    <FolderOpen className="size-3" />
-                    {t("nav.openFileManager")}
-                  </button>
-                )}
               <button
                 className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
                 onClick={() => {
