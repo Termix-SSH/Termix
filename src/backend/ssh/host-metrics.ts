@@ -49,6 +49,7 @@ import {
   createConnectionLog,
   isTcpPingEnabled,
   supportsMetrics,
+  tcpPingThroughJumpHost,
 } from "./host-metrics-helpers.js";
 import { applyAgentAuth } from "./terminal-auth-helpers.js";
 import {
@@ -361,24 +362,45 @@ class PollingManager {
     }
 
     try {
-      let pingHost = refreshedHost.ip;
       const ct = refreshedHost.connectionType || "ssh";
       let pingPort: number;
       if (ct === "rdp") pingPort = refreshedHost.rdpPort ?? 3389;
       else if (ct === "vnc") pingPort = refreshedHost.vncPort ?? 5900;
       else if (ct === "telnet") pingPort = refreshedHost.telnetPort ?? 23;
       else pingPort = refreshedHost.port;
+
+      let isOnline: boolean;
       if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
-        const firstJump = await fetchHostById(
-          refreshedHost.jumpHosts[0].hostId,
+        const proxyConfig: SOCKS5Config | null =
+          refreshedHost.useSocks5 &&
+          (refreshedHost.socks5Host ||
+            (refreshedHost.socks5ProxyChain &&
+              refreshedHost.socks5ProxyChain.length > 0))
+            ? {
+                useSocks5: true,
+                socks5Host: refreshedHost.socks5Host,
+                socks5Port: refreshedHost.socks5Port,
+                socks5Username: refreshedHost.socks5Username,
+                socks5Password: refreshedHost.socks5Password,
+                socks5ProxyChain: refreshedHost.socks5ProxyChain,
+              }
+            : null;
+        const jumpClient = await createJumpHostChain(
+          refreshedHost.jumpHosts,
           userId,
+          proxyConfig,
         );
-        if (firstJump) {
-          pingHost = firstJump.ip;
-          pingPort = firstJump.port;
-        }
+        isOnline = jumpClient
+          ? await tcpPingThroughJumpHost(
+              jumpClient,
+              refreshedHost.ip,
+              pingPort,
+              5000,
+            )
+          : false;
+      } else {
+        isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
       }
-      const isOnline = await tcpPing(pingHost, pingPort, 5000);
       const statusEntry: StatusEntry = {
         status: isOnline ? "online" : "offline",
         lastChecked: new Date().toISOString(),

@@ -1,4 +1,5 @@
 import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
+import type { Client } from "ssh2";
 
 export type StatsCapableHost = {
   connectionType?: string;
@@ -19,6 +20,32 @@ export function supportsMetrics(host: StatsCapableHost): boolean {
 
 export function isTcpPingEnabled(statsConfig: TcpPingStatsConfig): boolean {
   return statsConfig.statusCheckEnabled && !statsConfig.disableTcpPing;
+}
+
+export function tcpPingThroughJumpHost(
+  jumpClient: Pick<Client, "forwardOut" | "end">,
+  host: string,
+  port: number,
+  timeoutMs = 5000,
+): Promise<boolean> {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      jumpClient.end();
+      resolve(result);
+    };
+
+    const timeout = setTimeout(() => finish(false), timeoutMs);
+
+    jumpClient.forwardOut("127.0.0.1", 0, host, port, (error, stream) => {
+      stream?.destroy();
+      finish(!error && !!stream);
+    });
+  });
 }
 
 export function createConnectionLog(
