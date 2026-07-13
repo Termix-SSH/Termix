@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
+import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 import { Input } from "@/components/input";
 import {
   Tooltip,
@@ -190,10 +191,11 @@ export function SessionLogsPanel() {
         .then((fresh) => {
           setLogs((prev) => {
             if (
-              JSON.stringify(prev.map((l) => l.id)) ===
-              JSON.stringify(fresh.map((l) => l.id))
-            )
+              prev.length === fresh.length &&
+              prev.every((log, i) => log.id === fresh[i]?.id)
+            ) {
               return prev;
+            }
             return fresh;
           });
         })
@@ -212,9 +214,16 @@ export function SessionLogsPanel() {
     getSessionRecordingRetention()
       .then(setRetentionDays)
       .catch(() => setRetentionDays(null));
-    const interval = setInterval(() => load(false), 5000);
-    return () => clearInterval(interval);
   }, [load]);
+
+  usePageVisibleInterval(
+    () => {
+      void load(false);
+    },
+    5_000,
+    true,
+    { runOnMount: false },
+  );
 
   const q = filter.trim().toLowerCase();
   const filtered = q

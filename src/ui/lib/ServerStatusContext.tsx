@@ -45,6 +45,7 @@ export function ServerStatusProvider({
   const [enabledHostIds, setEnabledHostIds] = useState<Set<number>>(new Set());
   const mountedRef = useRef(true);
   const enabledHostIdsRef = useRef(enabledHostIds);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     enabledHostIdsRef.current = enabledHostIds;
@@ -56,15 +57,18 @@ export function ServerStatusProvider({
     }
 
     try {
-      const hosts = await getSSHHosts();
+      // Host list only — status is loaded separately via getAllServerStatuses.
+      const hosts = await getSSHHosts({ includeStatus: false });
       const enabled = new Set<number>();
 
       hosts.forEach((host) => {
         const statsConfig = (() => {
           try {
-            return host.statsConfig
-              ? JSON.parse(host.statsConfig)
-              : DEFAULT_STATS_CONFIG;
+            if (!host.statsConfig) return DEFAULT_STATS_CONFIG;
+            if (typeof host.statsConfig === "string") {
+              return JSON.parse(host.statsConfig);
+            }
+            return host.statsConfig;
           } catch {
             return DEFAULT_STATS_CONFIG;
           }
@@ -90,50 +94,64 @@ export function ServerStatusProvider({
 
   const refreshStatuses = useCallback(async () => {
     if (!mountedRef.current || !isAuthenticated) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      return;
+    }
+
+    if (refreshInFlightRef.current) {
+      return refreshInFlightRef.current;
+    }
 
     setIsLoading(true);
-    try {
-      const data = await getAllServerStatuses();
-      if (!mountedRef.current) return;
+    const run = (async () => {
+      try {
+        const data = await getAllServerStatuses();
+        if (!mountedRef.current) return;
 
-      const newStatuses = new Map<number, ServerStatusEntry>();
-      const now = new Date().toISOString();
+        const newStatuses = new Map<number, ServerStatusEntry>();
+        const now = new Date().toISOString();
 
-      if (data && typeof data === "object") {
-        Object.entries(data).forEach(([idStr, statusData]) => {
-          const id = parseInt(idStr, 10);
-          if (!isNaN(id)) {
-            const status =
-              statusData?.status === "online" ? "online" : "offline";
-            newStatuses.set(id, {
-              status,
-              lastChecked: statusData?.lastChecked || now,
-            });
-          }
-        });
-      }
-
-      setStatuses(newStatuses);
-    } catch {
-      if (mountedRef.current) {
-        setStatuses((prev) => {
-          const updated = new Map(prev);
-          enabledHostIdsRef.current.forEach((id) => {
-            const existing = updated.get(id);
-            updated.set(id, {
-              status: "degraded",
-              lastChecked: existing?.lastChecked || new Date().toISOString(),
-            });
+        if (data && typeof data === "object") {
+          Object.entries(data).forEach(([idStr, statusData]) => {
+            const id = parseInt(idStr, 10);
+            if (!isNaN(id)) {
+              const status =
+                statusData?.status === "online" ? "online" : "offline";
+              newStatuses.set(id, {
+                status,
+                lastChecked: statusData?.lastChecked || now,
+              });
+            }
           });
-          return updated;
-        });
+        }
+
+        setStatuses(newStatuses);
+      } catch {
+        if (mountedRef.current) {
+          setStatuses((prev) => {
+            const updated = new Map(prev);
+            enabledHostIdsRef.current.forEach((id) => {
+              const existing = updated.get(id);
+              updated.set(id, {
+                status: "degraded",
+                lastChecked: existing?.lastChecked || new Date().toISOString(),
+              });
+            });
+            return updated;
+          });
+        }
+      } finally {
+        if (mountedRef.current) {
+          setIsLoading(false);
+          setInitialLoadComplete(true);
+        }
       }
-    } finally {
-      if (mountedRef.current) {
-        setIsLoading(false);
-        setInitialLoadComplete(true);
-      }
-    }
+    })();
+
+    refreshInFlightRef.current = run.finally(() => {
+      refreshInFlightRef.current = null;
+    });
+    return refreshInFlightRef.current;
   }, [isAuthenticated]);
 
   const stableEnabledHostIds = useMemo(() => enabledHostIds, [enabledHostIds]);
@@ -151,18 +169,50 @@ export function ServerStatusProvider({
   useEffect(() => {
     mountedRef.current = true;
 
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      if (intervalId !== null) return;
+      intervalId = setInterval(() => {
+        void refreshStatuses();
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (intervalId === null) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+
     const init = async () => {
       await fetchEnabledHosts();
       await refreshStatuses();
+      if (
+        mountedRef.current &&
+        (typeof document === "undefined" ||
+          document.visibilityState !== "hidden")
+      ) {
+        startPolling();
+      }
     };
 
-    init();
+    void init();
 
-    const intervalId = setInterval(refreshStatuses, POLL_INTERVAL);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stopPolling();
+        return;
+      }
+      void refreshStatuses();
+      startPolling();
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       mountedRef.current = false;
-      clearInterval(intervalId);
+      stopPolling();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [fetchEnabledHosts, refreshStatuses]);
 

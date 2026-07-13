@@ -265,10 +265,34 @@ export function TunnelTab({ host }: { label: string; host?: DemoHost }) {
 
   useEffect(() => {
     fetchHost();
-    const interval = setInterval(fetchHost, 5000);
     window.addEventListener("ssh-hosts:changed", fetchHost);
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (intervalId !== null) return;
+      // Host config rarely changes; tunnel runtime status uses subscribeTunnelStatuses.
+      intervalId = setInterval(fetchHost, 30_000);
+    };
+    const stop = () => {
+      if (intervalId === null) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stop();
+        return;
+      }
+      void fetchHost();
+      start();
+    };
+
+    if (document.visibilityState !== "hidden") start();
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
-      clearInterval(interval);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("ssh-hosts:changed", fetchHost);
     };
   }, [fetchHost]);
