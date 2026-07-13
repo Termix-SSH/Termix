@@ -660,6 +660,8 @@ export const sessionRecordings = sqliteTable("session_recordings", {
   dangerousActions: text("dangerous_actions"),
 
   recordingPath: text("recording_path"),
+  protocol: text("protocol").notNull().default("ssh"),
+  format: text("format").notNull().default("text"),
 
   terminatedByOwner: integer("terminated_by_owner", { mode: "boolean" })
     .default(false),

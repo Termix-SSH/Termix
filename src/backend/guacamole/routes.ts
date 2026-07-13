@@ -9,12 +9,15 @@ import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq, and } from "drizzle-orm";
 import { Client } from "ssh2";
 import net from "net";
+import crypto from "crypto";
+import path from "path";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { resolveGuacdOptions } from "../utils/guacd-config.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
 const authManager = AuthManager.getInstance();
+const DATA_DIR = process.env.DATA_DIR || "./db/data";
 
 router.use(authManager.createAuthMiddleware());
 
@@ -526,6 +529,28 @@ router.post(
           ? { guacdPort: perConnectionGuacdPort }
           : {}),
       };
+      const recordingEnabled = host.enableSessionLogging !== false;
+      const recordingName = `${crypto.randomUUID()}.guac`;
+      const recordingPath =
+        process.env.GUACD_RECORDING_PATH ||
+        process.env.GUACD_RECORDING_BACKEND_PATH ||
+        path.resolve(DATA_DIR, "session_recordings", "guacamole");
+      const recordingMetadata = recordingEnabled
+        ? {
+            hostId,
+            userId,
+            protocol: connectionType as "rdp" | "vnc" | "telnet",
+            path: recordingName,
+            startedAt: new Date().toISOString(),
+          }
+        : undefined;
+      if (recordingEnabled) {
+        guacConfig["recording-path"] = recordingPath;
+        guacConfig["recording-name"] = recordingName;
+        guacConfig["create-recording-path"] = true;
+        guacConfig["recording-exclude-output"] = false;
+        guacConfig["recording-include-keys"] = true;
+      }
 
       switch (connectionType) {
         case "rdp":
@@ -533,22 +558,28 @@ router.post(
             guacConfig["drive-path"] = "/drive";
             guacConfig["create-drive-path"] = true;
           }
-          token = tokenService.createRdpToken(hostname, username, password, {
-            port,
-            domain,
-            security:
-              (host.rdpSecurity as string) ||
-              (host.security as string) ||
-              undefined,
-            "ignore-cert":
-              host.rdpIgnoreCert !== undefined
-                ? !!host.rdpIgnoreCert
-                : host.ignoreCert !== undefined
-                  ? !!host.ignoreCert
-                  : true,
-            ...guacConfig,
-            ...guacdOverrides,
-          });
+          token = tokenService.createRdpToken(
+            hostname,
+            username,
+            password,
+            {
+              port,
+              domain,
+              security:
+                (host.rdpSecurity as string) ||
+                (host.security as string) ||
+                undefined,
+              "ignore-cert":
+                host.rdpIgnoreCert !== undefined
+                  ? !!host.rdpIgnoreCert
+                  : host.ignoreCert !== undefined
+                    ? !!host.ignoreCert
+                    : true,
+              ...guacConfig,
+              ...guacdOverrides,
+            },
+            recordingMetadata,
+          );
           break;
         case "vnc":
           token = tokenService.createVncToken(
@@ -561,14 +592,21 @@ router.post(
               ...guacConfig,
               ...guacdOverrides,
             },
+            recordingMetadata,
           );
           break;
         case "telnet":
-          token = tokenService.createTelnetToken(hostname, username, password, {
-            port,
-            ...guacConfig,
-            ...guacdOverrides,
-          });
+          token = tokenService.createTelnetToken(
+            hostname,
+            username,
+            password,
+            {
+              port,
+              ...guacConfig,
+              ...guacdOverrides,
+            },
+            recordingMetadata,
+          );
           break;
         default:
           return res.status(400).json({ error: "Invalid connection type" });

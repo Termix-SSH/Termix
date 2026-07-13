@@ -460,6 +460,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         commands TEXT,
         dangerous_actions TEXT,
         recording_path TEXT,
+        protocol TEXT NOT NULL DEFAULT 'ssh',
+        format TEXT NOT NULL DEFAULT 'text',
         terminated_by_owner INTEGER DEFAULT 0,
         termination_reason TEXT,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
@@ -713,6 +715,17 @@ const addColumnIfNotExists = (
 };
 
 const migrateSchema = () => {
+  addColumnIfNotExists(
+    "session_recordings",
+    "protocol",
+    "TEXT NOT NULL DEFAULT 'ssh'",
+  );
+  addColumnIfNotExists(
+    "session_recordings",
+    "format",
+    "TEXT NOT NULL DEFAULT 'text'",
+  );
+
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
@@ -1575,6 +1588,8 @@ const migrateSchema = () => {
           commands TEXT,
           dangerous_actions TEXT,
           recording_path TEXT,
+          protocol TEXT NOT NULL DEFAULT 'ssh',
+          format TEXT NOT NULL DEFAULT 'text',
           terminated_by_owner INTEGER DEFAULT 0,
           termination_reason TEXT,
           FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,

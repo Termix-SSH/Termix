@@ -2,24 +2,58 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { eq, and, desc, lt } from "drizzle-orm";
+import { eq, desc, lt } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { sessionRecordings, hosts } from "../db/schema.js";
+import { sessionRecordings, hosts, users } from "../db/schema.js";
 import { apiLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { Request, Response } from "express";
+import { PermissionManager } from "../../utils/permission-manager.js";
 
 const router = express.Router();
 
 const DATA_DIR = process.env.DATA_DIR ?? "./db/data";
 
-// Delete session log files and DB rows older than this many days
-const LOG_RETENTION_DAYS = 30;
+const permissionManager = PermissionManager.getInstance();
+
+function isAllowedRecordingPath(filePath: string): boolean {
+  const resolved = path.resolve(filePath);
+  return ["session_logs", "session_recordings"].some((directory) => {
+    const base = `${path.resolve(DATA_DIR, directory)}${path.sep}`;
+    return resolved.startsWith(base);
+  });
+}
+
+function getRetentionDays(): number {
+  const envDays = parseInt(
+    process.env.SESSION_RECORDING_RETENTION_DAYS || "",
+    10,
+  );
+  try {
+    const row = db.$client
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'session_recording_retention_days'",
+      )
+      .get() as { value?: string } | undefined;
+    const configured = parseInt(row?.value || "", 10);
+    if (configured >= 1 && configured <= 3650) return configured;
+  } catch {
+    // use environment/default below
+  }
+  return envDays >= 1 && envDays <= 3650 ? envDays : 30;
+}
+
+async function canAccessRecording(
+  userId: string,
+  ownerId: string,
+): Promise<boolean> {
+  return userId === ownerId || permissionManager.isAdmin(userId);
+}
 
 async function pruneOldLogs(): Promise<void> {
   try {
     const cutoff = new Date(
-      Date.now() - LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+      Date.now() - getRetentionDays() * 24 * 60 * 60 * 1000,
     ).toISOString();
 
     const old = await db
@@ -33,8 +67,7 @@ async function pruneOldLogs(): Promise<void> {
     for (const row of old) {
       if (row.recordingPath) {
         const resolved = path.resolve(row.recordingPath);
-        const allowed = path.resolve(DATA_DIR, "session_logs");
-        if (resolved.startsWith(allowed) && fs.existsSync(resolved)) {
+        if (isAllowedRecordingPath(resolved) && fs.existsSync(resolved)) {
           await fs.promises.unlink(resolved).catch(() => {});
         }
       }
@@ -81,6 +114,7 @@ const authenticateJWT = authManager.createAuthMiddleware();
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
+    const isAdmin = await permissionManager.isAdmin(userId);
     const rows = await db
       .select({
         id: sessionRecordings.id,
@@ -90,12 +124,16 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
         endedAt: sessionRecordings.endedAt,
         duration: sessionRecordings.duration,
         recordingPath: sessionRecordings.recordingPath,
+        protocol: sessionRecordings.protocol,
+        format: sessionRecordings.format,
+        username: users.username,
         hostName: hosts.name,
         hostIp: hosts.ip,
       })
       .from(sessionRecordings)
       .leftJoin(hosts, eq(sessionRecordings.hostId, hosts.id))
-      .where(eq(sessionRecordings.userId, userId))
+      .leftJoin(users, eq(sessionRecordings.userId, users.id))
+      .where(isAdmin ? undefined : eq(sessionRecordings.userId, userId))
       .orderBy(desc(sessionRecordings.startedAt));
 
     const records = rows.map((row) => {
@@ -119,6 +157,46 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to fetch session logs" });
   }
 });
+
+router.get(
+  "/retention",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    if (!(await permissionManager.isAdmin(userId))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    res.json({ retentionDays: getRetentionDays() });
+  },
+);
+
+router.put(
+  "/retention",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    if (!(await permissionManager.isAdmin(userId))) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    const retentionDays = Number(req.body?.retentionDays);
+    if (
+      !Number.isInteger(retentionDays) ||
+      retentionDays < 1 ||
+      retentionDays > 3650
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Retention must be between 1 and 3650 days" });
+    }
+    db.$client
+      .prepare(
+        "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+      )
+      .run("session_recording_retention_days", String(retentionDays));
+    void pruneOldLogs();
+    res.json({ retentionDays });
+  },
+);
 
 /**
  * @openapi
@@ -153,12 +231,13 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
     const rows = await db
       .select()
       .from(sessionRecordings)
-      .where(
-        and(eq(sessionRecordings.id, id), eq(sessionRecordings.userId, userId)),
-      )
+      .where(eq(sessionRecordings.id, id))
       .limit(1);
 
     if (rows.length === 0) return res.status(404).json({ error: "Not found" });
+    if (!(await canAccessRecording(userId, rows[0].userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     res.json({ log: rows[0] });
   } catch (error) {
     apiLogger.error("Failed to fetch session log", error, {
@@ -206,26 +285,27 @@ router.get(
 
     try {
       const rows = await db
-        .select({ recordingPath: sessionRecordings.recordingPath })
+        .select({
+          recordingPath: sessionRecordings.recordingPath,
+          userId: sessionRecordings.userId,
+          format: sessionRecordings.format,
+        })
         .from(sessionRecordings)
-        .where(
-          and(
-            eq(sessionRecordings.id, id),
-            eq(sessionRecordings.userId, userId),
-          ),
-        )
+        .where(eq(sessionRecordings.id, id))
         .limit(1);
 
       if (rows.length === 0)
         return res.status(404).json({ error: "Not found" });
+      if (!(await canAccessRecording(userId, rows[0].userId))) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
 
       const filePath = rows[0].recordingPath;
       if (!filePath)
         return res.status(404).json({ error: "No recording file" });
 
       const resolvedPath = path.resolve(filePath);
-      const allowedBase = path.resolve(DATA_DIR, "session_logs");
-      if (!resolvedPath.startsWith(allowedBase)) {
+      if (!isAllowedRecordingPath(resolvedPath)) {
         return res.status(403).json({ error: "Forbidden" });
       }
 
@@ -233,8 +313,14 @@ router.get(
         return res.status(404).json({ error: "File not found" });
       }
 
-      const content = await fs.promises.readFile(resolvedPath, "utf-8");
-      res.type("text/plain").send(content);
+      const content = await fs.promises.readFile(resolvedPath);
+      const contentType =
+        rows[0].format === "guacamole"
+          ? "application/vnd.apache.guacamole.recording"
+          : rows[0].format === "asciicast"
+            ? "application/x-asciicast"
+            : "text/plain";
+      res.type(contentType).send(content);
     } catch (error) {
       apiLogger.error("Failed to read session log content", error, {
         operation: "session_log_content",
@@ -277,27 +363,26 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
 
   try {
     const rows = await db
-      .select({ recordingPath: sessionRecordings.recordingPath })
+      .select({
+        recordingPath: sessionRecordings.recordingPath,
+        userId: sessionRecordings.userId,
+      })
       .from(sessionRecordings)
-      .where(
-        and(eq(sessionRecordings.id, id), eq(sessionRecordings.userId, userId)),
-      )
+      .where(eq(sessionRecordings.id, id))
       .limit(1);
 
     if (rows.length === 0) return res.status(404).json({ error: "Not found" });
+    if (!(await canAccessRecording(userId, rows[0].userId))) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
 
     const filePath = rows[0].recordingPath;
 
-    await db
-      .delete(sessionRecordings)
-      .where(
-        and(eq(sessionRecordings.id, id), eq(sessionRecordings.userId, userId)),
-      );
+    await db.delete(sessionRecordings).where(eq(sessionRecordings.id, id));
 
     if (filePath) {
       const resolvedPath = path.resolve(filePath);
-      const allowedBase = path.resolve(DATA_DIR, "session_logs");
-      if (resolvedPath.startsWith(allowedBase) && fs.existsSync(resolvedPath)) {
+      if (isAllowedRecordingPath(resolvedPath) && fs.existsSync(resolvedPath)) {
         await fs.promises.unlink(resolvedPath).catch(() => {});
       }
     }

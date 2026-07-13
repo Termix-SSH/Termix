@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Stub all external imports before loading the module under test
-const mockInsertValues = vi.fn().mockResolvedValue(undefined);
+const mockReturning = vi.fn().mockResolvedValue([{ id: 1 }]);
+const mockInsertValues = vi.fn().mockReturnValue({ returning: mockReturning });
 const mockInsert = vi.fn().mockReturnValue({ values: mockInsertValues });
 
 vi.mock("../database/db/index.js", () => ({
@@ -29,21 +30,25 @@ vi.mock("../utils/logger.js", () => ({
 // Mock individual fs.promises methods via a stub object
 const mockMkdir = vi.fn().mockResolvedValue(undefined);
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
+const mockAppendFile = vi.fn().mockResolvedValue(undefined);
+const mockUnlink = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("fs", () => ({
   default: {
     promises: {
       mkdir: mockMkdir,
       writeFile: mockWriteFile,
+      appendFile: mockAppendFile,
       readFile: vi.fn(),
-      unlink: vi.fn(),
+      unlink: mockUnlink,
     },
   },
   promises: {
     mkdir: mockMkdir,
     writeFile: mockWriteFile,
+    appendFile: mockAppendFile,
     readFile: vi.fn(),
-    unlink: vi.fn(),
+    unlink: mockUnlink,
   },
 }));
 
@@ -55,7 +60,8 @@ describe("TerminalSessionManager - session logging", () => {
     // Re-apply resolved values after clearAllMocks
     mockMkdir.mockResolvedValue(undefined);
     mockWriteFile.mockResolvedValue(undefined);
-    mockInsertValues.mockResolvedValue(undefined);
+    mockReturning.mockResolvedValue([{ id: 1 }]);
+    mockInsertValues.mockReturnValue({ returning: mockReturning });
     mockInsert.mockReturnValue({ values: mockInsertValues });
   });
 

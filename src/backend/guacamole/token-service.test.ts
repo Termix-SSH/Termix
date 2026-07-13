@@ -45,4 +45,23 @@ describe("GuacamoleTokenService", () => {
     });
     expect(decrypted?.connection.settings["disable-auth"]).toBeUndefined();
   });
+
+  it("preserves recording metadata outside guacd connection settings", () => {
+    const recording = {
+      hostId: 42,
+      userId: "user-1",
+      protocol: "vnc" as const,
+      path: "recording.guac",
+      startedAt: "2026-07-14T00:00:00.000Z",
+    };
+    const token = tokenService.createVncToken(
+      "vnc.example.test",
+      "user",
+      "secret",
+      {},
+      recording,
+    );
+
+    expect(tokenService.decryptToken(token)?.recording).toEqual(recording);
+  });
 });
