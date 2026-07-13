@@ -44,16 +44,11 @@ import {
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
-
-type SortKey =
-  | "default"
-  | "name-asc"
-  | "name-desc"
-  | "ip-asc"
-  | "ip-desc"
-  | "status-online"
-  | "status-offline"
-  | "pinned";
+import {
+  resolveHostSortPreferences,
+  sortHostTree,
+  type SortKey,
+} from "@/sidebar/host-sort";
 
 type FilterState = {
   status: ("online" | "offline" | "pinned")[];
@@ -125,43 +120,6 @@ function groupHosts(
       children: members,
     }));
   return { name: "root", children };
-}
-
-function sortHostTree(folder: HostFolder, key: SortKey): HostFolder {
-  if (key === "default") return folder;
-
-  const comparator = (a: Host | HostFolder, b: Host | HostFolder): number => {
-    const aIsFolder = isFolder(a);
-    const bIsFolder = isFolder(b);
-    if (aIsFolder && !bIsFolder) return -1;
-    if (!aIsFolder && bIsFolder) return 1;
-    if (aIsFolder && bIsFolder)
-      return (a as HostFolder).name.localeCompare((b as HostFolder).name);
-    const ha = a as Host,
-      hb = b as Host;
-    switch (key) {
-      case "name-asc":
-        return ha.name.localeCompare(hb.name);
-      case "name-desc":
-        return hb.name.localeCompare(ha.name);
-      case "ip-asc":
-        return ha.ip.localeCompare(hb.ip);
-      case "ip-desc":
-        return hb.ip.localeCompare(ha.ip);
-      case "status-online":
-        return (hb.online ? 1 : 0) - (ha.online ? 1 : 0);
-      case "status-offline":
-        return (ha.online ? 1 : 0) - (hb.online ? 1 : 0);
-      case "pinned":
-        return (hb.pin ? 1 : 0) - (ha.pin ? 1 : 0);
-    }
-    return 0;
-  };
-
-  const sortedChildren = [...folder.children]
-    .sort(comparator)
-    .map((child) => (isFolder(child) ? sortHostTree(child, key) : child));
-  return { ...folder, children: sortedChildren };
 }
 
 function hostPassesFilters(host: Host, filters: FilterState): boolean {
@@ -255,9 +213,18 @@ export function HostsPanel({
   const [proxmoxDefaultUsername, setProxmoxDefaultUsername] = useState<
     string | undefined
   >(undefined);
-  const [sortKey, setSortKey] = useState<SortKey>(
-    () => (localStorage.getItem("hostSortKey") as SortKey) ?? "default",
-  );
+  const [sortKey, setSortKey] = useState<SortKey>(() => {
+    return resolveHostSortPreferences(
+      localStorage.getItem("hostSortKey"),
+      localStorage.getItem("hostPinnedFirst"),
+    ).sortKey;
+  });
+  const [pinnedFirst, setPinnedFirst] = useState(() => {
+    return resolveHostSortPreferences(
+      localStorage.getItem("hostSortKey"),
+      localStorage.getItem("hostPinnedFirst"),
+    ).pinnedFirst;
+  });
   const [groupKey, setGroupKey] = useState<GroupKey>(
     () => (localStorage.getItem("hostGroupKey") as GroupKey) ?? "folder",
   );
@@ -278,6 +245,11 @@ export function HostsPanel({
   function handleSortChange(key: SortKey) {
     setSortKey(key);
     localStorage.setItem("hostSortKey", key);
+  }
+
+  function handlePinnedFirstChange(enabled: boolean) {
+    setPinnedFirst(enabled);
+    localStorage.setItem("hostPinnedFirst", String(enabled));
   }
 
   function handleGroupChange(key: GroupKey) {
@@ -654,7 +626,7 @@ export function HostsPanel({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`size-7 ${sortKey !== "default" ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`size-7 ${sortKey !== "default" || pinnedFirst ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
                   title={t("hosts.sortHosts")}
                 >
                   <ArrowUpDown className="size-3.5" />
@@ -708,28 +680,32 @@ export function HostsPanel({
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
-                {(["status-online", "status-offline", "pinned"] as const).map(
-                  (key) => (
-                    <DropdownMenuItem
-                      key={key}
-                      onClick={() => handleSortChange(key)}
-                      className="flex items-center gap-1.5"
-                    >
-                      {sortKey === key ? (
-                        <Check className="size-3 shrink-0 text-accent-brand" />
-                      ) : (
-                        <span className="size-3 shrink-0 inline-block" />
-                      )}
-                      {t(
-                        key === "status-online"
-                          ? "hosts.sortOnlineFirst"
-                          : key === "status-offline"
-                            ? "hosts.sortOfflineFirst"
-                            : "hosts.sortPinnedFirst",
-                      )}
-                    </DropdownMenuItem>
-                  ),
-                )}
+                {(["status-online", "status-offline"] as const).map((key) => (
+                  <DropdownMenuItem
+                    key={key}
+                    onClick={() => handleSortChange(key)}
+                    className="flex items-center gap-1.5"
+                  >
+                    {sortKey === key ? (
+                      <Check className="size-3 shrink-0 text-accent-brand" />
+                    ) : (
+                      <span className="size-3 shrink-0 inline-block" />
+                    )}
+                    {t(
+                      key === "status-online"
+                        ? "hosts.sortOnlineFirst"
+                        : "hosts.sortOfflineFirst",
+                    )}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={pinnedFirst}
+                  onCheckedChange={handlePinnedFirstChange}
+                  onSelect={(event) => event.preventDefault()}
+                >
+                  {t("hosts.sortPinnedFirst")}
+                </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
@@ -1017,7 +993,10 @@ export function HostsPanel({
           children={
             hostTree
               ? groupHosts(
-                  applyFilters(sortHostTree(hostTree, sortKey), filterState),
+                  applyFilters(
+                    sortHostTree(hostTree, sortKey, pinnedFirst),
+                    filterState,
+                  ),
                   groupKey,
                   groupLabel,
                 ).children
