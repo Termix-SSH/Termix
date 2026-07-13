@@ -62,7 +62,11 @@ import {
   useStatusColorScheme,
   getStatusClasses,
 } from "@/hooks/use-status-color-scheme";
-import { useServerStatus } from "@/lib/ServerStatusContext";
+import {
+  useHostStatus,
+  useServerStatus,
+  useServerStatusMeta,
+} from "@/lib/ServerStatusContext";
 import {
   Tooltip,
   TooltipContent,
@@ -305,10 +309,11 @@ export function HostItem({
     () => localStorage.getItem("compactHostView") === "true",
   );
   const statusScheme = useStatusColorScheme();
-  const { initialLoadComplete, getStatus } = useServerStatus();
+  const { initialLoadComplete } = useServerStatusMeta();
   const statusCheckOn = statusCheckEnabled(host);
   const statusLoading = !initialLoadComplete && statusCheckOn;
-  const liveStatus = statusCheckOn ? getStatus(Number(host.id)) : null;
+  // Per-host subscription — status polls only re-render rows that flipped.
+  const liveStatus = useHostStatus(Number(host.id), statusCheckOn);
   const isOnline = liveStatus != null ? liveStatus === "online" : host.online;
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;

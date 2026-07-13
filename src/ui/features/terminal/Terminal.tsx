@@ -2276,9 +2276,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       element?.addEventListener("keydown", handleTabCapture, true);
 
       const resizeObserver = new ResizeObserver(() => {
+        // Background keep-alive tabs still observe layout; skip fit work.
+        if (!isVisibleRef.current) return;
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (isVisible) {
+          if (isVisibleRef.current) {
             performFit();
           }
         }, 50);
