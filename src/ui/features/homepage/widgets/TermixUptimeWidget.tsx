@@ -9,6 +9,7 @@ import type {
 import { GRID_SIZE } from "@/types/homepage-types";
 import { getUptime } from "@/api/dashboard-api";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 function formatUptime(seconds: number): {
   days: number;
@@ -43,14 +44,12 @@ function TermixUptimeWidget({
       })
       .catch(() => setError(true));
 
-    const iv = setInterval(() => {
+    return runVisibleInterval(() => {
       if (baseRef.current !== null) {
         const elapsed = (Date.now() - startRef.current) / 1000;
         setSeconds(Math.floor(baseRef.current + elapsed));
       }
     }, 1000);
-
-    return () => clearInterval(iv);
   }, []);
 
   if (error) {

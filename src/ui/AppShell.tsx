@@ -808,8 +808,17 @@ export function AppShell({
   }, [loadHosts]);
 
   useEffect(() => {
-    window.addEventListener("termix:hosts-changed", loadHosts);
-    return () => window.removeEventListener("termix:hosts-changed", loadHosts);
+    const onHostsChanged = () => {
+      void loadHosts();
+    };
+    window.addEventListener("termix:hosts-changed", onHostsChanged);
+    window.addEventListener("ssh-hosts:changed", onHostsChanged);
+    window.addEventListener("hosts:refresh", onHostsChanged);
+    return () => {
+      window.removeEventListener("termix:hosts-changed", onHostsChanged);
+      window.removeEventListener("ssh-hosts:changed", onHostsChanged);
+      window.removeEventListener("hosts:refresh", onHostsChanged);
+    };
   }, [loadHosts]);
 
   // Sync tab host data when allHosts updates (e.g. after editing terminal theme in host settings)

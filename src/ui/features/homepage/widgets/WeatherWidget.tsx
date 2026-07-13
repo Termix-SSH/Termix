@@ -14,6 +14,7 @@ import type {
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 interface WttrCurrent {
   temp_C: string;
@@ -77,10 +78,12 @@ function WeatherWidget({
       }
     };
     fetchWeather();
-    const interval = setInterval(fetchWeather, 10 * 60 * 1000);
+    const stop = runVisibleInterval(() => {
+      void fetchWeather();
+    }, 10 * 60 * 1000);
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stop();
     };
   }, [location]);
 

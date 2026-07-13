@@ -8,14 +8,21 @@ interface PooledConnection {
   hostKey: string;
 }
 
+interface ConnectionWaiter {
+  resolve: (client: Client) => void;
+  reject: (error: Error) => void;
+  factory: () => Promise<Client>;
+  timer: NodeJS.Timeout;
+}
+
 const DEFAULT_MAX_CONNECTIONS_PER_HOST = 3;
 const DEFAULT_MAX_WAIT_MS = 30_000;
-const WAIT_POLL_MS = 100;
 const IDLE_MAX_AGE_MS = 10 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 2 * 60 * 1000;
 
 class SSHConnectionPool {
   private connections = new Map<string, PooledConnection[]>();
+  private waiters = new Map<string, ConnectionWaiter[]>();
   private maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
   private maxWaitMs = DEFAULT_MAX_WAIT_MS;
   private cleanupInterval: NodeJS.Timeout;
@@ -86,6 +93,82 @@ class SSHConnectionPool {
     return client;
   }
 
+  private enqueueWaiter(
+    key: string,
+    factory: () => Promise<Client>,
+  ): Promise<Client> {
+    return new Promise<Client>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const queue = this.waiters.get(key);
+        if (queue) {
+          const idx = queue.findIndex((w) => w.timer === timer);
+          if (idx >= 0) queue.splice(idx, 1);
+          if (queue.length === 0) this.waiters.delete(key);
+        }
+        const err = new Error(
+          `SSH connection pool wait timed out after ${this.maxWaitMs}ms (${key})`,
+        );
+        sshLogger.warn("Connection pool wait timeout", {
+          operation: "pool_wait_timeout",
+          hostKey: key,
+          maxWaitMs: this.maxWaitMs,
+        });
+        reject(err);
+      }, this.maxWaitMs);
+
+      const waiter: ConnectionWaiter = { resolve, reject, factory, timer };
+      const queue = this.waiters.get(key) || [];
+      queue.push(waiter);
+      this.waiters.set(key, queue);
+    });
+  }
+
+  /** Hand a free connection (or new slot) to the next waiter, if any. */
+  private wakeWaiter(key: string): void {
+    const queue = this.waiters.get(key);
+    if (!queue || queue.length === 0) return;
+
+    let connections = this.connections.get(key) || [];
+    const available = connections.find((conn) => !conn.inUse);
+
+    if (available) {
+      if (!this.isConnectionHealthy(available.client)) {
+        connections = this.removeUnhealthy(key, connections, available);
+        // Fall through — may create or wait again.
+      } else {
+        const waiter = queue.shift()!;
+        if (queue.length === 0) this.waiters.delete(key);
+        else this.waiters.set(key, queue);
+        clearTimeout(waiter.timer);
+        available.inUse = true;
+        available.lastUsed = Date.now();
+        waiter.resolve(available.client);
+        return;
+      }
+    }
+
+    if (connections.length < this.maxConnectionsPerHost) {
+      const waiter = queue.shift()!;
+      if (queue.length === 0) this.waiters.delete(key);
+      else this.waiters.set(key, queue);
+      clearTimeout(waiter.timer);
+      this.createPooledClient(key, waiter.factory, connections)
+        .then(waiter.resolve)
+        .catch(waiter.reject);
+      return;
+    }
+  }
+
+  private rejectWaiters(key: string, reason: string): void {
+    const queue = this.waiters.get(key);
+    if (!queue) return;
+    this.waiters.delete(key);
+    for (const waiter of queue) {
+      clearTimeout(waiter.timer);
+      waiter.reject(new Error(reason));
+    }
+  }
+
   async getConnection(
     key: string,
     factory: () => Promise<Client>,
@@ -107,50 +190,7 @@ class SSHConnectionPool {
       return this.createPooledClient(key, factory, connections);
     }
 
-    const startedAt = Date.now();
-
-    return new Promise<Client>((resolve, reject) => {
-      const checkAvailable = () => {
-        if (Date.now() - startedAt >= this.maxWaitMs) {
-          const err = new Error(
-            `SSH connection pool wait timed out after ${this.maxWaitMs}ms (${key})`,
-          );
-          sshLogger.warn("Connection pool wait timeout", {
-            operation: "pool_wait_timeout",
-            hostKey: key,
-            maxWaitMs: this.maxWaitMs,
-          });
-          reject(err);
-          return;
-        }
-
-        const conns = this.connections.get(key) || [];
-        const avail = conns.find((conn) => !conn.inUse);
-
-        if (!avail) {
-          setTimeout(checkAvailable, WAIT_POLL_MS);
-          return;
-        }
-
-        if (!this.isConnectionHealthy(avail.client)) {
-          const filtered = this.removeUnhealthy(key, conns, avail);
-          if (filtered.length < this.maxConnectionsPerHost) {
-            this.createPooledClient(key, factory, filtered)
-              .then(resolve)
-              .catch(reject);
-            return;
-          }
-          setTimeout(checkAvailable, WAIT_POLL_MS);
-          return;
-        }
-
-        avail.inUse = true;
-        avail.lastUsed = Date.now();
-        resolve(avail.client);
-      };
-
-      checkAvailable();
-    });
+    return this.enqueueWaiter(key, factory);
   }
 
   releaseConnection(key: string, client: Client): void {
@@ -159,6 +199,7 @@ class SSHConnectionPool {
     if (pooled) {
       pooled.inUse = false;
       pooled.lastUsed = Date.now();
+      this.wakeWaiter(key);
     }
   }
 
@@ -171,6 +212,8 @@ class SSHConnectionPool {
     } else {
       this.connections.set(key, filtered);
     }
+    // A slot or idle connection may now be free for waiters.
+    this.wakeWaiter(key);
   }
 
   clearKeyConnections(key: string): void {
@@ -183,6 +226,7 @@ class SSHConnectionPool {
       }
     }
     this.connections.delete(key);
+    this.rejectWaiters(key, `SSH connection pool cleared for ${key}`);
   }
 
   private cleanup(): void {
@@ -214,10 +258,14 @@ class SSHConnectionPool {
       } else {
         this.connections.set(hostKey, activeConnections);
       }
+      this.wakeWaiter(hostKey);
     }
   }
 
   clearAllConnections(): void {
+    for (const key of [...this.waiters.keys()]) {
+      this.rejectWaiters(key, "SSH connection pool destroyed");
+    }
     for (const connections of this.connections.values()) {
       for (const conn of connections) {
         try {
