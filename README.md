@@ -266,6 +266,8 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
+      GUACD_HOST: "guacd"
+      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
     depends_on:
       - guacd
     networks:
@@ -277,6 +279,8 @@ services:
     restart: unless-stopped
     ports:
       - "4822:4822"
+    volumes:
+      - termix-data:/termix-data
     networks:
       - termix-net
 
@@ -288,6 +292,13 @@ networks:
   termix-net:
     driver: bridge
 ```
+
+Termix records enabled SSH, RDP, VNC, and Telnet sessions for replay and audit.
+When using an external `guacd`, mount the same recording storage into both
+services and set `GUACD_RECORDING_PATH` to the path visible to `guacd` and
+`GUACD_RECORDING_BACKEND_PATH` to the corresponding path visible to Termix.
+Administrators can change the default 30-day retention period from Session Logs
+or with `SESSION_RECORDING_RETENTION_DAYS`.
 
 <br />
 

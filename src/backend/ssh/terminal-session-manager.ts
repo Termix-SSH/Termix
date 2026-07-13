@@ -2,6 +2,7 @@ import { type Client, type ClientChannel } from "ssh2";
 import { WebSocket } from "ws";
 import fs from "fs";
 import path from "path";
+import { eq } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
 import { getDb } from "../database/db/index.js";
 import { sessionRecordings } from "../database/db/schema.js";
@@ -36,6 +37,12 @@ export interface TerminalSession {
 
   outputBuffer: string[];
   outputBufferBytes: number;
+  recordingPath: string | null;
+  recordingHeader: string | null;
+  recordingBytes: number;
+  recordingId: number | null;
+  recordingWriteChain: Promise<void>;
+  recordingPersistChain: Promise<void>;
   tmuxSessionName: string | null;
   sessionLoggingEnabled: boolean;
   sessionStartedAt: number;
@@ -117,6 +124,19 @@ class TerminalSessionManager {
 
     const id = crypto.randomUUID();
     const now = Date.now();
+    let recordingPath: string | null = null;
+    let recordingHeader: string | null = null;
+    if (sessionLoggingEnabled) {
+      const userLogDir = path.join(SESSION_LOGS_DIR, userId);
+      recordingPath = path.join(userLogDir, `${id}.cast`);
+      recordingHeader = `${JSON.stringify({
+        version: 2,
+        width: cols,
+        height: rows,
+        timestamp: Math.floor(now / 1000),
+        env: { TERM: "xterm-256color", SHELL: "/bin/sh" },
+      })}\n`;
+    }
     const session: TerminalSession = {
       id,
       userId,
@@ -135,6 +155,12 @@ class TerminalSessionManager {
       detachTimeout: null,
       outputBuffer: [],
       outputBufferBytes: 0,
+      recordingPath,
+      recordingHeader,
+      recordingBytes: 0,
+      recordingId: null,
+      recordingWriteChain: Promise.resolve(),
+      recordingPersistChain: Promise.resolve(),
       tmuxSessionName: null,
       sessionLoggingEnabled,
       sessionStartedAt: now,
@@ -334,6 +360,9 @@ class TerminalSessionManager {
     }
 
     this.maybePersistLog(session, true);
+    if (session.recordingPath && session.recordingBytes === 0) {
+      fs.promises.unlink(session.recordingPath).catch(() => {});
+    }
 
     if (session.sshStream) {
       try {
@@ -376,65 +405,51 @@ class TerminalSessionManager {
     });
   }
 
-  private stripAnsi(raw: string): string {
-    return (
-      raw
-        // ESC sequences: CSI, OSC, DCS, PM, APC, SOS
-        .replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, "")
-        .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
-        .replace(/\x1b[PX^_][^\x1b]*\x1b\\/g, "")
-        // Single-char ESC sequences (e.g. ESC M, ESC =)
-        .replace(/\x1b[^[\]PX^_]/g, "")
-        // Other C0/C1 control chars except newline, carriage return, tab
-        .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
-        // Collapse carriage returns used for line overwrites
-        .replace(/[^\n]*\r(?!\n)/g, "")
-    );
-  }
-
   private maybePersistLog(session: TerminalSession, force = false): void {
     if (!session.sessionLoggingEnabled) return;
-    if (session.outputBufferBytes === 0) return;
-    // Only save if new output arrived since last persist (unless forced)
-    if (!force && session.outputBufferBytes === session.lastPersistedBytes)
-      return;
-    const snapshot = session.outputBuffer.join("");
-    session.lastPersistedBytes = session.outputBufferBytes;
-    this.persistSessionLog(session, snapshot).catch((err) => {
-      sshLogger.warn("Failed to persist session log", {
-        operation: "session_log_persist_error",
-        sessionId: session.id,
-        error: err instanceof Error ? err.message : String(err),
+    if (session.recordingBytes === 0) return;
+    if (!force && session.recordingBytes === session.lastPersistedBytes) return;
+    session.lastPersistedBytes = session.recordingBytes;
+    session.recordingPersistChain = session.recordingPersistChain
+      .then(() => this.persistSessionLog(session))
+      .catch((err) => {
+        sshLogger.warn("Failed to persist session log", {
+          operation: "session_log_persist_error",
+          sessionId: session.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
-    });
   }
 
-  private async persistSessionLog(
-    session: TerminalSession,
-    logContent: string,
-  ): Promise<void> {
-    const cleaned = this.stripAnsi(logContent);
-    if (!cleaned.trim()) return;
-
-    const userLogDir = path.join(SESSION_LOGS_DIR, session.userId);
-    await fs.promises.mkdir(userLogDir, { recursive: true });
-
-    const logFile = path.join(userLogDir, `${session.id}.log`);
-    await fs.promises.writeFile(logFile, cleaned, "utf-8");
-
+  private async persistSessionLog(session: TerminalSession): Promise<void> {
+    if (!session.recordingPath) return;
+    await session.recordingWriteChain;
     const endedAt = Date.now();
     const duration = Math.floor((endedAt - session.sessionStartedAt) / 1000);
 
     try {
       const db = getDb();
-      await db.insert(sessionRecordings).values({
-        hostId: session.hostId,
-        userId: session.userId,
-        startedAt: new Date(session.sessionStartedAt).toISOString(),
-        endedAt: new Date(endedAt).toISOString(),
-        duration,
-        recordingPath: logFile,
-      });
+      if (session.recordingId == null) {
+        const rows = await db
+          .insert(sessionRecordings)
+          .values({
+            hostId: session.hostId,
+            userId: session.userId,
+            startedAt: new Date(session.sessionStartedAt).toISOString(),
+            endedAt: new Date(endedAt).toISOString(),
+            duration,
+            recordingPath: session.recordingPath,
+            protocol: "ssh",
+            format: "asciicast",
+          })
+          .returning({ id: sessionRecordings.id });
+        session.recordingId = rows[0]?.id ?? null;
+      } else {
+        await db
+          .update(sessionRecordings)
+          .set({ endedAt: new Date(endedAt).toISOString(), duration })
+          .where(eq(sessionRecordings.id, session.recordingId));
+      }
     } catch (err) {
       sshLogger.warn("Failed to insert session recording row", {
         operation: "session_recording_insert_error",
@@ -449,7 +464,7 @@ class TerminalSessionManager {
       userId: session.userId,
       hostId: session.hostId,
       duration,
-      bytes: cleaned.length,
+      bytes: session.recordingBytes,
     });
   }
 
@@ -477,6 +492,47 @@ class TerminalSessionManager {
       const removed = session.outputBuffer.shift();
       if (removed) session.outputBufferBytes -= removed.length;
     }
+
+    this.recordSessionEvent(session, "o", data);
+  }
+
+  bufferInput(sessionId: string, data: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    this.recordSessionEvent(session, "i", data);
+  }
+
+  bufferResize(sessionId: string, cols: number, rows: number): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    this.recordSessionEvent(session, "r", `${cols}x${rows}`);
+  }
+
+  private recordSessionEvent(
+    session: TerminalSession,
+    type: "i" | "o" | "r",
+    data: string,
+  ): void {
+    if (!session.sessionLoggingEnabled || !session.recordingPath || !data)
+      return;
+    const elapsed = (Date.now() - session.sessionStartedAt) / 1000;
+    const line = `${JSON.stringify([elapsed, type, data])}\n`;
+    const firstEvent = session.recordingBytes === 0;
+    session.recordingBytes += Buffer.byteLength(line);
+    session.recordingWriteChain = session.recordingWriteChain.then(async () => {
+      if (firstEvent) {
+        await fs.promises.mkdir(path.dirname(session.recordingPath!), {
+          recursive: true,
+        });
+        await fs.promises.writeFile(
+          session.recordingPath!,
+          `${session.recordingHeader}${line}`,
+          "utf8",
+        );
+        return;
+      }
+      await fs.promises.appendFile(session.recordingPath!, line, "utf8");
+    });
   }
 
   flushBuffer(session: TerminalSession): string | null {

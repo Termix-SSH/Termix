@@ -539,6 +539,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
       case "input": {
         const inputData = data as string;
+        if (currentSessionId) {
+          sessionManager.bufferInput(currentSessionId, inputData);
+        }
         const inputStream =
           sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
         if (inputStream) {
@@ -2913,6 +2916,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       if (session) {
         session.cols = data.cols;
         session.rows = data.rows;
+        sessionManager.bufferResize(session.id, data.cols, data.rows);
       }
       ws.send(
         JSON.stringify({ type: "resized", cols: data.cols, rows: data.rows }),
