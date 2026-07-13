@@ -21,7 +21,7 @@ import {
 } from "../utils/socks5-helper.js";
 import { withConnection } from "./ssh-connection-pool.js";
 import { resolveSshConnectConfigHost } from "./ssh-dns.js";
-import { execCommand, tmuxCommand, withTmuxPath } from "./tmux-helper.js";
+import { execCommand, tmuxCommand } from "./tmux-helper.js";
 import {
   SEP,
   parseSessions,
@@ -246,7 +246,7 @@ async function withHostConnection<T>(
 
 async function tmuxAvailable(conn: Client): Promise<boolean> {
   try {
-    await execCommand(conn, withTmuxPath("command -v tmux"));
+    await execCommand(conn, tmuxCommand("-V"));
     return true;
   } catch {
     return false;
