@@ -30,6 +30,19 @@ const ServerStatusContext = createContext<ServerStatusContextType | null>(null);
 
 const POLL_INTERVAL = 30000;
 
+/** Compare only status values so lastChecked churn does not re-render the host tree. */
+function statusMapsEqual(
+  a: Map<number, ServerStatusEntry>,
+  b: Map<number, ServerStatusEntry>,
+): boolean {
+  if (a.size !== b.size) return false;
+  for (const [id, entry] of b) {
+    const prev = a.get(id);
+    if (!prev || prev.status !== entry.status) return false;
+  }
+  return true;
+}
+
 export function ServerStatusProvider({
   children,
   isAuthenticated = false,
@@ -45,6 +58,7 @@ export function ServerStatusProvider({
   const [enabledHostIds, setEnabledHostIds] = useState<Set<number>>(new Set());
   const mountedRef = useRef(true);
   const enabledHostIdsRef = useRef(enabledHostIds);
+  const initialLoadCompleteRef = useRef(false);
   const refreshInFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
@@ -102,7 +116,9 @@ export function ServerStatusProvider({
       return refreshInFlightRef.current;
     }
 
-    setIsLoading(true);
+    // Avoid isLoading flicker on background polls — only the first load shows spinner.
+    const showLoading = !initialLoadCompleteRef.current;
+    if (showLoading) setIsLoading(true);
     const run = (async () => {
       try {
         const data = await getAllServerStatuses();
@@ -125,24 +141,30 @@ export function ServerStatusProvider({
           });
         }
 
-        setStatuses(newStatuses);
+        setStatuses((prev) =>
+          statusMapsEqual(prev, newStatuses) ? prev : newStatuses,
+        );
       } catch {
         if (mountedRef.current) {
           setStatuses((prev) => {
             const updated = new Map(prev);
+            let changed = false;
             enabledHostIdsRef.current.forEach((id) => {
               const existing = updated.get(id);
+              if (existing?.status === "degraded") return;
+              changed = true;
               updated.set(id, {
                 status: "degraded",
                 lastChecked: existing?.lastChecked || new Date().toISOString(),
               });
             });
-            return updated;
+            return changed ? updated : prev;
           });
         }
       } finally {
         if (mountedRef.current) {
-          setIsLoading(false);
+          if (showLoading) setIsLoading(false);
+          initialLoadCompleteRef.current = true;
           setInitialLoadComplete(true);
         }
       }
@@ -154,16 +176,25 @@ export function ServerStatusProvider({
     return refreshInFlightRef.current;
   }, [isAuthenticated]);
 
-  const stableEnabledHostIds = useMemo(() => enabledHostIds, [enabledHostIds]);
-
   const getStatus = useCallback(
     (hostId: number): StatusValue => {
-      if (!stableEnabledHostIds.has(hostId)) {
+      if (!enabledHostIds.has(hostId)) {
         return "offline";
       }
       return statuses.get(hostId)?.status || "degraded";
     },
-    [statuses, stableEnabledHostIds],
+    [statuses, enabledHostIds],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      statuses,
+      isLoading,
+      initialLoadComplete,
+      refreshStatuses,
+      getStatus,
+    }),
+    [statuses, isLoading, initialLoadComplete, refreshStatuses, getStatus],
   );
 
   useEffect(() => {
@@ -232,15 +263,7 @@ export function ServerStatusProvider({
   }, [fetchEnabledHosts, refreshStatuses]);
 
   return (
-    <ServerStatusContext.Provider
-      value={{
-        statuses,
-        isLoading,
-        initialLoadComplete,
-        refreshStatuses,
-        getStatus,
-      }}
-    >
+    <ServerStatusContext.Provider value={contextValue}>
       {children}
     </ServerStatusContext.Provider>
   );

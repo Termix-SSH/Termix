@@ -432,20 +432,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [isVisible]);
 
     useEffect(() => {
-      const checkAuth = () => {
-        setIsAuthenticated((prev) => {
-          if (!prev) {
-            return true;
-          }
-          return prev;
-        });
-      };
-
-      checkAuth();
-
-      const authCheckInterval = setInterval(checkAuth, 5000);
-
-      return () => clearInterval(authCheckInterval);
+      // One-shot: historical code polled every 5s but only ever flipped false→true.
+      setIsAuthenticated(true);
     }, []);
 
     function hardRefresh() {
