@@ -56,6 +56,10 @@ import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
+import {
+  clampTerminalFontSize,
+  getTerminalFontZoomDirection,
+} from "./terminal-font-zoom.ts";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
@@ -83,8 +87,6 @@ interface SSHTerminalProps {
   disableAutoFocus?: boolean;
 }
 
-const TERMINAL_FONT_ZOOM_MIN = 8;
-const TERMINAL_FONT_ZOOM_MAX = 36;
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
 
 function updateAlternateScreenMode(output: string, currentMode: boolean) {
@@ -497,16 +499,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }
 
-    function zoomTerminalFont(deltaY: number) {
-      const direction = deltaY < 0 ? 1 : -1;
+    function zoomTerminalFont(direction: 1 | -1) {
       const currentFontSize =
         terminal.options.fontSize ??
         terminalFontSizeRef.current ??
         DEFAULT_TERMINAL_CONFIG.fontSize;
-      const nextFontSize = Math.min(
-        TERMINAL_FONT_ZOOM_MAX,
-        Math.max(TERMINAL_FONT_ZOOM_MIN, currentFontSize + direction),
-      );
+      const nextFontSize = clampTerminalFontSize(currentFontSize, direction);
 
       if (nextFontSize === currentFontSize) {
         return;
@@ -2167,7 +2165,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.attachCustomWheelEventHandler((ev) => {
         if (ev.ctrlKey || ev.metaKey) {
-          zoomTerminalFont(ev.deltaY);
+          zoomTerminalFont(ev.deltaY < 0 ? 1 : -1);
           return false;
         }
 
@@ -2365,6 +2363,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const handleCustomKey = (e: KeyboardEvent): boolean => {
         if (e.type !== "keydown") {
           return true;
+        }
+
+        const fontZoomDirection = getTerminalFontZoomDirection(e);
+        if (fontZoomDirection) {
+          e.preventDefault();
+          e.stopPropagation();
+          zoomTerminalFont(fontZoomDirection);
+          return false;
         }
 
         // Forward global app shortcuts to AppShell directly — xterm swallows
