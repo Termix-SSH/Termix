@@ -43,6 +43,10 @@ import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
 import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
+import {
+  applyHostEnrollmentDefaults,
+  requireHostEnrollmentAccessForPath,
+} from "./host-enrollment-auth.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 const router = express.Router();
@@ -164,9 +168,10 @@ registerHostInternalRoutes(router);
  *         description: Failed to save SSH data.
  */
 router.post(
-  "/db/host",
+  ["/db/host", "/enroll"],
   authenticateJWT,
   requireDataAccess,
+  requireHostEnrollmentAccessForPath,
   upload.single("key"),
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -197,6 +202,10 @@ router.post(
       }
     } else {
       hostData = req.body;
+    }
+
+    if (req.path === "/enroll") {
+      hostData = applyHostEnrollmentDefaults(hostData);
     }
 
     const {
@@ -542,6 +551,67 @@ router.post(
   },
 );
 
+/**
+ * @openapi
+ * /host/enroll:
+ *   post:
+ *     summary: Enroll a host with an API key
+ *     description: Creates a host owned by the user assigned to the API key. The user's encrypted data must be unlocked by an active sign-in.
+ *     tags:
+ *       - Host Enrollment
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [ip]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               ip:
+ *                 type: string
+ *               port:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 65535
+ *                 default: 22
+ *               username:
+ *                 type: string
+ *               authType:
+ *                 type: string
+ *                 enum: [none, password, key, credential, agent]
+ *                 default: none
+ *               password:
+ *                 type: string
+ *               folder:
+ *                 type: string
+ *               tags:
+ *                 oneOf:
+ *                   - type: string
+ *                   - type: array
+ *                     items:
+ *                       type: string
+ *               enableTerminal:
+ *                 type: boolean
+ *               enableFileManager:
+ *                 type: boolean
+ *               enableTunnel:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Host enrolled successfully.
+ *       400:
+ *         description: Invalid host data.
+ *       401:
+ *         description: Missing or invalid API key.
+ *       423:
+ *         description: The API key user's encrypted data is locked.
+ *       500:
+ *         description: Failed to enroll the host.
+ */
 /**
  * @openapi
  * /host/quick-connect:

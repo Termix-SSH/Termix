@@ -955,6 +955,7 @@ export type PartialExcept<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 export interface AuthenticatedRequest extends Request {
   userId: string;
   sessionId?: string;
+  apiKeyId?: string;
   user?: {
     id: string;
     username: string;

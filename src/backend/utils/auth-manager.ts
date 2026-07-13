@@ -42,6 +42,7 @@ interface WrappedDataKey {
 interface AuthenticatedRequest extends Request {
   userId?: string;
   sessionId?: string;
+  apiKeyId?: string;
   pendingTOTP?: boolean;
   dataKey?: Buffer;
 }
@@ -881,6 +882,7 @@ class AuthManager {
         });
 
       req.userId = matchedKey.userId;
+      req.apiKeyId = matchedKey.id;
       next();
     } catch (error) {
       databaseLogger.error("API key authentication failed", error, {
