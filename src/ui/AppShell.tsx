@@ -6,7 +6,15 @@ import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
-import { useState, useRef, useCallback, useEffect, createRef } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  createRef,
+  lazy,
+  Suspense,
+} from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
@@ -16,20 +24,61 @@ import type { RailView } from "@/sidebar/AppRail";
 import { HostsPanel } from "@/sidebar/HostsPanel";
 import { QuickConnectPanel } from "@/sidebar/QuickConnectPanel";
 import { SerialPanel } from "@/sidebar/SerialPanel";
-import { SshToolsPanel } from "@/sidebar/SshToolsPanel";
-import { SnippetsPanel } from "@/sidebar/SnippetsPanel";
-import { HistoryPanel } from "@/sidebar/HistoryPanel";
-import { SessionLogsPanel } from "@/sidebar/SessionLogsPanel";
 import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
-import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
-import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
-import { AlertsPanel } from "@/sidebar/AlertsPanel";
-import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
-import { TermixIdPanel } from "@/sidebar/TermixIdPanel";
 import { SplitView } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { AlertManager } from "@/dashboard/panels/alerts/AlertManager";
 import { TabBar } from "@/shell/TabBar";
+
+// Secondary rail panels — load on first open, not with the shell critical path.
+const SshToolsPanel = lazy(() =>
+  import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
+);
+const SnippetsPanel = lazy(() =>
+  import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
+);
+const HistoryPanel = lazy(() =>
+  import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
+);
+const SessionLogsPanel = lazy(() =>
+  import("@/sidebar/SessionLogsPanel").then((m) => ({
+    default: m.SessionLogsPanel,
+  })),
+);
+const UserProfilePanel = lazy(() =>
+  import("@/sidebar/UserProfilePanel").then((m) => ({
+    default: m.UserProfilePanel,
+  })),
+);
+const AdminSettingsPanel = lazy(() =>
+  import("@/sidebar/AdminSettingsPanel").then((m) => ({
+    default: m.AdminSettingsPanel,
+  })),
+);
+const AlertsPanel = lazy(() =>
+  import("@/sidebar/AlertsPanel").then((m) => ({ default: m.AlertsPanel })),
+);
+const CredentialsPanel = lazy(() =>
+  import("@/sidebar/CredentialsPanel").then((m) => ({
+    default: m.CredentialsPanel,
+  })),
+);
+const TermixIdPanel = lazy(() =>
+  import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
+);
+const ConnectionsPanel = lazy(() =>
+  import("@/sidebar/ConnectionsPanel").then((m) => ({
+    default: m.ConnectionsPanel,
+  })),
+);
+
+function SidebarPanelFallback() {
+  return (
+    <div className="flex flex-1 items-center justify-center p-6">
+      <div className="size-5 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground/70 animate-spin" />
+    </div>
+  );
+}
 import type {
   Tab,
   TabType,
@@ -59,7 +108,6 @@ import {
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
-import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
 import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
@@ -1437,6 +1485,7 @@ export function AppShell({
 
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
   const sidebarPanelContent = (
+    <Suspense fallback={<SidebarPanelFallback />}>
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <div
         className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
@@ -1600,6 +1649,7 @@ export function AppShell({
         </div>
       )}
     </div>
+    </Suspense>
   );
 
   // Sidebar header — shared
