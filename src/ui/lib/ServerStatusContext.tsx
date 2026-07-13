@@ -248,9 +248,7 @@ export function ServerStatusProvider({
 function useStatusStore(): ServerStatusStore {
   const store = useContext(StatusStoreContext);
   if (!store) {
-    throw new Error(
-      "Server status store hooks require ServerStatusProvider",
-    );
+    throw new Error("Server status store hooks require ServerStatusProvider");
   }
   return store;
 }

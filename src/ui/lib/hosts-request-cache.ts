@@ -8,9 +8,8 @@ const HOSTS_TTL_MS = 10_000;
 const STATUS_TTL_MS = 3_000;
 
 const hostsCache = createTtlRequestCache<SSHHost[]>(HOSTS_TTL_MS);
-const statusCache = createTtlRequestCache<Record<number, ServerStatus>>(
-  STATUS_TTL_MS,
-);
+const statusCache =
+  createTtlRequestCache<Record<number, ServerStatus>>(STATUS_TTL_MS);
 
 let listenersBound = false;
 

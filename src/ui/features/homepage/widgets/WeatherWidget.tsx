@@ -78,9 +78,12 @@ function WeatherWidget({
       }
     };
     fetchWeather();
-    const stop = runVisibleInterval(() => {
-      void fetchWeather();
-    }, 10 * 60 * 1000);
+    const stop = runVisibleInterval(
+      () => {
+        void fetchWeather();
+      },
+      10 * 60 * 1000,
+    );
     return () => {
       cancelled = true;
       stop();

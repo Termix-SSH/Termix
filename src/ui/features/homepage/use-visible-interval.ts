@@ -31,7 +31,10 @@ export function runVisibleInterval(
     start();
   };
 
-  if (typeof document === "undefined" || document.visibilityState !== "hidden") {
+  if (
+    typeof document === "undefined" ||
+    document.visibilityState !== "hidden"
+  ) {
     start();
   }
   if (typeof document !== "undefined") {

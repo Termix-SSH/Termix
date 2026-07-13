@@ -193,9 +193,10 @@ class PollingManager {
     host: SSHHostWithCredentials,
     userId: string,
   ): Promise<SSHHostWithCredentials | null> {
-    const cached = hostPollCache.get(host.id, userId) as
-      | SSHHostWithCredentials
-      | null;
+    const cached = hostPollCache.get(
+      host.id,
+      userId,
+    ) as SSHHostWithCredentials | null;
     if (cached) {
       return cached;
     }
@@ -399,10 +400,7 @@ class PollingManager {
       config.statusTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
         if (latestConfig && isTcpPingEnabled(latestConfig.statsConfig)) {
-          this.scheduleStatusPoll(
-            latestConfig.host,
-            latestConfig.viewerUserId,
-          );
+          this.scheduleStatusPoll(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
     } else {

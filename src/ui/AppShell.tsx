@@ -1517,169 +1517,172 @@ export function AppShell({
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
   const sidebarPanelContent = (
     <Suspense fallback={<SidebarPanelFallback />}>
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <div
-        className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
-      >
-        <HostsPanel
-          onOpenTab={(host, type) => {
-            connectHost(host, type);
-            if (isMobile) setSidebarOpen(false);
-          }}
-          onEditHost={editHostInManager}
-          hostTree={realHostTree ?? undefined}
-          loading={hostsLoading}
-          onEditingChange={setSidebarEditing}
-          active={railView === "hosts"}
-        />
-      </div>
-
-      <div
-        className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
-      >
-        <CredentialsPanel
-          onEditingChange={setSidebarEditing}
-          active={railView === "credentials"}
-        />
-      </div>
-
-      {railView === "termix-id" && (
-        <div className="flex flex-col flex-1 min-h-0">
-          <TermixIdPanel />
-        </div>
-      )}
-
-      {railView === "serial" && (
-        <SerialPanel
-          onConnect={(config) => {
-            openSerialTab(config);
-            if (isMobile) setSidebarOpen(false);
-          }}
-        />
-      )}
-
-      {railView === "quick-connect" && (
-        <QuickConnectPanel
-          onConnect={(host, type) => {
-            openTab(host, type);
-            if (isMobile) setSidebarOpen(false);
-          }}
-        />
-      )}
-
-      {railView === "ssh-tools" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <SshToolsPanel
-            terminalTabs={terminalTabs}
-            activeTabId={activeTabId}
-          />
-        </div>
-      )}
-
-      {railView === "snippets" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <SnippetsPanel
-            terminalTabs={terminalTabs}
-            activeTabId={activeTabId}
-          />
-        </div>
-      )}
-
-      {railView === "history" && (
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-          <HistoryPanel terminalTabs={terminalTabs} activeTabId={activeTabId} />
-        </div>
-      )}
-
-      {railView === "split-screen" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <SplitScreenPanel
-            tabs={tabs}
-            splitMode={splitMode}
-            setSplitMode={setSplitMode}
-            paneTabIds={paneTabIds}
-            setPaneTabIds={setPaneTabIds}
-            onAssignPane={assignPane}
-          />
-        </div>
-      )}
-
-      {railView === "connections" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <ConnectionsPanel
-            tabs={tabs}
-            activeTabId={activeTabId}
-            allHosts={allHosts}
-            backgroundTabRecords={backgroundTabRecords}
-            onSwitchToTab={(tabId) => {
-              setActiveTabId(tabId);
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div
+          className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
+        >
+          <HostsPanel
+            onOpenTab={(host, type) => {
+              connectHost(host, type);
               if (isMobile) setSidebarOpen(false);
             }}
-            onCloseTab={closeTab}
-            onReopenTab={(record, restoredSessionId) => {
-              const host = record.hostId
-                ? allHosts.find((h) => h.id === String(record.hostId))
-                : undefined;
-              const hostlessTypes: TabType[] = ["tunnel"];
-              if (!host && !hostlessTypes.includes(record.tabType as TabType))
-                return;
-              setBackgroundTabRecords((prev) =>
-                prev.filter((r) => r.id !== record.id),
-              );
-              if (host) {
-                const effectiveSessionId =
-                  restoredSessionId ?? record.backendSessionId ?? null;
-                openTab(host, record.tabType as TabType, {
-                  instanceId: record.id,
-                  restoredSessionId: effectiveSessionId,
-                  savedLabel: record.label,
-                });
-              } else {
-                openSingletonTab(record.tabType as TabType);
-              }
+            onEditHost={editHostInManager}
+            hostTree={realHostTree ?? undefined}
+            loading={hostsLoading}
+            onEditingChange={setSidebarEditing}
+            active={railView === "hosts"}
+          />
+        </div>
+
+        <div
+          className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
+        >
+          <CredentialsPanel
+            onEditingChange={setSidebarEditing}
+            active={railView === "credentials"}
+          />
+        </div>
+
+        {railView === "termix-id" && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <TermixIdPanel />
+          </div>
+        )}
+
+        {railView === "serial" && (
+          <SerialPanel
+            onConnect={(config) => {
+              openSerialTab(config);
               if (isMobile) setSidebarOpen(false);
             }}
-            onForgetBackground={(recordId) => {
-              setBackgroundTabRecords((prev) =>
-                prev.filter((r) => r.id !== recordId),
-              );
+          />
+        )}
+
+        {railView === "quick-connect" && (
+          <QuickConnectPanel
+            onConnect={(host, type) => {
+              openTab(host, type);
+              if (isMobile) setSidebarOpen(false);
             }}
-            onRenameTab={renameTab}
-            onReorderTabs={setTabs}
           />
-        </div>
-      )}
+        )}
 
-      {railView === "session-logs" && (
-        <div className="relative flex-1 min-h-0 flex flex-col">
-          <SessionLogsPanel />
-        </div>
-      )}
+        {railView === "ssh-tools" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <SshToolsPanel
+              terminalTabs={terminalTabs}
+              activeTabId={activeTabId}
+            />
+          </div>
+        )}
 
-      {railView === "user-profile" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <UserProfilePanel
-            username={username}
-            onLogout={onLogout}
-            onChangeServer={onChangeServer}
-            userPrefs={userPrefs}
-            onPrefsChange={setUserPrefs}
-          />
-        </div>
-      )}
+        {railView === "snippets" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <SnippetsPanel
+              terminalTabs={terminalTabs}
+              activeTabId={activeTabId}
+            />
+          </div>
+        )}
 
-      {railView === "admin-settings" && isAdmin && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <AdminSettingsPanel />
-        </div>
-      )}
+        {railView === "history" && (
+          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+            <HistoryPanel
+              terminalTabs={terminalTabs}
+              activeTabId={activeTabId}
+            />
+          </div>
+        )}
 
-      {railView === "alerts" && (
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <AlertsPanel />
-        </div>
-      )}
-    </div>
+        {railView === "split-screen" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <SplitScreenPanel
+              tabs={tabs}
+              splitMode={splitMode}
+              setSplitMode={setSplitMode}
+              paneTabIds={paneTabIds}
+              setPaneTabIds={setPaneTabIds}
+              onAssignPane={assignPane}
+            />
+          </div>
+        )}
+
+        {railView === "connections" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <ConnectionsPanel
+              tabs={tabs}
+              activeTabId={activeTabId}
+              allHosts={allHosts}
+              backgroundTabRecords={backgroundTabRecords}
+              onSwitchToTab={(tabId) => {
+                setActiveTabId(tabId);
+                if (isMobile) setSidebarOpen(false);
+              }}
+              onCloseTab={closeTab}
+              onReopenTab={(record, restoredSessionId) => {
+                const host = record.hostId
+                  ? allHosts.find((h) => h.id === String(record.hostId))
+                  : undefined;
+                const hostlessTypes: TabType[] = ["tunnel"];
+                if (!host && !hostlessTypes.includes(record.tabType as TabType))
+                  return;
+                setBackgroundTabRecords((prev) =>
+                  prev.filter((r) => r.id !== record.id),
+                );
+                if (host) {
+                  const effectiveSessionId =
+                    restoredSessionId ?? record.backendSessionId ?? null;
+                  openTab(host, record.tabType as TabType, {
+                    instanceId: record.id,
+                    restoredSessionId: effectiveSessionId,
+                    savedLabel: record.label,
+                  });
+                } else {
+                  openSingletonTab(record.tabType as TabType);
+                }
+                if (isMobile) setSidebarOpen(false);
+              }}
+              onForgetBackground={(recordId) => {
+                setBackgroundTabRecords((prev) =>
+                  prev.filter((r) => r.id !== recordId),
+                );
+              }}
+              onRenameTab={renameTab}
+              onReorderTabs={setTabs}
+            />
+          </div>
+        )}
+
+        {railView === "session-logs" && (
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            <SessionLogsPanel />
+          </div>
+        )}
+
+        {railView === "user-profile" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <UserProfilePanel
+              username={username}
+              onLogout={onLogout}
+              onChangeServer={onChangeServer}
+              userPrefs={userPrefs}
+              onPrefsChange={setUserPrefs}
+            />
+          </div>
+        )}
+
+        {railView === "admin-settings" && isAdmin && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <AdminSettingsPanel />
+          </div>
+        )}
+
+        {railView === "alerts" && (
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <AlertsPanel />
+          </div>
+        )}
+      </div>
     </Suspense>
   );
 

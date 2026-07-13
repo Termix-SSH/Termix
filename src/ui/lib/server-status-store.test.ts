@@ -59,9 +59,7 @@ describe("ServerStatusStore", () => {
 
   it("returns offline for disabled hosts", () => {
     const store = new ServerStatusStore();
-    store.applyStatuses(
-      new Map([[5, { status: "online", lastChecked: "t" }]]),
-    );
+    store.applyStatuses(new Map([[5, { status: "online", lastChecked: "t" }]]));
     expect(store.getStatus(5)).toBe("offline");
     store.setEnabledHostIds(new Set([5]));
     expect(store.getStatus(5)).toBe("online");
