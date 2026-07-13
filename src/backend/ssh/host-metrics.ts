@@ -62,9 +62,12 @@ import {
 } from "./host-metrics-sessions.js";
 import {
   authFailureTracker,
+  hostPollCache,
   metricsCache,
+  metricsPollLimiter,
   pollingBackoff,
   requestQueue,
+  statusPollLimiter,
 } from "./host-metrics-state.js";
 
 const authManager = AuthManager.getInstance();
@@ -169,11 +172,88 @@ class PollingManager {
   private activeViewers = new Map<number, Set<string>>();
   private viewerDetails = new Map<string, MetricsViewer>();
   private viewerCleanupInterval: NodeJS.Timeout;
+  /** Skip stacking another status/metrics poll while one is already running. */
+  private statusInFlight = new Set<number>();
+  private metricsInFlight = new Set<number>();
 
   constructor() {
     this.viewerCleanupInterval = setInterval(() => {
       this.cleanupInactiveViewers();
     }, 60000);
+  }
+
+  /** Spread timers so N hosts do not fire on the same wall-clock second. */
+  private intervalWithJitter(intervalMs: number, hostId: number): number {
+    const spread = Math.min(intervalMs * 0.2, 15_000);
+    const jitter = (hostId * 1103515245) % Math.max(1, Math.floor(spread));
+    return intervalMs + jitter;
+  }
+
+  private async resolveHostForPoll(
+    host: SSHHostWithCredentials,
+    userId: string,
+  ): Promise<SSHHostWithCredentials | null> {
+    const cached = hostPollCache.get(host.id, userId) as
+      | SSHHostWithCredentials
+      | null;
+    if (cached) {
+      return cached;
+    }
+
+    const refreshed = await fetchHostById(host.id, userId);
+    if (!refreshed) {
+      return null;
+    }
+
+    hostPollCache.set(host.id, userId, refreshed);
+    const config = this.pollingConfigs.get(host.id);
+    if (config) {
+      config.host = refreshed;
+      config.statsConfig = this.parseStatsConfig(refreshed.statsConfig);
+    }
+    return refreshed;
+  }
+
+  private scheduleStatusPoll(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): void {
+    if (this.statusInFlight.has(host.id)) {
+      return;
+    }
+    this.statusInFlight.add(host.id);
+    void statusPollLimiter
+      .run(() => this.pollHostStatus(host, viewerUserId))
+      .catch((err) => {
+        statsLogger.error("Status polling failed", err, {
+          operation: "status_poll_unhandled",
+          hostId: host.id,
+        });
+      })
+      .finally(() => {
+        this.statusInFlight.delete(host.id);
+      });
+  }
+
+  private scheduleMetricsPoll(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): void {
+    if (this.metricsInFlight.has(host.id)) {
+      return;
+    }
+    this.metricsInFlight.add(host.id);
+    void metricsPollLimiter
+      .run(() => this.pollHostMetrics(host, viewerUserId))
+      .catch((err) => {
+        statsLogger.error("Metrics polling failed", err, {
+          operation: "metrics_poll_unhandled",
+          hostId: host.id,
+        });
+      })
+      .finally(() => {
+        this.metricsInFlight.delete(host.id);
+      });
   }
 
   private getGlobalDefaults(): {
@@ -309,14 +389,20 @@ class PollingManager {
     this.pollingConfigs.set(host.id, config);
 
     if (isTcpPingEnabled(statsConfig)) {
-      const intervalMs = statsConfig.statusCheckInterval * 1000;
+      const intervalMs = this.intervalWithJitter(
+        statsConfig.statusCheckInterval * 1000,
+        host.id,
+      );
 
-      this.pollHostStatus(host, viewerUserId);
+      this.scheduleStatusPoll(host, viewerUserId);
 
       config.statusTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
         if (latestConfig && isTcpPingEnabled(latestConfig.statsConfig)) {
-          this.pollHostStatus(latestConfig.host, latestConfig.viewerUserId);
+          this.scheduleStatusPoll(
+            latestConfig.host,
+            latestConfig.viewerUserId,
+          );
         }
       }, intervalMs);
     } else {
@@ -324,9 +410,27 @@ class PollingManager {
     }
 
     if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
-      const intervalMs = statsConfig.metricsInterval * 1000;
+      const intervalMs = this.intervalWithJitter(
+        statsConfig.metricsInterval * 1000,
+        host.id,
+      );
 
-      await this.pollHostMetrics(host, viewerUserId);
+      // First sample still awaited (gated) so callers can rely on a warm cache.
+      if (!this.metricsInFlight.has(host.id)) {
+        this.metricsInFlight.add(host.id);
+        try {
+          await metricsPollLimiter.run(() =>
+            this.pollHostMetrics(host, viewerUserId),
+          );
+        } catch (err) {
+          statsLogger.error("Metrics polling failed", err, {
+            operation: "metrics_poll_unhandled",
+            hostId: host.id,
+          });
+        } finally {
+          this.metricsInFlight.delete(host.id);
+        }
+      }
 
       config.metricsTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
@@ -335,15 +439,10 @@ class PollingManager {
           latestConfig.statsConfig.metricsEnabled &&
           supportsMetrics(latestConfig.host)
         ) {
-          this.pollHostMetrics(
+          this.scheduleMetricsPoll(
             latestConfig.host,
             latestConfig.viewerUserId,
-          ).catch((err) => {
-            statsLogger.error("Metrics polling failed", err, {
-              operation: "metrics_poll_unhandled",
-              hostId: host.id,
-            });
-          });
+          );
         }
       }, intervalMs);
     } else {
@@ -356,7 +455,7 @@ class PollingManager {
     viewerUserId?: string,
   ): Promise<void> {
     const userId = viewerUserId || host.userId;
-    const refreshedHost = await fetchHostById(host.id, userId);
+    const refreshedHost = await this.resolveHostForPoll(host, userId);
     if (!refreshedHost) {
       return;
     }
@@ -426,7 +525,7 @@ class PollingManager {
     viewerUserId?: string,
   ): Promise<void> {
     const userId = viewerUserId || host.userId;
-    const refreshedHost = await fetchHostById(host.id, userId);
+    const refreshedHost = await this.resolveHostForPoll(host, userId);
     if (!refreshedHost) {
       return;
     }
@@ -581,6 +680,9 @@ class PollingManager {
         this.metricsStore.delete(hostId);
       }
     }
+    hostPollCache.invalidate(hostId);
+    this.statusInFlight.delete(hostId);
+    this.metricsInFlight.delete(hostId);
   }
 
   stopMetricsOnly(hostId: number): void {
@@ -1843,6 +1945,7 @@ app.post("/host-updated", async (req, res) => {
   }
 
   try {
+    hostPollCache.invalidate(hostId);
     const host = await fetchHostById(hostId, userId);
     if (host) {
       connectionPool.clearKeyConnections(getPoolKey(host));
