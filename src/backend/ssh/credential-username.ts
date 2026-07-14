@@ -22,6 +22,19 @@ export function pickResolvedUsername(
 }
 
 /**
+ * A host can keep a per-host password while using a shared key credential.
+ * Prefer that host-specific value and fall back to the credential password.
+ */
+export function pickResolvedPassword(
+  hostPassword: unknown,
+  credentialPassword: unknown,
+): string | undefined {
+  if (isNonEmptyString(hostPassword)) return hostPassword;
+  if (isNonEmptyString(credentialPassword)) return credentialPassword;
+  return undefined;
+}
+
+/**
  * Expands the `$oidc.preferred_username` placeholder in an SSH username to the
  * connecting user's OIDC identifier. Returns the username unchanged if it does
  * not contain the placeholder or the user has no OIDC identifier.

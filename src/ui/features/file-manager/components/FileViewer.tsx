@@ -407,7 +407,7 @@ export function FileViewer({
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="flex-shrink-0 bg-card border-b border-border p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className={cn("p-2 rounded-lg bg-muted", fileTypeInfo.color)}>
               {fileTypeInfo.icon}
@@ -434,7 +434,7 @@ export function FileViewer({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
             {isEditable && (
               <Button
                 variant="ghost"

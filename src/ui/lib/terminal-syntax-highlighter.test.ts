@@ -66,6 +66,26 @@ describe("highlightTerminalOutput", () => {
     expect(highlightTerminalOutput(chunk)).toBe(chunk);
   });
 
+  it("skips TUI frames with box-drawing characters", () => {
+    const chunk = `┌─ /var/log ─┐\n│ ERROR file │`;
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
+  it("skips DEC line-drawing charset frames", () => {
+    const chunk = `${ESC}(0lqq /var/log qk${ESC}(B`;
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
+  it("skips OSC current-directory sequences used by fish prompts", () => {
+    const chunk = `${ESC}]7;file://server/home/user/docker/sonarr\x07user@server ~/docker/sonarr> `;
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
+  it("skips OSC title sequences", () => {
+    const chunk = `${ESC}]0;user@server:/var/log\x07ERROR after title`;
+    expect(highlightTerminalOutput(chunk)).toBe(chunk);
+  });
+
   it("highlights text that already has ANSI codes", () => {
     let heavy = "";
     for (let i = 0; i < 12; i++) heavy += `${ESC}[32mgreen${ESC}[0m `;

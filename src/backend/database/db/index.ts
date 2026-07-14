@@ -482,6 +482,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         commands TEXT,
         dangerous_actions TEXT,
         recording_path TEXT,
+        protocol TEXT NOT NULL DEFAULT 'ssh',
+        format TEXT NOT NULL DEFAULT 'text',
         terminated_by_owner INTEGER DEFAULT 0,
         termination_reason TEXT,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
@@ -586,12 +588,30 @@ async function initializeCompleteDatabase(): Promise<void> {
 `);
 
   try {
-    sqlite.prepare("DELETE FROM user_open_tabs").run();
-    databaseLogger.info("Open tabs cleared on startup", {
-      operation: "db_init_open_tabs_cleanup",
-    });
+    const timeoutRow = sqlite
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
+      )
+      .get() as { value: string } | undefined;
+    const timeoutMinutes = timeoutRow
+      ? parseInt(timeoutRow.value, 10)
+      : 30;
+    const ttlMs =
+      !isNaN(timeoutMinutes) && timeoutMinutes > 0
+        ? timeoutMinutes * 60_000
+        : 30 * 60_000;
+    const cutoff = new Date(Date.now() - ttlMs).toISOString();
+    const result = sqlite
+      .prepare("DELETE FROM user_open_tabs WHERE updated_at <= ?")
+      .run(cutoff);
+    if (result.changes > 0) {
+      databaseLogger.info("Expired open tabs cleared on startup", {
+        operation: "db_init_open_tabs_cleanup",
+        count: result.changes,
+      });
+    }
   } catch (e) {
-    databaseLogger.warn("Could not clear open tabs on startup", {
+    databaseLogger.warn("Could not clear expired open tabs on startup", {
       operation: "db_init_open_tabs_cleanup_failed",
       error: e,
     });
@@ -681,6 +701,17 @@ const addColumnIfNotExists = (
 };
 
 const migrateSchema = () => {
+  addColumnIfNotExists(
+    "session_recordings",
+    "protocol",
+    "TEXT NOT NULL DEFAULT 'ssh'",
+  );
+  addColumnIfNotExists(
+    "session_recordings",
+    "format",
+    "TEXT NOT NULL DEFAULT 'text'",
+  );
+
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
@@ -732,6 +763,10 @@ const migrateSchema = () => {
   addColumnIfNotExists("users", "totp_secret", "TEXT");
   addColumnIfNotExists("users", "totp_enabled", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("users", "totp_backup_codes", "TEXT");
+
+  addColumnIfNotExists("sessions", "oidc_sub", "TEXT");
+  addColumnIfNotExists("sessions", "oidc_sid", "TEXT");
+  addColumnIfNotExists("sessions", "sso_provider_id", "INTEGER");
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS webauthn_credentials (
@@ -1539,6 +1574,8 @@ const migrateSchema = () => {
           commands TEXT,
           dangerous_actions TEXT,
           recording_path TEXT,
+          protocol TEXT NOT NULL DEFAULT 'ssh',
+          format TEXT NOT NULL DEFAULT 'text',
           terminated_by_owner INTEGER DEFAULT 0,
           termination_reason TEXT,
           FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,

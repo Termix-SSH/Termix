@@ -19,7 +19,8 @@ import {
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
 import { withConnection } from "./ssh-connection-pool.js";
-import { execCommand, tmuxCommand, withTmuxPath } from "./tmux-helper.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
+import { execCommand, tmuxCommand } from "./tmux-helper.js";
 import {
   SEP,
   parseSessions,
@@ -94,6 +95,8 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
     }
   } else if (host.authType === "none") {
     // no credentials needed
+  } else if (host.authType === "vault") {
+    // cert auth setup happens in connectToHost (needs client instance)
   } else if (host.authType === "agent") {
     const result = await applyAgentAuth(
       base as Record<string, unknown>,
@@ -116,6 +119,12 @@ export function connectToHost(host: SSHHost): () => Promise<Client> {
   return async () => {
     const config = await buildSshConfig(host);
     const client = new Client();
+
+    if (host.authType === "vault") {
+      const { setupVaultSshSignerAuth } =
+        await import("./vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config, client, host);
+    }
 
     const proxyConfig: SOCKS5Config | null =
       host.useSocks5 &&
@@ -200,8 +209,17 @@ export function connectToHost(host: SSHHost): () => Promise<Client> {
             client.connect(config);
           },
         );
-      } else {
+      } else if (config.sock) {
         client.connect(config);
+      } else {
+        resolveSshConnectConfigHost(config)
+          .then(() => {
+            client.connect(config);
+          })
+          .catch((error) => {
+            clearTimeout(timeout);
+            reject(error);
+          });
       }
     });
   };
@@ -227,7 +245,7 @@ async function withHostConnection<T>(
 
 async function tmuxAvailable(conn: Client): Promise<boolean> {
   try {
-    await execCommand(conn, withTmuxPath("command -v tmux"));
+    await execCommand(conn, tmuxCommand("-V"));
     return true;
   } catch {
     return false;

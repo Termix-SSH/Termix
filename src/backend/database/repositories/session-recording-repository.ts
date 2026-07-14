@@ -13,6 +13,8 @@ export interface SessionRecordingCreateInput {
   commands?: string | null;
   dangerousActions?: string | null;
   recordingPath?: string | null;
+  protocol?: string | null;
+  format?: string | null;
   terminatedByOwner?: boolean | null;
   terminationReason?: string | null;
 }
@@ -50,6 +52,48 @@ export class SessionRecordingRepository {
 
     await this.afterWrite();
     return created;
+  }
+
+  async updateEnded(
+    id: number,
+    input: { endedAt: string; duration: number | null },
+  ): Promise<void> {
+    await this.context.drizzle
+      .update(sessionRecordings)
+      .set(input)
+      .where(eq(sessionRecordings.id, id));
+    await this.afterWrite();
+  }
+
+  async findById(id: number): Promise<SessionRecordingRecord | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(sessionRecordings)
+      .where(eq(sessionRecordings.id, id))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async findPathById(
+    id: number,
+  ): Promise<
+    | (SessionRecordingPathRecord & {
+        userId: string;
+        format?: string | null;
+      })
+    | null
+  > {
+    const rows = await this.context.drizzle
+      .select({
+        id: sessionRecordings.id,
+        recordingPath: sessionRecordings.recordingPath,
+        userId: sessionRecordings.userId,
+        format: sessionRecordings.format,
+      })
+      .from(sessionRecordings)
+      .where(eq(sessionRecordings.id, id))
+      .limit(1);
+    return rows[0] ?? null;
   }
 
   async listByUserIdWithHost(

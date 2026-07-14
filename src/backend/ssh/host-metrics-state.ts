@@ -250,6 +250,88 @@ class PollingBackoff {
   }
 }
 
+/**
+ * Limits how many async jobs run at once. Extra callers wait in FIFO order.
+ * Used to stop host-metrics status/metrics polls from stampeding under load.
+ */
+export class ConcurrentLimiter {
+  private active = 0;
+  private readonly waiters: Array<() => void> = [];
+
+  constructor(private readonly maxConcurrent: number) {
+    if (maxConcurrent < 1) {
+      throw new Error("maxConcurrent must be >= 1");
+    }
+  }
+
+  get activeCount(): number {
+    return this.active;
+  }
+
+  get pendingCount(): number {
+    return this.waiters.length;
+  }
+
+  async run<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.active >= this.maxConcurrent) {
+      await new Promise<void>((resolve) => {
+        this.waiters.push(resolve);
+      });
+    }
+
+    this.active += 1;
+    try {
+      return await fn();
+    } finally {
+      this.active -= 1;
+      const next = this.waiters.shift();
+      if (next) next();
+    }
+  }
+}
+
+/** Short-lived host snapshots for polling — avoids decrypting host rows every tick. */
+export class HostPollCache<THost extends { id: number } = { id: number }> {
+  private cache = new Map<
+    number,
+    { host: THost; userId: string; expiresAt: number }
+  >();
+
+  constructor(private readonly ttlMs = 30_000) {}
+
+  get(hostId: number, userId: string): THost | null {
+    const entry = this.cache.get(hostId);
+    if (!entry) return null;
+    if (entry.userId !== userId || Date.now() >= entry.expiresAt) {
+      this.cache.delete(hostId);
+      return null;
+    }
+    return entry.host;
+  }
+
+  set(hostId: number, userId: string, host: THost): void {
+    this.cache.set(hostId, {
+      host,
+      userId,
+      expiresAt: Date.now() + this.ttlMs,
+    });
+  }
+
+  invalidate(hostId?: number): void {
+    if (hostId === undefined) {
+      this.cache.clear();
+      return;
+    }
+    this.cache.delete(hostId);
+  }
+}
+
+/** TCP status checks are cheap relative to SSH metrics collection. */
+export const statusPollLimiter = new ConcurrentLimiter(20);
+/** SSH metrics execs are expensive; keep concurrency tight. */
+export const metricsPollLimiter = new ConcurrentLimiter(5);
+export const hostPollCache = new HostPollCache(30_000);
+
 export const requestQueue = new RequestQueue();
 export const metricsCache = new MetricsCache();
 export const authFailureTracker = new AuthFailureTracker();

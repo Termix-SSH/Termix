@@ -273,7 +273,8 @@ export function buildHostEditorPayload(
     pin: form.pin,
     authType: form.authType,
     useWarpgate: form.useWarpgate,
-    password: usesPassword || usesKey ? form.password || null : null,
+    password:
+      usesPassword || usesKey || usesCredential ? form.password || null : null,
     key: usesKey
       ? form.key === "existing_key"
         ? undefined

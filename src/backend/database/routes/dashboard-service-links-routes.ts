@@ -95,6 +95,7 @@ dashboardServiceLinksRouter.post("/", async (req: Request, res: Response) => {
         },
       );
 
+    DatabaseSaveTrigger.triggerSave("dashboard_service_link_created");
     res.status(201).json(created);
   } catch (err) {
     dashboardLogger.error("Failed to create service link", err);
@@ -155,6 +156,7 @@ dashboardServiceLinksRouter.delete(
         id,
       );
 
+      DatabaseSaveTrigger.triggerSave("dashboard_service_link_deleted");
       res.json({ message: "Service link deleted" });
     } catch (err) {
       dashboardLogger.error("Failed to delete service link", err);
@@ -241,6 +243,7 @@ dashboardServiceLinksRouter.put("/:id", async (req: Request, res: Response) => {
         updates,
       );
 
+    DatabaseSaveTrigger.triggerSave("dashboard_service_link_updated");
     res.json(updated);
   } catch (err) {
     dashboardLogger.error("Failed to update service link", err);

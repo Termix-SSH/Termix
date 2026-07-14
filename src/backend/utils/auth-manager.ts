@@ -8,7 +8,10 @@ import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DeviceType } from "./user-agent-parser.js";
+import { getDb } from "../database/db/index.js";
+import { sessions } from "../database/db/schema.js";
 import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 import { createCurrentSessionRepository } from "../database/repositories/current-session-repository.js";
 import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
@@ -45,6 +48,7 @@ interface WrappedDataKey {
 interface AuthenticatedRequest extends Request {
   userId?: string;
   sessionId?: string;
+  apiKeyId?: string;
   pendingTOTP?: boolean;
   dataKey?: Buffer;
 }
@@ -337,6 +341,9 @@ class AuthManager {
       rememberMe?: boolean;
       deviceType?: DeviceType;
       deviceInfo?: string;
+      oidcSub?: string | null;
+      oidcSid?: string | null;
+      ssoProviderId?: number | null;
     } = {},
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
@@ -383,6 +390,9 @@ class AuthManager {
           jwtToken: token,
           deviceType: options.deviceType,
           deviceInfo: options.deviceInfo,
+          oidcSub: options.oidcSub ?? null,
+          oidcSid: options.oidcSid ?? null,
+          ssoProviderId: options.ssoProviderId ?? null,
           createdAt,
           expiresAt,
           lastActiveAt: createdAt,
@@ -559,6 +569,63 @@ class AuthManager {
     }
   }
 
+  async revokeSessionsByOidc(params: {
+    ssoProviderId?: number | null;
+    sub?: string | null;
+    sid?: string | null;
+  }): Promise<number> {
+    const { ssoProviderId, sub, sid } = params;
+    if (!sub && !sid) return 0;
+
+    try {
+      const conditions = [
+        sid ? eq(sessions.oidcSid, sid) : eq(sessions.oidcSub, sub!),
+      ];
+      if (ssoProviderId != null)
+        conditions.push(eq(sessions.ssoProviderId, ssoProviderId));
+
+      const db = getDb();
+      const matched = await db
+        .select()
+        .from(sessions)
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions));
+
+      if (matched.length === 0) return 0;
+
+      const matchedIds = matched.map((s) => s.id);
+      const affectedUsers = new Set(matched.map((s) => s.userId));
+
+      await db.delete(sessions).where(inArray(sessions.id, matchedIds));
+
+      authLogger.info("Sessions revoked via OIDC back-channel logout", {
+        operation: "oidc_backchannel_logout",
+        ssoProviderId,
+        sessionCount: matchedIds.length,
+      });
+
+      for (const userId of affectedUsers) {
+        const remaining = await db
+          .select()
+          .from(sessions)
+          .where(eq(sessions.userId, userId));
+        if (remaining.length === 0) {
+          this.userCrypto.logoutUser(userId);
+        }
+      }
+
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
+      await saveMemoryDatabaseToFile();
+
+      return matchedIds.length;
+    } catch (error) {
+      databaseLogger.error("Failed to revoke sessions via OIDC", error, {
+        operation: "oidc_backchannel_logout_failed",
+      });
+      throw error;
+    }
+  }
+
   async cleanupExpiredSessions(): Promise<number> {
     try {
       const sessionRepository = createCurrentSessionRepository();
@@ -695,6 +762,7 @@ class AuthManager {
         });
 
       req.userId = matchedKey.userId;
+      req.apiKeyId = matchedKey.id;
       next();
     } catch (error) {
       databaseLogger.error("API key authentication failed", error, {

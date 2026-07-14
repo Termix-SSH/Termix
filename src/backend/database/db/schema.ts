@@ -54,6 +54,9 @@ export const sessions = sqliteTable("sessions", {
   jwtToken: text("jwt_token").notNull(),
   deviceType: text("device_type").notNull(),
   deviceInfo: text("device_info").notNull(),
+  oidcSub: text("oidc_sub"),
+  oidcSid: text("oidc_sid"),
+  ssoProviderId: integer("sso_provider_id"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -657,6 +660,8 @@ export const sessionRecordings = sqliteTable("session_recordings", {
   dangerousActions: text("dangerous_actions"),
 
   recordingPath: text("recording_path"),
+  protocol: text("protocol").notNull().default("ssh"),
+  format: text("format").notNull().default("text"),
 
   terminatedByOwner: integer("terminated_by_owner", { mode: "boolean" })
     .default(false),

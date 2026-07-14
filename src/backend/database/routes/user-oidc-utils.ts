@@ -5,6 +5,13 @@ import { Agent } from "undici";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
 
+const BACKCHANNEL_LOGOUT_EVENT =
+  "http://schemas.openid.net/event/backchannel-logout";
+
+function normalizeIssuer(url: string): string {
+  return url.trim().replace(/\/+$/, "");
+}
+
 export type OIDCConfig = {
   client_id: string;
   client_secret: string;
@@ -404,4 +411,103 @@ export async function loadProviderConfig(
   }
 
   return null;
+}
+
+export async function resolveProviderByIssuer(issuer: string): Promise<{
+  config: OIDCConfig;
+  providerType: SSOProviderType;
+  providerDbId: number | null;
+} | null> {
+  const target = normalizeIssuer(issuer);
+
+  try {
+    const rows = await db
+      .select()
+      .from(ssoProviders)
+      .where(eq(ssoProviders.enabled, true));
+    for (const row of rows) {
+      if (!["oidc", "github", "google"].includes(row.type)) continue;
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(row.config);
+      } catch {
+        continue;
+      }
+      parsed = decryptConfigSecret(parsed);
+      const providerType = row.type as SSOProviderType;
+      const config = applyProviderDefaults(
+        parsed as unknown as OIDCConfig,
+        providerType,
+      );
+      if (config.issuer_url && normalizeIssuer(config.issuer_url) === target) {
+        return { config, providerType, providerDbId: row.id };
+      }
+    }
+  } catch (err) {
+    authLogger.error("Failed to resolve SSO provider by issuer", err, {
+      issuer,
+    });
+  }
+
+  const envConfig = getOIDCConfigFromEnv();
+  if (
+    envConfig?.issuer_url &&
+    normalizeIssuer(envConfig.issuer_url) === target
+  ) {
+    return { config: envConfig, providerType: "oidc", providerDbId: null };
+  }
+
+  return null;
+}
+
+export type LogoutTokenClaims = {
+  sub: string | null;
+  sid: string | null;
+  jti: string;
+};
+
+export function validateLogoutTokenClaims(
+  payload: Record<string, unknown>,
+): LogoutTokenClaims {
+  if ("nonce" in payload) {
+    throw new Error("logout_token must not contain a nonce claim");
+  }
+
+  const event = (payload.events as Record<string, unknown> | undefined)?.[
+    BACKCHANNEL_LOGOUT_EVENT
+  ];
+  if (!event || typeof event !== "object" || Array.isArray(event)) {
+    throw new Error("logout_token missing back-channel logout event");
+  }
+
+  if (!Number.isInteger(payload.iat)) {
+    throw new Error("logout_token missing iat claim");
+  }
+
+  const jti = typeof payload.jti === "string" ? payload.jti.trim() : "";
+  if (!jti) {
+    throw new Error("logout_token missing jti claim");
+  }
+
+  const sub = typeof payload.sub === "string" ? payload.sub : null;
+  const sid = typeof payload.sid === "string" ? payload.sid : null;
+  if (!sub && !sid) {
+    throw new Error("logout_token must contain sub and/or sid");
+  }
+
+  return { sub, sid, jti };
+}
+
+export async function validateLogoutToken(
+  logoutToken: string,
+  config: OIDCConfig,
+): Promise<LogoutTokenClaims> {
+  const payload = await verifyOIDCToken(
+    logoutToken,
+    config.issuer_url,
+    config.client_id,
+    config.ca_cert,
+  );
+
+  return validateLogoutTokenClaims(payload);
 }

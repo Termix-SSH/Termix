@@ -11,6 +11,7 @@ import {
   getContainerRuntimeConfig,
   type ContainerRuntime,
 } from "./container-runtime.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 
 const sshLogger = systemLogger;
 
@@ -256,6 +257,10 @@ async function createJumpHostChain(
       });
     }
 
+    if (!config.sock) {
+      await resolveSshConnectConfigHost(config);
+    }
+
     await new Promise<void>((resolve, reject) => {
       client.on("ready", () => resolve());
       client.on("error", reject);
@@ -467,6 +472,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 );
                 config.sock = stream;
               }
+            }
+
+            if (!config.sock) {
+              await resolveSshConnectConfigHost(config);
             }
 
             await new Promise<void>((resolve, reject) => {

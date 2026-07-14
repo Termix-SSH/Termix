@@ -241,9 +241,10 @@ export function TmuxMonitor({
 
   // -- relative time refresh --------------------------------------------------
   useEffect(() => {
+    if (!isVisible) return;
     const interval = setInterval(() => setNow(Date.now()), TIME_TICK_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [isVisible]);
 
   // -- overview polling -----------------------------------------------------
   const loadOverview = useCallback(

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   pickResolvedUsername,
+  pickResolvedPassword,
   expandOidcUsername,
 } from "./credential-username.js";
 
@@ -27,6 +28,27 @@ describe("pickResolvedUsername", () => {
   it("returns undefined when neither username is usable", () => {
     expect(pickResolvedUsername("", "", false)).toBeUndefined();
     expect(pickResolvedUsername(undefined, undefined, false)).toBeUndefined();
+  });
+});
+
+describe("pickResolvedPassword", () => {
+  it("keeps the host-specific password ahead of the credential password", () => {
+    expect(pickResolvedPassword("host-pass", "credential-pass")).toBe(
+      "host-pass",
+    );
+  });
+
+  it("falls back to the credential password when the host has none", () => {
+    expect(pickResolvedPassword("", "credential-pass")).toBe("credential-pass");
+    expect(pickResolvedPassword(undefined, "credential-pass")).toBe(
+      "credential-pass",
+    );
+  });
+
+  it("treats whitespace-only passwords as empty", () => {
+    expect(pickResolvedPassword("   ", "credential-pass")).toBe(
+      "credential-pass",
+    );
   });
 });
 

@@ -22,7 +22,8 @@ const TMUX_PATH_DIRS = [
 ];
 
 export function withTmuxPath(command: string): string {
-  return `PATH=${TMUX_PATH_DIRS.join(":")}:$PATH; ${command}`;
+  const script = `PATH=${TMUX_PATH_DIRS.join(":")}:$PATH; export PATH; ${command}`;
+  return `/bin/sh -c ${shellEscape(script)}`;
 }
 
 export function tmuxCommand(args: string): string {
@@ -69,7 +70,7 @@ export function execCommand(conn: Client, command: string): Promise<string> {
  */
 export async function detectTmux(conn: Client): Promise<TmuxDetectionResult> {
   try {
-    await execCommand(conn, withTmuxPath("command -v tmux"));
+    await execCommand(conn, tmuxCommand("-V"));
   } catch {
     return { available: false, sessions: [] };
   }

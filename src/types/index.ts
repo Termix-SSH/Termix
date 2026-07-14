@@ -109,7 +109,8 @@ export interface Host {
     | "none"
     | "opkssh"
     | "tailscale"
-    | "agent";
+    | "agent"
+    | "vault";
   useWarpgate?: boolean;
   password?: string;
   key?: string;
@@ -123,6 +124,8 @@ export interface Host {
   autostartKeyPassword?: string;
 
   credentialId?: number;
+  vaultProfileId?: number | null;
+  vaultProfile?: { id?: number | null };
   overrideCredentialUsername?: boolean;
   userId?: string;
   enableTerminal: boolean;
@@ -952,6 +955,7 @@ export type PartialExcept<T, K extends keyof T> = Partial<T> & Pick<T, K>;
 export interface AuthenticatedRequest extends Request {
   userId: string;
   sessionId?: string;
+  apiKeyId?: string;
   user?: {
     id: string;
     username: string;

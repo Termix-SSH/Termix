@@ -90,7 +90,10 @@ export function LogViewer({
 
   React.useEffect(() => {
     if (!autoRefresh) return;
-    const interval = setInterval(fetchLogs, 3000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void fetchLogs();
+    }, 3000);
     return () => clearInterval(interval);
   }, [autoRefresh, fetchLogs]);
 

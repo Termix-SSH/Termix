@@ -34,6 +34,7 @@ import {
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../utils/alert-trigger.js";
+import { isRetriableDnsError, resolveHostForSshConnect } from "./ssh-dns.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -533,6 +534,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
       case "input": {
         const inputData = data as string;
+        if (currentSessionId) {
+          sessionManager.bufferInput(currentSessionId, inputData);
+        }
         const inputStream =
           sessionManager.getSession(currentSessionId)?.sshStream ?? sshStream;
         if (inputStream) {
@@ -1142,6 +1146,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           socks5Username?: string;
           socks5Password?: string;
           socks5ProxyChain?: unknown;
+          portKnockSequence?: ConnectToHostData["hostConfig"]["portKnockSequence"];
           terminalConfig?: ConnectToHostData["hostConfig"]["terminalConfig"];
           enableSessionLogging?: boolean;
         })
@@ -1180,6 +1185,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           if (!hostConfig.terminalConfig && resolvedHostData.terminalConfig) {
             hostConfig.terminalConfig = resolvedHostData.terminalConfig;
+          }
+
+          if (
+            (!hostConfig.portKnockSequence ||
+              hostConfig.portKnockSequence.length === 0) &&
+            resolvedHostData.portKnockSequence &&
+            resolvedHostData.portKnockSequence.length > 0
+          ) {
+            hostConfig.portKnockSequence = resolvedHostData.portKnockSequence;
+            sendLog(
+              "port_knock",
+              "info",
+              `Loaded ${resolvedHostData.portKnockSequence.length} port knock(s) from server-side host data`,
+            );
           }
         }
       } catch (error) {
@@ -1256,6 +1275,53 @@ wss.on("connection", async (ws: WebSocket, req) => {
         });
       }
     }
+
+    if (hostConfig.passwordFallbackOnly && resolvedCredentials.password) {
+      resolvedCredentials = {
+        ...resolvedCredentials,
+        key: undefined,
+        keyPassword: undefined,
+        keyType: undefined,
+        certPublicKey: undefined,
+        authType: "password",
+      };
+    }
+
+    sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    let connectHost = ip;
+    try {
+      const resolution = await resolveHostForSshConnect(ip);
+      connectHost = resolution.host;
+      if (resolution.resolvedAddress && resolution.resolvedAddress !== ip) {
+        sendLog(
+          "dns",
+          "success",
+          `Resolved ${ip} to ${resolution.resolvedAddress}`,
+          { attempts: resolution.attempts },
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      sshLogger.error("SSH hostname resolution failed", error, {
+        operation: "terminal_dns_resolve",
+        hostId: id,
+        ip,
+        port,
+        transient: isRetriableDnsError(error),
+      });
+      sendLog("dns", "error", `DNS resolution failed for ${ip}: ${message}`);
+      ws.send(
+        JSON.stringify({
+          type: "error",
+          message: isRetriableDnsError(error)
+            ? "SSH error: DNS lookup temporarily failed. Check the Docker/container DNS configuration or try again."
+            : "SSH error: Could not resolve hostname from the Termix server container.",
+        }),
+      );
+      cleanupAuthState(connectionTimeout);
+      return;
+    }
+    sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
@@ -2219,7 +2285,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(id);
 
     const connectConfig: Record<string, unknown> = {
-      host: ip,
+      host: connectHost,
       port,
       username,
       tryKeyboard: resolvedCredentials.authType !== "tailscale",
@@ -2779,6 +2845,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       if (session) {
         session.cols = data.cols;
         session.rows = data.rows;
+        sessionManager.bufferResize(session.id, data.cols, data.rows);
       }
       ws.send(
         JSON.stringify({ type: "resized", cols: data.cols, rows: data.rows }),

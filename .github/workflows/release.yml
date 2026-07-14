@@ -278,7 +278,7 @@ jobs:
 
           MAIN_SHA=$(gh api repos/${{ github.repository }}/commits/main -q .sha)
           echo "main_sha=$MAIN_SHA" >> "$GITHUB_OUTPUT"
-          echo "build_ref=main" >> "$GITHUB_OUTPUT"
+          echo "build_ref=$MAIN_SHA" >> "$GITHUB_OUTPUT"
 
   docker:
     needs: [prep, merge-to-main]
@@ -287,6 +287,7 @@ jobs:
       version: ${{ needs.prep.outputs.version }}
       build_type: Production
       dry_run: ${{ inputs.mode == 'Dry run' }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
     secrets: inherit
 
   create-release:
@@ -351,15 +352,17 @@ jobs:
       build_type: all
       artifact_destination: ${{ inputs.mode == 'Dry run' && 'file' || 'release' }}
       release_tag: ${{ needs.prep.outputs.release_tag }}
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
     secrets: inherit
 
   electron-submit:
-    needs: [prep, electron-release]
+    needs: [prep, merge-to-main, electron-release]
     if: ${{ inputs.mode != 'Dry run' && inputs.mode != 'Skip submit' }}
     uses: ./.github/workflows/electron.yml
     with:
       build_type: all
       artifact_destination: submit
+      source_ref: ${{ needs.merge-to-main.outputs.build_ref }}
     secrets: inherit
 
   cask-commit-back:
@@ -483,11 +486,16 @@ jobs:
 
           PR_NUMBER=$(gh pr list --repo Termix-SSH/Docs --head "$BRANCH" --base main --state open --json number -q '.[0].number' || true)
           if [ -z "$PR_NUMBER" ]; then
-            PR_NUMBER=$(gh pr create --repo Termix-SSH/Docs \
+            PR_URL=$(gh pr create --repo Termix-SSH/Docs \
               --base main --head "$BRANCH" \
               --title "release-${{ needs.prep.outputs.version }}" \
-              --body "API docs for ${{ needs.prep.outputs.version }}" \
-              | grep -oE '[0-9]+$')
+              --body "API docs for ${{ needs.prep.outputs.version }}")
+            PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          fi
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "Failed to find or create a PR for $BRANCH."
+            exit 1
           fi
 
           gh pr merge "$PR_NUMBER" --repo Termix-SSH/Docs --squash --admin

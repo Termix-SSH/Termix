@@ -2,6 +2,7 @@ import { createCurrentHostResolutionRepository } from "../database/repositories/
 import { createCurrentVaultProfileRepository } from "../database/repositories/current-vault-profile-repository.js";
 import { logger } from "../utils/logger.js";
 import {
+  pickResolvedPassword,
   pickResolvedUsername,
   expandOidcUsername,
 } from "./credential-username.js";
@@ -155,7 +156,7 @@ export async function resolveHostById(
       )) as Record<string, unknown> | null;
 
       if (cred) {
-        host.password = cred.password;
+        host.password = pickResolvedPassword(host.password, cred.password);
         // Prefer the normalised private key; fall back to raw key field
         host.key = (cred.privateKey || cred.key) as string | null;
         host.keyPassword = cred.keyPassword;

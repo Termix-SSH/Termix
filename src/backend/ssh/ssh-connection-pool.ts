@@ -8,18 +8,29 @@ interface PooledConnection {
   hostKey: string;
 }
 
+interface ConnectionWaiter {
+  resolve: (client: Client) => void;
+  reject: (error: Error) => void;
+  factory: () => Promise<Client>;
+  timer: NodeJS.Timeout;
+}
+
+const DEFAULT_MAX_CONNECTIONS_PER_HOST = 3;
+const DEFAULT_MAX_WAIT_MS = 30_000;
+const IDLE_MAX_AGE_MS = 10 * 60 * 1000;
+const CLEANUP_INTERVAL_MS = 2 * 60 * 1000;
+
 class SSHConnectionPool {
   private connections = new Map<string, PooledConnection[]>();
-  private maxConnectionsPerHost = 3;
+  private waiters = new Map<string, ConnectionWaiter[]>();
+  private maxConnectionsPerHost = DEFAULT_MAX_CONNECTIONS_PER_HOST;
+  private maxWaitMs = DEFAULT_MAX_WAIT_MS;
   private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    this.cleanupInterval = setInterval(
-      () => {
-        this.cleanup();
-      },
-      2 * 60 * 1000,
-    );
+    this.cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, CLEANUP_INTERVAL_MS);
   }
 
   private isConnectionHealthy(client: Client): boolean {
@@ -38,6 +49,126 @@ class SSHConnectionPool {
     }
   }
 
+  private removeUnhealthy(
+    key: string,
+    connections: PooledConnection[],
+    target: PooledConnection,
+  ): PooledConnection[] {
+    sshLogger.warn("Removing unhealthy connection from pool", {
+      operation: "pool_remove_dead",
+      hostKey: key,
+    });
+    try {
+      target.client.end();
+    } catch {
+      // expected
+    }
+    const filtered = connections.filter((c) => c !== target);
+    this.connections.set(key, filtered);
+    return filtered;
+  }
+
+  private async createPooledClient(
+    key: string,
+    factory: () => Promise<Client>,
+    existing: PooledConnection[],
+  ): Promise<Client> {
+    const client = await factory();
+    const pooled: PooledConnection = {
+      client,
+      lastUsed: Date.now(),
+      inUse: true,
+      hostKey: key,
+    };
+    existing.push(pooled);
+    this.connections.set(key, existing);
+
+    client.on("end", () => {
+      this.removeConnection(key, client);
+    });
+    client.on("close", () => {
+      this.removeConnection(key, client);
+    });
+
+    return client;
+  }
+
+  private enqueueWaiter(
+    key: string,
+    factory: () => Promise<Client>,
+  ): Promise<Client> {
+    return new Promise<Client>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const queue = this.waiters.get(key);
+        if (queue) {
+          const idx = queue.findIndex((w) => w.timer === timer);
+          if (idx >= 0) queue.splice(idx, 1);
+          if (queue.length === 0) this.waiters.delete(key);
+        }
+        const err = new Error(
+          `SSH connection pool wait timed out after ${this.maxWaitMs}ms (${key})`,
+        );
+        sshLogger.warn("Connection pool wait timeout", {
+          operation: "pool_wait_timeout",
+          hostKey: key,
+          maxWaitMs: this.maxWaitMs,
+        });
+        reject(err);
+      }, this.maxWaitMs);
+
+      const waiter: ConnectionWaiter = { resolve, reject, factory, timer };
+      const queue = this.waiters.get(key) || [];
+      queue.push(waiter);
+      this.waiters.set(key, queue);
+    });
+  }
+
+  /** Hand a free connection (or new slot) to the next waiter, if any. */
+  private wakeWaiter(key: string): void {
+    const queue = this.waiters.get(key);
+    if (!queue || queue.length === 0) return;
+
+    let connections = this.connections.get(key) || [];
+    const available = connections.find((conn) => !conn.inUse);
+
+    if (available) {
+      if (!this.isConnectionHealthy(available.client)) {
+        connections = this.removeUnhealthy(key, connections, available);
+        // Fall through — may create or wait again.
+      } else {
+        const waiter = queue.shift()!;
+        if (queue.length === 0) this.waiters.delete(key);
+        else this.waiters.set(key, queue);
+        clearTimeout(waiter.timer);
+        available.inUse = true;
+        available.lastUsed = Date.now();
+        waiter.resolve(available.client);
+        return;
+      }
+    }
+
+    if (connections.length < this.maxConnectionsPerHost) {
+      const waiter = queue.shift()!;
+      if (queue.length === 0) this.waiters.delete(key);
+      else this.waiters.set(key, queue);
+      clearTimeout(waiter.timer);
+      this.createPooledClient(key, waiter.factory, connections)
+        .then(waiter.resolve)
+        .catch(waiter.reject);
+      return;
+    }
+  }
+
+  private rejectWaiters(key: string, reason: string): void {
+    const queue = this.waiters.get(key);
+    if (!queue) return;
+    this.waiters.delete(key);
+    for (const waiter of queue) {
+      clearTimeout(waiter.timer);
+      waiter.reject(new Error(reason));
+    }
+  }
+
   async getConnection(
     key: string,
     factory: () => Promise<Client>,
@@ -47,17 +178,7 @@ class SSHConnectionPool {
     const available = connections.find((conn) => !conn.inUse);
     if (available) {
       if (!this.isConnectionHealthy(available.client)) {
-        sshLogger.warn("Removing unhealthy connection from pool", {
-          operation: "pool_remove_dead",
-          hostKey: key,
-        });
-        try {
-          available.client.end();
-        } catch {
-          // expected
-        }
-        connections = connections.filter((c) => c !== available);
-        this.connections.set(key, connections);
+        connections = this.removeUnhealthy(key, connections, available);
       } else {
         available.inUse = true;
         available.lastUsed = Date.now();
@@ -66,63 +187,10 @@ class SSHConnectionPool {
     }
 
     if (connections.length < this.maxConnectionsPerHost) {
-      const client = await factory();
-      const pooled: PooledConnection = {
-        client,
-        lastUsed: Date.now(),
-        inUse: true,
-        hostKey: key,
-      };
-      connections.push(pooled);
-      this.connections.set(key, connections);
-
-      client.on("end", () => {
-        this.removeConnection(key, client);
-      });
-      client.on("close", () => {
-        this.removeConnection(key, client);
-      });
-
-      return client;
+      return this.createPooledClient(key, factory, connections);
     }
 
-    return new Promise((resolve) => {
-      const checkAvailable = () => {
-        const conns = this.connections.get(key) || [];
-        const avail = conns.find((conn) => !conn.inUse);
-        if (avail) {
-          if (!this.isConnectionHealthy(avail.client)) {
-            try {
-              avail.client.end();
-            } catch {
-              // expected
-            }
-            const filtered = conns.filter((c) => c !== avail);
-            this.connections.set(key, filtered);
-            factory().then((client) => {
-              const pooled: PooledConnection = {
-                client,
-                lastUsed: Date.now(),
-                inUse: true,
-                hostKey: key,
-              };
-              filtered.push(pooled);
-              this.connections.set(key, filtered);
-              client.on("end", () => this.removeConnection(key, client));
-              client.on("close", () => this.removeConnection(key, client));
-              resolve(client);
-            });
-          } else {
-            avail.inUse = true;
-            avail.lastUsed = Date.now();
-            resolve(avail.client);
-          }
-        } else {
-          setTimeout(checkAvailable, 100);
-        }
-      };
-      checkAvailable();
-    });
+    return this.enqueueWaiter(key, factory);
   }
 
   releaseConnection(key: string, client: Client): void {
@@ -131,6 +199,7 @@ class SSHConnectionPool {
     if (pooled) {
       pooled.inUse = false;
       pooled.lastUsed = Date.now();
+      this.wakeWaiter(key);
     }
   }
 
@@ -143,6 +212,8 @@ class SSHConnectionPool {
     } else {
       this.connections.set(key, filtered);
     }
+    // A slot or idle connection may now be free for waiters.
+    this.wakeWaiter(key);
   }
 
   clearKeyConnections(key: string): void {
@@ -155,15 +226,15 @@ class SSHConnectionPool {
       }
     }
     this.connections.delete(key);
+    this.rejectWaiters(key, `SSH connection pool cleared for ${key}`);
   }
 
   private cleanup(): void {
     const now = Date.now();
-    const maxAge = 10 * 60 * 1000;
 
     for (const [hostKey, connections] of this.connections.entries()) {
       const activeConnections = connections.filter((conn) => {
-        if (!conn.inUse && now - conn.lastUsed > maxAge) {
+        if (!conn.inUse && now - conn.lastUsed > IDLE_MAX_AGE_MS) {
           try {
             conn.client.end();
           } catch {
@@ -187,10 +258,14 @@ class SSHConnectionPool {
       } else {
         this.connections.set(hostKey, activeConnections);
       }
+      this.wakeWaiter(hostKey);
     }
   }
 
   clearAllConnections(): void {
+    for (const key of [...this.waiters.keys()]) {
+      this.rejectWaiters(key, "SSH connection pool destroyed");
+    }
     for (const connections of this.connections.values()) {
       for (const conn of connections) {
         try {

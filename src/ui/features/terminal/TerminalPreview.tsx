@@ -45,7 +45,7 @@ export function TerminalPreview({
   return (
     <div className="border border-input overflow-hidden">
       <div
-        className="p-3 font-mono"
+        className="p-3"
         style={{
           fontSize: `${fontSize}px`,
           fontFamily: fontFallback,
