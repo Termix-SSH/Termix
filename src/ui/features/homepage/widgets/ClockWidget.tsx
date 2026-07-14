@@ -1,18 +1,20 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Clock } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
 import type { ClockConfig, WidgetComponentProps } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
 import { WidgetTitle } from "./WidgetTitle";
+import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 
 function ClockWidget({ widget, config }: WidgetComponentProps<ClockConfig>) {
   const { timezone, showSeconds, format } = config;
   const [now, setNow] = useState(new Date());
 
-  useEffect(() => {
-    const iv = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(iv);
-  }, []);
+  // Minute-level is enough without seconds; pause when the tab is backgrounded.
+  usePageVisibleInterval(
+    () => setNow(new Date()),
+    showSeconds ? 1_000 : 30_000,
+  );
 
   const opts: Intl.DateTimeFormatOptions = {
     hour: "2-digit",

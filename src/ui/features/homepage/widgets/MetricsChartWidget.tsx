@@ -12,6 +12,7 @@ import { getMetricsHistory } from "@/api/host-metrics-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import type { MetricsHistoryRow } from "@/api/host-metrics-api";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 function getAccentColor(): string {
   return (
@@ -161,8 +162,9 @@ function MetricsChartWidget({
 
   useEffect(() => {
     fetchData();
-    const iv = setInterval(fetchData, 60_000);
-    return () => clearInterval(iv);
+    return runVisibleInterval(() => {
+      void fetchData();
+    }, 60_000);
   }, [hostId, metric, range]);
 
   const accent = getAccentColor();

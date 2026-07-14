@@ -7,6 +7,8 @@ export interface FileManagerProps {
   initialPath?: string;
   onClose?: () => void;
   onOpenTerminalTab?: (path?: string) => void;
+  /** When false, pause keepalive while the tab stays mounted in the background. */
+  isVisible?: boolean;
 }
 
 export type ConnectionLogPayload = Omit<LogEntry, "id" | "timestamp">;

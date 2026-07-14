@@ -432,20 +432,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [isVisible]);
 
     useEffect(() => {
-      const checkAuth = () => {
-        setIsAuthenticated((prev) => {
-          if (!prev) {
-            return true;
-          }
-          return prev;
-        });
-      };
-
-      checkAuth();
-
-      const authCheckInterval = setInterval(checkAuth, 5000);
-
-      return () => clearInterval(authCheckInterval);
+      // One-shot: historical code polled every 5s but only ever flipped false→true.
+      setIsAuthenticated(true);
     }, []);
 
     function hardRefresh() {
@@ -2288,9 +2276,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       element?.addEventListener("keydown", handleTabCapture, true);
 
       const resizeObserver = new ResizeObserver(() => {
+        // Background keep-alive tabs still observe layout; skip fit work.
+        if (!isVisibleRef.current) return;
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (isVisible) {
+          if (isVisibleRef.current) {
             performFit();
           }
         }, 50);

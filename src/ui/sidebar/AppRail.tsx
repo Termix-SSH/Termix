@@ -171,18 +171,43 @@ export function AppRail({
 
   useEffect(() => {
     let cancelled = false;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
     const poll = () => {
+      if (document.visibilityState === "hidden") return;
       getAlertFirings({ acknowledged: false, limit: 50 })
         .then((firings) => {
           if (!cancelled) setUnreadAlerts(firings.length);
         })
         .catch(() => {});
     };
+
+    const start = () => {
+      if (intervalId !== null) return;
+      intervalId = setInterval(poll, 30000);
+    };
+    const stop = () => {
+      if (intervalId === null) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stop();
+        return;
+      }
+      poll();
+      start();
+    };
+
     poll();
-    const iv = setInterval(poll, 30000);
+    if (document.visibilityState !== "hidden") start();
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       cancelled = true;
-      clearInterval(iv);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
   const [hiddenTabs, setHiddenTabs] = useState<Set<string>>(() => {

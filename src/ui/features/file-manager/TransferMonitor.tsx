@@ -71,9 +71,34 @@ export function TransferMonitor() {
       }
     };
 
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    const start = () => {
+      if (intervalId !== null) return;
+      intervalId = setInterval(reconcileTransfers, POLL_INTERVAL_MS);
+    };
+    const stop = () => {
+      if (intervalId === null) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stop();
+        return;
+      }
+      void reconcileTransfers();
+      start();
+    };
+
     void reconcileTransfers();
-    const interval = setInterval(reconcileTransfers, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    if (document.visibilityState !== "hidden") start();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [t, formatTransferMetrics]);
 
   return null;

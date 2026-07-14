@@ -8,16 +8,38 @@ import {
 import type { SSHHost, SSHHostData, ProxyNode } from "@/types/index";
 import type { ServerStatus, SSHHostWithStatus } from "@/main-axios";
 import type { ProxmoxDiscoverResult } from "@/types/proxmox";
+import {
+  getCachedSSHHosts,
+  invalidateHostsAndStatusCaches,
+} from "@/lib/hosts-request-cache";
 
 // SSH HOST MANAGEMENT
 // ============================================================================
 
-export async function getSSHHosts(): Promise<SSHHostWithStatus[]> {
+export type GetSSHHostsOptions = {
+  /** When false, skip the status service call (host config only). Default true. */
+  includeStatus?: boolean;
+};
+
+async function loadSSHHostsFromApi(): Promise<SSHHost[]> {
+  const hostsResponse = await sshHostApi.get("/db/host");
+  return Array.isArray(hostsResponse.data) ? hostsResponse.data : [];
+}
+
+export async function getSSHHosts(
+  options: GetSSHHostsOptions = {},
+): Promise<SSHHostWithStatus[]> {
+  const includeStatus = options.includeStatus !== false;
+
   try {
-    const hostsResponse = await sshHostApi.get("/db/host");
-    const hosts: SSHHost[] = Array.isArray(hostsResponse.data)
-      ? hostsResponse.data
-      : [];
+    const hosts = await getCachedSSHHosts(loadSSHHostsFromApi);
+
+    if (!includeStatus) {
+      return hosts.map((host) => ({
+        ...host,
+        status: "unknown",
+      }));
+    }
 
     let statuses: Record<number, ServerStatus> = {};
     try {
@@ -45,9 +67,11 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
       const response = await sshHostApi.post("/db/host", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      invalidateHostsAndStatusCaches();
       return response.data;
     }
     const response = await sshHostApi.post("/db/host", hostData);
+    invalidateHostsAndStatusCaches();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "create SSH host");
@@ -67,9 +91,11 @@ export async function updateSSHHost(
       const response = await sshHostApi.put(`/db/host/${hostId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      invalidateHostsAndStatusCaches();
       return response.data;
     }
     const response = await sshHostApi.put(`/db/host/${hostId}`, hostData);
+    invalidateHostsAndStatusCaches();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update SSH host");
@@ -103,6 +129,7 @@ export async function bulkImportSSHHosts(
       overwrite,
       ...(credentials ? { credentials } : {}),
     });
+    invalidateHostsAndStatusCaches();
     return response.data;
   } catch (error) {
     handleApiError(error, "bulk import SSH hosts");
@@ -125,6 +152,7 @@ export async function importSSHConfigHosts(
       content,
       overwrite,
     });
+    invalidateHostsAndStatusCaches();
     return response.data;
   } catch (error) {
     handleApiError(error, "import SSH config hosts");
@@ -155,6 +183,7 @@ export async function bulkUpdateSSHHosts(
       hostIds,
       updates,
     });
+    invalidateHostsAndStatusCaches();
     return response.data;
   } catch (error) {
     handleApiError(error, "bulk update SSH hosts");
@@ -166,6 +195,7 @@ export async function deleteSSHHost(
 ): Promise<Record<string, unknown>> {
   try {
     const response = await sshHostApi.delete(`/db/host/${hostId}`);
+    invalidateHostsAndStatusCaches();
     return response.data;
   } catch (error) {
     handleApiError(error, "delete SSH host");

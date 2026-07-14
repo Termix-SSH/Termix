@@ -292,9 +292,25 @@ export function HostsPanel({
   }
 
   useEffect(() => {
-    getSSHHosts()
-      .then(setRawHosts)
-      .catch(() => {});
+    let cancelled = false;
+    const load = () => {
+      getSSHHosts()
+        .then((hosts) => {
+          if (!cancelled) setRawHosts(hosts);
+        })
+        .catch(() => {});
+    };
+    load();
+    const onChanged = () => load();
+    window.addEventListener("ssh-hosts:changed", onChanged);
+    window.addEventListener("hosts:refresh", onChanged);
+    window.addEventListener("termix:hosts-changed", onChanged);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("ssh-hosts:changed", onChanged);
+      window.removeEventListener("hosts:refresh", onChanged);
+      window.removeEventListener("termix:hosts-changed", onChanged);
+    };
   }, []);
 
   function handleEditingChange(editing: boolean) {
