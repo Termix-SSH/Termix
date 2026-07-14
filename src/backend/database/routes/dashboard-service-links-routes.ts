@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, Response } from "express";
 import { dashboardLogger } from "../../utils/logger.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 import express from "express";
 import { createCurrentDashboardServiceLinkRepository } from "../repositories/current-dashboard-service-link-repository.js";

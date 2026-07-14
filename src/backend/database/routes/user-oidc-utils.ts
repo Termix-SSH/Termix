@@ -2,6 +2,9 @@ import { authLogger } from "../../utils/logger.js";
 import type { SSOProviderType } from "../../../types/index.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { Agent } from "undici";
+import { eq } from "drizzle-orm";
+import { getDb } from "../db/index.js";
+import { ssoProviders } from "../db/schema.js";
 import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
 import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
 
@@ -421,7 +424,7 @@ export async function resolveProviderByIssuer(issuer: string): Promise<{
   const target = normalizeIssuer(issuer);
 
   try {
-    const rows = await db
+    const rows = await getDb()
       .select()
       .from(ssoProviders)
       .where(eq(ssoProviders.enabled, true));

@@ -71,6 +71,8 @@ interface ConnectToHostData {
       [key: string]: unknown;
     };
     enableSessionLogging?: boolean;
+    /** When true, ignore key material and force password auth (fallback path). */
+    passwordFallbackOnly?: boolean;
   };
   initialPath?: string;
   executeCommand?: string;

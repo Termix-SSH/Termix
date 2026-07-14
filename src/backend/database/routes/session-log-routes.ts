@@ -278,10 +278,13 @@ router.get(
       }
 
       const content = await fs.promises.readFile(resolvedPath);
+      const format =
+        (row as { format?: string | null }).format ??
+        (row.recordingPath?.endsWith(".cast") ? "asciicast" : "text");
       const contentType =
-        rows[0].format === "guacamole"
+        format === "guacamole"
           ? "application/vnd.apache.guacamole.recording"
-          : rows[0].format === "asciicast"
+          : format === "asciicast"
             ? "application/x-asciicast"
             : "text/plain";
       res.type(contentType).send(content);

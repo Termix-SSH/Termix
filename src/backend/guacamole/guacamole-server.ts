@@ -5,6 +5,7 @@ import { getCurrentSettingValue } from "../database/repositories/current-setting
 import { resolveGuacdOptions } from "../utils/guacd-config.js";
 import fs from "fs";
 import path from "path";
+import { getDb } from "../database/db/index.js";
 import { sessionRecordings } from "../database/db/schema.js";
 import type { GuacamoleRecordingMetadata } from "./token-service.js";
 
