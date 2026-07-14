@@ -96,7 +96,7 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
 
 interface GuacamoleAppInnerProps {
   hostId: number;
-  hostConfig: Pick<SSHHost, "connectionType">;
+  hostConfig: Pick<SSHHost, "connectionType" | "guacamoleConfig">;
   hostName: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
@@ -213,6 +213,7 @@ const GuacamoleAppInner = React.forwardRef<
     | "rdp"
     | "vnc"
     | "telnet";
+  const configuredDpi = Number(hostConfig.guacamoleConfig?.dpi);
 
   return (
     <div className="relative w-full h-full">
@@ -250,6 +251,10 @@ const GuacamoleAppInner = React.forwardRef<
           token,
           protocol: resolvedProtocol,
           type: resolvedProtocol,
+          dpi:
+            Number.isFinite(configuredDpi) && configuredDpi > 0
+              ? configuredDpi
+              : undefined,
         }}
         isVisible={true}
         onError={(err) => setConnectionError(err)}
