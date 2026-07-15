@@ -1115,25 +1115,20 @@ router.get("/oidc/callback", async (req, res) => {
     );
 
     if (tokenData.id_token) {
-      try {
-        userInfo = await verifyOIDCToken(
-          tokenData.id_token as string,
-          config.issuer_url,
-          config.client_id,
-          caCert,
-        );
-      } catch {
-        try {
-          const parts = (tokenData.id_token as string).split(".");
-          if (parts.length === 3) {
-            const payload = JSON.parse(
-              Buffer.from(parts[1], "base64").toString(),
-            );
-            userInfo = payload;
-          }
-        } catch (decodeError) {
-          authLogger.error("Failed to decode ID token payload:", decodeError);
-        }
+      userInfo = await verifyOIDCToken(
+        tokenData.id_token as string,
+        config.issuer_url,
+        config.client_id,
+        caCert,
+      );
+
+      const expectedNonce = (storedNonce as { value: string }).value;
+      if (userInfo.nonce !== expectedNonce) {
+        authLogger.warn("OIDC ID token nonce mismatch", {
+          operation: "oidc_nonce_mismatch",
+          providerId: callbackProviderId,
+        });
+        return res.status(401).json({ error: "Invalid OIDC token nonce" });
       }
     }
 
