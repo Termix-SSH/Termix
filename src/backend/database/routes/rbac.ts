@@ -362,7 +362,9 @@ router.delete(
         return res.status(403).json({ error: "Not host owner" });
       }
 
-      await db.delete(hostAccess).where(eq(hostAccess.id, accessId));
+      await db
+        .delete(hostAccess)
+        .where(and(eq(hostAccess.id, accessId), eq(hostAccess.hostId, hostId)));
       databaseLogger.info("Permission revoked", {
         operation: "rbac_permission_revoke",
         adminId: userId,
@@ -1369,7 +1371,14 @@ router.delete(
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
-      await db.delete(snippetAccess).where(eq(snippetAccess.id, accessId));
+      await db
+        .delete(snippetAccess)
+        .where(
+          and(
+            eq(snippetAccess.id, accessId),
+            eq(snippetAccess.snippetId, snippetId),
+          ),
+        );
 
       res.json({ success: true, message: "Snippet access revoked" });
     } catch (error) {

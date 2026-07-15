@@ -9,6 +9,7 @@ const sshLogger = logger;
 
 type DockerSession = {
   isConnected: boolean;
+  userId?: string;
   lastActive: number;
   activeOperations: number;
   hostId?: number;
@@ -46,6 +47,10 @@ export function registerDockerContainerRoutes(
 ): void {
   const getRuntime = (session: DockerSession) =>
     session.containerRuntime ?? "docker";
+  const getOwnedSession = (sessionId: string, userId: string) => {
+    const session = sshSessions[sessionId];
+    return session?.userId === userId ? session : undefined;
+  };
 
   /**
    * @openapi
@@ -89,7 +94,7 @@ export function registerDockerContainerRoutes(
       });
     }
 
-    const session = sshSessions[sessionId];
+    const session = getOwnedSession(sessionId, userId);
 
     if (!session || !session.isConnected) {
       return res.status(400).json({
@@ -189,7 +194,7 @@ export function registerDockerContainerRoutes(
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const session = sshSessions[sessionId];
+    const session = getOwnedSession(sessionId, userId);
 
     if (!session || !session.isConnected) {
       return res.status(400).json({
@@ -287,7 +292,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
@@ -387,7 +392,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
@@ -487,7 +492,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
@@ -587,7 +592,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
@@ -687,7 +692,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
@@ -792,7 +797,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
@@ -925,7 +930,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
@@ -1040,7 +1045,7 @@ export function registerDockerContainerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const session = sshSessions[sessionId];
+      const session = getOwnedSession(sessionId, userId);
 
       if (!session || !session.isConnected) {
         return res.status(400).json({
