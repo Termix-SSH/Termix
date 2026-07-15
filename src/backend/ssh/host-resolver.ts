@@ -20,6 +20,14 @@ export async function resolveHostById(
   hostId: number,
   userId: string,
 ): Promise<SSHHost | null> {
+  const { PermissionManager } = await import("../utils/permission-manager.js");
+  const access = await PermissionManager.getInstance().canAccessHost(
+    userId,
+    hostId,
+    "read",
+  );
+  if (!access.hasAccess) return null;
+
   const db = getDb();
 
   const hostResults = await SimpleDBOps.select(
