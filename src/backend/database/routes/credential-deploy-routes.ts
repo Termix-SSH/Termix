@@ -3,7 +3,7 @@ import type {
   CredentialBackend,
 } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import ssh2Pkg from "ssh2";
 import { db } from "../db/index.js";
 import { hosts, sshCredentials } from "../db/schema.js";
@@ -432,7 +432,12 @@ export function registerCredentialDeployRoutes(
           db
             .select()
             .from(sshCredentials)
-            .where(eq(sshCredentials.id, credentialId))
+            .where(
+              and(
+                eq(sshCredentials.id, credentialId),
+                eq(sshCredentials.userId, userId),
+              ),
+            )
             .limit(1),
           "ssh_credentials",
           userId,
@@ -462,7 +467,11 @@ export function registerCredentialDeployRoutes(
           });
         }
         const targetHost = await SimpleDBOps.select(
-          db.select().from(hosts).where(eq(hosts.id, targetHostId)).limit(1),
+          db
+            .select()
+            .from(hosts)
+            .where(and(eq(hosts.id, targetHostId), eq(hosts.userId, userId)))
+            .limit(1),
           "ssh_data",
           userId,
         );
