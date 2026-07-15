@@ -1789,7 +1789,10 @@ app.get("/status", async (req, res) => {
 
   const result: Record<number, StatusEntry> = {};
   for (const [id, entry] of pollingManager.getAllStatuses().entries()) {
-    result[id] = entry;
+    const access = await permissionManager.canAccessHost(userId, id, "read");
+    if (access.hasAccess) {
+      result[id] = entry;
+    }
   }
   res.json(result);
 });
@@ -1827,6 +1830,11 @@ app.get("/status/:id", validateHostId, async (req, res) => {
     });
   }
 
+  const access = await permissionManager.canAccessHost(userId, id, "read");
+  if (!access.hasAccess) {
+    return res.status(404).json({ error: "Status not available" });
+  }
+
   const statuses = pollingManager.getAllStatuses();
   if (statuses.size === 0) {
     await pollingManager.initializePolling(userId);
@@ -1854,7 +1862,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
  *       401:
  *         description: Session expired - please log in again.
  */
-app.post("/clear-connections", async (req, res) => {
+app.post("/clear-connections", requireAdmin, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
@@ -1873,7 +1881,7 @@ app.post("/clear-connections", async (req, res) => {
  * /refresh:
  *   post:
  *     summary: Refresh polling
- *     description: Clears all SSH connections and refreshes host polling.
+ *     description: Refreshes host polling for the authenticated user.
  *     tags:
  *       - Host Metrics
  *     responses:
@@ -1891,8 +1899,6 @@ app.post("/refresh", async (req, res) => {
       code: "SESSION_EXPIRED",
     });
   }
-
-  connectionPool.clearAllConnections();
 
   await pollingManager.refreshHostPolling(userId);
   res.json({ message: "Polling refreshed" });
