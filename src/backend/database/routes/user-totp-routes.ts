@@ -31,16 +31,6 @@ export async function verifyTotpReauth(
   credential: string,
   userDataKey?: Buffer | null,
 ): Promise<boolean> {
-  if (!userRecord.isOidc && userRecord.passwordHash) {
-    const passwordMatch = await bcrypt.compare(
-      credential,
-      userRecord.passwordHash,
-    );
-    if (passwordMatch) {
-      return true;
-    }
-  }
-
   if (userRecord.totpSecret) {
     const totpSecret = userDataKey
       ? LazyFieldEncryption.safeGetFieldValue(
@@ -342,14 +332,6 @@ export function registerUserTotpRoutes(
   router.post("/totp/disable", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { password, totp_code } = req.body;
-    const credential = password || totp_code;
-
-    if (!credential) {
-      return res
-        .status(400)
-        .json({ error: "A TOTP code or password is required" });
-    }
-
     try {
       const user = await db.select().from(users).where(eq(users.id, userId));
       if (!user || user.length === 0) {
@@ -358,6 +340,22 @@ export function registerUserTotpRoutes(
 
       const userRecord = user[0];
 
+      if (!totp_code || (!userRecord.isOidc && !password)) {
+        return res.status(400).json({
+          error: userRecord.isOidc
+            ? "A TOTP code is required"
+            : "Both password and TOTP code are required",
+        });
+      }
+
+      if (
+        !userRecord.isOidc &&
+        (!userRecord.passwordHash ||
+          !(await bcrypt.compare(password, userRecord.passwordHash)))
+      ) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+
       if (!userRecord.totpEnabled) {
         return res.status(400).json({ error: "TOTP is not enabled" });
       }
@@ -365,7 +363,7 @@ export function registerUserTotpRoutes(
       const userDataKey = authManager.getUserDataKey(userId);
       const verified = await verifyTotpReauth(
         userRecord,
-        credential,
+        totp_code,
         userDataKey,
       );
       if (!verified) {
@@ -428,14 +426,6 @@ export function registerUserTotpRoutes(
   router.post("/totp/backup-codes", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     const { password, totp_code } = req.body;
-    const credential = password || totp_code;
-
-    if (!credential) {
-      return res
-        .status(400)
-        .json({ error: "A TOTP code or password is required" });
-    }
-
     try {
       const user = await db.select().from(users).where(eq(users.id, userId));
       if (!user || user.length === 0) {
@@ -444,6 +434,22 @@ export function registerUserTotpRoutes(
 
       const userRecord = user[0];
 
+      if (!totp_code || (!userRecord.isOidc && !password)) {
+        return res.status(400).json({
+          error: userRecord.isOidc
+            ? "A TOTP code is required"
+            : "Both password and TOTP code are required",
+        });
+      }
+
+      if (
+        !userRecord.isOidc &&
+        (!userRecord.passwordHash ||
+          !(await bcrypt.compare(password, userRecord.passwordHash)))
+      ) {
+        return res.status(401).json({ error: "Incorrect password" });
+      }
+
       if (!userRecord.totpEnabled) {
         return res.status(400).json({ error: "TOTP is not enabled" });
       }
@@ -451,7 +457,7 @@ export function registerUserTotpRoutes(
       const userDataKey = authManager.getUserDataKey(userId);
       const verified = await verifyTotpReauth(
         userRecord,
-        credential,
+        totp_code,
         userDataKey,
       );
       if (!verified) {
