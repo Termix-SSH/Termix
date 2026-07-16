@@ -1,7 +1,7 @@
 import type { Request, Response, Router } from "express";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { sshLogger } from "../../utils/logger.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/factory.js";
 
 export function registerHostInternalRoutes(router: Router): void {
   /**

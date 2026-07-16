@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const createMock = vi.fn().mockResolvedValue(undefined);
 
-vi.mock("../database/repositories/current-audit-log-repository.js", () => ({
+vi.mock("../database/repositories/factory.js", () => ({
   createCurrentAuditLogRepository: vi.fn(() => ({
     create: createMock,
   })),

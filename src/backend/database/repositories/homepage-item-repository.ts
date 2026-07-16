@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { homepageItems } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type HomepageItemRecord = typeof homepageItems.$inferSelect;
 

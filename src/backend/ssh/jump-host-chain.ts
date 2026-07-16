@@ -1,5 +1,5 @@
 import { Client as SSHClient } from "ssh2";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { fileLogger } from "../utils/logger.js";
 import {
   createSocks5Connection,

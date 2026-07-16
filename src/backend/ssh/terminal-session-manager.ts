@@ -2,10 +2,11 @@ import { type Client, type ClientChannel } from "ssh2";
 import { WebSocket } from "ws";
 import fs from "fs";
 import path from "path";
-import { eq } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
-import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
-import { createCurrentSessionRecordingRepository } from "../database/repositories/current-session-recording-repository.js";
+import {
+  getCurrentSettingValue,
+  createCurrentSessionRecordingRepository,
+} from "../database/repositories/factory.js";
 
 const MAX_BUFFER_BYTES = 512 * 1024;
 const DATA_DIR = process.env.DATA_DIR ?? "./db/data";

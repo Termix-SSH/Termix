@@ -8,8 +8,10 @@ import net from "net";
 import crypto from "crypto";
 import path from "path";
 import type { AuthenticatedRequest } from "../../types/index.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
-import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
+import {
+  createCurrentHostResolutionRepository,
+  createCurrentSettingsRepository,
+} from "../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../utils/guacd-config.js";
 
 const router = express.Router();

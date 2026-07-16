@@ -1,7 +1,9 @@
 import express from "express";
 import type { Request, Response } from "express";
-import { createCurrentVaultProfileRepository } from "../repositories/current-vault-profile-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentVaultProfileRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import type { VaultProfileUpdateInput } from "../repositories/vault-profile-repository.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { authLogger } from "../../utils/logger.js";

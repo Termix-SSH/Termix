@@ -34,15 +34,16 @@ import { DatabaseFileEncryption } from "../utils/database-file-encryption.js";
 import { DatabaseMigration } from "../utils/database-migration.js";
 import { UserDataExport } from "../utils/user-data-export.js";
 import { AutoSSLSetup } from "../utils/auto-ssl-setup.js";
-import { createCurrentCredentialRepository } from "./repositories/current-credential-repository.js";
-import { createCurrentDismissedAlertRepository } from "./repositories/current-dismissed-alert-repository.js";
-import { createCurrentFileManagerBookmarkRepository } from "./repositories/current-file-manager-bookmark-repository.js";
-import { createCurrentHostRepository } from "./repositories/current-host-repository.js";
-import { createCurrentSettingsRepository } from "./repositories/current-settings-repository.js";
-import { createCurrentSshCredentialUsageRepository } from "./repositories/current-ssh-credential-usage-repository.js";
-import { createCurrentUserRepository } from "./repositories/current-user-repository.js";
-import { getRepositoryRolloutStatus } from "./repositories/repository-rollout.js";
-import { withCurrentSqliteForeignKeysDisabled } from "./runtime/sqlite-foreign-key-boundary.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentDismissedAlertRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentHostRepository,
+  createCurrentSettingsRepository,
+  createCurrentSshCredentialUsageRepository,
+  createCurrentUserRepository,
+} from "./repositories/factory.js";
+import { withCurrentSqliteForeignKeysDisabled } from "./repositories/sqlite-foreign-keys.js";
 import { parseUserAgent } from "../utils/user-agent-parser.js";
 import { getProxyAgent } from "../utils/proxy-agent.js";
 import type {
@@ -1895,7 +1896,6 @@ app.get(
 
       res.json({
         migrationStatus: status,
-        repositoryRollout: getRepositoryRolloutStatus(),
         files: {
           unencryptedDbSize: unencryptedSize,
           encryptedDbSize: encryptedSize,

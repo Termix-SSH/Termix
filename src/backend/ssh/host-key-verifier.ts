@@ -1,5 +1,5 @@
 import type { WebSocket } from "ws";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { sshLogger } from "../utils/logger.js";
 
 interface HostKeyVerificationData {

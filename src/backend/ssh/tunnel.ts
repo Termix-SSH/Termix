@@ -12,7 +12,7 @@ import { WebSocketServer } from "ws";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { ChildProcess } from "child_process";
 import axios from "axios";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import type {
   SSHHost,
   TunnelConfig,

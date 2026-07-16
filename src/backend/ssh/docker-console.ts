@@ -2,7 +2,7 @@ import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { WebSocketServer, WebSocket } from "ws";
 import { AuthManager } from "../utils/auth-manager.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { systemLogger } from "../utils/logger.js";
 import type { SSHHost } from "../../types/index.js";
 import { applyAgentAuth } from "./terminal-auth-helpers.js";

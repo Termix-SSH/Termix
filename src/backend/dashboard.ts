@@ -5,10 +5,12 @@ import { dashboardLogger } from "./utils/logger.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../types/index.js";
 import { dashboardServiceLinksRouter } from "./database/routes/dashboard-service-links-routes.js";
-import { createCurrentHostResolutionRepository } from "./database/repositories/current-host-resolution-repository.js";
-import { createCurrentRbacAccessRepository } from "./database/repositories/current-rbac-access-repository.js";
-import { createCurrentRecentActivityRepository } from "./database/repositories/current-recent-activity-repository.js";
-import { createCurrentRoleRepository } from "./database/repositories/current-role-repository.js";
+import {
+  createCurrentHostResolutionRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRecentActivityRepository,
+  createCurrentRoleRepository,
+} from "./database/repositories/factory.js";
 import { DataCrypto } from "./utils/data-crypto.js";
 
 const app = express();

@@ -1,4 +1,4 @@
-import { getCurrentRepositorySqlite } from "../database/repositories/current-repository-runtime.js";
+import { getCurrentRepositorySqlite } from "../database/repositories/factory.js";
 
 export interface UserEncryptionMigrationRecord {
   id: number | string;

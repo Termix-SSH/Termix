@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { termixIdentityCa } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 
 export type TermixIdentityCaRecord = typeof termixIdentityCa.$inferSelect;

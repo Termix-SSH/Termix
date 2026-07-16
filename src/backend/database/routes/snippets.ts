@@ -6,11 +6,13 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
-import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
-import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
-import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentHostResolutionRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentSnippetRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 

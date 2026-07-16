@@ -5,7 +5,7 @@ import {
   createSocks5Connection,
   type SOCKS5Config,
 } from "../utils/socks5-helper.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
 import { applyAgentAuth } from "./terminal-auth-helpers.js";

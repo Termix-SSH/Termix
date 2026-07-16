@@ -16,7 +16,7 @@
 // The pure (DB-free) signing/OIDC/cert logic lives in vault-signer-core.ts and
 // is re-exported here so callers have a single import surface.
 
-import { createCurrentVaultTokenRepository } from "../database/repositories/current-vault-token-repository.js";
+import { createCurrentVaultTokenRepository } from "../database/repositories/factory.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { parseCertValidBefore } from "./vault-signer-core.js";

@@ -1,6 +1,6 @@
 import express, { type Request, type Response } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { createCurrentAlertRepository } from "../repositories/current-alert-repository.js";
+import { createCurrentAlertRepository } from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { databaseLogger } from "../../utils/logger.js";
 import { sendWebhook, sendNtfy } from "../../utils/notification-sender.js";

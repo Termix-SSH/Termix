@@ -1,5 +1,7 @@
-import { createCurrentCredentialRepository } from "../database/repositories/current-credential-repository.js";
-import { createCurrentSharedCredentialRepository } from "../database/repositories/current-shared-credential-repository.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentSharedCredentialRepository,
+} from "../database/repositories/factory.js";
 import { DataCrypto } from "./data-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";

@@ -1,10 +1,12 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { Request, Response } from "express";
-import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
-import { createCurrentTermixIdentityRepository } from "../repositories/current-termix-identity-repository.js";
-import { createCurrentTermixIdentityCaRepository } from "../repositories/current-termix-identity-ca-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentTermixIdentityRepository,
+  createCurrentTermixIdentityCaRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 // ssh2 is CommonJS; Node's cjs-module-lexer does not surface its `utils` named
 // export, so we use a default import (esModuleInterop) and read `.utils` off it.
 import ssh2 from "ssh2";

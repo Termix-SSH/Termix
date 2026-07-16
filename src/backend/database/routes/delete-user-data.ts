@@ -1,40 +1,42 @@
 import { authLogger } from "../../utils/logger.js";
-import { createCurrentAlertRepository } from "../repositories/current-alert-repository.js";
-import { createCurrentApiKeyRepository } from "../repositories/current-api-key-repository.js";
-import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
-import { createCurrentC2sTunnelPresetRepository } from "../repositories/current-c2s-tunnel-preset-repository.js";
-import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
-import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
-import { createCurrentDashboardServiceLinkRepository } from "../repositories/current-dashboard-service-link-repository.js";
-import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
-import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
-import { createCurrentHomepageItemRepository } from "../repositories/current-homepage-item-repository.js";
-import { createCurrentHomepageLayoutRepository } from "../repositories/current-homepage-layout-repository.js";
-import { createCurrentHostHealthRepository } from "../repositories/current-host-health-repository.js";
-import { createCurrentHostFolderRepository } from "../repositories/current-host-folder-repository.js";
-import { createCurrentHostMetricsPreferenceRepository } from "../repositories/current-host-metrics-preference-repository.js";
-import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
-import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
-import { createCurrentOpksshTokenRepository } from "../repositories/current-opkssh-token-repository.js";
-import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
-import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
-import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
-import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
-import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
-import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
-import { createCurrentSharedCredentialRepository } from "../repositories/current-shared-credential-repository.js";
-import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
-import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
-import { createCurrentTermixIdentityCaRepository } from "../repositories/current-termix-identity-ca-repository.js";
-import { createCurrentTermixIdentityRepository } from "../repositories/current-termix-identity-repository.js";
-import { createCurrentTmuxSessionTagRepository } from "../repositories/current-tmux-session-tag-repository.js";
-import { createCurrentTrustedDeviceRepository } from "../repositories/current-trusted-device-repository.js";
-import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
-import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
-import { createCurrentVaultProfileRepository } from "../repositories/current-vault-profile-repository.js";
-import { createCurrentVaultTokenRepository } from "../repositories/current-vault-token-repository.js";
+import {
+  createCurrentAlertRepository,
+  createCurrentApiKeyRepository,
+  createCurrentAuditLogRepository,
+  createCurrentC2sTunnelPresetRepository,
+  createCurrentCommandHistoryRepository,
+  createCurrentCredentialRepository,
+  createCurrentDashboardServiceLinkRepository,
+  createCurrentDismissedAlertRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentHomepageItemRepository,
+  createCurrentHomepageLayoutRepository,
+  createCurrentHostHealthRepository,
+  createCurrentHostFolderRepository,
+  createCurrentHostMetricsPreferenceRepository,
+  createCurrentHostRepository,
+  createCurrentNetworkTopologyRepository,
+  createCurrentOpksshTokenRepository,
+  createCurrentOpenTabRepository,
+  createCurrentRecentActivityRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentSessionRepository,
+  createCurrentSessionRecordingRepository,
+  createCurrentSettingsRepository,
+  createCurrentSharedCredentialRepository,
+  createCurrentSnippetRepository,
+  createCurrentSshCredentialUsageRepository,
+  createCurrentTermixIdentityCaRepository,
+  createCurrentTermixIdentityRepository,
+  createCurrentTmuxSessionTagRepository,
+  createCurrentTrustedDeviceRepository,
+  createCurrentUserPreferenceRepository,
+  createCurrentUserRepository,
+  createCurrentTransferRecentRepository,
+  createCurrentVaultProfileRepository,
+  createCurrentVaultTokenRepository,
+} from "../repositories/factory.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {

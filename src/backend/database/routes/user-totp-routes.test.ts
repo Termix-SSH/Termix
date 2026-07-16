@@ -6,7 +6,7 @@ import speakeasy from "speakeasy";
 // importing stays inert.
 const userRepositoryUpdate = vi.fn().mockResolvedValue(null);
 
-vi.mock("../repositories/current-user-repository.js", () => ({
+vi.mock("../repositories/factory.js", () => ({
   createCurrentUserRepository: () => ({
     update: userRepositoryUpdate,
   }),

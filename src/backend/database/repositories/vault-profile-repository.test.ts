@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { VaultProfileRepository } from "./vault-profile-repository.js";
 
 describe("VaultProfileRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
 
   afterEach(async () => {
     if (adapter) {
@@ -15,11 +15,7 @@ describe("VaultProfileRepository", () => {
   async function createRepository(
     onWrite?: () => void | Promise<void>,
   ): Promise<VaultProfileRepository> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE users (

@@ -43,9 +43,9 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
-} from "../repositories/current-settings-repository.js";
-import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+  createCurrentRoleRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
 const authManager = AuthManager.getInstance();

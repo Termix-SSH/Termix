@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 
 describe("HostRepository and CredentialRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
 
   afterEach(async () => {
     vi.restoreAllMocks();
@@ -23,14 +23,10 @@ describe("HostRepository and CredentialRepository", () => {
     credentials: CredentialRepository;
     hosts: HostRepository;
     sqlite: NonNullable<
-      Awaited<ReturnType<SqliteDatabaseAdapter["connect"]>>["sqlite"]
+      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
     >;
   }> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE users (

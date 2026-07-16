@@ -1,4 +1,4 @@
-import { createCurrentAlertRepository } from "../database/repositories/current-alert-repository.js";
+import { createCurrentAlertRepository } from "../database/repositories/factory.js";
 import { statsLogger } from "../utils/logger.js";
 import {
   sendNotification,

@@ -1,6 +1,6 @@
 import type { Express, RequestHandler } from "express";
 import { statsLogger } from "../utils/logger.js";
-import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
+import { createCurrentSettingsRepository } from "../database/repositories/factory.js";
 
 type HostMetricsSettingsConfig = {
   statusCheckInterval: number;

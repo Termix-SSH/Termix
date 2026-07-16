@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { createCurrentAuditLogRepository } from "../database/repositories/current-audit-log-repository.js";
+import { createCurrentAuditLogRepository } from "../database/repositories/factory.js";
 
 export interface AuditLogParams {
   userId: string;

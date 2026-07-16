@@ -1,5 +1,7 @@
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
-import { createCurrentVaultProfileRepository } from "../database/repositories/current-vault-profile-repository.js";
+import {
+  createCurrentHostResolutionRepository,
+  createCurrentVaultProfileRepository,
+} from "../database/repositories/factory.js";
 import { logger } from "../utils/logger.js";
 import {
   pickResolvedPassword,

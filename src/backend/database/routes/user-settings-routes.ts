@@ -7,8 +7,10 @@ import {
   setGlobalLogLevel,
 } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentSettingsRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
 function getDefaultGuacUrl(): string {

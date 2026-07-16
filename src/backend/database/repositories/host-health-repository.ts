@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { hostHealthChecks, hostHealthHistory } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type HostHealthCheckRecord = typeof hostHealthChecks.$inferSelect;
 export type HostHealthHistoryRecord = typeof hostHealthHistory.$inferSelect;

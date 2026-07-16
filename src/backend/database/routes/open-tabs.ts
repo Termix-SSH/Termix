@@ -4,8 +4,10 @@ import type { Request, Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { sessionManager } from "../../ssh/terminal-session-manager.js";
-import { getCurrentSettingValue } from "../repositories/current-settings-repository.js";
-import { createCurrentOpenTabRepository } from "../repositories/current-open-tab-repository.js";
+import {
+  getCurrentSettingValue,
+  createCurrentOpenTabRepository,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();

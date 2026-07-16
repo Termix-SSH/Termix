@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
-import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
+import { createCurrentCommandHistoryRepository } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 export function registerHostCommandHistoryRoutes(

@@ -4,7 +4,7 @@ import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { fileLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";

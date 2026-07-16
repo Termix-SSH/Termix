@@ -2,7 +2,7 @@ import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { sshLogger } from "../../utils/logger.js";
-import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
+import { createCurrentHostRepository } from "../repositories/factory.js";
 
 type HostAutostartRoutesDeps = {
   authenticateJWT: RequestHandler;

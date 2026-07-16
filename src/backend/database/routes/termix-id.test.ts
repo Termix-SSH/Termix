@@ -53,7 +53,7 @@ vi.mock("../../utils/user-crypto.js", () => ({
   UserCrypto: { getInstance: () => ({ getUserKey: vi.fn() }) },
 }));
 
-vi.mock("../repositories/current-termix-identity-ca-repository.js", () => ({
+vi.mock("../repositories/factory.js", () => ({
   createCurrentTermixIdentityCaRepository: vi.fn(() => ({
     findPublicByIdentityId: vi.fn(),
     findDecryptedByIdentityId: vi.fn(),
@@ -61,9 +61,6 @@ vi.mock("../repositories/current-termix-identity-ca-repository.js", () => ({
     updateEncryptedForIdentity: vi.fn(),
     deleteByIdentityId: vi.fn(),
   })),
-}));
-
-vi.mock("../repositories/current-termix-identity-repository.js", () => ({
   createCurrentTermixIdentityRepository: vi.fn(() => ({
     findIdentityForUser: vi.fn(),
     findIdentityByHandle: vi.fn(),

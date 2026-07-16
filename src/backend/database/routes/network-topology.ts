@@ -2,7 +2,7 @@ import express from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { databaseLogger } from "../../utils/logger.js";
-import { createCurrentNetworkTopologyRepository } from "../repositories/current-network-topology-repository.js";
+import { createCurrentNetworkTopologyRepository } from "../repositories/factory.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();

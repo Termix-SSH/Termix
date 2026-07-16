@@ -4,7 +4,7 @@ import type {
 } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import ssh2Pkg from "ssh2";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/factory.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 
 const { Client } = ssh2Pkg;

@@ -1,6 +1,6 @@
 import type { Express, RequestHandler } from "express";
 import type { AuthenticatedRequest } from "../../types/index.js";
-import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/current-host-metrics-history-repository.js";
+import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/factory.js";
 import { statsLogger } from "../utils/logger.js";
 
 type HistoryRoutesDeps = {

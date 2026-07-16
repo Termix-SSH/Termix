@@ -1,7 +1,9 @@
-import { createCurrentCredentialRepository } from "../database/repositories/current-credential-repository.js";
-import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
-import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
-import { createCurrentSharedCredentialRepository } from "../database/repositories/current-shared-credential-repository.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentSharedCredentialRepository,
+} from "../database/repositories/factory.js";
 import type { SharedCredentialRecord } from "../database/repositories/shared-credential-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";

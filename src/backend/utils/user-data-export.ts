@@ -1,8 +1,10 @@
-import { createCurrentDismissedAlertRepository } from "../database/repositories/current-dismissed-alert-repository.js";
-import { createCurrentFileManagerBookmarkRepository } from "../database/repositories/current-file-manager-bookmark-repository.js";
-import { createCurrentTransferRecentRepository } from "../database/repositories/current-transfer-recent-repository.js";
-import { createCurrentUserDataExportRepository } from "../database/repositories/current-user-data-export-repository.js";
-import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
+import {
+  createCurrentDismissedAlertRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentTransferRecentRepository,
+  createCurrentUserDataExportRepository,
+  createCurrentUserRepository,
+} from "../database/repositories/factory.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
 
@@ -11,7 +11,7 @@ vi.mock("../../utils/data-crypto.js", () => ({
 }));
 
 describe("HostResolutionRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
 
   afterEach(async () => {
     vi.mocked(DataCrypto.getUserDataKey).mockReset();
@@ -25,11 +25,7 @@ describe("HostResolutionRepository", () => {
   async function createRepository(
     onWrite?: () => void | Promise<void>,
   ): Promise<HostResolutionRepository> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE users (

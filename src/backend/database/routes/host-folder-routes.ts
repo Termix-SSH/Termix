@@ -1,14 +1,16 @@
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
-import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
-import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
-import { createCurrentHostFolderRepository } from "../repositories/current-host-folder-repository.js";
-import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
-import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
-import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
-import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
-import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
+import {
+  createCurrentCommandHistoryRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentHostFolderRepository,
+  createCurrentRecentActivityRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentSshCredentialUsageRepository,
+  createCurrentSessionRecordingRepository,
+  createCurrentTransferRecentRepository,
+} from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 type HostFolderRoutesDeps = {

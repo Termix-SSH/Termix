@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import { hosts, sessionRecordings } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type SessionRecordingRecord = typeof sessionRecordings.$inferSelect;
 
@@ -74,9 +74,7 @@ export class SessionRecordingRepository {
     return rows[0] ?? null;
   }
 
-  async findPathById(
-    id: number,
-  ): Promise<
+  async findPathById(id: number): Promise<
     | (SessionRecordingPathRecord & {
         userId: string;
         format?: string | null;

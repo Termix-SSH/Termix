@@ -1,6 +1,6 @@
 import { eq, and } from "drizzle-orm";
 import { apiKeys, users } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type ApiKeyRecord = typeof apiKeys.$inferSelect;
 export type NewApiKeyRecord = typeof apiKeys.$inferInsert;

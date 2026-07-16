@@ -2,7 +2,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sendWakeOnLan, isValidMac } from "../../utils/wake-on-lan.js";
 import { sshLogger } from "../../utils/logger.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/factory.js";
 
 interface HostNetworkRoutesDeps {
   authenticateJWT: RequestHandler;

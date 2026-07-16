@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { trustedDevices } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type TrustedDeviceRecord = typeof trustedDevices.$inferSelect;
 export type NewTrustedDeviceRecord = typeof trustedDevices.$inferInsert;

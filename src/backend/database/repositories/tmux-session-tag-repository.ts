@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { tmuxSessionTags } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type TmuxSessionTagRecord = typeof tmuxSessionTags.$inferSelect;
 

@@ -1,5 +1,5 @@
 import ssh2Pkg, { type Client as SSHClientType } from "ssh2";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { sshLogger } from "../utils/logger.js";
 import {

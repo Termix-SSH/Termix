@@ -13,18 +13,12 @@ const sharedCredentialRepository = {
   markNeedsReEncryptionByOriginalCredentialId: vi.fn(),
 };
 
-vi.mock("../database/repositories/current-credential-repository.js", () => ({
+vi.mock("../database/repositories/factory.js", () => ({
   createCurrentCredentialRepository: vi.fn(() => credentialRepository),
+  createCurrentSharedCredentialRepository: vi.fn(
+    () => sharedCredentialRepository,
+  ),
 }));
-
-vi.mock(
-  "../database/repositories/current-shared-credential-repository.js",
-  () => ({
-    createCurrentSharedCredentialRepository: vi.fn(
-      () => sharedCredentialRepository,
-    ),
-  }),
-);
 
 describe("CredentialSystemEncryptionMigration", () => {
   beforeEach(() => {

@@ -12,11 +12,13 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { DeviceType } from "./user-agent-parser.js";
 import { getDb } from "../database/db/index.js";
 import { sessions } from "../database/db/schema.js";
-import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
-import { createCurrentSessionRepository } from "../database/repositories/current-session-repository.js";
-import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
-import { createCurrentApiKeyRepository } from "../database/repositories/current-api-key-repository.js";
-import { createCurrentTrustedDeviceRepository } from "../database/repositories/current-trusted-device-repository.js";
+import {
+  createCurrentSettingsRepository,
+  createCurrentSessionRepository,
+  createCurrentUserRepository,
+  createCurrentApiKeyRepository,
+  createCurrentTrustedDeviceRepository,
+} from "../database/repositories/factory.js";
 
 interface AuthenticationResult {
   success: boolean;

@@ -1,9 +1,11 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
-import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
-import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentHostRepository,
+  createCurrentHostResolutionRepository,
+} from "../repositories/factory.js";
 import {
   isNonEmptyString,
   isValidPort,

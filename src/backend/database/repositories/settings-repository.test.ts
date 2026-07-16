@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { SettingsRepository } from "./settings-repository.js";
 
 describe("SettingsRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
 
   afterEach(async () => {
     if (adapter) {
@@ -13,11 +13,7 @@ describe("SettingsRepository", () => {
   });
 
   async function createRepository(): Promise<SettingsRepository> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE settings (

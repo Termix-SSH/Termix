@@ -1,6 +1,6 @@
 import { and, eq, lte, ne } from "drizzle-orm";
 import { sessions } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;

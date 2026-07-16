@@ -4,8 +4,10 @@ import { Client, type ConnectConfig } from "ssh2";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { DataCrypto } from "../utils/data-crypto.js";
-import { createCurrentTmuxSessionTagRepository } from "../database/repositories/current-tmux-session-tag-repository.js";
-import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
+import {
+  createCurrentTmuxSessionTagRepository,
+  createCurrentUserRepository,
+} from "../database/repositories/factory.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import { sshLogger } from "../utils/logger.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";

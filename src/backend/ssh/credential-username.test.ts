@@ -63,7 +63,7 @@ describe("expandOidcUsername", () => {
   });
 
   it("expands the placeholder with the user's OIDC identifier", async () => {
-    vi.doMock("../database/repositories/current-user-repository.js", () => ({
+    vi.doMock("../database/repositories/factory.js", () => ({
       createCurrentUserRepository: () => ({
         findById: async () => ({ oidcIdentifier: "jdoe" }),
       }),
@@ -75,7 +75,7 @@ describe("expandOidcUsername", () => {
   });
 
   it("leaves the placeholder as-is when the user has no OIDC identifier", async () => {
-    vi.doMock("../database/repositories/current-user-repository.js", () => ({
+    vi.doMock("../database/repositories/factory.js", () => ({
       createCurrentUserRepository: () => ({
         findById: async () => ({ oidcIdentifier: null }),
       }),
@@ -89,7 +89,7 @@ describe("expandOidcUsername", () => {
   });
 
   it("returns the username unchanged when the DB lookup throws", async () => {
-    vi.doMock("../database/repositories/current-user-repository.js", () => ({
+    vi.doMock("../database/repositories/factory.js", () => ({
       createCurrentUserRepository: () => {
         throw new Error("DB unavailable");
       },

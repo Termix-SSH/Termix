@@ -6,8 +6,10 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentRoleRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import type {
   UserRecord,
   UserRepository,

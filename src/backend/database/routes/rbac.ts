@@ -4,12 +4,14 @@ import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
-import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
-import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
-import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
-import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentHostResolutionRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentSnippetRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 

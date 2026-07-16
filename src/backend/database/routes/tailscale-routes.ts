@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { RequestHandler, Router as ExpressRouter } from "express";
 import { apiLogger } from "../../utils/logger.js";
 import { getProxyAgent } from "../../utils/proxy-agent.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSettingsRepository } from "../repositories/factory.js";
 
 interface TailscaleDevice {
   id: string;

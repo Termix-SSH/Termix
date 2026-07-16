@@ -1,7 +1,7 @@
 import { and, eq, like, or, sql } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type HostFolderRecord = typeof sshFolders.$inferSelect;
 export type HostFolderHostRecord = typeof hosts.$inferSelect;

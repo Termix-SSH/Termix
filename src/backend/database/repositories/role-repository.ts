@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { hostAccess, roles, userRoles } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type RoleRecord = typeof roles.$inferSelect;
 export type NewRoleRecord = typeof roles.$inferInsert;

@@ -1,7 +1,9 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentAuditLogRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import { apiLogger } from "../../utils/logger.js";
 
 async function isAdminUser(userId: string | undefined): Promise<boolean> {

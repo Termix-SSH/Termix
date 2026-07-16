@@ -97,10 +97,6 @@ import {
       version: version,
     });
 
-    const { logRepositoryRolloutConfig } =
-      await import("./database/repositories/repository-rollout.js");
-    logRepositoryRolloutConfig();
-
     const systemCrypto = SystemCrypto.getInstance();
     await systemCrypto.initializeJWTSecret();
     await systemCrypto.initializeDatabaseKey();
@@ -160,7 +156,7 @@ import {
 
     // Initialize log level from database settings
     const { getCurrentSettingValue } =
-      await import("./database/repositories/current-settings-repository.js");
+      await import("./database/repositories/factory.js");
     const logLevel = getCurrentSettingValue("log_level");
     if (logLevel) {
       setGlobalLogLevel(logLevel);

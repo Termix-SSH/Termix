@@ -7,7 +7,7 @@ import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { C2sTunnelPresetRecord } from "../repositories/c2s-tunnel-preset-repository.js";
-import { createCurrentC2sTunnelPresetRepository } from "../repositories/current-c2s-tunnel-preset-repository.js";
+import { createCurrentC2sTunnelPresetRepository } from "../repositories/factory.js";
 
 const router = express.Router();
 

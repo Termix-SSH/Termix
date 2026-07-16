@@ -7,11 +7,13 @@ import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
-import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
-import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentRbacAccessRepository,
+  createCurrentCredentialRepository,
+  createCurrentHostResolutionRepository,
+  createCurrentHostRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 

@@ -1,6 +1,6 @@
 import type { Express, RequestHandler } from "express";
 import type { AuthenticatedRequest } from "../../types/index.js";
-import { createCurrentHostMetricsPreferenceRepository } from "../database/repositories/current-host-metrics-preference-repository.js";
+import { createCurrentHostMetricsPreferenceRepository } from "../database/repositories/factory.js";
 import { statsLogger } from "../utils/logger.js";
 import {
   deriveEnabledWidgets,

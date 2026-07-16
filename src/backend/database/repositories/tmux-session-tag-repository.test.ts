@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { TmuxSessionTagRepository } from "./tmux-session-tag-repository.js";
 
 describe("TmuxSessionTagRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
 
   afterEach(async () => {
     if (adapter) {
@@ -15,11 +15,7 @@ describe("TmuxSessionTagRepository", () => {
   async function createRepository(
     onWrite?: () => void | Promise<void>,
   ): Promise<TmuxSessionTagRepository> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE users (

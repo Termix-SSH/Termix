@@ -1,8 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
-import { createCurrentRbacAccessRepository } from "../database/repositories/current-rbac-access-repository.js";
-import { createCurrentRoleRepository } from "../database/repositories/current-role-repository.js";
-import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import {
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentUserRepository,
+  createCurrentHostResolutionRepository,
+} from "../database/repositories/factory.js";
 import { databaseLogger } from "./logger.js";
 
 interface AuthenticatedRequest extends Request {

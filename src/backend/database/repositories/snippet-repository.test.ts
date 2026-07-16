@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { SnippetRepository } from "./snippet-repository.js";
 
 describe("SnippetRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
 
   afterEach(async () => {
     if (adapter) {
@@ -15,14 +15,10 @@ describe("SnippetRepository", () => {
   async function createRepository(onWrite?: () => void): Promise<{
     repository: SnippetRepository;
     sqlite: NonNullable<
-      Awaited<ReturnType<SqliteDatabaseAdapter["connect"]>>["sqlite"]
+      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
     >;
   }> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE snippets (

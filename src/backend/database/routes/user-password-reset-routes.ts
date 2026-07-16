@@ -5,15 +5,17 @@ import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
-import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
-import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
-import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
-import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
-import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
-import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
-import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentDismissedAlertRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentHostRepository,
+  createCurrentRecentActivityRepository,
+  createCurrentSettingsRepository,
+  createCurrentSnippetRepository,
+  createCurrentSshCredentialUsageRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 interface UserPasswordResetRoutesDeps {
   authManager: AuthManager;

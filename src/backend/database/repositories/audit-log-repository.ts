@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { auditLogs } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type AuditLogRecord = typeof auditLogs.$inferSelect;
 export type NewAuditLogRecord = typeof auditLogs.$inferInsert;

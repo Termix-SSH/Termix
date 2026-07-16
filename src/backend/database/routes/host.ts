@@ -12,13 +12,20 @@ import {
   pickResolvedPassword,
   pickResolvedUsername,
 } from "../../ssh/credential-username.js";
-import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
-import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
-import { createCurrentOpksshTokenRepository } from "../repositories/current-opkssh-token-repository.js";
-import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
-import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
-import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
-import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
+import {
+  createCurrentCommandHistoryRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentOpksshTokenRepository,
+  createCurrentRecentActivityRepository,
+  createCurrentSshCredentialUsageRepository,
+  createCurrentSessionRecordingRepository,
+  createCurrentTransferRecentRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentHostResolutionRepository,
+  createCurrentHostRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -38,11 +45,6 @@ import {
   requireHostEnrollmentAccessForPath,
 } from "./host-enrollment-auth.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
-import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
-import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
 

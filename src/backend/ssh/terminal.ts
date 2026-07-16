@@ -7,7 +7,7 @@ import ssh2Pkg, {
 const { Client, utils: ssh2Utils } = ssh2Pkg;
 import { buildSSHAlgorithms } from "../utils/ssh-algorithms.js";
 import axios from "axios";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { logAudit } from "../utils/audit-logger.js";
 import { AuthManager } from "../utils/auth-manager.js";

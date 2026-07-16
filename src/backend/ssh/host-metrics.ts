@@ -8,9 +8,11 @@ import {
   pickResolvedPassword,
   pickResolvedUsername,
 } from "./credential-username.js";
-import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
-import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/current-host-metrics-history-repository.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import {
+  getCurrentSettingValue,
+  createCurrentHostMetricsHistoryRepository,
+  createCurrentHostResolutionRepository,
+} from "../database/repositories/factory.js";
 import { statsLogger } from "../utils/logger.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { AuthManager } from "../utils/auth-manager.js";

@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { WebSocket } from "ws";
 import { OPKSSHBinaryManager } from "../utils/opkssh-binary-manager.js";
 import { sshLogger } from "../utils/logger.js";
-import { createCurrentOpksshTokenRepository } from "../database/repositories/current-opkssh-token-repository.js";
+import { createCurrentOpksshTokenRepository } from "../database/repositories/factory.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { promises as fs } from "fs";

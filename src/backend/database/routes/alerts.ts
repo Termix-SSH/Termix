@@ -7,7 +7,7 @@ import express from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { getProxyAgent } from "../../utils/proxy-agent.js";
-import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
+import { createCurrentDismissedAlertRepository } from "../repositories/factory.js";
 
 class AlertCache {
   private cache: Map<string, CacheEntry> = new Map();

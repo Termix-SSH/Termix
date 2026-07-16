@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { RecentActivityRepository } from "./recent-activity-repository.js";
 
 describe("RecentActivityRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
 
   afterEach(async () => {
     if (adapter) {
@@ -17,14 +17,10 @@ describe("RecentActivityRepository", () => {
   ): Promise<{
     repository: RecentActivityRepository;
     sqlite: NonNullable<
-      Awaited<ReturnType<SqliteDatabaseAdapter["connect"]>>["sqlite"]
+      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
     >;
   }> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE users (

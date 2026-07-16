@@ -3,9 +3,11 @@ import express from "express";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
-import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import {
+  createCurrentCommandHistoryRepository,
+  createCurrentHostResolutionRepository,
+  createCurrentSettingsRepository,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 

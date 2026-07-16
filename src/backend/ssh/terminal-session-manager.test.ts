@@ -8,15 +8,12 @@ vi.mock("../database/db/index.js", () => ({
   getDb: () => ({}),
 }));
 
-vi.mock(
-  "../database/repositories/current-session-recording-repository.js",
-  () => ({
-    createCurrentSessionRecordingRepository: () => ({
-      create: mockCreate,
-      updateEnded: mockUpdateEnded,
-    }),
+vi.mock("../database/repositories/factory.js", () => ({
+  createCurrentSessionRecordingRepository: () => ({
+    create: mockCreate,
+    updateEnded: mockUpdateEnded,
   }),
-);
+}));
 
 vi.mock("../utils/logger.js", () => ({
   sshLogger: {

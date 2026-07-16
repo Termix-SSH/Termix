@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { hosts, sshCredentials } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type UserDataExportHostRecord = typeof hosts.$inferSelect;
 export type UserDataExportCredentialRecord = typeof sshCredentials.$inferSelect;

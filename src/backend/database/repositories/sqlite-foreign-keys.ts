@@ -1,4 +1,4 @@
-import { getCurrentRepositorySqlite } from "../repositories/current-repository-runtime.js";
+import { getCurrentRepositorySqlite } from "./factory.js";
 
 export interface SqliteForeignKeyClient {
   exec(sql: string): unknown;

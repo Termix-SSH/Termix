@@ -5,8 +5,10 @@ import { Agent } from "undici";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db/index.js";
 import { ssoProviders } from "../db/schema.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
-import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
+import {
+  createCurrentSettingsRepository,
+  createCurrentSsoProviderRepository,
+} from "../repositories/factory.js";
 
 const BACKCHANNEL_LOGOUT_EVENT =
   "http://schemas.openid.net/event/backchannel-logout";

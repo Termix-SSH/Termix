@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { termixIdentities, termixIdentityKeys } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type TermixIdentityRecord = typeof termixIdentities.$inferSelect;
 export type NewTermixIdentityRecord = typeof termixIdentities.$inferInsert;

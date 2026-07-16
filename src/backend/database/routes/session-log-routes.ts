@@ -6,7 +6,7 @@ import { apiLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { Request, Response } from "express";
 import { PermissionManager } from "../../utils/permission-manager.js";
-import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
+import { createCurrentSessionRecordingRepository } from "../repositories/factory.js";
 import { getDb } from "../db/index.js";
 
 const router = express.Router();
@@ -29,8 +29,8 @@ function getRetentionDays(): number {
     10,
   );
   try {
-    const row = getDb().$client
-      .prepare(
+    const row = getDb()
+      .$client.prepare(
         "SELECT value FROM settings WHERE key = 'session_recording_retention_days'",
       )
       .get() as { value?: string } | undefined;

@@ -1,6 +1,6 @@
 import { eq, like } from "drizzle-orm";
 import { settings } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export class SettingsRepository {
   constructor(

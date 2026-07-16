@@ -4,7 +4,7 @@ import { dashboardLogger } from "../../utils/logger.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 import express from "express";
-import { createCurrentDashboardServiceLinkRepository } from "../repositories/current-dashboard-service-link-repository.js";
+import { createCurrentDashboardServiceLinkRepository } from "../repositories/factory.js";
 
 export const dashboardServiceLinksRouter = express.Router();
 

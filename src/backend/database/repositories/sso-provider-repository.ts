@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { ssoProviders, users } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type SsoProviderRecord = typeof ssoProviders.$inferSelect;
 export type NewSsoProviderRecord = typeof ssoProviders.$inferInsert;

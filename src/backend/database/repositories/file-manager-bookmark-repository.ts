@@ -4,7 +4,7 @@ import {
   fileManagerRecent,
   fileManagerShortcuts,
 } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type FileManagerRecentRecord = typeof fileManagerRecent.$inferSelect;
 export type FileManagerPinnedRecord = typeof fileManagerPinned.$inferSelect;

@@ -3,8 +3,10 @@ import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentSessionRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 type UserSessionRoutesDeps = {
   authenticateJWT: RequestHandler;

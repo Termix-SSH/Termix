@@ -3,7 +3,7 @@ import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { authLogger } from "../../utils/logger.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import { createCurrentUserRepository } from "../repositories/factory.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 
 type UserOidcAccountRoutesDeps = {

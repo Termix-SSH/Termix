@@ -1,6 +1,6 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { c2sTunnelPresets } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type C2sTunnelPresetRecord = typeof c2sTunnelPresets.$inferSelect;
 

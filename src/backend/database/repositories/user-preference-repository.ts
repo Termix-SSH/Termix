@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { userPreferences } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type UserPreferenceRecord = typeof userPreferences.$inferSelect;
 export type NewUserPreferenceRecord = typeof userPreferences.$inferInsert;

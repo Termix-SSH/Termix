@@ -6,7 +6,7 @@ import {
   hosts,
   notificationChannels,
 } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 type AlertRuleRecord = typeof alertRules.$inferSelect;
 type NotificationChannelRecord = typeof notificationChannels.$inferSelect;

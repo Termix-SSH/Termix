@@ -1,6 +1,6 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { recentActivity } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type RecentActivityRecord = typeof recentActivity.$inferSelect;
 export type NewRecentActivityRecord = typeof recentActivity.$inferInsert;

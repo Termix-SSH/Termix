@@ -5,8 +5,10 @@ import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentApiKeyRepository } from "../repositories/current-api-key-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentApiKeyRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 export function registerUserApiKeyRoutes(
   router: Router,

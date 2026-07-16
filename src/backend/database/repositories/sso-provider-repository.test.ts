@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { SsoProviderRepository } from "./sso-provider-repository.js";
 
 describe("SsoProviderRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
-  let sqlite: Awaited<ReturnType<SqliteDatabaseAdapter["connect"]>>["sqlite"];
+  let adapter: TestSqliteDatabase | null = null;
+  let sqlite: Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"];
 
   afterEach(async () => {
     if (adapter) {
@@ -17,11 +17,7 @@ describe("SsoProviderRepository", () => {
   async function createRepository(
     onWrite?: () => void | Promise<void>,
   ): Promise<SsoProviderRepository> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     sqlite = context.sqlite;
     context.sqlite?.exec(`

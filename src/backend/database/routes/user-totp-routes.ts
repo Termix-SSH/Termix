@@ -13,10 +13,12 @@ import {
   generateDeviceFingerprint,
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
-import { createCurrentSessionRepository } from "../repositories/current-session-repository.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
-import { createCurrentTrustedDeviceRepository } from "../repositories/current-trusted-device-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentSessionRepository,
+  createCurrentSettingsRepository,
+  createCurrentTrustedDeviceRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
 type NativeAppRequestChecker = (req: Request) => boolean;

@@ -49,7 +49,7 @@ export async function expandOidcUsername(
 
   try {
     const { createCurrentUserRepository } =
-      await import("../database/repositories/current-user-repository.js");
+      await import("../database/repositories/factory.js");
     const user = await createCurrentUserRepository().findById(userId);
     const oidcIdentifier = user?.oidcIdentifier;
     if (!oidcIdentifier) return username;

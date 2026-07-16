@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, Response } from "express";
 import { homepageLogger } from "../../utils/logger.js";
-import { createCurrentHomepageItemRepository } from "../repositories/current-homepage-item-repository.js";
+import { createCurrentHomepageItemRepository } from "../repositories/factory.js";
 import express from "express";
 
 export const homepageItemsRouter = express.Router();

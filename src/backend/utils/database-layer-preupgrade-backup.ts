@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { databaseLogger } from "./logger.js";
-import { getRepositoryRolloutStatus } from "../database/repositories/repository-rollout.js";
 
 export const DATABASE_LAYER_PREUPGRADE_BACKUP_MARKER =
   ".database-layer-preupgrade-backup.json";
@@ -31,7 +30,6 @@ export interface PreupgradeBackupManifest {
   sourceVersion: string;
   dataDir: string;
   backupDir: string;
-  rollout: ReturnType<typeof getRepositoryRolloutStatus>;
   files: BackupFileEntry[];
 }
 
@@ -159,7 +157,6 @@ export function ensureDatabaseLayerPreupgradeBackup(
       sourceVersion: options.version ?? env.VERSION ?? "unknown",
       dataDir,
       backupDir,
-      rollout: getRepositoryRolloutStatus(env),
       files,
     };
 

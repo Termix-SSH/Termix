@@ -8,7 +8,7 @@ import {
   snippets,
   users,
 } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type RbacAccessTargetType = "user" | "role";
 

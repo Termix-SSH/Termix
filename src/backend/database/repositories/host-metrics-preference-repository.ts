@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { hostMetricsPreferences, hosts } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type HostMetricsPreferenceRecord =
   typeof hostMetricsPreferences.$inferSelect;

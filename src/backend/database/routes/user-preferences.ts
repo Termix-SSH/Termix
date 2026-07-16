@@ -3,7 +3,7 @@ import express from "express";
 import type { Request, Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { createCurrentUserPreferenceRepository } from "../repositories/current-user-preference-repository.js";
+import { createCurrentUserPreferenceRepository } from "../repositories/factory.js";
 import type {
   UserPreferenceRecord,
   UserPreferenceUpdate,

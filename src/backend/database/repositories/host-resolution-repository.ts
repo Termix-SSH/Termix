@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { hostAccess, hosts, sshCredentials } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 
 export type HostResolutionHostRecord = typeof hosts.$inferSelect;

@@ -6,7 +6,7 @@ import type { Router } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { SSOProviderType } from "../../../types/index.js";
-import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
+import { createCurrentSsoProviderRepository } from "../repositories/factory.js";
 import { getOIDCConfigFromEnv } from "./user-oidc-utils.js";
 
 const authManager = AuthManager.getInstance();

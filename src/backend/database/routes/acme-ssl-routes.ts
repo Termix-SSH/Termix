@@ -5,8 +5,10 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentSettingsRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
 
 const DATA_DIR = process.env.DATA_DIR || "./db/data";

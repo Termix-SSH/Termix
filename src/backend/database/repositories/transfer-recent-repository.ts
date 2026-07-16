@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { transferRecent } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type TransferRecentRecord = typeof transferRecent.$inferSelect;
 

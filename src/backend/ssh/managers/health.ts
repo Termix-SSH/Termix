@@ -2,7 +2,7 @@ import type { Express } from "express";
 import type { Client } from "ssh2";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { execCommand } from "../widgets/common-utils.js";
-import { createCurrentHostHealthRepository } from "../../database/repositories/current-host-health-repository.js";
+import { createCurrentHostHealthRepository } from "../../database/repositories/factory.js";
 import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import { shellSingleQuote } from "./exec-elevated.js";
 import { isValidPort } from "./validation.js";

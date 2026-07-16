@@ -1,7 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
-import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 export function registerHostFileManagerBookmarkRoutes(

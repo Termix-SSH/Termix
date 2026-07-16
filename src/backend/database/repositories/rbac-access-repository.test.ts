@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { SqliteDatabaseAdapter } from "../runtime/sqlite-adapter.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { RbacAccessRepository } from "./rbac-access-repository.js";
 
 describe("RbacAccessRepository", () => {
-  let adapter: SqliteDatabaseAdapter | null = null;
+  let adapter: TestSqliteDatabase | null = null;
   const activeAccessTime = "2026-06-26T12:00:00.000Z";
 
   afterEach(async () => {
@@ -16,11 +16,7 @@ describe("RbacAccessRepository", () => {
   async function createRepository(
     onWrite?: () => void | Promise<void>,
   ): Promise<RbacAccessRepository> {
-    adapter = new SqliteDatabaseAdapter({
-      dialect: "sqlite",
-      url: ":memory:",
-      sqlitePath: ":memory:",
-    });
+    adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     context.sqlite?.exec(`
       CREATE TABLE users (

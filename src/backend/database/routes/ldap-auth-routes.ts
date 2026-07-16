@@ -6,10 +6,12 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
 import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
-import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
-import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
-import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
-import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import {
+  createCurrentRoleRepository,
+  createCurrentSettingsRepository,
+  createCurrentSsoProviderRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 const authManager = AuthManager.getInstance();
 

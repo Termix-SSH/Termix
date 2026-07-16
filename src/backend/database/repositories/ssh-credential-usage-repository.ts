@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { sshCredentialUsage } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type SshCredentialUsageRecord = typeof sshCredentialUsage.$inferSelect;
 

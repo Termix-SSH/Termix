@@ -1,6 +1,6 @@
 import type { WebSocket } from "ws";
 import { sshLogger, authLogger } from "../utils/logger.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
 interface ResolvedCredentials {
   username: string;
   password?: string;

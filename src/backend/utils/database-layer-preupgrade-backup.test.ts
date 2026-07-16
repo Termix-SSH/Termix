@@ -37,9 +37,7 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
       dataDir,
       version: "2.5.0-test",
       now: new Date("2026-06-27T12:00:00.000Z"),
-      env: {
-        DATABASE_LAYER_REPOSITORY_ROLLOUT: "settings,users",
-      } as NodeJS.ProcessEnv,
+      env: {} as NodeJS.ProcessEnv,
     });
 
     expect(result.status).toBe("created");
@@ -67,9 +65,8 @@ describe("ensureDatabaseLayerPreupgradeBackup", () => {
 
     const manifest = JSON.parse(
       fs.readFileSync(path.join(result.backupDir!, "manifest.json"), "utf8"),
-    ) as { sourceVersion: string; rollout: { mode: string } };
+    ) as { sourceVersion: string };
     expect(manifest.sourceVersion).toBe("2.5.0-test");
-    expect(manifest.rollout.mode).toBe("partial");
   });
 
   it("skips when the marker already exists", () => {

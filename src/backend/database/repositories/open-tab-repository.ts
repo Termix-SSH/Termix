@@ -1,6 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { userOpenTabs } from "../db/schema.js";
-import type { DatabaseContext } from "../runtime/adapter.js";
+import type { DatabaseContext } from "./database-context.js";
 
 export type OpenTabRecord = typeof userOpenTabs.$inferSelect;
 export type NewOpenTabRecord = typeof userOpenTabs.$inferInsert;
