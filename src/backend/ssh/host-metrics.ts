@@ -45,7 +45,7 @@ import { registerManagerRoutes } from "./managers/index.js";
 import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
-import { createJumpHostChain } from "./host-metrics-jump-hosts.js";
+import { createJumpHostChain } from "./jump-host-chain.js";
 import {
   createConnectionLog,
   isTcpPingEnabled,

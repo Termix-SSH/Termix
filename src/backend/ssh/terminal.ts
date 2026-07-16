@@ -19,7 +19,7 @@ import {
 import { SSHAuthManager } from "./auth-manager.js";
 import type { ProxyNode } from "../../types/index.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
-import { createJumpHostChain } from "./terminal-jump-hosts.js";
+import { createJumpHostChain } from "./jump-host-chain.js";
 import { sessionManager } from "./terminal-session-manager.js";
 import {
   detectTmux,
