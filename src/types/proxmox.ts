@@ -14,3 +14,11 @@ export interface ProxmoxDiscoverResult {
   credentialId: number | null;
   defaultCredentialId: number | null;
 }
+
+export interface ProxmoxSyncResult {
+  created: number;
+  updated: number;
+  markedMissing: number;
+  skipped: number;
+  errors: string[];
+}
