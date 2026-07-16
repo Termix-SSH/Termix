@@ -1510,21 +1510,21 @@ router.post("/login", async (req, res) => {
 
     const deviceInfo = parseUserAgent(req);
 
-    let dataUnlocked = false;
+    let authenticated = false;
     if (userRecord.isOidc) {
-      dataUnlocked = await authManager.authenticateOIDCUser(
+      authenticated = await authManager.authenticateOIDCUser(
         userRecord.id,
         deviceInfo.type,
       );
     } else {
-      dataUnlocked = await authManager.authenticateUser(
+      authenticated = await authManager.authenticateUser(
         userRecord.id,
         password,
         deviceInfo.type,
       );
     }
 
-    if (!dataUnlocked) {
+    if (!authenticated) {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
@@ -1771,7 +1771,6 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
       totp_enabled: !!user.totpEnabled,
-      data_unlocked: authManager.isUserUnlocked(userId),
     });
   } catch (err) {
     authLogger.error("Failed to get username", err);

@@ -465,12 +465,12 @@ export function registerUserWebAuthnRoutes(
       }
 
       const deviceInfo = parseUserAgent(req);
-      const dataUnlocked = await authManager.authenticateWebAuthnUser(
+      const authenticated = await authManager.authenticateWebAuthnUser(
         userRecord.id,
         deviceInfo.type,
       );
 
-      if (!dataUnlocked) {
+      if (!authenticated) {
         return res.status(401).json({
           error:
             "Passkey cannot unlock this account. Log in with password and register the passkey again.",
@@ -530,7 +530,6 @@ export function registerUserWebAuthnRoutes(
         userId: userRecord.id,
         is_oidc: !!userRecord.isOidc,
         totp_enabled: !!userRecord.totpEnabled,
-        data_unlocked: true,
         ...(isNativeAppRequest(req) ? { token } : {}),
       });
     } catch (error) {

@@ -188,7 +188,6 @@ export interface AuthResponse {
   userId?: string;
   is_oidc?: boolean;
   totp_enabled?: boolean;
-  data_unlocked?: boolean;
   requires_totp?: boolean;
   temp_token?: string;
   rememberMe?: boolean;
@@ -201,7 +200,6 @@ export interface UserInfo {
   username: string;
   is_admin: boolean;
   is_oidc: boolean;
-  data_unlocked: boolean;
   password_hash?: string;
 }
 
@@ -1716,7 +1714,6 @@ export async function loginUser(
       rememberMe: response.data.rememberMe,
       is_oidc: response.data.is_oidc,
       totp_enabled: response.data.totp_enabled,
-      data_unlocked: response.data.data_unlocked,
       token: response.data.token,
     };
   } catch (error) {
