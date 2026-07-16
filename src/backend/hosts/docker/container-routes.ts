@@ -3,7 +3,7 @@ import { logger } from "../../utils/logger.js";
 import {
   containerCommand,
   type ContainerRuntime,
-} from "../container-runtime.js";
+} from "./container-runtime.js";
 
 const sshLogger = logger;
 

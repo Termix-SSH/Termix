@@ -12,7 +12,7 @@ import { SystemCrypto } from "../../utils/system-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 
-import { getTunnelMode, validateTunnelConfig } from "../tunnel-utils.js";
+import { getTunnelMode, validateTunnelConfig } from "./utils.js";
 
 import {
   tunnelConfigs,

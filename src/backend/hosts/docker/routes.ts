@@ -28,7 +28,7 @@ import {
   containerCommand,
   getContainerRuntimeConfig,
   getRuntimeLabel,
-} from "../container-runtime.js";
+} from "./container-runtime.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import {
   type SSHSession,

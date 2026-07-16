@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   buildSudoCommand,
   shellSingleQuote,
-} from "../../../hosts/managers/exec-elevated.js";
-import { parsePlatformProbe } from "../../../hosts/managers/platform.js";
+} from "../../../hosts/metrics/managers/exec-elevated.js";
+import { parsePlatformProbe } from "../../../hosts/metrics/managers/platform.js";
 import {
   isValidSystemdUnit,
   isValidPid,
@@ -15,47 +15,53 @@ import {
   isValidSignal,
   isValidServiceAction,
   isAllowedPath,
-} from "../../../hosts/managers/validation.js";
+} from "../../../hosts/metrics/managers/validation.js";
 import {
   parseServiceList,
   buildServiceActionCommand,
-} from "../../../hosts/managers/services.js";
+} from "../../../hosts/metrics/managers/services.js";
 import {
   parseProcessList,
   buildKillCommand,
-} from "../../../hosts/managers/processes.js";
+} from "../../../hosts/metrics/managers/processes.js";
 import {
   parseDfMounts,
   parseTopMemory,
-} from "../../../hosts/managers/simple-reads.js";
+} from "../../../hosts/metrics/managers/simple-reads.js";
 import {
   parseCrontab,
   serializeCrontab,
   isValidCronSchedule,
   buildApplyCrontabCommand,
-} from "../../../hosts/managers/cron.js";
+} from "../../../hosts/metrics/managers/cron.js";
 import {
   buildPackageActionCommand,
   parseUpgradable,
   buildListUpgradableCommand,
-} from "../../../hosts/managers/packages.js";
+} from "../../../hosts/metrics/managers/packages.js";
 import {
   buildIssueCommand,
   buildRenewCommand,
   buildRevokeCommand,
   isValidCertName,
   parseCertbotCertificates,
-} from "../../../hosts/managers/ssl.js";
+} from "../../../hosts/metrics/managers/ssl.js";
 import {
   buildIptablesRuleCommand,
   buildNftRuleCommand,
-} from "../../../hosts/managers/firewall.js";
-import { parsePasswd, parseSudoers } from "../../../hosts/managers/users.js";
+} from "../../../hosts/metrics/managers/firewall.js";
+import {
+  parsePasswd,
+  parseSudoers,
+} from "../../../hosts/metrics/managers/users.js";
 import {
   buildHealthCheckCommand,
   parseHealthResult,
-} from "../../../hosts/managers/health.js";
-import { buildTailCommand, clampLines } from "../../../hosts/managers/logs.js";
+} from "../../../hosts/metrics/managers/health.js";
+import {
+  buildTailCommand,
+  clampLines,
+} from "../../../hosts/metrics/managers/logs.js";
 
 describe("exec-elevated", () => {
   it("single-quotes and escapes for the shell", () => {

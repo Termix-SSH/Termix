@@ -154,13 +154,13 @@ import {
 
     const dbServer = await import("./database/database.js");
     await (dbServer as unknown as { serverReady: Promise<void> }).serverReady;
-    await import("./hosts/terminal.js");
+    await import("./hosts/terminal/index.js");
     await import("./hosts/tunnel/index.js");
-    await import("./hosts/file-manager.js");
-    await import("./hosts/host-metrics.js");
+    await import("./hosts/file-manager/index.js");
+    await import("./hosts/metrics/index.js");
     await import("./hosts/docker/index.js");
     await import("./hosts/docker/console.js");
-    await import("./hosts/tmux-monitor.js"); // --- tmux-monitor ---
+    await import("./hosts/tmux/index.js"); // --- tmux-monitor ---
     await import("./hosts/serial.js");
     await import("./services/dashboard.js");
     await import("./services/homepage.js");

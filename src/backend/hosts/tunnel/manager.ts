@@ -31,7 +31,7 @@ import {
   getManagedTunnelAlgorithms,
   pipeTunnelStreams,
   unbindForwardIn,
-} from "../tunnel-ssh-primitives.js";
+} from "./ssh-primitives.js";
 import {
   classifyTunnelError,
   getTunnelBindHost,
@@ -39,10 +39,10 @@ import {
   getTunnelMode,
   getTunnelScope,
   normalizeTunnelName,
-} from "../tunnel-utils.js";
+} from "./utils.js";
 
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
-import { handleSocks5Connect } from "../tunnel-socks5-relay.js";
+import { handleSocks5Connect } from "./socks5-relay.js";
 
 export const activeTunnels = new Map<string, Client>();
 export const retryCounters = new Map<string, number>();

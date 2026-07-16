@@ -10,7 +10,7 @@ import {
   containerCommand,
   getContainerRuntimeConfig,
   type ContainerRuntime,
-} from "../container-runtime.js";
+} from "./container-runtime.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 
 const sshLogger = systemLogger;

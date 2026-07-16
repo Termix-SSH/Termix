@@ -12,12 +12,12 @@ import {
   describeC2SRelayError,
   extractRequestToken,
   sendC2SError,
-} from "../tunnel-c2s-relay-utils.js";
+} from "./c2s-relay-utils.js";
 import {
   handleC2SRelayOpen,
   handleC2SRelayTest,
   type C2SOpenMessage,
-} from "../tunnel-c2s-relay.js";
+} from "./c2s-relay.js";
 
 import { registerTunnelRoutes } from "./routes.js";
 import { initializeAutoStartTunnels } from "./manager.js";

@@ -1,6 +1,6 @@
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../utils/logger.js";
-import type { ContainerRuntime } from "../container-runtime.js";
+import type { ContainerRuntime } from "./container-runtime.js";
 
 const sshLogger = logger;
 
