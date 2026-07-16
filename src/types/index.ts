@@ -217,8 +217,9 @@ export interface Host {
   hasKeyPassword?: boolean;
 
   isShared?: boolean;
-  permissionLevel?: "view";
+  permissionLevel?: "connect" | "view" | "edit" | "manage";
   sharedExpiresAt?: string;
+  ownerUsername?: string;
 }
 
 export interface JumpHostData {

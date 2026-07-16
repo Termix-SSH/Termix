@@ -182,7 +182,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
         const accessInfo = await permissionManager.canAccessHost(
           userId,
           hostId,
-          "execute",
+          "connect",
         );
 
         if (!accessInfo.hasAccess) {
@@ -294,13 +294,13 @@ export function registerDockerSshRoutes(app: express.Express): void {
 
         if (userId !== ownerId) {
           try {
-            const { SharedCredentialManager } =
-              await import("../../utils/shared-credential-manager.js");
-            const sharedCredManager = SharedCredentialManager.getInstance();
+            const { SharedHostSecretsManager } =
+              await import("../../utils/shared-host-secrets-manager.js");
             const sharedCred =
-              await sharedCredManager.getSharedCredentialForUser(
+              await SharedHostSecretsManager.getInstance().getSecretForUser(
                 host.id,
                 userId,
+                "ssh",
               );
 
             if (sharedCred) {

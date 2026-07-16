@@ -28,7 +28,7 @@ import { RoleRepository } from "./role-repository.js";
 import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
-import { SharedCredentialRepository } from "./shared-credential-repository.js";
+import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
 import { SsoProviderRepository } from "./sso-provider-repository.js";
@@ -260,10 +260,10 @@ export function createCurrentSettingsRepository(): SettingsRepository {
   );
 }
 
-export function createCurrentSharedCredentialRepository(): SharedCredentialRepository {
-  return new SharedCredentialRepository(
+export function createCurrentSharedHostSecretsRepository(): SharedHostSecretsRepository {
+  return new SharedHostSecretsRepository(
     createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("shared_credential_repository_write"),
+    createCurrentRepositoryWriteHook("shared_host_secrets_repository_write"),
   );
 }
 

@@ -322,6 +322,7 @@ describe("HostResolutionRepository", () => {
       rdpCredentialId: null,
       vncCredentialId: null,
       telnetCredentialId: null,
+      vaultProfileId: null,
       authType: "password",
     });
     await expect(repository.findHostUpdateState(999)).resolves.toBeNull();

@@ -15,7 +15,7 @@ export interface Role {
   displayName: string;
   description: string | null;
   isSystem: boolean;
-  permissions: string | null;
+  permissions: string[] | string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,7 +40,7 @@ export interface AccessRecord {
   roleDisplayName: string | null;
   grantedBy: string;
   grantedByUsername: string;
-  permissionLevel: "view";
+  permissionLevel: "connect" | "view" | "edit" | "manage";
   expiresAt: string | null;
   createdAt: string;
 }
@@ -2087,12 +2087,20 @@ export {
   assignRoleToUser,
   removeRoleFromUser,
   shareHost,
+  updateHostAccess,
   getHostAccess,
   revokeHostAccess,
+  getPermissionsCatalog,
+  getSharedHosts,
   shareSnippet,
   getSnippetAccess,
   revokeSnippetAccess,
   getSharedSnippets,
+} from "@/api/rbac-api";
+export type {
+  SharePermissionLevel,
+  ShareTarget,
+  PermissionCatalogEntry,
 } from "@/api/rbac-api";
 
 // ============================================================================

@@ -12,11 +12,32 @@ interface AuthenticatedRequest extends Request {
   dataKey?: Buffer;
 }
 
+const SHARE_PERMISSION_LEVELS = ["connect", "view", "edit", "manage"] as const;
+
+type SharePermissionLevel = (typeof SHARE_PERMISSION_LEVELS)[number];
+
+type HostAction = SharePermissionLevel | "delete";
+
+const LEVEL_RANK: Record<SharePermissionLevel, number> = {
+  connect: 1,
+  view: 2,
+  edit: 3,
+  manage: 4,
+};
+
+function normalizeSharePermissionLevel(
+  level: string | null | undefined,
+): SharePermissionLevel {
+  return SHARE_PERMISSION_LEVELS.includes(level as SharePermissionLevel)
+    ? (level as SharePermissionLevel)
+    : "connect";
+}
+
 interface HostAccessInfo {
   hasAccess: boolean;
   isOwner: boolean;
   isShared: boolean;
-  permissionLevel?: "view";
+  permissionLevel?: SharePermissionLevel;
   expiresAt?: string | null;
 }
 
@@ -146,7 +167,7 @@ class PermissionManager {
   async canAccessHost(
     userId: string,
     hostId: number,
-    action: "read" | "write" | "execute" | "delete" | "share" = "read",
+    action: HostAction = "connect",
   ): Promise<HostAccessInfo> {
     try {
       const hostResolutionRepository = createCurrentHostResolutionRepository();
@@ -180,30 +201,41 @@ class PermissionManager {
           };
         }
 
-        if (action === "write" || action === "delete") {
+        const grantedLevel = normalizeSharePermissionLevel(
+          access.permissionLevel,
+        );
+
+        if (
+          action === "delete" ||
+          LEVEL_RANK[grantedLevel] < LEVEL_RANK[action]
+        ) {
           return {
             hasAccess: false,
             isOwner: false,
             isShared: true,
-            permissionLevel: access.permissionLevel as "view",
+            permissionLevel: grantedLevel,
             expiresAt: access.expiresAt,
           };
         }
 
-        try {
-          await createCurrentRbacAccessRepository().touchHostAccess(access.id);
-        } catch (error) {
-          databaseLogger.warn("Failed to update host access timestamp", {
-            operation: "update_host_access_timestamp",
-            error,
-          });
+        if (action === "connect") {
+          try {
+            await createCurrentRbacAccessRepository().touchHostAccess(
+              access.id,
+            );
+          } catch (error) {
+            databaseLogger.warn("Failed to update host access timestamp", {
+              operation: "update_host_access_timestamp",
+              error,
+            });
+          }
         }
 
         return {
           hasAccess: true,
           isOwner: false,
           isShared: true,
-          permissionLevel: access.permissionLevel as "view",
+          permissionLevel: grantedLevel,
           expiresAt: access.expiresAt,
         };
       }
@@ -283,7 +315,7 @@ class PermissionManager {
 
   requireHostAccess(
     hostIdParam: string = "id",
-    action: "read" | "write" | "execute" | "delete" | "share" = "read",
+    action: HostAction = "connect",
   ) {
     return async (
       req: AuthenticatedRequest,
@@ -358,5 +390,11 @@ class PermissionManager {
   }
 }
 
-export { PermissionManager };
-export type { AuthenticatedRequest, HostAccessInfo, PermissionCheckResult };
+export { PermissionManager, SHARE_PERMISSION_LEVELS, LEVEL_RANK };
+export type {
+  AuthenticatedRequest,
+  HostAccessInfo,
+  PermissionCheckResult,
+  SharePermissionLevel,
+  HostAction,
+};

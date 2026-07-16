@@ -1,5 +1,6 @@
 import type { Client } from "ssh2";
 import type { RequestHandler } from "express";
+import type { HostAction } from "../../../utils/permission-manager.js";
 
 /** Minimal host shape managers need (includes the decrypted sudo password). */
 export interface ManagerHost {
@@ -17,7 +18,7 @@ export interface ManagerHost {
 export type RunOnHost = <T>(
   hostId: number,
   userId: string,
-  level: "read" | "execute",
+  level: HostAction,
   fn: (client: Client, host: ManagerHost) => Promise<T>,
 ) => Promise<T>;
 

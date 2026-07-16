@@ -4,6 +4,7 @@ import type { AuthenticatedRequest } from "../../../../types/index.js";
 import { statsLogger } from "../../../utils/logger.js";
 import { ElevationError } from "./exec-elevated.js";
 import type { ManagerHost, RunOnHost } from "./types.js";
+import type { HostAction } from "../../../utils/permission-manager.js";
 
 export class AccessDeniedError extends Error {
   constructor(message = "No access to this host") {
@@ -25,7 +26,7 @@ export class ManagerInputError extends Error {
  */
 export function managerHandler(
   runOnHost: RunOnHost,
-  level: "read" | "execute",
+  level: HostAction,
   operation: string,
   fn: (client: Client, host: ManagerHost, req: Request) => Promise<unknown>,
 ) {

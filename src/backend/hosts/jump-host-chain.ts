@@ -36,35 +36,36 @@ async function resolveJumpHost(
 ): Promise<JumpHostConfig | null> {
   try {
     const repository = createCurrentHostResolutionRepository();
-    const resolvedHost = await repository.findHostById(hostId, userId);
+    const ownerId = (await repository.findHostOwnerId(hostId)) ?? userId;
+    const resolvedHost = await repository.findHostById(hostId, ownerId);
 
     if (!resolvedHost) {
       return null;
     }
 
     const host = resolvedHost as Record<string, unknown>;
-    const ownerId = (host.userId || userId) as string;
 
     if (host.credentialId) {
       if (userId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            hostId,
-            userId,
-          );
-          if (sharedCred) {
+          const { SharedHostSecretsManager } =
+            await import("../utils/shared-host-secrets-manager.js");
+          const secret =
+            await SharedHostSecretsManager.getInstance().getSecretForUser(
+              hostId,
+              userId,
+              "ssh",
+            );
+          if (secret) {
             return {
               ...host,
-              password: sharedCred.password,
-              key: sharedCred.key,
-              keyPassword: sharedCred.keyPassword,
-              keyType: sharedCred.keyType,
-              authType: sharedCred.key
+              password: secret.password,
+              key: secret.key,
+              keyPassword: secret.keyPassword,
+              keyType: secret.keyType,
+              authType: secret.key
                 ? "key"
-                : sharedCred.password
+                : secret.password
                   ? "password"
                   : "none",
             } as JumpHostConfig;

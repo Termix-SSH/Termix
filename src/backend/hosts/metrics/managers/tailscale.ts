@@ -116,7 +116,7 @@ export function registerTailscaleRoutes(
   app.get(
     "/host-metrics/managers/tailscale/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "tailscale_read", async (client) => {
+    managerHandler(runOnHost, "connect", "tailscale_read", async (client) => {
       const { stdout } = await execCommand(client, PROBE_CMD, 15000);
       return parseTailscaleData(stdout);
     }),
@@ -154,7 +154,7 @@ export function registerTailscaleRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "tailscale_action",
       async (client, host, req) => {
         const { action } = req.body as { action: unknown };

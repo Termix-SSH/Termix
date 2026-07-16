@@ -168,7 +168,14 @@ export type Host = {
 
   guacamoleConfig?: Record<string, unknown>;
   forceKeyboardInteractive?: boolean;
+
+  isShared?: boolean;
+  permissionLevel?: SharePermissionLevel;
+  sharedExpiresAt?: string;
+  ownerUsername?: string;
 };
+
+export type SharePermissionLevel = "connect" | "view" | "edit" | "manage";
 
 export type Credential = {
   id: string;

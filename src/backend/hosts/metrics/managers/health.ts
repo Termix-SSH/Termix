@@ -147,7 +147,7 @@ export function registerHealthRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "read",
+      "connect",
       "health_get",
       async (client, host, req) => {
         const userId = (req as AuthenticatedRequest).userId;
@@ -191,7 +191,7 @@ export function registerHealthRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "read",
+      "connect",
       "health_config",
       async (_client, host, req) => {
         const userId = (req as AuthenticatedRequest).userId;
@@ -226,7 +226,7 @@ export function registerHealthRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "read",
+      "connect",
       "health_run",
       async (client, host, req) => {
         const userId = (req as AuthenticatedRequest).userId;

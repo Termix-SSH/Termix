@@ -3,7 +3,7 @@ import {
   hostAccess,
   hosts,
   roles,
-  sharedCredentials,
+  sharedHostSecrets,
   snippetAccess,
   snippets,
   users,
@@ -151,10 +151,6 @@ export class RbacAccessRepository {
           expiresAt: input.expiresAt,
         })
         .where(eq(hostAccess.id, existing.id));
-
-      await this.context.drizzle
-        .delete(sharedCredentials)
-        .where(eq(sharedCredentials.hostAccessId, existing.id));
 
       await this.afterWrite();
       return { id: existing.id, created: false };
@@ -583,25 +579,73 @@ export class RbacAccessRepository {
       .where(eq(hostAccess.roleId, roleId));
   }
 
-  async findSharedCredentialForHostAndUser(
+  async findSharedSecretForHostUserProtocol(
     hostId: number,
     userId: string,
-  ): Promise<typeof sharedCredentials.$inferSelect | null> {
+    protocol: string,
+  ): Promise<typeof sharedHostSecrets.$inferSelect | null> {
     const rows = await this.context.drizzle
       .select({
-        sharedCredential: sharedCredentials,
+        secret: sharedHostSecrets,
       })
-      .from(sharedCredentials)
-      .innerJoin(hostAccess, eq(sharedCredentials.hostAccessId, hostAccess.id))
+      .from(sharedHostSecrets)
+      .innerJoin(hostAccess, eq(sharedHostSecrets.hostAccessId, hostAccess.id))
       .where(
         and(
           eq(hostAccess.hostId, hostId),
-          eq(sharedCredentials.targetUserId, userId),
+          eq(sharedHostSecrets.targetUserId, userId),
+          eq(sharedHostSecrets.protocol, protocol),
         ),
       )
       .limit(1);
 
-    return rows[0]?.sharedCredential ?? null;
+    return rows[0]?.secret ?? null;
+  }
+
+  async listActiveHostAccessGrants(
+    hostId: number,
+    now = new Date().toISOString(),
+  ): Promise<(typeof hostAccess.$inferSelect)[]> {
+    return this.context.drizzle
+      .select()
+      .from(hostAccess)
+      .where(
+        and(
+          eq(hostAccess.hostId, hostId),
+          or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
+        ),
+      );
+  }
+
+  async findHostAccessById(
+    accessId: number,
+    hostId: number,
+  ): Promise<typeof hostAccess.$inferSelect | null> {
+    const rows = await this.context.drizzle
+      .select()
+      .from(hostAccess)
+      .where(and(eq(hostAccess.id, accessId), eq(hostAccess.hostId, hostId)))
+      .limit(1);
+
+    return rows[0] ?? null;
+  }
+
+  async updateHostAccessGrant(
+    accessId: number,
+    hostId: number,
+    update: { permissionLevel?: string; expiresAt?: string | null },
+  ): Promise<boolean> {
+    const rows = await this.context.drizzle
+      .update(hostAccess)
+      .set(update)
+      .where(and(eq(hostAccess.id, accessId), eq(hostAccess.hostId, hostId)))
+      .returning({ id: hostAccess.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length > 0;
   }
 
   async findHostAccessOwnerId(hostAccessId: number): Promise<string | null> {

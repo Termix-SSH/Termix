@@ -2,13 +2,14 @@ import type { Express, RequestHandler } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { createCurrentHostMetricsHistoryRepository } from "../../database/repositories/factory.js";
 import { statsLogger } from "../../utils/logger.js";
+import type { HostAction } from "../../utils/permission-manager.js";
 
 type HistoryRoutesDeps = {
   validateHostId: RequestHandler;
   canAccessHost: (
     userId: string,
     hostId: number,
-    level: "read" | "write" | "execute" | "delete" | "share",
+    level: HostAction,
   ) => Promise<boolean>;
 };
 
@@ -65,7 +66,7 @@ export function registerHostMetricsHistoryRoutes(
     const userId = (req as AuthenticatedRequest).userId;
 
     try {
-      const hasAccess = await canAccessHost(userId, hostId, "read");
+      const hasAccess = await canAccessHost(userId, hostId, "connect");
       if (!hasAccess) {
         return res.status(403).json({ error: "Access denied" });
       }

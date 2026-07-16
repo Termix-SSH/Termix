@@ -18,6 +18,7 @@ export interface HostUpdateStateRecord {
   rdpCredentialId: number | null;
   vncCredentialId: number | null;
   telnetCredentialId: number | null;
+  vaultProfileId: number | null;
   authType: string;
 }
 export interface HostListAccessEntry {
@@ -74,6 +75,7 @@ export class HostResolutionRepository {
         rdpCredentialId: hosts.rdpCredentialId,
         vncCredentialId: hosts.vncCredentialId,
         telnetCredentialId: hosts.telnetCredentialId,
+        vaultProfileId: hosts.vaultProfileId,
         authType: hosts.authType,
       })
       .from(hosts)

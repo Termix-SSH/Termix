@@ -96,7 +96,7 @@ export function registerPackageRoutes(
   app.get(
     "/host-metrics/managers/packages/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "packages_list", async (client) => {
+    managerHandler(runOnHost, "connect", "packages_list", async (client) => {
       const platform = await detectPlatform(client);
       const cmd = buildListUpgradableCommand(platform.pkg);
       if (!cmd) return { pkg: platform.pkg, upgradable: [] };
@@ -113,7 +113,7 @@ export function registerPackageRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "packages_action",
       async (client, host, req) => {
         const { action, pkg: name } = req.body as {

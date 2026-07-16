@@ -85,7 +85,7 @@ export function registerCronRoutes(
   app.get(
     "/host-metrics/managers/cron/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "cron_list", async (client) => {
+    managerHandler(runOnHost, "connect", "cron_list", async (client) => {
       const { stdout } = await execCommand(client, READ_CRONTAB_CMD, 15000);
       return { entries: parseCrontab(stdout) };
     }),
@@ -96,7 +96,7 @@ export function registerCronRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "cron_replace",
       async (client, _host, req) => {
         const { entries } = req.body as { entries?: CronEntry[] };

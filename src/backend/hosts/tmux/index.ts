@@ -14,6 +14,7 @@ import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { resolveHostById, checkHostAccess } from "../host-resolver.js";
+import type { HostAction } from "../../utils/permission-manager.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
 import { applyAgentAuth } from "../terminal-auth-helpers.js";
 import {
@@ -343,7 +344,7 @@ app.use(authManager.createAuthMiddleware());
 async function requireHost(
   req: express.Request,
   res: express.Response,
-  permission: "read" | "execute" = "read",
+  permission: HostAction = "connect",
 ): Promise<SSHHost | null> {
   const userId = (req as unknown as AuthenticatedRequest).userId;
   const hostId = parseInt(String(req.params.hostId), 10);
@@ -503,7 +504,7 @@ app.get("/tmux_monitor/:hostId/overview", async (req, res) => {
 // Focus a pane: select its window and pane on the server so every attached
 // client (including the monitor's embedded terminal) switches to it.
 app.post("/tmux_monitor/:hostId/focus", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const paneId = String((req.body as { paneId?: string })?.paneId || "");
@@ -530,7 +531,7 @@ app.post("/tmux_monitor/:hostId/focus", async (req, res) => {
 
 // Create a detached session. Starts the tmux server if none is running.
 app.post("/tmux_monitor/:hostId/sessions", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const name = String((req.body as { name?: string })?.name || "").trim();
@@ -563,7 +564,7 @@ app.post("/tmux_monitor/:hostId/sessions", async (req, res) => {
 // target's meaning (":" and "." are window/pane separators in tmux targets);
 // "=" prefixes the target for an exact-name match.
 app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const sessionName = String(
@@ -597,7 +598,7 @@ app.post("/tmux_monitor/:hostId/windows", async (req, res) => {
 // Rename a session. Saved tags follow the session to its new name (for every
 // user — the session itself is shared on the host).
 app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const body = req.body as { sessionName?: string; newName?: string };
@@ -649,7 +650,7 @@ app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
 
 // Kill a session and drop its saved tags.
 app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const sessionName = String(
@@ -688,7 +689,7 @@ app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
 // Kill a window (and every pane in it). Killing the last window of a session
 // ends the session — tmux semantics.
 app.post("/tmux_monitor/:hostId/kill-window", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const body = req.body as { sessionName?: string; windowIndex?: number };
@@ -735,7 +736,7 @@ app.post("/tmux_monitor/:hostId/kill-window", async (req, res) => {
 // Kill a single pane. Killing the last pane of a window closes the window,
 // and the last window of a session ends the session — tmux semantics.
 app.post("/tmux_monitor/:hostId/kill-pane", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const paneId = String((req.body as { paneId?: string })?.paneId || "");
@@ -766,7 +767,7 @@ app.post("/tmux_monitor/:hostId/kill-pane", async (req, res) => {
 // "v" below — matching tmux's own -h/-v semantics. The new pane starts in the
 // source pane's working directory.
 app.post("/tmux_monitor/:hostId/split", async (req, res) => {
-  const host = await requireHost(req, res, "execute");
+  const host = await requireHost(req, res, "connect");
   if (!host) return;
 
   const body = req.body as { paneId?: string; direction?: string };

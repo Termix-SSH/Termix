@@ -92,6 +92,8 @@ describe("SessionRecordingRepository", () => {
     expect(rows[0]).toMatchObject({
       hostIp: "10.0.0.2",
       recordingPath: "/tmp/two.log",
+      protocol: "ssh",
+      format: "text",
     });
   });
 

@@ -101,6 +101,10 @@ import {
     await authManager.initialize();
     DataCrypto.initialize();
 
+    const { runSharedHostSecretsMigration } =
+      await import("./utils/crypto-migration/shared-host-secrets-migration.js");
+    await runSharedHostSecretsMigration();
+
     import("./utils/opkssh-binary-manager.js").then(
       ({ OPKSSHBinaryManager }) => {
         OPKSSHBinaryManager.ensureBinary().catch((error) => {

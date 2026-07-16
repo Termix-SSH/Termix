@@ -79,7 +79,7 @@ export function registerUserRoutes(
   app.get(
     "/host-metrics/managers/users/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "users_list", async (client) => {
+    managerHandler(runOnHost, "connect", "users_list", async (client) => {
       const [passwd, groups, sudoers] = await Promise.all([
         execCommand(client, READ_USERS_CMD, 15000),
         execCommand(client, READ_GROUPS_CMD, 15000),
@@ -98,7 +98,7 @@ export function registerUserRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "users_action",
       async (client, host, req) => {
         const { action, username, group } = req.body as {

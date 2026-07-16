@@ -1585,34 +1585,52 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite.prepare("SELECT id FROM shared_credentials LIMIT 1").get();
+    sqlite.prepare("SELECT id FROM shared_host_secrets LIMIT 1").get();
   } catch {
     try {
       sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS shared_credentials (
+        CREATE TABLE IF NOT EXISTS shared_host_secrets (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           host_access_id INTEGER NOT NULL,
-          original_credential_id INTEGER NOT NULL,
           target_user_id TEXT NOT NULL,
-          encrypted_username TEXT NOT NULL,
-          encrypted_auth_type TEXT NOT NULL,
+          protocol TEXT NOT NULL DEFAULT 'ssh',
+          source_type TEXT NOT NULL DEFAULT 'credential',
+          original_credential_id INTEGER,
+          encrypted_username TEXT,
+          encrypted_auth_type TEXT,
           encrypted_password TEXT,
           encrypted_key TEXT,
           encrypted_key_password TEXT,
           encrypted_key_type TEXT,
+          encrypted_domain TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(host_access_id, target_user_id, protocol),
           FOREIGN KEY (host_access_id) REFERENCES host_access (id) ON DELETE CASCADE,
           FOREIGN KEY (original_credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
           FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
         );
       `);
     } catch (createError) {
-      databaseLogger.warn("Failed to create shared_credentials table", {
+      databaseLogger.warn("Failed to create shared_host_secrets table", {
         operation: "schema_migration",
         error: createError,
       });
     }
+  }
+
+  try {
+    if (getRawSettingValue("rbac_permission_levels_v2") === null) {
+      sqlite.exec(
+        "UPDATE host_access SET permission_level = 'connect' WHERE permission_level = 'view'",
+      );
+      setRawSettingValue("rbac_permission_levels_v2", "done");
+    }
+  } catch (migrateError) {
+    databaseLogger.warn("Failed to migrate legacy view permission level", {
+      operation: "schema_migration",
+      error: migrateError,
+    });
   }
 
   try {

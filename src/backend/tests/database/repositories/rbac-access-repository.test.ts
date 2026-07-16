@@ -52,19 +52,23 @@ describe("RbacAccessRepository", () => {
         override_credential_id INTEGER
       );
 
-      CREATE TABLE shared_credentials (
+      CREATE TABLE shared_host_secrets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host_access_id INTEGER NOT NULL,
-        original_credential_id INTEGER NOT NULL,
         target_user_id TEXT NOT NULL,
-        encrypted_username TEXT NOT NULL,
-        encrypted_auth_type TEXT NOT NULL,
+        protocol TEXT NOT NULL DEFAULT 'ssh',
+        source_type TEXT NOT NULL DEFAULT 'credential',
+        original_credential_id INTEGER,
+        encrypted_username TEXT,
+        encrypted_auth_type TEXT,
         encrypted_password TEXT,
         encrypted_key TEXT,
         encrypted_key_password TEXT,
         encrypted_key_type TEXT,
+        encrypted_domain TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(host_access_id, target_user_id, protocol)
       );
 
       CREATE TABLE ssh_data (
@@ -128,10 +132,12 @@ describe("RbacAccessRepository", () => {
         (2, 42, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z'),
         (5, 44, 'user-1', NULL, 'admin', 'view', '2026-06-25T00:00:00.000Z', '2026-06-24T00:00:00.000Z');
 
-      INSERT INTO shared_credentials (
-        id, host_access_id, original_credential_id, target_user_id, encrypted_username, encrypted_auth_type
+      INSERT INTO shared_host_secrets (
+        id, host_access_id, target_user_id, protocol, source_type, original_credential_id, encrypted_username, encrypted_auth_type
       )
-      VALUES (8, 2, 123, 'user-1', 'enc-user', 'enc-auth');
+      VALUES
+        (8, 2, 'user-1', 'ssh', 'credential', 123, 'enc-user', 'enc-auth'),
+        (9, 2, 'user-1', 'rdp', 'inline', NULL, 'enc-rdp-user', 'direct');
 
       INSERT INTO snippets (id, user_id, name, content)
       VALUES (99, 'owner-1', 'deploy', 'echo deploy');
@@ -261,14 +267,16 @@ describe("RbacAccessRepository", () => {
     ]);
   });
 
-  it("finds shared credential and host access owner for shared credential reads", async () => {
+  it("finds shared secrets per protocol and host access owner", async () => {
     const repo = await createRepository();
 
     await expect(
-      repo.findSharedCredentialForHostAndUser(42, "user-1"),
+      repo.findSharedSecretForHostUserProtocol(42, "user-1", "ssh"),
     ).resolves.toMatchObject({
       id: 8,
       hostAccessId: 2,
+      protocol: "ssh",
+      sourceType: "credential",
       originalCredentialId: 123,
       targetUserId: "user-1",
       encryptedUsername: "enc-user",
@@ -276,10 +284,60 @@ describe("RbacAccessRepository", () => {
     });
 
     await expect(
-      repo.findSharedCredentialForHostAndUser(99, "user-1"),
+      repo.findSharedSecretForHostUserProtocol(42, "user-1", "rdp"),
+    ).resolves.toMatchObject({
+      id: 9,
+      protocol: "rdp",
+      sourceType: "inline",
+      originalCredentialId: null,
+    });
+
+    await expect(
+      repo.findSharedSecretForHostUserProtocol(42, "user-1", "vnc"),
+    ).resolves.toBeNull();
+    await expect(
+      repo.findSharedSecretForHostUserProtocol(99, "user-1", "ssh"),
     ).resolves.toBeNull();
     await expect(repo.findHostAccessOwnerId(2)).resolves.toBe("owner-1");
     await expect(repo.findHostAccessOwnerId(999)).resolves.toBeNull();
+  });
+
+  it("lists active grants, finds grants by id and updates grant level/expiry", async () => {
+    let writeCount = 0;
+    const repo = await createRepository(() => {
+      writeCount += 1;
+    });
+
+    const grants = await repo.listActiveHostAccessGrants(42, activeAccessTime);
+    expect(grants.map((grant) => grant.id).sort()).toEqual([1, 2]);
+
+    // Host 44's only grant expired before activeAccessTime.
+    await expect(
+      repo.listActiveHostAccessGrants(44, activeAccessTime),
+    ).resolves.toEqual([]);
+
+    await expect(repo.findHostAccessById(1, 42)).resolves.toMatchObject({
+      id: 1,
+      hostId: 42,
+      permissionLevel: "view",
+    });
+    await expect(repo.findHostAccessById(1, 99)).resolves.toBeNull();
+
+    await expect(
+      repo.updateHostAccessGrant(1, 42, {
+        permissionLevel: "manage",
+        expiresAt: "2026-07-01T00:00:00.000Z",
+      }),
+    ).resolves.toBe(true);
+    await expect(repo.findHostAccessById(1, 42)).resolves.toMatchObject({
+      permissionLevel: "manage",
+      expiresAt: "2026-07-01T00:00:00.000Z",
+    });
+
+    await expect(
+      repo.updateHostAccessGrant(999, 42, { permissionLevel: "view" }),
+    ).resolves.toBe(false);
+    expect(writeCount).toBe(1);
   });
 
   it("lists shared snippets and preserves route-level direct-over-role behavior", async () => {

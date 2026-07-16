@@ -523,7 +523,7 @@ export const hostAccess = sqliteTable("host_access", {
 
   permissionLevel: text("permission_level")
     .notNull()
-    .default("view"),
+    .default("connect"),
 
   expiresAt: text("expires_at"),
 
@@ -538,27 +538,32 @@ export const hostAccess = sqliteTable("host_access", {
   ),
 });
 
-export const sharedCredentials = sqliteTable("shared_credentials", {
+export const sharedHostSecrets = sqliteTable("shared_host_secrets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
 
   hostAccessId: integer("host_access_id")
     .notNull()
     .references(() => hostAccess.id, { onDelete: "cascade" }),
 
-  originalCredentialId: integer("original_credential_id")
-    .notNull()
-    .references(() => sshCredentials.id, { onDelete: "cascade" }),
-
   targetUserId: text("target_user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 
-  encryptedUsername: text("encrypted_username").notNull(),
-  encryptedAuthType: text("encrypted_auth_type").notNull(),
+  protocol: text("protocol").notNull().default("ssh"),
+  sourceType: text("source_type").notNull().default("credential"),
+
+  originalCredentialId: integer("original_credential_id").references(
+    () => sshCredentials.id,
+    { onDelete: "cascade" },
+  ),
+
+  encryptedUsername: text("encrypted_username"),
+  encryptedAuthType: text("encrypted_auth_type"),
   encryptedPassword: text("encrypted_password"),
   encryptedKey: text("encrypted_key", { length: 16384 }),
   encryptedKeyPassword: text("encrypted_key_password"),
   encryptedKeyType: text("encrypted_key_type"),
+  encryptedDomain: text("encrypted_domain"),
 
   createdAt: text("created_at")
     .notNull()

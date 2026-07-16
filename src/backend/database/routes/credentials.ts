@@ -8,7 +8,6 @@ import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
-  createCurrentRbacAccessRepository,
   createCurrentCredentialRepository,
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
@@ -523,10 +522,9 @@ router.put(
           credentialId,
         ));
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
-      const sharedCredManager = SharedCredentialManager.getInstance();
-      await sharedCredManager.updateSharedCredentialsForOriginal(
+      const { SharedHostSecretsManager } =
+        await import("../../utils/shared-host-secrets-manager.js");
+      await SharedHostSecretsManager.getInstance().resyncHostsForCredential(
         credentialId,
         userId,
       );
@@ -633,37 +631,23 @@ router.delete(
             authType: "password",
           },
         );
-
-        for (const host of hostsUsingCredential) {
-          const revokedCount =
-            await createCurrentRbacAccessRepository().deleteHostAccessForHost(
-              host.id,
-            );
-
-          if (revokedCount > 0) {
-            authLogger.info(
-              "Auto-revoked host shares due to credential deletion",
-              {
-                operation: "auto_revoke_shares",
-                hostId: host.id,
-                credentialId,
-                revokedCount,
-                reason: "credential_deleted",
-              },
-            );
-          }
-        }
       }
 
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
-      const sharedCredManager = SharedCredentialManager.getInstance();
-      await sharedCredManager.deleteSharedCredentialsForOriginal(credentialId);
+      const { SharedHostSecretsManager } =
+        await import("../../utils/shared-host-secrets-manager.js");
+      const sharedSecretsManager = SharedHostSecretsManager.getInstance();
+      await sharedSecretsManager.deleteForCredential(credentialId);
 
       await createCurrentCredentialRepository().deleteForUser(
         userId,
         credentialId,
       );
+
+      // Shares stay in place; re-snapshot so recipients fall back to whatever
+      // auth the host still has (or lose the stale credential copy).
+      for (const host of hostsUsingCredential) {
+        await sharedSecretsManager.resyncHost(host.id);
+      }
 
       authLogger.success("SSH credential deleted", {
         operation: "credential_delete_success",

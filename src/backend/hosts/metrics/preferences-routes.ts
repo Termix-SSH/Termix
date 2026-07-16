@@ -7,6 +7,7 @@ import {
   defaultLayoutFromWidgets,
   type HostMetricsLayout,
 } from "../../../types/host-metrics.js";
+import type { HostAction } from "../../utils/permission-manager.js";
 
 interface PrefStatsConfig {
   enabledWidgets?: string[];
@@ -25,7 +26,7 @@ type HostMetricsPreferencesRoutesDeps = {
   canAccessHost: (
     userId: string,
     hostId: number,
-    level: "read" | "execute",
+    level: HostAction,
   ) => Promise<boolean>;
 };
 
@@ -88,7 +89,7 @@ export function registerHostMetricsPreferencesRoutes(
     const userId = (req as AuthenticatedRequest).userId;
     const hostId = parseInt(String(req.params.id), 10);
     try {
-      if (!(await canAccessHost(userId, hostId, "read"))) {
+      if (!(await canAccessHost(userId, hostId, "connect"))) {
         return res.status(403).json({ error: "No access to this host" });
       }
       const host = await fetchHostById(hostId, userId);
@@ -166,7 +167,7 @@ export function registerHostMetricsPreferencesRoutes(
       const userId = (req as AuthenticatedRequest).userId;
       const hostId = parseInt(String(req.params.id), 10);
       try {
-        if (!(await canAccessHost(userId, hostId, "read"))) {
+        if (!(await canAccessHost(userId, hostId, "connect"))) {
           return res.status(403).json({ error: "No access to this host" });
         }
         const host = await fetchHostById(hostId, userId);

@@ -51,7 +51,7 @@ export function registerFirewallRoutes(
   app.get(
     "/host-metrics/managers/firewall/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "firewall_read", async (client) => {
+    managerHandler(runOnHost, "connect", "firewall_read", async (client) => {
       return await collectFirewallMetrics(client);
     }),
   );
@@ -61,7 +61,7 @@ export function registerFirewallRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "firewall_rule",
       async (client, host, req) => {
         const { op, protocol, port, target } = req.body as {
@@ -106,7 +106,7 @@ export function registerFirewallRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "firewall_persist",
       async (client, host) => {
         const platform = await detectPlatform(client);

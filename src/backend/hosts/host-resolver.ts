@@ -9,6 +9,7 @@ import {
   expandOidcUsername,
 } from "./credential-username.js";
 import type { SSHHost } from "../../types/index.js";
+import type { HostAction } from "../utils/permission-manager.js";
 
 const sshLogger = logger;
 
@@ -24,15 +25,27 @@ export async function resolveHostById(
   const access = await PermissionManager.getInstance().canAccessHost(
     userId,
     hostId,
-    "read",
+    "connect",
   );
   if (!access.hasAccess) return null;
 
   const repository = createCurrentHostResolutionRepository();
-  const resolvedHost = await repository.findHostById(hostId, userId);
+
+  // Decrypt under the owner's DEK: shared hosts carry owner-encrypted fields
+  // (socks5Password, inline auth, ...) that the requester's key cannot open.
+  const ownerId = (await repository.findHostOwnerId(hostId)) ?? userId;
+  const resolvedHost = await repository.findHostById(hostId, ownerId);
   if (!resolvedHost) return null;
 
   const host = resolvedHost as Record<string, unknown>;
+
+  if (userId !== ownerId) {
+    // Owner-only operational secrets are never shared.
+    host.sudoPassword = null;
+    host.autostartPassword = null;
+    host.autostartKey = null;
+    host.autostartKeyPassword = null;
+  }
 
   // Parse JSON fields
   if (typeof host.jumpHosts === "string" && host.jumpHosts) {
@@ -78,88 +91,16 @@ export async function resolveHostById(
     }
   }
 
-  // Resolve credential if using credential-based auth
-  if (host.credentialId) {
-    const ownerId = (host.userId || userId) as string;
+  if (userId !== ownerId) {
+    const resolved = await resolveSharedSshSecrets(
+      host,
+      hostId,
+      userId,
+      repository,
+    );
+    if (!resolved) return null;
+  } else if (host.credentialId) {
     try {
-      // Try user's own override credential first
-      if (userId !== ownerId) {
-        try {
-          const overrideCredId = await repository.findOverrideCredentialId(
-            hostId,
-            userId,
-          );
-          if (overrideCredId) {
-            const cred = (await repository.findCredentialByIdForUser(
-              overrideCredId,
-              userId,
-            )) as Record<string, unknown> | null;
-            if (cred) {
-              host.password = cred.password;
-              host.key = cred.key;
-              host.keyPassword = cred.keyPassword;
-              host.keyType = cred.keyType;
-              host.username = pickResolvedUsername(
-                host.username,
-                cred.username,
-                host.overrideCredentialUsername,
-              );
-              host.authType = cred.key
-                ? "key"
-                : cred.password
-                  ? "password"
-                  : "none";
-              host.username = await expandOidcUsername(
-                host.username as string | undefined,
-                userId,
-              );
-              return host as unknown as SSHHost;
-            }
-          }
-        } catch {
-          // fall through to shared credential
-        }
-
-        try {
-          const { SharedCredentialManager } =
-            await import("../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            hostId,
-            userId,
-          );
-          if (sharedCred) {
-            host.password = sharedCred.password;
-            host.key = sharedCred.key;
-            host.keyPassword = sharedCred.keyPassword;
-            host.keyType = sharedCred.keyType;
-            host.username = pickResolvedUsername(
-              host.username,
-              sharedCred.username,
-              host.overrideCredentialUsername,
-            );
-            host.authType = sharedCred.key
-              ? "key"
-              : sharedCred.password
-                ? "password"
-                : "none";
-            host.username = await expandOidcUsername(
-              host.username as string | undefined,
-              userId,
-            );
-            return host as unknown as SSHHost;
-          }
-        } catch (e) {
-          sshLogger.warn("Failed to get shared credential", {
-            operation: "host_resolver_shared_credential",
-            hostId,
-            error: e instanceof Error ? e.message : "Unknown",
-          });
-        }
-
-        return null;
-      }
-
       const cred = (await repository.findCredentialByIdForUser(
         host.credentialId as number,
         ownerId,
@@ -219,13 +160,97 @@ export async function resolveHostById(
 }
 
 /**
+ * Fill in SSH auth secrets for a shared (non-owner) requester. Order:
+ * the recipient's own override credential, then their re-encrypted share
+ * snapshot. Secret-less auth types (opkssh, vault, agent, none) pass through
+ * untouched. Returns false when a secret-bearing host has no usable source.
+ */
+async function resolveSharedSshSecrets(
+  host: Record<string, unknown>,
+  hostId: number,
+  userId: string,
+  repository: ReturnType<typeof createCurrentHostResolutionRepository>,
+): Promise<boolean> {
+  try {
+    const overrideCredId = await repository.findOverrideCredentialId(
+      hostId,
+      userId,
+    );
+    if (overrideCredId) {
+      const cred = (await repository.findCredentialByIdForUser(
+        overrideCredId,
+        userId,
+      )) as Record<string, unknown> | null;
+      if (cred) {
+        host.password = cred.password;
+        host.key = (cred.privateKey || cred.key) as string | null;
+        host.keyPassword = cred.keyPassword;
+        host.keyType = cred.keyType;
+        host.username = pickResolvedUsername(
+          host.username,
+          cred.username,
+          host.overrideCredentialUsername,
+        );
+        host.authType = host.key ? "key" : host.password ? "password" : "none";
+        return true;
+      }
+    }
+  } catch {
+    // fall through to the share snapshot
+  }
+
+  try {
+    const { SharedHostSecretsManager } =
+      await import("../utils/shared-host-secrets-manager.js");
+    const secret =
+      await SharedHostSecretsManager.getInstance().getSecretForUser(
+        hostId,
+        userId,
+        "ssh",
+      );
+    if (secret) {
+      host.password = secret.password;
+      host.key = secret.key;
+      host.keyPassword = secret.keyPassword;
+      host.keyType = secret.keyType;
+      host.username = pickResolvedUsername(
+        host.username,
+        secret.username,
+        host.overrideCredentialUsername,
+      );
+      host.authType = secret.key
+        ? "key"
+        : secret.password
+          ? "password"
+          : "none";
+      return true;
+    }
+  } catch (e) {
+    sshLogger.warn("Failed to get shared host secret", {
+      operation: "host_resolver_shared_secret",
+      hostId,
+      error: e instanceof Error ? e.message : "Unknown",
+    });
+  }
+
+  const needsSecrets =
+    !!host.credentialId ||
+    host.authType === "password" ||
+    host.authType === "key" ||
+    host.authType === "credential";
+  if (!needsSecrets) return true;
+
+  return false;
+}
+
+/**
  * Check if a user has access to a host (owner or shared access).
  */
 export async function checkHostAccess(
   hostId: number,
   userId: string,
   hostUserId: string,
-  requiredPermission: "read" | "execute" = "execute",
+  requiredPermission: HostAction = "connect",
 ): Promise<boolean> {
   if (userId === hostUserId) return true;
 

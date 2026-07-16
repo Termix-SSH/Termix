@@ -4,6 +4,7 @@ import {
   isValidPort,
   normalizeImportedHost,
   renameFolderPath,
+  sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
 } from "../../../database/routes/host-normalizers.js";
@@ -217,5 +218,60 @@ describe("transformHostResponse", () => {
     const result = transformHostResponse({ port: 22 });
     expect(result.enableProxmox).toBe(false);
     expect(result.proxmoxConfig).toBeUndefined();
+  });
+});
+
+describe("sanitizeHostForRecipient", () => {
+  const sharedHost = {
+    id: 42,
+    userId: "owner",
+    ownerUsername: "owner",
+    isShared: true,
+    permissionLevel: "view",
+    name: "prod",
+    ip: "10.0.0.42",
+    port: 22,
+    username: "root",
+    folder: "servers",
+    tags: ["linux"],
+    notes: "secret runbook",
+    quickActions: [{ name: "restart", snippetId: "1" }],
+    password: "hunter2",
+    key: "PRIVATE",
+    sudoPassword: "sudo",
+    rdpPassword: "rdp",
+    socks5Password: "socks",
+    enableSsh: true,
+    enableRdp: true,
+    sshPort: 22,
+    rdpPort: 3389,
+    defaultPath: "/srv",
+  };
+
+  it("always strips secrets for recipients", () => {
+    const result = sanitizeHostForRecipient({ ...sharedHost }, "view");
+    expect(result.password).toBeUndefined();
+    expect(result.key).toBeUndefined();
+    expect(result.sudoPassword).toBeUndefined();
+    expect(result.rdpPassword).toBeUndefined();
+    expect(result.socks5Password).toBeUndefined();
+    // view keeps configuration fields
+    expect(result.notes).toBe("secret runbook");
+    expect(result.quickActions).toEqual(sharedHost.quickActions);
+  });
+
+  it("reduces connect-level hosts to connection essentials", () => {
+    const result = sanitizeHostForRecipient(
+      { ...sharedHost, permissionLevel: "connect" },
+      "connect",
+    );
+    expect(result.name).toBe("prod");
+    expect(result.ip).toBe("10.0.0.42");
+    expect(result.enableRdp).toBe(true);
+    expect(result.rdpPort).toBe(3389);
+    expect(result.permissionLevel).toBe("connect");
+    expect(result.notes).toBeUndefined();
+    expect(result.quickActions).toBeUndefined();
+    expect(result.password).toBeUndefined();
   });
 });

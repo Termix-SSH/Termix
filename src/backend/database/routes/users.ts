@@ -58,12 +58,11 @@ async function syncSharedCredentialsForUserRoles(
   operation: string,
 ) {
   try {
-    const { SharedCredentialManager } =
-      await import("../../utils/shared-credential-manager.js");
-    const sharedCredManager = SharedCredentialManager.getInstance();
-    await sharedCredManager.createSharedCredentialsForUserRoles(userId);
+    const { SharedHostSecretsManager } =
+      await import("../../utils/shared-host-secrets-manager.js");
+    await SharedHostSecretsManager.getInstance().snapshotForUserRoles(userId);
   } catch (error) {
-    authLogger.warn("Failed to sync role shared credentials", {
+    authLogger.warn("Failed to sync role shared host secrets", {
       operation,
       userId,
       error,

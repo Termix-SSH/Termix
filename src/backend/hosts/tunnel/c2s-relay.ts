@@ -36,7 +36,7 @@ async function resolveC2STunnelSource(
   const accessInfo = await permissionManager.canAccessHost(
     userId,
     tunnelConfig.sourceHostId,
-    "read",
+    "connect",
   );
   if (!accessInfo.hasAccess) {
     throw new Error("Access denied to this host");

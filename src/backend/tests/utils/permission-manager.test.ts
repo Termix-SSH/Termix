@@ -15,6 +15,39 @@ vi.mock("../../utils/logger.js", () => ({
   },
 }));
 
+const accessState = vi.hoisted(() => ({
+  ownerId: "owner" as string,
+  grant: null as {
+    id: number;
+    permissionLevel: string;
+    expiresAt: string | null;
+  } | null,
+  touched: [] as number[],
+}));
+
+vi.mock("../../database/repositories/factory.js", () => ({
+  createCurrentHostResolutionRepository: () => ({
+    isHostOwnedByUser: async (_hostId: number, userId: string) =>
+      userId === accessState.ownerId,
+    findHostOwnerId: async () => accessState.ownerId,
+  }),
+  createCurrentRbacAccessRepository: () => ({
+    findActiveHostAccess: async () => accessState.grant,
+    touchHostAccess: async (id: number) => {
+      accessState.touched.push(id);
+    },
+    deleteExpiredHostAccess: async () => 0,
+  }),
+  createCurrentRoleRepository: () => ({
+    listUserRoleIds: async () => [],
+    listUserRolePermissions: async () => [],
+    userHasAnyRoleName: async () => false,
+  }),
+  createCurrentUserRepository: () => ({
+    findById: async () => null,
+  }),
+}));
+
 const { PermissionManager } = await import("../../utils/permission-manager.js");
 
 type PermissionManagerInstance = ReturnType<
@@ -69,5 +102,67 @@ describe("PermissionManager.hasPermission wildcard matching", () => {
   it("does not let a narrower wildcard grant a sibling branch", async () => {
     withPermissions(["hosts.read.*"]);
     expect(await manager.hasPermission("u1", "hosts.write")).toBe(false);
+  });
+});
+
+describe("PermissionManager.canAccessHost level hierarchy", () => {
+  const manager = PermissionManager.getInstance();
+  const actions = ["connect", "view", "edit", "manage"] as const;
+  const levels = ["connect", "view", "edit", "manage"] as const;
+  const rank = { connect: 1, view: 2, edit: 3, manage: 4 } as const;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    accessState.ownerId = "owner";
+    accessState.grant = null;
+    accessState.touched = [];
+  });
+
+  it("grants the owner every action including delete", async () => {
+    for (const action of [...actions, "delete"] as const) {
+      const info = await manager.canAccessHost("owner", 42, action);
+      expect(info).toMatchObject({ hasAccess: true, isOwner: true });
+    }
+  });
+
+  it("denies everything without a grant", async () => {
+    const info = await manager.canAccessHost("stranger", 42, "connect");
+    expect(info).toMatchObject({ hasAccess: false, isShared: false });
+  });
+
+  it("enforces the connect < view < edit < manage hierarchy", async () => {
+    for (const level of levels) {
+      accessState.grant = { id: 5, permissionLevel: level, expiresAt: null };
+      for (const action of actions) {
+        const info = await manager.canAccessHost("recipient", 42, action);
+        expect(info.hasAccess).toBe(rank[level] >= rank[action]);
+        expect(info.permissionLevel).toBe(level);
+        expect(info.isShared).toBe(true);
+      }
+    }
+  });
+
+  it("never grants delete to a shared recipient", async () => {
+    accessState.grant = { id: 5, permissionLevel: "manage", expiresAt: null };
+    const info = await manager.canAccessHost("recipient", 42, "delete");
+    expect(info.hasAccess).toBe(false);
+  });
+
+  it("normalizes the legacy 'view' string mapping and unknown levels to connect", async () => {
+    accessState.grant = { id: 5, permissionLevel: "bogus", expiresAt: null };
+    const connect = await manager.canAccessHost("recipient", 42, "connect");
+    expect(connect.hasAccess).toBe(true);
+    expect(connect.permissionLevel).toBe("connect");
+
+    const view = await manager.canAccessHost("recipient", 42, "view");
+    expect(view.hasAccess).toBe(false);
+  });
+
+  it("only touches the grant timestamp on connect", async () => {
+    accessState.grant = { id: 5, permissionLevel: "manage", expiresAt: null };
+    await manager.canAccessHost("recipient", 42, "manage");
+    expect(accessState.touched).toEqual([]);
+    await manager.canAccessHost("recipient", 42, "connect");
+    expect(accessState.touched).toEqual([5]);
   });
 });

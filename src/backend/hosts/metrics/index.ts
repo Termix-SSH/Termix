@@ -898,7 +898,7 @@ async function fetchHostById(
     const accessInfo = await permissionManager.canAccessHost(
       userId,
       id,
-      "read",
+      "connect",
     );
 
     if (!accessInfo.hasAccess) {
@@ -991,13 +991,14 @@ async function resolveHostCredentials(
         const isSharedHost = userId !== ownerId;
 
         if (isSharedHost) {
-          const { SharedCredentialManager } =
-            await import("../../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            host.id as number,
-            userId,
-          );
+          const { SharedHostSecretsManager } =
+            await import("../../utils/shared-host-secrets-manager.js");
+          const sharedCred =
+            await SharedHostSecretsManager.getInstance().getSecretForUser(
+              host.id as number,
+              userId,
+              "ssh",
+            );
 
           if (sharedCred) {
             baseHost.credentialId = host.credentialId;
@@ -1730,7 +1731,7 @@ app.get("/status", async (req, res) => {
 
   const result: Record<number, StatusEntry> = {};
   for (const [id, entry] of pollingManager.getAllStatuses().entries()) {
-    const access = await permissionManager.canAccessHost(userId, id, "read");
+    const access = await permissionManager.canAccessHost(userId, id, "connect");
     if (access.hasAccess) {
       result[id] = entry;
     }
@@ -1771,7 +1772,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
     });
   }
 
-  const access = await permissionManager.canAccessHost(userId, id, "read");
+  const access = await permissionManager.canAccessHost(userId, id, "connect");
   if (!access.hasAccess) {
     return res.status(404).json({ error: "Status not available" });
   }

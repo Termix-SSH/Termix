@@ -36,6 +36,7 @@ import {
   Share2,
   Terminal,
   Trash2,
+  Users,
   Zap,
 } from "lucide-react";
 import {
@@ -64,6 +65,11 @@ import type { SSHHostData } from "@/types/index";
 import { FolderIconEl } from "@/components/folder-style";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
 import { copyToClipboard } from "@/lib/clipboard";
+import {
+  canDeleteHost,
+  canEditHost,
+  canShareHost,
+} from "@/sidebar/host-permissions";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
 import {
   useStatusColorScheme,
@@ -266,8 +272,8 @@ function folderHostCount(folder: HostFolder): {
 export function HostItem({
   host,
   onOpenTab,
-  onEditHost,
-  onShareHost,
+  onEditHost: onEditHostProp,
+  onShareHost: onShareHostProp,
   onProxmoxDiscover,
   onDelete,
   onDuplicate,
@@ -306,6 +312,10 @@ export function HostItem({
   depth?: number;
 }) {
   const { t } = useTranslation();
+  // Shared hosts expose actions matching the recipient's permission level.
+  const onEditHost = canEditHost(host) ? onEditHostProp : undefined;
+  const onShareHost = canShareHost(host) ? onShareHostProp : undefined;
+  const allowDelete = canDeleteHost(host);
   const metricsEnabled =
     host.enableSsh && host.statsConfig?.metricsEnabled !== false;
   const [trayOnClick, setTrayOnClick] = useState(
@@ -328,8 +338,8 @@ export function HostItem({
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const shouldUseClickTray = trayOnClick || isTouchOnly;
-  const showPasswordCopy = canCopyHostPassword(host);
-  const showSudoPasswordCopy = canCopyHostSudoPassword(host);
+  const showPasswordCopy = !host.isShared && canCopyHostPassword(host);
+  const showSudoPasswordCopy = !host.isShared && canCopyHostSudoPassword(host);
 
   async function handleCopyPassword(
     e: MouseEvent,
@@ -465,6 +475,26 @@ export function HostItem({
             <span className="text-[13px] font-medium truncate text-foreground leading-none">
               {host.name}
             </span>
+            {host.isShared && (
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="flex items-center gap-0.5 text-[9px] px-1 py-px border border-accent-brand/30 bg-accent-brand/10 text-accent-brand shrink-0 leading-none uppercase tracking-wider">
+                      <Users className="size-2.5" />
+                      {t("hosts.sharing.sharedBadge")}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {t("hosts.sharing.sharedBadgeTooltip", {
+                      owner: host.ownerUsername || "?",
+                      level: t(
+                        `hosts.sharing.levels.${host.permissionLevel ?? "connect"}.label`,
+                      ),
+                    })}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {!selectionMode && shouldUseClickTray && (
               <button
                 title={
@@ -666,27 +696,31 @@ export function HostItem({
                         {t("nav.copySudoPassword")}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDuplicate();
-                      }}
-                    >
-                      <CopyPlus className="size-3.5 mr-2" />
-                      {t("hosts.cloneHostAction")}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                      }}
-                    >
-                      <Trash2 className="size-3.5 mr-2" />
-                      {t("common.delete")}
-                    </DropdownMenuItem>
+                    {allowDelete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDuplicate();
+                          }}
+                        >
+                          <CopyPlus className="size-3.5 mr-2" />
+                          {t("hosts.cloneHostAction")}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                          }}
+                        >
+                          <Trash2 className="size-3.5 mr-2" />
+                          {t("common.delete")}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -862,27 +896,31 @@ export function HostItem({
                         {t("nav.copySudoPassword")}
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDuplicate();
-                      }}
-                    >
-                      <CopyPlus className="size-3.5 mr-2" />
-                      {t("hosts.cloneHostAction")}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="text-destructive focus:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete();
-                      }}
-                    >
-                      <Trash2 className="size-3.5 mr-2" />
-                      {t("common.delete")}
-                    </DropdownMenuItem>
+                    {allowDelete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDuplicate();
+                          }}
+                        >
+                          <CopyPlus className="size-3.5 mr-2" />
+                          {t("hosts.cloneHostAction")}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                          }}
+                        >
+                          <Trash2 className="size-3.5 mr-2" />
+                          {t("common.delete")}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -973,6 +1011,26 @@ export function HostItem({
           </span>
           {host.pin && (
             <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
+          )}
+          {host.isShared && (
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="flex items-center gap-0.5 text-[9px] px-1 py-px border border-accent-brand/30 bg-accent-brand/10 text-accent-brand shrink-0 leading-none uppercase tracking-wider">
+                    <Users className="size-2.5" />
+                    {t("hosts.sharing.sharedBadge")}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  {t("hosts.sharing.sharedBadgeTooltip", {
+                    owner: host.ownerUsername || "?",
+                    level: t(
+                      `hosts.sharing.levels.${host.permissionLevel ?? "connect"}.label`,
+                    ),
+                  })}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {!selectionMode && shouldUseClickTray && (
             <button
@@ -1445,27 +1503,31 @@ export function HostItem({
                       )}
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDuplicate();
-                    }}
-                  >
-                    <CopyPlus className="size-3.5 mr-2" />
-                    {t("hosts.cloneHostAction")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete();
-                    }}
-                  >
-                    <Trash2 className="size-3.5 mr-2" />
-                    {t("common.delete")}
-                  </DropdownMenuItem>
+                  {allowDelete && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDuplicate();
+                        }}
+                      >
+                        <CopyPlus className="size-3.5 mr-2" />
+                        {t("hosts.cloneHostAction")}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete();
+                        }}
+                      >
+                        <Trash2 className="size-3.5 mr-2" />
+                        {t("common.delete")}
+                      </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

@@ -143,7 +143,7 @@ export function registerWireGuardRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "read",
+      "connect",
       "wireguard_read",
       async (client, host) => {
         const result = await execElevated(
@@ -194,7 +194,7 @@ export function registerWireGuardRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "wireguard_action",
       async (client, host, req) => {
         const { interface: iface, action } = req.body as {

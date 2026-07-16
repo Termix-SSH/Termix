@@ -196,10 +196,13 @@ router.post(
         return res.status(400).json({ error: "Invalid host ID" });
       }
 
-      const host = await createCurrentHostResolutionRepository().findHostById(
-        hostId,
-        userId,
-      );
+      const hostResolutionRepository = createCurrentHostResolutionRepository();
+      // Decrypt under the owner's DEK; shared hosts carry owner-encrypted fields.
+      const hostOwnerId =
+        await hostResolutionRepository.findHostOwnerId(hostId);
+      const host = hostOwnerId
+        ? await hostResolutionRepository.findHostById(hostId, hostOwnerId)
+        : null;
 
       if (!host) {
         return res.status(404).json({ error: "Host not found" });
@@ -210,7 +213,7 @@ router.post(
         const accessInfo = await permissionManager.canAccessHost(
           userId,
           hostId,
-          "read",
+          "connect",
         );
 
         if (!accessInfo.hasAccess) {
@@ -294,83 +297,121 @@ router.post(
       }
 
       const hostRecord = host as Record<string, unknown>;
-      const hostRepository = createCurrentHostResolutionRepository();
+      const hostRepository = hostResolutionRepository;
+      const isSharedConnection = host.userId !== userId;
 
-      // Backward compat: if authType is not stored but a credentialId is, treat as credential mode
-      const rdpEffectiveAuthType =
-        (host.rdpAuthType as string) ||
-        (host.rdpCredentialId ? "credential" : "direct");
-      const vncEffectiveAuthType =
-        (host.vncAuthType as string) ||
-        (host.vncCredentialId ? "credential" : "direct");
-      const telnetEffectiveAuthType =
-        (host.telnetAuthType as string) ||
-        (hostRecord.telnetCredentialId ? "credential" : "direct");
+      if (isSharedConnection) {
+        // Recipients never read the owner's raw secrets; wipe them and use
+        // the per-recipient snapshot for the requested protocol instead.
+        host.password = null;
+        host.rdpUser = null;
+        host.rdpPassword = null;
+        host.vncUser = null;
+        host.vncPassword = null;
+        host.telnetUser = null;
+        host.telnetPassword = null;
 
-      if (rdpEffectiveAuthType === "credential" && host.rdpCredentialId) {
         try {
-          const cred =
-            await hostRepository.findCredentialByIdForOwnerDecryptedAs(
+          const { SharedHostSecretsManager } =
+            await import("../../utils/shared-host-secrets-manager.js");
+          const secret =
+            await SharedHostSecretsManager.getInstance().getSecretForUser(
+              hostId,
+              userId,
+              connectionType as "rdp" | "vnc" | "telnet",
+            );
+          if (secret) {
+            if (connectionType === "rdp") {
+              host.rdpUser = secret.username ?? null;
+              host.rdpPassword = secret.password ?? null;
+              if (secret.domain) host.rdpDomain = secret.domain;
+            } else if (connectionType === "vnc") {
+              host.vncUser = secret.username ?? null;
+              host.vncPassword = secret.password ?? null;
+            } else if (connectionType === "telnet") {
+              host.telnetUser = secret.username ?? null;
+              host.telnetPassword = secret.password ?? null;
+            }
+          }
+        } catch (e) {
+          guacLogger.warn("Failed to resolve shared host secret", {
+            operation: "guac_shared_secret_resolve",
+            hostId,
+            protocol: connectionType,
+            error: e instanceof Error ? e.message : "Unknown",
+          });
+        }
+      } else {
+        // Backward compat: if authType is not stored but a credentialId is, treat as credential mode
+        const rdpEffectiveAuthType =
+          (host.rdpAuthType as string) ||
+          (host.rdpCredentialId ? "credential" : "direct");
+        const vncEffectiveAuthType =
+          (host.vncAuthType as string) ||
+          (host.vncCredentialId ? "credential" : "direct");
+        const telnetEffectiveAuthType =
+          (host.telnetAuthType as string) ||
+          (hostRecord.telnetCredentialId ? "credential" : "direct");
+
+        if (rdpEffectiveAuthType === "credential" && host.rdpCredentialId) {
+          try {
+            const cred = await hostRepository.findCredentialByIdForUser(
               host.rdpCredentialId as number,
               host.userId as string,
-              userId,
             );
-          if (cred) {
-            if (cred.username) host.rdpUser = cred.username;
-            if (cred.password) host.rdpPassword = cred.password;
-            // domain is never sourced from credential
+            if (cred) {
+              if (cred.username) host.rdpUser = cred.username;
+              if (cred.password) host.rdpPassword = cred.password;
+              // domain is never sourced from credential
+            }
+          } catch (e) {
+            guacLogger.warn("Failed to resolve RDP credential", {
+              operation: "guac_rdp_credential_resolve",
+              hostId,
+              error: e instanceof Error ? e.message : "Unknown",
+            });
           }
-        } catch (e) {
-          guacLogger.warn("Failed to resolve RDP credential", {
-            operation: "guac_rdp_credential_resolve",
-            hostId,
-            error: e instanceof Error ? e.message : "Unknown",
-          });
         }
-      }
 
-      if (vncEffectiveAuthType === "credential" && host.vncCredentialId) {
-        try {
-          const cred =
-            await hostRepository.findCredentialByIdForOwnerDecryptedAs(
+        if (vncEffectiveAuthType === "credential" && host.vncCredentialId) {
+          try {
+            const cred = await hostRepository.findCredentialByIdForUser(
               host.vncCredentialId as number,
               host.userId as string,
-              userId,
             );
-          if (cred) {
-            if (cred.password) host.vncPassword = cred.password;
-            if (cred.username) host.vncUser = cred.username;
+            if (cred) {
+              if (cred.password) host.vncPassword = cred.password;
+              if (cred.username) host.vncUser = cred.username;
+            }
+          } catch (e) {
+            guacLogger.warn("Failed to resolve VNC credential", {
+              operation: "guac_vnc_credential_resolve",
+              hostId,
+              error: e instanceof Error ? e.message : "Unknown",
+            });
           }
-        } catch (e) {
-          guacLogger.warn("Failed to resolve VNC credential", {
-            operation: "guac_vnc_credential_resolve",
-            hostId,
-            error: e instanceof Error ? e.message : "Unknown",
-          });
         }
-      }
 
-      if (
-        telnetEffectiveAuthType === "credential" &&
-        hostRecord.telnetCredentialId
-      ) {
-        try {
-          const cred =
-            await hostRepository.findCredentialByIdForOwnerDecryptedAs(
+        if (
+          telnetEffectiveAuthType === "credential" &&
+          hostRecord.telnetCredentialId
+        ) {
+          try {
+            const cred = await hostRepository.findCredentialByIdForUser(
               hostRecord.telnetCredentialId as number,
               host.userId as string,
-              userId,
             );
-          if (cred) {
-            if (cred.username) host.telnetUser = cred.username;
-            if (cred.password) host.telnetPassword = cred.password;
+            if (cred) {
+              if (cred.username) host.telnetUser = cred.username;
+              if (cred.password) host.telnetPassword = cred.password;
+            }
+          } catch (e) {
+            guacLogger.warn("Failed to resolve Telnet credential", {
+              operation: "guac_telnet_credential_resolve",
+              hostId,
+              error: e instanceof Error ? e.message : "Unknown",
+            });
           }
-        } catch (e) {
-          guacLogger.warn("Failed to resolve Telnet credential", {
-            operation: "guac_telnet_credential_resolve",
-            hostId,
-            error: e instanceof Error ? e.message : "Unknown",
-          });
         }
       }
 

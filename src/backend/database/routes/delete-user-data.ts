@@ -24,7 +24,7 @@ import {
   createCurrentSessionRepository,
   createCurrentSessionRecordingRepository,
   createCurrentSettingsRepository,
-  createCurrentSharedCredentialRepository,
+  createCurrentSharedHostSecretsRepository,
   createCurrentSnippetRepository,
   createCurrentSshCredentialUsageRepository,
   createCurrentTermixIdentityCaRepository,
@@ -40,7 +40,7 @@ import {
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
-    await createCurrentSharedCredentialRepository().deleteByTargetUserId(
+    await createCurrentSharedHostSecretsRepository().deleteByTargetUserId(
       userId,
     );
 

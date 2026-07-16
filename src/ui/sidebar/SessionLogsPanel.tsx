@@ -117,7 +117,7 @@ function LogRow({
         <span className="text-[10px] text-muted-foreground/60 truncate">
           {formatDate(log.startedAt)}
           {" · "}
-          {log.protocol.toUpperCase()}
+          {(log.protocol ?? "ssh").toUpperCase()}
           {log.username ? ` · ${log.username}` : ""}
           {" · "}
           {formatDuration(log.duration)}

@@ -70,7 +70,7 @@ export function registerProcessRoutes(
   app.get(
     "/host-metrics/managers/processes/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "processes_list", async (client) => {
+    managerHandler(runOnHost, "connect", "processes_list", async (client) => {
       const { stdout } = await execCommand(client, LIST_PROCESSES_CMD, 20000);
       return { processes: parseProcessList(stdout) };
     }),
@@ -106,7 +106,7 @@ export function registerProcessRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "processes_signal",
       async (client, host, req) => {
         const { pid, signal } = req.body as {

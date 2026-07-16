@@ -312,7 +312,7 @@ async function discoverProxmoxGuestsForHost(
     const { PermissionManager } =
       await import("../../utils/permission-manager.js");
     const pm = PermissionManager.getInstance();
-    const access = await pm.canAccessHost(userId, parsedHostId, "execute");
+    const access = await pm.canAccessHost(userId, parsedHostId, "connect");
     if (!access.hasAccess) {
       const error = new Error("Access denied");
       (error as Error & { status?: number }).status = 403;
@@ -337,12 +337,13 @@ async function discoverProxmoxGuestsForHost(
   if (host.credentialId) {
     if (userId !== host.userId) {
       try {
-        const { SharedCredentialManager } =
-          await import("../../utils/shared-credential-manager.js");
+        const { SharedHostSecretsManager } =
+          await import("../../utils/shared-host-secrets-manager.js");
         const sharedCred =
-          await SharedCredentialManager.getInstance().getSharedCredentialForUser(
+          await SharedHostSecretsManager.getInstance().getSecretForUser(
             host.id,
             userId,
+            "ssh",
           );
         if (sharedCred) {
           resolvedCredentials = {

@@ -29,6 +29,7 @@ import {
 import {
   isNonEmptyString,
   isValidPort,
+  sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
 } from "./host-normalizers.js";
@@ -1070,7 +1071,7 @@ router.put(
       const accessInfo = await permissionManager.canAccessHost(
         userId,
         Number(hostId),
-        "write",
+        "edit",
       );
 
       if (!accessInfo.hasAccess) {
@@ -1080,17 +1081,6 @@ router.put(
           userId,
         });
         return res.status(403).json({ error: "Access denied" });
-      }
-
-      if (!accessInfo.isOwner) {
-        sshLogger.warn("Shared user attempted to update host (view-only)", {
-          operation: "host_update",
-          hostId: parseInt(hostId),
-          userId,
-        });
-        return res.status(403).json({
-          error: "Only the host owner can modify host configuration",
-        });
       }
 
       const hostRecord =
@@ -1109,57 +1099,49 @@ router.put(
 
       const ownerId = hostRecord.userId;
 
-      if (
-        !accessInfo.isOwner &&
-        sshDataObj.credentialId !== undefined &&
-        sshDataObj.credentialId !== hostRecord.credentialId
-      ) {
-        return res.status(403).json({
-          error: "Only the host owner can change the credential",
-        });
-      }
+      if (!accessInfo.isOwner) {
+        // Shared editors work on the owner's real record but may never
+        // repoint it at credential/vault references (those live in the
+        // owner's personal vault) or switch the authentication type.
+        const referenceViolations: Array<[unknown, number | null, string]> = [
+          [sshDataObj.credentialId, hostRecord.credentialId, "credential"],
+          [
+            sshDataObj.rdpCredentialId,
+            hostRecord.rdpCredentialId,
+            "RDP credential",
+          ],
+          [
+            sshDataObj.vncCredentialId,
+            hostRecord.vncCredentialId,
+            "VNC credential",
+          ],
+          [
+            sshDataObj.telnetCredentialId,
+            hostRecord.telnetCredentialId,
+            "Telnet credential",
+          ],
+          [
+            sshDataObj.vaultProfileId,
+            hostRecord.vaultProfileId,
+            "Vault profile",
+          ],
+        ];
 
-      if (
-        !accessInfo.isOwner &&
-        sshDataObj.authType !== undefined &&
-        sshDataObj.authType !== hostRecord.authType
-      ) {
-        return res.status(403).json({
-          error: "Only the host owner can change the authentication type",
-        });
-      }
+        for (const [incoming, current, label] of referenceViolations) {
+          if (incoming !== undefined && (incoming ?? null) !== current) {
+            return res.status(403).json({
+              error: `Only the host owner can change the ${label}`,
+            });
+          }
+        }
 
-      {
-        const newCredId =
-          sshDataObj.credentialId !== undefined
-            ? sshDataObj.credentialId
-            : hostRecord.credentialId;
-        const newRdpCredId =
-          sshDataObj.rdpCredentialId !== undefined
-            ? sshDataObj.rdpCredentialId
-            : hostRecord.rdpCredentialId;
-        const newVncCredId =
-          sshDataObj.vncCredentialId !== undefined
-            ? sshDataObj.vncCredentialId
-            : hostRecord.vncCredentialId;
-        const newTelnetCredId =
-          sshDataObj.telnetCredentialId !== undefined
-            ? sshDataObj.telnetCredentialId
-            : hostRecord.telnetCredentialId;
-        const hadCredential =
-          hostRecord.credentialId !== null ||
-          hostRecord.rdpCredentialId !== null ||
-          hostRecord.vncCredentialId !== null ||
-          hostRecord.telnetCredentialId !== null;
-        const willHaveCredential =
-          newCredId !== null ||
-          newRdpCredId !== null ||
-          newVncCredId !== null ||
-          newTelnetCredId !== null;
-        if (hadCredential && !willHaveCredential) {
-          await createCurrentRbacAccessRepository().deleteHostAccessForHost(
-            Number(hostId),
-          );
+        if (
+          sshDataObj.authType !== undefined &&
+          sshDataObj.authType !== hostRecord.authType
+        ) {
+          return res.status(403).json({
+            error: "Only the host owner can change the authentication type",
+          });
         }
       }
 
@@ -1168,6 +1150,23 @@ router.put(
         Number(hostId),
         sshDataObj,
       );
+
+      // Keep every recipient's re-encrypted secret snapshots in sync with
+      // the updated host record.
+      try {
+        const { SharedHostSecretsManager } =
+          await import("../../utils/shared-host-secrets-manager.js");
+        await SharedHostSecretsManager.getInstance().resyncHost(Number(hostId));
+      } catch (resyncError) {
+        sshLogger.warn("Failed to resync shared host secrets after update", {
+          operation: "host_update_resync",
+          hostId: parseInt(hostId),
+          error:
+            resyncError instanceof Error
+              ? resyncError.message
+              : "Unknown error",
+        });
+      }
 
       const updatedHost =
         await createCurrentHostResolutionRepository().findHostById(
@@ -1296,9 +1295,21 @@ router.get(
         }
       }
 
-      const sanitizedSharedHosts = sharedHosts;
+      const ownerUsernames = new Map<string, string>();
+      const userRepository = createCurrentUserRepository();
+      for (const sharedHost of sharedHosts) {
+        const ownerId = sharedHost.userId as string;
+        if (!ownerUsernames.has(ownerId)) {
+          try {
+            const owner = await userRepository.findById(ownerId);
+            ownerUsernames.set(ownerId, owner?.username ?? "");
+          } catch {
+            ownerUsernames.set(ownerId, "");
+          }
+        }
+      }
 
-      const data = [...decryptedOwnHosts, ...sanitizedSharedHosts];
+      const data = [...decryptedOwnHosts, ...sharedHosts];
 
       const result = await Promise.all(
         data.map(async (row: Record<string, unknown>) => {
@@ -1307,6 +1318,9 @@ router.get(
             isShared: !!row.isShared,
             permissionLevel: row.permissionLevel || undefined,
             sharedExpiresAt: row.expiresAt || undefined,
+            ownerUsername: row.isShared
+              ? ownerUsernames.get(row.userId as string) || undefined
+              : undefined,
           };
 
           const resolved =
@@ -1315,7 +1329,14 @@ router.get(
         }),
       );
 
-      const sanitized = result.map((host) => stripSensitiveFields(host));
+      const sanitized = result.map((host) =>
+        host.isShared
+          ? sanitizeHostForRecipient(
+              host,
+              host.permissionLevel as string | undefined,
+            )
+          : stripSensitiveFields(host),
+      );
       res.json(sanitized);
     } catch (err) {
       sshLogger.error("Failed to fetch SSH hosts from database", err, {
@@ -1370,13 +1391,28 @@ router.get(
       return res.status(400).json({ error: "Invalid userId or hostId" });
     }
     try {
-      const host =
-        await createCurrentHostResolutionRepository().findHostByIdForUser(
-          Number(hostId),
-          userId,
-        );
+      const hostResolutionRepository = createCurrentHostResolutionRepository();
+      const host = await hostResolutionRepository.findHostByIdForUser(
+        Number(hostId),
+        userId,
+      );
 
-      if (!host) {
+      if (host) {
+        const result = transformHostResponse(host);
+        const resolved =
+          (await resolveHostCredentials(result, userId)) || result;
+
+        return res.json(stripSensitiveFields(resolved));
+      }
+
+      // Not the owner: shared recipients get a sanitized view of the host.
+      const accessInfo = await permissionManager.canAccessHost(
+        userId,
+        Number(hostId),
+        "connect",
+      );
+
+      if (!accessInfo.hasAccess) {
         sshLogger.warn("SSH host not found", {
           operation: "host_fetch_by_id",
           hostId: parseInt(hostId),
@@ -1385,10 +1421,38 @@ router.get(
         return res.status(404).json({ error: "SSH host not found" });
       }
 
-      const result = transformHostResponse(host);
-      const resolved = (await resolveHostCredentials(result, userId)) || result;
+      const ownerId = await hostResolutionRepository.findHostOwnerId(
+        Number(hostId),
+      );
+      const sharedHost = ownerId
+        ? await hostResolutionRepository.findHostById(Number(hostId), ownerId)
+        : null;
 
-      res.json(stripSensitiveFields(resolved));
+      if (!sharedHost) {
+        return res.status(404).json({ error: "SSH host not found" });
+      }
+
+      let ownerUsername: string | undefined;
+      try {
+        const owner = ownerId
+          ? await createCurrentUserRepository().findById(ownerId)
+          : null;
+        ownerUsername = owner?.username ?? undefined;
+      } catch {
+        ownerUsername = undefined;
+      }
+
+      const sharedResult = {
+        ...transformHostResponse(sharedHost),
+        isShared: true,
+        permissionLevel: accessInfo.permissionLevel,
+        sharedExpiresAt: accessInfo.expiresAt || undefined,
+        ownerUsername,
+      };
+
+      res.json(
+        sanitizeHostForRecipient(sharedResult, accessInfo.permissionLevel),
+      );
     } catch (err) {
       sshLogger.error("Failed to fetch SSH host by ID from database", err, {
         operation: "host_fetch_by_id",
@@ -2033,13 +2097,14 @@ async function resolveHostCredentials(
 
       if (requestingUserId && requestingUserId !== ownerId) {
         try {
-          const { SharedCredentialManager } =
-            await import("../../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          const sharedCred = await sharedCredManager.getSharedCredentialForUser(
-            host.id as number,
-            requestingUserId,
-          );
+          const { SharedHostSecretsManager } =
+            await import("../../utils/shared-host-secrets-manager.js");
+          const sharedCred =
+            await SharedHostSecretsManager.getInstance().getSecretForUser(
+              host.id as number,
+              requestingUserId,
+              "ssh",
+            );
 
           if (sharedCred) {
             const resolvedHost: Record<string, unknown> = {

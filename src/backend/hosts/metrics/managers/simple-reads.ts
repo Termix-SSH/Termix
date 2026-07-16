@@ -112,7 +112,7 @@ export function registerSimpleReadRoutes(
   app.get(
     "/host-metrics/managers/top-memory/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "top_memory", async (client) => {
+    managerHandler(runOnHost, "connect", "top_memory", async (client) => {
       const { stdout } = await execCommand(client, TOP_MEM_CMD, 15000);
       return { processes: parseTopMemory(stdout) };
     }),
@@ -121,7 +121,7 @@ export function registerSimpleReadRoutes(
   app.get(
     "/host-metrics/managers/timers/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "systemd_timers", async (client) => {
+    managerHandler(runOnHost, "connect", "systemd_timers", async (client) => {
       const { stdout } = await execCommand(client, TIMERS_CMD, 15000);
       return { timers: parseTimers(stdout) };
     }),
@@ -130,7 +130,7 @@ export function registerSimpleReadRoutes(
   app.get(
     "/host-metrics/managers/disk-breakdown/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "disk_breakdown", async (client) => {
+    managerHandler(runOnHost, "connect", "disk_breakdown", async (client) => {
       const { stdout } = await execCommand(client, DF_CMD, 15000);
       return { mounts: parseDfMounts(stdout) };
     }),

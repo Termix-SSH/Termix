@@ -46,7 +46,7 @@ export function registerLogRoutes(
   app.get(
     "/host-metrics/managers/logs/:id/files",
     validateHostId,
-    managerHandler(runOnHost, "read", "logs_list", async (client) => {
+    managerHandler(runOnHost, "connect", "logs_list", async (client) => {
       const { stdout } = await execCommand(client, LIST_LOGS_CMD, 10000);
       const found = stdout
         .split("\n")
@@ -62,7 +62,7 @@ export function registerLogRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "read",
+      "connect",
       "logs_tail",
       async (client, host, req) => {
         const path = req.query.path as string | undefined;

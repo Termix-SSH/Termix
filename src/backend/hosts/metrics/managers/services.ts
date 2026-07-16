@@ -70,7 +70,7 @@ export function registerServiceRoutes(
   app.get(
     "/host-metrics/managers/services/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "services_list", async (client) => {
+    managerHandler(runOnHost, "connect", "services_list", async (client) => {
       const { stdout } = await execCommand(client, LIST_SERVICES_CMD, 20000);
       return { services: parseServiceList(stdout) };
     }),
@@ -106,7 +106,7 @@ export function registerServiceRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "services_action",
       async (client, host, req) => {
         const { unit, action } = req.body as {

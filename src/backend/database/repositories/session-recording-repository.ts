@@ -27,6 +27,8 @@ export interface SessionRecordingListRecord {
   endedAt: string | null;
   duration: number | null;
   recordingPath: string | null;
+  protocol: string;
+  format: string | null;
   hostName: string | null;
   hostIp: string | null;
 }
@@ -106,6 +108,8 @@ export class SessionRecordingRepository {
         endedAt: sessionRecordings.endedAt,
         duration: sessionRecordings.duration,
         recordingPath: sessionRecordings.recordingPath,
+        protocol: sessionRecordings.protocol,
+        format: sessionRecordings.format,
         hostName: hosts.name,
         hostIp: hosts.ip,
       })

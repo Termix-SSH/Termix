@@ -199,7 +199,7 @@ export function registerTunnelRoutes(app: express.Express): void {
           const accessInfo = await permissionManager.canAccessHost(
             userId,
             tunnelConfig.sourceHostId,
-            "read",
+            "connect",
           );
 
           if (!accessInfo.hasAccess) {
@@ -285,7 +285,7 @@ export function registerTunnelRoutes(app: express.Express): void {
                 const endpointAccess = await permissionManager.canAccessHost(
                   userId,
                   endpointHost.id,
-                  "read",
+                  "connect",
                 );
                 if (!endpointAccess.hasAccess) {
                   tunnelLogger.warn(
@@ -442,7 +442,7 @@ export function registerTunnelRoutes(app: express.Express): void {
           const accessInfo = await permissionManager.canAccessHost(
             userId,
             config.sourceHostId,
-            "read",
+            "connect",
           );
           if (!accessInfo.hasAccess) {
             return res.status(403).json({ error: "Access denied" });
@@ -547,7 +547,7 @@ export function registerTunnelRoutes(app: express.Express): void {
           const accessInfo = await permissionManager.canAccessHost(
             userId,
             config.sourceHostId,
-            "read",
+            "connect",
           );
           if (!accessInfo.hasAccess) {
             return res.status(403).json({ error: "Access denied" });

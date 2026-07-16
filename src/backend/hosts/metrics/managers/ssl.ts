@@ -153,7 +153,7 @@ export function registerSslRoutes(
   app.get(
     "/host-metrics/managers/ssl/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "ssl_list", async (client, host) => {
+    managerHandler(runOnHost, "connect", "ssl_list", async (client, host) => {
       const platform = await detectPlatform(client);
       const certs: CertInfo[] = [];
       if (platform.hasCertbot) {
@@ -187,7 +187,7 @@ export function registerSslRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "ssl_issue",
       async (client, host, req) => {
         const body = req.body as Partial<IssueRequest>;
@@ -236,7 +236,7 @@ export function registerSslRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "ssl_renew",
       async (client, host, req) => {
         const { client: acmeClient, dryRun } = req.body as {
@@ -289,7 +289,7 @@ export function registerSslRoutes(
     validateHostId,
     managerHandler(
       runOnHost,
-      "execute",
+      "connect",
       "ssl_revoke",
       async (client, host, req) => {
         const { client: acmeClient, name } = req.body as {

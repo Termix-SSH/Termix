@@ -45,7 +45,7 @@ export function registerManagerRoutes(
   app.get(
     "/host-metrics/platform/:id",
     validateHostId,
-    managerHandler(runOnHost, "read", "platform_detect", (client) =>
+    managerHandler(runOnHost, "connect", "platform_detect", (client) =>
       detectPlatform(client),
     ),
   );
