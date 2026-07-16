@@ -35,7 +35,7 @@
 
 Termix is free and open source. If you find it useful, consider [donating](https://donate.termix.site/) to help cover server costs and development time.
 
-<a href="https://donate.termix.site/"><img src="https://raw.githubusercontent.com/Termix-SSH/Termix/badges/donation-goal.svg" alt="Monthly donation goal" /></a>
+<a href="https://donate.termix.site/"><img src="./repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -266,8 +266,6 @@ services:
       - termix-data:/app/data
     environment:
       PORT: "8080"
-      GUACD_HOST: "guacd"
-      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
     depends_on:
       - guacd
     networks:
@@ -279,8 +277,6 @@ services:
     restart: unless-stopped
     ports:
       - "4822:4822"
-    volumes:
-      - termix-data:/termix-data
     networks:
       - termix-net
 
@@ -292,13 +288,6 @@ networks:
   termix-net:
     driver: bridge
 ```
-
-Termix records enabled SSH, RDP, VNC, and Telnet sessions for replay and audit.
-When using an external `guacd`, mount the same recording storage into both
-services and set `GUACD_RECORDING_PATH` to the path visible to `guacd` and
-`GUACD_RECORDING_BACKEND_PATH` to the corresponding path visible to Termix.
-Administrators can change the default 30-day retention period from Session Logs
-or with `SESSION_RECORDING_RETENTION_DAYS`.
 
 <br />
 
@@ -402,10 +391,6 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/5) for all planned fe
 &nbsp;&nbsp;&nbsp;
 <a href="https://aws.amazon.com/">
   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://rackgenius.com/">
-  <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="AWS" />
 </a>
 
 </div>
