@@ -155,7 +155,7 @@ import {
     const dbServer = await import("./database/database.js");
     await (dbServer as unknown as { serverReady: Promise<void> }).serverReady;
     await import("./ssh/terminal.js");
-    await import("./ssh/tunnel.js");
+    await import("./ssh/tunnel/index.js");
     await import("./ssh/file-manager.js");
     await import("./ssh/host-metrics.js");
     await import("./ssh/docker/index.js");
