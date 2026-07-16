@@ -1,17 +1,17 @@
 import { Client as SSHClient } from "ssh2";
-import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
+import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { WebSocketServer, WebSocket } from "ws";
-import { AuthManager } from "../utils/auth-manager.js";
-import { createCurrentHostResolutionRepository } from "../database/repositories/factory.js";
-import { systemLogger } from "../utils/logger.js";
-import type { SSHHost } from "../../types/index.js";
-import { applyAgentAuth } from "./terminal-auth-helpers.js";
+import { AuthManager } from "../../utils/auth-manager.js";
+import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
+import { systemLogger } from "../../utils/logger.js";
+import type { SSHHost } from "../../../types/index.js";
+import { applyAgentAuth } from "../terminal-auth-helpers.js";
 import {
   containerCommand,
   getContainerRuntimeConfig,
   type ContainerRuntime,
-} from "./container-runtime.js";
-import { resolveSshConnectConfigHost } from "./ssh-dns.js";
+} from "../container-runtime.js";
+import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 
 const sshLogger = systemLogger;
 
@@ -383,7 +383,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           try {
             // Resolve host with credentials server-side
-            const { resolveHostById } = await import("./host-resolver.js");
+            const { resolveHostById } = await import("../host-resolver.js");
             const resolvedHost = await resolveHostById(hostId, userId);
 
             if (!resolvedHost) {

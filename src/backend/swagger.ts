@@ -125,6 +125,7 @@ const swaggerOptions: SwaggerJSDocOptions = {
     path.join(__dirname, "database", "routes", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "dashboard.js").replace(/\\/g, "/"),
     path.join(__dirname, "ssh", "*.js").replace(/\\/g, "/"),
+    path.join(__dirname, "ssh", "**", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "guacamole", "routes.js").replace(/\\/g, "/"),
   ],
 };

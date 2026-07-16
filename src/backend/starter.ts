@@ -158,8 +158,8 @@ import {
     await import("./ssh/tunnel.js");
     await import("./ssh/file-manager.js");
     await import("./ssh/host-metrics.js");
-    await import("./ssh/docker.js");
-    await import("./ssh/docker-console.js");
+    await import("./ssh/docker/index.js");
+    await import("./ssh/docker/console.js");
     await import("./ssh/tmux-monitor.js"); // --- tmux-monitor ---
     await import("./serial/serial.js");
     await import("./dashboard.js");
