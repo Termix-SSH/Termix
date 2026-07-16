@@ -892,13 +892,6 @@ class AuthManager {
     return this.userKeys.tryGetUserDEK(userId) !== null;
   }
 
-  async resetUserPasswordWithPreservedDEK(
-    userId: string,
-    _newPassword?: string,
-  ): Promise<boolean> {
-    return this.userKeys.tryGetUserDEK(userId) !== null;
-  }
-
   async isTrustedDevice(
     userId: string,
     deviceFingerprint: string,

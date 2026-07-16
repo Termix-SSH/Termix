@@ -483,4 +483,127 @@ export function registerUserAdminRoutes(
       res.status(500).json({ error: "Failed to create user" });
     }
   });
+
+  /**
+   * @openapi
+   * /users/admin/reset-password:
+   *   post:
+   *     summary: Reset a user's password (admin only)
+   *     description: >
+   *       Resets another user's password. Data is preserved for users whose
+   *       encryption key has been migrated to the system wrap. Users who never
+   *       logged in since the encryption upgrade require confirmDataWipe,
+   *       which deletes their encrypted data.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - newPassword
+   *             properties:
+   *               userId:
+   *                 type: string
+   *               username:
+   *                 type: string
+   *               newPassword:
+   *                 type: string
+   *               confirmDataWipe:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Password reset; dataWiped indicates whether encrypted data was deleted.
+   *       400:
+   *         description: Missing or invalid parameters.
+   *       403:
+   *         description: Admin access required.
+   *       404:
+   *         description: User not found.
+   *       409:
+   *         description: Reset would wipe the user's data and confirmDataWipe was not set.
+   *       500:
+   *         description: Failed to reset password.
+   */
+  router.post("/admin/reset-password", authenticateJWT, async (req, res) => {
+    const adminId = (req as AuthenticatedRequest).userId;
+    const { userId: targetUserId, username, newPassword } = req.body;
+    const resolvedUserId = isNonEmptyString(targetUserId)
+      ? targetUserId.trim()
+      : null;
+    const resolvedUsername = isNonEmptyString(username)
+      ? username.trim()
+      : null;
+
+    if (!resolvedUserId && !resolvedUsername) {
+      return res.status(400).json({ error: "User ID or username is required" });
+    }
+    if (!isNonEmptyString(newPassword)) {
+      return res.status(400).json({ error: "New password is required" });
+    }
+
+    try {
+      const userRepository = createCurrentUserRepository();
+      const adminUser = await userRepository.findById(adminId);
+      if (!adminUser?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const targetUser = await getUserByPreferredIdentifier(
+        userRepository,
+        resolvedUserId,
+        resolvedUsername,
+      );
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (targetUser.isOidc && !targetUser.passwordHash) {
+        return res.status(400).json({
+          error: "This user authenticates through an external provider",
+        });
+      }
+
+      const { resetUserPassword } =
+        await import("./user-password-reset-routes.js");
+      const outcome = await resetUserPassword(AuthManager.getInstance(), {
+        userId: targetUser.id,
+        username: targetUser.username,
+        newPassword,
+        confirmDataWipe: req.body?.confirmDataWipe === true,
+      });
+
+      if (outcome.status === "wipe_confirmation_required") {
+        return res.status(409).json({
+          error:
+            "This user has not logged in since the encryption upgrade, so their data cannot be recovered. Set confirmDataWipe to reset anyway and delete their hosts, credentials and snippets.",
+          code: "DATA_WIPE_REQUIRED",
+        });
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId: adminId,
+        username: adminUser.username ?? adminId,
+        action: "admin_reset_password",
+        resourceType: "user",
+        resourceId: targetUser.id,
+        resourceName: targetUser.username,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      await DatabaseSaveTrigger.forceSave("admin_password_reset");
+
+      res.json({
+        message: "Password reset",
+        dataWiped: outcome.dataWiped,
+      });
+    } catch (err) {
+      authLogger.error("Failed to reset user password", err);
+      res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
 }

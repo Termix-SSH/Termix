@@ -1950,7 +1950,8 @@
     "passwordLoginDisabledDesc": "Password login is disabled. Use a passkey or an external authentication provider.",
     "signInWithPasskey": "Sign in with passkey",
     "passkeyLoginFailed": "Passkey login failed",
-    "attemptsRemaining": "{{count}} attempts remaining"
+    "attemptsRemaining": "{{count}} attempts remaining",
+    "confirmResetDataWipe": "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and snippets. Continue?"
   },
   "hostKey": {
     "verifyNewHost": "Verify SSH Host Key",

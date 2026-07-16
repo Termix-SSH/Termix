@@ -511,7 +511,26 @@ export function Auth({
     }
 
     try {
-      await completePasswordReset(localUsername, tempToken, newPassword);
+      try {
+        await completePasswordReset(localUsername, tempToken, newPassword);
+      } catch (err: unknown) {
+        const error = err as {
+          response?: { data?: { code?: string } };
+        };
+        if (error?.response?.data?.code !== "DATA_WIPE_REQUIRED") {
+          throw err;
+        }
+        if (!window.confirm(t("auth.confirmResetDataWipe"))) {
+          setResetLoading(false);
+          return;
+        }
+        await completePasswordReset(
+          localUsername,
+          tempToken,
+          newPassword,
+          true,
+        );
+      }
 
       setResetStep("initiate");
       setResetCode("");

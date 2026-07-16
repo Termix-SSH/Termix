@@ -25,6 +25,82 @@ function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
+export type PasswordResetOutcome =
+  | { status: "reset"; dataWiped: false }
+  | { status: "reset"; dataWiped: true }
+  | { status: "wipe_confirmation_required" };
+
+// Resets a user's password. The DEK is wrapped by the system key, so for any
+// user migrated to the v3 wrap this is just a hash update and their data
+// survives. Users who never logged in after the encryption upgrade still have
+// a password-wrapped DEK that a reset cannot recover; their encrypted data
+// must be wiped, which callers have to confirm explicitly.
+export async function resetUserPassword(
+  authManager: AuthManager,
+  options: {
+    userId: string;
+    username: string;
+    newPassword: string;
+    confirmDataWipe: boolean;
+  },
+): Promise<PasswordResetOutcome> {
+  const { userId, username, newPassword, confirmDataWipe } = options;
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const userRepository = createCurrentUserRepository();
+
+  if (authManager.isUserUnlocked(userId)) {
+    await userRepository.update(userId, { passwordHash });
+    await authManager.logoutUser(userId);
+
+    authLogger.success(
+      `Password reset (data preserved) for user: ${username}`,
+      {
+        operation: "password_reset_preserved",
+        userId,
+        username,
+      },
+    );
+    return { status: "reset", dataWiped: false };
+  }
+
+  if (!confirmDataWipe) {
+    return { status: "wipe_confirmation_required" };
+  }
+
+  await userRepository.update(userId, { passwordHash });
+
+  await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
+  await createCurrentFileManagerBookmarkRepository().deleteByUserId(userId);
+  await createCurrentRecentActivityRepository().deleteByUserId(userId);
+  await createCurrentDismissedAlertRepository().deleteByUserId(userId);
+  await createCurrentSnippetRepository().deleteByUserId(userId);
+  await createCurrentHostRepository().deleteByUserId(userId);
+  await createCurrentCredentialRepository().deleteByUserId(userId);
+
+  const { UserKeyManager } = await import("../../utils/user-keys.js");
+  await UserKeyManager.getInstance().rotateUserDEK(userId);
+  const { deleteLegacyWraps } =
+    await import("../../utils/crypto-migration/dek-migration.js");
+  await deleteLegacyWraps(userId);
+  await authManager.logoutUser(userId);
+
+  await userRepository.update(userId, {
+    totpEnabled: false,
+    totpSecret: null,
+    totpBackupCodes: null,
+  });
+
+  authLogger.warn(
+    `Password reset completed for user: ${username}. All encrypted data has been deleted because the old key was unrecoverable.`,
+    {
+      operation: "password_reset_data_deleted",
+      userId,
+      username,
+    },
+  );
+  return { status: "reset", dataWiped: true };
+}
+
 export function registerUserPasswordResetRoutes(
   router: Router,
   { authManager }: UserPasswordResetRoutesDeps,
@@ -332,111 +408,19 @@ export function registerUserPasswordResetRoutes(
       }
       const userId = user.id;
 
-      const password_hash = await bcrypt.hash(newPassword, 10);
+      const outcome = await resetUserPassword(authManager, {
+        userId,
+        username,
+        newPassword,
+        confirmDataWipe: req.body?.confirmDataWipe === true,
+      });
 
-      let userIdFromJwt: string | null = null;
-      const cookie = req.cookies?.jwt;
-      let header: string | undefined;
-      if (req.headers?.authorization?.startsWith("Bearer ")) {
-        header = req.headers?.authorization?.split(" ")[1];
-      }
-      const token = cookie || header;
-
-      if (token) {
-        const payload = await authManager.verifyJWTToken(token);
-        if (payload) {
-          userIdFromJwt = payload.userId;
-        }
-      }
-
-      if (userIdFromJwt === userId) {
-        try {
-          const success = await authManager.resetUserPasswordWithPreservedDEK(
-            userId,
-            newPassword,
-          );
-
-          if (!success) {
-            throw new Error(
-              "Failed to re-encrypt user data with new password.",
-            );
-          }
-
-          await createCurrentUserRepository().update(userId, {
-            passwordHash: password_hash,
-          });
-          authManager.logoutUser(userId);
-          authLogger.success(
-            `Password reset (data preserved) for user: ${username}`,
-            {
-              operation: "password_reset_preserved",
-              userId,
-              username,
-            },
-          );
-        } catch (encryptionError) {
-          authLogger.error(
-            "Failed to setup user data encryption after password reset",
-            encryptionError,
-            {
-              operation: "password_reset_encryption_failed_preserved",
-              userId,
-              username,
-            },
-          );
-          return res.status(500).json({
-            error: "Password reset failed. Please contact administrator.",
-          });
-        }
-      } else {
-        await createCurrentUserRepository().update(userId, {
-          passwordHash: password_hash,
+      if (outcome.status === "wipe_confirmation_required") {
+        return res.status(409).json({
+          error:
+            "This account has not logged in since the encryption upgrade, so its stored data cannot be recovered without the old password. Resetting will permanently delete its hosts, credentials and snippets.",
+          code: "DATA_WIPE_REQUIRED",
         });
-
-        try {
-          await createCurrentSshCredentialUsageRepository().deleteByUserId(
-            userId,
-          );
-          await createCurrentFileManagerBookmarkRepository().deleteByUserId(
-            userId,
-          );
-          await createCurrentRecentActivityRepository().deleteByUserId(userId);
-          await createCurrentDismissedAlertRepository().deleteByUserId(userId);
-          await createCurrentSnippetRepository().deleteByUserId(userId);
-          await createCurrentHostRepository().deleteByUserId(userId);
-          await createCurrentCredentialRepository().deleteByUserId(userId);
-
-          await authManager.registerUser(userId, newPassword);
-          authManager.logoutUser(userId);
-
-          await createCurrentUserRepository().update(userId, {
-            totpEnabled: false,
-            totpSecret: null,
-            totpBackupCodes: null,
-          });
-
-          authLogger.warn(
-            `Password reset completed for user: ${username}. All encrypted data has been deleted due to lost encryption key.`,
-            {
-              operation: "password_reset_data_deleted",
-              userId,
-              username,
-            },
-          );
-        } catch (encryptionError) {
-          authLogger.error(
-            "Failed to setup user data encryption after password reset",
-            encryptionError,
-            {
-              operation: "password_reset_encryption_failed",
-              userId,
-              username,
-            },
-          );
-          return res.status(500).json({
-            error: "Password reset failed. Please contact administrator.",
-          });
-        }
       }
 
       authLogger.success(`Password successfully reset for user: ${username}`);
@@ -445,7 +429,10 @@ export function registerUserPasswordResetRoutes(
       await settingsRepository.delete(`reset_code_${username}`);
       await settingsRepository.delete(`temp_reset_token_${username}`);
 
-      res.json({ message: "Password has been successfully reset" });
+      res.json({
+        message: "Password has been successfully reset",
+        dataWiped: outcome.dataWiped,
+      });
     } catch (err) {
       authLogger.error("Failed to complete password reset", err);
       res.status(500).json({ error: "Failed to complete password reset" });

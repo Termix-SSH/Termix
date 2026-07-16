@@ -1888,12 +1888,14 @@ export async function completePasswordReset(
   username: string,
   tempToken: string,
   newPassword: string,
+  confirmDataWipe = false,
 ): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/complete-reset", {
       username,
       tempToken,
       newPassword,
+      confirmDataWipe,
     });
     return response.data;
   } catch (error) {
