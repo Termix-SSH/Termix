@@ -4,9 +4,9 @@ const mocks = vi.hoisted(() => ({
   isUserDataUnlocked: vi.fn(),
 }));
 
-vi.mock("../../../utils/simple-db-ops.js", () => ({
-  SimpleDBOps: {
-    isUserDataUnlocked: mocks.isUserDataUnlocked,
+vi.mock("../../../utils/data-crypto.js", () => ({
+  DataCrypto: {
+    canUserAccessData: mocks.isUserDataUnlocked,
   },
 }));
 

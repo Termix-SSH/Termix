@@ -22,9 +22,7 @@ const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 // Proxmox node names are restricted to [a-zA-Z0-9-] by PVE itself,
 // but we validate defensively before using in a shell command.

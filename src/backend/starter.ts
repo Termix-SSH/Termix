@@ -38,58 +38,27 @@ import {
       port: process.env.PORT || 4090,
     });
 
-    let version = "unknown";
-
-    const versionSources = [
-      () => process.env.VERSION,
-      () => {
+    let version = process.env.VERSION || "unknown";
+    if (version === "unknown") {
+      const candidates = [
+        path.join(process.cwd(), "package.json"),
+        path.join(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "../../../package.json",
+        ),
+      ];
+      for (const packageJsonPath of candidates) {
         try {
-          const packageJsonPath = path.join(process.cwd(), "package.json");
           const packageJson = JSON.parse(
             readFileSync(packageJsonPath, "utf-8"),
           );
-          return packageJson.version;
+          if (packageJson.version) {
+            version = packageJson.version;
+            break;
+          }
         } catch {
-          return null;
+          // try the next location
         }
-      },
-      () => {
-        try {
-          const __filename = fileURLToPath(import.meta.url);
-          const packageJsonPath = path.join(
-            path.dirname(__filename),
-            "../../../package.json",
-          );
-          const packageJson = JSON.parse(
-            readFileSync(packageJsonPath, "utf-8"),
-          );
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-      () => {
-        try {
-          const packageJsonPath = path.join("/app", "package.json");
-          const packageJson = JSON.parse(
-            readFileSync(packageJsonPath, "utf-8"),
-          );
-          return packageJson.version;
-        } catch {
-          return null;
-        }
-      },
-    ];
-
-    for (const getVersion of versionSources) {
-      try {
-        const foundVersion = getVersion();
-        if (foundVersion && foundVersion !== "unknown") {
-          version = foundVersion;
-          break;
-        }
-      } catch {
-        continue;
       }
     }
     versionLogger.info(`Termix Backend starting - Version: ${version}`, {
@@ -152,15 +121,15 @@ import {
       },
     );
 
-    const dbServer = await import("./database/database.js");
-    await (dbServer as unknown as { serverReady: Promise<void> }).serverReady;
+    const { serverReady } = await import("./database/database.js");
+    await serverReady;
     await import("./hosts/terminal/index.js");
     await import("./hosts/tunnel/index.js");
     await import("./hosts/file-manager/index.js");
     await import("./hosts/metrics/index.js");
     await import("./hosts/docker/index.js");
     await import("./hosts/docker/console.js");
-    await import("./hosts/tmux/index.js"); // --- tmux-monitor ---
+    await import("./hosts/tmux/index.js");
     await import("./hosts/serial.js");
     await import("./services/dashboard.js");
     await import("./services/homepage.js");

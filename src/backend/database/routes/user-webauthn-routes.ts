@@ -132,6 +132,20 @@ export function registerUserWebAuthnRoutes(
   router: Router,
   { authenticateJWT, authManager, isNativeAppRequest }: WebAuthnRoutesDeps,
 ): void {
+  /**
+   * @openapi
+   * /users/webauthn/credentials:
+   *   get:
+   *     summary: List passkeys
+   *     description: Lists the authenticated user's registered passkeys.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: List of passkeys.
+   *       401:
+   *         description: Authentication required.
+   */
   router.get("/webauthn/credentials", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     if (!userId) {
@@ -155,6 +169,22 @@ export function registerUserWebAuthnRoutes(
     });
   });
 
+  /**
+   * @openapi
+   * /users/webauthn/register/options:
+   *   post:
+   *     summary: Start passkey registration
+   *     description: Generates WebAuthn registration options for the authenticated user.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Registration options and challenge id.
+   *       401:
+   *         description: Authentication required.
+   *       404:
+   *         description: User not found.
+   */
   router.post(
     "/webauthn/register/options",
     authenticateJWT,
@@ -213,6 +243,22 @@ export function registerUserWebAuthnRoutes(
     },
   );
 
+  /**
+   * @openapi
+   * /users/webauthn/register/verify:
+   *   post:
+   *     summary: Finish passkey registration
+   *     description: Verifies the WebAuthn registration response and stores the passkey.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Passkey registered.
+   *       400:
+   *         description: Registration failed or challenge expired.
+   *       401:
+   *         description: Authentication required.
+   */
   router.post(
     "/webauthn/register/verify",
     authenticateJWT,
@@ -282,6 +328,20 @@ export function registerUserWebAuthnRoutes(
     },
   );
 
+  /**
+   * @openapi
+   * /users/webauthn/authenticate/options:
+   *   post:
+   *     summary: Start passkey login
+   *     description: Generates WebAuthn authentication options, optionally scoped to a username.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Authentication options and challenge id.
+   *       404:
+   *         description: No passkeys found for the user.
+   */
   router.post("/webauthn/authenticate/options", async (req, res) => {
     const origin = getRequestOrigin(req);
     const rpID = getRpID(origin);
@@ -333,6 +393,22 @@ export function registerUserWebAuthnRoutes(
     res.json({ options, challengeId });
   });
 
+  /**
+   * @openapi
+   * /users/webauthn/authenticate/verify:
+   *   post:
+   *     summary: Finish passkey login
+   *     description: Verifies the WebAuthn assertion and issues a session token (or a TOTP challenge).
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Login succeeded or TOTP verification required.
+   *       400:
+   *         description: Challenge expired or invalid response.
+   *       401:
+   *         description: Passkey not recognized or authentication failed.
+   */
   router.post("/webauthn/authenticate/verify", async (req, res) => {
     const challenge = takeChallenge(
       authenticationChallenges,
@@ -468,6 +544,25 @@ export function registerUserWebAuthnRoutes(
     }
   });
 
+  /**
+   * @openapi
+   * /users/webauthn/credentials/{credentialId}:
+   *   delete:
+   *     summary: Delete a passkey
+   *     description: Removes one of the authenticated user's passkeys.
+   *     tags:
+   *       - WebAuthn
+   *     parameters:
+   *       - in: path
+   *         name: credentialId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200:
+   *         description: Passkey deleted.
+   *       401:
+   *         description: Authentication required.
+   */
   router.delete(
     "/webauthn/credentials/:credentialId",
     authenticateJWT,

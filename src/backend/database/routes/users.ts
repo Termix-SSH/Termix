@@ -32,6 +32,7 @@ import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
 import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
 import { registerUserTotpRoutes } from "./user-totp-routes.js";
+import { registerUserWebAuthnRoutes } from "./user-webauthn-routes.js";
 import { registerUserSessionRoutes } from "./user-session-routes.js";
 import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
@@ -2420,6 +2421,12 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 registerUserAdminRoutes(router, authenticateJWT);
 
 registerUserTotpRoutes(router, {
+  authenticateJWT,
+  authManager,
+  isNativeAppRequest,
+});
+
+registerUserWebAuthnRoutes(router, {
   authenticateJWT,
   authManager,
   isNativeAppRequest,

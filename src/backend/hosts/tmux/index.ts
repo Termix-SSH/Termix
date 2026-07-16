@@ -54,10 +54,8 @@ interface TmuxSessionOverview extends TmuxSessionSummary {
   tags: string[];
 }
 
-// ---------------------------------------------------------------------------
 // SSH connection (lean variant of the per-module pattern used by server-stats
 // and docker; jump hosts and SOCKS5 reuse the shared helpers)
-// ---------------------------------------------------------------------------
 
 async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
   const base: ConnectConfig = {
@@ -241,9 +239,7 @@ async function withHostConnection<T>(
   return withConnection(getPoolKey(host), connectToHost(host), fn);
 }
 
-// ---------------------------------------------------------------------------
 // tmux queries
-// ---------------------------------------------------------------------------
 
 async function tmuxAvailable(conn: Client): Promise<boolean> {
   try {
@@ -326,9 +322,7 @@ async function collectPaneMetrics(
   );
 }
 
-// ---------------------------------------------------------------------------
 // Express app
-// ---------------------------------------------------------------------------
 
 const app = express();
 const authManager = AuthManager.getInstance();

@@ -88,10 +88,8 @@ async function getActorUsername(userId: string): Promise<string> {
   return user?.username ?? userId;
 }
 
-// ---------------------------------------------------------------------------
 // Public resolver — UNAUTHENTICATED. Serves authorized_keys (text/plain) or a
 // small HTML viewer for browsers, keyed by handle, with optional /<ALGO> filter.
-// ---------------------------------------------------------------------------
 
 // Never let an intermediary/CDN cache a public resolver feed (a disabled/removed
 // key could keep being served after revocation), and keep it out of search
@@ -276,9 +274,7 @@ router.get("/u/:handle/ca", caResolver);
 router.get("/u/:handle", resolveHandle);
 router.get("/u/:handle/:algo", resolveHandle);
 
-// ---------------------------------------------------------------------------
 // Authenticated management API.
-// ---------------------------------------------------------------------------
 
 /**
  * @openapi
@@ -1024,9 +1020,7 @@ router.delete(
   },
 );
 
-// ---------------------------------------------------------------------------
 // Certificate authority — central revocation (rotate) + expiry (validity).
-// ---------------------------------------------------------------------------
 
 type CaRow = {
   id: number;

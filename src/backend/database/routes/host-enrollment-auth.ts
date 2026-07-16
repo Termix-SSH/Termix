@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
 
 export function applyHostEnrollmentDefaults(
   hostData: Record<string, unknown>,
@@ -34,7 +34,7 @@ export function requireHostEnrollmentAccessForPath(
     return;
   }
 
-  if (!SimpleDBOps.isUserDataUnlocked(authReq.userId)) {
+  if (!DataCrypto.canUserAccessData(authReq.userId)) {
     res.status(423).json({
       error: "User data is locked. Sign in before enrolling hosts.",
       code: "DATA_LOCKED",

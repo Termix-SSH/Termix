@@ -46,6 +46,22 @@ function validateConfig(config: unknown): config is TunnelConnection[] {
   });
 }
 
+/**
+ * @openapi
+ * /c2s-tunnel-presets:
+ *   get:
+ *     summary: List client tunnel presets
+ *     description: Returns the authenticated user's saved client-to-server tunnel presets.
+ *     tags:
+ *       - Tunnel Presets
+ *     responses:
+ *       200:
+ *         description: List of tunnel presets.
+ *       401:
+ *         description: Authentication required.
+ *       500:
+ *         description: Failed to list presets.
+ */
 router.get(
   "/",
   authenticateJWT,
@@ -67,6 +83,37 @@ router.get(
   },
 );
 
+/**
+ * @openapi
+ * /c2s-tunnel-presets:
+ *   post:
+ *     summary: Create a client tunnel preset
+ *     description: Saves a named client-to-server tunnel configuration for the authenticated user.
+ *     tags:
+ *       - Tunnel Presets
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               config:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: Preset created.
+ *       400:
+ *         description: Invalid name or config.
+ *       401:
+ *         description: Authentication required.
+ *       500:
+ *         description: Failed to create preset.
+ */
 router.post(
   "/",
   authenticateJWT,
@@ -111,6 +158,29 @@ router.post(
   },
 );
 
+/**
+ * @openapi
+ * /c2s-tunnel-presets/{id}:
+ *   put:
+ *     summary: Update a client tunnel preset
+ *     description: Updates the name or config of one of the authenticated user's tunnel presets.
+ *     tags:
+ *       - Tunnel Presets
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Preset updated.
+ *       400:
+ *         description: Invalid name or config.
+ *       404:
+ *         description: Preset not found.
+ *       500:
+ *         description: Failed to update preset.
+ */
 router.put(
   "/:id",
   authenticateJWT,
@@ -171,6 +241,27 @@ router.put(
   },
 );
 
+/**
+ * @openapi
+ * /c2s-tunnel-presets/{id}:
+ *   delete:
+ *     summary: Delete a client tunnel preset
+ *     description: Deletes one of the authenticated user's tunnel presets.
+ *     tags:
+ *       - Tunnel Presets
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200:
+ *         description: Preset deleted.
+ *       404:
+ *         description: Preset not found.
+ *       500:
+ *         description: Failed to delete preset.
+ */
 router.delete(
   "/:id",
   authenticateJWT,
