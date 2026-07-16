@@ -117,6 +117,13 @@ import {
       operation: "backend_init_db",
     });
 
+    const { UserKeyManager } = await import("./utils/user-keys.js");
+    await UserKeyManager.getInstance().initialize();
+
+    const { runBootDekMigration } =
+      await import("./utils/crypto-migration/dek-migration.js");
+    await runBootDekMigration();
+
     const authManager = AuthManager.getInstance();
     await authManager.initialize();
     DataCrypto.initialize();
