@@ -7,7 +7,7 @@ import {
 } from "@/main-axios";
 import type { SSHHost, SSHHostData, ProxyNode } from "@/types/index";
 import type { ServerStatus, SSHHostWithStatus } from "@/main-axios";
-import type { ProxmoxDiscoverResult } from "@/types/proxmox";
+import type { ProxmoxDiscoverResult, ProxmoxSyncResult } from "@/types/proxmox";
 import {
   getCachedSSHHosts,
   invalidateHostsAndStatusCaches,
@@ -171,6 +171,21 @@ export async function discoverProxmoxGuests(
     return response.data;
   } catch (error) {
     handleApiError(error, "discover Proxmox guests");
+  }
+}
+
+export async function syncProxmoxGuests(
+  hostId: number,
+): Promise<ProxmoxSyncResult> {
+  try {
+    const response = await authApi.post(
+      "/proxmox/sync",
+      { hostId },
+      { timeout: 120000 },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "sync Proxmox guests");
   }
 }
 

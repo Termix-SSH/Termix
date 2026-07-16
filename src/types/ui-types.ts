@@ -116,6 +116,19 @@ export type Host = {
     windowsPatterns: string;
     dockerPatterns: string;
     preferredPrefixes: string;
+    autoSyncEnabled?: boolean;
+    syncIntervalMinutes?: number;
+    markMissingGuests?: boolean;
+    lastSyncAt?: string;
+    lastSyncStatus?: "success" | "error";
+    lastSyncError?: string | null;
+    lastSyncResult?: {
+      created: number;
+      updated: number;
+      markedMissing: number;
+      skipped: number;
+      errors: string[];
+    };
   } | null;
 
   statsConfig?: {
