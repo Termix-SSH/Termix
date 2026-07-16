@@ -2046,22 +2046,47 @@ app.post(
                 );
               }
             } else {
+              if (!endpointHost.id) {
+                throw new Error("Endpoint host not found");
+              }
+
+              const endpointAccess = await permissionManager.canAccessHost(
+                userId,
+                endpointHost.id,
+                "read",
+              );
+              if (!endpointAccess.hasAccess) {
+                tunnelLogger.warn(
+                  "User attempted tunnel connect without endpoint access",
+                  {
+                    operation: "tunnel_connect_endpoint_unauthorized",
+                    userId,
+                    hostId: endpointHost.id,
+                    tunnelName,
+                  },
+                );
+                throw new Error("Endpoint host not found");
+              }
+
               tunnelConfig.endpointIP = endpointHost.ip;
               tunnelConfig.endpointSSHPort = endpointHost.port;
               tunnelConfig.endpointUsername = endpointHost.username;
               tunnelConfig.endpointAuthMethod = endpointHost.authType;
               tunnelConfig.endpointKeyType = endpointHost.keyType;
-              tunnelConfig.endpointCredentialId = endpointHost.credentialId;
-              tunnelConfig.endpointUserId = endpointHost.userId;
+              tunnelConfig.endpointCredentialId =
+                endpointHost.userId === userId
+                  ? endpointHost.credentialId
+                  : undefined;
+              tunnelConfig.endpointUserId = userId;
 
               // Resolve credentials server-side instead of from HTTP response
-              if (endpointHost.id && endpointHost.userId) {
+              if (endpointHost.id) {
                 try {
                   const { resolveHostById } =
                     await import("./host-resolver.js");
                   const resolved = await resolveHostById(
                     endpointHost.id,
-                    endpointHost.userId,
+                    userId,
                   );
                   if (resolved) {
                     tunnelConfig.endpointPassword = resolved.password;

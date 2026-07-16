@@ -407,7 +407,7 @@ export function buildHostEditorPayload(
           agentForwarding: form.agentForwarding,
           autoMosh: form.autoMosh,
           autoTmux: form.autoTmux,
-          sudoPasswordAutoFill: false,
+          sudoPasswordAutoFill: form.sudoPasswordAutoFill,
           sudoPassword: form.sudoPassword || null,
           keepaliveInterval: Number(form.keepaliveInterval),
           keepaliveCountMax: Number(form.keepaliveCountMax),

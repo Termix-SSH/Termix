@@ -393,7 +393,7 @@ describe("RbacAccessRepository", () => {
       (await repo.findDirectHostAccess(42, "user-1"))?.lastAccessedAt,
     ).toBe("2026-06-26T03:00:00.000Z");
 
-    await repo.revokeHostAccess(1);
+    await repo.revokeHostAccess(1, 42);
     expect(await repo.findDirectHostAccess(42, "user-1")).toBeNull();
     expect(writeCount).toBe(5);
   });
@@ -500,7 +500,7 @@ describe("RbacAccessRepository", () => {
     });
     expect(created.created).toBe(true);
 
-    await repo.revokeSnippetAccess(3);
+    await repo.revokeSnippetAccess(3, 99);
     expect((await repo.listSnippetAccess(99)).map((row) => row.id)).toEqual([
       4,
     ]);

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { databaseLogger } from "./logger.js";
 import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
+import { SystemCrypto } from "./system-crypto.js";
 
 interface KEKSalt {
   salt: string;
@@ -74,12 +75,15 @@ class UserCrypto {
     let DEK: Buffer;
 
     if (existingEncryptedDEK) {
-      const systemKey = this.deriveOIDCSystemKey(userId);
-      DEK = this.decryptDEK(existingEncryptedDEK, systemKey);
-      systemKey.fill(0);
+      DEK = await this.decryptSystemWrappedDEK(
+        existingEncryptedDEK,
+        userId,
+        "oidc",
+        `user_encrypted_dek_${userId}`,
+      );
     } else {
       DEK = crypto.randomBytes(UserCrypto.DEK_LENGTH);
-      const systemKey = this.deriveOIDCSystemKey(userId);
+      const systemKey = await this.deriveOIDCSystemKey(userId);
 
       try {
         const encryptedDEK = this.encryptDEK(DEK, systemKey);
@@ -170,9 +174,12 @@ class UserCrypto {
       const oidcEncryptedDEK = await this.getOIDCEncryptedDEK(userId);
 
       if (oidcEncryptedDEK) {
-        const systemKey = this.deriveOIDCSystemKey(userId);
-        const DEK = this.decryptDEK(oidcEncryptedDEK, systemKey);
-        systemKey.fill(0);
+        const DEK = await this.decryptSystemWrappedDEK(
+          oidcEncryptedDEK,
+          userId,
+          "oidc",
+          `user_encrypted_dek_oidc_${userId}`,
+        );
 
         if (!DEK || DEK.length === 0) {
           databaseLogger.error(
@@ -208,9 +215,12 @@ class UserCrypto {
         return true;
       }
 
-      const systemKey = this.deriveOIDCSystemKey(userId);
-      const DEK = this.decryptDEK(encryptedDEK, systemKey);
-      systemKey.fill(0);
+      const DEK = await this.decryptSystemWrappedDEK(
+        encryptedDEK,
+        userId,
+        "oidc",
+        `user_encrypted_dek_${userId}`,
+      );
 
       if (!DEK || DEK.length === 0) {
         await this.setupOIDCUserEncryption(userId, sessionDurationMs);
@@ -252,7 +262,7 @@ class UserCrypto {
       );
     }
 
-    const systemKey = this.deriveWebAuthnSystemKey(userId);
+    const systemKey = await this.deriveWebAuthnSystemKey(userId);
     const encryptedDEK = this.encryptDEK(existingDEK, systemKey);
     systemKey.fill(0);
 
@@ -269,9 +279,12 @@ class UserCrypto {
         return false;
       }
 
-      const systemKey = this.deriveWebAuthnSystemKey(userId);
-      const DEK = this.decryptDEK(encryptedDEK, systemKey);
-      systemKey.fill(0);
+      const DEK = await this.decryptSystemWrappedDEK(
+        encryptedDEK,
+        userId,
+        "webauthn",
+        `user_encrypted_dek_webauthn_${userId}`,
+      );
 
       if (!DEK || DEK.length === 0) {
         return false;
@@ -442,7 +455,7 @@ class UserCrypto {
         );
       }
 
-      const systemKey = this.deriveOIDCSystemKey(userId);
+      const systemKey = await this.deriveOIDCSystemKey(userId);
       const oidcEncryptedDEK = this.encryptDEK(existingDEK, systemKey);
       systemKey.fill(0);
 
@@ -526,12 +539,68 @@ class UserCrypto {
     );
   }
 
-  private deriveOIDCSystemKey(userId: string): Buffer {
-    const systemSecret =
-      process.env.OIDC_SYSTEM_SECRET || "termix-oidc-system-secret-default";
-    const salt = Buffer.from(userId, "utf8");
+  private async deriveOIDCSystemKey(userId: string): Promise<Buffer> {
+    if (process.env.OIDC_SYSTEM_SECRET) {
+      return crypto.pbkdf2Sync(
+        process.env.OIDC_SYSTEM_SECRET,
+        Buffer.from(userId, "utf8"),
+        100000,
+        UserCrypto.KEK_LENGTH,
+        "sha256",
+      );
+    }
+
+    const systemSecret = await SystemCrypto.getInstance().getEncryptionKey();
+    return Buffer.from(
+      crypto.hkdfSync(
+        "sha256",
+        systemSecret,
+        Buffer.from(userId, "utf8"),
+        Buffer.from("termix:oidc-user-kek", "utf8"),
+        UserCrypto.KEK_LENGTH,
+      ),
+    );
+  }
+
+  private async deriveWebAuthnSystemKey(userId: string): Promise<Buffer> {
+    const configuredSecret =
+      process.env.WEBAUTHN_SYSTEM_SECRET || process.env.OIDC_SYSTEM_SECRET;
+    if (configuredSecret) {
+      return crypto.pbkdf2Sync(
+        configuredSecret,
+        Buffer.from(`webauthn:${userId}`, "utf8"),
+        100000,
+        UserCrypto.KEK_LENGTH,
+        "sha256",
+      );
+    }
+
+    const systemSecret = await SystemCrypto.getInstance().getEncryptionKey();
+    return Buffer.from(
+      crypto.hkdfSync(
+        "sha256",
+        systemSecret,
+        Buffer.from(userId, "utf8"),
+        Buffer.from("termix:webauthn-user-kek", "utf8"),
+        UserCrypto.KEK_LENGTH,
+      ),
+    );
+  }
+
+  private deriveLegacySystemKey(
+    userId: string,
+    type: "oidc" | "webauthn",
+  ): Buffer {
+    const secret =
+      type === "oidc"
+        ? "termix-oidc-system-secret-default"
+        : "termix-webauthn-system-secret-default";
+    const salt = Buffer.from(
+      type === "oidc" ? userId : `webauthn:${userId}`,
+      "utf8",
+    );
     return crypto.pbkdf2Sync(
-      systemSecret,
+      secret,
       salt,
       100000,
       UserCrypto.KEK_LENGTH,
@@ -539,19 +608,36 @@ class UserCrypto {
     );
   }
 
-  private deriveWebAuthnSystemKey(userId: string): Buffer {
-    const systemSecret =
-      process.env.WEBAUTHN_SYSTEM_SECRET ||
-      process.env.OIDC_SYSTEM_SECRET ||
-      "termix-webauthn-system-secret-default";
-    const salt = Buffer.from(`webauthn:${userId}`, "utf8");
-    return crypto.pbkdf2Sync(
-      systemSecret,
-      salt,
-      100000,
-      UserCrypto.KEK_LENGTH,
-      "sha256",
-    );
+  private async decryptSystemWrappedDEK(
+    encryptedDEK: EncryptedDEK,
+    userId: string,
+    type: "oidc" | "webauthn",
+    settingKey: string,
+  ): Promise<Buffer> {
+    const systemKey =
+      type === "oidc"
+        ? await this.deriveOIDCSystemKey(userId)
+        : await this.deriveWebAuthnSystemKey(userId);
+    try {
+      return this.decryptDEK(encryptedDEK, systemKey);
+    } catch {
+      const legacyKey = this.deriveLegacySystemKey(userId, type);
+      try {
+        const dek = this.decryptDEK(encryptedDEK, legacyKey);
+        const value = JSON.stringify(this.encryptDEK(dek, systemKey));
+        await createCurrentSettingsRepository().set(settingKey, value);
+        databaseLogger.info("Migrated legacy system-wrapped user key", {
+          operation: "user_key_wrap_migrated",
+          userId,
+          type,
+        });
+        return dek;
+      } finally {
+        legacyKey.fill(0);
+      }
+    } finally {
+      systemKey.fill(0);
+    }
   }
 
   private encryptDEK(dek: Buffer, kek: Buffer): EncryptedDEK {

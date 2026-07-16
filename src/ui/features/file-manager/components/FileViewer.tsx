@@ -88,6 +88,7 @@ interface FileViewerProps {
   content?: string;
   savedContent?: string;
   isLoading?: boolean;
+  isSaving?: boolean;
   isEditable?: boolean;
   resetKey?: number;
   onContentChange?: (content: string) => void;
@@ -271,6 +272,7 @@ export function FileViewer({
   content = "",
   savedContent = "",
   isLoading = false,
+  isSaving = false,
   isEditable = false,
   resetKey,
   onContentChange,
@@ -353,6 +355,7 @@ export function FileViewer({
   };
 
   const handleSave = () => {
+    if (isSaving) return;
     onSave?.(editedContent);
   };
 
@@ -490,6 +493,7 @@ export function FileViewer({
                   variant="outline"
                   size="sm"
                   onClick={handleRevert}
+                  disabled={isSaving}
                   className="flex items-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -499,6 +503,7 @@ export function FileViewer({
                   variant="default"
                   size="sm"
                   onClick={handleSave}
+                  disabled={isSaving}
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />

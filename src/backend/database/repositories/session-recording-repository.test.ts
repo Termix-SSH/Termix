@@ -46,6 +46,8 @@ describe("SessionRecordingRepository", () => {
         commands TEXT,
         dangerous_actions TEXT,
         recording_path TEXT,
+        protocol TEXT NOT NULL DEFAULT 'ssh',
+        format TEXT NOT NULL DEFAULT 'text',
         terminated_by_owner INTEGER DEFAULT 0,
         termination_reason TEXT
       );

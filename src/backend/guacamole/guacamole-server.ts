@@ -99,7 +99,7 @@ const clientOptions = {
     },
   },
   allowedUnencryptedConnectionSettings: {
-    rdp: ["width", "height"],
+    rdp: ["width", "height", "dpi"],
     vnc: ["width", "height"],
     telnet: ["width", "height"],
   },

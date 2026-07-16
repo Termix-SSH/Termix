@@ -208,6 +208,7 @@ function TerminalTabContent({
   onRenameTab,
   onOpenFileInEditor,
   onOpenFileManager,
+  onSaveQuickConnect,
 }: {
   tab: Tab;
   host: Host;
@@ -217,6 +218,7 @@ function TerminalTabContent({
   onRenameTab?: (tabId: string, newLabel: string) => void;
   onOpenFileInEditor?: (filePath: string) => void;
   onOpenFileManager?: (path?: string) => void;
+  onSaveQuickConnect?: () => Promise<void>;
 }) {
   const { previewTerminalTheme } = useTabsSafe();
   const isMobile = useIsMobile();
@@ -248,6 +250,8 @@ function TerminalTabContent({
             previewTheme={previewTerminalTheme}
             onOpenFileInEditor={onOpenFileInEditor}
             onOpenFileManager={onOpenFileManager}
+            isQuickConnect={host.id.startsWith("quick-connect-")}
+            onSaveQuickConnect={onSaveQuickConnect}
           />
         </div>
         {isMobile && (
@@ -272,6 +276,7 @@ export function renderTabContent(
   onOpenFileManager?: (host: Host, path?: string) => void,
   onOpenTerminalTab?: (host: Host, path?: string) => void,
   onRenameTab?: (tabId: string, newLabel: string) => void,
+  onSaveQuickConnect?: (tab: Tab, host: Host) => Promise<void>,
 ) {
   const { host, label } = tab;
 
@@ -308,6 +313,9 @@ export function renderTabContent(
           }
           onOpenFileManager={
             onOpenFileManager ? (p) => onOpenFileManager(host, p) : undefined
+          }
+          onSaveQuickConnect={
+            onSaveQuickConnect ? () => onSaveQuickConnect(tab, host) : undefined
           }
         />
       );

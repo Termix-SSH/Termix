@@ -1,3 +1,4 @@
+import path from "path";
 import { describe, expect, it } from "vitest";
 import { isExternalDatabase, parseDatabaseRuntimeConfig } from "./config.js";
 
@@ -5,10 +6,11 @@ describe("parseDatabaseRuntimeConfig", () => {
   it("defaults to sqlite under DATA_DIR", () => {
     const config = parseDatabaseRuntimeConfig({ DATA_DIR: "/app/data" });
 
+    const sqlitePath = path.join("/app/data", "termix.sqlite");
     expect(config).toEqual({
       dialect: "sqlite",
-      url: "file:/app/data/termix.sqlite",
-      sqlitePath: "/app/data/termix.sqlite",
+      url: `file:${sqlitePath}`,
+      sqlitePath,
     });
   });
 

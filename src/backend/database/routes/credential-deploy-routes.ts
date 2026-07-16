@@ -84,6 +84,10 @@ async function deploySSHKeyToHost(
             }
 
             const keyPattern = keyParts[1];
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(keyPattern)) {
+              clearTimeout(checkTimeout);
+              return rejectCheck(new Error("Invalid public key data"));
+            }
 
             conn.exec(
               `if [ -f ~/.ssh/authorized_keys ]; then grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?; else echo 1; fi`,
@@ -189,6 +193,10 @@ async function deploySSHKeyToHost(
             }
 
             const keyPattern = keyParts[1];
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(keyPattern)) {
+              clearTimeout(verifyTimeout);
+              return rejectVerify(new Error("Invalid public key data"));
+            }
             conn.exec(
               `grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?`,
               (err, stream) => {
@@ -441,7 +449,10 @@ export function registerCredentialDeployRoutes(
             error: "Public key is required for deployment",
           });
         }
-        const hostData = await repository.findHostById(targetHostId, userId);
+        const hostData = await repository.findHostByIdForUser(
+          targetHostId,
+          userId,
+        );
 
         if (!hostData) {
           return res.status(404).json({

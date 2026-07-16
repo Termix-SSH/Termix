@@ -1,22 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Stub all external imports before loading the module under test
-const mockReturning = vi.fn().mockResolvedValue([{ id: 1 }]);
-const mockInsertValues = vi.fn().mockReturnValue({ returning: mockReturning });
-const mockInsert = vi.fn().mockReturnValue({ values: mockInsertValues });
+const mockCreate = vi.fn().mockResolvedValue({ id: 1 });
+const mockUpdateEnded = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("../database/db/index.js", () => ({
-  getDb: () => ({
-    $client: {
-      prepare: () => ({ get: () => undefined }),
-    },
-    insert: mockInsert,
-  }),
+  getDb: () => ({}),
 }));
 
-vi.mock("../database/db/schema.js", () => ({
-  sessionRecordings: {},
-}));
+vi.mock(
+  "../database/repositories/current-session-recording-repository.js",
+  () => ({
+    createCurrentSessionRecordingRepository: () => ({
+      create: mockCreate,
+      updateEnded: mockUpdateEnded,
+    }),
+  }),
+);
 
 vi.mock("../utils/logger.js", () => ({
   sshLogger: {
@@ -60,9 +60,8 @@ describe("TerminalSessionManager - session logging", () => {
     // Re-apply resolved values after clearAllMocks
     mockMkdir.mockResolvedValue(undefined);
     mockWriteFile.mockResolvedValue(undefined);
-    mockReturning.mockResolvedValue([{ id: 1 }]);
-    mockInsertValues.mockReturnValue({ returning: mockReturning });
-    mockInsert.mockReturnValue({ values: mockInsertValues });
+    mockCreate.mockResolvedValue({ id: 1 });
+    mockUpdateEnded.mockResolvedValue(undefined);
   });
 
   it("createSession stores sessionLoggingEnabled=true by default", () => {
@@ -117,8 +116,7 @@ describe("TerminalSessionManager - session logging", () => {
     sessionManager.destroySession(id);
     await new Promise((r) => setTimeout(r, 20));
     expect(mockWriteFile).toHaveBeenCalledOnce();
-    expect(mockInsert).toHaveBeenCalledOnce();
-    expect(mockInsertValues).toHaveBeenCalledOnce();
+    expect(mockCreate).toHaveBeenCalledOnce();
   });
 
   it("does not write log file when buffer is empty", async () => {

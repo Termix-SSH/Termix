@@ -173,10 +173,10 @@ export class RbacAccessRepository {
     return { id: Number(result.lastInsertRowid), created: true };
   }
 
-  async revokeHostAccess(accessId: number): Promise<void> {
+  async revokeHostAccess(accessId: number, hostId: number): Promise<void> {
     await this.context.drizzle
       .delete(hostAccess)
-      .where(eq(hostAccess.id, accessId));
+      .where(and(eq(hostAccess.id, accessId), eq(hostAccess.hostId, hostId)));
     await this.afterWrite();
   }
 
@@ -308,10 +308,18 @@ export class RbacAccessRepository {
     return { id: Number(result.lastInsertRowid), created: true };
   }
 
-  async revokeSnippetAccess(accessId: number): Promise<void> {
+  async revokeSnippetAccess(
+    accessId: number,
+    snippetId: number,
+  ): Promise<void> {
     await this.context.drizzle
       .delete(snippetAccess)
-      .where(eq(snippetAccess.id, accessId));
+      .where(
+        and(
+          eq(snippetAccess.id, accessId),
+          eq(snippetAccess.snippetId, snippetId),
+        ),
+      );
     await this.afterWrite();
   }
 

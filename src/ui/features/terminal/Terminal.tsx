@@ -55,6 +55,7 @@ import {
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
+import { Save } from "lucide-react";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 import {
@@ -85,6 +86,8 @@ interface SSHTerminalProps {
   previewTheme?: string | null;
   /** When true, suppress automatic focus on connect/visibility change. */
   disableAutoFocus?: boolean;
+  isQuickConnect?: boolean;
+  onSaveQuickConnect?: () => Promise<void>;
 }
 
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
@@ -118,6 +121,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onOpenFileInEditor,
       previewTheme,
       disableAutoFocus = false,
+      isQuickConnect = false,
+      onSaveQuickConnect,
     },
     ref,
   ) {
@@ -159,6 +164,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const pongReceivedRef = useRef(true);
     const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [isSavingQuickConnect, setIsSavingQuickConnect] = useState(false);
+    const [isQuickConnectSaved, setIsQuickConnectSaved] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isFitted, setIsFitted] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -2809,6 +2816,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             tmux:detach
           </button>
         )}
+
+        {isQuickConnect &&
+          isConnected &&
+          !isQuickConnectSaved &&
+          onSaveQuickConnect && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={isSavingQuickConnect}
+              onClick={async () => {
+                setIsSavingQuickConnect(true);
+                try {
+                  await onSaveQuickConnect();
+                  setIsQuickConnectSaved(true);
+                } catch {
+                  // The shell reports the failure with a toast.
+                } finally {
+                  setIsSavingQuickConnect(false);
+                }
+              }}
+              className="absolute top-2 left-2 z-[110] h-7 gap-1.5 bg-black/60 text-white/80 hover:bg-black/80 hover:text-white"
+            >
+              <Save className="size-3.5" />
+              {t("hosts.addHost")}
+            </Button>
+          )}
 
         <SimpleLoader
           visible={isConnecting && !isConnectionLogExpanded}

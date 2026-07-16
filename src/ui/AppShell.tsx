@@ -122,6 +122,7 @@ import {
   addOpenTab,
   deleteOpenTab,
   patchOpenTab,
+  createSSHHost,
   getActiveSessions,
   getUserPreferences,
   type UserPreferences,
@@ -134,6 +135,7 @@ import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
 import { changeAppLanguage } from "@/i18n/i18n";
+import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
 
 function buildHostTree(
   hosts: SSHHostWithStatus[],
@@ -1092,6 +1094,21 @@ export function AppShell({
     openTab(host, type);
   }
 
+  const saveQuickConnectHost = useCallback(
+    async (tab: Tab, host: Host) => {
+      try {
+        const savedHost = await createSSHHost(quickConnectHostToPayload(host));
+        await patchOpenTab(tab.instanceId, { hostId: savedHost.id });
+        await loadHosts();
+        toast.success(t("hosts.hostCreated"));
+      } catch (error) {
+        toast.error(t("hosts.failedToSave"));
+        throw error;
+      }
+    },
+    [loadHosts, t],
+  );
+
   function openSerialTab(config: SerialConfig) {
     const pseudoHost: Host = {
       id: `serial-${Date.now()}`,
@@ -1666,7 +1683,9 @@ export function AppShell({
               onLogout={onLogout}
               onChangeServer={onChangeServer}
               userPrefs={userPrefs}
-              onPrefsChange={setUserPrefs}
+              onPrefsChange={(updates) =>
+                setUserPrefs((current) => ({ ...current, ...updates }))
+              }
             />
           </div>
         )}
@@ -1877,6 +1896,7 @@ export function AppShell({
                           initialFilePath: path,
                         }),
                       renameTab,
+                      saveQuickConnectHost,
                     ),
                     tabNode,
                     tab.id,

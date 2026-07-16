@@ -43,6 +43,7 @@ describe("UserPreferenceRepository", () => {
         show_host_tags INTEGER,
         host_tray_on_click INTEGER,
         pin_app_rail INTEGER,
+        expand_app_rail_on_hover INTEGER,
         folders_collapsed INTEGER,
         confirm_snippet_execution INTEGER,
         disable_update_check INTEGER,

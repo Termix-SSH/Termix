@@ -761,6 +761,38 @@ class AuthManager {
           });
         });
 
+      // Auto-unlock the per-user Data Encryption Key for OIDC-backed users so
+      // API-key (headless / automation) requests can access encrypted
+      // credentials/hosts. Without this, every encrypted-table op throws
+      // "User data not unlocked" because the API-key path never established a
+      // DEK session. OIDC DEKs are wrapped with a server-derived system key
+      // (deriveOIDCSystemKey), so no user password is required. Password-based
+      // users are deliberately NOT unlocked here (their KEK is password-derived
+      // and cannot be reproduced server-side).
+      //
+      // Opt-in and OFF by default: enabling this widens the blast radius of a
+      // leaked API key (it can then read that user's stored SSH secrets in
+      // clear text), so operators must turn it on explicitly.
+      if (
+        process.env.ALLOW_APIKEY_DATA_UNLOCK === "true" &&
+        !this.userCrypto.isUserUnlocked(matchedKey.userId)
+      ) {
+        try {
+          const keyUser = await createCurrentUserRepository().findById(
+            matchedKey.userId,
+          );
+          if (keyUser?.isOidc) {
+            await this.authenticateOIDCUser(matchedKey.userId);
+          }
+        } catch (err) {
+          databaseLogger.warn("API-key OIDC auto-unlock failed", {
+            operation: "api_key_oidc_unlock_failed",
+            userId: matchedKey.userId,
+            error: err instanceof Error ? err.message : "Unknown",
+          });
+        }
+      }
+
       req.userId = matchedKey.userId;
       req.apiKeyId = matchedKey.id;
       next();
