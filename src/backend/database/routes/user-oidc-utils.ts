@@ -2,9 +2,6 @@ import { authLogger } from "../../utils/logger.js";
 import type { SSOProviderType } from "../../../types/index.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { Agent } from "undici";
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/index.js";
-import { ssoProviders } from "../db/schema.js";
 import {
   createCurrentSettingsRepository,
   createCurrentSsoProviderRepository,
@@ -426,10 +423,7 @@ export async function resolveProviderByIssuer(issuer: string): Promise<{
   const target = normalizeIssuer(issuer);
 
   try {
-    const rows = await getDb()
-      .select()
-      .from(ssoProviders)
-      .where(eq(ssoProviders.enabled, true));
+    const rows = await createCurrentSsoProviderRepository().listEnabled();
     for (const row of rows) {
       if (!["oidc", "github", "google"].includes(row.type)) continue;
       let parsed: Record<string, unknown>;

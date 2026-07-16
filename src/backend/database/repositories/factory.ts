@@ -1,6 +1,7 @@
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { getDb, getSqlite } from "../db/index.js";
 import type { DatabaseContext } from "./database-context.js";
+import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
 import { AlertRepository } from "./alert-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
@@ -66,6 +67,13 @@ export function getCurrentSettingValue(key: string): string | null {
     .get(key) as { value?: string } | undefined;
 
   return row?.value ?? null;
+}
+
+export function createCurrentWebauthnCredentialRepository(): WebauthnCredentialRepository {
+  return new WebauthnCredentialRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("webauthn_credential_repository_write"),
+  );
 }
 
 export function createCurrentAlertRepository(): AlertRepository {

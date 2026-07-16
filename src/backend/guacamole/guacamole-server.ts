@@ -5,8 +5,7 @@ import { getCurrentSettingValue } from "../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../utils/guacd-config.js";
 import fs from "fs";
 import path from "path";
-import { getDb } from "../database/db/index.js";
-import { sessionRecordings } from "../database/db/schema.js";
+import { createCurrentSessionRecordingRepository } from "../database/repositories/factory.js";
 import type { GuacamoleRecordingMetadata } from "./token-service.js";
 
 const tokenService = GuacamoleTokenService.getInstance();
@@ -63,21 +62,19 @@ async function persistGuacamoleRecording(
 
   const endedAt = new Date();
   const startedAt = new Date(recording.startedAt);
-  await getDb()
-    .insert(sessionRecordings)
-    .values({
-      hostId: recording.hostId,
-      userId: recording.userId,
-      startedAt: startedAt.toISOString(),
-      endedAt: endedAt.toISOString(),
-      duration: Math.max(
-        0,
-        Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000),
-      ),
-      recordingPath: resolvedPath,
-      protocol: recording.protocol,
-      format: "guacamole",
-    });
+  await createCurrentSessionRecordingRepository().create({
+    hostId: recording.hostId,
+    userId: recording.userId,
+    startedAt: startedAt.toISOString(),
+    endedAt: endedAt.toISOString(),
+    duration: Math.max(
+      0,
+      Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000),
+    ),
+    recordingPath: resolvedPath,
+    protocol: recording.protocol,
+    format: "guacamole",
+  });
 }
 
 const websocketOptions = {

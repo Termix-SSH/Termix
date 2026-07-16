@@ -6,8 +6,11 @@ import { apiLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { Request, Response } from "express";
 import { PermissionManager } from "../../utils/permission-manager.js";
-import { createCurrentSessionRecordingRepository } from "../repositories/factory.js";
-import { getDb } from "../db/index.js";
+import {
+  createCurrentSessionRecordingRepository,
+  createCurrentSettingsRepository,
+  getCurrentSettingValue,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 
@@ -29,12 +32,10 @@ function getRetentionDays(): number {
     10,
   );
   try {
-    const row = getDb()
-      .$client.prepare(
-        "SELECT value FROM settings WHERE key = 'session_recording_retention_days'",
-      )
-      .get() as { value?: string } | undefined;
-    const configured = parseInt(row?.value || "", 10);
+    const configured = parseInt(
+      getCurrentSettingValue("session_recording_retention_days") || "",
+      10,
+    );
     if (configured >= 1 && configured <= 3650) return configured;
   } catch {
     // use environment/default below
@@ -164,11 +165,10 @@ router.put(
         .status(400)
         .json({ error: "Retention must be between 1 and 3650 days" });
     }
-    getDb()
-      .$client.prepare(
-        "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-      )
-      .run("session_recording_retention_days", String(retentionDays));
+    await createCurrentSettingsRepository().upsert(
+      "session_recording_retention_days",
+      String(retentionDays),
+    );
     void pruneOldLogs();
     res.json({ retentionDays });
   },

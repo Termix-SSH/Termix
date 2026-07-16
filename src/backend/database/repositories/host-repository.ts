@@ -78,6 +78,32 @@ export class HostRepository {
     return rows[0] ?? null;
   }
 
+  async findDecryptedByIdAs(
+    userId: string,
+    hostId: number,
+  ): Promise<HostRecord | null> {
+    const row = await this.findById(hostId);
+    if (!row) return null;
+
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) return null;
+
+    return DataCrypto.decryptRecord("ssh_data", row, userId, userDataKey);
+  }
+
+  async listProxmoxEnabled(): Promise<
+    Pick<HostRecord, "id" | "userId" | "proxmoxConfig">[]
+  > {
+    return this.context.drizzle
+      .select({
+        id: hosts.id,
+        userId: hosts.userId,
+        proxmoxConfig: hosts.proxmoxConfig,
+      })
+      .from(hosts)
+      .where(eq(hosts.enableProxmox, true));
+  }
+
   async listByUserId(userId: string): Promise<HostRecord[]> {
     return this.context.drizzle
       .select()

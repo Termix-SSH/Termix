@@ -35,6 +35,14 @@ export class SsoProviderRepository {
       .orderBy(asc(ssoProviders.displayOrder), asc(ssoProviders.id));
   }
 
+  async listEnabled(): Promise<SsoProviderRecord[]> {
+    return this.context.drizzle
+      .select()
+      .from(ssoProviders)
+      .where(eq(ssoProviders.enabled, true))
+      .orderBy(asc(ssoProviders.displayOrder), asc(ssoProviders.id));
+  }
+
   async listAll(): Promise<SsoProviderRecord[]> {
     return this.context.drizzle
       .select()

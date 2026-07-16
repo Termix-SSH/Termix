@@ -1,10 +1,11 @@
 import express from "express";
 import { Client as SSHClient } from "ssh2";
-import { db, getDb, DatabaseSaveTrigger } from "../db/index.js";
-import { hosts, sshCredentials } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import { logger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentHostRepository,
+} from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { SSHHost } from "../../../types/index.js";
@@ -288,25 +289,24 @@ async function discoverProxmoxGuestsForHost(
   defaultCredentialId: number | null;
   config: ReturnType<typeof parseProxmoxConfig>;
 }> {
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (!DataCrypto.canUserAccessData(userId)) {
     const error = new Error("Session expired — please log in again");
     (error as Error & { code?: string }).code = "SESSION_EXPIRED";
     throw error;
   }
 
-  const hostResults = await SimpleDBOps.select(
-    getDb().select().from(hosts).where(eq(hosts.id, parsedHostId)),
-    "ssh_data",
+  const hostRecord = await createCurrentHostRepository().findDecryptedByIdAs(
     userId,
+    parsedHostId,
   );
 
-  if (!hostResults.length) {
+  if (!hostRecord) {
     const error = new Error("Host not found");
     (error as Error & { status?: number }).status = 404;
     throw error;
   }
 
-  const host = hostResults[0] as unknown as SSHHost;
+  const host = hostRecord as unknown as SSHHost;
   const proxmoxCfgRaw = parseJsonObject(host.proxmoxConfig);
   const config = parseProxmoxConfig(proxmoxCfgRaw);
 
@@ -362,21 +362,13 @@ async function discoverProxmoxGuestsForHost(
         });
       }
     } else {
-      const creds = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
-        userId,
-      );
-      if (creds.length > 0) {
-        const c = creds[0];
+      const cred =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          host.credentialId as number,
+        );
+      if (cred) {
+        const c = cred;
         resolvedCredentials = {
           password: c.password as string | undefined,
           sshKey: (c.key || c.privateKey) as string | undefined,
@@ -634,11 +626,10 @@ async function syncProxmoxHost(
     );
     const now = new Date().toISOString();
 
-    const existingHosts = await SimpleDBOps.select<Record<string, unknown>>(
-      db.select().from(hosts).where(eq(hosts.userId, userId)),
-      "ssh_data",
-      userId,
-    );
+    const existingHosts =
+      (await createCurrentHostRepository().listDecryptedByUserId(
+        userId,
+      )) as unknown as Record<string, unknown>[];
     const existingBySource = new Map<string, Record<string, unknown>>();
     for (const host of existingHosts) {
       const source = getProxmoxSource(host);
@@ -712,12 +703,10 @@ async function syncProxmoxHost(
       };
 
       if (existing) {
-        await SimpleDBOps.update(
-          hosts,
-          "ssh_data",
-          eq(hosts.id, existing.id as number),
-          update,
+        await createCurrentHostRepository().updateEncryptedForUser(
           userId,
+          existing.id as number,
+          update,
         );
         result.updated++;
         continue;
@@ -732,57 +721,51 @@ async function syncProxmoxHost(
         enableRdp: connectionType === "rdp",
       });
 
-      await SimpleDBOps.insert(
-        hosts,
-        "ssh_data",
-        {
-          ...update,
-          userId,
-          createdAt: now,
-          pin: false,
-          authType: connectionType === "rdp" ? "password" : importAuth.authType,
-          credentialId:
-            connectionType === "ssh" ? importAuth.credentialId : null,
-          overrideCredentialUsername: importAuth.overrideCredentialUsername,
-          password: null,
-          key: null,
-          keyPassword: null,
-          keyType: null,
-          rdpUser: null,
-          rdpPassword: null,
-          rdpDomain: null,
-          rdpSecurity: null,
-          rdpIgnoreCert: 0,
-          rdpPort: connectionType === "rdp" ? 3389 : null,
-          vncUser: null,
-          vncPassword: null,
-          vncPort: null,
-          telnetUser: null,
-          telnetPassword: null,
-          telnetPort: null,
-          defaultPath: "/",
-          tunnelConnections: "[]",
-          jumpHosts: null,
-          quickActions: null,
-          statsConfig: null,
-          dockerConfig: null,
-          terminalConfig: null,
-          forceKeyboardInteractive: "false",
-          useSocks5: 0,
-          socks5Host: null,
-          socks5Port: null,
-          socks5Username: null,
-          socks5Password: null,
-          socks5ProxyChain: null,
-          portKnockSequence: null,
-          showTerminalInSidebar: 0,
-          showFileManagerInSidebar: 0,
-          showTunnelInSidebar: 0,
-          showDockerInSidebar: 0,
-          showServerStatsInSidebar: 0,
-        },
+      await createCurrentHostRepository().createEncryptedForUser(userId, {
+        ...update,
         userId,
-      );
+        createdAt: now,
+        pin: false,
+        authType: connectionType === "rdp" ? "password" : importAuth.authType,
+        credentialId: connectionType === "ssh" ? importAuth.credentialId : null,
+        overrideCredentialUsername: importAuth.overrideCredentialUsername,
+        password: null,
+        key: null,
+        keyPassword: null,
+        keyType: null,
+        rdpUser: null,
+        rdpPassword: null,
+        rdpDomain: null,
+        rdpSecurity: null,
+        rdpIgnoreCert: 0,
+        rdpPort: connectionType === "rdp" ? 3389 : null,
+        vncUser: null,
+        vncPassword: null,
+        vncPort: null,
+        telnetUser: null,
+        telnetPassword: null,
+        telnetPort: null,
+        defaultPath: "/",
+        tunnelConnections: "[]",
+        jumpHosts: null,
+        quickActions: null,
+        statsConfig: null,
+        dockerConfig: null,
+        terminalConfig: null,
+        forceKeyboardInteractive: "false",
+        useSocks5: 0,
+        socks5Host: null,
+        socks5Port: null,
+        socks5Username: null,
+        socks5Password: null,
+        socks5ProxyChain: null,
+        portKnockSequence: null,
+        showTerminalInSidebar: 0,
+        showFileManagerInSidebar: 0,
+        showTunnelInSidebar: 0,
+        showDockerInSidebar: 0,
+        showServerStatsInSidebar: 0,
+      });
       result.created++;
     }
 
@@ -793,10 +776,9 @@ async function syncProxmoxHost(
         const source = getProxmoxSource(existing);
         if (!source) continue;
         const missingSince = source.missingSince || now;
-        await SimpleDBOps.update(
-          hosts,
-          "ssh_data",
-          eq(hosts.id, existing.id as number),
+        await createCurrentHostRepository().updateEncryptedForUser(
+          userId,
+          existing.id as number,
           {
             tags: mergeTags(existing.tags, ["proxmox-missing"]),
             proxmoxConfig: JSON.stringify({
@@ -808,7 +790,6 @@ async function syncProxmoxHost(
             }),
             updatedAt: now,
           },
-          userId,
         );
         result.markedMissing++;
       }
@@ -842,18 +823,13 @@ async function writeSyncStatus(
   hostId: number,
   patch: Record<string, unknown>,
 ): Promise<void> {
-  const rows = await db
-    .select({ proxmoxConfig: hosts.proxmoxConfig })
-    .from(hosts)
-    .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-    .limit(1);
-  if (!rows.length) return;
-  const config = parseJsonObject(rows[0].proxmoxConfig);
-  await db
-    .update(hosts)
-    .set({ proxmoxConfig: JSON.stringify({ ...config, ...patch }) })
-    .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)));
-  DatabaseSaveTrigger.triggerSave("proxmox_sync_status");
+  const hostRepository = createCurrentHostRepository();
+  const row = await hostRepository.findByIdForUser(userId, hostId);
+  if (!row) return;
+  const config = parseJsonObject(row.proxmoxConfig);
+  await hostRepository.updateForUser(userId, hostId, {
+    proxmoxConfig: JSON.stringify({ ...config, ...patch }),
+  });
 }
 
 router.post("/sync", authenticateJWT, requireDataAccess, async (req, res) => {
@@ -886,22 +862,14 @@ router.post("/sync", authenticateJWT, requireDataAccess, async (req, res) => {
 
 async function runDueProxmoxAutoSyncs(): Promise<void> {
   try {
-    const rows = await db
-      .select({
-        id: hosts.id,
-        userId: hosts.userId,
-        enableProxmox: hosts.enableProxmox,
-        proxmoxConfig: hosts.proxmoxConfig,
-      })
-      .from(hosts)
-      .where(eq(hosts.enableProxmox, true));
+    const rows = await createCurrentHostRepository().listProxmoxEnabled();
 
     const now = Date.now();
     for (const row of rows) {
       const configRaw = parseJsonObject(row.proxmoxConfig);
       const config = parseProxmoxConfig(configRaw);
       if (!config.autoSyncEnabled) continue;
-      if (!SimpleDBOps.isUserDataUnlocked(row.userId)) continue;
+      if (!DataCrypto.canUserAccessData(row.userId)) continue;
 
       const lastSyncAt =
         typeof configRaw.lastSyncAt === "string"
