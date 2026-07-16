@@ -16,9 +16,7 @@
 // The pure (DB-free) signing/OIDC/cert logic lives in vault-signer-core.ts and
 // is re-exported here so callers have a single import surface.
 
-import { and, eq } from "drizzle-orm";
-import { getDb } from "../database/db/index.js";
-import { vaultTokens } from "../database/db/schema.js";
+import { createCurrentVaultTokenRepository } from "../database/repositories/current-vault-token-repository.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { parseCertValidBefore } from "./vault-signer-core.js";
@@ -52,7 +50,6 @@ export async function storeVaultCert(
   privateKey: string,
   signedCert: string,
 ): Promise<string> {
-  const db = getDb();
   const userDataKey = UserCrypto.getInstance().getUserDataKey(userId);
   if (!userDataKey) {
     throw new Error("User data key not found");
@@ -77,24 +74,13 @@ export async function storeVaultCert(
     "private_key",
   );
 
-  await db
-    .insert(vaultTokens)
-    .values({
-      userId,
-      profileId,
-      sshCert: encryptedCert,
-      privateKey: encryptedKey,
-      expiresAt,
-    })
-    .onConflictDoUpdate({
-      target: [vaultTokens.userId, vaultTokens.profileId],
-      set: {
-        sshCert: encryptedCert,
-        privateKey: encryptedKey,
-        expiresAt,
-        createdAt: new Date().toISOString(),
-      },
-    });
+  await createCurrentVaultTokenRepository().upsert({
+    userId,
+    profileId,
+    sshCert: encryptedCert,
+    privateKey: encryptedKey,
+    expiresAt,
+  });
 
   return expiresAt;
 }
@@ -107,17 +93,10 @@ export async function getVaultCert(
   userId: string,
   profileId: number,
 ): Promise<{ privateKey: string; sshCert: string } | null> {
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(vaultTokens)
-    .where(
-      and(eq(vaultTokens.userId, userId), eq(vaultTokens.profileId, profileId)),
-    )
-    .limit(1);
+  const repository = createCurrentVaultTokenRepository();
+  const row = await repository.findByUserAndProfile(userId, profileId);
 
-  if (!rows || rows.length === 0) return null;
-  const row = rows[0];
+  if (!row) return null;
 
   const expiresMs = new Date(row.expiresAt).getTime();
   if (expiresMs - EXPIRY_SKEW_SECONDS * 1000 < Date.now()) {
@@ -144,12 +123,7 @@ export async function getVaultCert(
     "private_key",
   );
 
-  await db
-    .update(vaultTokens)
-    .set({ lastUsed: new Date().toISOString() })
-    .where(
-      and(eq(vaultTokens.userId, userId), eq(vaultTokens.profileId, profileId)),
-    );
+  await repository.updateLastUsed(userId, profileId);
 
   return { privateKey, sshCert };
 }
@@ -158,10 +132,8 @@ export async function deleteVaultCert(
   userId: string,
   profileId: number,
 ): Promise<void> {
-  const db = getDb();
-  await db
-    .delete(vaultTokens)
-    .where(
-      and(eq(vaultTokens.userId, userId), eq(vaultTokens.profileId, profileId)),
-    );
+  await createCurrentVaultTokenRepository().deleteByUserAndProfile(
+    userId,
+    profileId,
+  );
 }

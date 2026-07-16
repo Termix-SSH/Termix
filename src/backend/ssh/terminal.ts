@@ -7,12 +7,9 @@ import ssh2Pkg, {
 const { Client, utils: ssh2Utils } = ssh2Pkg;
 import { buildSSHAlgorithms } from "../utils/ssh-algorithms.js";
 import axios from "axios";
-import { getDb } from "../database/db/index.js";
-import { hosts } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { logAudit } from "../utils/audit-logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { UserCrypto } from "../utils/user-crypto.js";
 import {
@@ -30,9 +27,9 @@ import {
   waitForTmuxSession,
 } from "./tmux-helper.js";
 import {
-  applyAgentAuth,
   MemoryAgent,
   performPortKnocking,
+  resolveAgentSocket,
 } from "./terminal-auth-helpers.js";
 import { isWindowsSftpPath, sftpPathToLocalPath } from "./transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
@@ -56,8 +53,6 @@ interface ConnectToHostData {
     credentialId?: number;
     userId?: string;
     forceKeyboardInteractive?: boolean;
-    passwordFallbackOnly?: boolean;
-    passwordFallbackAttempted?: boolean;
     jumpHosts?: Array<{ hostId: number }>;
     useSocks5?: boolean;
     socks5Host?: string;
@@ -76,6 +71,8 @@ interface ConnectToHostData {
       [key: string]: unknown;
     };
     enableSessionLogging?: boolean;
+    /** When true, ignore key material and force password auth (fallback path). */
+    passwordFallbackOnly?: boolean;
   };
   initialPath?: string;
   executeCommand?: string;
@@ -786,15 +783,14 @@ wss.on("connection", async (ws: WebSocket, req) => {
         const opksshData = data as { hostId: number };
         try {
           const { startOPKSSHAuth } = await import("./opkssh-auth.js");
-          const { getRequestBaseUrl } =
+          const { getRequestOrigin } =
             await import("../utils/request-origin.js");
-          const db = getDb();
-          const hostRow = await db
-            .select()
-            .from(hosts)
-            .where(eq(hosts.id, opksshData.hostId))
-            .limit(1);
-          if (!hostRow || hostRow.length === 0) {
+          const host =
+            await createCurrentHostResolutionRepository().findHostById(
+              opksshData.hostId,
+              userId,
+            );
+          if (!host) {
             sshLogger.error(
               `Host ${opksshData.hostId} not found for OPKSSH auth`,
               {
@@ -812,8 +808,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
             break;
           }
-          const hostname = hostRow[0].name || hostRow[0].ip;
-          const requestOrigin = getRequestBaseUrl(req);
+          const hostname = host.name || host.ip;
+          const requestOrigin = getRequestOrigin(req);
           await startOPKSSHAuth(
             userId,
             opksshData.hostId,
@@ -904,9 +900,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
         try {
           const { loadVaultProfileForHost, startVaultAuth } =
             await import("./vault-oidc-auth.js");
-          const { getRequestBaseUrl } =
+          const { getRequestOrigin } =
             await import("../utils/request-origin.js");
-          const profile = await loadVaultProfileForHost(vaultData.hostId);
+          const profile = await loadVaultProfileForHost(
+            vaultData.hostId,
+            userId,
+          );
           if (!profile) {
             ws.send(
               JSON.stringify({
@@ -917,7 +916,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             );
             break;
           }
-          const requestOrigin = getRequestBaseUrl(req);
+          const requestOrigin = getRequestOrigin(req);
           await startVaultAuth(
             userId,
             vaultData.hostId,
@@ -1109,6 +1108,9 @@ wss.on("connection", async (ws: WebSocket, req) => {
     isConnecting = true;
     sshConn = new Client();
 
+    sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
+
     const connectionTimeout = setTimeout(() => {
       if (sshConn && isConnecting && !isConnected) {
         sshLogger.error("SSH connection timeout", undefined, {
@@ -1161,10 +1163,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         )) as unknown as typeof resolvedHostData;
 
         if (resolvedHostData) {
-          ip = resolvedHostData.ip || ip;
-          port = resolvedHostData.port || port;
-          username = resolvedHostData.username || username;
-
           if (
             (!hostConfig.jumpHosts || hostConfig.jumpHosts.length === 0) &&
             resolvedHostData.jumpHosts &&
@@ -1228,8 +1226,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (id && userId && !password && !key) {
       try {
         if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username,
+            username: resolvedHostData.username || username,
             password: resolvedHostData.password,
             key: resolvedHostData.key,
             keyPassword: keyPassword || resolvedHostData.keyPassword,
@@ -1253,8 +1254,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
     } else if (credentialId && id && userId) {
       try {
         if (resolvedHostData) {
+          ip = resolvedHostData.ip || ip;
+          port = resolvedHostData.port || port;
+          username = resolvedHostData.username || username;
           resolvedCredentials = {
-            username,
+            username: resolvedHostData.username || username,
             password: resolvedHostData.password,
             key: resolvedHostData.key,
             // Preserve user-supplied keyPassword (e.g. from passphrase dialog) over the empty DB value
@@ -1819,23 +1823,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
           if (id && hostConfig.userId) {
             (async () => {
               try {
-                const hostResults = await SimpleDBOps.select(
-                  getDb()
-                    .select()
-                    .from(hosts)
-                    .where(
-                      and(
-                        eq(hosts.id, id),
-                        eq(hosts.userId, hostConfig.userId!),
-                      ),
-                    ),
-                  "ssh_data",
-                  hostConfig.userId!,
-                );
+                const host =
+                  await createCurrentHostResolutionRepository().findHostById(
+                    id,
+                    hostConfig.userId!,
+                  );
 
                 const hostName =
-                  hostResults.length > 0 && hostResults[0].name
-                    ? hostResults[0].name
+                  host?.userId === hostConfig.userId && host.name
+                    ? host.name
                     : `${username}@${ip}:${port}`;
 
                 await axios.post(
@@ -1883,72 +1879,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         hasKeyboardInteractiveFinish: !!keyboardInteractiveFinish,
         keyboardInteractiveResponded,
       });
-
-      const isAuthFailure =
-        err.message.includes("All configured authentication methods failed") ||
-        err.message.includes("authentication failed") ||
-        err.message.includes("Authentication failed") ||
-        err.message.includes("Permission denied");
-
-      if (
-        resolvedCredentials.authType === "key" &&
-        resolvedCredentials.password &&
-        isAuthFailure &&
-        !hostConfig.passwordFallbackAttempted
-      ) {
-        sendLog(
-          "auth",
-          "warning",
-          "SSH key authentication failed; retrying with stored password",
-        );
-        sshLogger.warn("Retrying SSH connection with stored password", {
-          operation: "terminal_key_password_fallback",
-          hostId: id,
-          userId,
-        });
-        if (currentSessionId) {
-          sessionManager.destroySession(currentSessionId);
-          currentSessionId = null;
-        }
-        cleanupAuthState(connectionTimeout);
-        sshConn = null;
-        sshStream = null;
-        handleConnectToHost({
-          ...data,
-          hostConfig: {
-            ...hostConfig,
-            authType: "password",
-            password: resolvedCredentials.password,
-            key: undefined,
-            keyPassword: undefined,
-            keyType: undefined,
-            passwordFallbackOnly: true,
-            passwordFallbackAttempted: true,
-          },
-        }).catch((fallbackError) => {
-          const fallbackMessage =
-            fallbackError instanceof Error
-              ? fallbackError.message
-              : "Unknown error";
-          sshLogger.error(
-            "Password fallback connection failed",
-            fallbackError,
-            {
-              operation: "terminal_key_password_fallback_error",
-              hostId: id,
-              userId,
-            },
-          );
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              message:
-                "Failed to retry with stored password: " + fallbackMessage,
-            }),
-          );
-        });
-        return;
-      }
 
       if (
         resolvedCredentials.authType === "opkssh" &&
@@ -2608,14 +2538,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
       }
     } else if (resolvedCredentials.authType === "agent") {
       sendLog("auth", "info", "Using SSH agent authentication");
-      const result = await applyAgentAuth(
-        connectConfig as Record<string, unknown>,
+      const result = await resolveAgentSocket(
         hostConfig.terminalConfig as Record<string, unknown> | undefined,
       );
       if ("error" in result) {
         ws.send(JSON.stringify({ type: "error", message: result.error }));
         return;
       }
+      const { createAgent } = ssh2Pkg;
+      connectConfig.agent = createAgent(result.socketPath);
       sendLog(
         "auth",
         "info",

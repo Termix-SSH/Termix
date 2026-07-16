@@ -2,24 +2,18 @@ import type { Router } from "express";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { eq } from "drizzle-orm";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
-import { db } from "../db/index.js";
-import {
-  users,
-  hosts,
-  sshCredentials,
-  fileManagerRecent,
-  fileManagerPinned,
-  fileManagerShortcuts,
-  dismissedAlerts,
-  sshCredentialUsage,
-  recentActivity,
-  snippets,
-  webauthnCredentials,
-} from "../db/schema.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
+import { createCurrentDismissedAlertRepository } from "../repositories/current-dismissed-alert-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
+import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSnippetRepository } from "../repositories/current-snippet-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 interface UserPasswordResetRoutesDeps {
   authManager: AuthManager;
@@ -68,14 +62,10 @@ export function registerUserPasswordResetRoutes(
       const allowed =
         envVal !== undefined
           ? envVal.trim().toLowerCase() === "true"
-          : (() => {
-              const row = db.$client
-                .prepare(
-                  "SELECT value FROM settings WHERE key = 'allow_password_reset'",
-                )
-                .get();
-              return row ? (row as { value: string }).value === "true" : true;
-            })();
+          : await createCurrentSettingsRepository().getBoolean(
+              "allow_password_reset",
+              true,
+            );
       if (!allowed) {
         return res
           .status(403)
@@ -95,12 +85,9 @@ export function registerUserPasswordResetRoutes(
     }
 
     try {
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
+      const user = await createCurrentUserRepository().findByUsername(username);
 
-      if (!user || user.length === 0) {
+      if (!user) {
         authLogger.warn(
           `Password reset attempted for non-existent user: ${username}`,
         );
@@ -110,7 +97,7 @@ export function registerUserPasswordResetRoutes(
         });
       }
 
-      if (user[0].isOidc) {
+      if (user.isOidc) {
         return res.json({
           message:
             "If the user exists, a password reset code has been generated. Check docker logs for the code.",
@@ -120,15 +107,13 @@ export function registerUserPasswordResetRoutes(
       const resetCode = crypto.randomInt(100000, 1000000).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-      db.$client
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-        .run(
-          `reset_code_${username}`,
-          JSON.stringify({
-            code: resetCode,
-            expiresAt: expiresAt.toISOString(),
-          }),
-        );
+      await createCurrentSettingsRepository().set(
+        `reset_code_${username}`,
+        JSON.stringify({
+          code: resetCode,
+          expiresAt: expiresAt.toISOString(),
+        }),
+      );
 
       authLogger.info(
         `Password reset code generated for user ${username}: ${resetCode} (expires at ${expiresAt.toLocaleString()})`,
@@ -200,10 +185,10 @@ export function registerUserPasswordResetRoutes(
 
       loginRateLimiter.recordResetCodeAttempt(username);
 
-      const resetDataRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = ?")
-        .get(`reset_code_${username}`);
-      if (!resetDataRow) {
+      const resetDataValue = await createCurrentSettingsRepository().get(
+        `reset_code_${username}`,
+      );
+      if (!resetDataValue) {
         authLogger.warn("Reset code verification failed - no code found", {
           operation: "reset_code_verify_failed",
           username,
@@ -217,16 +202,14 @@ export function registerUserPasswordResetRoutes(
         });
       }
 
-      const resetData = JSON.parse(
-        (resetDataRow as Record<string, unknown>).value as string,
-      );
+      const resetData = JSON.parse(resetDataValue);
       const now = new Date();
       const expiresAt = new Date(resetData.expiresAt);
 
       if (now > expiresAt) {
-        db.$client
-          .prepare("DELETE FROM settings WHERE key = ?")
-          .run(`reset_code_${username}`);
+        await createCurrentSettingsRepository().delete(
+          `reset_code_${username}`,
+        );
         authLogger.warn("Reset code verification failed - code expired", {
           operation: "reset_code_verify_failed",
           username,
@@ -259,15 +242,13 @@ export function registerUserPasswordResetRoutes(
       const tempToken = nanoid();
       const tempTokenExpiry = new Date(Date.now() + 10 * 60 * 1000);
 
-      db.$client
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-        .run(
-          `temp_reset_token_${username}`,
-          JSON.stringify({
-            token: tempToken,
-            expiresAt: tempTokenExpiry.toISOString(),
-          }),
-        );
+      await createCurrentSettingsRepository().set(
+        `temp_reset_token_${username}`,
+        JSON.stringify({
+          token: tempToken,
+          expiresAt: tempTokenExpiry.toISOString(),
+        }),
+      );
 
       res.json({ message: "Reset code verified", tempToken });
     } catch (err) {
@@ -321,23 +302,21 @@ export function registerUserPasswordResetRoutes(
     }
 
     try {
-      const tempTokenRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = ?")
-        .get(`temp_reset_token_${username}`);
-      if (!tempTokenRow) {
+      const tempTokenValue = await createCurrentSettingsRepository().get(
+        `temp_reset_token_${username}`,
+      );
+      if (!tempTokenValue) {
         return res.status(400).json({ error: "No temporary token found" });
       }
 
-      const tempTokenData = JSON.parse(
-        (tempTokenRow as Record<string, unknown>).value as string,
-      );
+      const tempTokenData = JSON.parse(tempTokenValue);
       const now = new Date();
       const expiresAt = new Date(tempTokenData.expiresAt);
 
       if (now > expiresAt) {
-        db.$client
-          .prepare("DELETE FROM settings WHERE key = ?")
-          .run(`temp_reset_token_${username}`);
+        await createCurrentSettingsRepository().delete(
+          `temp_reset_token_${username}`,
+        );
         return res.status(400).json({ error: "Temporary token has expired" });
       }
 
@@ -345,14 +324,11 @@ export function registerUserPasswordResetRoutes(
         return res.status(400).json({ error: "Invalid temporary token" });
       }
 
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-      if (!user || user.length === 0) {
+      const user = await createCurrentUserRepository().findByUsername(username);
+      if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const userId = user[0].id;
+      const userId = user.id;
 
       const password_hash = await bcrypt.hash(newPassword, 10);
 
@@ -384,10 +360,9 @@ export function registerUserPasswordResetRoutes(
             );
           }
 
-          await db
-            .update(users)
-            .set({ passwordHash: password_hash })
-            .where(eq(users.id, userId));
+          await createCurrentUserRepository().update(userId, {
+            passwordHash: password_hash,
+          });
           authManager.logoutUser(userId);
           authLogger.success(
             `Password reset (data preserved) for user: ${username}`,
@@ -412,50 +387,31 @@ export function registerUserPasswordResetRoutes(
           });
         }
       } else {
-        await db
-          .update(users)
-          .set({ passwordHash: password_hash })
-          .where(eq(users.username, username));
+        await createCurrentUserRepository().update(userId, {
+          passwordHash: password_hash,
+        });
 
         try {
-          await db
-            .delete(sshCredentialUsage)
-            .where(eq(sshCredentialUsage.userId, userId));
-          await db
-            .delete(fileManagerRecent)
-            .where(eq(fileManagerRecent.userId, userId));
-          await db
-            .delete(fileManagerPinned)
-            .where(eq(fileManagerPinned.userId, userId));
-          await db
-            .delete(fileManagerShortcuts)
-            .where(eq(fileManagerShortcuts.userId, userId));
-          await db
-            .delete(recentActivity)
-            .where(eq(recentActivity.userId, userId));
-          await db
-            .delete(dismissedAlerts)
-            .where(eq(dismissedAlerts.userId, userId));
-          await db.delete(snippets).where(eq(snippets.userId, userId));
-          await db.delete(hosts).where(eq(hosts.userId, userId));
-          await db
-            .delete(sshCredentials)
-            .where(eq(sshCredentials.userId, userId));
-          await db
-            .delete(webauthnCredentials)
-            .where(eq(webauthnCredentials.userId, userId));
+          await createCurrentSshCredentialUsageRepository().deleteByUserId(
+            userId,
+          );
+          await createCurrentFileManagerBookmarkRepository().deleteByUserId(
+            userId,
+          );
+          await createCurrentRecentActivityRepository().deleteByUserId(userId);
+          await createCurrentDismissedAlertRepository().deleteByUserId(userId);
+          await createCurrentSnippetRepository().deleteByUserId(userId);
+          await createCurrentHostRepository().deleteByUserId(userId);
+          await createCurrentCredentialRepository().deleteByUserId(userId);
 
           await authManager.registerUser(userId, newPassword);
           authManager.logoutUser(userId);
 
-          await db
-            .update(users)
-            .set({
-              totpEnabled: false,
-              totpSecret: null,
-              totpBackupCodes: null,
-            })
-            .where(eq(users.id, userId));
+          await createCurrentUserRepository().update(userId, {
+            totpEnabled: false,
+            totpSecret: null,
+            totpBackupCodes: null,
+          });
 
           authLogger.warn(
             `Password reset completed for user: ${username}. All encrypted data has been deleted due to lost encryption key.`,
@@ -483,12 +439,9 @@ export function registerUserPasswordResetRoutes(
 
       authLogger.success(`Password successfully reset for user: ${username}`);
 
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`reset_code_${username}`);
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`temp_reset_token_${username}`);
+      const settingsRepository = createCurrentSettingsRepository();
+      await settingsRepository.delete(`reset_code_${username}`);
+      await settingsRepository.delete(`temp_reset_token_${username}`);
 
       res.json({ message: "Password has been successfully reset" });
     } catch (err) {

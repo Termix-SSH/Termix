@@ -1,10 +1,11 @@
 import GuacamoleLite from "guacamole-lite";
 import { guacLogger } from "../utils/logger.js";
 import { GuacamoleTokenService } from "./token-service.js";
-import { getDb } from "../database/db/index.js";
+import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
 import { resolveGuacdOptions } from "../utils/guacd-config.js";
 import fs from "fs";
 import path from "path";
+import { getDb } from "../database/db/index.js";
 import { sessionRecordings } from "../database/db/schema.js";
 import type { GuacamoleRecordingMetadata } from "./token-service.js";
 
@@ -13,11 +14,7 @@ const tokenService = GuacamoleTokenService.getInstance();
 function readGuacdOptions(): { host: string; port: number } {
   let dbUrl: string | undefined;
   try {
-    const db = getDb();
-    const urlRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-      .get() as { value: string } | undefined;
-    dbUrl = urlRow?.value;
+    dbUrl = getCurrentSettingValue("guac_url") ?? undefined;
   } catch {
     // DB not available yet, use env var defaults
   }

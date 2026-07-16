@@ -1,8 +1,8 @@
 import express from "express";
 import type { Request, Response } from "express";
-import { desc, eq, or } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { users, vaultProfiles } from "../db/schema.js";
+import { createCurrentVaultProfileRepository } from "../repositories/current-vault-profile-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import type { VaultProfileUpdateInput } from "../repositories/vault-profile-repository.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -19,12 +19,8 @@ function isNonEmptyString(val: unknown): val is string {
 
 async function userIsAdmin(userId: string): Promise<boolean> {
   try {
-    const rows = await db
-      .select({ isAdmin: users.isAdmin })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    return !!rows[0]?.isAdmin;
+    const user = await createCurrentUserRepository().findById(userId);
+    return !!user?.isAdmin;
   } catch {
     return false;
   }
@@ -148,13 +144,8 @@ router.get(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const rows = await db
-        .select()
-        .from(vaultProfiles)
-        .where(
-          or(eq(vaultProfiles.userId, userId), eq(vaultProfiles.shared, true)),
-        )
-        .orderBy(desc(vaultProfiles.updatedAt));
+      const rows =
+        await createCurrentVaultProfileRepository().listVisibleToUser(userId);
       res.json(
         rows.map((r) => formatProfile(r as Record<string, unknown>, userId)),
       );
@@ -253,28 +244,25 @@ router.post(
     }
 
     try {
-      const inserted = await db
-        .insert(vaultProfiles)
-        .values({
-          userId,
-          name: name.trim(),
-          description: description?.trim() || null,
-          folder: folder?.trim() || null,
-          tags: Array.isArray(tags) ? tags.join(",") : tags || "",
-          vaultAddr: vaultAddr.trim(),
-          vaultNamespace: vaultNamespace?.trim() || null,
-          oidcMount: oidcMount?.trim() || null,
-          oidcRole: oidcRole?.trim() || null,
-          sshMount: sshMount?.trim() || null,
-          sshRole: sshRole.trim(),
-          validPrincipals: validPrincipals?.trim() || null,
-          keyType: keyType?.trim() || null,
-          shared: wantShared,
-        })
-        .returning();
+      const inserted = await createCurrentVaultProfileRepository().create({
+        userId,
+        name: name.trim(),
+        description: description?.trim() || null,
+        folder: folder?.trim() || null,
+        tags: Array.isArray(tags) ? tags.join(",") : tags || "",
+        vaultAddr: vaultAddr.trim(),
+        vaultNamespace: vaultNamespace?.trim() || null,
+        oidcMount: oidcMount?.trim() || null,
+        oidcRole: oidcRole?.trim() || null,
+        sshMount: sshMount?.trim() || null,
+        sshRole: sshRole.trim(),
+        validPrincipals: validPrincipals?.trim() || null,
+        keyType: keyType?.trim() || null,
+        shared: wantShared,
+      });
       res
         .status(201)
-        .json(formatProfile(inserted[0] as Record<string, unknown>, userId));
+        .json(formatProfile(inserted as Record<string, unknown>, userId));
     } catch (err) {
       authLogger.error("Failed to create vault profile", err);
       res.status(500).json({ error: "Failed to create vault profile" });
@@ -324,22 +312,19 @@ router.put(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(vaultProfiles)
-        .where(eq(vaultProfiles.id, id))
-        .limit(1);
-      if (!existing.length) {
+      const repository = createCurrentVaultProfileRepository();
+      const existing = await repository.findById(id);
+      if (!existing) {
         return res.status(404).json({ error: "Profile not found" });
       }
-      if (existing[0].userId !== userId) {
+      if (existing.userId !== userId) {
         return res
           .status(403)
           .json({ error: "Only the owner can edit this profile" });
       }
 
       const body = req.body;
-      const fields: Record<string, unknown> = {
+      const fields: VaultProfileUpdateInput = {
         updatedAt: new Date().toISOString(),
       };
       if (body.name !== undefined) fields.name = body.name?.trim();
@@ -376,12 +361,11 @@ router.put(
         fields.shared = !!body.shared;
       }
 
-      const updated = await db
-        .update(vaultProfiles)
-        .set(fields)
-        .where(eq(vaultProfiles.id, id))
-        .returning();
-      res.json(formatProfile(updated[0] as Record<string, unknown>, userId));
+      const updated = await repository.updateById(id, fields);
+      if (!updated) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      res.json(formatProfile(updated as Record<string, unknown>, userId));
     } catch (err) {
       authLogger.error("Failed to update vault profile", err);
       res.status(500).json({ error: "Failed to update vault profile" });
@@ -425,20 +409,17 @@ router.delete(
       return res.status(400).json({ error: "Invalid profile id" });
     }
     try {
-      const existing = await db
-        .select()
-        .from(vaultProfiles)
-        .where(eq(vaultProfiles.id, id))
-        .limit(1);
-      if (!existing.length) {
+      const repository = createCurrentVaultProfileRepository();
+      const existing = await repository.findById(id);
+      if (!existing) {
         return res.status(404).json({ error: "Profile not found" });
       }
-      if (existing[0].userId !== userId) {
+      if (existing.userId !== userId) {
         return res
           .status(403)
           .json({ error: "Only the owner can delete this profile" });
       }
-      await db.delete(vaultProfiles).where(eq(vaultProfiles.id, id));
+      await repository.deleteById(id);
       res.json({ success: true });
     } catch (err) {
       authLogger.error("Failed to delete vault profile", err);

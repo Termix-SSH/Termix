@@ -4,8 +4,8 @@ import fs from "fs";
 import path from "path";
 import { eq } from "drizzle-orm";
 import { sshLogger } from "../utils/logger.js";
-import { getDb } from "../database/db/index.js";
-import { sessionRecordings } from "../database/db/schema.js";
+import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
+import { createCurrentSessionRecordingRepository } from "../database/repositories/current-session-recording-repository.js";
 
 const MAX_BUFFER_BYTES = 512 * 1024;
 const DATA_DIR = process.env.DATA_DIR ?? "./db/data";
@@ -428,27 +428,24 @@ class TerminalSessionManager {
     const duration = Math.floor((endedAt - session.sessionStartedAt) / 1000);
 
     try {
-      const db = getDb();
+      const repo = createCurrentSessionRecordingRepository();
       if (session.recordingId == null) {
-        const rows = await db
-          .insert(sessionRecordings)
-          .values({
-            hostId: session.hostId,
-            userId: session.userId,
-            startedAt: new Date(session.sessionStartedAt).toISOString(),
-            endedAt: new Date(endedAt).toISOString(),
-            duration,
-            recordingPath: session.recordingPath,
-            protocol: "ssh",
-            format: "asciicast",
-          })
-          .returning({ id: sessionRecordings.id });
-        session.recordingId = rows[0]?.id ?? null;
+        const created = await repo.create({
+          hostId: session.hostId,
+          userId: session.userId,
+          startedAt: new Date(session.sessionStartedAt).toISOString(),
+          endedAt: new Date(endedAt).toISOString(),
+          duration,
+          recordingPath: session.recordingPath,
+          protocol: "ssh",
+          format: "asciicast",
+        });
+        session.recordingId = created.id;
       } else {
-        await db
-          .update(sessionRecordings)
-          .set({ endedAt: new Date(endedAt).toISOString(), duration })
-          .where(eq(sessionRecordings.id, session.recordingId));
+        await repo.updateEnded(session.recordingId, {
+          endedAt: new Date(endedAt).toISOString(),
+          duration,
+        });
       }
     } catch (err) {
       sshLogger.warn("Failed to insert session recording row", {
@@ -550,14 +547,9 @@ class TerminalSessionManager {
 
   private getTimeoutMs(): number {
     try {
-      const db = getDb();
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
-        )
-        .get() as { value: string } | undefined;
-      if (row) {
-        const minutes = parseInt(row.value, 10);
+      const value = getCurrentSettingValue("terminal_session_timeout_minutes");
+      if (value) {
+        const minutes = parseInt(value, 10);
         if (!isNaN(minutes) && minutes > 0) {
           return minutes * 60_000;
         }

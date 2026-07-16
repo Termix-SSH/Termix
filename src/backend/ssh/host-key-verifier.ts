@@ -1,7 +1,5 @@
 import type { WebSocket } from "ws";
-import { db } from "../database/db/index.js";
-import { hosts } from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { sshLogger } from "../utils/logger.js";
 
 interface HostKeyVerificationData {
@@ -36,17 +34,9 @@ export class SSHHostKeyVerifier {
   } | null> {
     if (!hostId) return null;
     try {
-      const host = await db.query.hosts.findFirst({
-        where: eq(hosts.id, hostId),
-        columns: {
-          hostKeyFingerprint: true,
-          hostKeyType: true,
-          hostKeyAlgorithm: true,
-          hostKeyChangedCount: true,
-          name: true,
-        },
-      });
-      return host ?? null;
+      return await createCurrentHostResolutionRepository().findHostKeyVerificationData(
+        hostId,
+      );
     } catch {
       return null;
     }
@@ -89,7 +79,9 @@ export class SSHHostKeyVerifier {
           const host =
             preloadedHost !== undefined
               ? preloadedHost
-              : await db.query.hosts.findFirst({ where: eq(hosts.id, hostId) });
+              : await createCurrentHostResolutionRepository().findHostKeyVerificationData(
+                  hostId,
+                );
 
           if (!host) {
             sshLogger.warn(
@@ -189,9 +181,8 @@ export class SSHHostKeyVerifier {
             // Verify first, then update the timestamp asynchronously so the
             // DB write doesn't delay the SSH key exchange critical path.
             verify(true);
-            db.update(hosts)
-              .set({ hostKeyLastVerified: new Date().toISOString() })
-              .where(eq(hosts.id, hostId))
+            createCurrentHostResolutionRepository()
+              .touchHostKeyLastVerified(hostId)
               .catch((err) => {
                 sshLogger.error("Failed to update hostKeyLastVerified", err, {
                   operation: "host_key_update_timestamp",
@@ -314,16 +305,12 @@ export class SSHHostKeyVerifier {
     keyType: string,
     algorithm: string,
   ): Promise<void> {
-    await db
-      .update(hosts)
-      .set({
-        hostKeyFingerprint: fingerprint,
-        hostKeyType: keyType,
-        hostKeyAlgorithm: algorithm,
-        hostKeyFirstSeen: new Date().toISOString(),
-        hostKeyLastVerified: new Date().toISOString(),
-      })
-      .where(eq(hosts.id, hostId));
+    await createCurrentHostResolutionRepository().storeHostKey(
+      hostId,
+      fingerprint,
+      keyType,
+      algorithm,
+    );
   }
 
   private static async updateHostKey(
@@ -333,16 +320,13 @@ export class SSHHostKeyVerifier {
     algorithm: string,
     currentChangeCount: number,
   ): Promise<void> {
-    await db
-      .update(hosts)
-      .set({
-        hostKeyFingerprint: fingerprint,
-        hostKeyType: keyType,
-        hostKeyAlgorithm: algorithm,
-        hostKeyLastVerified: new Date().toISOString(),
-        hostKeyChangedCount: currentChangeCount + 1,
-      })
-      .where(eq(hosts.id, hostId));
+    await createCurrentHostResolutionRepository().updateHostKey(
+      hostId,
+      fingerprint,
+      keyType,
+      algorithm,
+      currentChangeCount,
+    );
   }
 
   private static async promptUserForNewKey(

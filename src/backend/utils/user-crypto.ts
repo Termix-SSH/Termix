@@ -1,8 +1,6 @@
 import crypto from "crypto";
-import { getDb } from "../database/db/index.js";
-import { settings } from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
 import { databaseLogger } from "./logger.js";
+import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 import { SystemCrypto } from "./system-crypto.js";
 
 interface KEKSalt {
@@ -385,10 +383,6 @@ class UserCrypto {
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
 
-      const { saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-      await saveMemoryDatabaseToFile();
-
       oldKEK.fill(0);
       newKEK.fill(0);
       DEK.fill(0);
@@ -421,10 +415,6 @@ class UserCrypto {
 
       await this.storeKEKSalt(userId, newKekSalt);
       await this.storeEncryptedDEK(userId, newEncryptedDEK);
-
-      const { saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-      await saveMemoryDatabaseToFile();
 
       newKEK.fill(0);
 
@@ -472,23 +462,7 @@ class UserCrypto {
       const key = `user_encrypted_dek_oidc_${userId}`;
       const value = JSON.stringify(oidcEncryptedDEK);
 
-      const { getDb } = await import("../database/db/index.js");
-      const { settings } = await import("../database/db/schema.js");
-      const { eq } = await import("drizzle-orm");
-
-      const existing = await getDb()
-        .select()
-        .from(settings)
-        .where(eq(settings.key, key));
-
-      if (existing.length > 0) {
-        await getDb()
-          .update(settings)
-          .set({ value })
-          .where(eq(settings.key, key));
-      } else {
-        await getDb().insert(settings).values({ key, value });
-      }
+      await this.setSetting(key, value);
 
       databaseLogger.info(
         "Converted user encryption to dual-auth (password + OIDC)",
@@ -497,10 +471,6 @@ class UserCrypto {
           userId,
         },
       );
-
-      const { saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-      await saveMemoryDatabaseToFile();
     } catch (error) {
       databaseLogger.error("Failed to convert to OIDC encryption", error, {
         operation: "convert_to_oidc_encryption_error",
@@ -655,10 +625,7 @@ class UserCrypto {
       try {
         const dek = this.decryptDEK(encryptedDEK, legacyKey);
         const value = JSON.stringify(this.encryptDEK(dek, systemKey));
-        await getDb()
-          .update(settings)
-          .set({ value })
-          .where(eq(settings.key, settingKey));
+        await createCurrentSettingsRepository().set(settingKey, value);
         databaseLogger.info("Migrated legacy system-wrapped user key", {
           operation: "user_key_wrap_migrated",
           userId,
@@ -704,38 +671,31 @@ class UserCrypto {
     return decrypted;
   }
 
+  private async setSetting(key: string, value: string): Promise<void> {
+    await createCurrentSettingsRepository().set(key, value);
+  }
+
+  private async getSetting(key: string): Promise<string | null> {
+    return createCurrentSettingsRepository().get(key);
+  }
+
   private async storeKEKSalt(userId: string, kekSalt: KEKSalt): Promise<void> {
     const key = `user_kek_salt_${userId}`;
     const value = JSON.stringify(kekSalt);
 
-    const existing = await getDb()
-      .select()
-      .from(settings)
-      .where(eq(settings.key, key));
-
-    if (existing.length > 0) {
-      await getDb()
-        .update(settings)
-        .set({ value })
-        .where(eq(settings.key, key));
-    } else {
-      await getDb().insert(settings).values({ key, value });
-    }
+    await this.setSetting(key, value);
   }
 
   private async getKEKSalt(userId: string): Promise<KEKSalt | null> {
     try {
       const key = `user_kek_salt_${userId}`;
-      const result = await getDb()
-        .select()
-        .from(settings)
-        .where(eq(settings.key, key));
+      const value = await this.getSetting(key);
 
-      if (result.length === 0) {
+      if (value === null) {
         return null;
       }
 
-      return JSON.parse(result[0].value);
+      return JSON.parse(value);
     } catch {
       return null;
     }
@@ -748,34 +708,19 @@ class UserCrypto {
     const key = `user_encrypted_dek_${userId}`;
     const value = JSON.stringify(encryptedDEK);
 
-    const existing = await getDb()
-      .select()
-      .from(settings)
-      .where(eq(settings.key, key));
-
-    if (existing.length > 0) {
-      await getDb()
-        .update(settings)
-        .set({ value })
-        .where(eq(settings.key, key));
-    } else {
-      await getDb().insert(settings).values({ key, value });
-    }
+    await this.setSetting(key, value);
   }
 
   private async getEncryptedDEK(userId: string): Promise<EncryptedDEK | null> {
     try {
       const key = `user_encrypted_dek_${userId}`;
-      const result = await getDb()
-        .select()
-        .from(settings)
-        .where(eq(settings.key, key));
+      const value = await this.getSetting(key);
 
-      if (result.length === 0) {
+      if (value === null) {
         return null;
       }
 
-      return JSON.parse(result[0].value);
+      return JSON.parse(value);
     } catch {
       return null;
     }
@@ -786,16 +731,13 @@ class UserCrypto {
   ): Promise<EncryptedDEK | null> {
     try {
       const key = `user_encrypted_dek_oidc_${userId}`;
-      const result = await getDb()
-        .select()
-        .from(settings)
-        .where(eq(settings.key, key));
+      const value = await this.getSetting(key);
 
-      if (result.length === 0) {
+      if (value === null) {
         return null;
       }
 
-      return JSON.parse(result[0].value);
+      return JSON.parse(value);
     } catch {
       return null;
     }
@@ -807,20 +749,7 @@ class UserCrypto {
   ): Promise<void> {
     const key = `user_encrypted_dek_webauthn_${userId}`;
     const value = JSON.stringify(encryptedDEK);
-
-    const existing = await getDb()
-      .select()
-      .from(settings)
-      .where(eq(settings.key, key));
-
-    if (existing.length > 0) {
-      await getDb()
-        .update(settings)
-        .set({ value })
-        .where(eq(settings.key, key));
-    } else {
-      await getDb().insert(settings).values({ key, value });
-    }
+    await this.setSetting(key, value);
   }
 
   private async getWebAuthnEncryptedDEK(
@@ -828,16 +757,13 @@ class UserCrypto {
   ): Promise<EncryptedDEK | null> {
     try {
       const key = `user_encrypted_dek_webauthn_${userId}`;
-      const result = await getDb()
-        .select()
-        .from(settings)
-        .where(eq(settings.key, key));
+      const value = await this.getSetting(key);
 
-      if (result.length === 0) {
+      if (value === null) {
         return null;
       }
 
-      return JSON.parse(result[0].value);
+      return JSON.parse(value);
     } catch {
       return null;
     }

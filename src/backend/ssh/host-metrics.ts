@@ -8,11 +8,11 @@ import {
   pickResolvedPassword,
   pickResolvedUsername,
 } from "./credential-username.js";
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
+import { getCurrentSettingValue } from "../database/repositories/current-settings-repository.js";
+import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/current-host-metrics-history-repository.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { statsLogger } from "../utils/logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
 import type { AuthenticatedRequest, ProxyNode } from "../../types/index.js";
@@ -27,7 +27,6 @@ import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
-import { collectTemperatureMetrics } from "./widgets/temperature-collector.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -51,7 +50,6 @@ import {
   supportsMetrics,
   tcpPingThroughJumpHost,
 } from "./host-metrics-helpers.js";
-import { applyAgentAuth } from "./terminal-auth-helpers.js";
 import {
   cleanupMetricsSession,
   getSessionKey,
@@ -143,7 +141,6 @@ const DEFAULT_STATS_CONFIG: StatsConfig = {
     "processes",
     "ports",
     "firewall",
-    "temperature",
   ],
   statusCheckEnabled: true,
   statusCheckInterval: 60,
@@ -262,26 +259,18 @@ class PollingManager {
     metricsInterval: number;
   } {
     try {
-      const db = getDb();
-      const statusRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'global_status_check_interval'",
-        )
-        .get() as { value: string } | undefined;
-      const metricsRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'global_metrics_interval'",
-        )
-        .get() as { value: string } | undefined;
+      const statusValue = getCurrentSettingValue(
+        "global_status_check_interval",
+      );
+      const metricsValue = getCurrentSettingValue("global_metrics_interval");
 
       return {
-        statusCheckInterval: statusRow
-          ? parseInt(statusRow.value, 10) ||
+        statusCheckInterval: statusValue
+          ? parseInt(statusValue, 10) ||
             DEFAULT_STATS_CONFIG.statusCheckInterval
           : DEFAULT_STATS_CONFIG.statusCheckInterval,
-        metricsInterval: metricsRow
-          ? parseInt(metricsRow.value, 10) ||
-            DEFAULT_STATS_CONFIG.metricsInterval
+        metricsInterval: metricsValue
+          ? parseInt(metricsValue, 10) || DEFAULT_STATS_CONFIG.metricsInterval
           : DEFAULT_STATS_CONFIG.metricsInterval,
       };
     } catch {
@@ -387,8 +376,6 @@ class PollingManager {
       viewerUserId,
     };
 
-    this.pollingConfigs.set(host.id, config);
-
     if (isTcpPingEnabled(statsConfig)) {
       const intervalMs = this.intervalWithJitter(
         statsConfig.statusCheckInterval * 1000,
@@ -446,6 +433,8 @@ class PollingManager {
     } else {
       this.metricsStore.delete(host.id);
     }
+
+    this.pollingConfigs.set(host.id, config);
   }
 
   private async pollHostStatus(
@@ -556,7 +545,7 @@ class PollingManager {
         data: metrics,
         timestamp: Date.now(),
       });
-      this.insertMetricsHistory(refreshedHost.id, metrics);
+      await this.insertMetricsHistory(refreshedHost.id, metrics);
       AlertEngine.getInstance()
         .evaluateMetrics(refreshedHost.id, metrics)
         .catch(() => {});
@@ -600,20 +589,15 @@ class PollingManager {
 
   private getRetentionDays(): number {
     try {
-      const db = getDb();
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'metrics_history_retention_days'",
-        )
-        .get() as { value: string } | undefined;
-      const days = row ? parseInt(row.value, 10) : 7;
+      const value = getCurrentSettingValue("metrics_history_retention_days");
+      const days = value ? parseInt(value, 10) : 7;
       return isNaN(days) || days < 1 ? 7 : Math.min(days, 90);
     } catch {
       return 7;
     }
   }
 
-  private insertMetricsHistory(
+  private async insertMetricsHistory(
     hostId: number,
     metrics: {
       cpu: { percent: number | null };
@@ -623,34 +607,24 @@ class PollingManager {
         interfaces: Array<{ rxBytes: string | null; txBytes: string | null }>;
       };
     },
-  ): void {
+  ): Promise<void> {
     try {
-      const db = getDb();
       const iface = metrics.network?.interfaces?.[0];
       const rxRaw = iface?.rxBytes ? parseInt(iface.rxBytes, 10) : null;
       const txRaw = iface?.txBytes ? parseInt(iface.txBytes, 10) : null;
 
-      db.$client
-        .prepare(
-          `INSERT INTO host_metrics_history
-             (host_id, cpu_percent, mem_percent, disk_percent, net_rx_bytes, net_tx_bytes)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          hostId,
-          metrics.cpu?.percent ?? null,
-          metrics.memory?.percent ?? null,
-          metrics.disk?.percent ?? null,
-          isNaN(rxRaw as number) ? null : rxRaw,
-          isNaN(txRaw as number) ? null : txRaw,
-        );
+      const repository = createCurrentHostMetricsHistoryRepository();
+      await repository.create({
+        hostId,
+        cpuPercent: metrics.cpu?.percent ?? null,
+        memPercent: metrics.memory?.percent ?? null,
+        diskPercent: metrics.disk?.percent ?? null,
+        netRxBytes: isNaN(rxRaw as number) ? null : rxRaw,
+        netTxBytes: isNaN(txRaw as number) ? null : txRaw,
+      });
 
       const retentionDays = this.getRetentionDays();
-      db.$client
-        .prepare(
-          `DELETE FROM host_metrics_history WHERE host_id = ? AND ts < datetime('now', ?)`,
-        )
-        .run(hostId, `-${retentionDays} days`);
+      repository.pruneOlderThan(hostId, retentionDays);
     } catch (err) {
       statsLogger.warn("Failed to write metrics history", {
         operation: "insert_metrics_history",
@@ -883,11 +857,8 @@ async function fetchAllHosts(
   userId: string,
 ): Promise<SSHHostWithCredentials[]> {
   try {
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.userId, userId)),
-      "ssh_data",
-      userId,
-    );
+    const repository = createCurrentHostResolutionRepository();
+    const hostResults = await repository.findHostsByUserId(userId);
 
     const hostsWithCredentials: SSHHostWithCredentials[] = [];
     for (const host of hostResults) {
@@ -915,7 +886,7 @@ async function fetchHostById(
   userId: string,
 ): Promise<SSHHostWithCredentials | undefined> {
   try {
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (DataCrypto.getUserDataKey(userId) === null) {
       return undefined;
     }
 
@@ -934,17 +905,13 @@ async function fetchHostById(
       return undefined;
     }
 
-    const hostResults = await SimpleDBOps.select(
-      getDb().select().from(hosts).where(eq(hosts.id, id)),
-      "ssh_data",
-      userId,
-    );
+    const repository = createCurrentHostResolutionRepository();
+    const host = await repository.findHostById(id, userId);
 
-    if (hostResults.length === 0) {
+    if (!host) {
       return undefined;
     }
 
-    const host = hostResults[0];
     return await resolveHostCredentials(host, userId);
   } catch (err) {
     statsLogger.error(`Failed to fetch host ${id}`, err);
@@ -972,15 +939,6 @@ async function resolveHostCredentials(
           : [],
       pin: !!host.pin,
       authType: host.authType,
-      terminalConfig: (() => {
-        try {
-          return typeof host.terminalConfig === "string"
-            ? JSON.parse(host.terminalConfig as string)
-            : host.terminalConfig || undefined;
-        } catch {
-          return undefined;
-        }
-      })(),
       enableTerminal: !!host.enableTerminal,
       enableTunnel: !!host.enableTunnel,
       enableFileManager: !!host.enableFileManager,
@@ -1060,17 +1018,13 @@ async function resolveHostCredentials(
             }
           }
         } else {
-          const credentials = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(eq(sshCredentials.id, host.credentialId as number)),
-            "ssh_credentials",
-            userId,
-          );
+          const credential =
+            await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+              host.credentialId as number,
+              userId,
+            );
 
-          if (credentials.length > 0) {
-            const credential = credentials[0];
+          if (credential) {
             baseHost.credentialId = credential.id;
             baseHost.authType =
               credential.authType ||
@@ -1275,14 +1229,6 @@ async function buildSshConfig(
       }
     } else {
       throw new Error(`Credential for host ${host.ip} could not be resolved`);
-    }
-  } else if (host.authType === "agent") {
-    const result = await applyAgentAuth(
-      base as Record<string, unknown>,
-      (host as { terminalConfig?: Record<string, unknown> }).terminalConfig,
-    );
-    if ("error" in result) {
-      throw new Error(result.error);
     }
   } else {
     throw new Error(
@@ -1537,14 +1483,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     kernel: string | null;
     os: string | null;
   };
-  temperature: {
-    source: "sysfs" | "sensors" | "none";
-    highestCelsius: number | null;
-    sensors: Array<{
-      label: string;
-      celsius: number;
-    }>;
-  };
 }> {
   if (!supportsMetrics(host)) {
     throw new Error("Metrics collection only supported for SSH hosts");
@@ -1575,7 +1513,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
         const uptime = await collectUptimeMetrics(client);
         const processes = await collectProcessesMetrics(client);
         const system = await collectSystemMetrics(client);
-        const temperature = await collectTemperatureMetrics(client);
 
         let login_stats = {
           recentLogins: [],
@@ -1647,7 +1584,6 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           uptime,
           processes,
           system,
-          temperature,
           login_stats,
           ports,
           firewall,
@@ -1775,7 +1711,7 @@ function tcpPing(
 app.get("/status", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1823,7 +1759,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1865,7 +1801,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
 app.post("/clear-connections", requireAdmin, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1893,7 +1829,7 @@ app.post("/clear-connections", requireAdmin, async (req, res) => {
 app.post("/refresh", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -1937,7 +1873,7 @@ app.post("/host-updated", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { hostId } = req.body;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -2000,7 +1936,7 @@ app.post("/host-deleted", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { hostId } = req.body;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -2050,7 +1986,7 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
   const id = Number(req.params.id);
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -2113,7 +2049,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
 
   const connectionLogs: Array<Omit<LogEntry, "id" | "timestamp">> = [];
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     connectionLogs.push(
       createConnectionLog("error", "stats_connecting", "Session expired"),
     );
@@ -2131,20 +2067,6 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
         createConnectionLog("error", "stats_connecting", "Host not found"),
       );
       return res.status(404).json({ error: "Host not found", connectionLogs });
-    }
-
-    if (!supportsMetrics(host)) {
-      connectionLogs.push(
-        createConnectionLog(
-          "info",
-          "stats_connecting",
-          "Metrics collection is only supported for SSH hosts",
-          {
-            connectionType: host.connectionType || "ssh",
-          },
-        ),
-      );
-      return res.json({ success: true, skipped: true, connectionLogs });
     }
 
     connectionLogs.push(
@@ -2192,11 +2114,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
           "Using existing metrics session",
         ),
       );
-
-      const viewerSessionId = `viewer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      pollingManager.registerViewer(host.id, viewerSessionId, userId);
-
-      return res.json({ success: true, viewerSessionId, connectionLogs });
+      return res.json({ success: true, connectionLogs });
     }
 
     const config = await buildSshConfig(host);
@@ -2587,7 +2505,7 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { viewerSessionId } = req.body;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",
@@ -2659,7 +2577,7 @@ app.post("/metrics/connect-totp", async (req, res) => {
   const { sessionId, totpCode } = req.body;
   const userId = (req as AuthenticatedRequest).userId;
 
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     return res.status(401).json({
       error: "Session expired - please log in again",
       code: "SESSION_EXPIRED",

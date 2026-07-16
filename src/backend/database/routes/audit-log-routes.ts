@@ -1,9 +1,14 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq, and, gte, lte, sql } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { auditLogs, users } from "../db/schema.js";
+import { createCurrentAuditLogRepository } from "../repositories/current-audit-log-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 import { apiLogger } from "../../utils/logger.js";
+
+async function isAdminUser(userId: string | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const user = await createCurrentUserRepository().findById(userId);
+  return !!user?.isAdmin;
+}
 
 export function registerAuditLogRoutes(
   router: Router,
@@ -53,13 +58,7 @@ export function registerAuditLogRoutes(
   router.get("/audit-logs", authenticateJWT, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const adminUser = await db
-        .select({ isAdmin: users.isAdmin })
-        .from(users)
-        .where(eq(users.id, authReq.userId))
-        .limit(1);
-
-      if (!adminUser[0]?.isAdmin) {
+      if (!(await isAdminUser(authReq.userId))) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
@@ -73,36 +72,21 @@ export function registerAuditLogRoutes(
       const { userId, action, resourceType, success, startDate, endDate } =
         req.query as Record<string, string | undefined>;
 
-      const conditions = [];
-
-      if (userId) conditions.push(eq(auditLogs.userId, userId));
-      if (action) conditions.push(eq(auditLogs.action, action));
-      if (resourceType)
-        conditions.push(eq(auditLogs.resourceType, resourceType));
-      if (success !== undefined && success !== "") {
-        conditions.push(eq(auditLogs.success, success === "true"));
-      }
-      if (startDate) conditions.push(gte(auditLogs.timestamp, startDate));
-      if (endDate) conditions.push(lte(auditLogs.timestamp, endDate));
-
-      const whereClause =
-        conditions.length > 0 ? and(...conditions) : undefined;
-
-      const [logs, totalResult] = await Promise.all([
-        db
-          .select()
-          .from(auditLogs)
-          .where(whereClause)
-          .orderBy(sql`${auditLogs.timestamp} DESC`)
-          .limit(limit)
-          .offset(offset),
-        db
-          .select({ count: sql<number>`COUNT(*)` })
-          .from(auditLogs)
-          .where(whereClause),
-      ]);
-
-      const total = totalResult[0]?.count ?? 0;
+      const { logs, total } = await createCurrentAuditLogRepository().listPage({
+        filters: {
+          userId,
+          action,
+          resourceType,
+          success:
+            success !== undefined && success !== ""
+              ? success === "true"
+              : undefined,
+          startDate,
+          endDate,
+        },
+        limit,
+        offset,
+      });
       const totalPages = Math.ceil(total / limit);
 
       return res.json({ logs, total, page, totalPages });
@@ -131,21 +115,14 @@ export function registerAuditLogRoutes(
   router.get("/audit-logs/actions", authenticateJWT, async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const adminUser = await db
-        .select({ isAdmin: users.isAdmin })
-        .from(users)
-        .where(eq(users.id, authReq.userId))
-        .limit(1);
-
-      if (!adminUser[0]?.isAdmin) {
+      if (!(await isAdminUser(authReq.userId))) {
         return res.status(403).json({ error: "Not authorized" });
       }
 
-      const rows = db.$client
-        .prepare("SELECT DISTINCT action FROM audit_logs ORDER BY action ASC")
-        .all() as { action: string }[];
+      const actions =
+        await createCurrentAuditLogRepository().listDistinctActions();
 
-      return res.json({ actions: rows.map((r) => r.action) });
+      return res.json({ actions });
     } catch (err) {
       apiLogger.error("Failed to fetch audit log actions", err);
       return res

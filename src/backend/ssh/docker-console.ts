@@ -2,10 +2,7 @@ import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { WebSocketServer, WebSocket } from "ws";
 import { AuthManager } from "../utils/auth-manager.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
-import { and, eq } from "drizzle-orm";
-import { getDb } from "../database/db/index.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 import { systemLogger } from "../utils/logger.js";
 import type { SSHHost } from "../../types/index.js";
 import { applyAgentAuth } from "./terminal-auth-helpers.js";
@@ -92,24 +89,17 @@ async function createJumpHostChain(
   }
 
   let currentClient: SSHClient | null = null;
+  const repository = createCurrentHostResolutionRepository();
 
   for (let i = 0; i < jumpHosts.length; i++) {
     const jumpHostId = jumpHosts[i].hostId;
 
-    const jumpHostData = await SimpleDBOps.select(
-      getDb()
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, jumpHostId), eq(hosts.userId, userId))),
-      "ssh_data",
-      userId,
-    );
-
-    if (jumpHostData.length === 0) {
+    const resolvedJumpHost = await repository.findHostById(jumpHostId, userId);
+    if (!resolvedJumpHost || resolvedJumpHost.userId !== userId) {
       throw new Error(`Jump host ${jumpHostId} not found`);
     }
 
-    const jumpHost = jumpHostData[0] as unknown as SSHHost;
+    const jumpHost = resolvedJumpHost as unknown as SSHHost;
     if (typeof jumpHost.jumpHosts === "string" && jumpHost.jumpHosts) {
       try {
         jumpHost.jumpHosts = JSON.parse(jumpHost.jumpHosts);
@@ -134,22 +124,12 @@ async function createJumpHostChain(
     };
 
     if (jumpHost.credentialId) {
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, jumpHost.credentialId as number),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
+      const credential = await repository.findCredentialByIdForUser(
+        jumpHost.credentialId as number,
         userId,
       );
 
-      if (credentials.length > 0) {
-        const credential = credentials[0];
+      if (credential) {
         resolvedCredentials = {
           password: credential.password as string | undefined,
           sshKey: (credential.key || credential.privateKey) as

@@ -1,6 +1,6 @@
 import type { Express, RequestHandler } from "express";
 import type { AuthenticatedRequest } from "../../types/index.js";
-import { getDb } from "../database/db/index.js";
+import { createCurrentHostMetricsHistoryRepository } from "../database/repositories/current-host-metrics-history-repository.js";
 import { statsLogger } from "../utils/logger.js";
 
 type HistoryRoutesDeps = {
@@ -98,19 +98,24 @@ export function registerHostMetricsHistoryRoutes(
         fromTs = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       }
 
-      const db = getDb();
       // SQLite CURRENT_TIMESTAMP stores 'YYYY-MM-DD HH:MM:SS' (no T/Z).
       // Normalize both sides to that format for reliable string comparison.
       const toSqlite = (iso: string) =>
         iso.replace("T", " ").replace(/\.\d{3}Z$/, "");
-      const rows = db.$client
-        .prepare(
-          `SELECT ts, cpu_percent, mem_percent, disk_percent, net_rx_bytes, net_tx_bytes
-           FROM host_metrics_history
-           WHERE host_id = ? AND ts >= ? AND ts <= ?
-           ORDER BY ts ASC`,
+      const rows = (
+        await createCurrentHostMetricsHistoryRepository().listRange(
+          hostId,
+          toSqlite(fromTs),
+          toSqlite(toTs),
         )
-        .all(hostId, toSqlite(fromTs), toSqlite(toTs));
+      ).map((row) => ({
+        ts: row.ts,
+        cpu_percent: row.cpuPercent,
+        mem_percent: row.memPercent,
+        disk_percent: row.diskPercent,
+        net_rx_bytes: row.netRxBytes,
+        net_tx_bytes: row.netTxBytes,
+      }));
 
       res.json({ rows, fromTs, toTs });
     } catch (error) {

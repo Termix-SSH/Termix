@@ -1,21 +1,17 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import {
-  sshCredentials,
-  sshCredentialUsage,
-  hosts,
-  hostAccess,
-} from "../db/schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
 
 const router = express.Router();
 
@@ -26,6 +22,11 @@ function isNonEmptyString(val: unknown): val is string {
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
+
+async function getAuditUsername(userId: string): Promise<string> {
+  const actor = await createCurrentUserRepository().findById(userId);
+  return actor?.username ?? userId;
+}
 
 /**
  * @openapi
@@ -137,7 +138,8 @@ router.post(
           .status(400)
           .json({ error: "SSH key is required for key authentication" });
       }
-      const plainPassword = password ? password : null;
+      const plainPassword =
+        authType === "password" && password ? password : null;
       const plainKey = authType === "key" && key ? key : null;
       const plainKeyPassword =
         authType === "key" && keyPassword ? keyPassword : null;
@@ -181,23 +183,16 @@ router.post(
         lastUsed: null,
       };
 
-      const created = (await SimpleDBOps.insert(
-        sshCredentials,
-        "ssh_credentials",
-        credentialData,
-        userId,
-      )) as typeof credentialData & { id: number };
+      const created =
+        await createCurrentCredentialRepository().createEncryptedForUser(
+          userId,
+          credentialData,
+        );
 
       const { ipAddress: ccIp, userAgent: ccUa } = getRequestMeta(req);
-      const { users: usersTableCc } = await import("../db/schema.js");
-      const ccActor = await db
-        .select({ username: usersTableCc.username })
-        .from(usersTableCc)
-        .where(eq(usersTableCc.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: ccActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "create_credential",
         resourceType: "credential",
         resourceId: String(created.id),
@@ -265,15 +260,8 @@ router.get(
     }
 
     try {
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(eq(sshCredentials.userId, userId))
-          .orderBy(desc(sshCredentials.updatedAt)),
-        "ssh_credentials",
-        userId,
-      );
+      const credentials =
+        await createCurrentCredentialRepository().listDecryptedByUserId(userId);
 
       res.json(credentials.map((cred) => formatCredentialOutput(cred)));
     } catch (err) {
@@ -312,22 +300,7 @@ router.get(
     }
 
     try {
-      const result = await db
-        .select({ folder: sshCredentials.folder })
-        .from(sshCredentials)
-        .where(eq(sshCredentials.userId, userId));
-
-      const folderCounts: Record<string, number> = {};
-      result.forEach((r) => {
-        if (r.folder && r.folder.trim() !== "") {
-          folderCounts[r.folder] = (folderCounts[r.folder] || 0) + 1;
-        }
-      });
-
-      const folders = Object.keys(folderCounts).filter(
-        (folder) => folderCounts[folder] > 0,
-      );
-      res.json(folders);
+      res.json(await createCurrentCredentialRepository().listFolders(userId));
     } catch (err) {
       authLogger.error("Failed to fetch credential folders", err);
       res.status(500).json({ error: "Failed to fetch credential folders" });
@@ -373,25 +346,16 @@ router.get(
     }
 
     try {
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, parseInt(id)),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
-        userId,
-      );
+      const credential =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          parseInt(id),
+        );
 
-      if (credentials.length === 0) {
+      if (!credential) {
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      const credential = credentials[0];
       const output = formatCredentialOutput(credential);
 
       if (credential.password) {
@@ -468,25 +432,22 @@ router.put(
       authLogger.warn("Invalid request for credential update");
       return res.status(400).json({ error: "Invalid request" });
     }
+    const credentialId = parseInt(id);
     authLogger.info("Updating SSH credential", {
       operation: "credential_update",
       userId,
-      credentialId: parseInt(id),
+      credentialId,
       changes: Object.keys(updateData),
     });
 
     try {
-      const existing = await db
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, parseInt(id)),
-            eq(sshCredentials.userId, userId),
-          ),
+      const existingCredential =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          credentialId,
         );
 
-      if (existing.length === 0) {
+      if (!existingCredential) {
         return res.status(404).json({ error: "Credential not found" });
       }
 
@@ -513,17 +474,16 @@ router.put(
       if (updateData.password !== undefined) {
         updateFields.password = updateData.password || null;
       }
-      const nextAuthType = updateData.authType ?? existing[0].authType;
       if (updateData.key !== undefined) {
         updateFields.key = updateData.key || null;
 
-        if (updateData.key && nextAuthType === "key") {
+        if (updateData.key && existingCredential.authType === "key") {
           const keyInfo = parseSSHKey(updateData.key, updateData.keyPassword);
           if (!keyInfo.success) {
             authLogger.warn("SSH key parsing failed during update", {
               operation: "credential_update",
               userId,
-              credentialId: parseInt(id),
+              credentialId,
               error: keyInfo.error,
             });
             return res.status(400).json({
@@ -545,72 +505,50 @@ router.put(
       }
 
       if (Object.keys(updateFields).length === 0) {
-        const existing = await SimpleDBOps.select(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(eq(sshCredentials.id, parseInt(id))),
-          "ssh_credentials",
-          userId,
-        );
-
-        return res.json(formatCredentialOutput(existing[0]));
+        return res.json(formatCredentialOutput(existingCredential));
       }
 
-      await SimpleDBOps.update(
-        sshCredentials,
-        "ssh_credentials",
-        and(
-          eq(sshCredentials.id, parseInt(id)),
-          eq(sshCredentials.userId, userId),
-        ),
+      const credentialRepository = createCurrentCredentialRepository();
+      const updated = await credentialRepository.updateEncryptedForUser(
+        userId,
+        credentialId,
         updateFields,
-        userId,
       );
-
-      const updated = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(eq(sshCredentials.id, parseInt(id))),
-        "ssh_credentials",
-        userId,
-      );
+      const updatedCredential =
+        updated ??
+        (await credentialRepository.findDecryptedByIdForUser(
+          userId,
+          credentialId,
+        ));
 
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
       await sharedCredManager.updateSharedCredentialsForOriginal(
-        parseInt(id),
+        credentialId,
         userId,
       );
 
       authLogger.success("SSH credential updated", {
         operation: "credential_update_success",
         userId,
-        credentialId: parseInt(id),
+        credentialId,
       });
 
       const { ipAddress: cuIp, userAgent: cuUa } = getRequestMeta(req);
-      const { users: usersTableCu } = await import("../db/schema.js");
-      const cuActor = await db
-        .select({ username: usersTableCu.username })
-        .from(usersTableCu)
-        .where(eq(usersTableCu.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: cuActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "update_credential",
         resourceType: "credential",
         resourceId: id,
-        resourceName: existing[0].name,
+        resourceName: String(existingCredential.name ?? id),
         ipAddress: cuIp,
         userAgent: cuUa,
         success: true,
       });
 
-      res.json(formatCredentialOutput(updated[0]));
+      res.json(formatCredentialOutput(updatedCredential ?? existingCredential));
     } catch (err) {
       authLogger.error("Failed to update credential", err);
       res.status(500).json({
@@ -664,55 +602,50 @@ router.delete(
     });
 
     try {
-      const credentialToDelete = await db
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, parseInt(id)),
-            eq(sshCredentials.userId, userId),
-          ),
+      const credentialId = parseInt(id);
+      const credentialToDelete =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          credentialId,
         );
 
-      if (credentialToDelete.length === 0) {
+      if (!credentialToDelete) {
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      const hostsUsingCredential = await db
-        .select()
-        .from(hosts)
-        .where(
-          and(eq(hosts.credentialId, parseInt(id)), eq(hosts.userId, userId)),
+      const hostsUsingCredential =
+        await createCurrentHostResolutionRepository().listHostsUsingCredentialForUser(
+          userId,
+          credentialId,
         );
 
       if (hostsUsingCredential.length > 0) {
-        await db
-          .update(hosts)
-          .set({
+        await createCurrentHostRepository().updateManyForUser(
+          userId,
+          hostsUsingCredential.map((host) => host.id),
+          {
             credentialId: null,
             password: null,
             key: null,
             keyPassword: null,
             authType: "password",
-          })
-          .where(
-            and(eq(hosts.credentialId, parseInt(id)), eq(hosts.userId, userId)),
-          );
+          },
+        );
 
         for (const host of hostsUsingCredential) {
-          const revokedShares = await db
-            .delete(hostAccess)
-            .where(eq(hostAccess.hostId, host.id))
-            .returning({ id: hostAccess.id });
+          const revokedCount =
+            await createCurrentRbacAccessRepository().deleteHostAccessForHost(
+              host.id,
+            );
 
-          if (revokedShares.length > 0) {
+          if (revokedCount > 0) {
             authLogger.info(
               "Auto-revoked host shares due to credential deletion",
               {
                 operation: "auto_revoke_shares",
                 hostId: host.id,
-                credentialId: parseInt(id),
-                revokedCount: revokedShares.length,
+                credentialId,
+                revokedCount,
                 reason: "credential_deleted",
               },
             );
@@ -723,37 +656,27 @@ router.delete(
       const { SharedCredentialManager } =
         await import("../../utils/shared-credential-manager.js");
       const sharedCredManager = SharedCredentialManager.getInstance();
-      await sharedCredManager.deleteSharedCredentialsForOriginal(parseInt(id));
+      await sharedCredManager.deleteSharedCredentialsForOriginal(credentialId);
 
-      await db
-        .delete(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.id, parseInt(id)),
-            eq(sshCredentials.userId, userId),
-          ),
-        );
+      await createCurrentCredentialRepository().deleteForUser(
+        userId,
+        credentialId,
+      );
 
       authLogger.success("SSH credential deleted", {
         operation: "credential_delete_success",
         userId,
-        credentialId: parseInt(id),
+        credentialId,
       });
 
       const { ipAddress: cdIp, userAgent: cdUa } = getRequestMeta(req);
-      const { users: usersTableCd } = await import("../db/schema.js");
-      const cdActor = await db
-        .select({ username: usersTableCd.username })
-        .from(usersTableCd)
-        .where(eq(usersTableCd.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: cdActor[0]?.username ?? userId,
+        username: await getAuditUsername(userId),
         action: "delete_credential",
         resourceType: "credential",
         resourceId: id,
-        resourceName: credentialToDelete[0].name,
+        resourceName: String(credentialToDelete.name ?? id),
         ipAddress: cdIp,
         userAgent: cdUa,
         success: true,
@@ -817,29 +740,20 @@ router.post(
     }
 
     try {
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, parseInt(credentialId)),
-              eq(sshCredentials.userId, userId),
-            ),
-          ),
-        "ssh_credentials",
-        userId,
-      );
+      const credential =
+        await createCurrentCredentialRepository().findDecryptedByIdForUser(
+          userId,
+          parseInt(credentialId),
+        );
 
-      if (credentials.length === 0) {
+      if (!credential) {
         return res.status(404).json({ error: "Credential not found" });
       }
 
-      const credential = credentials[0];
-
-      await db
-        .update(hosts)
-        .set({
+      await createCurrentHostRepository().updateForUser(
+        userId,
+        parseInt(hostId),
+        {
           credentialId: parseInt(credentialId),
           username: (credential.username as string) || "",
           authType: credential.authType as string,
@@ -848,24 +762,14 @@ router.post(
           keyPassword: null,
           keyType: null,
           updatedAt: new Date().toISOString(),
-        })
-        .where(and(eq(hosts.id, parseInt(hostId)), eq(hosts.userId, userId)));
+        },
+      );
 
-      await db.insert(sshCredentialUsage).values({
-        credentialId: parseInt(credentialId),
-        hostId: parseInt(hostId),
+      await createCurrentCredentialRepository().recordUsage(
         userId,
-      });
-
-      await db
-        .update(sshCredentials)
-        .set({
-          usageCount: sql`${sshCredentials.usageCount}
-                + 1`,
-          lastUsed: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(sshCredentials.id, parseInt(credentialId)));
+        parseInt(credentialId),
+        parseInt(hostId),
+      );
       res.json({ message: "Credential applied to host successfully" });
     } catch (err) {
       authLogger.error("Failed to apply credential to host", err);
@@ -916,14 +820,10 @@ router.get(
     }
 
     try {
-      const hostsUsingCredential = await db
-        .select()
-        .from(hosts)
-        .where(
-          and(
-            eq(hosts.credentialId, parseInt(credentialId)),
-            eq(hosts.userId, userId),
-          ),
+      const hostsUsingCredential =
+        await createCurrentHostResolutionRepository().listHostsUsingCredentialForUser(
+          userId,
+          parseInt(credentialId),
         );
 
       res.json(hostsUsingCredential.map((host) => formatSSHHostOutput(host)));
@@ -1044,15 +944,11 @@ router.put(
     }
 
     try {
-      await db
-        .update(sshCredentials)
-        .set({ folder: newName })
-        .where(
-          and(
-            eq(sshCredentials.userId, userId),
-            eq(sshCredentials.folder, oldName),
-          ),
-        );
+      await createCurrentCredentialRepository().renameFolder(
+        userId,
+        oldName,
+        newName,
+      );
 
       res.json({ success: true, message: "Folder renamed successfully" });
     } catch (error) {

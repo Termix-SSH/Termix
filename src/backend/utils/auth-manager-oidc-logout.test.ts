@@ -17,8 +17,10 @@ vi.mock("../database/db/index.js", async () => {
   const { drizzle } = await import("drizzle-orm/better-sqlite3");
   const sqlite = new Database(":memory:");
   mocks.sqlite = sqlite;
+  const db = drizzle(sqlite);
   return {
-    db: drizzle(sqlite),
+    db,
+    getDb: () => db,
     saveMemoryDatabaseToFile: mocks.saveDatabase,
   };
 });

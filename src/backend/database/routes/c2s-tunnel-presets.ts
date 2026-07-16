@@ -3,12 +3,11 @@ import type {
   TunnelConnection,
 } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { c2sTunnelPresets } from "../db/schema.js";
-import { and, asc, eq, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import type { C2sTunnelPresetRecord } from "../repositories/c2s-tunnel-preset-repository.js";
+import { createCurrentC2sTunnelPresetRepository } from "../repositories/current-c2s-tunnel-preset-repository.js";
 
 const router = express.Router();
 
@@ -20,7 +19,7 @@ function isNonEmptyString(val: unknown): val is string {
   return typeof val === "string" && val.trim().length > 0;
 }
 
-function parsePreset(row: typeof c2sTunnelPresets.$inferSelect) {
+function parsePreset(row: C2sTunnelPresetRecord) {
   return {
     ...row,
     config: JSON.parse(row.config) as TunnelConnection[],
@@ -58,11 +57,8 @@ router.get(
     }
 
     try {
-      const result = await db
-        .select()
-        .from(c2sTunnelPresets)
-        .where(eq(c2sTunnelPresets.userId, userId))
-        .orderBy(asc(c2sTunnelPresets.name));
+      const result =
+        await createCurrentC2sTunnelPresetRepository().listByUserId(userId);
       res.json(result.map(parsePreset));
     } catch (error) {
       authLogger.error("Failed to fetch C2S tunnel presets", error);
@@ -90,36 +86,24 @@ router.post(
 
     const trimmedName = name.trim();
     try {
-      const existing = await db
-        .select()
-        .from(c2sTunnelPresets)
-        .where(
-          and(
-            eq(c2sTunnelPresets.userId, userId),
-            eq(c2sTunnelPresets.name, trimmedName),
-          ),
-        );
-      if (existing.length > 0) {
+      const presetRepository = createCurrentC2sTunnelPresetRepository();
+      if (await presetRepository.hasNameForUser(userId, trimmedName)) {
         return res.status(409).json({ error: "Preset name already exists" });
       }
 
-      const result = await db
-        .insert(c2sTunnelPresets)
-        .values({
-          userId,
-          name: trimmedName,
-          config: JSON.stringify(config),
-          platform: platform?.trim() || null,
-          computerName: computerName?.trim() || null,
-        })
-        .returning();
+      const created = await presetRepository.createForUser(userId, {
+        name: trimmedName,
+        config: JSON.stringify(config),
+        platform: platform?.trim() || null,
+        computerName: computerName?.trim() || null,
+      });
 
       databaseLogger.info("C2S tunnel preset created", {
         operation: "c2s_tunnel_preset_create",
         userId,
-        presetId: result[0].id,
+        presetId: created.id,
       });
-      res.status(201).json(parsePreset(result[0]));
+      res.status(201).json(parsePreset(created));
     } catch (error) {
       authLogger.error("Failed to create C2S tunnel preset", error);
       res.status(500).json({ error: "Failed to create C2S tunnel preset" });
@@ -141,35 +125,21 @@ router.put(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(c2sTunnelPresets)
-        .where(
-          and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
-        );
-      if (existing.length === 0) {
+      const presetRepository = createCurrentC2sTunnelPresetRepository();
+      const existing = await presetRepository.findByIdForUser(userId, id);
+      if (!existing) {
         return res.status(404).json({ error: "Preset not found" });
       }
 
-      const updateFields: Record<string, unknown> = {
-        updatedAt: sql`CURRENT_TIMESTAMP`,
-      };
+      const updateFields: Parameters<typeof presetRepository.updateForUser>[2] =
+        {};
 
       if (name !== undefined) {
         if (!isNonEmptyString(name)) {
           return res.status(400).json({ error: "Preset name is required" });
         }
         const trimmedName = name.trim();
-        const duplicate = await db
-          .select()
-          .from(c2sTunnelPresets)
-          .where(
-            and(
-              eq(c2sTunnelPresets.userId, userId),
-              eq(c2sTunnelPresets.name, trimmedName),
-            ),
-          );
-        if (duplicate.some((preset) => preset.id !== id)) {
+        if (await presetRepository.hasNameForUser(userId, trimmedName, id)) {
           return res.status(409).json({ error: "Preset name already exists" });
         }
         updateFields.name = trimmedName;
@@ -188,18 +158,12 @@ router.put(
       if (computerName !== undefined)
         updateFields.computerName = computerName?.trim() || null;
 
-      await db
-        .update(c2sTunnelPresets)
-        .set(updateFields)
-        .where(
-          and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
-        );
-
-      const updated = await db
-        .select()
-        .from(c2sTunnelPresets)
-        .where(eq(c2sTunnelPresets.id, id));
-      res.json(parsePreset(updated[0]));
+      const updated = await presetRepository.updateForUser(
+        userId,
+        id,
+        updateFields,
+      );
+      res.json(parsePreset(updated ?? existing));
     } catch (error) {
       authLogger.error("Failed to update C2S tunnel preset", error);
       res.status(500).json({ error: "Failed to update C2S tunnel preset" });
@@ -220,21 +184,13 @@ router.delete(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(c2sTunnelPresets)
-        .where(
-          and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
-        );
-      if (existing.length === 0) {
+      const presetRepository = createCurrentC2sTunnelPresetRepository();
+      const existing = await presetRepository.findByIdForUser(userId, id);
+      if (!existing) {
         return res.status(404).json({ error: "Preset not found" });
       }
 
-      await db
-        .delete(c2sTunnelPresets)
-        .where(
-          and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
-        );
+      await presetRepository.deleteForUser(userId, id);
 
       res.json({ success: true });
     } catch (error) {

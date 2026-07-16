@@ -1,10 +1,12 @@
 import { authLogger } from "../../utils/logger.js";
 import type { SSOProviderType } from "../../../types/index.js";
-import { db } from "../db/index.js";
-import { ssoProviders } from "../db/schema.js";
-import { eq } from "drizzle-orm";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { Agent } from "undici";
+import { eq } from "drizzle-orm";
+import { getDb } from "../db/index.js";
+import { ssoProviders } from "../db/schema.js";
+import { createCurrentSettingsRepository } from "../repositories/current-settings-repository.js";
+import { createCurrentSsoProviderRepository } from "../repositories/current-sso-provider-repository.js";
 
 const BACKCHANNEL_LOGOUT_EVENT =
   "http://schemas.openid.net/event/backchannel-logout";
@@ -318,13 +320,9 @@ export async function loadProviderConfig(
 } | null> {
   if (providerId != null) {
     try {
-      const rows = await db
-        .select()
-        .from(ssoProviders)
-        .where(eq(ssoProviders.id, providerId))
-        .limit(1);
-      if (rows.length > 0) {
-        const row = rows[0];
+      const row =
+        await createCurrentSsoProviderRepository().findById(providerId);
+      if (row) {
         let parsed: Record<string, unknown>;
         try {
           parsed = JSON.parse(row.config);
@@ -374,14 +372,8 @@ export async function loadProviderConfig(
 
   // Fallback: first enabled OIDC-type provider in ssoProviders table
   try {
-    const rows = await db
-      .select()
-      .from(ssoProviders)
-      .where(eq(ssoProviders.enabled, true))
-      .orderBy();
-    const oidcRow = rows.find(
-      (r) => r.type === "oidc" || r.type === "github" || r.type === "google",
-    );
+    const oidcRow =
+      await createCurrentSsoProviderRepository().findFirstEnabledOidcLike();
     if (oidcRow) {
       let parsed: Record<string, unknown>;
       try {
@@ -406,11 +398,10 @@ export async function loadProviderConfig(
 
   // Fallback: legacy settings blob
   try {
-    const legacyRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
-      .get() as { value: string } | undefined;
-    if (legacyRow) {
-      let config = JSON.parse(legacyRow.value) as Record<string, unknown>;
+    const legacyValue =
+      await createCurrentSettingsRepository().get("oidc_config");
+    if (legacyValue) {
+      let config = JSON.parse(legacyValue) as Record<string, unknown>;
       config = decryptConfigSecret(config);
       return {
         config: config as unknown as OIDCConfig,
@@ -433,7 +424,7 @@ export async function resolveProviderByIssuer(issuer: string): Promise<{
   const target = normalizeIssuer(issuer);
 
   try {
-    const rows = await db
+    const rows = await getDb()
       .select()
       .from(ssoProviders)
       .where(eq(ssoProviders.enabled, true));

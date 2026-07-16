@@ -1,7 +1,5 @@
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials, vaultProfiles } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentVaultProfileRepository } from "../database/repositories/current-vault-profile-repository.js";
 import { logger } from "../utils/logger.js";
 import {
   pickResolvedPassword,
@@ -28,17 +26,11 @@ export async function resolveHostById(
   );
   if (!access.hasAccess) return null;
 
-  const db = getDb();
+  const repository = createCurrentHostResolutionRepository();
+  const resolvedHost = await repository.findHostById(hostId, userId);
+  if (!resolvedHost) return null;
 
-  const hostResults = await SimpleDBOps.select(
-    db.select().from(hosts).where(eq(hosts.id, hostId)),
-    "ssh_data",
-    userId,
-  );
-
-  if (hostResults.length === 0) return null;
-
-  const host = hostResults[0] as Record<string, unknown>;
+  const host = resolvedHost as Record<string, unknown>;
 
   // Parse JSON fields
   if (typeof host.jumpHosts === "string" && host.jumpHosts) {
@@ -91,33 +83,16 @@ export async function resolveHostById(
       // Try user's own override credential first
       if (userId !== ownerId) {
         try {
-          const { hostAccess } = await import("../database/db/schema.js");
-          const accessRecords = await db
-            .select()
-            .from(hostAccess)
-            .where(
-              and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
-            )
-            .limit(1);
-          const overrideCredId = accessRecords[0]?.overrideCredentialId as
-            | number
-            | null;
+          const overrideCredId = await repository.findOverrideCredentialId(
+            hostId,
+            userId,
+          );
           if (overrideCredId) {
-            const userCreds = await SimpleDBOps.select(
-              db
-                .select()
-                .from(sshCredentials)
-                .where(
-                  and(
-                    eq(sshCredentials.id, overrideCredId),
-                    eq(sshCredentials.userId, userId),
-                  ),
-                ),
-              "ssh_credentials",
+            const cred = (await repository.findCredentialByIdForUser(
+              overrideCredId,
               userId,
-            );
-            if (userCreds.length > 0) {
-              const cred = userCreds[0] as Record<string, unknown>;
+            )) as Record<string, unknown> | null;
+            if (cred) {
               host.password = cred.password;
               host.key = cred.key;
               host.keyPassword = cred.keyPassword;
@@ -183,22 +158,12 @@ export async function resolveHostById(
         return null;
       }
 
-      const credentials = await SimpleDBOps.select(
-        db
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, host.credentialId as number),
-              eq(sshCredentials.userId, ownerId),
-            ),
-          ),
-        "ssh_credentials",
+      const cred = (await repository.findCredentialByIdForUser(
+        host.credentialId as number,
         ownerId,
-      );
+      )) as Record<string, unknown> | null;
 
-      if (credentials.length > 0) {
-        const cred = credentials[0] as Record<string, unknown>;
+      if (cred) {
         host.password = pickResolvedPassword(host.password, cred.password);
         // Prefer the normalised private key; fall back to raw key field
         host.key = (cred.privateKey || cred.key) as string | null;
@@ -232,13 +197,11 @@ export async function resolveHostById(
   // certificate itself is obtained per-user at connect time via Vault OIDC.
   if (host.vaultProfileId) {
     try {
-      const profiles = await db
-        .select()
-        .from(vaultProfiles)
-        .where(eq(vaultProfiles.id, host.vaultProfileId as number))
-        .limit(1);
-      if (profiles.length > 0) {
-        (host as Record<string, unknown>).vaultProfile = profiles[0];
+      const profile = await createCurrentVaultProfileRepository().findById(
+        host.vaultProfileId as number,
+      );
+      if (profile) {
+        (host as Record<string, unknown>).vaultProfile = profile;
         host.authType = "vault";
       }
     } catch (e) {

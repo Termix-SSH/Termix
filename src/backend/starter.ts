@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
 import { AuthManager } from "./utils/auth-manager.js";
 import { DataCrypto } from "./utils/data-crypto.js";
+import { ensureDatabaseLayerPreupgradeBackup } from "./utils/database-layer-preupgrade-backup.js";
+import { DatabaseSaveTrigger } from "./utils/database-save-trigger.js";
 import { SystemCrypto } from "./utils/system-crypto.js";
 import {
   systemLogger,
@@ -95,11 +97,17 @@ import {
       version: version,
     });
 
+    const { logRepositoryRolloutConfig } =
+      await import("./database/repositories/repository-rollout.js");
+    logRepositoryRolloutConfig();
+
     const systemCrypto = SystemCrypto.getInstance();
     await systemCrypto.initializeJWTSecret();
     await systemCrypto.initializeDatabaseKey();
     await systemCrypto.initializeEncryptionKey();
     await systemCrypto.initializeInternalAuthToken();
+
+    ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
 
     await AutoSSLSetup.initialize();
     systemLogger.success("SSL setup completed", {
@@ -151,27 +159,18 @@ import {
     await import("./homepage.js");
 
     // Initialize log level from database settings
-    const { getDb: getDbForSettings } = await import("./database/db/index.js");
-    const settingsDb = getDbForSettings();
-    const logLevelRow = settingsDb.$client
-      .prepare("SELECT value FROM settings WHERE key = 'log_level'")
-      .get() as { value: string } | undefined;
-    if (logLevelRow) {
-      setGlobalLogLevel(logLevelRow.value);
-      systemLogger.info(`Log level set to: ${logLevelRow.value}`, {
+    const { getCurrentSettingValue } =
+      await import("./database/repositories/current-settings-repository.js");
+    const logLevel = getCurrentSettingValue("log_level");
+    if (logLevel) {
+      setGlobalLogLevel(logLevel);
+      systemLogger.info(`Log level set to: ${logLevel}`, {
         operation: "log_level_init",
       });
     }
 
     // Initialize Guacamole server for RDP/VNC/Telnet support
-    const { getDb: getDbForGuac } = await import("./database/db/index.js");
-    const guacDb = getDbForGuac();
-    const guacEnabledRow = guacDb.$client
-      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
-      .get() as { value: string } | undefined;
-    const guacEnabled = guacEnabledRow
-      ? guacEnabledRow.value !== "false"
-      : true;
+    const guacEnabled = getCurrentSettingValue("guac_enabled") !== "false";
 
     if (process.env.ENABLE_GUACAMOLE !== "false" && guacEnabled) {
       import("./guacamole/guacamole-server.js")
@@ -203,9 +202,7 @@ import {
         operation: "shutdown",
       });
       try {
-        const { saveMemoryDatabaseToFile } =
-          await import("./database/db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
         systemLogger.info("Database saved to disk before exit", {
           operation: "shutdown_db_saved",
         });

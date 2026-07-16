@@ -1,6 +1,5 @@
-import { db } from "../database/db/index.js";
-import { sshCredentials, sharedCredentials } from "../database/db/schema.js";
-import { eq, and, or, isNull } from "drizzle-orm";
+import { createCurrentCredentialRepository } from "../database/repositories/current-credential-repository.js";
+import { createCurrentSharedCredentialRepository } from "../database/repositories/current-shared-credential-repository.js";
 import { DataCrypto } from "./data-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { FieldCrypto } from "./field-crypto.js";
@@ -20,20 +19,12 @@ export class CredentialSystemEncryptionMigration {
 
       const systemCrypto = SystemCrypto.getInstance();
       const CSKEK = await systemCrypto.getCredentialSharingKey();
+      const credentialRepository = createCurrentCredentialRepository();
+      const sharedCredentialRepository =
+        createCurrentSharedCredentialRepository();
 
-      const credentials = await db
-        .select()
-        .from(sshCredentials)
-        .where(
-          and(
-            eq(sshCredentials.userId, userId),
-            or(
-              isNull(sshCredentials.systemPassword),
-              isNull(sshCredentials.systemKey),
-              isNull(sshCredentials.systemKeyPassword),
-            ),
-          ),
-        );
+      const credentials =
+        await credentialRepository.listMissingSystemEncryptionByUserId(userId);
 
       let migrated = 0;
       let failed = 0;
@@ -95,20 +86,20 @@ export class CredentialSystemEncryptionMigration {
               )
             : null;
 
-          await db
-            .update(sshCredentials)
-            .set({
+          await credentialRepository.updateSystemEncryptionForUser(
+            userId,
+            cred.id,
+            {
               systemPassword,
               systemKey,
               systemKeyPassword,
               updatedAt: new Date().toISOString(),
-            })
-            .where(eq(sshCredentials.id, cred.id));
+            },
+          );
 
-          await db
-            .update(sharedCredentials)
-            .set({ needsReEncryption: true })
-            .where(eq(sharedCredentials.originalCredentialId, cred.id));
+          await sharedCredentialRepository.markNeedsReEncryptionByOriginalCredentialId(
+            cred.id,
+          );
 
           migrated++;
         } catch (error) {

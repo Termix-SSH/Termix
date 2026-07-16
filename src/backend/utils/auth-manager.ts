@@ -3,14 +3,20 @@ import crypto from "crypto";
 import { UserCrypto } from "./user-crypto.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
+import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
-import { db } from "../database/db/index.js";
-import { sessions, trustedDevices, apiKeys } from "../database/db/schema.js";
-import { eq, and, inArray, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DeviceType } from "./user-agent-parser.js";
+import { getDb } from "../database/db/index.js";
+import { sessions } from "../database/db/schema.js";
+import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
+import { createCurrentSessionRepository } from "../database/repositories/current-session-repository.js";
+import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
+import { createCurrentApiKeyRepository } from "../database/repositories/current-api-key-repository.js";
+import { createCurrentTrustedDeviceRepository } from "../database/repositories/current-trusted-device-repository.js";
 
 interface AuthenticationResult {
   success: boolean;
@@ -191,20 +197,7 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-
-      const sqlite = getSqlite();
-
-      const migrationResult = await DataCrypto.migrateUserSensitiveFields(
-        userId,
-        userDataKey,
-        sqlite,
-      );
-
-      if (migrationResult.migrated) {
-        await saveMemoryDatabaseToFile();
-      }
+      await DataCrypto.migrateCurrentUserSensitiveFields(userId, userDataKey);
 
       try {
         const { CredentialSystemEncryptionMigration } =
@@ -213,7 +206,9 @@ class AuthManager {
         const credResult = await credMigration.migrateUserCredentials(userId);
 
         if (credResult.migrated > 0) {
-          await saveMemoryDatabaseToFile();
+          await DatabaseSaveTrigger.forceSave(
+            "login_credential_migration_explicit_save",
+          );
         }
       } catch (error) {
         databaseLogger.warn("Credential migration failed during login", {
@@ -353,10 +348,10 @@ class AuthManager {
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-    const timeoutRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
-      .get() as { value: string } | undefined;
-    const defaultExpiry = `${timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24}h`;
+    const timeoutValue = await createCurrentSettingsRepository().get(
+      "session_timeout_hours",
+    );
+    const defaultExpiry = `${timeoutValue ? parseInt(timeoutValue, 10) || 24 : 24}h`;
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
@@ -389,7 +384,7 @@ class AuthManager {
       const createdAt = now.toISOString();
 
       try {
-        await db.insert(sessions).values({
+        await createCurrentSessionRepository().create({
           id: sessionId,
           userId,
           jwtToken: token,
@@ -402,21 +397,6 @@ class AuthManager {
           expiresAt,
           lastActiveAt: createdAt,
         });
-
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch (saveError) {
-          databaseLogger.error(
-            "Failed to save database after session creation",
-            saveError,
-            {
-              operation: "session_create_db_save_failed",
-              sessionId,
-            },
-          );
-        }
       } catch (error) {
         databaseLogger.error("Failed to create session", error, {
           operation: "session_create_failed",
@@ -461,13 +441,11 @@ class AuthManager {
 
       if (payload.sessionId) {
         try {
-          const sessionRecords = await db
-            .select()
-            .from(sessions)
-            .where(eq(sessions.id, payload.sessionId))
-            .limit(1);
+          const sessionRecord = await createCurrentSessionRepository().findById(
+            payload.sessionId,
+          );
 
-          if (sessionRecords.length === 0) {
+          if (!sessionRecord) {
             databaseLogger.warn("Session not found during JWT verification", {
               operation: "jwt_verify_session_not_found",
               sessionId: payload.sessionId,
@@ -478,7 +456,7 @@ class AuthManager {
 
           await this.restoreDataKeyFromPayload(
             payload,
-            sessionRecords[0].expiresAt,
+            sessionRecord.expiresAt,
           );
         } catch (dbError) {
           databaseLogger.error(
@@ -509,17 +487,14 @@ class AuthManager {
     userId: string,
     sessionId: string,
   ): Promise<{ token: string; maxAge: number } | null> {
-    const sessionRecords = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.id, sessionId))
-      .limit(1);
+    const sessionRecord =
+      await createCurrentSessionRepository().findById(sessionId);
 
-    if (sessionRecords.length === 0 || sessionRecords[0].userId !== userId) {
+    if (!sessionRecord || sessionRecord.userId !== userId) {
       return null;
     }
 
-    const expiresAt = new Date(sessionRecords[0].expiresAt).getTime();
+    const expiresAt = new Date(sessionRecord.expiresAt).getTime();
     const maxAge = expiresAt - Date.now();
     if (!Number.isFinite(maxAge) || maxAge <= 0) {
       return null;
@@ -532,28 +507,7 @@ class AuthManager {
       expiresIn: Math.ceil(maxAge / 1000),
     } as jwt.SignOptions);
 
-    await db
-      .update(sessions)
-      .set({
-        jwtToken: token,
-        lastActiveAt: new Date().toISOString(),
-      })
-      .where(eq(sessions.id, sessionId));
-
-    try {
-      const { saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-      await saveMemoryDatabaseToFile();
-    } catch (saveError) {
-      databaseLogger.error(
-        "Failed to save database after session token refresh",
-        saveError,
-        {
-          operation: "session_token_refresh_db_save_failed",
-          sessionId,
-        },
-      );
-    }
+    await createCurrentSessionRepository().updateToken(sessionId, token);
 
     return { token, maxAge };
   }
@@ -573,22 +527,7 @@ class AuthManager {
         sessionId,
       });
 
-      await db.delete(sessions).where(eq(sessions.id, sessionId));
-
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after session revocation",
-          saveError,
-          {
-            operation: "session_revoke_db_save_failed",
-            sessionId,
-          },
-        );
-      }
+      await createCurrentSessionRepository().revoke(sessionId);
 
       return true;
     } catch (error) {
@@ -605,10 +544,8 @@ class AuthManager {
     exceptSessionId?: string,
   ): Promise<number> {
     try {
-      const userSessions = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.userId, userId));
+      const sessionRepository = createCurrentSessionRepository();
+      const userSessions = await sessionRepository.listByUserId(userId);
 
       const deletedCount = userSessions.filter(
         (s) => !exceptSessionId || s.id !== exceptSessionId,
@@ -620,33 +557,7 @@ class AuthManager {
         sessionCount: deletedCount,
       });
 
-      if (exceptSessionId) {
-        await db
-          .delete(sessions)
-          .where(
-            and(
-              eq(sessions.userId, userId),
-              sql`${sessions.id} != ${exceptSessionId}`,
-            ),
-          );
-      } else {
-        await db.delete(sessions).where(eq(sessions.userId, userId));
-      }
-
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after revoking all user sessions",
-          saveError,
-          {
-            operation: "user_sessions_revoke_db_save_failed",
-            userId,
-          },
-        );
-      }
+      await sessionRepository.revokeAllForUser(userId, exceptSessionId);
 
       return deletedCount;
     } catch (error) {
@@ -673,6 +584,7 @@ class AuthManager {
       if (ssoProviderId != null)
         conditions.push(eq(sessions.ssoProviderId, ssoProviderId));
 
+      const db = getDb();
       const matched = await db
         .select()
         .from(sessions)
@@ -716,10 +628,9 @@ class AuthManager {
 
   async cleanupExpiredSessions(): Promise<number> {
     try {
-      const expiredSessions = await db
-        .select()
-        .from(sessions)
-        .where(sql`${sessions.expiresAt} < datetime('now')`);
+      const sessionRepository = createCurrentSessionRepository();
+      const now = new Date();
+      const expiredSessions = await sessionRepository.listExpired(now);
 
       const expiredCount = expiredSessions.length;
 
@@ -727,30 +638,11 @@ class AuthManager {
         return 0;
       }
 
-      await db
-        .delete(sessions)
-        .where(sql`${sessions.expiresAt} < datetime('now')`);
-
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after cleaning up expired sessions",
-          saveError,
-          {
-            operation: "sessions_cleanup_db_save_failed",
-          },
-        );
-      }
+      await sessionRepository.deleteExpired(now);
 
       const affectedUsers = new Set(expiredSessions.map((s) => s.userId));
       for (const userId of affectedUsers) {
-        const remainingSessions = await db
-          .select()
-          .from(sessions)
-          .where(eq(sessions.userId, userId));
+        const remainingSessions = await sessionRepository.listByUserId(userId);
 
         if (remainingSessions.length === 0) {
           this.userCrypto.logoutUser(userId);
@@ -768,8 +660,7 @@ class AuthManager {
 
   async getAllSessions(): Promise<Record<string, unknown>[]> {
     try {
-      const allSessions = await db.select().from(sessions);
-      return allSessions;
+      return createCurrentSessionRepository().listAll();
     } catch (error) {
       databaseLogger.error("Failed to get all sessions", error, {
         operation: "sessions_get_all_failed",
@@ -780,11 +671,7 @@ class AuthManager {
 
   async getUserSessions(userId: string): Promise<Record<string, unknown>[]> {
     try {
-      const userSessions = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.userId, userId));
-      return userSessions;
+      return createCurrentSessionRepository().listByUserId(userId);
     } catch (error) {
       databaseLogger.error("Failed to get user sessions", error, {
         operation: "sessions_get_user_failed",
@@ -825,13 +712,10 @@ class AuthManager {
   ): Promise<void> {
     try {
       const tokenPrefix = token.substring(0, 12);
+      const apiKeyRepository = createCurrentApiKeyRepository();
 
-      const candidates = await db
-        .select()
-        .from(apiKeys)
-        .where(
-          and(eq(apiKeys.tokenPrefix, tokenPrefix), eq(apiKeys.isActive, true)),
-        );
+      const candidates =
+        await apiKeyRepository.listActiveByTokenPrefix(tokenPrefix);
 
       if (candidates.length === 0) {
         res.status(401).json({ error: "Invalid API key" });
@@ -857,21 +741,17 @@ class AuthManager {
       }
 
       if (requireAdmin) {
-        const { users } = await import("../database/db/schema.js");
-        const userRows = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, matchedKey.userId))
-          .limit(1);
-        if (!userRows[0]?.isAdmin) {
+        const user = await createCurrentUserRepository().findById(
+          matchedKey.userId,
+        );
+        if (!user?.isAdmin) {
           res.status(403).json({ error: "Admin access required" });
           return;
         }
       }
 
-      db.update(apiKeys)
-        .set({ lastUsedAt: new Date().toISOString() })
-        .where(eq(apiKeys.id, matchedKey.id))
+      apiKeyRepository
+        .updateLastUsedAt(matchedKey.id, new Date().toISOString())
         .then(() => {})
         .catch((err) => {
           databaseLogger.warn("Failed to update API key lastUsedAt", {
@@ -898,13 +778,10 @@ class AuthManager {
         !this.userCrypto.isUserUnlocked(matchedKey.userId)
       ) {
         try {
-          const { users } = await import("../database/db/schema.js");
-          const oidcRows = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, matchedKey.userId))
-            .limit(1);
-          if (oidcRows[0]?.isOidc) {
+          const keyUser = await createCurrentUserRepository().findById(
+            matchedKey.userId,
+          );
+          if (keyUser?.isOidc) {
             await this.authenticateOIDCUser(matchedKey.userId);
           }
         } catch (err) {
@@ -965,13 +842,10 @@ class AuthManager {
 
       if (payload.sessionId) {
         try {
-          const sessionRecords = await db
-            .select()
-            .from(sessions)
-            .where(eq(sessions.id, payload.sessionId))
-            .limit(1);
+          const sessionRepository = createCurrentSessionRepository();
+          const session = await sessionRepository.findById(payload.sessionId);
 
-          if (sessionRecords.length === 0) {
+          if (!session) {
             databaseLogger.warn("Session not found in middleware", {
               operation: "middleware_session_not_found",
               sessionId: payload.sessionId,
@@ -985,8 +859,6 @@ class AuthManager {
                 code: "SESSION_NOT_FOUND",
               });
           }
-
-          const session = sessionRecords[0];
 
           const sessionExpiryTime = new Date(session.expiresAt).getTime();
           const currentTime = Date.now();
@@ -1002,18 +874,12 @@ class AuthManager {
               difference: currentTime - sessionExpiryTime,
             });
 
-            db.delete(sessions)
-              .where(eq(sessions.id, payload.sessionId))
+            sessionRepository
+              .revoke(payload.sessionId)
               .then(async () => {
                 try {
-                  const { saveMemoryDatabaseToFile } =
-                    await import("../database/db/index.js");
-                  await saveMemoryDatabaseToFile();
-
-                  const remainingSessions = await db
-                    .select()
-                    .from(sessions)
-                    .where(eq(sessions.userId, payload.userId));
+                  const remainingSessions =
+                    await sessionRepository.listByUserId(payload.userId);
 
                   if (remainingSessions.length === 0) {
                     this.userCrypto.logoutUser(payload.userId);
@@ -1049,9 +915,8 @@ class AuthManager {
               });
           }
 
-          db.update(sessions)
-            .set({ lastActiveAt: new Date().toISOString() })
-            .where(eq(sessions.id, payload.sessionId))
+          sessionRepository
+            .touch(payload.sessionId)
             .then(() => {})
             .catch((error) => {
               databaseLogger.warn("Failed to update session lastActiveAt", {
@@ -1132,16 +997,11 @@ class AuthManager {
       }
 
       try {
-        const { db } = await import("../database/db/index.js");
-        const { users } = await import("../database/db/schema.js");
-        const { eq } = await import("drizzle-orm");
+        const user = await createCurrentUserRepository().findById(
+          payload.userId,
+        );
 
-        const user = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, payload.userId));
-
-        if (!user || user.length === 0 || !user[0].isAdmin) {
+        if (!user?.isAdmin) {
           databaseLogger.warn(
             "Non-admin user attempted to access admin endpoint",
             {
@@ -1171,30 +1031,13 @@ class AuthManager {
   }
 
   async logoutUser(userId: string, sessionId?: string): Promise<void> {
+    const sessionRepository = createCurrentSessionRepository();
+
     if (sessionId) {
       try {
-        await db.delete(sessions).where(eq(sessions.id, sessionId));
+        await sessionRepository.revoke(sessionId);
 
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch (saveError) {
-          databaseLogger.error(
-            "Failed to save database after logout",
-            saveError,
-            {
-              operation: "logout_db_save_failed",
-              userId,
-              sessionId,
-            },
-          );
-        }
-
-        const remainingSessions = await db
-          .select()
-          .from(sessions)
-          .where(eq(sessions.userId, userId));
+        const remainingSessions = await sessionRepository.listByUserId(userId);
 
         if (remainingSessions.length === 0) {
           this.userCrypto.logoutUser(userId);
@@ -1210,15 +1053,7 @@ class AuthManager {
       }
     } else {
       try {
-        await db.delete(sessions).where(eq(sessions.userId, userId));
-
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch {
-          // best effort
-        }
+        await sessionRepository.revokeAllForUser(userId);
       } catch (error) {
         databaseLogger.error("Failed to revoke all sessions on logout", error, {
           operation: "session_revoke_all_failed",
@@ -1264,38 +1099,29 @@ class AuthManager {
     deviceFingerprint: string,
   ): Promise<boolean> {
     try {
-      const device = await db
-        .select()
-        .from(trustedDevices)
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        )
-        .limit(1);
+      const trustedDeviceRepository = createCurrentTrustedDeviceRepository();
+      const device = await trustedDeviceRepository.findByUserAndFingerprint(
+        userId,
+        deviceFingerprint,
+      );
 
-      if (!device || device.length === 0) {
+      if (!device) {
         return false;
       }
 
       const now = new Date();
-      const expiresAt = new Date(device[0].expiresAt);
+      const expiresAt = new Date(device.expiresAt);
 
       if (now > expiresAt) {
         await this.removeTrustedDevice(userId, deviceFingerprint);
         return false;
       }
 
-      await db
-        .update(trustedDevices)
-        .set({ lastUsedAt: now.toISOString() })
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        );
+      await trustedDeviceRepository.touch(
+        userId,
+        deviceFingerprint,
+        now.toISOString(),
+      );
 
       return true;
     } catch (error) {
@@ -1313,56 +1139,26 @@ class AuthManager {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const existingDevice = await db
-      .select()
-      .from(trustedDevices)
-      .where(
-        and(
-          eq(trustedDevices.userId, userId),
-          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-        ),
-      )
-      .limit(1);
-
-    if (existingDevice && existingDevice.length > 0) {
-      await db
-        .update(trustedDevices)
-        .set({
-          expiresAt: expiresAt.toISOString(),
-          lastUsedAt: now.toISOString(),
-        })
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        );
-    } else {
-      await db.insert(trustedDevices).values({
-        id: nanoid(),
-        userId,
-        deviceFingerprint,
-        deviceType,
-        deviceInfo,
-        createdAt: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        lastUsedAt: now.toISOString(),
-      });
-    }
+    await createCurrentTrustedDeviceRepository().upsert({
+      id: nanoid(),
+      userId,
+      deviceFingerprint,
+      deviceType,
+      deviceInfo,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      lastUsedAt: now.toISOString(),
+    });
   }
 
   async removeTrustedDevice(
     userId: string,
     deviceFingerprint: string,
   ): Promise<void> {
-    await db
-      .delete(trustedDevices)
-      .where(
-        and(
-          eq(trustedDevices.userId, userId),
-          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-        ),
-      );
+    await createCurrentTrustedDeviceRepository().deleteByUserAndFingerprint(
+      userId,
+      deviceFingerprint,
+    );
   }
 }
 

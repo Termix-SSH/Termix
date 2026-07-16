@@ -1,10 +1,9 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { and, eq, inArray } from "drizzle-orm";
 import { sshLogger } from "../../utils/logger.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
-import { db, DatabaseSaveTrigger } from "../db/index.js";
-import { hosts, sshCredentials } from "../db/schema.js";
+import { createCurrentCredentialRepository } from "../repositories/current-credential-repository.js";
+import { createCurrentHostRepository } from "../repositories/current-host-repository.js";
+import { createCurrentHostResolutionRepository } from "../repositories/current-host-resolution-repository.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -190,15 +189,11 @@ export function registerHostBulkRoutes(
       }
 
       try {
-        const ownedHosts = await db
-          .select({
-            id: hosts.id,
-            statsConfig: hosts.statsConfig,
-            credentialId: hosts.credentialId,
-            proxmoxConfig: hosts.proxmoxConfig,
-          })
-          .from(hosts)
-          .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)));
+        const hostRepository = createCurrentHostRepository();
+        const ownedHosts = await hostRepository.listBulkUpdateState(
+          userId,
+          hostIds,
+        );
 
         const ownedIds = ownedHosts.map((h) => h.id);
         const unauthorizedIds = hostIds.filter(
@@ -236,10 +231,11 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableProxmox = false;
 
         if (Object.keys(simpleUpdates).length > 0) {
-          await db
-            .update(hosts)
-            .set(simpleUpdates)
-            .where(and(inArray(hosts.id, ownedIds), eq(hosts.userId, userId)));
+          await hostRepository.updateManyForUser(
+            userId,
+            ownedIds,
+            simpleUpdates,
+          );
         }
 
         if (updates.statsConfig && typeof updates.statsConfig === "object") {
@@ -249,10 +245,9 @@ export function registerHostBulkRoutes(
                 ? JSON.parse(host.statsConfig as string)
                 : {};
               const merged = { ...existing, ...updates.statsConfig };
-              await db
-                .update(hosts)
-                .set({ statsConfig: JSON.stringify(merged) })
-                .where(and(eq(hosts.id, host.id), eq(hosts.userId, userId)));
+              await hostRepository.updateForUser(userId, host.id, {
+                statsConfig: JSON.stringify(merged),
+              });
             } catch {
               errors.push(`Failed to update statsConfig for host ${host.id}`);
             }
@@ -280,20 +275,15 @@ export function registerHostBulkRoutes(
                 syncIntervalMinutes: existing.syncIntervalMinutes ?? 15,
                 markMissingGuests: existing.markMissingGuests ?? true,
               };
-              await db
-                .update(hosts)
-                .set({
-                  enableProxmox: true,
-                  proxmoxConfig: JSON.stringify(merged),
-                })
-                .where(and(eq(hosts.id, host.id), eq(hosts.userId, userId)));
+              await hostRepository.updateForUser(userId, host.id, {
+                enableProxmox: true,
+                proxmoxConfig: JSON.stringify(merged),
+              });
             } catch {
               errors.push(`Failed to enable Proxmox for host ${host.id}`);
             }
           }
         }
-
-        DatabaseSaveTrigger.triggerSave("bulk_update");
 
         return res.json({
           updated: ownedIds.length,
@@ -345,16 +335,9 @@ export function registerHostBulkRoutes(
       };
 
       try {
-        const existingCredentials = await SimpleDBOps.select<
-          Record<string, unknown>
-        >(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(eq(sshCredentials.userId, userId)),
-          "ssh_credentials",
-          userId,
-        );
+        const credentialRepository = createCurrentCredentialRepository();
+        const existingCredentials =
+          await credentialRepository.listDecryptedByUserId(userId);
 
         for (const credential of existingCredentials) {
           addCredentialAlias(credential.name, credential.id as number);
@@ -373,9 +356,8 @@ export function registerHostBulkRoutes(
             }
 
             const now = new Date().toISOString();
-            const created = await SimpleDBOps.insert(
-              sshCredentials,
-              "ssh_credentials",
+            const created = await credentialRepository.createEncryptedForUser(
+              userId,
               {
                 userId,
                 name,
@@ -398,7 +380,6 @@ export function registerHostBulkRoutes(
                 createdAt: now,
                 updatedAt: now,
               },
-              userId,
             );
 
             const createdCredential = created as Record<string, unknown>;
@@ -413,13 +394,13 @@ export function registerHostBulkRoutes(
       }
 
       let existingHostMap: Map<string, { id: number }> | undefined;
+      const hostRepository = createCurrentHostRepository();
       if (overwrite) {
         try {
-          const allHosts = await SimpleDBOps.select<Record<string, unknown>>(
-            db.select().from(hosts).where(eq(hosts.userId, userId)),
-            "ssh_data",
-            userId,
-          );
+          const allHosts =
+            await createCurrentHostResolutionRepository().findHostsByUserId(
+              userId,
+            );
           existingHostMap = new Map();
           for (const h of allHosts) {
             const key = `${h.ip}:${h.port}:${h.username}`;
@@ -527,23 +508,14 @@ export function registerHostBulkRoutes(
             hostData.authType === "credential" &&
             hostData.credentialId
           ) {
-            const cred = await db
-              .select({ id: sshCredentials.id })
-              .from(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, hostData.credentialId),
-                  eq(sshCredentials.userId, userId),
-                ),
-              )
-              .limit(1);
+            const credentialRepository = createCurrentCredentialRepository();
+            const cred = await credentialRepository.findByIdForUser(
+              userId,
+              hostData.credentialId,
+            );
 
-            if (cred.length === 0) {
-              const fallback = await db
-                .select({ id: sshCredentials.id })
-                .from(sshCredentials)
-                .where(eq(sshCredentials.userId, userId))
-                .limit(1);
+            if (!cred) {
+              const fallback = await credentialRepository.listByUserId(userId);
 
               if (fallback.length > 0) {
                 hostData.credentialId = fallback[0].id;
@@ -678,17 +650,15 @@ export function registerHostBulkRoutes(
           const existing = existingHostMap?.get(lookupKey);
 
           if (existing) {
-            await SimpleDBOps.update(
-              hosts,
-              "ssh_data",
-              eq(hosts.id, existing.id),
-              sshDataObj,
+            await hostRepository.updateEncryptedForUser(
               userId,
+              existing.id,
+              sshDataObj,
             );
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
-            await SimpleDBOps.insert(hosts, "ssh_data", sshDataObj, userId);
+            await hostRepository.createEncryptedForUser(userId, sshDataObj);
             results.success++;
           }
         } catch (error) {
@@ -754,7 +724,7 @@ export function registerHostBulkRoutes(
       let parsed: SSHConfigHost[];
       try {
         parsed = parseSSHConfig(content);
-      } catch (err) {
+      } catch {
         return res
           .status(400)
           .json({ error: "Failed to parse SSH config file" });
@@ -796,13 +766,13 @@ export function registerHostBulkRoutes(
       };
 
       let existingHostMap: Map<string, { id: number }> | undefined;
+      const hostRepository = createCurrentHostRepository();
       if (overwrite) {
         try {
-          const allHosts = await SimpleDBOps.select<Record<string, unknown>>(
-            db.select().from(hosts).where(eq(hosts.userId, userId)),
-            "ssh_data",
-            userId,
-          );
+          const allHosts =
+            await createCurrentHostResolutionRepository().findHostsByUserId(
+              userId,
+            );
           existingHostMap = new Map();
           for (const h of allHosts) {
             const key = `${h.ip}:${h.port}:${h.username}`;
@@ -886,17 +856,15 @@ export function registerHostBulkRoutes(
           const existing = existingHostMap?.get(lookupKey);
 
           if (existing) {
-            await SimpleDBOps.update(
-              hosts,
-              "ssh_data",
-              eq(hosts.id, existing.id),
-              sshDataObj,
+            await hostRepository.updateEncryptedForUser(
               userId,
+              existing.id,
+              sshDataObj,
             );
             results.updated++;
           } else {
             sshDataObj.createdAt = new Date().toISOString();
-            await SimpleDBOps.insert(hosts, "ssh_data", sshDataObj, userId);
+            await hostRepository.createEncryptedForUser(userId, sshDataObj);
             results.success++;
           }
         } catch (error) {

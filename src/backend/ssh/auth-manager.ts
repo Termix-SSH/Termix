@@ -1,9 +1,6 @@
 import type { WebSocket } from "ws";
 import { sshLogger, authLogger } from "../utils/logger.js";
-import { getDb } from "../database/db/index.js";
-import { sshCredentials } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
 interface ResolvedCredentials {
   username: string;
   password?: string;
@@ -59,22 +56,13 @@ export class SSHAuthManager {
     };
 
     if (hostConfig.credentialId) {
-      const credentials = await SimpleDBOps.select(
-        getDb()
-          .select()
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, hostConfig.credentialId),
-              eq(sshCredentials.userId, this.context.userId),
-            ),
-          ),
-        "ssh_credentials",
-        this.context.userId,
-      );
+      const cred =
+        await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+          hostConfig.credentialId,
+          this.context.userId,
+        );
 
-      if (credentials.length > 0) {
-        const cred = credentials[0];
+      if (cred) {
         resolvedCredentials = {
           username: (cred.username as string) || hostConfig.username,
           password: (cred.password as string) || undefined,

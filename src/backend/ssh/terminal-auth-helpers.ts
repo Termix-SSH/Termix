@@ -58,20 +58,10 @@ export class MemoryAgent extends BaseAgent {
 }
 
 export async function resolveAgentSocket(
-  terminalConfig: Record<string, unknown> | string | undefined,
+  terminalConfig: Record<string, unknown> | undefined,
 ): Promise<{ socketPath: string } | { error: string }> {
-  let parsedConfig: Record<string, unknown> | undefined;
-  if (typeof terminalConfig === "string") {
-    try {
-      parsedConfig = JSON.parse(terminalConfig) as Record<string, unknown>;
-    } catch {
-      return { error: "Invalid terminal configuration for SSH agent auth." };
-    }
-  } else {
-    parsedConfig = terminalConfig;
-  }
   const explicit = (
-    parsedConfig?.agentSocketPath as string | undefined
+    terminalConfig?.agentSocketPath as string | undefined
   )?.trim();
   const resolved = explicit || process.env.SSH_AUTH_SOCK;
 
@@ -97,7 +87,7 @@ export async function resolveAgentSocket(
 
 export async function applyAgentAuth(
   connectConfig: Record<string, unknown>,
-  terminalConfig: Record<string, unknown> | string | undefined,
+  terminalConfig: Record<string, unknown> | undefined,
 ): Promise<{ socketPath: string } | { error: string }> {
   const result = await resolveAgentSocket(terminalConfig);
   if ("error" in result) return result;

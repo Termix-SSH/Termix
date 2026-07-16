@@ -11,9 +11,8 @@
 //     ephemeral key, cache the cert, and notify the browser to reconnect.
 
 import { WebSocket } from "ws";
-import { eq } from "drizzle-orm";
-import { getDb } from "../database/db/index.js";
-import { hosts, vaultProfiles } from "../database/db/schema.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentVaultProfileRepository } from "../database/repositories/current-vault-profile-repository.js";
 import { sshLogger } from "../utils/logger.js";
 import {
   type VaultProfileConfig,
@@ -61,23 +60,20 @@ function rowToProfileConfig(row: Record<string, unknown>): VaultProfileConfig {
 /** Load the Vault profile referenced by a host, or null if not configured. */
 export async function loadVaultProfileForHost(
   hostId: number,
+  userId: string,
 ): Promise<VaultProfileConfig | null> {
-  const db = getDb();
-  const hostRows = await db
-    .select()
-    .from(hosts)
-    .where(eq(hosts.id, hostId))
-    .limit(1);
-  if (!hostRows.length || hostRows[0].vaultProfileId == null) return null;
+  const host = await createCurrentHostResolutionRepository().findHostById(
+    hostId,
+    userId,
+  );
+  if (!host || host.vaultProfileId == null) return null;
 
-  const profileRows = await db
-    .select()
-    .from(vaultProfiles)
-    .where(eq(vaultProfiles.id, hostRows[0].vaultProfileId as number))
-    .limit(1);
-  if (!profileRows.length) return null;
+  const profile = await createCurrentVaultProfileRepository().findById(
+    host.vaultProfileId as number,
+  );
+  if (!profile) return null;
 
-  return rowToProfileConfig(profileRows[0] as Record<string, unknown>);
+  return rowToProfileConfig(profile as Record<string, unknown>);
 }
 
 /**

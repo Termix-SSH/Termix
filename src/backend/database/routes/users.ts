@@ -1,23 +1,18 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { users, settings, roles, userRoles } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
   parseUserAgent,
   generateDeviceFingerprint,
 } from "../../utils/user-agent-parser.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
-import {
-  getRequestBasePath,
-  getRequestBaseUrlWithForceHTTPS,
-} from "../../utils/request-origin.js";
+import { getRequestOriginWithForceHTTPS } from "../../utils/request-origin.js";
 import {
   getDesktopOidcCallbackUrl,
   isOidcTokenCallback,
@@ -42,10 +37,16 @@ import { registerUserOidcAccountRoutes } from "./user-oidc-account-routes.js";
 import { registerUserPasswordResetRoutes } from "./user-password-reset-routes.js";
 import { registerUserAdminRoutes } from "./user-admin-routes.js";
 import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
-import { registerUserWebAuthnRoutes } from "./user-webauthn-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  createCurrentSettingsRepository,
+  getCurrentSettingValue,
+} from "../repositories/current-settings-repository.js";
+import { createCurrentRoleRepository } from "../repositories/current-role-repository.js";
+import { createCurrentUserRepository } from "../repositories/current-user-repository.js";
+import type { UserRecord } from "../repositories/user-repository.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -78,10 +79,8 @@ function isRegistrationAllowed(): boolean {
   const envVal = process.env.ALLOW_REGISTRATION;
   if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get() as { value: string } | undefined;
-    return row ? row.value === "true" : true;
+    const value = getCurrentSettingValue("allow_registration");
+    return value ? value === "true" : true;
   } catch {
     return true;
   }
@@ -91,10 +90,8 @@ function isPasswordLoginAllowed(): boolean {
   const envVal = process.env.ALLOW_PASSWORD_LOGIN;
   if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
-      .get() as { value: string } | undefined;
-    return row ? row.value === "true" : true;
+    const value = getCurrentSettingValue("allow_password_login");
+    return value ? value === "true" : true;
   } catch {
     return true;
   }
@@ -104,10 +101,8 @@ function isPasswordResetAllowed(): boolean {
   const envVal = process.env.ALLOW_PASSWORD_RESET;
   if (envVal !== undefined) return envVal.trim().toLowerCase() === "true";
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_reset'")
-      .get() as { value: string } | undefined;
-    return row ? row.value === "true" : true;
+    const value = getCurrentSettingValue("allow_password_reset");
+    return value ? value === "true" : true;
   } catch {
     return true;
   }
@@ -118,6 +113,24 @@ function isNativeAppRequest(req: Request): boolean {
     (req.get("User-Agent") || "").startsWith("Termix-Mobile/") ||
     req.get("X-Electron-App") === "true"
   );
+}
+
+async function findCurrentUser(userId: string): Promise<UserRecord | null> {
+  return createCurrentUserRepository().findById(userId);
+}
+
+async function requireCurrentAdmin(userId: string): Promise<UserRecord | null> {
+  const user = await findCurrentUser(userId);
+  return user?.isAdmin ? user : null;
+}
+
+async function deleteOIDCStateSettings(state: string): Promise<void> {
+  const settingsRepository = createCurrentSettingsRepository();
+  await settingsRepository.delete(`oidc_state_${state}`);
+  await settingsRepository.delete(`oidc_backend_callback_${state}`);
+  await settingsRepository.delete(`oidc_frontend_origin_${state}`);
+  await settingsRepository.delete(`oidc_remember_me_${state}`);
+  await settingsRepository.delete(`oidc_provider_${state}`);
 }
 
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -182,11 +195,9 @@ router.post("/create", async (req, res) => {
   }
 
   try {
-    const existing = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
-    if (existing && existing.length > 0) {
+    const userRepository = createCurrentUserRepository();
+    const existing = await userRepository.findByUsername(username);
+    if (existing) {
       authLogger.warn("Registration failed - username exists", {
         operation: "user_register_failed",
         username,
@@ -198,51 +209,35 @@ router.post("/create", async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     const id = nanoid();
 
-    const isFirstUser = db.$client.transaction(() => {
-      const countResult = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users")
-        .get() as { count?: number };
-      const first = (countResult?.count || 0) === 0;
-      db.$client
-        .prepare(
-          "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .run(
-          id,
-          username,
-          password_hash,
-          first ? 1 : 0,
-          0,
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "openid email profile",
-          null,
-          0,
-          null,
-        );
-      return first;
-    })();
+    const { isFirstUser } = await userRepository.createFirstLocalUser({
+      id,
+      username,
+      passwordHash: password_hash,
+      isOidc: false,
+      clientId: "",
+      clientSecret: "",
+      issuerUrl: "",
+      authorizationUrl: "",
+      tokenUrl: "",
+      identifierPath: "",
+      namePath: "",
+      scopes: "openid email profile",
+      totpSecret: null,
+      totpEnabled: false,
+      totpBackupCodes: null,
+    });
 
     try {
       const defaultRoleName = isFirstUser ? "admin" : "user";
-      const defaultRole = await db
-        .select({ id: roles.id })
-        .from(roles)
-        .where(eq(roles.name, defaultRoleName))
-        .limit(1);
-
-      if (defaultRole.length > 0) {
-        await db.insert(userRoles).values({
+      const assigned = await createCurrentRoleRepository().assignRoleNameToUser(
+        {
           userId: id,
-          roleId: defaultRole[0].id,
+          roleName: defaultRoleName,
           grantedBy: id,
-        });
-      } else {
+        },
+      );
+
+      if (!assigned) {
         authLogger.warn("Default role not found during user registration", {
           operation: "assign_default_role",
           userId: id,
@@ -259,7 +254,7 @@ router.post("/create", async (req, res) => {
     try {
       await authManager.registerUser(id, password);
     } catch (encryptionError) {
-      await db.delete(users).where(eq(users.id, id));
+      await userRepository.delete(id);
       authLogger.error(
         "Failed to setup user encryption, user creation rolled back",
         encryptionError,
@@ -274,8 +269,7 @@ router.post("/create", async (req, res) => {
     }
 
     try {
-      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-      await saveMemoryDatabaseToFile();
+      await DatabaseSaveTrigger.forceSave("user_create_explicit_save");
     } catch (saveError) {
       authLogger.error("Failed to persist user to disk", saveError, {
         operation: "user_create_save_failed",
@@ -333,8 +327,8 @@ router.post("/create", async (req, res) => {
 router.post("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -388,10 +382,10 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         .json({ error: "All OIDC configuration fields are required" });
     }
 
+    const settingsRepository = createCurrentSettingsRepository();
+
     if (isDisableRequest) {
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = 'oidc_config'")
-        .run();
+      await settingsRepository.delete("oidc_config");
       authLogger.info("OIDC configuration disabled", {
         operation: "oidc_disable",
         userId,
@@ -452,11 +446,10 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
         };
       }
 
-      db.$client
-        .prepare(
-          "INSERT OR REPLACE INTO settings (key, value) VALUES ('oidc_config', ?)",
-        )
-        .run(JSON.stringify(encryptedConfig));
+      await settingsRepository.set(
+        "oidc_config",
+        JSON.stringify(encryptedConfig),
+      );
       authLogger.info("OIDC configuration updated", {
         operation: "oidc_update",
         userId,
@@ -489,12 +482,12 @@ router.post("/oidc-config", authenticateJWT, async (req, res) => {
 router.delete("/oidc-config", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    db.$client.prepare("DELETE FROM settings WHERE key = 'oidc_config'").run();
+    await createCurrentSettingsRepository().delete("oidc_config");
     authLogger.success("OIDC configuration disabled", {
       operation: "oidc_disable",
       userId,
@@ -556,15 +549,13 @@ router.get("/oidc-config", async (_req, res) => {
 router.get("/oidc-config/admin", requireAdmin, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
-      .get();
-    if (!row) {
+    const value = await createCurrentSettingsRepository().get("oidc_config");
+    if (!value) {
       const envConfig = getOIDCConfigFromEnv();
       return res.json(envConfig);
     }
 
-    let config = JSON.parse((row as Record<string, unknown>).value as string);
+    let config = JSON.parse(value);
 
     if (config.client_secret?.startsWith("encrypted:")) {
       try {
@@ -639,8 +630,9 @@ router.get("/oidc/authorize", async (req, res) => {
       appCallbackUrl,
       providerId: providerIdStr,
     } = req.query;
-    const publicBaseUrl = getRequestBaseUrlWithForceHTTPS(req);
-    const backendCallbackUri = `${publicBaseUrl}/users/oidc/callback`;
+    const origin = getRequestOriginWithForceHTTPS(req);
+    const basePath = (process.env.BASE_PATH || "").replace(/\/+$/, "");
+    const backendCallbackUri = `${origin}${basePath}/users/oidc/callback`;
 
     const resolvedProviderId = providerIdStr
       ? parseInt(providerIdStr as string, 10)
@@ -675,34 +667,31 @@ router.get("/oidc/authorize", async (req, res) => {
       frontendOrigin = callbackUrl.toString();
     } else if (referer) {
       const refererUrl = new URL(referer);
-      frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}${getRequestBasePath(req)}`;
+      frontendOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
     } else {
-      frontendOrigin = publicBaseUrl;
+      frontendOrigin = origin;
     }
 
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_state_${state}`, nonce);
-
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_backend_callback_${state}`, backendCallbackUri);
-
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(`oidc_frontend_origin_${state}`, frontendOrigin);
-
-    db.$client
-      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-      .run(
-        `oidc_remember_me_${state}`,
-        rememberMe === "true" ? "true" : "false",
-      );
+    const settingsRepository = createCurrentSettingsRepository();
+    await settingsRepository.set(`oidc_state_${state}`, nonce);
+    await settingsRepository.set(
+      `oidc_backend_callback_${state}`,
+      backendCallbackUri,
+    );
+    await settingsRepository.set(
+      `oidc_frontend_origin_${state}`,
+      frontendOrigin,
+    );
+    await settingsRepository.set(
+      `oidc_remember_me_${state}`,
+      rememberMe === "true" ? "true" : "false",
+    );
 
     if (providerDbId != null) {
-      db.$client
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
-        .run(`oidc_provider_${state}`, String(providerDbId));
+      await settingsRepository.set(
+        `oidc_provider_${state}`,
+        String(providerDbId),
+      );
     }
 
     const authUrl = new URL(config.authorization_url);
@@ -741,43 +730,38 @@ router.get("/oidc/callback", async (req, res) => {
     return res.status(400).json({ error: "Code and state are required" });
   }
 
-  const storedBackendCallbackRow = db.$client
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .get(`oidc_backend_callback_${state}`);
-  const storedFrontendOriginRow = db.$client
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .get(`oidc_frontend_origin_${state}`);
-  const storedRememberMeRow = db.$client
-    .prepare("SELECT value FROM settings WHERE key = ?")
-    .get(`oidc_remember_me_${state}`);
+  const settingsRepository = createCurrentSettingsRepository();
+  const storedBackendCallback = await settingsRepository.get(
+    `oidc_backend_callback_${state}`,
+  );
+  const storedFrontendOrigin = await settingsRepository.get(
+    `oidc_frontend_origin_${state}`,
+  );
+  const storedRememberMeValue = await settingsRepository.get(
+    `oidc_remember_me_${state}`,
+  );
 
-  if (!storedBackendCallbackRow || !storedFrontendOriginRow) {
+  if (!storedBackendCallback || !storedFrontendOrigin) {
     return res
       .status(400)
       .json({ error: "Invalid state parameter - redirect URIs not found" });
   }
 
-  const backendCallbackUri = (
-    storedBackendCallbackRow as Record<string, unknown>
-  ).value as string;
-  const frontendOrigin = (storedFrontendOriginRow as Record<string, unknown>)
-    .value as string;
-  const storedRememberMe =
-    (storedRememberMeRow as Record<string, unknown> | null)?.value === "true";
+  const backendCallbackUri = storedBackendCallback;
+  const frontendOrigin = storedFrontendOrigin;
+  const storedRememberMe = storedRememberMeValue === "true";
 
   try {
-    const storedNonce = db.$client
-      .prepare("SELECT value FROM settings WHERE key = ?")
-      .get(`oidc_state_${state}`);
+    const storedNonce = await settingsRepository.get(`oidc_state_${state}`);
     if (!storedNonce) {
       return res.status(400).json({ error: "Invalid state parameter" });
     }
 
-    const storedProviderIdRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = ?")
-      .get(`oidc_provider_${state}`) as { value: string } | null;
-    const callbackProviderId = storedProviderIdRow
-      ? parseInt(storedProviderIdRow.value, 10)
+    const storedProviderId = await settingsRepository.get(
+      `oidc_provider_${state}`,
+    );
+    const callbackProviderId = storedProviderId
+      ? parseInt(storedProviderId, 10)
       : null;
 
     const providerResult = await loadProviderConfig(
@@ -792,12 +776,7 @@ router.get("/oidc/callback", async (req, res) => {
       providerDbId: callbackProviderDbId,
     } = providerResult;
 
-    // Clean up provider state key
-    if (storedProviderIdRow) {
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_provider_${state}`);
-    }
+    await settingsRepository.delete(`oidc_provider_${state}`);
 
     const caCert = config.ca_cert;
     const fetchOptions = buildFetchOptions(caCert);
@@ -836,18 +815,7 @@ router.get("/oidc/callback", async (req, res) => {
         string,
         unknown
       >;
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_state_${state}`);
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_backend_callback_${state}`);
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_frontend_origin_${state}`);
-      db.$client
-        .prepare("DELETE FROM settings WHERE key = ?")
-        .run(`oidc_remember_me_${state}`);
+      await deleteOIDCStateSettings(state);
 
       const ghUserInfoResponse = await fetch("https://api.github.com/user", {
         headers: {
@@ -889,16 +857,12 @@ router.get("/oidc/callback", async (req, res) => {
         ghUserInfo.login ||
         ghIdentifier) as string;
       const deviceInfo = parseUserAgent(req);
+      const userRepository = createCurrentUserRepository();
 
-      let ghUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.oidcIdentifier, ghIdentifier));
-      if (!ghUser || ghUser.length === 0) {
-        const preCheckCount = db.$client
-          .prepare("SELECT COUNT(*) as count FROM users")
-          .get() as { count?: number };
-        const isFirstUser = (preCheckCount?.count || 0) === 0;
+      let ghUserRecord =
+        await userRepository.findByOidcIdentifier(ghIdentifier);
+      if (!ghUserRecord) {
+        const isFirstUser = (await userRepository.countAll()) === 0;
 
         if (!isFirstUser && config.allowed_users) {
           const email = ghUserInfo.email as string | undefined;
@@ -911,12 +875,10 @@ router.get("/oidc/callback", async (req, res) => {
 
         let ghAutoProvision = false;
         try {
-          const r = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
-            )
-            .get() as { value: string } | undefined;
-          if (r) ghAutoProvision = r.value === "true";
+          ghAutoProvision = await settingsRepository.getBoolean(
+            "oidc_auto_provision",
+            false,
+          );
         } catch {
           /* */
         }
@@ -932,42 +894,23 @@ router.get("/oidc/callback", async (req, res) => {
         }
 
         const ghId = nanoid();
-        const ghIsFirst = db.$client.transaction(() => {
-          const c =
-            (
-              db.$client
-                .prepare("SELECT COUNT(*) as count FROM users")
-                .get() as { count?: number }
-            )?.count || 0;
-          const first = c === 0;
-          db.$client
-            .prepare(
-              "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, 1, ?, ?)",
-            )
-            .run(
-              ghId,
-              ghName,
-              "",
-              first ? 1 : 0,
-              ghIdentifier,
-              callbackProviderDbId,
-            );
-          return first;
-        })();
+        const createdUser = await userRepository.createFirstLocalUser({
+          id: ghId,
+          username: ghName,
+          passwordHash: "",
+          isOidc: true,
+          oidcIdentifier: ghIdentifier,
+          ssoProviderId: callbackProviderDbId,
+        });
+        ghUserRecord = createdUser.user;
 
         try {
-          const defaultRoleName = ghIsFirst ? "admin" : "user";
-          const defaultRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, defaultRoleName))
-            .limit(1);
-          if (defaultRole.length > 0)
-            await db.insert(userRoles).values({
-              userId: ghId,
-              roleId: defaultRole[0].id,
-              grantedBy: ghId,
-            });
+          const defaultRoleName = createdUser.isFirstUser ? "admin" : "user";
+          await createCurrentRoleRepository().assignRoleNameToUser({
+            userId: ghId,
+            roleName: defaultRoleName,
+            grantedBy: ghId,
+          });
         } catch {
           /* */
         }
@@ -979,16 +922,13 @@ router.get("/oidc/callback", async (req, res) => {
               : 24 * 60 * 60 * 1000;
           await authManager.registerOIDCUser(ghId, sessionDurationMs);
         } catch {
-          await db.delete(users).where(eq(users.id, ghId));
+          await userRepository.delete(ghId);
           return res.status(500).json({
             error: "Failed to setup user security - user creation cancelled",
           });
         }
-
-        ghUser = await db.select().from(users).where(eq(users.id, ghId));
       }
 
-      const ghUserRecord = ghUser[0];
       try {
         await authManager.authenticateOIDCUser(
           ghUserRecord.id,
@@ -1062,18 +1002,7 @@ router.get("/oidc/callback", async (req, res) => {
 
     const tokenData = (await tokenResponse.json()) as Record<string, unknown>;
 
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_state_${state}`);
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_backend_callback_${state}`);
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_frontend_origin_${state}`);
-    db.$client
-      .prepare("DELETE FROM settings WHERE key = ?")
-      .run(`oidc_remember_me_${state}`);
+    await deleteOIDCStateSettings(state);
 
     let userInfo: Record<string, unknown> = null;
     const userInfoUrls: string[] = [];
@@ -1122,7 +1051,7 @@ router.get("/oidc/callback", async (req, res) => {
         caCert,
       );
 
-      const expectedNonce = (storedNonce as { value: string }).value;
+      const expectedNonce = storedNonce;
       if (userInfo.nonce !== expectedNonce) {
         authLogger.warn("OIDC ID token nonce mismatch", {
           operation: "oidc_nonce_mismatch",
@@ -1201,17 +1130,12 @@ router.get("/oidc/callback", async (req, res) => {
     }
 
     const deviceInfo = parseUserAgent(req);
-    let user = await db
-      .select()
-      .from(users)
-      .where(eq(users.oidcIdentifier, identifier));
+    const userRepository = createCurrentUserRepository();
+    let userRecord = await userRepository.findByOidcIdentifier(identifier);
 
     let isFirstUser = false;
-    if (!user || user.length === 0) {
-      const preCheckCount = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users")
-        .get();
-      isFirstUser = ((preCheckCount as { count?: number })?.count || 0) === 0;
+    if (!userRecord) {
+      isFirstUser = (await userRepository.countAll()) === 0;
 
       if (!isFirstUser && config.allowed_users) {
         const email = userInfo.email as string | undefined;
@@ -1229,15 +1153,10 @@ router.get("/oidc/callback", async (req, res) => {
 
       let oidcAutoProvision = false;
       try {
-        const oidcProvRow = db.$client
-          .prepare(
-            "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
-          )
-          .get();
-        if (oidcProvRow) {
-          oidcAutoProvision =
-            (oidcProvRow as Record<string, unknown>).value === "true";
-        }
+        oidcAutoProvision = await settingsRepository.getBoolean(
+          "oidc_auto_provision",
+          false,
+        );
       } catch {
         // fall through to env var check
       }
@@ -1263,42 +1182,27 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       const id = nanoid();
-      isFirstUser = db.$client.transaction(() => {
-        const countResult = db.$client
-          .prepare("SELECT COUNT(*) as count FROM users")
-          .get() as { count?: number };
-        const first = (countResult?.count || 0) === 0;
-        db.$client
-          .prepare(
-            "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-          )
-          .run(
-            id,
-            name,
-            "",
-            first ? 1 : 0,
-            1,
-            identifier,
-            callbackProviderDbId,
-          );
-        return first;
-      })();
+      const createdUser = await userRepository.createFirstLocalUser({
+        id,
+        username: name,
+        passwordHash: "",
+        isOidc: true,
+        oidcIdentifier: identifier,
+        ssoProviderId: callbackProviderDbId,
+      });
+      isFirstUser = createdUser.isFirstUser;
+      userRecord = createdUser.user;
 
       try {
         const defaultRoleName = isFirstUser ? "admin" : "user";
-        const defaultRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.name, defaultRoleName))
-          .limit(1);
-
-        if (defaultRole.length > 0) {
-          await db.insert(userRoles).values({
+        const assigned =
+          await createCurrentRoleRepository().assignRoleNameToUser({
             userId: id,
-            roleId: defaultRole[0].id,
+            roleName: defaultRoleName,
             grantedBy: id,
           });
-        } else {
+
+        if (!assigned) {
           authLogger.warn(
             "Default role not found during OIDC user registration",
             {
@@ -1326,7 +1230,7 @@ router.get("/oidc/callback", async (req, res) => {
             : 24 * 60 * 60 * 1000;
         await authManager.registerOIDCUser(id, sessionDurationMs);
       } catch (encryptionError) {
-        await db.delete(users).where(eq(users.id, id));
+        await userRepository.delete(id);
         authLogger.error(
           "Failed to setup OIDC user encryption, user creation rolled back",
           encryptionError,
@@ -1341,16 +1245,13 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       try {
-        const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-        await saveMemoryDatabaseToFile();
+        await DatabaseSaveTrigger.forceSave("oidc_user_create_explicit_save");
       } catch (saveError) {
         authLogger.error("Failed to persist OIDC user to disk", saveError, {
           operation: "oidc_user_create_save_failed",
           userId: id,
         });
       }
-
-      user = await db.select().from(users).where(eq(users.id, id));
     } else {
       if (config.allowed_users) {
         const email = userInfo.email as string | undefined;
@@ -1359,7 +1260,7 @@ router.get("/oidc/callback", async (req, res) => {
             operation: "oidc_user_not_allowed_existing",
             identifier,
             email,
-            userId: user[0].id,
+            userId: userRecord.id,
           });
           const redirectUrl = new URL(frontendOrigin);
           redirectUrl.searchParams.set("error", "user_not_allowed");
@@ -1368,19 +1269,14 @@ router.get("/oidc/callback", async (req, res) => {
       }
 
       const isDualAuth =
-        user[0].passwordHash && user[0].passwordHash.trim() !== "";
+        userRecord.passwordHash && userRecord.passwordHash.trim() !== "";
 
       if (!isDualAuth) {
-        await db
-          .update(users)
-          .set({ username: name })
-          .where(eq(users.id, user[0].id));
+        userRecord =
+          (await userRepository.update(userRecord.id, { username: name })) ??
+          userRecord;
       }
-
-      user = await db.select().from(users).where(eq(users.id, user[0].id));
     }
-
-    const userRecord = user[0];
 
     // Sync admin status based on OIDC group membership
     if (config.admin_group) {
@@ -1405,41 +1301,19 @@ router.get("/oidc/callback", async (req, res) => {
           group: config.admin_group,
           isAdmin: shouldBeAdmin,
         });
-        await db
-          .update(users)
-          .set({ isAdmin: shouldBeAdmin })
-          .where(eq(users.id, userRecord.id));
-        userRecord.isAdmin = shouldBeAdmin;
+        userRecord =
+          (await userRepository.update(userRecord.id, {
+            isAdmin: shouldBeAdmin,
+          })) ?? userRecord;
         try {
           const newRoleName = shouldBeAdmin ? "admin" : "user";
           const oldRoleName = shouldBeAdmin ? "user" : "admin";
-          const newRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, newRoleName))
-            .limit(1);
-          const oldRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, oldRoleName))
-            .limit(1);
-          if (oldRole.length > 0) {
-            await db
-              .delete(userRoles)
-              .where(
-                and(
-                  eq(userRoles.userId, userRecord.id),
-                  eq(userRoles.roleId, oldRole[0].id),
-                ),
-              );
-          }
-          if (newRole.length > 0) {
-            await db.insert(userRoles).values({
-              userId: userRecord.id,
-              roleId: newRole[0].id,
-              grantedBy: userRecord.id,
-            });
-          }
+          await createCurrentRoleRepository().switchUserRoleName({
+            userId: userRecord.id,
+            addRoleName: newRoleName,
+            removeRoleName: oldRoleName,
+            grantedBy: userRecord.id,
+          });
         } catch {
           /* non-fatal */
         }
@@ -1587,12 +1461,10 @@ router.post("/login", async (req, res) => {
   }
 
   try {
-    const user = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
+    const userRecord =
+      await createCurrentUserRepository().findByUsername(username);
 
-    if (!user || user.length === 0) {
+    if (!userRecord) {
       loginRateLimiter.recordFailedAttempt(clientIp, username);
       authLogger.warn(`Login failed: user not found`, {
         operation: "user_login",
@@ -1605,8 +1477,6 @@ router.post("/login", async (req, res) => {
       });
       return res.status(401).json({ error: "Invalid username or password" });
     }
-
-    const userRecord = user[0];
 
     if (
       userRecord.isOidc &&
@@ -1639,12 +1509,11 @@ router.post("/login", async (req, res) => {
     }
 
     try {
-      const kekSalt = await db
-        .select()
-        .from(settings)
-        .where(eq(settings.key, `user_kek_salt_${userRecord.id}`));
+      const kekSalt = await createCurrentSettingsRepository().get(
+        `user_kek_salt_${userRecord.id}`,
+      );
 
-      if (kekSalt.length === 0) {
+      if (!kekSalt) {
         await authManager.registerUser(userRecord.id, password);
       }
     } catch {
@@ -1738,10 +1607,11 @@ router.post("/login", async (req, res) => {
       ...(isNativeAppRequest(req) ? { token } : {}),
     };
 
-    const timeoutRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
-      .get() as { value: string } | undefined;
-    const timeoutHours = timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24;
+    const sessionTimeoutHoursValue =
+      await createCurrentSettingsRepository().get("session_timeout_hours");
+    const timeoutHours = sessionTimeoutHoursValue
+      ? parseInt(sessionTimeoutHoursValue, 10) || 24
+      : 24;
     const maxAge = rememberMe
       ? 30 * 24 * 60 * 60 * 1000
       : timeoutHours * 60 * 60 * 1000;
@@ -1896,24 +1766,23 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid userId" });
   }
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
+    const user = await findCurrentUser(userId);
+    if (!user) {
       authLogger.warn(`User not found for /users/me: ${userId}`);
       return res.status(401).json({ error: "User not found" });
     }
 
-    const hasPassword =
-      user[0].passwordHash && user[0].passwordHash.trim() !== "";
-    const hasOidc = user[0].isOidc && user[0].oidcIdentifier;
+    const hasPassword = user.passwordHash && user.passwordHash.trim() !== "";
+    const hasOidc = user.isOidc && user.oidcIdentifier;
     const isDualAuth = hasPassword && hasOidc;
 
     res.json({
-      userId: user[0].id,
-      username: user[0].username,
-      is_admin: !!user[0].isAdmin,
-      is_oidc: !!user[0].isOidc,
+      userId: user.id,
+      username: user.username,
+      is_admin: !!user.isAdmin,
+      is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
-      totp_enabled: !!user[0].totpEnabled,
+      totp_enabled: !!user.totpEnabled,
       data_unlocked: authManager.isUserUnlocked(userId),
     });
   } catch (err) {
@@ -1965,10 +1834,7 @@ router.get("/me/token", authenticateJWT, (req: Request, res: Response) => {
  */
 router.get("/setup-required", async (req, res) => {
   try {
-    const countResult = db.$client
-      .prepare("SELECT COUNT(*) as count FROM users")
-      .get();
-    const count = (countResult as { count?: number })?.count || 0;
+    const count = await createCurrentUserRepository().countAll();
 
     res.json({
       setup_required: count === 0,
@@ -1998,15 +1864,12 @@ router.get("/setup-required", async (req, res) => {
 router.get("/count", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user[0] || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Admin access required" });
     }
 
-    const countResult = db.$client
-      .prepare("SELECT COUNT(*) as count FROM users")
-      .get();
-    const count = (countResult as { count?: number })?.count || 0;
+    const count = await createCurrentUserRepository().countAll();
     res.json({ count });
   } catch (err) {
     authLogger.error("Failed to count users", err);
@@ -2030,7 +1893,7 @@ router.get("/count", authenticateJWT, async (req, res) => {
  */
 router.get("/db-health", requireAdmin, async (req, res) => {
   try {
-    db.$client.prepare("SELECT 1").get();
+    await createCurrentUserRepository().countAll();
     res.json({ status: "ok" });
   } catch (err) {
     authLogger.error("DB health check failed", err);
@@ -2091,17 +1954,18 @@ router.get("/registration-allowed", async (req, res) => {
 router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
     if (typeof allowed !== "boolean") {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
-    db.$client
-      .prepare("UPDATE settings SET value = ? WHERE key = 'allow_registration'")
-      .run(allowed ? "true" : "false");
+    await createCurrentSettingsRepository().set(
+      "allow_registration",
+      allowed ? "true" : "false",
+    );
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set registration allowed", err);
@@ -2111,11 +1975,11 @@ router.patch("/registration-allowed", authenticateJWT, async (req, res) => {
 
 router.get("/oidc-auto-provision", async (_req, res) => {
   try {
-    const row = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
-      .get();
     res.json({
-      enabled: row ? (row as Record<string, unknown>).value === "true" : false,
+      enabled: await createCurrentSettingsRepository().getBoolean(
+        "oidc_auto_provision",
+        false,
+      ),
     });
   } catch (err) {
     authLogger.error("Failed to get OIDC auto-provision setting", err);
@@ -2128,30 +1992,18 @@ router.get("/oidc-auto-provision", async (_req, res) => {
 router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { enabled } = req.body;
     if (typeof enabled !== "boolean") {
       return res.status(400).json({ error: "Invalid value for enabled" });
     }
-    const existing = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'oidc_auto_provision'")
-      .get();
-    if (existing) {
-      db.$client
-        .prepare(
-          "UPDATE settings SET value = ? WHERE key = 'oidc_auto_provision'",
-        )
-        .run(enabled ? "true" : "false");
-    } else {
-      db.$client
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('oidc_auto_provision', ?)",
-        )
-        .run(enabled ? "true" : "false");
-    }
+    await createCurrentSettingsRepository().set(
+      "oidc_auto_provision",
+      enabled ? "true" : "false",
+    );
     res.json({ enabled });
   } catch (err) {
     authLogger.error("Failed to set OIDC auto-provision", err);
@@ -2175,13 +2027,11 @@ router.patch("/oidc-auto-provision", authenticateJWT, async (req, res) => {
  */
 router.get("/oidc-silent-login-default", async (_req, res) => {
   try {
-    const row = db.$client
-      .prepare(
-        "SELECT value FROM settings WHERE key = 'oidc_silent_login_default'",
-      )
-      .get();
     res.json({
-      enabled: row ? (row as Record<string, unknown>).value === "true" : false,
+      enabled: await createCurrentSettingsRepository().getBoolean(
+        "oidc_silent_login_default",
+        false,
+      ),
     });
   } catch (err) {
     authLogger.error("Failed to get OIDC silent login default", err);
@@ -2222,34 +2072,18 @@ router.patch(
   async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const user = await requireCurrentAdmin(userId);
+      if (!user) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { enabled } = req.body;
       if (typeof enabled !== "boolean") {
         return res.status(400).json({ error: "Invalid value for enabled" });
       }
-      const existing = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'oidc_silent_login_default'",
-        )
-        .get();
-      if (existing) {
-        db.$client
-          .prepare(
-            "UPDATE settings SET value = ? WHERE key = 'oidc_silent_login_default'",
-          )
-          .run(enabled ? "true" : "false");
-      } else {
-        db.$client
-          .prepare(
-            "INSERT INTO settings (key, value) VALUES ('oidc_silent_login_default', ?)",
-          )
-          .run(enabled ? "true" : "false");
-      }
-      const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-      await saveMemoryDatabaseToFile();
+      await createCurrentSettingsRepository().set(
+        "oidc_silent_login_default",
+        enabled ? "true" : "false",
+      );
       res.json({ enabled });
     } catch (err) {
       authLogger.error("Failed to set OIDC silent login default", err);
@@ -2313,8 +2147,8 @@ router.get("/password-login-allowed", async (req, res) => {
 router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
@@ -2322,23 +2156,19 @@ router.patch("/password-login-allowed", authenticateJWT, async (req, res) => {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
     if (!allowed) {
-      const totpRow = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users WHERE totp_enabled = 1")
-        .get() as { count?: number };
-      if ((totpRow?.count || 0) > 0) {
+      const totpEnabledCount =
+        await createCurrentUserRepository().countTotpEnabled();
+      if (totpEnabledCount > 0) {
         return res.status(409).json({
           error:
             "Cannot disable password login while 2FA is enabled for one or more users. Disable 2FA first.",
         });
       }
     }
-    db.$client
-      .prepare(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_login', ?)",
-      )
-      .run(allowed ? "true" : "false");
-    const { saveMemoryDatabaseToFile } = await import("../db/index.js");
-    await saveMemoryDatabaseToFile();
+    await createCurrentSettingsRepository().set(
+      "allow_password_login",
+      allowed ? "true" : "false",
+    );
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password login allowed", err);
@@ -2399,19 +2229,18 @@ router.get("/password-reset-allowed", async (req, res) => {
 router.patch("/password-reset-allowed", authenticateJWT, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0 || !user[0].isAdmin) {
+    const user = await requireCurrentAdmin(userId);
+    if (!user) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const { allowed } = req.body;
     if (typeof allowed !== "boolean") {
       return res.status(400).json({ error: "Invalid value for allowed" });
     }
-    db.$client
-      .prepare(
-        "INSERT OR REPLACE INTO settings (key, value) VALUES ('allow_password_reset', ?)",
-      )
-      .run(allowed ? "true" : "false");
+    await createCurrentSettingsRepository().set(
+      "allow_password_reset",
+      allowed ? "true" : "false",
+    );
     res.json({ allowed });
   } catch (err) {
     authLogger.error("Failed to set password reset allowed", err);
@@ -2461,12 +2290,10 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
   }
 
   try {
-    const user = await db.select().from(users).where(eq(users.id, userId));
-    if (!user || user.length === 0) {
+    const userRecord = await findCurrentUser(userId);
+    if (!userRecord) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    const userRecord = user[0];
 
     if (userRecord.isOidc) {
       return res.status(403).json({
@@ -2484,17 +2311,15 @@ router.delete("/delete-account", authenticateJWT, async (req, res) => {
     }
 
     if (userRecord.isAdmin) {
-      const adminCount = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
-        .get();
-      if (((adminCount as { count?: number })?.count || 0) <= 1) {
+      const adminCount = await createCurrentUserRepository().countAdmins();
+      if (adminCount <= 1) {
         return res
           .status(403)
           .json({ error: "Cannot delete the last admin user" });
       }
     }
 
-    await db.delete(users).where(eq(users.id, userId));
+    await createCurrentUserRepository().delete(userId);
 
     authLogger.success(`User account deleted: ${userRecord.username}`);
     res.json({ message: "Account deleted successfully" });
@@ -2553,12 +2378,12 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
       .json({ error: "Old and new passwords are required." });
   }
 
-  const user = await db.select().from(users).where(eq(users.id, userId));
-  if (!user || user.length === 0) {
+  const user = await findCurrentUser(userId);
+  if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
 
-  const isMatch = await bcrypt.compare(oldPassword, user[0].passwordHash);
+  const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
   if (!isMatch) {
     authLogger.warn("Password change failed - old password incorrect", {
       operation: "password_change_failed",
@@ -2580,10 +2405,9 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
   }
 
   const password_hash = await bcrypt.hash(newPassword, 10);
-  await db
-    .update(users)
-    .set({ passwordHash: password_hash })
-    .where(eq(users.id, userId));
+  await createCurrentUserRepository().update(userId, {
+    passwordHash: password_hash,
+  });
 
   authManager.logoutUser(userId);
   authLogger.success("Password changed successfully", {
@@ -2592,14 +2416,9 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
   });
 
   const { ipAddress: pwIp, userAgent: pwUa } = getRequestMeta(req);
-  const pwUser = await db
-    .select({ username: users.username })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
   await logAudit({
     userId,
-    username: pwUser[0]?.username ?? userId,
+    username: user.username ?? userId,
     action: "change_password",
     resourceType: "user",
     resourceId: userId,
@@ -2614,12 +2433,6 @@ router.post("/change-password", authenticateJWT, async (req, res) => {
 registerUserAdminRoutes(router, authenticateJWT);
 
 registerUserTotpRoutes(router, {
-  authenticateJWT,
-  authManager,
-  isNativeAppRequest,
-});
-
-registerUserWebAuthnRoutes(router, {
   authenticateJWT,
   authManager,
   isNativeAppRequest,
@@ -2663,35 +2476,30 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
   }
 
   try {
-    const adminUser = await db.select().from(users).where(eq(users.id, userId));
-    if (!adminUser || adminUser.length === 0 || !adminUser[0].isAdmin) {
+    const userRepository = createCurrentUserRepository();
+    const adminUser = await userRepository.findById(userId);
+    if (!adminUser?.isAdmin) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    if (adminUser[0].username === username) {
+    if (adminUser.username === username) {
       return res.status(400).json({ error: "Cannot delete your own account" });
     }
 
-    const targetUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.username, username));
-    if (!targetUser || targetUser.length === 0) {
+    const targetUser = await userRepository.findByUsername(username);
+    if (!targetUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (targetUser[0].isAdmin) {
-      const adminCount = db.$client
-        .prepare("SELECT COUNT(*) as count FROM users WHERE is_admin = 1")
-        .get();
-      if (((adminCount as { count?: number })?.count || 0) <= 1) {
+    if (targetUser.isAdmin) {
+      if ((await userRepository.countAdmins()) <= 1) {
         return res
           .status(403)
           .json({ error: "Cannot delete the last admin user" });
       }
     }
 
-    const targetUserId = targetUser[0].id;
+    const targetUserId = targetUser.id;
 
     await deleteUserAndRelatedData(targetUserId);
 
@@ -2703,14 +2511,9 @@ router.delete("/delete-user", authenticateJWT, async (req, res) => {
     });
 
     const { ipAddress: deleteIp, userAgent: deleteUa } = getRequestMeta(req);
-    const delAdminRecord = await db
-      .select({ username: users.username })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
     await logAudit({
       userId,
-      username: delAdminRecord[0]?.username ?? userId,
+      username: adminUser.username ?? userId,
       action: "delete_user",
       resourceType: "user",
       resourceId: targetUserId,

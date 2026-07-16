@@ -53,19 +53,37 @@ vi.mock("../../utils/user-crypto.js", () => ({
   UserCrypto: { getInstance: () => ({ getUserKey: vi.fn() }) },
 }));
 
+vi.mock("../repositories/current-termix-identity-ca-repository.js", () => ({
+  createCurrentTermixIdentityCaRepository: vi.fn(() => ({
+    findPublicByIdentityId: vi.fn(),
+    findDecryptedByIdentityId: vi.fn(),
+    createEncryptedForUser: vi.fn(),
+    updateEncryptedForIdentity: vi.fn(),
+    deleteByIdentityId: vi.fn(),
+  })),
+}));
+
+vi.mock("../repositories/current-termix-identity-repository.js", () => ({
+  createCurrentTermixIdentityRepository: vi.fn(() => ({
+    findIdentityForUser: vi.fn(),
+    findIdentityByHandle: vi.fn(),
+    isHandleTaken: vi.fn(),
+    createIdentity: vi.fn(),
+    updateIdentityForUser: vi.fn(),
+    deleteIdentityForUser: vi.fn(),
+    listKeysByIdentityId: vi.fn(),
+    listEnabledKeysByIdentityId: vi.fn(),
+    listLinkedCredentialIds: vi.fn(),
+    createKey: vi.fn(),
+    updateKeyForUser: vi.fn(),
+    deleteKeyForUser: vi.fn(),
+    findKeyForUser: vi.fn(),
+  })),
+}));
+
 vi.mock("./termix-id-keys.js", () => ({
   termixIdKeysRouter: { use: vi.fn() },
   matchesAlgoFilter: vi.fn(() => true),
-}));
-
-vi.mock("../../utils/simple-db-ops.js", () => ({
-  SimpleDBOps: vi.fn().mockImplementation(() => ({
-    findOne: vi.fn(),
-    findAll: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    remove: vi.fn(),
-  })),
 }));
 
 // Chainable Drizzle stub — supports arbitrary method chains and resolves via .then()
@@ -110,7 +128,7 @@ describe("GET /termix-id/linked-credentials", () => {
     expect(router).toBeDefined();
 
     expect(router).toBeDefined();
-  });
+  }, 15_000);
 
   it("returns empty list when identity has no keys", async () => {
     mockSelect

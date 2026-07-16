@@ -2,13 +2,12 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import fs from "fs";
 import path from "path";
-import { eq, desc, lt } from "drizzle-orm";
-import { db } from "../db/index.js";
-import { sessionRecordings, hosts, users } from "../db/schema.js";
 import { apiLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { Request, Response } from "express";
 import { PermissionManager } from "../../utils/permission-manager.js";
+import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
+import { getDb } from "../db/index.js";
 
 const router = express.Router();
 
@@ -30,7 +29,7 @@ function getRetentionDays(): number {
     10,
   );
   try {
-    const row = db.$client
+    const row = getDb().$client
       .prepare(
         "SELECT value FROM settings WHERE key = 'session_recording_retention_days'",
       )
@@ -56,13 +55,9 @@ async function pruneOldLogs(): Promise<void> {
       Date.now() - getRetentionDays() * 24 * 60 * 60 * 1000,
     ).toISOString();
 
-    const old = await db
-      .select({
-        id: sessionRecordings.id,
-        recordingPath: sessionRecordings.recordingPath,
-      })
-      .from(sessionRecordings)
-      .where(lt(sessionRecordings.startedAt, cutoff));
+    const sessionRecordingRepository =
+      createCurrentSessionRecordingRepository();
+    const old = await sessionRecordingRepository.listPathsOlderThan(cutoff);
 
     for (const row of old) {
       if (row.recordingPath) {
@@ -71,9 +66,7 @@ async function pruneOldLogs(): Promise<void> {
           await fs.promises.unlink(resolved).catch(() => {});
         }
       }
-      await db
-        .delete(sessionRecordings)
-        .where(eq(sessionRecordings.id, row.id));
+      await sessionRecordingRepository.deleteById(row.id);
     }
 
     if (old.length > 0) {
@@ -114,27 +107,10 @@ const authenticateJWT = authManager.createAuthMiddleware();
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const isAdmin = await permissionManager.isAdmin(userId);
-    const rows = await db
-      .select({
-        id: sessionRecordings.id,
-        hostId: sessionRecordings.hostId,
-        userId: sessionRecordings.userId,
-        startedAt: sessionRecordings.startedAt,
-        endedAt: sessionRecordings.endedAt,
-        duration: sessionRecordings.duration,
-        recordingPath: sessionRecordings.recordingPath,
-        protocol: sessionRecordings.protocol,
-        format: sessionRecordings.format,
-        username: users.username,
-        hostName: hosts.name,
-        hostIp: hosts.ip,
-      })
-      .from(sessionRecordings)
-      .leftJoin(hosts, eq(sessionRecordings.hostId, hosts.id))
-      .leftJoin(users, eq(sessionRecordings.userId, users.id))
-      .where(isAdmin ? undefined : eq(sessionRecordings.userId, userId))
-      .orderBy(desc(sessionRecordings.startedAt));
+    const rows =
+      await createCurrentSessionRecordingRepository().listByUserIdWithHost(
+        userId,
+      );
 
     const records = rows.map((row) => {
       let sizeBytes: number | null = null;
@@ -188,8 +164,8 @@ router.put(
         .status(400)
         .json({ error: "Retention must be between 1 and 3650 days" });
     }
-    db.$client
-      .prepare(
+    getDb()
+      .$client.prepare(
         "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
       )
       .run("session_recording_retention_days", String(retentionDays));
@@ -228,17 +204,13 @@ router.get("/:id", authenticateJWT, async (req: Request, res: Response) => {
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
   try {
-    const rows = await db
-      .select()
-      .from(sessionRecordings)
-      .where(eq(sessionRecordings.id, id))
-      .limit(1);
+    const row = await createCurrentSessionRecordingRepository().findByIdForUser(
+      userId,
+      id,
+    );
 
-    if (rows.length === 0) return res.status(404).json({ error: "Not found" });
-    if (!(await canAccessRecording(userId, rows[0].userId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
-    res.json({ log: rows[0] });
+    if (!row) return res.status(404).json({ error: "Not found" });
+    res.json({ log: row });
   } catch (error) {
     apiLogger.error("Failed to fetch session log", error, {
       operation: "session_log_get",
@@ -284,23 +256,15 @@ router.get(
     if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
     try {
-      const rows = await db
-        .select({
-          recordingPath: sessionRecordings.recordingPath,
-          userId: sessionRecordings.userId,
-          format: sessionRecordings.format,
-        })
-        .from(sessionRecordings)
-        .where(eq(sessionRecordings.id, id))
-        .limit(1);
+      const row =
+        await createCurrentSessionRecordingRepository().findPathByIdForUser(
+          userId,
+          id,
+        );
 
-      if (rows.length === 0)
-        return res.status(404).json({ error: "Not found" });
-      if (!(await canAccessRecording(userId, rows[0].userId))) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
+      if (!row) return res.status(404).json({ error: "Not found" });
 
-      const filePath = rows[0].recordingPath;
+      const filePath = row.recordingPath;
       if (!filePath)
         return res.status(404).json({ error: "No recording file" });
 
@@ -314,10 +278,13 @@ router.get(
       }
 
       const content = await fs.promises.readFile(resolvedPath);
+      const format =
+        (row as { format?: string | null }).format ??
+        (row.recordingPath?.endsWith(".cast") ? "asciicast" : "text");
       const contentType =
-        rows[0].format === "guacamole"
+        format === "guacamole"
           ? "application/vnd.apache.guacamole.recording"
-          : rows[0].format === "asciicast"
+          : format === "asciicast"
             ? "application/x-asciicast"
             : "text/plain";
       res.type(contentType).send(content);
@@ -362,23 +329,18 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
   if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
 
   try {
-    const rows = await db
-      .select({
-        recordingPath: sessionRecordings.recordingPath,
-        userId: sessionRecordings.userId,
-      })
-      .from(sessionRecordings)
-      .where(eq(sessionRecordings.id, id))
-      .limit(1);
+    const sessionRecordingRepository =
+      createCurrentSessionRecordingRepository();
+    const row = await sessionRecordingRepository.findPathByIdForUser(
+      userId,
+      id,
+    );
 
-    if (rows.length === 0) return res.status(404).json({ error: "Not found" });
-    if (!(await canAccessRecording(userId, rows[0].userId))) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
+    if (!row) return res.status(404).json({ error: "Not found" });
 
-    const filePath = rows[0].recordingPath;
+    const filePath = row.recordingPath;
 
-    await db.delete(sessionRecordings).where(eq(sessionRecordings.id, id));
+    await sessionRecordingRepository.deleteForUser(userId, id);
 
     if (filePath) {
       const resolvedPath = path.resolve(filePath);

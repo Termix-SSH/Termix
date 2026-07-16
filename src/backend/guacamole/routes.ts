@@ -3,15 +3,13 @@ import { GuacamoleTokenService } from "./token-service.js";
 import { guacLogger } from "../utils/logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import { PermissionManager } from "../utils/permission-manager.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
-import { getDb } from "../database/db/index.js";
-import { hosts, sshCredentials } from "../database/db/schema.js";
-import { eq, and } from "drizzle-orm";
 import { Client } from "ssh2";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
 import type { AuthenticatedRequest } from "../../types/index.js";
+import { createCurrentHostResolutionRepository } from "../database/repositories/current-host-resolution-repository.js";
+import { createCurrentSettingsRepository } from "../database/repositories/current-settings-repository.js";
 import { resolveGuacdOptions } from "../utils/guacd-config.js";
 
 const router = express.Router();
@@ -196,17 +194,14 @@ router.post(
         return res.status(400).json({ error: "Invalid host ID" });
       }
 
-      const hostResults = await SimpleDBOps.select(
-        getDb().select().from(hosts).where(eq(hosts.id, hostId)),
-        "ssh_data",
+      const host = await createCurrentHostResolutionRepository().findHostById(
+        hostId,
         userId,
       );
 
-      if (hostResults.length === 0) {
+      if (!host) {
         return res.status(404).json({ error: "Host not found" });
       }
-
-      const host = hostResults[0];
 
       if (host.userId !== userId) {
         const permissionManager = PermissionManager.getInstance();
@@ -297,6 +292,7 @@ router.post(
       }
 
       const hostRecord = host as Record<string, unknown>;
+      const hostRepository = createCurrentHostResolutionRepository();
 
       // Backward compat: if authType is not stored but a credentialId is, treat as credential mode
       const rdpEffectiveAuthType =
@@ -311,21 +307,13 @@ router.post(
 
       if (rdpEffectiveAuthType === "credential" && host.rdpCredentialId) {
         try {
-          const rdpCreds = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, host.rdpCredentialId as number),
-                  eq(sshCredentials.userId, host.userId as string),
-                ),
-              ),
-            "ssh_credentials",
-            userId,
-          );
-          if (rdpCreds.length > 0) {
-            const cred = rdpCreds[0] as Record<string, unknown>;
+          const cred =
+            await hostRepository.findCredentialByIdForOwnerDecryptedAs(
+              host.rdpCredentialId as number,
+              host.userId as string,
+              userId,
+            );
+          if (cred) {
             if (cred.username) host.rdpUser = cred.username;
             if (cred.password) host.rdpPassword = cred.password;
             // domain is never sourced from credential
@@ -341,21 +329,13 @@ router.post(
 
       if (vncEffectiveAuthType === "credential" && host.vncCredentialId) {
         try {
-          const vncCreds = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, host.vncCredentialId as number),
-                  eq(sshCredentials.userId, host.userId as string),
-                ),
-              ),
-            "ssh_credentials",
-            userId,
-          );
-          if (vncCreds.length > 0) {
-            const cred = vncCreds[0] as Record<string, unknown>;
+          const cred =
+            await hostRepository.findCredentialByIdForOwnerDecryptedAs(
+              host.vncCredentialId as number,
+              host.userId as string,
+              userId,
+            );
+          if (cred) {
             if (cred.password) host.vncPassword = cred.password;
             if (cred.username) host.vncUser = cred.username;
           }
@@ -373,24 +353,13 @@ router.post(
         hostRecord.telnetCredentialId
       ) {
         try {
-          const telnetCreds = await SimpleDBOps.select(
-            getDb()
-              .select()
-              .from(sshCredentials)
-              .where(
-                and(
-                  eq(
-                    sshCredentials.id,
-                    hostRecord.telnetCredentialId as number,
-                  ),
-                  eq(sshCredentials.userId, host.userId as string),
-                ),
-              ),
-            "ssh_credentials",
-            userId,
-          );
-          if (telnetCreds.length > 0) {
-            const cred = telnetCreds[0] as Record<string, unknown>;
+          const cred =
+            await hostRepository.findCredentialByIdForOwnerDecryptedAs(
+              hostRecord.telnetCredentialId as number,
+              host.userId as string,
+              userId,
+            );
+          if (cred) {
             if (cred.username) host.telnetUser = cred.username;
             if (cred.password) host.telnetPassword = cred.password;
           }
@@ -630,11 +599,8 @@ router.get("/status", async (req, res) => {
   try {
     let dbUrl: string | undefined;
     try {
-      const db = getDb();
-      const urlRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-        .get() as { value: string } | undefined;
-      dbUrl = urlRow?.value;
+      dbUrl =
+        (await createCurrentSettingsRepository().get("guac_url")) ?? undefined;
     } catch {
       // Fall back to env vars
     }

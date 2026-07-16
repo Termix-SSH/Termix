@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { AuthenticatedRequest } from "../../types/index.js";
 import { statsLogger } from "../utils/logger.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 
 type ViewerStatsConfig = {
   metricsEnabled: boolean;
@@ -70,7 +70,7 @@ export function registerHostMetricsViewerRoutes<
     const { viewerSessionId } = req.body;
     const userId = (req as AuthenticatedRequest).userId;
 
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (DataCrypto.getUserDataKey(userId) === null) {
       return res.status(401).json({
         error: "Session expired - please log in again",
         code: "SESSION_EXPIRED",
@@ -129,7 +129,7 @@ export function registerHostMetricsViewerRoutes<
     const { hostId } = req.body;
     const userId = (req as AuthenticatedRequest).userId;
 
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (DataCrypto.getUserDataKey(userId) === null) {
       return res.status(401).json({
         error: "Session expired - please log in again",
         code: "SESSION_EXPIRED",
@@ -259,7 +259,7 @@ export function registerHostMetricsViewerRoutes<
     const { hostId, viewerSessionId } = req.body;
     const userId = (req as AuthenticatedRequest).userId;
 
-    if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+    if (DataCrypto.getUserDataKey(userId) === null) {
       return res.status(401).json({
         error: "Session expired - please log in again",
         code: "SESSION_EXPIRED",

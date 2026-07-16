@@ -1,23 +1,14 @@
 import type { Request, RequestHandler, Response, Router } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
-import { db, DatabaseSaveTrigger } from "../db/index.js";
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
-import {
-  commandHistory,
-  fileManagerPinned,
-  fileManagerRecent,
-  fileManagerShortcuts,
-  hostAccess,
-  hosts,
-  recentActivity,
-  sessionRecordings,
-  sshCredentialUsage,
-  sshCredentials,
-  sshFolders,
-  transferRecent,
-} from "../db/schema.js";
+import { createCurrentCommandHistoryRepository } from "../repositories/current-command-history-repository.js";
+import { createCurrentFileManagerBookmarkRepository } from "../repositories/current-file-manager-bookmark-repository.js";
+import { createCurrentHostFolderRepository } from "../repositories/current-host-folder-repository.js";
+import { createCurrentRecentActivityRepository } from "../repositories/current-recent-activity-repository.js";
+import { createCurrentRbacAccessRepository } from "../repositories/current-rbac-access-repository.js";
+import { createCurrentSshCredentialUsageRepository } from "../repositories/current-ssh-credential-usage-repository.js";
+import { createCurrentSessionRecordingRepository } from "../repositories/current-session-recording-repository.js";
+import { createCurrentTransferRecentRepository } from "../repositories/current-transfer-recent-repository.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 type HostFolderRoutesDeps = {
@@ -75,49 +66,17 @@ export function registerHostFolderRoutes(
       }
 
       try {
-        const now = new Date().toISOString();
-        const oldPrefix = `${oldName} / `;
-        const newPrefix = `${newName} / `;
-        const childLike = `${oldPrefix}%`;
-
-        // folder is a plaintext column, so a SQL expression renames the exact
-        // folder and re-paths every nested child in one statement.
-        const renameExpr = (col: SQLiteColumn) =>
-          sql`CASE WHEN ${col} = ${oldName} THEN ${newName} ELSE ${newPrefix} || substr(${col}, ${oldPrefix.length + 1}) END`;
-
-        const folderMatch = (col: SQLiteColumn) =>
-          or(eq(col, oldName), like(col, childLike));
-
-        const updatedHosts = await db
-          .update(hosts)
-          .set({ folder: renameExpr(hosts.folder), updatedAt: now })
-          .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)))
-          .returning();
-
-        const updatedCredentials = await db
-          .update(sshCredentials)
-          .set({ folder: renameExpr(sshCredentials.folder), updatedAt: now })
-          .where(
-            and(
-              eq(sshCredentials.userId, userId),
-              folderMatch(sshCredentials.folder),
-            ),
-          )
-          .returning();
-
-        DatabaseSaveTrigger.triggerSave("folder_rename");
-
-        await db
-          .update(sshFolders)
-          .set({ name: renameExpr(sshFolders.name), updatedAt: now })
-          .where(
-            and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)),
+        const { updatedHosts, updatedCredentials } =
+          await createCurrentHostFolderRepository().renameFolder(
+            userId,
+            oldName,
+            newName,
           );
 
         res.json({
           message: "Folder renamed successfully",
-          updatedHosts: updatedHosts.length,
-          updatedCredentials: updatedCredentials.length,
+          updatedHosts,
+          updatedCredentials,
         });
       } catch (err) {
         sshLogger.error("Failed to rename folder", err, {
@@ -158,10 +117,8 @@ export function registerHostFolderRoutes(
       }
 
       try {
-        const folders = await db
-          .select()
-          .from(sshFolders)
-          .where(eq(sshFolders.userId, userId));
+        const folders =
+          await createCurrentHostFolderRepository().listFolders(userId);
 
         res.json(folders);
       } catch (err) {
@@ -215,45 +172,27 @@ export function registerHostFolderRoutes(
       }
 
       try {
-        const existing = await db
-          .select()
-          .from(sshFolders)
-          .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)))
-          .limit(1);
+        const { folder, created } =
+          await createCurrentHostFolderRepository().upsertMetadata(
+            userId,
+            name,
+            color,
+            icon,
+          );
 
-        if (existing.length > 0) {
+        if (!created) {
           databaseLogger.info("Updating SSH folder", {
             operation: "folder_update",
             userId,
-            folderId: existing[0].id,
+            folderId: folder.id,
           });
-          await db
-            .update(sshFolders)
-            .set({
-              color,
-              icon,
-              updatedAt: new Date().toISOString(),
-            })
-            .where(
-              and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)),
-            );
         } else {
           databaseLogger.info("Creating SSH folder", {
             operation: "folder_create",
             userId,
             name,
           });
-          await db.insert(sshFolders).values({
-            userId,
-            name,
-            color,
-            icon,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          });
         }
-
-        DatabaseSaveTrigger.triggerSave("folder_metadata_update");
 
         res.json({ message: "Folder metadata updated successfully" });
       } catch (err) {
@@ -308,76 +247,48 @@ export function registerHostFolderRoutes(
       });
 
       try {
-        // Match the folder itself and any nested children (e.g. "fgh / sub").
-        const childLike = `${folderName} / %`;
-        const folderMatch = (col: SQLiteColumn) =>
-          or(eq(col, folderName), like(col, childLike));
-
-        const hostsToDelete = await db
-          .select()
-          .from(hosts)
-          .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
+        const hostFolderRepository = createCurrentHostFolderRepository();
+        const hostsToDelete = await hostFolderRepository.listHostsInFolder(
+          userId,
+          folderName,
+        );
 
         const hostIds = hostsToDelete.map((host) => host.id);
 
         if (hostIds.length > 0) {
-          await db
-            .delete(fileManagerRecent)
-            .where(inArray(fileManagerRecent.hostId, hostIds));
-
-          await db
-            .delete(fileManagerPinned)
-            .where(inArray(fileManagerPinned.hostId, hostIds));
-
-          await db
-            .delete(fileManagerShortcuts)
-            .where(inArray(fileManagerShortcuts.hostId, hostIds));
-
-          await db
-            .delete(transferRecent)
-            .where(
-              or(
-                inArray(transferRecent.sourceHostId, hostIds),
-                inArray(transferRecent.destHostId, hostIds),
-              ),
-            );
-
-          await db
-            .delete(commandHistory)
-            .where(inArray(commandHistory.hostId, hostIds));
-
-          await db
-            .delete(sshCredentialUsage)
-            .where(inArray(sshCredentialUsage.hostId, hostIds));
-
-          await db
-            .delete(recentActivity)
-            .where(inArray(recentActivity.hostId, hostIds));
-
-          await db
-            .delete(hostAccess)
-            .where(inArray(hostAccess.hostId, hostIds));
-
-          await db
-            .delete(sessionRecordings)
-            .where(inArray(sessionRecordings.hostId, hostIds));
-        }
-
-        if (hostIds.length > 0) {
-          await db
-            .delete(hosts)
-            .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
-        }
-
-        // Always remove the folder records (and nested children), even when the
-        // folder held no hosts, so empty folders don't reappear on reload.
-        await db
-          .delete(sshFolders)
-          .where(
-            and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)),
+          await createCurrentFileManagerBookmarkRepository().deleteByHostIds(
+            hostIds,
           );
 
-        DatabaseSaveTrigger.triggerSave("folder_hosts_delete");
+          await createCurrentTransferRecentRepository().deleteByHostIds(
+            hostIds,
+          );
+
+          await createCurrentCommandHistoryRepository().deleteByHostIds(
+            hostIds,
+          );
+
+          await createCurrentSshCredentialUsageRepository().deleteByHostIds(
+            hostIds,
+          );
+
+          await createCurrentRecentActivityRepository().deleteByHostIds(
+            hostIds,
+          );
+
+          await createCurrentRbacAccessRepository().deleteHostAccessForHosts(
+            hostIds,
+          );
+
+          await createCurrentSessionRecordingRepository().deleteByHostIds(
+            hostIds,
+          );
+        }
+
+        await hostFolderRepository.deleteHostsAndFolderRecords(
+          userId,
+          folderName,
+        );
 
         try {
           const axios = (await import("axios")).default;

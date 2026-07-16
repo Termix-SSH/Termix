@@ -1,12 +1,11 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
-import { eq, and } from "drizzle-orm";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { AuthManager } from "../utils/auth-manager.js";
-import { SimpleDBOps } from "../utils/simple-db-ops.js";
-import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
-import { tmuxSessionTags, users } from "../database/db/schema.js";
+import { DataCrypto } from "../utils/data-crypto.js";
+import { createCurrentTmuxSessionTagRepository } from "../database/repositories/current-tmux-session-tag-repository.js";
+import { createCurrentUserRepository } from "../database/repositories/current-user-repository.js";
 import { logAudit, getRequestMeta } from "../utils/audit-logger.js";
 import { sshLogger } from "../utils/logger.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
@@ -287,21 +286,10 @@ async function fetchSessionTags(
   userId: string,
   hostId: number,
 ): Promise<Map<string, string[]>> {
-  const rows = await getDb()
-    .select()
-    .from(tmuxSessionTags)
-    .where(
-      and(
-        eq(tmuxSessionTags.userId, userId),
-        eq(tmuxSessionTags.hostId, hostId),
-      ),
-    );
-  const bySession = new Map<string, string[]>();
-  for (const row of rows) {
-    if (!bySession.has(row.sessionName)) bySession.set(row.sessionName, []);
-    bySession.get(row.sessionName)!.push(row.tag);
-  }
-  return bySession;
+  return createCurrentTmuxSessionTagRepository().listByUserAndHost(
+    userId,
+    hostId,
+  );
 }
 
 async function collectPaneMetrics(
@@ -367,7 +355,7 @@ async function requireHost(
     res.status(400).json({ error: "Invalid host ID" });
     return null;
   }
-  if (!SimpleDBOps.isUserDataUnlocked(userId)) {
+  if (DataCrypto.getUserDataKey(userId) === null) {
     res.status(401).json({ error: "User data is locked" });
     return null;
   }
@@ -422,12 +410,8 @@ async function auditTmuxAction(
   const { ipAddress, userAgent } = getRequestMeta(req);
   let username = userId;
   try {
-    const actor = await getDb()
-      .select({ username: users.username })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    username = actor[0]?.username ?? userId;
+    const actor = await createCurrentUserRepository().findById(userId);
+    username = actor?.username ?? userId;
   } catch {
     // fall back to the raw user id
   }
@@ -639,16 +623,11 @@ app.post("/tmux_monitor/:hostId/rename", async (req, res) => {
         ),
       ),
     );
-    await getDb()
-      .update(tmuxSessionTags)
-      .set({ sessionName: newName })
-      .where(
-        and(
-          eq(tmuxSessionTags.hostId, host.id),
-          eq(tmuxSessionTags.sessionName, sessionName),
-        ),
-      );
-    await DatabaseSaveTrigger.triggerSave("tmux_session_tags_updated");
+    await createCurrentTmuxSessionTagRepository().renameSessionForHost(
+      host.id,
+      sessionName,
+      newName,
+    );
     sshLogger.info("tmux session renamed", {
       operation: "tmux_session_rename",
       hostId: host.id,
@@ -691,15 +670,10 @@ app.post("/tmux_monitor/:hostId/kill", async (req, res) => {
         tmuxCommand(`kill-session -t ${shellEscape(`=${sessionName}`)}`),
       ),
     );
-    await getDb()
-      .delete(tmuxSessionTags)
-      .where(
-        and(
-          eq(tmuxSessionTags.hostId, host.id),
-          eq(tmuxSessionTags.sessionName, sessionName),
-        ),
-      );
-    await DatabaseSaveTrigger.triggerSave("tmux_session_tags_updated");
+    await createCurrentTmuxSessionTagRepository().deleteSessionForHost(
+      host.id,
+      sessionName,
+    );
     sshLogger.info("tmux session killed", {
       operation: "tmux_session_kill",
       hostId: host.id,
@@ -936,27 +910,12 @@ app.put("/tmux_monitor/:hostId/tags", async (req, res) => {
   ].slice(0, 20);
 
   try {
-    const db = getDb();
-    await db
-      .delete(tmuxSessionTags)
-      .where(
-        and(
-          eq(tmuxSessionTags.userId, userId),
-          eq(tmuxSessionTags.hostId, host.id),
-          eq(tmuxSessionTags.sessionName, sessionName),
-        ),
-      );
-    if (cleanTags.length > 0) {
-      await db.insert(tmuxSessionTags).values(
-        cleanTags.map((tag) => ({
-          userId,
-          hostId: host.id,
-          sessionName,
-          tag,
-        })),
-      );
-    }
-    await DatabaseSaveTrigger.triggerSave("tmux_session_tags_updated");
+    await createCurrentTmuxSessionTagRepository().replaceForUserHostSession(
+      userId,
+      host.id,
+      sessionName,
+      cleanTags,
+    );
     res.json({ sessionName, tags: cleanTags });
   } catch (err) {
     sshLogger.error(

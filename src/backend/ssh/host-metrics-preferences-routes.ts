@@ -1,6 +1,6 @@
 import type { Express, RequestHandler } from "express";
 import type { AuthenticatedRequest } from "../../types/index.js";
-import { getDb, DatabaseSaveTrigger } from "../database/db/index.js";
+import { createCurrentHostMetricsPreferenceRepository } from "../database/repositories/current-host-metrics-preference-repository.js";
 import { statsLogger } from "../utils/logger.js";
 import {
   deriveEnabledWidgets,
@@ -96,12 +96,11 @@ export function registerHostMetricsPreferencesRoutes(
         return res.status(404).json({ error: "Host not found" });
       }
 
-      const db = getDb();
-      const row = db.$client
-        .prepare(
-          "SELECT layout FROM host_metrics_preferences WHERE user_id = ? AND host_id = ?",
-        )
-        .get(userId, hostId) as { layout: string } | undefined;
+      const row =
+        await createCurrentHostMetricsPreferenceRepository().findByUserAndHost(
+          userId,
+          hostId,
+        );
 
       if (row?.layout) {
         try {
@@ -180,29 +179,15 @@ export function registerHostMetricsPreferencesRoutes(
           return res.status(400).json({ error: "Invalid layout" });
         }
 
-        const db = getDb();
         const now = new Date().toISOString();
         const layoutJson = JSON.stringify(layout);
 
-        const existing = db.$client
-          .prepare(
-            "SELECT id FROM host_metrics_preferences WHERE user_id = ? AND host_id = ?",
-          )
-          .get(userId, hostId) as { id: number } | undefined;
-
-        if (existing) {
-          db.$client
-            .prepare(
-              "UPDATE host_metrics_preferences SET layout = ?, updated_at = ? WHERE id = ?",
-            )
-            .run(layoutJson, now, existing.id);
-        } else {
-          db.$client
-            .prepare(
-              "INSERT INTO host_metrics_preferences (user_id, host_id, layout, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-            )
-            .run(userId, hostId, layoutJson, now, now);
-        }
+        await createCurrentHostMetricsPreferenceRepository().upsertLayout(
+          userId,
+          hostId,
+          layoutJson,
+          now,
+        );
 
         // Keep statsConfig.enabledWidgets in sync (mobile contract) for hosts the
         // user owns. stats_config is plain JSON text (not an encrypted field).
@@ -213,11 +198,11 @@ export function registerHostMetricsPreferencesRoutes(
               ...current,
               enabledWidgets: deriveEnabledWidgets(layout.slots),
             };
-            db.$client
-              .prepare(
-                "UPDATE ssh_data SET stats_config = ? WHERE id = ? AND user_id = ?",
-              )
-              .run(JSON.stringify(merged), hostId, userId);
+            await createCurrentHostMetricsPreferenceRepository().updateHostStatsConfig(
+              userId,
+              hostId,
+              JSON.stringify(merged),
+            );
           } catch (syncErr) {
             statsLogger.warn("Failed to sync enabledWidgets from layout", {
               operation: "host_metrics_prefs_sync_widgets",
@@ -228,7 +213,6 @@ export function registerHostMetricsPreferencesRoutes(
           }
         }
 
-        DatabaseSaveTrigger.triggerSave("host_metrics_preferences_updated");
         return res.json({ success: true });
       } catch (error) {
         statsLogger.error("Failed to save host metrics preferences", {
