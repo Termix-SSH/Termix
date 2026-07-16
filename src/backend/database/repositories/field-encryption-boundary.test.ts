@@ -35,15 +35,14 @@ describe("FieldEncryptionBoundary", () => {
     expect(decrypted).toMatchObject(host);
   });
 
-  it("encrypts credential system secret fields that the legacy map did not cover", () => {
+  it("encrypts credential secret fields and keeps metadata plaintext", () => {
     const credential = {
       id: 7,
       userId: "user-1",
-      name: "system credential",
+      name: "primary credential",
       authType: "key",
-      systemPassword: "system-password",
-      systemKey: "system-key",
-      systemKeyPassword: "system-key-password",
+      key: "private-key-material",
+      keyPassword: "key-password",
     };
 
     const encrypted = FieldEncryptionBoundary.encryptRecord(
@@ -52,10 +51,9 @@ describe("FieldEncryptionBoundary", () => {
       userDataKey,
     );
 
-    expect(encrypted.systemPassword).not.toBe("system-password");
-    expect(encrypted.systemKey).not.toBe("system-key");
-    expect(encrypted.systemKeyPassword).not.toBe("system-key-password");
-    expect(encrypted.name).toBe("system credential");
+    expect(encrypted.key).not.toBe("private-key-material");
+    expect(encrypted.keyPassword).not.toBe("key-password");
+    expect(encrypted.name).toBe("primary credential");
 
     expect(
       FieldEncryptionBoundary.decryptRecord(

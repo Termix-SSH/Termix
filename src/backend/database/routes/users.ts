@@ -61,7 +61,6 @@ async function syncSharedCredentialsForUserRoles(
       await import("../../utils/shared-credential-manager.js");
     const sharedCredManager = SharedCredentialManager.getInstance();
     await sharedCredManager.createSharedCredentialsForUserRoles(userId);
-    await sharedCredManager.reEncryptPendingCredentialsForUser(userId);
   } catch (error) {
     authLogger.warn("Failed to sync role shared credentials", {
       operation,

@@ -1,17 +1,12 @@
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import { SystemCrypto } from "../../utils/system-crypto.js";
 
 export type CredentialRecord = typeof sshCredentials.$inferSelect;
 export type NewCredentialRecord = typeof sshCredentials.$inferInsert;
 export type CredentialUpdate = Partial<
   Omit<NewCredentialRecord, "id" | "userId">
->;
-export type CredentialSystemEncryptionUpdate = Pick<
-  CredentialUpdate,
-  "systemPassword" | "systemKey" | "systemKeyPassword" | "updatedAt"
 >;
 
 export class CredentialRepository {
@@ -36,7 +31,7 @@ export class CredentialRepository {
     const userDataKey = DataCrypto.validateUserAccess(userId);
     const tempId = credential.id ?? Date.now();
     const dataWithTempId = { ...credential, id: tempId };
-    const encryptedCredential = await this.encryptCredentialRecordForWrite(
+    const encryptedCredential = this.encryptCredentialRecordForWrite(
       dataWithTempId,
       userId,
       userDataKey,
@@ -94,24 +89,6 @@ export class CredentialRepository {
       .from(sshCredentials)
       .where(eq(sshCredentials.userId, userId))
       .orderBy(desc(sshCredentials.updatedAt));
-  }
-
-  async listMissingSystemEncryptionByUserId(
-    userId: string,
-  ): Promise<CredentialRecord[]> {
-    return this.context.drizzle
-      .select()
-      .from(sshCredentials)
-      .where(
-        and(
-          eq(sshCredentials.userId, userId),
-          or(
-            isNull(sshCredentials.systemPassword),
-            isNull(sshCredentials.systemKey),
-            isNull(sshCredentials.systemKeyPassword),
-          ),
-        ),
-      );
   }
 
   async existsForImportIdentity(
@@ -205,7 +182,7 @@ export class CredentialRepository {
     update: CredentialUpdate,
   ): Promise<CredentialRecord | null> {
     const userDataKey = DataCrypto.validateUserAccess(userId);
-    const encryptedUpdate = await this.encryptCredentialRecordForWrite(
+    const encryptedUpdate = this.encryptCredentialRecordForWrite(
       update,
       userId,
       userDataKey,
@@ -224,29 +201,6 @@ export class CredentialRepository {
 
     await this.afterWrite();
     return this.decryptOne(rows[0] ?? null, userId);
-  }
-
-  async updateSystemEncryptionForUser(
-    userId: string,
-    credentialId: number,
-    update: CredentialSystemEncryptionUpdate,
-  ): Promise<CredentialRecord | null> {
-    const rows = await this.context.drizzle
-      .update(sshCredentials)
-      .set(update)
-      .where(
-        and(
-          eq(sshCredentials.id, credentialId),
-          eq(sshCredentials.userId, userId),
-        ),
-      )
-      .returning();
-
-    if (rows.length > 0) {
-      await this.afterWrite();
-    }
-
-    return rows[0] ?? null;
   }
 
   async deleteForUser(userId: string, credentialId: number): Promise<boolean> {
@@ -334,24 +288,17 @@ export class CredentialRepository {
     );
   }
 
-  private async encryptCredentialRecordForWrite<
-    T extends Record<string, unknown>,
-  >(record: T, userId: string, userDataKey: Buffer): Promise<T> {
-    const encryptedRecord = DataCrypto.encryptRecord(
+  private encryptCredentialRecordForWrite<T extends Record<string, unknown>>(
+    record: T,
+    userId: string,
+    userDataKey: Buffer,
+  ): T {
+    return DataCrypto.encryptRecord(
       "ssh_credentials",
       record,
       userId,
       userDataKey,
     );
-    const systemKey =
-      await SystemCrypto.getInstance().getCredentialSharingKey();
-    const systemEncrypted = await DataCrypto.encryptRecordWithSystemKey(
-      "ssh_credentials",
-      record,
-      systemKey,
-    );
-
-    return { ...encryptedRecord, ...systemEncrypted };
   }
 
   private async afterWrite(): Promise<void> {

@@ -30,20 +30,6 @@ class SimpleDBOps {
       userDataKey,
     );
 
-    if (tableName === "ssh_credentials") {
-      const { SystemCrypto } = await import("./system-crypto.js");
-      const systemCrypto = SystemCrypto.getInstance();
-      const systemKey = await systemCrypto.getCredentialSharingKey();
-
-      const systemEncrypted = await DataCrypto.encryptRecordWithSystemKey(
-        tableName,
-        dataWithTempId,
-        systemKey,
-      );
-
-      Object.assign(encryptedData, systemEncrypted);
-    }
-
     if (!data.id) {
       delete encryptedData.id;
     }
@@ -125,20 +111,6 @@ class SimpleDBOps {
       userId,
       userDataKey,
     );
-
-    if (tableName === "ssh_credentials") {
-      const { SystemCrypto } = await import("./system-crypto.js");
-      const systemCrypto = SystemCrypto.getInstance();
-      const systemKey = await systemCrypto.getCredentialSharingKey();
-
-      const systemEncrypted = await DataCrypto.encryptRecordWithSystemKey(
-        tableName,
-        data,
-        systemKey,
-      );
-
-      Object.assign(encryptedData, systemEncrypted);
-    }
 
     const result = await getDb()
       .update(table)

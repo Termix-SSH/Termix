@@ -344,9 +344,6 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
 
   certPublicKey: text("cert_public_key", { length: 8192 }),
 
-  systemPassword: text("system_password"),
-  systemKey: text("system_key", { length: 16384 }),
-  systemKeyPassword: text("system_key_password"),
 
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
@@ -569,10 +566,6 @@ export const sharedCredentials = sqliteTable("shared_credentials", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-
-  needsReEncryption: integer("needs_re_encryption", { mode: "boolean" })
-    .notNull()
-    .default(false),
 });
 
 export const roles = sqliteTable("roles", {

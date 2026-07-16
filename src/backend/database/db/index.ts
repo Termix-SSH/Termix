@@ -939,10 +939,6 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("ssh_credentials", "cert_public_key", "TEXT");
 
-  addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
-  addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
-  addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
-
   try {
     const tableInfo = sqlite.prepare("PRAGMA table_info(ssh_credentials)").all() as Array<{
       cid: number;
@@ -980,9 +976,6 @@ const migrateSchema = () => {
           private_key TEXT,
           public_key TEXT,
           detected_key_type TEXT,
-          system_password TEXT,
-          system_key TEXT,
-          system_key_password TEXT,
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         );
 
@@ -1609,7 +1602,6 @@ const migrateSchema = () => {
           encrypted_key_type TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          needs_re_encryption INTEGER NOT NULL DEFAULT 0,
           FOREIGN KEY (host_access_id) REFERENCES host_access (id) ON DELETE CASCADE,
           FOREIGN KEY (original_credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
           FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE

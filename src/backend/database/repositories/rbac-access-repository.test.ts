@@ -64,8 +64,7 @@ describe("RbacAccessRepository", () => {
         encrypted_key_password TEXT,
         encrypted_key_type TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        needs_re_encryption INTEGER NOT NULL DEFAULT 0
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE ssh_data (
@@ -130,9 +129,9 @@ describe("RbacAccessRepository", () => {
         (5, 44, 'user-1', NULL, 'admin', 'view', '2026-06-25T00:00:00.000Z', '2026-06-24T00:00:00.000Z');
 
       INSERT INTO shared_credentials (
-        id, host_access_id, original_credential_id, target_user_id, encrypted_username, encrypted_auth_type, needs_re_encryption
+        id, host_access_id, original_credential_id, target_user_id, encrypted_username, encrypted_auth_type
       )
-      VALUES (8, 2, 123, 'user-1', 'enc-user', 'enc-auth', 0);
+      VALUES (8, 2, 123, 'user-1', 'enc-user', 'enc-auth');
 
       INSERT INTO snippets (id, user_id, name, content)
       VALUES (99, 'owner-1', 'deploy', 'echo deploy');

@@ -7,7 +7,6 @@ import {
 } from "./crypto-migration/dek-migration.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
-import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger, authLogger } from "./logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
@@ -178,25 +177,6 @@ class AuthManager {
       }
 
       await DataCrypto.migrateCurrentUserSensitiveFields(userId, userDataKey);
-
-      try {
-        const { CredentialSystemEncryptionMigration } =
-          await import("./credential-system-encryption-migration.js");
-        const credMigration = new CredentialSystemEncryptionMigration();
-        const credResult = await credMigration.migrateUserCredentials(userId);
-
-        if (credResult.migrated > 0) {
-          await DatabaseSaveTrigger.forceSave(
-            "login_credential_migration_explicit_save",
-          );
-        }
-      } catch (error) {
-        databaseLogger.warn("Credential migration failed during login", {
-          operation: "login_credential_migration_failed",
-          userId,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
     } catch (error) {
       databaseLogger.error("Lazy encryption migration failed", error, {
         operation: "lazy_encryption_migration_error",

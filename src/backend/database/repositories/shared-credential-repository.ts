@@ -63,20 +63,6 @@ export class SharedCredentialRepository {
       .where(eq(sharedCredentials.originalCredentialId, credentialId));
   }
 
-  async listPendingByTargetUserId(
-    userId: string,
-  ): Promise<SharedCredentialRecord[]> {
-    return this.context.drizzle
-      .select()
-      .from(sharedCredentials)
-      .where(
-        and(
-          eq(sharedCredentials.targetUserId, userId),
-          eq(sharedCredentials.needsReEncryption, true),
-        ),
-      );
-  }
-
   async updateById(
     id: number,
     update: SharedCredentialUpdate,
@@ -94,20 +80,17 @@ export class SharedCredentialRepository {
     return rows[0] ?? null;
   }
 
-  async markNeedsReEncryptionByOriginalCredentialId(
-    credentialId: number,
-  ): Promise<number> {
+  async deleteById(id: number): Promise<boolean> {
     const rows = await this.context.drizzle
-      .update(sharedCredentials)
-      .set({ needsReEncryption: true })
-      .where(eq(sharedCredentials.originalCredentialId, credentialId))
+      .delete(sharedCredentials)
+      .where(eq(sharedCredentials.id, id))
       .returning({ id: sharedCredentials.id });
 
     if (rows.length > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rows.length > 0;
   }
 
   async deleteByOriginalCredentialId(credentialId: number): Promise<number> {

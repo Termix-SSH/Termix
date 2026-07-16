@@ -47,9 +47,6 @@ const FIELD_ENCRYPTION_POLICY = {
       "privateKey",
       "publicKey",
       "keyPassword",
-      "systemPassword",
-      "systemKey",
-      "systemKeyPassword",
     ]),
     plaintext: new Set([
       "id",

@@ -18,6 +18,8 @@ interface CredentialData {
   keyType?: string;
 }
 
+// Shared credentials are per-target copies of the owner's credential,
+// re-encrypted under the target user's DEK at share time.
 class SharedCredentialManager {
   private static instance: SharedCredentialManager;
 
@@ -47,68 +49,28 @@ class SharedCredentialManager {
 
       if (existing) return;
 
-      const ownerDEK = DataCrypto.getUserDataKey(ownerId);
+      const ownerDEK = DataCrypto.validateUserAccess(ownerId);
+      const targetDEK = DataCrypto.validateUserAccess(targetUserId);
 
-      if (ownerDEK) {
-        const targetDEK = DataCrypto.getUserDataKey(targetUserId);
-        if (!targetDEK) {
-          await this.createPendingSharedCredential(
-            hostAccessId,
-            originalCredentialId,
-            targetUserId,
-          );
-          return;
-        }
+      const credentialData = await this.getDecryptedCredential(
+        originalCredentialId,
+        ownerId,
+        ownerDEK,
+      );
 
-        const credentialData = await this.getDecryptedCredential(
-          originalCredentialId,
-          ownerId,
-          ownerDEK,
-        );
+      const encryptedForTarget = this.encryptCredentialForUser(
+        credentialData,
+        targetUserId,
+        targetDEK,
+        hostAccessId,
+      );
 
-        const encryptedForTarget = this.encryptCredentialForUser(
-          credentialData,
-          targetUserId,
-          targetDEK,
-          hostAccessId,
-        );
-
-        await sharedCredentialRepository.create({
-          hostAccessId,
-          originalCredentialId,
-          targetUserId,
-          ...encryptedForTarget,
-          needsReEncryption: false,
-        });
-      } else {
-        const targetDEK = DataCrypto.getUserDataKey(targetUserId);
-        if (!targetDEK) {
-          await this.createPendingSharedCredential(
-            hostAccessId,
-            originalCredentialId,
-            targetUserId,
-          );
-          return;
-        }
-
-        const credentialData =
-          await this.getDecryptedCredentialViaSystemKey(originalCredentialId);
-
-        const encryptedForTarget = this.encryptCredentialForUser(
-          credentialData,
-          targetUserId,
-          targetDEK,
-          hostAccessId,
-        );
-
-        await sharedCredentialRepository.create({
-          hostAccessId,
-          originalCredentialId,
-          targetUserId,
-          ...encryptedForTarget,
-          needsReEncryption: false,
-        });
-      }
+      await sharedCredentialRepository.create({
+        hostAccessId,
+        originalCredentialId,
+        targetUserId,
+        ...encryptedForTarget,
+      });
     } catch (error) {
       databaseLogger.error("Failed to create shared credential", error, {
         operation: "create_shared_credential",
@@ -243,10 +205,7 @@ class SharedCredentialManager {
     userId: string,
   ): Promise<CredentialData | null> {
     try {
-      const userDEK = DataCrypto.getUserDataKey(userId);
-      if (!userDEK) {
-        throw new Error(`User ${userId} data not unlocked`);
-      }
+      const userDEK = DataCrypto.validateUserAccess(userId);
 
       const cred =
         await createCurrentRbacAccessRepository().findSharedCredentialForHostAndUser(
@@ -256,27 +215,6 @@ class SharedCredentialManager {
 
       if (!cred) {
         return null;
-      }
-
-      if (cred.needsReEncryption) {
-        await this.reEncryptSharedCredential(cred.id, userId);
-
-        const refreshed =
-          await createCurrentSharedCredentialRepository().findById(cred.id);
-
-        if (!refreshed || refreshed.needsReEncryption) {
-          databaseLogger.warn(
-            "Shared credential needs re-encryption but cannot be accessed yet",
-            {
-              operation: "get_shared_credential_pending",
-              hostId,
-              userId,
-            },
-          );
-          return null;
-        }
-
-        return this.decryptSharedCredential(refreshed, userDEK);
       }
 
       return this.decryptSharedCredential(cred, userDEK);
@@ -302,45 +240,19 @@ class SharedCredentialManager {
           credentialId,
         );
 
-      const ownerDEK = DataCrypto.getUserDataKey(ownerId);
-      let credentialData: CredentialData;
+      if (sharedCreds.length === 0) return;
 
-      if (ownerDEK) {
-        credentialData = await this.getDecryptedCredential(
-          credentialId,
-          ownerId,
-          ownerDEK,
-        );
-      } else {
-        try {
-          credentialData =
-            await this.getDecryptedCredentialViaSystemKey(credentialId);
-        } catch (error) {
-          databaseLogger.warn(
-            "Cannot update shared credentials: owner offline and credential not migrated",
-            {
-              operation: "update_shared_credentials_failed",
-              credentialId,
-              ownerId,
-              error: error instanceof Error ? error.message : "Unknown error",
-            },
-          );
-          await sharedCredentialRepository.markNeedsReEncryptionByOriginalCredentialId(
-            credentialId,
-          );
-          return;
-        }
-      }
+      const ownerDEK = DataCrypto.validateUserAccess(ownerId);
+      const credentialData = await this.getDecryptedCredential(
+        credentialId,
+        ownerId,
+        ownerDEK,
+      );
 
       for (const sharedCred of sharedCreds) {
-        const targetDEK = DataCrypto.getUserDataKey(sharedCred.targetUserId);
-
-        if (!targetDEK) {
-          await sharedCredentialRepository.updateById(sharedCred.id, {
-            needsReEncryption: true,
-          });
-          continue;
-        }
+        const targetDEK = DataCrypto.validateUserAccess(
+          sharedCred.targetUserId,
+        );
 
         const encryptedForTarget = this.encryptCredentialForUser(
           credentialData,
@@ -351,7 +263,6 @@ class SharedCredentialManager {
 
         await sharedCredentialRepository.updateById(sharedCred.id, {
           ...encryptedForTarget,
-          needsReEncryption: false,
           updatedAt: new Date().toISOString(),
         });
       }
@@ -374,29 +285,6 @@ class SharedCredentialManager {
       databaseLogger.error("Failed to delete shared credentials", error, {
         operation: "delete_shared_credentials",
         credentialId,
-      });
-    }
-  }
-
-  async reEncryptPendingCredentialsForUser(userId: string): Promise<void> {
-    try {
-      const userDEK = DataCrypto.getUserDataKey(userId);
-      if (!userDEK) {
-        return;
-      }
-
-      const pendingCreds =
-        await createCurrentSharedCredentialRepository().listPendingByTargetUserId(
-          userId,
-        );
-
-      for (const cred of pendingCreds) {
-        await this.reEncryptSharedCredential(cred.id, userId);
-      }
-    } catch (error) {
-      databaseLogger.error("Failed to re-encrypt pending credentials", error, {
-        operation: "reencrypt_pending_credentials",
-        userId,
       });
     }
   }
@@ -430,53 +318,6 @@ class SharedCredentialManager {
             ownerDEK,
             credentialId,
             "keyPassword",
-          )
-        : undefined,
-      keyType: cred.keyType,
-    };
-  }
-
-  private async getDecryptedCredentialViaSystemKey(
-    credentialId: number,
-  ): Promise<CredentialData> {
-    const cred =
-      await createCurrentCredentialRepository().findById(credentialId);
-
-    if (!cred) {
-      throw new Error(`Credential ${credentialId} not found`);
-    }
-
-    if (!cred.systemPassword && !cred.systemKey && !cred.systemKeyPassword) {
-      throw new Error(
-        "Credential not yet migrated for offline sharing. " +
-          "Please ask credential owner to log in to enable sharing.",
-      );
-    }
-
-    const { SystemCrypto } = await import("./system-crypto.js");
-    const systemCrypto = SystemCrypto.getInstance();
-    const CSKEK = await systemCrypto.getCredentialSharingKey();
-
-    return {
-      username: cred.username,
-      authType: cred.authType,
-      password: cred.systemPassword
-        ? this.decryptField(
-            cred.systemPassword,
-            CSKEK,
-            credentialId,
-            "password",
-          )
-        : undefined,
-      key: cred.systemKey
-        ? this.decryptField(cred.systemKey, CSKEK, credentialId, "key")
-        : undefined,
-      keyPassword: cred.systemKeyPassword
-        ? this.decryptField(
-            cred.systemKeyPassword,
-            CSKEK,
-            credentialId,
-            "key_password",
           )
         : undefined,
       keyType: cred.keyType,
@@ -596,114 +437,6 @@ class SharedCredentialManager {
         recordId,
       });
       return encryptedValue;
-    }
-  }
-
-  private async createPendingSharedCredential(
-    hostAccessId: number,
-    originalCredentialId: number,
-    targetUserId: string,
-  ): Promise<void> {
-    await createCurrentSharedCredentialRepository().create({
-      hostAccessId,
-      originalCredentialId,
-      targetUserId,
-      encryptedUsername: "",
-      encryptedAuthType: "",
-      needsReEncryption: true,
-    });
-
-    databaseLogger.info("Created pending shared credential", {
-      operation: "create_pending_shared_credential",
-      hostAccessId,
-      targetUserId,
-    });
-  }
-
-  private async reEncryptSharedCredential(
-    sharedCredId: number,
-    userId: string,
-  ): Promise<void> {
-    try {
-      const cred =
-        await createCurrentSharedCredentialRepository().findById(sharedCredId);
-
-      if (!cred) {
-        databaseLogger.warn("Re-encrypt: shared credential not found", {
-          operation: "reencrypt_not_found",
-          sharedCredId,
-        });
-        return;
-      }
-
-      const ownerId =
-        await createCurrentRbacAccessRepository().findHostAccessOwnerId(
-          cred.hostAccessId,
-        );
-
-      if (!ownerId) {
-        databaseLogger.warn("Re-encrypt: host access not found", {
-          operation: "reencrypt_access_not_found",
-          sharedCredId,
-        });
-        return;
-      }
-
-      const userDEK = DataCrypto.getUserDataKey(userId);
-      if (!userDEK) {
-        databaseLogger.warn("Re-encrypt: user DEK not available", {
-          operation: "reencrypt_user_offline",
-          sharedCredId,
-          userId,
-        });
-        return;
-      }
-
-      const ownerDEK = DataCrypto.getUserDataKey(ownerId);
-      let credentialData: CredentialData;
-
-      if (ownerDEK) {
-        credentialData = await this.getDecryptedCredential(
-          cred.originalCredentialId,
-          ownerId,
-          ownerDEK,
-        );
-      } else {
-        try {
-          credentialData = await this.getDecryptedCredentialViaSystemKey(
-            cred.originalCredentialId,
-          );
-        } catch (error) {
-          databaseLogger.warn(
-            "Re-encrypt: system key decryption failed, credential may not be migrated yet",
-            {
-              operation: "reencrypt_system_key_failed",
-              sharedCredId,
-              error: error instanceof Error ? error.message : "Unknown error",
-            },
-          );
-          return;
-        }
-      }
-
-      const encryptedForTarget = this.encryptCredentialForUser(
-        credentialData,
-        userId,
-        userDEK,
-        cred.hostAccessId,
-      );
-
-      await createCurrentSharedCredentialRepository().updateById(sharedCredId, {
-        ...encryptedForTarget,
-        needsReEncryption: false,
-        updatedAt: new Date().toISOString(),
-      });
-    } catch (error) {
-      databaseLogger.error("Failed to re-encrypt shared credential", error, {
-        operation: "reencrypt_shared_credential",
-        sharedCredId,
-        userId,
-      });
     }
   }
 }

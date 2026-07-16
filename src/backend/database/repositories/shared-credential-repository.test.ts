@@ -35,8 +35,7 @@ describe("SharedCredentialRepository", () => {
         encrypted_key_password TEXT,
         encrypted_key_type TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        needs_re_encryption INTEGER NOT NULL DEFAULT 0
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
       INSERT INTO shared_credentials (
@@ -46,13 +45,12 @@ describe("SharedCredentialRepository", () => {
         target_user_id,
         encrypted_username,
         encrypted_auth_type,
-        encrypted_password,
-        needs_re_encryption
+        encrypted_password
       )
       VALUES
-        (1, 10, 100, 'user-1', 'u1', 'password', 'p1', 0),
-        (2, 10, 100, 'user-2', 'u2', 'password', 'p2', 1),
-        (3, 11, 101, 'user-2', 'u3', 'key', NULL, 1);
+        (1, 10, 100, 'user-1', 'u1', 'password', 'p1'),
+        (2, 10, 100, 'user-2', 'u2', 'password', 'p2'),
+        (3, 11, 101, 'user-2', 'u3', 'key', NULL);
     `);
 
     return {
@@ -81,7 +79,6 @@ describe("SharedCredentialRepository", () => {
       encryptedUsername: "u4",
       encryptedAuthType: "password",
       encryptedPassword: "p4",
-      needsReEncryption: false,
     });
 
     expect(created).toMatchObject({
@@ -106,42 +103,31 @@ describe("SharedCredentialRepository", () => {
     await expect(
       repository.listByOriginalCredentialId(100),
     ).resolves.toHaveLength(2);
-    await expect(
-      repository.listPendingByTargetUserId("user-2"),
-    ).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 2 }),
-        expect.objectContaining({ id: 3 }),
-      ]),
-    );
 
     await expect(
       repository.updateById(2, {
         encryptedPassword: "updated",
-        needsReEncryption: false,
       }),
     ).resolves.toMatchObject({
       encryptedPassword: "updated",
-      needsReEncryption: false,
     });
     expect(writes).toBe(1);
   });
 
-  it("marks and deletes shared credentials", async () => {
+  it("deletes shared credentials", async () => {
     let writes = 0;
     const { repository, sqlite } = await createRepository(() => {
       writes += 1;
     });
 
-    await expect(
-      repository.markNeedsReEncryptionByOriginalCredentialId(100),
-    ).resolves.toBe(2);
-    await expect(repository.deleteByTargetUserId("user-1")).resolves.toBe(1);
-    await expect(repository.deleteByOriginalCredentialId(101)).resolves.toBe(1);
+    await expect(repository.deleteById(1)).resolves.toBe(true);
+    await expect(repository.deleteById(999)).resolves.toBe(false);
+    await expect(repository.deleteByTargetUserId("user-2")).resolves.toBe(2);
+    await expect(repository.deleteByOriginalCredentialId(100)).resolves.toBe(0);
 
     expect(
       sqlite.prepare("SELECT id FROM shared_credentials ORDER BY id").all(),
-    ).toEqual([{ id: 2 }]);
-    expect(writes).toBe(3);
+    ).toEqual([]);
+    expect(writes).toBe(2);
   });
 });

@@ -3,7 +3,6 @@ import { TestSqliteDatabase } from "./test-support.js";
 import { CredentialRepository } from "./credential-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import { SystemCrypto } from "../../utils/system-crypto.js";
 
 describe("HostRepository and CredentialRepository", () => {
   let adapter: TestSqliteDatabase | null = null;
@@ -54,9 +53,6 @@ describe("HostRepository and CredentialRepository", () => {
         key_type TEXT,
         detected_key_type TEXT,
         cert_public_key TEXT,
-        system_password TEXT,
-        system_key TEXT,
-        system_key_password TEXT,
         usage_count INTEGER NOT NULL DEFAULT 0,
         last_used TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -306,7 +302,7 @@ describe("HostRepository and CredentialRepository", () => {
     );
   });
 
-  it("encrypts credential writes with user and system keys", async () => {
+  it("encrypts credential writes with the user key", async () => {
     const repo = await createRepositories();
     vi.spyOn(DataCrypto, "validateUserAccess").mockReturnValue(
       Buffer.from("user-key"),
@@ -321,16 +317,9 @@ describe("HostRepository and CredentialRepository", () => {
           password: "user-encrypted-password",
         }) as typeof record,
     );
-    vi.spyOn(DataCrypto, "encryptRecordWithSystemKey").mockResolvedValue({
-      systemPassword: "system-encrypted-password",
-    });
     vi.spyOn(DataCrypto, "decryptRecord").mockImplementation(
       (_tableName, record) => record,
     );
-    vi.spyOn(
-      SystemCrypto.getInstance(),
-      "getCredentialSharingKey",
-    ).mockResolvedValue(Buffer.from("system-key"));
 
     const created = await repo.credentials.createEncryptedForUser("user-1", {
       userId: "user-1",
@@ -341,77 +330,26 @@ describe("HostRepository and CredentialRepository", () => {
     });
 
     const raw = repo.sqlite
-      .prepare(
-        "SELECT password, system_password FROM ssh_credentials WHERE id = ?",
-      )
-      .get(created.id) as { password: string; system_password: string };
+      .prepare("SELECT password FROM ssh_credentials WHERE id = ?")
+      .get(created.id) as { password: string };
 
     expect(raw.password).toBe("user-encrypted-password");
-    expect(raw.system_password).toBe("system-encrypted-password");
 
     await repo.credentials.updateEncryptedForUser("user-1", created.id, {
       password: "updated-secret",
     });
 
     const updatedRaw = repo.sqlite
-      .prepare(
-        "SELECT password, system_password FROM ssh_credentials WHERE id = ?",
-      )
-      .get(created.id) as { password: string; system_password: string };
+      .prepare("SELECT password FROM ssh_credentials WHERE id = ?")
+      .get(created.id) as { password: string };
 
     expect(updatedRaw.password).toBe("user-encrypted-password");
-    expect(updatedRaw.system_password).toBe("system-encrypted-password");
-    expect(DataCrypto.encryptRecordWithSystemKey).toHaveBeenCalledWith(
+    expect(DataCrypto.encryptRecord).toHaveBeenCalledWith(
       "ssh_credentials",
       expect.objectContaining({ password: "updated-secret" }),
-      Buffer.from("system-key"),
+      "user-1",
+      Buffer.from("user-key"),
     );
-  });
-
-  it("finds and updates credential system encryption migration rows", async () => {
-    const repo = await createRepositories();
-
-    const complete = await repo.credentials.create({
-      userId: "user-1",
-      name: "complete",
-      authType: "password",
-      password: "encrypted-password",
-      systemPassword: "system-password",
-      systemKey: "system-key",
-      systemKeyPassword: "system-key-password",
-    });
-    const missing = await repo.credentials.create({
-      userId: "user-1",
-      name: "missing",
-      authType: "key",
-      key: "encrypted-key",
-      systemPassword: null,
-      systemKey: null,
-      systemKeyPassword: null,
-    });
-    await repo.credentials.create({
-      userId: "user-2",
-      name: "other",
-      authType: "password",
-      systemPassword: null,
-    });
-
-    await expect(
-      repo.credentials.listMissingSystemEncryptionByUserId("user-1"),
-    ).resolves.toMatchObject([{ id: missing.id }]);
-
-    await repo.credentials.updateSystemEncryptionForUser("user-1", missing.id, {
-      systemPassword: "new-system-password",
-      systemKey: "new-system-key",
-      systemKeyPassword: "new-system-key-password",
-    });
-
-    await expect(
-      repo.credentials.listMissingSystemEncryptionByUserId("user-1"),
-    ).resolves.toEqual([]);
-    await expect(
-      repo.credentials.findByIdForUser("user-1", complete.id),
-    ).resolves.toMatchObject({ systemPassword: "system-password" });
   });
 
   it("checks credential import identity", async () => {

@@ -124,6 +124,10 @@ import {
       await import("./utils/crypto-migration/dek-migration.js");
     await runBootDekMigration({ cleanupLegacy: true });
 
+    const { runLegacySharedCredentialCleanup } =
+      await import("./utils/crypto-migration/legacy-share-cleanup.js");
+    await runLegacySharedCredentialCleanup();
+
     const authManager = AuthManager.getInstance();
     await authManager.initialize();
     DataCrypto.initialize();
