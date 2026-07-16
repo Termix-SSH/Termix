@@ -1,6 +1,7 @@
 import axios, { type AxiosRequestConfig } from "axios";
 import { handleApiError, statsApi } from "@/main-axios";
 import type { ServerMetrics, ServerStatus } from "@/main-axios";
+import { getCachedServerStatuses } from "@/lib/hosts-request-cache";
 
 type ApiConnectionLog = {
   type: "info" | "success" | "warning" | "error";
@@ -73,34 +74,37 @@ function isTransientStatusError(error: unknown): boolean {
 export async function getAllServerStatuses(): Promise<
   Record<number, ServerStatus>
 > {
-  let lastError: unknown = null;
+  return getCachedServerStatuses(async () => {
+    let lastError: unknown = null;
 
-  for (let i = 0; i < STATUS_RETRY_SCHEDULE.length; i++) {
-    const { timeoutMs, pauseAfterMs } = STATUS_RETRY_SCHEDULE[i];
-    const isFinalAttempt = i === STATUS_RETRY_SCHEDULE.length - 1;
+    for (let i = 0; i < STATUS_RETRY_SCHEDULE.length; i++) {
+      const { timeoutMs, pauseAfterMs } = STATUS_RETRY_SCHEDULE[i];
+      const isFinalAttempt = i === STATUS_RETRY_SCHEDULE.length - 1;
 
-    try {
-      const response = await statsApi.get("/status", {
-        timeout: timeoutMs,
-        // Silence per-attempt interceptor logging & health-monitor side
-        // effects on all attempts except the final one, so background
-        // blips don't look like real outages.
-        __silentRetry: !isFinalAttempt,
-      } as AxiosRequestConfig & { __silentRetry?: boolean });
-      return response.data || {};
-    } catch (error) {
-      lastError = error;
-      if (!isTransientStatusError(error)) {
-        break;
+      try {
+        const response = await statsApi.get("/status", {
+          timeout: timeoutMs,
+          // Silence per-attempt interceptor logging & health-monitor side
+          // effects on all attempts except the final one, so background
+          // blips don't look like real outages.
+          __silentRetry: !isFinalAttempt,
+        } as AxiosRequestConfig & { __silentRetry?: boolean });
+        return response.data || {};
+      } catch (error) {
+        lastError = error;
+        if (!isTransientStatusError(error)) {
+          break;
+        }
+        if (pauseAfterMs === null) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, pauseAfterMs));
       }
-      if (pauseAfterMs === null) {
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, pauseAfterMs));
     }
-  }
 
-  handleApiError(lastError, "fetch server statuses");
+    handleApiError(lastError, "fetch server statuses");
+    return {};
+  });
 }
 
 export async function getServerStatusById(id: number): Promise<ServerStatus> {

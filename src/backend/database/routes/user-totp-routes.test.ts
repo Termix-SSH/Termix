@@ -47,8 +47,8 @@ describe("verifyTotpReauth", () => {
     vi.clearAllMocks();
   });
 
-  it("accepts the correct password", async () => {
-    expect(await verifyTotpReauth(makeUser(), "correct-horse")).toBe(true);
+  it("does not accept the account password as a second factor", async () => {
+    expect(await verifyTotpReauth(makeUser(), "correct-horse")).toBe(false);
   });
 
   it("accepts a valid TOTP code without a password", async () => {

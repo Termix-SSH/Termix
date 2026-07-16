@@ -12,6 +12,12 @@ import { getGuacamoleToken, isElectron, isEmbeddedMode } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { getBasePath } from "@/lib/base-path.ts";
 import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
+import {
+  isFirefoxBrowser,
+  isPasteShortcut,
+  pasteTextToRemote,
+} from "./guacamole-clipboard.ts";
+import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -124,13 +130,14 @@ export const GuacamoleDisplay = forwardRef<
     ): Promise<string | null> => {
       try {
         let token: string;
-        const protocol = connectionConfig.protocol ?? connectionConfig.type;
+        const connectionProtocol =
+          connectionConfig.protocol ?? connectionConfig.type;
 
         if (connectionConfig.token) {
           token = connectionConfig.token;
         } else {
           const data = await getGuacamoleToken({
-            protocol: protocol ?? "rdp",
+            protocol: connectionProtocol ?? "rdp",
             hostname: String(connectionConfig.hostname ?? ""),
             port: connectionConfig.port,
             username: connectionConfig.username,
@@ -151,8 +158,13 @@ export const GuacamoleDisplay = forwardRef<
           token = data.token;
         }
 
-        const width = connectionConfig.width ?? containerWidth ?? 1280;
-        const height = connectionConfig.height ?? containerHeight ?? 720;
+        const displaySize = getGuacamoleDisplaySize(
+          connectionConfig.width ?? containerWidth ?? 1280,
+          connectionConfig.height ?? containerHeight ?? 720,
+          connectionProtocol,
+          window.devicePixelRatio,
+          connectionConfig.dpi,
+        );
 
         const wsBase = buildGuacamoleWebSocketBaseUrl({
           isDev,
@@ -166,9 +178,10 @@ export const GuacamoleDisplay = forwardRef<
 
         const params = new URLSearchParams({
           token,
-          width: String(width),
-          height: String(height),
+          width: String(displaySize.width),
+          height: String(displaySize.height),
         });
+        if (displaySize.dpi) params.set("dpi", String(displaySize.dpi));
         return `${wsBase}?${params.toString()}`;
       } catch (error) {
         const errorMessage =
@@ -338,6 +351,32 @@ export const GuacamoleDisplay = forwardRef<
     displayElement.setAttribute("tabindex", "0");
     displayElement.style.outline = "none";
 
+    const useNativePasteFallback = isFirefoxBrowser();
+    if (useNativePasteFallback) {
+      displayElement.addEventListener(
+        "keydown",
+        (event) => {
+          if (isPasteShortcut(event)) {
+            event.stopImmediatePropagation();
+          }
+        },
+        true,
+      );
+      displayElement.addEventListener(
+        "paste",
+        (event) => {
+          if (clientRef.current !== client) return;
+          const text = event.clipboardData?.getData("text/plain");
+          if (!text) return;
+
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          pasteTextToRemote(client, text);
+        },
+        true,
+      );
+    }
+
     display.onresize = () => {
       if (!isMountedRef.current) return;
       rescaleDisplay(true);
@@ -403,9 +442,14 @@ export const GuacamoleDisplay = forwardRef<
           onConnect?.();
           if (containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
-            const w = Math.round(rect.width);
-            const h = Math.round(rect.height);
-            if (w > 0 && h > 0) client.sendSize(w, h);
+            const size = getGuacamoleDisplaySize(
+              rect.width,
+              rect.height,
+              protocol,
+              window.devicePixelRatio,
+              connectionConfig.dpi,
+            );
+            client.sendSize(size.width, size.height);
           }
           rescaleDisplay(false);
           break;
@@ -484,6 +528,7 @@ export const GuacamoleDisplay = forwardRef<
     rescaleDisplay,
     connectionConfig.protocol,
     connectionConfig.type,
+    connectionConfig.dpi,
     t,
   ]);
 
@@ -557,10 +602,15 @@ export const GuacamoleDisplay = forwardRef<
       resizeTimeoutRef.current = setTimeout(() => {
         if (clientRef.current && containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
-          const w = Math.round(rect.width);
-          const h = Math.round(rect.height);
-          if (w > 0 && h > 0) {
-            clientRef.current.sendSize(w, h);
+          const size = getGuacamoleDisplaySize(
+            rect.width,
+            rect.height,
+            connectionConfig.protocol ?? connectionConfig.type,
+            window.devicePixelRatio,
+            connectionConfig.dpi,
+          );
+          if (rect.width > 0 && rect.height > 0) {
+            clientRef.current.sendSize(size.width, size.height);
             rescaleDisplay(true);
           }
         }
@@ -572,11 +622,16 @@ export const GuacamoleDisplay = forwardRef<
     return () => {
       resizeObserver.disconnect();
     };
-  }, [rescaleDisplay]);
+  }, [
+    connectionConfig.dpi,
+    connectionConfig.protocol,
+    connectionConfig.type,
+    rescaleDisplay,
+  ]);
 
   const syncClipboard = useCallback(() => {
     const client = clientRef.current;
-    if (!client || !navigator.clipboard?.readText) return;
+    if (!client || isFirefoxBrowser() || !navigator.clipboard?.readText) return;
     navigator.clipboard
       .readText()
       .then((text) => {

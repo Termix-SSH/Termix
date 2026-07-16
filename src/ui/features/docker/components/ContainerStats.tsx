@@ -50,7 +50,10 @@ export function ContainerStats({
 
   React.useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 2000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void fetchStats();
+    }, 2000);
     return () => clearInterval(interval);
   }, [fetchStats]);
 

@@ -69,8 +69,32 @@ function CountdownWidget({
       }
     };
     update();
-    const iv = setInterval(update, 1000);
-    return () => clearInterval(iv);
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (intervalId !== null) return;
+      intervalId = setInterval(update, 1000);
+    };
+    const stop = () => {
+      if (intervalId === null) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stop();
+        return;
+      }
+      update();
+      start();
+    };
+
+    if (document.visibilityState !== "hidden") start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [targetDate]);
 
   const titleBar = (

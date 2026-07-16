@@ -1,6 +1,14 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useLayoutEffect,
+} from "react";
 import { createPortal } from "react-dom";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils.ts";
 import {
   Folder,
@@ -185,12 +193,64 @@ export function FileManagerGrid({
   const { t } = useTranslation();
   const gridRef = useRef<HTMLDivElement>(null);
   const [editingName, setEditingName] = useState("");
+  const [gridCols, setGridCols] = useState(4);
+
+  const LIST_ROW_H = 41;
+  const GRID_ROW_H = 112;
+  const LIST_HEADER_H = 33;
+  const CONTENT_PAD = 16;
 
   const [dragState, setDragState] = useState<DragState>({
     type: "none",
     files: [],
     counter: 0,
   });
+
+  // Responsive column count for grid virtualization (matches Tailwind breakpoints roughly).
+  useEffect(() => {
+    if (viewMode !== "grid") return;
+    const el = gridRef.current;
+    if (!el) return;
+
+    const updateCols = () => {
+      const w = el.clientWidth - CONTENT_PAD * 2;
+      // gap-4 (16px) + ~min cell 96px
+      const n = Math.max(2, Math.min(8, Math.floor((w + 16) / 112)));
+      setGridCols(n);
+    };
+    updateCols();
+    const ro = new ResizeObserver(updateCols);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [viewMode]);
+
+  const gridRowCount = useMemo(
+    () => (viewMode === "grid" ? Math.ceil(files.length / gridCols) : 0),
+    [viewMode, files.length, gridCols],
+  );
+
+  const listVirtualizer = useVirtualizer({
+    count: viewMode === "list" ? files.length : 0,
+    getScrollElement: () => gridRef.current,
+    estimateSize: () => LIST_ROW_H,
+    overscan: 16,
+    getItemKey: (index) => files[index]?.path ?? index,
+    enabled: viewMode === "list" && files.length > 0,
+  });
+
+  const gridVirtualizer = useVirtualizer({
+    count: gridRowCount,
+    getScrollElement: () => gridRef.current,
+    estimateSize: () => GRID_ROW_H,
+    overscan: 6,
+    getItemKey: (index) => `row-${index}`,
+    enabled: viewMode === "grid" && files.length > 0,
+  });
+
+  useLayoutEffect(() => {
+    if (viewMode === "list") listVirtualizer.measure();
+    else gridVirtualizer.measure();
+  }, [viewMode, files.length, editingFile?.path, createIntent, gridCols]);
 
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -442,6 +502,77 @@ export function FileManagerGrid({
         setSelectionRect({ x, y, width, height });
 
         if (gridRef.current) {
+          const selectionBox = {
+            left: x,
+            top: y,
+            right: x + width,
+            bottom: y + height,
+          };
+
+          // Virtual list: only visible DOM nodes exist. For list mode compute
+          // selection from scroll position + fixed row height so drag-select
+          // still covers off-screen rows.
+          if (viewMode === "list" && files.length > 0) {
+            const scrollTop = gridRef.current.scrollTop;
+            const createExtra = createIntent ? LIST_ROW_H : 0;
+            const contentTop =
+              selectionBox.top +
+              scrollTop -
+              CONTENT_PAD -
+              LIST_HEADER_H -
+              createExtra;
+            const contentBottom =
+              selectionBox.bottom +
+              scrollTop -
+              CONTENT_PAD -
+              LIST_HEADER_H -
+              createExtra;
+            const startIdx = Math.max(0, Math.floor(contentTop / LIST_ROW_H));
+            const endIdx = Math.min(
+              files.length - 1,
+              Math.ceil(contentBottom / LIST_ROW_H),
+            );
+            if (endIdx >= startIdx) {
+              onSelectionChange(files.slice(startIdx, endIdx + 1));
+            } else {
+              onSelectionChange([]);
+            }
+            return;
+          }
+
+          if (viewMode === "grid" && files.length > 0) {
+            const scrollTop = gridRef.current.scrollTop;
+            const createExtra = createIntent ? GRID_ROW_H : 0;
+            const contentTop =
+              selectionBox.top + scrollTop - CONTENT_PAD - createExtra;
+            const contentBottom =
+              selectionBox.bottom + scrollTop - CONTENT_PAD - createExtra;
+            const startRow = Math.max(0, Math.floor(contentTop / GRID_ROW_H));
+            const endRow = Math.min(
+              gridRowCount - 1,
+              Math.ceil(contentBottom / GRID_ROW_H),
+            );
+            // Column range from X within padded content.
+            const contentLeft = selectionBox.left - CONTENT_PAD;
+            const contentRight = selectionBox.right - CONTENT_PAD;
+            const cellW =
+              (gridRef.current.clientWidth - CONTENT_PAD * 2 + 16) / gridCols;
+            const startCol = Math.max(0, Math.floor(contentLeft / cellW));
+            const endCol = Math.min(
+              gridCols - 1,
+              Math.ceil(contentRight / cellW),
+            );
+            const selected: FileItem[] = [];
+            for (let r = startRow; r <= endRow; r++) {
+              for (let c = startCol; c <= endCol; c++) {
+                const idx = r * gridCols + c;
+                if (idx >= 0 && idx < files.length) selected.push(files[idx]);
+              }
+            }
+            onSelectionChange(selected);
+            return;
+          }
+
           const fileElements =
             gridRef.current.querySelectorAll("[data-file-path]");
           const selectedPaths: string[] = [];
@@ -455,13 +586,6 @@ export function FileManagerGrid({
               top: elementRect.top - containerRect.top,
               right: elementRect.right - containerRect.left,
               bottom: elementRect.bottom - containerRect.top,
-            };
-
-            const selectionBox = {
-              left: x,
-              top: y,
-              right: x + width,
-              bottom: y + height,
             };
 
             const intersects = !(
@@ -486,7 +610,16 @@ export function FileManagerGrid({
         }
       }
     },
-    [isSelecting, selectionStart, files, onSelectionChange],
+    [
+      isSelecting,
+      selectionStart,
+      files,
+      onSelectionChange,
+      viewMode,
+      createIntent,
+      gridCols,
+      gridRowCount,
+    ],
   );
 
   const handleMouseUp = useCallback(
@@ -819,89 +952,126 @@ export function FileManagerGrid({
               </span>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+            <div className="flex flex-col gap-4">
               {createIntent && (
-                <CreateIntentGridItem
-                  intent={createIntent}
-                  onConfirm={onConfirmCreate}
-                  onCancel={onCancelCreate}
-                />
+                <div
+                  className="grid gap-4"
+                  style={{
+                    gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+                  }}
+                >
+                  <CreateIntentGridItem
+                    intent={createIntent}
+                    onConfirm={onConfirmCreate}
+                    onCancel={onCancelCreate}
+                  />
+                </div>
               )}
-              {files.map((file) => {
-                const isSelected = selectedFiles.some(
-                  (f) => f.path === file.path,
-                );
-
-                return (
-                  <div
-                    key={file.path}
-                    data-file-path={file.path}
-                    draggable={true}
-                    className={cn(
-                      "group flex flex-col items-center p-3 rounded-none border-2 border-transparent transition-all cursor-pointer hover:bg-muted/50 select-none",
-                      isSelected && "bg-accent-brand/10 border-accent-brand/40",
-                      dragState.target?.path === file.path &&
-                        "bg-accent-brand/20 border-accent-brand border-dashed",
-                      dragState.files.some((f) => f.path === file.path) &&
-                        "opacity-50",
-                    )}
-                    title={file.name}
-                    onClick={(e) => handleFileClick(file, e)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onContextMenu?.(e, file);
-                    }}
-                    onDragStart={(e) => handleFileDragStart(e, file)}
-                    onDragOver={(e) => handleFileDragOver(e, file)}
-                    onDragLeave={(e) => handleFileDragLeave(e, file)}
-                    onDrop={(e) => handleFileDrop(e, file)}
-                    onDragEnd={handleFileDragEnd}
-                  >
-                    <div className="relative mb-2 pointer-events-none">
-                      {getFileIcon(file, viewMode)}
+              <div
+                className="relative w-full"
+                style={{ height: gridVirtualizer.getTotalSize() }}
+              >
+                {gridVirtualizer.getVirtualItems().map((vRow) => {
+                  const start = vRow.index * gridCols;
+                  const rowFiles = files.slice(start, start + gridCols);
+                  return (
+                    <div
+                      key={vRow.key}
+                      data-index={vRow.index}
+                      ref={gridVirtualizer.measureElement}
+                      className="absolute top-0 left-0 w-full"
+                      style={{
+                        transform: `translateY(${vRow.start}px)`,
+                      }}
+                    >
+                      <div
+                        className="grid gap-4 pb-4"
+                        style={{
+                          gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
+                        }}
+                      >
+                        {rowFiles.map((file) => {
+                          const isSelected = selectedFiles.some(
+                            (f) => f.path === file.path,
+                          );
+                          return (
+                            <div
+                              key={file.path}
+                              data-file-path={file.path}
+                              draggable={true}
+                              className={cn(
+                                "group flex flex-col items-center p-3 rounded-none border-2 border-transparent transition-all cursor-pointer hover:bg-muted/50 select-none",
+                                isSelected &&
+                                  "bg-accent-brand/10 border-accent-brand/40",
+                                dragState.target?.path === file.path &&
+                                  "bg-accent-brand/20 border-accent-brand border-dashed",
+                                dragState.files.some(
+                                  (f) => f.path === file.path,
+                                ) && "opacity-50",
+                              )}
+                              title={file.name}
+                              onClick={(e) => handleFileClick(file, e)}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onContextMenu?.(e, file);
+                              }}
+                              onDragStart={(e) => handleFileDragStart(e, file)}
+                              onDragOver={(e) => handleFileDragOver(e, file)}
+                              onDragLeave={(e) => handleFileDragLeave(e, file)}
+                              onDrop={(e) => handleFileDrop(e, file)}
+                              onDragEnd={handleFileDragEnd}
+                            >
+                              <div className="relative mb-2 pointer-events-none">
+                                {getFileIcon(file, viewMode)}
+                              </div>
+                              <div className="w-full flex flex-col items-center pointer-events-none">
+                                {editingFile?.path === file.path ? (
+                                  <input
+                                    ref={editInputRef}
+                                    type="text"
+                                    value={editingName}
+                                    onChange={(e) =>
+                                      setEditingName(e.target.value)
+                                    }
+                                    onKeyDown={handleEditKeyDown}
+                                    onBlur={handleEditConfirm}
+                                    className="max-w-[120px] min-w-[60px] w-fit border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 text-center pointer-events-auto"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                  />
+                                ) : (
+                                  <p
+                                    className="text-[11px] font-bold tracking-tight text-center truncate w-full px-1"
+                                    title={file.name}
+                                  >
+                                    {file.name}
+                                  </p>
+                                )}
+                                {file.type === "file" &&
+                                  file.size !== undefined &&
+                                  file.size !== null && (
+                                    <p className="text-[10px] font-medium text-muted-foreground/60 mt-0.5">
+                                      {formatFileSize(file.size)}
+                                    </p>
+                                  )}
+                                {file.type === "link" && file.linkTarget && (
+                                  <p
+                                    className="text-[10px] text-accent-brand mt-0.5 truncate w-full text-center"
+                                    title={file.linkTarget}
+                                  >
+                                    → {file.linkTarget}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-
-                    <div className="w-full flex flex-col items-center pointer-events-none">
-                      {editingFile?.path === file.path ? (
-                        <input
-                          ref={editInputRef}
-                          type="text"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onKeyDown={handleEditKeyDown}
-                          onBlur={handleEditConfirm}
-                          className="max-w-[120px] min-w-[60px] w-fit border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 text-center pointer-events-auto"
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        />
-                      ) : (
-                        <p
-                          className="text-[11px] font-bold tracking-tight text-center truncate w-full px-1"
-                          title={file.name}
-                        >
-                          {file.name}
-                        </p>
-                      )}
-                      {file.type === "file" &&
-                        file.size !== undefined &&
-                        file.size !== null && (
-                          <p className="text-[10px] font-medium text-muted-foreground/60 mt-0.5">
-                            {formatFileSize(file.size)}
-                          </p>
-                        )}
-                      {file.type === "link" && file.linkTarget && (
-                        <p
-                          className="text-[10px] text-accent-brand mt-0.5 truncate w-full text-center"
-                          title={file.linkTarget}
-                        >
-                          → {file.linkTarget}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="flex flex-col">
@@ -952,91 +1122,106 @@ export function FileManagerGrid({
                   onCancel={onCancelCreate}
                 />
               )}
-              {files.map((file) => {
-                const isSelected = selectedFiles.some(
-                  (f) => f.path === file.path,
-                );
-
-                return (
-                  <div
-                    key={file.path}
-                    data-file-path={file.path}
-                    draggable={true}
-                    className={cn(
-                      "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center text-xs cursor-pointer border-b border-border hover:bg-muted/50 last:border-0 rounded-none select-none transition-colors",
-                      isSelected && "bg-accent-brand/10",
-                      dragState.target?.path === file.path &&
-                        "bg-accent-brand/20 border-accent-brand border-dashed",
-                      dragState.files.some((f) => f.path === file.path) &&
-                        "opacity-50",
-                    )}
-                    onClick={(e) => handleFileClick(file, e)}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onContextMenu?.(e, file);
-                    }}
-                    onDragStart={(e) => handleFileDragStart(e, file)}
-                    onDragOver={(e) => handleFileDragOver(e, file)}
-                    onDragLeave={(e) => handleFileDragLeave(e, file)}
-                    onDrop={(e) => handleFileDrop(e, file)}
-                    onDragEnd={handleFileDragEnd}
-                  >
-                    <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
-                      <div className="shrink-0">
-                        {getFileIcon(file, viewMode)}
-                      </div>
-                      {editingFile?.path === file.path ? (
-                        <input
-                          ref={editInputRef}
-                          type="text"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onKeyDown={handleEditKeyDown}
-                          onBlur={handleEditConfirm}
-                          className="flex-1 min-w-0 max-w-[200px] border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto"
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        />
-                      ) : (
-                        <span
-                          className="font-bold truncate tracking-tight"
-                          title={file.name}
-                        >
-                          {file.name}
-                          {file.type === "link" && file.linkTarget && (
-                            <span className="text-accent-brand ml-1 normal-case font-normal">
-                              → {file.linkTarget}
+              <div
+                className="relative w-full"
+                style={{ height: listVirtualizer.getTotalSize() }}
+              >
+                {listVirtualizer.getVirtualItems().map((vItem) => {
+                  const file = files[vItem.index];
+                  if (!file) return null;
+                  const isSelected = selectedFiles.some(
+                    (f) => f.path === file.path,
+                  );
+                  return (
+                    <div
+                      key={vItem.key}
+                      data-index={vItem.index}
+                      ref={listVirtualizer.measureElement}
+                      className="absolute top-0 left-0 w-full"
+                      style={{
+                        transform: `translateY(${vItem.start}px)`,
+                      }}
+                    >
+                      <div
+                        data-file-path={file.path}
+                        draggable={true}
+                        className={cn(
+                          "grid grid-cols-[1fr_120px_150px_80px_90px] gap-2 px-4 py-2 items-center text-xs cursor-pointer border-b border-border hover:bg-muted/50 rounded-none select-none transition-colors",
+                          isSelected && "bg-accent-brand/10",
+                          dragState.target?.path === file.path &&
+                            "bg-accent-brand/20 border-accent-brand border-dashed",
+                          dragState.files.some((f) => f.path === file.path) &&
+                            "opacity-50",
+                        )}
+                        onClick={(e) => handleFileClick(file, e)}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onContextMenu?.(e, file);
+                        }}
+                        onDragStart={(e) => handleFileDragStart(e, file)}
+                        onDragOver={(e) => handleFileDragOver(e, file)}
+                        onDragLeave={(e) => handleFileDragLeave(e, file)}
+                        onDrop={(e) => handleFileDrop(e, file)}
+                        onDragEnd={handleFileDragEnd}
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden pointer-events-none">
+                          <div className="shrink-0">
+                            {getFileIcon(file, viewMode)}
+                          </div>
+                          {editingFile?.path === file.path ? (
+                            <input
+                              ref={editInputRef}
+                              type="text"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              onKeyDown={handleEditKeyDown}
+                              onBlur={handleEditConfirm}
+                              className="flex-1 min-w-0 max-w-[200px] border border-accent-brand/60 bg-card px-2 py-1 text-xs rounded-none outline-none focus:ring-1 focus:ring-accent-brand/50 pointer-events-auto"
+                              onClick={(e) => e.stopPropagation()}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span
+                              className="font-bold truncate tracking-tight"
+                              title={file.name}
+                            >
+                              {file.name}
+                              {file.type === "link" && file.linkTarget && (
+                                <span className="text-accent-brand ml-1 normal-case font-normal">
+                                  → {file.linkTarget}
+                                </span>
+                              )}
                             </span>
                           )}
+                        </div>
+
+                        <span className="text-[10px] text-muted-foreground pointer-events-none">
+                          {file.modified || "—"}
                         </span>
-                      )}
+
+                        <span className="text-[10px] text-muted-foreground truncate hidden md:block pointer-events-none">
+                          {file.owner
+                            ? `${file.owner}${file.group ? `:${file.group}` : ""}`
+                            : "—"}
+                        </span>
+
+                        <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none">
+                          {file.type === "file" &&
+                          file.size !== undefined &&
+                          file.size !== null
+                            ? formatFileSize(file.size)
+                            : "—"}
+                        </span>
+
+                        <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none">
+                          {file.permissions || "—"}
+                        </span>
+                      </div>
                     </div>
-
-                    <span className="text-[10px] text-muted-foreground pointer-events-none">
-                      {file.modified || "—"}
-                    </span>
-
-                    <span className="text-[10px] text-muted-foreground truncate hidden md:block pointer-events-none">
-                      {file.owner
-                        ? `${file.owner}${file.group ? `:${file.group}` : ""}`
-                        : "—"}
-                    </span>
-
-                    <span className="text-[10px] text-right text-muted-foreground tabular-nums pointer-events-none">
-                      {file.type === "file" &&
-                      file.size !== undefined &&
-                      file.size !== null
-                        ? formatFileSize(file.size)
-                        : "—"}
-                    </span>
-
-                    <span className="text-[10px] text-right font-mono text-muted-foreground/60 pointer-events-none">
-                      {file.permissions || "—"}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
 

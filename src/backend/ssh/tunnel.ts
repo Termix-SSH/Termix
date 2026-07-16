@@ -61,6 +61,7 @@ import {
   handleC2SRelayTest,
   type C2SOpenMessage,
 } from "./tunnel-c2s-relay.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 import { handleSocks5Connect } from "./tunnel-socks5-relay.js";
 
 const app = express();
@@ -1507,6 +1508,27 @@ async function connectSSHTunnel(
     }
   }
 
+  try {
+    await resolveSshConnectConfigHost(connOptions);
+  } catch (error) {
+    tunnelLogger.error("Tunnel source hostname resolution failed", error, {
+      operation: "tunnel_dns_resolve",
+      tunnelName,
+      sourceHost: `${tunnelConfig.sourceIP}:${tunnelConfig.sourceSSHPort}`,
+      retryAttempt,
+    });
+    broadcastTunnelStatus(tunnelName, {
+      connected: false,
+      status: CONNECTION_STATES.FAILED,
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Failed to resolve tunnel source hostname",
+    });
+    tunnelConnecting.delete(tunnelName);
+    return;
+  }
+
   conn.connect(connOptions);
 }
 
@@ -1691,6 +1713,10 @@ async function killRemoteTunnelByMarker(
           { cause: socks5Error },
         );
       }
+    }
+
+    if (!connOptions.sock) {
+      await resolveSshConnectConfigHost(connOptions);
     }
 
     return new Promise<Client>((resolve, reject) => {
@@ -1937,6 +1963,7 @@ app.post(
     }
 
     const tunnelName = tunnelConfig.name;
+    tunnelConfig.requestingUserId = userId;
 
     try {
       if (!validateTunnelConfig(tunnelName, tunnelConfig)) {
@@ -1966,10 +1993,6 @@ app.post(
             tunnelName,
           });
           return res.status(403).json({ error: "Access denied to this host" });
-        }
-
-        if (accessInfo.isShared && !accessInfo.isOwner) {
-          tunnelConfig.requestingUserId = userId;
         }
       }
 
@@ -2033,22 +2056,47 @@ app.post(
                 );
               }
             } else {
+              if (!endpointHost.id) {
+                throw new Error("Endpoint host not found");
+              }
+
+              const endpointAccess = await permissionManager.canAccessHost(
+                userId,
+                endpointHost.id,
+                "read",
+              );
+              if (!endpointAccess.hasAccess) {
+                tunnelLogger.warn(
+                  "User attempted tunnel connect without endpoint access",
+                  {
+                    operation: "tunnel_connect_endpoint_unauthorized",
+                    userId,
+                    hostId: endpointHost.id,
+                    tunnelName,
+                  },
+                );
+                throw new Error("Endpoint host not found");
+              }
+
               tunnelConfig.endpointIP = endpointHost.ip;
               tunnelConfig.endpointSSHPort = endpointHost.port;
               tunnelConfig.endpointUsername = endpointHost.username;
               tunnelConfig.endpointAuthMethod = endpointHost.authType;
               tunnelConfig.endpointKeyType = endpointHost.keyType;
-              tunnelConfig.endpointCredentialId = endpointHost.credentialId;
-              tunnelConfig.endpointUserId = endpointHost.userId;
+              tunnelConfig.endpointCredentialId =
+                endpointHost.userId === userId
+                  ? endpointHost.credentialId
+                  : undefined;
+              tunnelConfig.endpointUserId = userId;
 
               // Resolve credentials server-side instead of from HTTP response
-              if (endpointHost.id && endpointHost.userId) {
+              if (endpointHost.id) {
                 try {
                   const { resolveHostById } =
                     await import("./host-resolver.js");
                   const resolved = await resolveHostById(
                     endpointHost.id,
-                    endpointHost.userId,
+                    userId,
                   );
                   if (resolved) {
                     tunnelConfig.endpointPassword = resolved.password;

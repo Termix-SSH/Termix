@@ -88,6 +88,7 @@ interface FileViewerProps {
   content?: string;
   savedContent?: string;
   isLoading?: boolean;
+  isSaving?: boolean;
   isEditable?: boolean;
   resetKey?: number;
   onContentChange?: (content: string) => void;
@@ -271,6 +272,7 @@ export function FileViewer({
   content = "",
   savedContent = "",
   isLoading = false,
+  isSaving = false,
   isEditable = false,
   resetKey,
   onContentChange,
@@ -353,6 +355,7 @@ export function FileViewer({
   };
 
   const handleSave = () => {
+    if (isSaving) return;
     onSave?.(editedContent);
   };
 
@@ -407,7 +410,7 @@ export function FileViewer({
   return (
     <div className="h-full flex flex-col bg-background">
       <div className="flex-shrink-0 bg-card border-b border-border p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className={cn("p-2 rounded-lg bg-muted", fileTypeInfo.color)}>
               {fileTypeInfo.icon}
@@ -434,7 +437,7 @@ export function FileViewer({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
             {isEditable && (
               <Button
                 variant="ghost"
@@ -490,6 +493,7 @@ export function FileViewer({
                   variant="outline"
                   size="sm"
                   onClick={handleRevert}
+                  disabled={isSaving}
                   className="flex items-center gap-2"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -499,6 +503,7 @@ export function FileViewer({
                   variant="default"
                   size="sm"
                   onClick={handleSave}
+                  disabled={isSaving}
                   className="flex items-center gap-2"
                 >
                   <Save className="w-4 h-4" />

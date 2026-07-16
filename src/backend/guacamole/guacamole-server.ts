@@ -3,6 +3,10 @@ import { guacLogger } from "../utils/logger.js";
 import { GuacamoleTokenService } from "./token-service.js";
 import { getDb } from "../database/db/index.js";
 import { resolveGuacdOptions } from "../utils/guacd-config.js";
+import fs from "fs";
+import path from "path";
+import { sessionRecordings } from "../database/db/schema.js";
+import type { GuacamoleRecordingMetadata } from "./token-service.js";
 
 const tokenService = GuacamoleTokenService.getInstance();
 
@@ -21,6 +25,63 @@ function readGuacdOptions(): { host: string; port: number } {
 }
 
 const GUAC_WS_PORT = 30008;
+const DATA_DIR = process.env.DATA_DIR || "./db/data";
+const GUACAMOLE_RECORDINGS_DIR =
+  process.env.GUACD_RECORDING_BACKEND_PATH ||
+  path.join(DATA_DIR, "session_recordings", "guacamole");
+
+type GuacamoleClientConnection = {
+  connectionSettings?: {
+    connection?: { type?: string };
+    recording?: GuacamoleRecordingMetadata;
+  };
+};
+
+async function persistGuacamoleRecording(
+  clientConnection: GuacamoleClientConnection,
+): Promise<void> {
+  const recording = clientConnection.connectionSettings?.recording;
+  if (!recording) return;
+
+  const resolvedPath = path.resolve(GUACAMOLE_RECORDINGS_DIR, recording.path);
+  const allowedBase = `${path.resolve(GUACAMOLE_RECORDINGS_DIR)}${path.sep}`;
+  if (!resolvedPath.startsWith(allowedBase)) return;
+
+  // guacd may flush/rename the recording just after the websocket closes.
+  for (
+    let attempt = 0;
+    attempt < 10 && !fs.existsSync(resolvedPath);
+    attempt++
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (!fs.existsSync(resolvedPath)) {
+    guacLogger.warn("Guacamole recording file was not found", {
+      operation: "guac_recording_missing",
+      hostId: recording.hostId,
+      path: resolvedPath,
+    });
+    return;
+  }
+
+  const endedAt = new Date();
+  const startedAt = new Date(recording.startedAt);
+  await getDb()
+    .insert(sessionRecordings)
+    .values({
+      hostId: recording.hostId,
+      userId: recording.userId,
+      startedAt: startedAt.toISOString(),
+      endedAt: endedAt.toISOString(),
+      duration: Math.max(
+        0,
+        Math.floor((endedAt.getTime() - startedAt.getTime()) / 1000),
+      ),
+      recordingPath: resolvedPath,
+      protocol: recording.protocol,
+      format: "guacamole",
+    });
+}
 
 const websocketOptions = {
   port: GUAC_WS_PORT,
@@ -41,7 +102,7 @@ const clientOptions = {
     },
   },
   allowedUnencryptedConnectionSettings: {
-    rdp: ["width", "height"],
+    rdp: ["width", "height", "dpi"],
     vnc: ["width", "height"],
     telnet: ["width", "height"],
   },
@@ -89,35 +150,31 @@ function createGuacServer(): GuacamoleLite {
     clientOptions,
   );
 
-  server.on(
-    "open",
-    (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
-      guacLogger.info("Guacamole connection opened", {
-        operation: "guac_connection_open",
-        type: clientConnection.connectionSettings?.type,
-      });
-    },
-  );
+  server.on("open", (clientConnection: GuacamoleClientConnection) => {
+    guacLogger.info("Guacamole connection opened", {
+      operation: "guac_connection_open",
+      type: clientConnection.connectionSettings?.connection?.type,
+    });
+  });
 
-  server.on(
-    "close",
-    (clientConnection: { connectionSettings?: Record<string, unknown> }) => {
-      guacLogger.info("Guacamole connection closed", {
-        operation: "guac_connection_close",
-        type: clientConnection.connectionSettings?.type,
+  server.on("close", (clientConnection: GuacamoleClientConnection) => {
+    guacLogger.info("Guacamole connection closed", {
+      operation: "guac_connection_close",
+      type: clientConnection.connectionSettings?.connection?.type,
+    });
+    persistGuacamoleRecording(clientConnection).catch((error) => {
+      guacLogger.error("Failed to persist Guacamole recording", error, {
+        operation: "guac_recording_persist_error",
       });
-    },
-  );
+    });
+  });
 
   server.on(
     "error",
-    (
-      clientConnection: { connectionSettings?: Record<string, unknown> },
-      error: Error,
-    ) => {
+    (clientConnection: GuacamoleClientConnection, error: Error) => {
       guacLogger.error("Guacamole connection error", error, {
         operation: "guac_connection_error",
-        type: clientConnection.connectionSettings?.type,
+        type: clientConnection.connectionSettings?.connection?.type,
       });
     },
   );

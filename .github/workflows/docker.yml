@@ -14,6 +14,10 @@ on:
         options:
           - Development
           - Production
+      source_ref:
+        description: "Git ref/SHA to build (defaults to the workflow ref)"
+        required: false
+        default: ""
   workflow_call:
     inputs:
       version:
@@ -29,6 +33,11 @@ on:
         required: false
         type: boolean
         default: false
+      source_ref:
+        description: "Git ref/SHA to build"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   build:
@@ -37,7 +46,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+
+      - name: Resolve source revision
+        run: echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -98,7 +111,7 @@ jobs:
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.created=${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

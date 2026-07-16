@@ -81,6 +81,7 @@ export function FileWindow({
 
   const [content, setContent] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isEditable, setIsEditable] = useState(false);
   const [pendingContent, setPendingContent] = useState<string>("");
   const [resetKey, setResetKey] = useState(0);
@@ -309,7 +310,7 @@ export function FileWindow({
 
   const handleSave = async (newContent: string) => {
     try {
-      setIsLoading(true);
+      setIsSaving(true);
 
       await ensureSSHConnection();
 
@@ -340,7 +341,7 @@ export function FileWindow({
         );
       }
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -553,6 +554,7 @@ export function FileWindow({
         content={pendingContent || content}
         savedContent={content}
         isLoading={isLoading}
+        isSaving={isSaving}
         resetKey={resetKey}
         onRevert={handleRevert}
         isEditable={isEditable}

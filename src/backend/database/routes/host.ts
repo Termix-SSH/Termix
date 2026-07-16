@@ -25,7 +25,10 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
-import { pickResolvedUsername } from "../../ssh/credential-username.js";
+import {
+  pickResolvedPassword,
+  pickResolvedUsername,
+} from "../../ssh/credential-username.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -40,6 +43,10 @@ import { registerHostAutostartRoutes } from "./host-autostart-routes.js";
 import { registerHostInternalRoutes } from "./host-internal-routes.js";
 import { registerHostNetworkRoutes } from "./host-network-routes.js";
 import { registerHostBulkRoutes } from "./host-bulk-routes.js";
+import {
+  applyHostEnrollmentDefaults,
+  requireHostEnrollmentAccessForPath,
+} from "./host-enrollment-auth.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 
 const router = express.Router();
@@ -161,9 +168,10 @@ registerHostInternalRoutes(router);
  *         description: Failed to save SSH data.
  */
 router.post(
-  "/db/host",
+  ["/db/host", "/enroll"],
   authenticateJWT,
   requireDataAccess,
+  requireHostEnrollmentAccessForPath,
   upload.single("key"),
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
@@ -194,6 +202,10 @@ router.post(
       }
     } else {
       hostData = req.body;
+    }
+
+    if (req.path === "/enroll") {
+      hostData = applyHostEnrollmentDefaults(hostData);
     }
 
     const {
@@ -259,6 +271,8 @@ router.post(
       rdpPort,
       vncPort,
       telnetPort,
+      rdpAuthType,
+      rdpCredentialId,
       rdpUser,
       rdpPassword,
       rdpDomain,
@@ -268,6 +282,8 @@ router.post(
       vncCredentialId,
       vncPassword,
       vncUser,
+      telnetAuthType,
+      telnetCredentialId,
       telnetUser,
       telnetPassword,
     } = hostData;
@@ -385,6 +401,11 @@ router.post(
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
       telnetPort: telnetPort || 23,
+      rdpAuthType: enableRdp ? rdpAuthType || null : null,
+      rdpCredentialId:
+        enableRdp && rdpAuthType === "credential" && rdpCredentialId
+          ? rdpCredentialId
+          : null,
       rdpUser: rdpUser || null,
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
@@ -395,6 +416,11 @@ router.post(
           ? vncCredentialId
           : null,
       vncUser: vncUser || null,
+      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
+      telnetCredentialId:
+        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
+          ? telnetCredentialId
+          : null,
       telnetUser: telnetUser || null,
     };
 
@@ -433,7 +459,12 @@ router.post(
       sshDataObj.key = key || null;
       sshDataObj.keyPassword = keyPassword || null;
       sshDataObj.keyType = keyType;
-      sshDataObj.password = null;
+      sshDataObj.password = password || null;
+    } else if (effectiveAuthType === "credential") {
+      sshDataObj.password = password || null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else if (effectiveAuthType === "agent") {
       sshDataObj.password = null;
       sshDataObj.key = null;
@@ -520,6 +551,67 @@ router.post(
   },
 );
 
+/**
+ * @openapi
+ * /host/enroll:
+ *   post:
+ *     summary: Enroll a host with an API key
+ *     description: Creates a host owned by the user assigned to the API key. The user's encrypted data must be unlocked by an active sign-in.
+ *     tags:
+ *       - Host Enrollment
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [ip]
+ *             properties:
+ *               name:
+ *                 type: string
+ *               ip:
+ *                 type: string
+ *               port:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 65535
+ *                 default: 22
+ *               username:
+ *                 type: string
+ *               authType:
+ *                 type: string
+ *                 enum: [none, password, key, credential, agent]
+ *                 default: none
+ *               password:
+ *                 type: string
+ *               folder:
+ *                 type: string
+ *               tags:
+ *                 oneOf:
+ *                   - type: string
+ *                   - type: array
+ *                     items:
+ *                       type: string
+ *               enableTerminal:
+ *                 type: boolean
+ *               enableFileManager:
+ *                 type: boolean
+ *               enableTunnel:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Host enrolled successfully.
+ *       400:
+ *         description: Invalid host data.
+ *       401:
+ *         description: Missing or invalid API key.
+ *       423:
+ *         description: The API key user's encrypted data is locked.
+ *       500:
+ *         description: Failed to enroll the host.
+ */
 /**
  * @openapi
  * /host/quick-connect:
@@ -642,7 +734,7 @@ router.post(
 
         const cred = credentials[0];
 
-        resolvedPassword = cred.password as string | undefined;
+        resolvedPassword = pickResolvedPassword(password, cred.password);
         resolvedKey = cred.privateKey as string | undefined;
         resolvedKeyPassword = cred.keyPassword as string | undefined;
         resolvedKeyType = cred.keyType as string | undefined;
@@ -835,6 +927,8 @@ router.put(
       rdpPort,
       vncPort,
       telnetPort,
+      rdpAuthType,
+      rdpCredentialId,
       rdpUser,
       rdpPassword,
       rdpDomain,
@@ -844,6 +938,8 @@ router.put(
       vncCredentialId,
       vncPassword,
       vncUser,
+      telnetAuthType,
+      telnetCredentialId,
       telnetUser,
       telnetPassword,
     } = hostData;
@@ -958,6 +1054,11 @@ router.put(
       rdpPort: rdpPort || 3389,
       vncPort: vncPort || 5900,
       telnetPort: telnetPort || 23,
+      rdpAuthType: enableRdp ? rdpAuthType || null : null,
+      rdpCredentialId:
+        enableRdp && rdpAuthType === "credential" && rdpCredentialId
+          ? rdpCredentialId
+          : null,
       rdpUser: rdpUser || null,
       rdpDomain: rdpDomain || null,
       rdpSecurity: rdpSecurity || null,
@@ -968,6 +1069,11 @@ router.put(
           ? vncCredentialId
           : null,
       vncUser: vncUser || null,
+      telnetAuthType: enableTelnet ? telnetAuthType || null : null,
+      telnetCredentialId:
+        enableTelnet && telnetAuthType === "credential" && telnetCredentialId
+          ? telnetCredentialId
+          : null,
       telnetUser: telnetUser || null,
     };
 
@@ -1015,7 +1121,12 @@ router.put(
       if (keyType) {
         sshDataObj.keyType = keyType;
       }
-      sshDataObj.password = null;
+      sshDataObj.password = password || null;
+    } else if (effectiveAuthType === "credential") {
+      sshDataObj.password = password || null;
+      sshDataObj.key = null;
+      sshDataObj.keyPassword = null;
+      sshDataObj.keyType = null;
     } else if (effectiveAuthType === "agent") {
       sshDataObj.password = null;
       sshDataObj.key = null;
@@ -1065,6 +1176,7 @@ router.put(
           credentialId: hosts.credentialId,
           rdpCredentialId: hosts.rdpCredentialId,
           vncCredentialId: hosts.vncCredentialId,
+          telnetCredentialId: hosts.telnetCredentialId,
           authType: hosts.authType,
         })
         .from(hosts)
@@ -1115,12 +1227,20 @@ router.put(
           sshDataObj.vncCredentialId !== undefined
             ? sshDataObj.vncCredentialId
             : hostRecord[0].vncCredentialId;
+        const newTelnetCredId =
+          sshDataObj.telnetCredentialId !== undefined
+            ? sshDataObj.telnetCredentialId
+            : hostRecord[0].telnetCredentialId;
         const hadCredential =
           hostRecord[0].credentialId !== null ||
           hostRecord[0].rdpCredentialId !== null ||
-          hostRecord[0].vncCredentialId !== null;
+          hostRecord[0].vncCredentialId !== null ||
+          hostRecord[0].telnetCredentialId !== null;
         const willHaveCredential =
-          newCredId !== null || newRdpCredId !== null || newVncCredId !== null;
+          newCredId !== null ||
+          newRdpCredId !== null ||
+          newVncCredId !== null ||
+          newTelnetCredId !== null;
         if (hadCredential && !willHaveCredential) {
           await db
             .delete(hostAccess)
@@ -1308,6 +1428,7 @@ router.get(
           rdpPort: hosts.rdpPort,
           vncPort: hosts.vncPort,
           telnetPort: hosts.telnetPort,
+          rdpAuthType: hosts.rdpAuthType,
           rdpCredentialId: hosts.rdpCredentialId,
           rdpUser: hosts.rdpUser,
           rdpPassword: hosts.rdpPassword,
@@ -1318,6 +1439,8 @@ router.get(
           vncCredentialId: hosts.vncCredentialId,
           vncUser: hosts.vncUser,
           vncPassword: hosts.vncPassword,
+          telnetAuthType: hosts.telnetAuthType,
+          telnetCredentialId: hosts.telnetCredentialId,
           telnetUser: hosts.telnetUser,
           telnetPassword: hosts.telnetPassword,
 
@@ -1660,6 +1783,8 @@ router.get(
             rdpPort: resolvedHost.rdpPort || 3389,
             vncPort: resolvedHost.vncPort || 5900,
             telnetPort: resolvedHost.telnetPort || 23,
+            rdpAuthType: resolvedHost.rdpAuthType || null,
+            rdpCredentialId: resolvedHost.rdpCredentialId || null,
             rdpUser: resolvedHost.rdpUser || null,
             rdpPassword: resolvedHost.rdpPassword || null,
             rdpDomain: resolvedHost.rdpDomain || null,
@@ -1669,6 +1794,8 @@ router.get(
             vncCredentialId: resolvedHost.vncCredentialId || null,
             vncUser: resolvedHost.vncUser || null,
             vncPassword: resolvedHost.vncPassword || null,
+            telnetAuthType: resolvedHost.telnetAuthType || null,
+            telnetCredentialId: resolvedHost.telnetCredentialId || null,
             telnetUser: resolvedHost.telnetUser || null,
             telnetPassword: resolvedHost.telnetPassword || null,
             guacamoleConfig: resolvedHost.guacamoleConfig
@@ -2445,7 +2572,7 @@ async function resolveHostCredentials(
         const credential = credentials[0];
         const resolvedHost: Record<string, unknown> = {
           ...host,
-          password: credential.password,
+          password: pickResolvedPassword(host.password, credential.password),
           key: credential.key,
           keyPassword: credential.keyPassword,
           keyType: credential.keyType,

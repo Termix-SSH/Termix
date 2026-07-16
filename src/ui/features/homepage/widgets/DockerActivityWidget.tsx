@@ -10,6 +10,7 @@ import { GRID_SIZE } from "@/types/homepage-types";
 import { getRecentActivity } from "@/api/dashboard-api";
 import type { RecentActivityItem } from "@/api/dashboard-api";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 function relativeTime(ts: string): string {
   const diff = Date.now() - new Date(ts).getTime();
@@ -43,8 +44,9 @@ function DockerActivityWidget({
 
   useEffect(() => {
     fetchData();
-    const iv = setInterval(fetchData, 30_000);
-    return () => clearInterval(iv);
+    return runVisibleInterval(() => {
+      void fetchData();
+    }, 30_000);
   }, [maxItems]);
 
   if (loading) {

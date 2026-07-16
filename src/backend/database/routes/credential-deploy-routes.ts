@@ -3,7 +3,7 @@ import type {
   CredentialBackend,
 } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import ssh2Pkg from "ssh2";
 import { db } from "../db/index.js";
 import { hosts, sshCredentials } from "../db/schema.js";
@@ -87,6 +87,10 @@ async function deploySSHKeyToHost(
             }
 
             const keyPattern = keyParts[1];
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(keyPattern)) {
+              clearTimeout(checkTimeout);
+              return rejectCheck(new Error("Invalid public key data"));
+            }
 
             conn.exec(
               `if [ -f ~/.ssh/authorized_keys ]; then grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?; else echo 1; fi`,
@@ -192,6 +196,10 @@ async function deploySSHKeyToHost(
             }
 
             const keyPattern = keyParts[1];
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(keyPattern)) {
+              clearTimeout(verifyTimeout);
+              return rejectVerify(new Error("Invalid public key data"));
+            }
             conn.exec(
               `grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?`,
               (err, stream) => {
@@ -432,7 +440,12 @@ export function registerCredentialDeployRoutes(
           db
             .select()
             .from(sshCredentials)
-            .where(eq(sshCredentials.id, credentialId))
+            .where(
+              and(
+                eq(sshCredentials.id, credentialId),
+                eq(sshCredentials.userId, userId),
+              ),
+            )
             .limit(1),
           "ssh_credentials",
           userId,
@@ -462,7 +475,11 @@ export function registerCredentialDeployRoutes(
           });
         }
         const targetHost = await SimpleDBOps.select(
-          db.select().from(hosts).where(eq(hosts.id, targetHostId)).limit(1),
+          db
+            .select()
+            .from(hosts)
+            .where(and(eq(hosts.id, targetHostId), eq(hosts.userId, userId)))
+            .limit(1),
           "ssh_data",
           userId,
         );

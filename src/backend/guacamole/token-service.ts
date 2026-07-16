@@ -30,6 +30,15 @@ export interface GuacamoleConnectionSettings {
 
 export interface GuacamoleToken {
   connection: GuacamoleConnectionSettings;
+  recording?: GuacamoleRecordingMetadata;
+}
+
+export interface GuacamoleRecordingMetadata {
+  hostId: number;
+  userId: string;
+  protocol: "rdp" | "vnc" | "telnet";
+  path: string;
+  startedAt: string;
 }
 
 const CIPHER = "aes-256-cbc";
@@ -127,6 +136,7 @@ export class GuacamoleTokenService {
       guacdHost?: string;
       guacdPort?: number;
     } = {},
+    recording?: GuacamoleRecordingMetadata,
   ): string {
     const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
@@ -144,6 +154,7 @@ export class GuacamoleTokenService {
           ...settingsOptions,
         },
       },
+      recording,
     };
     return this.encryptToken(token);
   }
@@ -156,6 +167,7 @@ export class GuacamoleTokenService {
       guacdHost?: string;
       guacdPort?: number;
     } = {},
+    recording?: GuacamoleRecordingMetadata,
   ): string {
     const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
@@ -171,6 +183,7 @@ export class GuacamoleTokenService {
           ...settingsOptions,
         },
       },
+      recording,
     };
     return this.encryptToken(token);
   }
@@ -183,6 +196,7 @@ export class GuacamoleTokenService {
       guacdHost?: string;
       guacdPort?: number;
     } = {},
+    recording?: GuacamoleRecordingMetadata,
   ): string {
     const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
@@ -198,6 +212,7 @@ export class GuacamoleTokenService {
           ...settingsOptions,
         },
       },
+      recording,
     };
     return this.encryptToken(token);
   }

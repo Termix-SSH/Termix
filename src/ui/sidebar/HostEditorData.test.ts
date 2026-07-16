@@ -45,19 +45,19 @@ describe("buildHostEditorPayload auth field isolation", () => {
     expect(payload.password).toBe("newpass");
   });
 
-  it("only sends the credentialId when authType is credential", () => {
+  it("sends credentialId and optional password when authType is credential", () => {
     const form = {
       ...createHostEditorForm(null),
       authType: "credential" as const,
       credentialId: "7",
-      password: "leftover",
+      password: "host-specific-password",
       key: "leftover-key",
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
 
     expect(payload.credentialId).toBe(7);
-    expect(payload.password).toBeNull();
+    expect(payload.password).toBe("host-specific-password");
     expect(payload.key).toBeNull();
   });
 
@@ -119,5 +119,19 @@ describe("buildHostEditorPayload auth field isolation", () => {
     const tc = payload.terminalConfig as Record<string, unknown> | null;
 
     expect(tc?.agentSocketPath).toBeNull();
+  });
+
+  it("preserves sudo password autofill settings", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      sudoPasswordAutoFill: true,
+      sudoPassword: "sudo-secret",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.sudoPasswordAutoFill).toBe(true);
+    expect(tc?.sudoPassword).toBe("sudo-secret");
   });
 });

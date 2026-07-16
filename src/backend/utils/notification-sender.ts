@@ -1,4 +1,5 @@
 import { statsLogger } from "./logger.js";
+import { safeOutboundFetch } from "./safe-outbound-fetch.js";
 
 export interface AlertPayload {
   hostName: string;
@@ -36,7 +37,7 @@ async function fetchWithRetry(
   options: RequestInit,
 ): Promise<void> {
   const attempt = async () => {
-    const res = await fetch(url, options);
+    const res = await safeOutboundFetch(url, options);
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }

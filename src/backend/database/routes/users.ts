@@ -18,6 +18,10 @@ import {
   getRequestBasePath,
   getRequestBaseUrlWithForceHTTPS,
 } from "../../utils/request-origin.js";
+import {
+  getDesktopOidcCallbackUrl,
+  isOidcTokenCallback,
+} from "../../utils/oidc-desktop-callback.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
 import {
   getOIDCConfigFromEnv,
@@ -26,6 +30,8 @@ import {
   extractOidcGroups,
   loadProviderConfig,
   buildFetchOptions,
+  resolveProviderByIssuer,
+  validateLogoutToken,
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
@@ -652,7 +658,10 @@ router.get("/oidc/authorize", async (req, res) => {
     const referer = req.get("Referer");
     let frontendOrigin;
     if (desktopCallbackPort) {
-      frontendOrigin = `http://127.0.0.1:${desktopCallbackPort}/oidc-callback`;
+      frontendOrigin = getDesktopOidcCallbackUrl(desktopCallbackPort);
+      if (!frontendOrigin) {
+        return res.status(400).json({ error: "Invalid desktop callback port" });
+      }
     } else if (typeof appCallbackUrl === "string" && appCallbackUrl) {
       let callbackUrl: URL;
       try {
@@ -999,9 +1008,7 @@ router.get("/oidc/callback", async (req, res) => {
       });
       const ghRedirectUrl = new URL(frontendOrigin);
       ghRedirectUrl.searchParams.set("success", "true");
-      const ghIsTokenCallback =
-        frontendOrigin.startsWith("http://127.0.0.1:") ||
-        frontendOrigin.startsWith("termix-mobile:");
+      const ghIsTokenCallback = isOidcTokenCallback(frontendOrigin);
       const ghMaxAge =
         deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
           ? 30 * 24 * 60 * 60 * 1000
@@ -1108,25 +1115,20 @@ router.get("/oidc/callback", async (req, res) => {
     );
 
     if (tokenData.id_token) {
-      try {
-        userInfo = await verifyOIDCToken(
-          tokenData.id_token as string,
-          config.issuer_url,
-          config.client_id,
-          caCert,
-        );
-      } catch {
-        try {
-          const parts = (tokenData.id_token as string).split(".");
-          if (parts.length === 3) {
-            const payload = JSON.parse(
-              Buffer.from(parts[1], "base64").toString(),
-            );
-            userInfo = payload;
-          }
-        } catch (decodeError) {
-          authLogger.error("Failed to decode ID token payload:", decodeError);
-        }
+      userInfo = await verifyOIDCToken(
+        tokenData.id_token as string,
+        config.issuer_url,
+        config.client_id,
+        caCert,
+      );
+
+      const expectedNonce = (storedNonce as { value: string }).value;
+      if (userInfo.nonce !== expectedNonce) {
+        authLogger.warn("OIDC ID token nonce mismatch", {
+          operation: "oidc_nonce_mismatch",
+          providerId: callbackProviderId,
+        });
+        return res.status(401).json({ error: "Invalid OIDC token nonce" });
       }
     }
 
@@ -1464,10 +1466,16 @@ router.get("/oidc/callback", async (req, res) => {
       "oidc_role_shared_credentials",
     );
 
+    const oidcSub = typeof userInfo.sub === "string" ? userInfo.sub : null;
+    const oidcSid = typeof userInfo.sid === "string" ? userInfo.sid : null;
+
     const token = await authManager.generateJWTToken(userRecord.id, {
       deviceType: deviceInfo.type,
       deviceInfo: deviceInfo.deviceInfo,
       rememberMe: storedRememberMe,
+      oidcSub,
+      oidcSid,
+      ssoProviderId: callbackProviderDbId ?? null,
     });
 
     authLogger.success("OIDC login successful", {
@@ -1479,9 +1487,7 @@ router.get("/oidc/callback", async (req, res) => {
     const redirectUrl = new URL(frontendOrigin);
     redirectUrl.searchParams.set("success", "true");
 
-    const isTokenCallback =
-      frontendOrigin.startsWith("http://127.0.0.1:") ||
-      frontendOrigin.startsWith("termix-mobile:");
+    const isTokenCallback = isOidcTokenCallback(frontendOrigin);
 
     const maxAge =
       deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
@@ -1785,6 +1791,84 @@ router.post("/logout", authenticateJWT, async (req, res) => {
   } catch (err) {
     authLogger.error("Logout failed", err);
     return res.status(500).json({ error: "Logout failed" });
+  }
+});
+
+const seenLogoutJti = new Map<string, number>();
+const LOGOUT_JTI_TTL_MS = 5 * 60 * 1000;
+
+function pruneLogoutJti(now: number): void {
+  for (const [key, expiry] of seenLogoutJti) {
+    if (expiry <= now) seenLogoutJti.delete(key);
+  }
+}
+
+function isReplayedJti(jti: string): boolean {
+  const now = Date.now();
+  pruneLogoutJti(now);
+  return seenLogoutJti.has(jti);
+}
+
+function markLogoutJti(jti: string): void {
+  const now = Date.now();
+  pruneLogoutJti(now);
+  seenLogoutJti.set(jti, now + LOGOUT_JTI_TTL_MS);
+}
+
+router.post("/oidc/backchannel-logout", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+
+  try {
+    const logoutToken = (req.body as Record<string, unknown> | undefined)
+      ?.logout_token;
+    if (typeof logoutToken !== "string" || !logoutToken) {
+      return res.status(400).json({ error: "missing logout_token" });
+    }
+
+    let issuer: string | null = null;
+    try {
+      const parts = logoutToken.split(".");
+      if (parts.length === 3) {
+        const claims = JSON.parse(Buffer.from(parts[1], "base64").toString());
+        issuer = typeof claims.iss === "string" ? claims.iss : null;
+      }
+    } catch {
+      issuer = null;
+    }
+
+    if (!issuer) {
+      return res.status(400).json({ error: "invalid logout_token" });
+    }
+
+    const provider = await resolveProviderByIssuer(issuer);
+    if (!provider) {
+      authLogger.warn("Back-channel logout for unknown issuer", { issuer });
+      return res.status(400).json({ error: "unknown issuer" });
+    }
+
+    const claims = await validateLogoutToken(logoutToken, provider.config);
+
+    if (claims.jti && isReplayedJti(claims.jti)) {
+      return res.status(200).json({ ok: true });
+    }
+
+    try {
+      await authManager.revokeSessionsByOidc({
+        ssoProviderId: provider.providerDbId,
+        sub: claims.sub,
+        sid: claims.sid,
+      });
+    } catch (err) {
+      authLogger.error("OIDC back-channel session revocation failed", err);
+      return res.status(500).json({ error: "logout processing failed" });
+    }
+
+    markLogoutJti(claims.jti);
+
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    authLogger.error("OIDC back-channel logout failed", err);
+    return res.status(400).json({ error: "invalid logout_token" });
   }
 });
 

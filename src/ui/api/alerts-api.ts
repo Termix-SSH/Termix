@@ -40,6 +40,28 @@ export interface AlertFiring {
   ruleName?: string;
 }
 
+function stringValue(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function numberValue(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function nullableNumberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function boolValue(value: unknown): boolean {
+  return value === true || value === 1 || value === "1";
+}
+
+function severityValue(value: unknown): AlertFiring["severity"] {
+  return value === "info" || value === "critical" || value === "warning"
+    ? value
+    : "warning";
+}
+
 export async function getNotificationChannels(): Promise<
   NotificationChannel[]
 > {
@@ -91,6 +113,23 @@ function mapRule(r: Record<string, unknown>): AlertRule {
   };
 }
 
+export function mapAlertFiring(r: Record<string, unknown>): AlertFiring {
+  return {
+    id: numberValue(r.id),
+    userId: stringValue(r.userId ?? r.user_id),
+    ruleId: numberValue(r.ruleId ?? r.rule_id),
+    hostId: numberValue(r.hostId ?? r.host_id),
+    hostName: stringValue(r.hostName ?? r.host_name),
+    firedAt: stringValue(r.firedAt ?? r.fired_at, new Date(0).toISOString()),
+    resolvedAt: stringValue(r.resolvedAt ?? r.resolved_at) || null,
+    value: nullableNumberValue(r.value),
+    message: stringValue(r.message),
+    severity: severityValue(r.severity),
+    acknowledged: boolValue(r.acknowledged),
+    ruleName: stringValue(r.ruleName ?? r.rule_name) || undefined,
+  };
+}
+
 export async function getAlertRules(): Promise<AlertRule[]> {
   const res = await rbacApi.get("/alert-rules");
   return (res.data as Record<string, unknown>[]).map(mapRule);
@@ -121,7 +160,13 @@ export async function getAlertFirings(opts?: {
   acknowledged?: boolean;
 }): Promise<AlertFiring[]> {
   const res = await rbacApi.get("/alert-firings", { params: opts });
-  return (res.data as { firings: AlertFiring[] }).firings ?? res.data;
+  const data = res.data as { firings?: unknown } | unknown[];
+  const rows = Array.isArray(data)
+    ? data
+    : Array.isArray(data.firings)
+      ? data.firings
+      : [];
+  return rows.map((row) => mapAlertFiring(row as Record<string, unknown>));
 }
 
 export async function acknowledgeAlertFiring(id: number): Promise<void> {

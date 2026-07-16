@@ -4,7 +4,10 @@ import { createCorsMiddleware } from "../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
-import { pickResolvedUsername } from "./credential-username.js";
+import {
+  pickResolvedPassword,
+  pickResolvedUsername,
+} from "./credential-username.js";
 import { getDb } from "../database/db/index.js";
 import { hosts, sshCredentials } from "../database/db/schema.js";
 import { eq } from "drizzle-orm";
@@ -38,6 +41,7 @@ import { registerHostMetricsPreferencesRoutes } from "./host-metrics-preferences
 import { registerHostMetricsHistoryRoutes } from "./host-metrics-history-routes.js";
 import { AlertEngine } from "./alert-engine.js";
 import { registerManagerRoutes } from "./managers/index.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
 import { createJumpHostChain } from "./host-metrics-jump-hosts.js";
@@ -45,6 +49,7 @@ import {
   createConnectionLog,
   isTcpPingEnabled,
   supportsMetrics,
+  tcpPingThroughJumpHost,
 } from "./host-metrics-helpers.js";
 import { applyAgentAuth } from "./terminal-auth-helpers.js";
 import {
@@ -57,9 +62,12 @@ import {
 } from "./host-metrics-sessions.js";
 import {
   authFailureTracker,
+  hostPollCache,
   metricsCache,
+  metricsPollLimiter,
   pollingBackoff,
   requestQueue,
+  statusPollLimiter,
 } from "./host-metrics-state.js";
 
 const authManager = AuthManager.getInstance();
@@ -104,6 +112,7 @@ interface SSHHostWithCredentials {
   rdpPort?: number;
   vncPort?: number;
   telnetPort?: number;
+  vaultProfile?: { id?: number | null } | null;
 }
 
 type StatusEntry = {
@@ -163,11 +172,89 @@ class PollingManager {
   private activeViewers = new Map<number, Set<string>>();
   private viewerDetails = new Map<string, MetricsViewer>();
   private viewerCleanupInterval: NodeJS.Timeout;
+  /** Skip stacking another status/metrics poll while one is already running. */
+  private statusInFlight = new Set<number>();
+  private metricsInFlight = new Set<number>();
 
   constructor() {
     this.viewerCleanupInterval = setInterval(() => {
       this.cleanupInactiveViewers();
     }, 60000);
+  }
+
+  /** Spread timers so N hosts do not fire on the same wall-clock second. */
+  private intervalWithJitter(intervalMs: number, hostId: number): number {
+    const spread = Math.min(intervalMs * 0.2, 15_000);
+    const jitter = (hostId * 1103515245) % Math.max(1, Math.floor(spread));
+    return intervalMs + jitter;
+  }
+
+  private async resolveHostForPoll(
+    host: SSHHostWithCredentials,
+    userId: string,
+  ): Promise<SSHHostWithCredentials | null> {
+    const cached = hostPollCache.get(
+      host.id,
+      userId,
+    ) as SSHHostWithCredentials | null;
+    if (cached) {
+      return cached;
+    }
+
+    const refreshed = await fetchHostById(host.id, userId);
+    if (!refreshed) {
+      return null;
+    }
+
+    hostPollCache.set(host.id, userId, refreshed);
+    const config = this.pollingConfigs.get(host.id);
+    if (config) {
+      config.host = refreshed;
+      config.statsConfig = this.parseStatsConfig(refreshed.statsConfig);
+    }
+    return refreshed;
+  }
+
+  private scheduleStatusPoll(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): void {
+    if (this.statusInFlight.has(host.id)) {
+      return;
+    }
+    this.statusInFlight.add(host.id);
+    void statusPollLimiter
+      .run(() => this.pollHostStatus(host, viewerUserId))
+      .catch((err) => {
+        statsLogger.error("Status polling failed", err, {
+          operation: "status_poll_unhandled",
+          hostId: host.id,
+        });
+      })
+      .finally(() => {
+        this.statusInFlight.delete(host.id);
+      });
+  }
+
+  private scheduleMetricsPoll(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): void {
+    if (this.metricsInFlight.has(host.id)) {
+      return;
+    }
+    this.metricsInFlight.add(host.id);
+    void metricsPollLimiter
+      .run(() => this.pollHostMetrics(host, viewerUserId))
+      .catch((err) => {
+        statsLogger.error("Metrics polling failed", err, {
+          operation: "metrics_poll_unhandled",
+          hostId: host.id,
+        });
+      })
+      .finally(() => {
+        this.metricsInFlight.delete(host.id);
+      });
   }
 
   private getGlobalDefaults(): {
@@ -303,14 +390,17 @@ class PollingManager {
     this.pollingConfigs.set(host.id, config);
 
     if (isTcpPingEnabled(statsConfig)) {
-      const intervalMs = statsConfig.statusCheckInterval * 1000;
+      const intervalMs = this.intervalWithJitter(
+        statsConfig.statusCheckInterval * 1000,
+        host.id,
+      );
 
-      this.pollHostStatus(host, viewerUserId);
+      this.scheduleStatusPoll(host, viewerUserId);
 
       config.statusTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
         if (latestConfig && isTcpPingEnabled(latestConfig.statsConfig)) {
-          this.pollHostStatus(latestConfig.host, latestConfig.viewerUserId);
+          this.scheduleStatusPoll(latestConfig.host, latestConfig.viewerUserId);
         }
       }, intervalMs);
     } else {
@@ -318,9 +408,27 @@ class PollingManager {
     }
 
     if (!statusOnly && statsConfig.metricsEnabled && canCollectMetrics) {
-      const intervalMs = statsConfig.metricsInterval * 1000;
+      const intervalMs = this.intervalWithJitter(
+        statsConfig.metricsInterval * 1000,
+        host.id,
+      );
 
-      await this.pollHostMetrics(host, viewerUserId);
+      // First sample still awaited (gated) so callers can rely on a warm cache.
+      if (!this.metricsInFlight.has(host.id)) {
+        this.metricsInFlight.add(host.id);
+        try {
+          await metricsPollLimiter.run(() =>
+            this.pollHostMetrics(host, viewerUserId),
+          );
+        } catch (err) {
+          statsLogger.error("Metrics polling failed", err, {
+            operation: "metrics_poll_unhandled",
+            hostId: host.id,
+          });
+        } finally {
+          this.metricsInFlight.delete(host.id);
+        }
+      }
 
       config.metricsTimer = setInterval(() => {
         const latestConfig = this.pollingConfigs.get(host.id);
@@ -329,15 +437,10 @@ class PollingManager {
           latestConfig.statsConfig.metricsEnabled &&
           supportsMetrics(latestConfig.host)
         ) {
-          this.pollHostMetrics(
+          this.scheduleMetricsPoll(
             latestConfig.host,
             latestConfig.viewerUserId,
-          ).catch((err) => {
-            statsLogger.error("Metrics polling failed", err, {
-              operation: "metrics_poll_unhandled",
-              hostId: host.id,
-            });
-          });
+          );
         }
       }, intervalMs);
     } else {
@@ -350,30 +453,51 @@ class PollingManager {
     viewerUserId?: string,
   ): Promise<void> {
     const userId = viewerUserId || host.userId;
-    const refreshedHost = await fetchHostById(host.id, userId);
+    const refreshedHost = await this.resolveHostForPoll(host, userId);
     if (!refreshedHost) {
       return;
     }
 
     try {
-      let pingHost = refreshedHost.ip;
       const ct = refreshedHost.connectionType || "ssh";
       let pingPort: number;
       if (ct === "rdp") pingPort = refreshedHost.rdpPort ?? 3389;
       else if (ct === "vnc") pingPort = refreshedHost.vncPort ?? 5900;
       else if (ct === "telnet") pingPort = refreshedHost.telnetPort ?? 23;
       else pingPort = refreshedHost.port;
+
+      let isOnline: boolean;
       if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
-        const firstJump = await fetchHostById(
-          refreshedHost.jumpHosts[0].hostId,
+        const proxyConfig: SOCKS5Config | null =
+          refreshedHost.useSocks5 &&
+          (refreshedHost.socks5Host ||
+            (refreshedHost.socks5ProxyChain &&
+              refreshedHost.socks5ProxyChain.length > 0))
+            ? {
+                useSocks5: true,
+                socks5Host: refreshedHost.socks5Host,
+                socks5Port: refreshedHost.socks5Port,
+                socks5Username: refreshedHost.socks5Username,
+                socks5Password: refreshedHost.socks5Password,
+                socks5ProxyChain: refreshedHost.socks5ProxyChain,
+              }
+            : null;
+        const jumpClient = await createJumpHostChain(
+          refreshedHost.jumpHosts,
           userId,
+          proxyConfig,
         );
-        if (firstJump) {
-          pingHost = firstJump.ip;
-          pingPort = firstJump.port;
-        }
+        isOnline = jumpClient
+          ? await tcpPingThroughJumpHost(
+              jumpClient,
+              refreshedHost.ip,
+              pingPort,
+              5000,
+            )
+          : false;
+      } else {
+        isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
       }
-      const isOnline = await tcpPing(pingHost, pingPort, 5000);
       const statusEntry: StatusEntry = {
         status: isOnline ? "online" : "offline",
         lastChecked: new Date().toISOString(),
@@ -399,7 +523,7 @@ class PollingManager {
     viewerUserId?: string,
   ): Promise<void> {
     const userId = viewerUserId || host.userId;
-    const refreshedHost = await fetchHostById(host.id, userId);
+    const refreshedHost = await this.resolveHostForPoll(host, userId);
     if (!refreshedHost) {
       return;
     }
@@ -554,6 +678,9 @@ class PollingManager {
         this.metricsStore.delete(hostId);
       }
     }
+    hostPollCache.invalidate(hostId);
+    this.statusInFlight.delete(hostId);
+    this.metricsInFlight.delete(hostId);
   }
 
   stopMetricsOnly(hostId: number): void {
@@ -960,9 +1087,10 @@ async function resolveHostCredentials(
               host.overrideCredentialUsername,
             );
 
-            if (credential.password) {
-              baseHost.password = credential.password;
-            }
+            baseHost.password = pickResolvedPassword(
+              host.password,
+              credential.password,
+            );
             if (
               credential.key ||
               (credential as Record<string, unknown>).privateKey
@@ -1128,6 +1256,8 @@ async function buildSshConfig(
     // no credentials needed
   } else if (host.authType === "opkssh") {
     // cert auth setup happens in createSshFactory (needs client instance)
+  } else if (host.authType === "vault") {
+    // cert auth setup happens in createSshFactory (needs client instance)
   } else if (host.authType === "credential") {
     if (host.password) {
       base.password = host.password;
@@ -1186,6 +1316,10 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
       }
       const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
       await setupOPKSSHCertAuth(config, client, token, host.username);
+    } else if (host.authType === "vault") {
+      const { setupVaultSshSignerAuth } =
+        await import("./vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config, client, host);
     }
 
     const proxyConfig: SOCKS5Config | null =
@@ -1331,8 +1465,18 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
             client.connect(config);
           },
         );
-      } else {
+      } else if (config.sock) {
         client.connect(config);
+      } else {
+        resolveSshConnectConfigHost(config)
+          .then(() => {
+            client.connect(config);
+          })
+          .catch((error) => {
+            clearTimeout(timeout);
+            reject(error);
+          });
+        return;
       }
     });
   };
@@ -1645,7 +1789,10 @@ app.get("/status", async (req, res) => {
 
   const result: Record<number, StatusEntry> = {};
   for (const [id, entry] of pollingManager.getAllStatuses().entries()) {
-    result[id] = entry;
+    const access = await permissionManager.canAccessHost(userId, id, "read");
+    if (access.hasAccess) {
+      result[id] = entry;
+    }
   }
   res.json(result);
 });
@@ -1683,6 +1830,11 @@ app.get("/status/:id", validateHostId, async (req, res) => {
     });
   }
 
+  const access = await permissionManager.canAccessHost(userId, id, "read");
+  if (!access.hasAccess) {
+    return res.status(404).json({ error: "Status not available" });
+  }
+
   const statuses = pollingManager.getAllStatuses();
   if (statuses.size === 0) {
     await pollingManager.initializePolling(userId);
@@ -1710,7 +1862,7 @@ app.get("/status/:id", validateHostId, async (req, res) => {
  *       401:
  *         description: Session expired - please log in again.
  */
-app.post("/clear-connections", async (req, res) => {
+app.post("/clear-connections", requireAdmin, async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
 
   if (!SimpleDBOps.isUserDataUnlocked(userId)) {
@@ -1729,7 +1881,7 @@ app.post("/clear-connections", async (req, res) => {
  * /refresh:
  *   post:
  *     summary: Refresh polling
- *     description: Clears all SSH connections and refreshes host polling.
+ *     description: Refreshes host polling for the authenticated user.
  *     tags:
  *       - Host Metrics
  *     responses:
@@ -1747,8 +1899,6 @@ app.post("/refresh", async (req, res) => {
       code: "SESSION_EXPIRED",
     });
   }
-
-  connectionPool.clearAllConnections();
 
   await pollingManager.refreshHostPolling(userId);
   res.json({ message: "Polling refreshed" });
@@ -1799,6 +1949,7 @@ app.post("/host-updated", async (req, res) => {
   }
 
   try {
+    hostPollCache.invalidate(hostId);
     const host = await fetchHostById(hostId, userId);
     if (host) {
       connectionPool.clearKeyConnections(getPoolKey(host));
@@ -2070,6 +2221,10 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       }
       const { setupOPKSSHCertAuth } = await import("./opkssh-cert-auth.js");
       await setupOPKSSHCertAuth(config, client, token, host.username);
+    } else if (host.authType === "vault") {
+      const { setupVaultSshSignerAuth } =
+        await import("./vault-ssh-connect.js");
+      await setupVaultSshSignerAuth(config, client, host);
     }
 
     const connectionPromise = new Promise<{
@@ -2357,7 +2512,17 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
             }
           });
       } else {
-        client.connect(config);
+        resolveSshConnectConfigHost(config)
+          .then(() => {
+            client.connect(config);
+          })
+          .catch((error) => {
+            if (!isResolved) {
+              isResolved = true;
+              clearTimeout(timeout);
+              reject(error);
+            }
+          });
       }
     });
 

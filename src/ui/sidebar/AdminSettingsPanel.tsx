@@ -33,6 +33,7 @@ import {
   getCommandHistoryEnabled,
   updateCommandHistoryEnabled,
   isElectron,
+  getConfiguredServerUrl,
   getUserRoles,
 } from "@/main-axios";
 import {
@@ -69,7 +70,7 @@ import {
   type AdminUser,
 } from "./AdminManagementSections";
 import { toast } from "sonner";
-import { getBasePath } from "@/lib/base-path";
+import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
   AdminDatabaseSection,
   AdminGeneralSettingsSection,
@@ -717,17 +718,11 @@ export function AdminSettingsPanel() {
   async function handleExportDatabase() {
     setExportLoading(true);
     try {
-      const isDev =
-        !isElectron() &&
-        (window.location.port === "5173" ||
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1");
-
-      const apiUrl = isElectron()
-        ? `${window.configuredServerUrl}/database/export`
-        : isDev
-          ? `http://localhost:30001/database/export`
-          : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/export`;
+      const apiUrl = getDatabaseTransferUrl("export", {
+        electron: isElectron(),
+        configuredServerUrl: getConfiguredServerUrl(),
+        location: window.location,
+      });
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -769,17 +764,11 @@ export function AdminSettingsPanel() {
     }
     setImportLoading(true);
     try {
-      const isDev =
-        !isElectron() &&
-        (window.location.port === "5173" ||
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1");
-
-      const apiUrl = isElectron()
-        ? `${window.configuredServerUrl}/database/import`
-        : isDev
-          ? `http://localhost:30001/database/import`
-          : `${window.location.protocol}//${window.location.host}${getBasePath()}/database/import`;
+      const apiUrl = getDatabaseTransferUrl("import", {
+        electron: isElectron(),
+        configuredServerUrl: getConfiguredServerUrl(),
+        location: window.location,
+      });
 
       const formData = new FormData();
       formData.append("file", importFile);

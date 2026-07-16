@@ -4,6 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { SimpleDBOps } from "../utils/simple-db-ops.js";
 import { logger } from "../utils/logger.js";
 import {
+  pickResolvedPassword,
   pickResolvedUsername,
   expandOidcUsername,
 } from "./credential-username.js";
@@ -19,6 +20,14 @@ export async function resolveHostById(
   hostId: number,
   userId: string,
 ): Promise<SSHHost | null> {
+  const { PermissionManager } = await import("../utils/permission-manager.js");
+  const access = await PermissionManager.getInstance().canAccessHost(
+    userId,
+    hostId,
+    "read",
+  );
+  if (!access.hasAccess) return null;
+
   const db = getDb();
 
   const hostResults = await SimpleDBOps.select(
@@ -190,7 +199,7 @@ export async function resolveHostById(
 
       if (credentials.length > 0) {
         const cred = credentials[0] as Record<string, unknown>;
-        host.password = cred.password;
+        host.password = pickResolvedPassword(host.password, cred.password);
         // Prefer the normalised private key; fall back to raw key field
         host.key = (cred.privateKey || cred.key) as string | null;
         host.keyPassword = cred.keyPassword;

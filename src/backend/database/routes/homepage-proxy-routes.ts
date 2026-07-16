@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import express from "express";
 import https from "https";
 import http from "http";
+import { lookup } from "dns/promises";
+import { BlockList, isIP } from "net";
 import { homepageLogger } from "../../utils/logger.js";
 
 export const homepageProxyRouter = express.Router();
@@ -15,22 +17,95 @@ const proxyCache = new Map<string, ProxyCacheEntry>();
 const CACHE_SIZE = 50;
 const FETCH_TIMEOUT_MS = 8000;
 
-function fetchJson(url: string): Promise<unknown> {
+const blockedAddresses = new BlockList();
+for (const [network, prefix] of [
+  ["0.0.0.0", 8],
+  ["10.0.0.0", 8],
+  ["100.64.0.0", 10],
+  ["127.0.0.0", 8],
+  ["169.254.0.0", 16],
+  ["172.16.0.0", 12],
+  ["192.168.0.0", 16],
+  ["198.18.0.0", 15],
+  ["224.0.0.0", 4],
+  ["240.0.0.0", 4],
+] as const) {
+  blockedAddresses.addSubnet(network, prefix, "ipv4");
+}
+for (const [network, prefix] of [
+  ["::", 128],
+  ["::1", 128],
+  ["::ffff:0:0", 96],
+  ["fc00::", 7],
+  ["fe80::", 10],
+  ["ff00::", 8],
+] as const) {
+  blockedAddresses.addSubnet(network, prefix, "ipv6");
+}
+
+function isBlockedAddress(address: string): boolean {
+  const family = isIP(address);
+  return (
+    family === 0 ||
+    blockedAddresses.check(address, family === 4 ? "ipv4" : "ipv6")
+  );
+}
+
+async function resolvePublicUrl(rawUrl: string): Promise<{
+  url: URL;
+  address: string;
+}> {
+  const url = new URL(rawUrl);
+  if (
+    !["http:", "https:"].includes(url.protocol) ||
+    url.username ||
+    url.password
+  ) {
+    throw new Error("Invalid URL");
+  }
+
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  const addresses = isIP(hostname)
+    ? [{ address: hostname }]
+    : await lookup(hostname, { all: true, verbatim: true });
+  if (
+    addresses.length === 0 ||
+    addresses.some(({ address }) => isBlockedAddress(address))
+  ) {
+    throw new Error("Private destinations are not allowed");
+  }
+
+  return { url, address: addresses[0].address };
+}
+
+async function fetchJson(rawUrl: string): Promise<unknown> {
+  const { url, address } = await resolvePublicUrl(rawUrl);
   return new Promise((resolve, reject) => {
-    const mod = url.startsWith("https") ? https : http;
-    const req = mod.get(url, { timeout: FETCH_TIMEOUT_MS }, (res) => {
-      const chunks: Buffer[] = [];
-      res.on("data", (chunk: Buffer) => chunks.push(chunk));
-      res.on("end", () => {
-        try {
-          const text = Buffer.concat(chunks).toString("utf-8");
-          resolve(JSON.parse(text));
-        } catch {
-          reject(new Error("Response is not valid JSON"));
-        }
-      });
-      res.on("error", reject);
-    });
+    const mod = url.protocol === "https:" ? https : http;
+    const req = mod.get(
+      {
+        protocol: url.protocol,
+        hostname: address,
+        port: url.port || undefined,
+        path: `${url.pathname}${url.search}`,
+        headers: { Host: url.host },
+        servername: url.protocol === "https:" ? url.hostname : undefined,
+        timeout: FETCH_TIMEOUT_MS,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          try {
+            const text = Buffer.concat(chunks).toString("utf-8");
+            resolve(JSON.parse(text));
+          } catch {
+            reject(new Error("Response is not valid JSON"));
+          }
+        });
+        res.on("error", reject);
+      },
+    );
     req.on("error", reject);
     req.on("timeout", () => {
       req.destroy();

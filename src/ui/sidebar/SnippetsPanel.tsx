@@ -908,12 +908,14 @@ function SnippetCard({
         onDragEnd={onDragEnd}
         className={`border bg-background p-2.5 flex flex-col gap-2 group/card transition-opacity ${isDragging ? "opacity-40" : "opacity-100"} border-border`}
       >
-        <div className="flex items-start gap-2">
+        <div className="flex items-start gap-2 min-w-0">
           <GripVertical className="size-3.5 mt-0.5 shrink-0 text-muted-foreground/30 group-hover/card:text-muted-foreground/60 cursor-grab active:cursor-grabbing transition-colors" />
           <div className="flex flex-col min-w-0 flex-1">
-            <span className="text-xs font-semibold">{snippet.name}</span>
+            <span className="text-xs font-semibold break-words">
+              {snippet.name}
+            </span>
             {snippet.description && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground break-words">
                 {snippet.description}
               </span>
             )}
@@ -925,7 +927,7 @@ function SnippetCard({
             />
           )}
         </div>
-        <span className="text-xs text-muted-foreground font-mono px-1">
+        <span className="text-xs text-muted-foreground font-mono px-1 min-w-0 break-all whitespace-pre-wrap">
           {snippet.content}
         </span>
         {targetHosts.length > 0 && (
@@ -936,7 +938,7 @@ function SnippetCard({
                 className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-accent-brand/10 text-accent-brand border border-accent-brand/20"
               >
                 <Server className="size-2.5" />
-                {host.name || host.ip}
+                <span className="min-w-0 truncate">{host.name || host.ip}</span>
               </span>
             ))}
           </div>

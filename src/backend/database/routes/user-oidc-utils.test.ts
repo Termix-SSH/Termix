@@ -11,8 +11,15 @@ vi.mock("../../utils/logger.js", () => ({
   },
 }));
 
-const { isOIDCUserAllowed, getOIDCConfigFromEnv, extractOidcGroups } =
-  await import("./user-oidc-utils.js");
+const {
+  isOIDCUserAllowed,
+  getOIDCConfigFromEnv,
+  extractOidcGroups,
+  validateLogoutTokenClaims,
+} = await import("./user-oidc-utils.js");
+
+const BACKCHANNEL_LOGOUT_EVENT =
+  "http://schemas.openid.net/event/backchannel-logout";
 
 describe("isOIDCUserAllowed", () => {
   it("allows everyone when the allow-list is empty", () => {
@@ -197,5 +204,50 @@ describe("extractOidcGroups", () => {
 
   it("returns an empty array when no groups are present", () => {
     expect(extractOidcGroups({})).toEqual([]);
+  });
+});
+
+describe("validateLogoutTokenClaims", () => {
+  const validClaims = {
+    sub: "subject-1",
+    sid: "session-1",
+    iat: 1_783_641_600,
+    jti: "logout-1",
+    events: { [BACKCHANNEL_LOGOUT_EVENT]: {} },
+  };
+
+  it("accepts a spec-compliant back-channel logout payload", () => {
+    expect(validateLogoutTokenClaims(validClaims)).toEqual({
+      sub: "subject-1",
+      sid: "session-1",
+      jti: "logout-1",
+    });
+  });
+
+  it("requires the logout event to contain an object", () => {
+    expect(() =>
+      validateLogoutTokenClaims({
+        ...validClaims,
+        events: { [BACKCHANNEL_LOGOUT_EVENT]: true },
+      }),
+    ).toThrow("missing back-channel logout event");
+  });
+
+  it("requires iat and jti claims", () => {
+    expect(() =>
+      validateLogoutTokenClaims({ ...validClaims, iat: undefined }),
+    ).toThrow("missing iat claim");
+    expect(() =>
+      validateLogoutTokenClaims({ ...validClaims, jti: "" }),
+    ).toThrow("missing jti claim");
+  });
+
+  it("rejects nonce and requires sub or sid", () => {
+    expect(() =>
+      validateLogoutTokenClaims({ ...validClaims, nonce: "forbidden" }),
+    ).toThrow("must not contain a nonce");
+    expect(() =>
+      validateLogoutTokenClaims({ ...validClaims, sub: null, sid: null }),
+    ).toThrow("must contain sub and/or sid");
   });
 });

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
+import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 import { Input } from "@/components/input";
 import {
   Tooltip,
@@ -15,6 +16,7 @@ import {
   Download,
   Eye,
   Loader2,
+  Save,
   ScrollText,
   Search,
   X,
@@ -23,9 +25,13 @@ import { toast } from "sonner";
 import {
   getSessionLogs,
   getSessionLogContent,
+  getSessionLogBlob,
+  getSessionRecordingRetention,
+  setSessionRecordingRetention,
   deleteSessionLog,
   type SessionLogRecord,
 } from "@/api/session-log-api";
+import { SessionRecordingPlayer } from "@/features/session-recording/SessionRecordingPlayer";
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "--";
@@ -63,7 +69,13 @@ function buildFilename(log: SessionLogRecord): string {
   const h = String(d.getHours()).padStart(2, "0");
   const min = String(d.getMinutes()).padStart(2, "0");
   const s = String(d.getSeconds()).padStart(2, "0");
-  return `${host}_${y}-${m}-${day}_${h}-${min}-${s}.log`;
+  const extension =
+    log.format === "guacamole"
+      ? "guac"
+      : log.format === "asciicast"
+        ? "cast"
+        : "log";
+  return `${host}_${y}-${m}-${day}_${h}-${min}-${s}.${extension}`;
 }
 
 function SectionHeader({ label, count }: { label: string; count: number }) {
@@ -104,6 +116,9 @@ function LogRow({
         </span>
         <span className="text-[10px] text-muted-foreground/60 truncate">
           {formatDate(log.startedAt)}
+          {" · "}
+          {log.protocol.toUpperCase()}
+          {log.username ? ` · ${log.username}` : ""}
           {" · "}
           {formatDuration(log.duration)}
           {" · "}
@@ -159,12 +174,15 @@ export function SessionLogsPanel() {
   const [filter, setFilter] = useState("");
   const [viewLog, setViewLog] = useState<SessionLogRecord | null>(null);
   const [viewContent, setViewContent] = useState<string>("");
+  const [viewBlob, setViewBlob] = useState<Blob | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SessionLogRecord | null>(
     null,
   );
   const [deleting, setDeleting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [retentionDays, setRetentionDays] = useState<number | null>(null);
+  const [savingRetention, setSavingRetention] = useState(false);
 
   const load = useCallback(
     (initial = false) => {
@@ -173,10 +191,11 @@ export function SessionLogsPanel() {
         .then((fresh) => {
           setLogs((prev) => {
             if (
-              JSON.stringify(prev.map((l) => l.id)) ===
-              JSON.stringify(fresh.map((l) => l.id))
-            )
+              prev.length === fresh.length &&
+              prev.every((log, i) => log.id === fresh[i]?.id)
+            ) {
               return prev;
+            }
             return fresh;
           });
         })
@@ -192,24 +211,40 @@ export function SessionLogsPanel() {
 
   useEffect(() => {
     load(true);
-    const interval = setInterval(() => load(false), 5000);
-    return () => clearInterval(interval);
+    getSessionRecordingRetention()
+      .then(setRetentionDays)
+      .catch(() => setRetentionDays(null));
   }, [load]);
+
+  usePageVisibleInterval(
+    () => {
+      void load(false);
+    },
+    5_000,
+    true,
+    { runOnMount: false },
+  );
 
   const q = filter.trim().toLowerCase();
   const filtered = q
     ? logs.filter((l) =>
-        (l.hostName ?? l.hostIp ?? "").toLowerCase().includes(q),
+        `${l.hostName ?? ""} ${l.hostIp ?? ""} ${l.username ?? ""} ${l.protocol}`
+          .toLowerCase()
+          .includes(q),
       )
     : logs;
 
   const handleView = async (log: SessionLogRecord) => {
     setViewLog(log);
     setViewContent("");
+    setViewBlob(null);
     setViewLoading(true);
     try {
-      const content = await getSessionLogContent(log.id);
-      setViewContent(content);
+      if (log.format === "text") {
+        setViewContent(await getSessionLogContent(log.id));
+      } else {
+        setViewBlob(await getSessionLogBlob(log.id));
+      }
     } catch {
       toast.error(t("sessionLogs.loadError"));
     } finally {
@@ -219,8 +254,7 @@ export function SessionLogsPanel() {
 
   const handleDownload = async (log: SessionLogRecord) => {
     try {
-      const content = await getSessionLogContent(log.id);
-      const blob = new Blob([content], { type: "text/plain" });
+      const blob = await getSessionLogBlob(log.id);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -285,6 +319,7 @@ export function SessionLogsPanel() {
             </span>
             <span className="text-[10px] text-muted-foreground/50">
               {formatDate(viewLog.startedAt)}
+              {` · ${viewLog.protocol.toUpperCase()}`}
               {viewLog.duration != null
                 ? ` · ${formatDuration(viewLog.duration)}`
                 : ""}
@@ -294,25 +329,27 @@ export function SessionLogsPanel() {
           </div>
           <TooltipProvider>
             <div className="flex items-center gap-0.5 shrink-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleCopy}
-                    className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    {copied ? (
-                      <Check className="size-3 text-green-500" />
-                    ) : (
-                      <Copy className="size-3" />
-                    )}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  {copied
-                    ? t("sessionLogs.copied")
-                    : t("sessionLogs.copyContent")}
-                </TooltipContent>
-              </Tooltip>
+              {viewLog.format === "text" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleCopy}
+                      className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
+                    >
+                      {copied ? (
+                        <Check className="size-3 text-green-500" />
+                      ) : (
+                        <Copy className="size-3" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    {copied
+                      ? t("sessionLogs.copied")
+                      : t("sessionLogs.copyContent")}
+                  </TooltipContent>
+                </Tooltip>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -336,6 +373,8 @@ export function SessionLogsPanel() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             </div>
+          ) : viewBlob ? (
+            <SessionRecordingPlayer log={viewLog} blob={viewBlob} />
           ) : (
             <pre className="p-3 text-[11px] font-mono whitespace-pre-wrap break-all text-foreground/80 leading-relaxed">
               {viewContent || "(empty)"}
@@ -349,6 +388,44 @@ export function SessionLogsPanel() {
   return (
     <div className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto">
+        {retentionDays != null && (
+          <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2 text-[10px] text-muted-foreground">
+            <span className="flex-1">Recording retention</span>
+            <Input
+              type="number"
+              min={1}
+              max={3650}
+              value={retentionDays}
+              onChange={(event) => setRetentionDays(Number(event.target.value))}
+              className="h-7 w-20 text-xs"
+              aria-label="Recording retention days"
+            />
+            <span>days</span>
+            <button
+              type="button"
+              disabled={savingRetention}
+              onClick={async () => {
+                setSavingRetention(true);
+                try {
+                  await setSessionRecordingRetention(retentionDays);
+                  toast.success("Recording retention updated");
+                } catch {
+                  toast.error("Failed to update recording retention");
+                } finally {
+                  setSavingRetention(false);
+                }
+              }}
+              className="flex size-7 items-center justify-center hover:bg-muted disabled:opacity-50"
+              aria-label="Save recording retention"
+            >
+              {savingRetention ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <Save className="size-3" />
+              )}
+            </button>
+          </div>
+        )}
         {logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 gap-3 p-6 text-center py-16">
             <div className="size-10 bg-muted/40 flex items-center justify-center">

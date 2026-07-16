@@ -28,6 +28,7 @@ import {
   getRuntimeLabel,
   type ContainerRuntime,
 } from "./container-runtime.js";
+import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 
 const sshLogger = logger;
 
@@ -1617,6 +1618,7 @@ app.post("/docker/ssh/connect", async (req, res) => {
         return;
       }
     } else {
+      await resolveSshConnectConfigHost(config);
       client.connect(config);
     }
   } catch (error) {
@@ -2136,12 +2138,19 @@ app.post("/docker/ssh/keepalive", async (req, res) => {
  */
 app.get("/docker/ssh/status", async (req, res) => {
   const sessionId = req.query.sessionId as string;
+  const userId = getRequestUserId(req);
 
   if (!sessionId) {
     return res.status(400).json({ error: "Session ID is required" });
   }
 
-  const isConnected = !!sshSessions[sessionId]?.isConnected;
+  if (!userId) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+
+  const session = sshSessions[sessionId];
+  const isConnected =
+    session?.userId === userId && session.isConnected === true;
 
   res.json({ success: true, connected: isConnected });
 });
@@ -2189,6 +2198,10 @@ app.get("/docker/validate/:sessionId", async (req, res) => {
     return res.status(400).json({
       error: "SSH session not found or not connected",
     });
+  }
+
+  if (session.userId !== userId) {
+    return res.status(403).json({ error: "Session access denied" });
   }
 
   session.lastActive = Date.now();

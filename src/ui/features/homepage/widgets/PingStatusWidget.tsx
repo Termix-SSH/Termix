@@ -9,6 +9,7 @@ import type {
 import { GRID_SIZE } from "@/types/homepage-types";
 import { homepageApi } from "@/main-axios";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 interface PingResult {
   ok: boolean;
@@ -72,8 +73,9 @@ function PingStatusWidget({
 
   useEffect(() => {
     fetchAll();
-    const iv = setInterval(fetchAll, interval * 1000);
-    return () => clearInterval(iv);
+    return runVisibleInterval(() => {
+      void fetchAll();
+    }, interval * 1000);
   }, [JSON.stringify(urls), interval]);
 
   if (urls.length === 0) {

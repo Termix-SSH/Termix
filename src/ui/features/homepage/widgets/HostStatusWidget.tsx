@@ -130,10 +130,37 @@ function HostStatusWidget({
     };
 
     poll();
-    const iv = setInterval(poll, 10000);
+
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (intervalId !== null) return;
+      // Align with global status cadence; metrics do not need sub-10s when hidden.
+      intervalId = setInterval(() => {
+        if (document.visibilityState === "hidden") return;
+        void poll();
+      }, 30_000);
+    };
+    const stop = () => {
+      if (intervalId === null) return;
+      clearInterval(intervalId);
+      intervalId = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        stop();
+        return;
+      }
+      void poll();
+      start();
+    };
+
+    if (document.visibilityState !== "hidden") start();
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       cancelled = true;
-      clearInterval(iv);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [hostId, needsMetrics]);
 
