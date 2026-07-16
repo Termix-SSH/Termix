@@ -120,4 +120,18 @@ describe("buildHostEditorPayload auth field isolation", () => {
 
     expect(tc?.agentSocketPath).toBeNull();
   });
+
+  it("preserves sudo password autofill settings", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      sudoPasswordAutoFill: true,
+      sudoPassword: "sudo-secret",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.sudoPasswordAutoFill).toBe(true);
+    expect(tc?.sudoPassword).toBe("sudo-secret");
+  });
 });
