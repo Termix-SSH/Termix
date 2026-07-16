@@ -122,7 +122,7 @@ import {
 
     const { runBootDekMigration } =
       await import("./utils/crypto-migration/dek-migration.js");
-    await runBootDekMigration();
+    await runBootDekMigration({ cleanupLegacy: true });
 
     const authManager = AuthManager.getInstance();
     await authManager.initialize();

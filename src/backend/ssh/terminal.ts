@@ -11,7 +11,7 @@ import { createCurrentHostResolutionRepository } from "../database/repositories/
 import { sshLogger, authLogger } from "../utils/logger.js";
 import { logAudit } from "../utils/audit-logger.js";
 import { AuthManager } from "../utils/auth-manager.js";
-import { UserCrypto } from "../utils/user-crypto.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -98,7 +98,6 @@ interface WebSocketMessage {
 }
 
 const authManager = AuthManager.getInstance();
-const userCrypto = UserCrypto.getInstance();
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
@@ -158,7 +157,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     return;
   }
 
-  const dataKey = userCrypto.getUserDataKey(userId);
+  const dataKey = DataCrypto.getUserDataKey(userId);
   if (!dataKey) {
     ws.send(
       JSON.stringify({
@@ -268,7 +267,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
   }
 
   ws.on("message", async (msg: RawData) => {
-    const currentDataKey = userCrypto.getUserDataKey(userId);
+    const currentDataKey = DataCrypto.getUserDataKey(userId);
     if (!currentDataKey) {
       ws.send(
         JSON.stringify({

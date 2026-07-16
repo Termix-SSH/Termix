@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
       run: (...values: unknown[]) => unknown;
     };
   } | null,
-  logoutUser: vi.fn(),
   saveDatabase: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -25,11 +24,12 @@ vi.mock("../database/db/index.js", async () => {
   };
 });
 
-vi.mock("./user-crypto.js", () => ({
-  UserCrypto: {
+vi.mock("./user-keys.js", () => ({
+  UserKeyManager: {
     getInstance: () => ({
-      setSessionExpiredCallback: vi.fn(),
-      logoutUser: mocks.logoutUser,
+      invalidate: vi.fn(),
+      tryGetUserDEK: vi.fn(() => null),
+      hasUserDEK: vi.fn(() => true),
     }),
   },
 }));
@@ -120,7 +120,6 @@ describe("AuthManager.revokeSessionsByOidc", () => {
 
   beforeEach(() => {
     mocks.sqlite!.exec("DELETE FROM sessions");
-    mocks.logoutUser.mockReset();
     mocks.saveDatabase.mockReset().mockResolvedValue(undefined);
   });
 
@@ -156,7 +155,6 @@ describe("AuthManager.revokeSessionsByOidc", () => {
     ).resolves.toBe(1);
 
     expect(sessionIds()).toEqual(["other-provider", "other-session"]);
-    expect(mocks.logoutUser).not.toHaveBeenCalled();
   });
 
   it("revokes all provider sessions for a subject when sid is absent", async () => {
@@ -190,8 +188,6 @@ describe("AuthManager.revokeSessionsByOidc", () => {
     ).resolves.toBe(2);
 
     expect(sessionIds()).toEqual(["other-subject"]);
-    expect(mocks.logoutUser).toHaveBeenCalledOnce();
-    expect(mocks.logoutUser).toHaveBeenCalledWith("user-1");
   });
 
   it("does not persist when no session matches", async () => {

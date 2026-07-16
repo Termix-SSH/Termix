@@ -1508,18 +1508,6 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    try {
-      const kekSalt = await createCurrentSettingsRepository().get(
-        `user_kek_salt_${userRecord.id}`,
-      );
-
-      if (!kekSalt) {
-        await authManager.registerUser(userRecord.id, password);
-      }
-    } catch {
-      // expected - KEK salt registration may fail for existing users
-    }
-
     const deviceInfo = parseUserAgent(req);
 
     let dataUnlocked = false;

@@ -119,40 +119,6 @@ export function registerUserOidcAccountRoutes(
         scopes: oidcUser.scopes || "openid email profile",
       });
 
-      try {
-        await authManager.convertToOIDCEncryption(targetUser.id);
-      } catch (encryptionError) {
-        authLogger.error(
-          "Failed to convert encryption to OIDC during linking",
-          encryptionError,
-          {
-            operation: "link_convert_encryption_failed",
-            userId: targetUser.id,
-          },
-        );
-        await userRepository.update(targetUser.id, {
-          isOidc: false,
-          oidcIdentifier: null,
-          clientId: "",
-          clientSecret: "",
-          issuerUrl: "",
-          authorizationUrl: "",
-          tokenUrl: "",
-          identifierPath: "",
-          namePath: "",
-          scopes: "openid email profile",
-        });
-
-        return res.status(500).json({
-          error:
-            "Failed to convert encryption for dual-auth. Please ensure the password account has encryption setup.",
-          details:
-            encryptionError instanceof Error
-              ? encryptionError.message
-              : "Unknown error",
-        });
-      }
-
       await authManager.revokeAllUserSessions(oidcUserId);
       authManager.logoutUser(oidcUserId);
 

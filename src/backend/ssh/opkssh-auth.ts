@@ -4,7 +4,7 @@ import { WebSocket } from "ws";
 import { OPKSSHBinaryManager } from "../utils/opkssh-binary-manager.js";
 import { sshLogger } from "../utils/logger.js";
 import { createCurrentOpksshTokenRepository } from "../database/repositories/factory.js";
-import { UserCrypto } from "../utils/user-crypto.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { promises as fs } from "fs";
 import path from "path";
@@ -647,12 +647,10 @@ function handleOPKSSHOutput(requestId: string, output: string): void {
 
 async function storeOPKSSHToken(session: OPKSSHAuthSession): Promise<void> {
   try {
-    const userCrypto = UserCrypto.getInstance();
-
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
 
-    const userDataKey = userCrypto.getUserDataKey(session.userId);
+    const userDataKey = DataCrypto.getUserDataKey(session.userId);
     if (!userDataKey) {
       throw new Error("User data key not found");
     }
@@ -729,8 +727,7 @@ export async function getOPKSSHToken(
       return null;
     }
 
-    const userCrypto = UserCrypto.getInstance();
-    const userDataKey = userCrypto.getUserDataKey(userId);
+    const userDataKey = DataCrypto.getUserDataKey(userId);
     if (!userDataKey) {
       throw new Error("User data key not found");
     }

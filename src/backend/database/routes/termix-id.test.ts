@@ -49,10 +49,6 @@ vi.mock("../../utils/data-crypto.js", () => ({
   DataCrypto: { getInstance: () => ({ encrypt: vi.fn(), decrypt: vi.fn() }) },
 }));
 
-vi.mock("../../utils/user-crypto.js", () => ({
-  UserCrypto: { getInstance: () => ({ getUserKey: vi.fn() }) },
-}));
-
 vi.mock("../repositories/factory.js", () => ({
   createCurrentTermixIdentityCaRepository: vi.fn(() => ({
     findPublicByIdentityId: vi.fn(),

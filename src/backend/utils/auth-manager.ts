@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { UserCrypto } from "./user-crypto.js";
+import { UserKeyManager } from "./user-keys.js";
+import {
+  adoptRecoveredDEK,
+  migratePasswordUserAtLogin,
+} from "./crypto-migration/dek-migration.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
 import { DatabaseSaveTrigger } from "./database-save-trigger.js";
@@ -18,6 +22,7 @@ import {
   createCurrentUserRepository,
   createCurrentApiKeyRepository,
   createCurrentTrustedDeviceRepository,
+  getCurrentSettingValue,
 } from "../database/repositories/factory.js";
 
 interface AuthenticationResult {
@@ -64,15 +69,11 @@ interface RequestWithHeaders extends Request {
 class AuthManager {
   private static instance: AuthManager;
   private systemCrypto: SystemCrypto;
-  private userCrypto: UserCrypto;
+  private userKeys: UserKeyManager;
 
   private constructor() {
     this.systemCrypto = SystemCrypto.getInstance();
-    this.userCrypto = UserCrypto.getInstance();
-
-    this.userCrypto.setSessionExpiredCallback((userId: string) => {
-      this.invalidateUserTokens(userId);
-    });
+    this.userKeys = UserKeyManager.getInstance();
 
     setInterval(
       () => {
@@ -101,88 +102,65 @@ class AuthManager {
     await this.systemCrypto.initializeJWTSecret();
   }
 
-  async registerUser(userId: string, password: string): Promise<void> {
-    await this.userCrypto.setupUserEncryption(userId, password);
+  async registerUser(userId: string, _password?: string): Promise<void> {
+    if (!this.userKeys.hasUserDEK(userId)) {
+      await this.userKeys.createUserDEK(userId);
+    }
   }
 
   async registerOIDCUser(
     userId: string,
-    sessionDurationMs: number,
+    _sessionDurationMs?: number,
   ): Promise<void> {
-    await this.userCrypto.setupOIDCUserEncryption(userId, sessionDurationMs);
+    if (!this.userKeys.hasUserDEK(userId)) {
+      await this.userKeys.createUserDEK(userId);
+    }
+  }
+
+  private async ensureUserDEK(userId: string): Promise<boolean> {
+    if (this.userKeys.tryGetUserDEK(userId)) {
+      await this.performLazyEncryptionMigration(userId);
+      return true;
+    }
+    return false;
   }
 
   async authenticateOIDCUser(
     userId: string,
-    deviceType?: DeviceType,
+    _deviceType?: DeviceType,
   ): Promise<boolean> {
-    const sessionDurationMs =
-      deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
-
-    const authenticated = await this.userCrypto.authenticateOIDCUser(
-      userId,
-      sessionDurationMs,
-    );
-
-    if (authenticated) {
-      await this.performLazyEncryptionMigration(userId);
+    if (!this.userKeys.hasUserDEK(userId)) {
+      await this.userKeys.createUserDEK(userId);
     }
-
-    return authenticated;
+    return this.ensureUserDEK(userId);
   }
 
   async authenticateUser(
     userId: string,
     password: string,
-    deviceType?: DeviceType,
+    _deviceType?: DeviceType,
   ): Promise<boolean> {
-    const sessionDurationMs =
-      deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
+    // Password-wrapped legacy DEKs can only be recovered while the password
+    // is in hand, so login is where those users migrate to the v3 wrap.
+    const migrated = await migratePasswordUserAtLogin(userId, password);
 
-    const authenticated = await this.userCrypto.authenticateUser(
-      userId,
-      password,
-      sessionDurationMs,
-    );
-
-    if (authenticated) {
-      await this.performLazyEncryptionMigration(userId);
+    if (!migrated && !this.userKeys.hasUserDEK(userId)) {
+      const raw = getCurrentSettingValue(`user_encrypted_dek_${userId}`);
+      if (raw) {
+        // A legacy wrap exists but the password could not unwrap it.
+        return false;
+      }
+      await this.userKeys.createUserDEK(userId);
     }
 
-    return authenticated;
-  }
-
-  async setupWebAuthnUserEncryption(userId: string): Promise<void> {
-    await this.userCrypto.setupWebAuthnUserEncryption(userId);
+    return this.ensureUserDEK(userId);
   }
 
   async authenticateWebAuthnUser(
     userId: string,
-    deviceType?: DeviceType,
+    _deviceType?: DeviceType,
   ): Promise<boolean> {
-    const sessionDurationMs =
-      deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
-
-    const authenticated = await this.userCrypto.authenticateWebAuthnUser(
-      userId,
-      sessionDurationMs,
-    );
-
-    if (authenticated) {
-      await this.performLazyEncryptionMigration(userId);
-    }
-
-    return authenticated;
-  }
-
-  async convertToOIDCEncryption(userId: string): Promise<void> {
-    await this.userCrypto.convertToOIDCEncryption(userId);
+    return this.ensureUserDEK(userId);
   }
 
   private async performLazyEncryptionMigration(userId: string): Promise<void> {
@@ -232,27 +210,6 @@ class AuthManager {
     return Buffer.from(`${userId}:${sessionId || ""}`, "utf8");
   }
 
-  private async wrapUserDataKey(
-    userId: string,
-    sessionId: string | undefined,
-    dataKey: Buffer,
-  ): Promise<WrappedDataKey> {
-    const encryptionKey = await this.systemCrypto.getEncryptionKey();
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey, iv);
-    cipher.setAAD(this.getDataKeyAAD(userId, sessionId));
-
-    const encrypted = Buffer.concat([cipher.update(dataKey), cipher.final()]);
-    const tag = cipher.getAuthTag();
-
-    return {
-      version: "v1",
-      iv: iv.toString("base64url"),
-      tag: tag.toString("base64url"),
-      data: encrypted.toString("base64url"),
-    };
-  }
-
   private async unwrapUserDataKey(
     userId: string,
     sessionId: string | undefined,
@@ -279,41 +236,11 @@ class AuthManager {
     ]);
   }
 
-  private async addWrappedDataKey(payload: JWTPayload): Promise<void> {
-    if (payload.pendingTOTP) {
-      return;
-    }
-
-    const dataKey = this.userCrypto.getUserDataKey(payload.userId);
-    if (!dataKey) {
-      return;
-    }
-
-    payload.dataKeyWrap = await this.wrapUserDataKey(
-      payload.userId,
-      payload.sessionId,
-      dataKey,
-    );
-  }
-
-  private async restoreDataKeyFromPayload(
-    payload: JWTPayload,
-    sessionExpiresAt?: string,
-  ): Promise<void> {
-    if (
-      !payload.dataKeyWrap ||
-      this.userCrypto.getUserDataKey(payload.userId)
-    ) {
-      return;
-    }
-
-    const expiresAt = sessionExpiresAt
-      ? new Date(sessionExpiresAt).getTime()
-      : payload.exp
-        ? payload.exp * 1000
-        : Date.now();
-
-    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+  // Upgrade shim, remove in the release after 2.5: tokens issued before the
+  // v3 key wrap carried the user's DEK wrapped with the system ENCRYPTION_KEY.
+  // Adopting it here silently migrates password users with live sessions.
+  private async migrateDataKeyFromPayload(payload: JWTPayload): Promise<void> {
+    if (!payload.dataKeyWrap || this.userKeys.hasUserDEK(payload.userId)) {
       return;
     }
 
@@ -323,11 +250,10 @@ class AuthManager {
         payload.sessionId,
         payload.dataKeyWrap,
       );
-      this.userCrypto.restoreUserDataKey(payload.userId, dataKey, expiresAt);
-      dataKey.fill(0);
+      await adoptRecoveredDEK(payload.userId, dataKey);
     } catch (error) {
-      databaseLogger.warn("Failed to restore data key from session token", {
-        operation: "session_data_key_restore_failed",
+      databaseLogger.warn("Failed to migrate data key from session token", {
+        operation: "session_data_key_migrate_failed",
         userId: payload.userId,
         sessionId: payload.sessionId,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -374,7 +300,6 @@ class AuthManager {
     if (!options.pendingTOTP && options.deviceType && options.deviceInfo) {
       const sessionId = nanoid();
       payload.sessionId = sessionId;
-      await this.addWrappedDataKey(payload);
 
       const token = jwt.sign(payload, jwtSecret, {
         expiresIn,
@@ -410,7 +335,6 @@ class AuthManager {
       return token;
     }
 
-    await this.addWrappedDataKey(payload);
     return jwt.sign(payload, jwtSecret, { expiresIn } as jwt.SignOptions);
   }
 
@@ -456,10 +380,7 @@ class AuthManager {
             return null;
           }
 
-          await this.restoreDataKeyFromPayload(
-            payload,
-            sessionRecord.expiresAt,
-          );
+          await this.migrateDataKeyFromPayload(payload);
         } catch (dbError) {
           databaseLogger.error(
             "Failed to check session in database during JWT verification",
@@ -472,7 +393,7 @@ class AuthManager {
           return null;
         }
       } else {
-        await this.restoreDataKeyFromPayload(payload);
+        await this.migrateDataKeyFromPayload(payload);
       }
       return payload;
     } catch (error) {
@@ -503,7 +424,6 @@ class AuthManager {
     }
 
     const payload: JWTPayload = { userId, sessionId };
-    await this.addWrappedDataKey(payload);
 
     const token = jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
       expiresIn: Math.ceil(maxAge / 1000),
@@ -605,16 +525,6 @@ class AuthManager {
         sessionCount: matchedIds.length,
       });
 
-      for (const userId of affectedUsers) {
-        const remaining = await db
-          .select()
-          .from(sessions)
-          .where(eq(sessions.userId, userId));
-        if (remaining.length === 0) {
-          this.userCrypto.logoutUser(userId);
-        }
-      }
-
       const { saveMemoryDatabaseToFile } =
         await import("../database/db/index.js");
       await saveMemoryDatabaseToFile();
@@ -641,15 +551,6 @@ class AuthManager {
       }
 
       await sessionRepository.deleteExpired(now);
-
-      const affectedUsers = new Set(expiredSessions.map((s) => s.userId));
-      for (const userId of affectedUsers) {
-        const remainingSessions = await sessionRepository.listByUserId(userId);
-
-        if (remainingSessions.length === 0) {
-          this.userCrypto.logoutUser(userId);
-        }
-      }
 
       return expiredCount;
     } catch (error) {
@@ -763,38 +664,6 @@ class AuthManager {
           });
         });
 
-      // Auto-unlock the per-user Data Encryption Key for OIDC-backed users so
-      // API-key (headless / automation) requests can access encrypted
-      // credentials/hosts. Without this, every encrypted-table op throws
-      // "User data not unlocked" because the API-key path never established a
-      // DEK session. OIDC DEKs are wrapped with a server-derived system key
-      // (deriveOIDCSystemKey), so no user password is required. Password-based
-      // users are deliberately NOT unlocked here (their KEK is password-derived
-      // and cannot be reproduced server-side).
-      //
-      // Opt-in and OFF by default: enabling this widens the blast radius of a
-      // leaked API key (it can then read that user's stored SSH secrets in
-      // clear text), so operators must turn it on explicitly.
-      if (
-        process.env.ALLOW_APIKEY_DATA_UNLOCK === "true" &&
-        !this.userCrypto.isUserUnlocked(matchedKey.userId)
-      ) {
-        try {
-          const keyUser = await createCurrentUserRepository().findById(
-            matchedKey.userId,
-          );
-          if (keyUser?.isOidc) {
-            await this.authenticateOIDCUser(matchedKey.userId);
-          }
-        } catch (err) {
-          databaseLogger.warn("API-key OIDC auto-unlock failed", {
-            operation: "api_key_oidc_unlock_failed",
-            userId: matchedKey.userId,
-            error: err instanceof Error ? err.message : "Unknown",
-          });
-        }
-      }
-
       req.userId = matchedKey.userId;
       req.apiKeyId = matchedKey.id;
       next();
@@ -876,37 +745,12 @@ class AuthManager {
               difference: currentTime - sessionExpiryTime,
             });
 
-            sessionRepository
-              .revoke(payload.sessionId)
-              .then(async () => {
-                try {
-                  const remainingSessions =
-                    await sessionRepository.listByUserId(payload.userId);
-
-                  if (remainingSessions.length === 0) {
-                    this.userCrypto.logoutUser(payload.userId);
-                  }
-                } catch (cleanupError) {
-                  databaseLogger.error(
-                    "Failed to cleanup after expired session",
-                    cleanupError,
-                    {
-                      operation: "expired_session_cleanup_failed",
-                      sessionId: payload.sessionId,
-                    },
-                  );
-                }
-              })
-              .catch((error) => {
-                databaseLogger.error(
-                  "Failed to delete expired session",
-                  error,
-                  {
-                    operation: "expired_session_delete_failed",
-                    sessionId: payload.sessionId,
-                  },
-                );
+            sessionRepository.revoke(payload.sessionId).catch((error) => {
+              databaseLogger.error("Failed to delete expired session", error, {
+                operation: "expired_session_delete_failed",
+                sessionId: payload.sessionId,
               });
+            });
 
             return res
               .clearCookie("jwt", this.getClearCookieOptions(req))
@@ -951,8 +795,7 @@ class AuthManager {
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const dataKey = this.userCrypto.getUserDataKey(userId);
-      authReq.dataKey = dataKey || undefined;
+      authReq.dataKey = this.userKeys.tryGetUserDEK(userId) ?? undefined;
       next();
     };
   }
@@ -1035,65 +878,45 @@ class AuthManager {
   async logoutUser(userId: string, sessionId?: string): Promise<void> {
     const sessionRepository = createCurrentSessionRepository();
 
-    if (sessionId) {
-      try {
+    try {
+      if (sessionId) {
         await sessionRepository.revoke(sessionId);
-
-        const remainingSessions = await sessionRepository.listByUserId(userId);
-
-        if (remainingSessions.length === 0) {
-          this.userCrypto.logoutUser(userId);
-        } else {
-          // expected - other sessions still active, keep user crypto state
-        }
-      } catch (error) {
-        databaseLogger.error("Failed to delete session on logout", error, {
-          operation: "session_delete_logout_failed",
-          userId,
-          sessionId,
-        });
-      }
-    } else {
-      try {
+      } else {
         await sessionRepository.revokeAllForUser(userId);
-      } catch (error) {
-        databaseLogger.error("Failed to revoke all sessions on logout", error, {
-          operation: "session_revoke_all_failed",
-          userId,
-        });
       }
-      this.userCrypto.logoutUser(userId);
+    } catch (error) {
+      databaseLogger.error("Failed to revoke sessions on logout", error, {
+        operation: "session_delete_logout_failed",
+        userId,
+        sessionId,
+      });
     }
   }
 
   getUserDataKey(userId: string): Buffer | null {
-    return this.userCrypto.getUserDataKey(userId);
+    return this.userKeys.tryGetUserDEK(userId);
   }
 
   isUserUnlocked(userId: string): boolean {
-    return this.userCrypto.isUserUnlocked(userId);
+    return this.userKeys.tryGetUserDEK(userId) !== null;
   }
 
   async changeUserPassword(
     userId: string,
     oldPassword: string,
-    newPassword: string,
+    _newPassword?: string,
   ): Promise<boolean> {
-    return await this.userCrypto.changeUserPassword(
-      userId,
-      oldPassword,
-      newPassword,
-    );
+    // The DEK is no longer derived from the password; the old password is
+    // only needed when the user still has a legacy password-wrapped key.
+    await migratePasswordUserAtLogin(userId, oldPassword);
+    return this.userKeys.tryGetUserDEK(userId) !== null;
   }
 
   async resetUserPasswordWithPreservedDEK(
     userId: string,
-    newPassword: string,
+    _newPassword?: string,
   ): Promise<boolean> {
-    return await this.userCrypto.resetUserPasswordWithPreservedDEK(
-      userId,
-      newPassword,
-    );
+    return this.userKeys.tryGetUserDEK(userId) !== null;
   }
 
   async isTrustedDevice(

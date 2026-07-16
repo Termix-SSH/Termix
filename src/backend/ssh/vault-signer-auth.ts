@@ -17,7 +17,7 @@
 // is re-exported here so callers have a single import surface.
 
 import { createCurrentVaultTokenRepository } from "../database/repositories/factory.js";
-import { UserCrypto } from "../utils/user-crypto.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { FieldCrypto } from "../utils/field-crypto.js";
 import { parseCertValidBefore } from "./vault-signer-core.js";
 
@@ -50,7 +50,7 @@ export async function storeVaultCert(
   privateKey: string,
   signedCert: string,
 ): Promise<string> {
-  const userDataKey = UserCrypto.getInstance().getUserDataKey(userId);
+  const userDataKey = DataCrypto.getUserDataKey(userId);
   if (!userDataKey) {
     throw new Error("User data key not found");
   }
@@ -104,7 +104,7 @@ export async function getVaultCert(
     return null;
   }
 
-  const userDataKey = UserCrypto.getInstance().getUserDataKey(userId);
+  const userDataKey = DataCrypto.getUserDataKey(userId);
   if (!userDataKey) {
     throw new Error("User data key not found");
   }

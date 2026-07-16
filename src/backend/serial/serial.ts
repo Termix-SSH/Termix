@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { SerialPort } from "serialport";
 import { AuthManager } from "../utils/auth-manager.js";
-import { UserCrypto } from "../utils/user-crypto.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 import { sshLogger } from "../utils/logger.js";
 
 interface SerialConnectData {
@@ -18,7 +18,6 @@ interface WebSocketMessage {
 }
 
 const authManager = AuthManager.getInstance();
-const userCrypto = UserCrypto.getInstance();
 
 const wss = new WebSocketServer({ port: 30011 });
 
@@ -64,7 +63,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     return;
   }
 
-  const dataKey = userCrypto.getUserDataKey(userId);
+  const dataKey = DataCrypto.getUserDataKey(userId);
   if (!dataKey) {
     ws.send(JSON.stringify({ type: "error", data: "Data locked" }));
     ws.close(1008, "Data access required");

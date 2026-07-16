@@ -1,6 +1,6 @@
 import { FieldCrypto } from "./field-crypto.js";
 import { LazyFieldEncryption } from "./lazy-field-encryption.js";
-import { UserCrypto } from "./user-crypto.js";
+import { UserKeyManager } from "./user-keys.js";
 import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger } from "./logger.js";
 import {
@@ -12,10 +12,10 @@ import {
 } from "./user-encryption-migration-store.js";
 
 class DataCrypto {
-  private static userCrypto: UserCrypto;
+  private static userKeys: UserKeyManager;
 
   static initialize() {
-    this.userCrypto = UserCrypto.getInstance();
+    this.userKeys = UserKeyManager.getInstance();
   }
 
   static encryptRecord<T extends Record<string, unknown>>(
@@ -235,7 +235,7 @@ class DataCrypto {
   }
 
   static getUserDataKey(userId: string): Buffer | null {
-    return this.userCrypto.getUserDataKey(userId);
+    return this.userKeys.tryGetUserDEK(userId);
   }
 
   static async reencryptUserDataAfterPasswordReset(
@@ -413,11 +413,7 @@ class DataCrypto {
   }
 
   static validateUserAccess(userId: string): Buffer {
-    const userDataKey = this.getUserDataKey(userId);
-    if (!userDataKey) {
-      throw new Error(`User ${userId} data not unlocked`);
-    }
-    return userDataKey;
+    return this.userKeys.getUserDEK(userId);
   }
 
   static encryptRecordForUser<T extends Record<string, unknown>>(
@@ -448,7 +444,7 @@ class DataCrypto {
   }
 
   static canUserAccessData(userId: string): boolean {
-    return this.userCrypto.isUserUnlocked(userId);
+    return this.userKeys.tryGetUserDEK(userId) !== null;
   }
 
   static testUserEncryption(userId: string): boolean {

@@ -251,8 +251,6 @@ export function registerUserWebAuthnRoutes(
           (req.body?.response as RegistrationResponseJSON | undefined)?.response
             ?.transports ?? [];
 
-        await authManager.setupWebAuthnUserEncryption(userId);
-
         const name =
           typeof req.body?.name === "string" && req.body.name.trim()
             ? req.body.name.trim().slice(0, 80)
