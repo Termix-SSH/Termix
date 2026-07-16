@@ -1683,7 +1683,9 @@ export function AppShell({
               onLogout={onLogout}
               onChangeServer={onChangeServer}
               userPrefs={userPrefs}
-              onPrefsChange={setUserPrefs}
+              onPrefsChange={(updates) =>
+                setUserPrefs((current) => ({ ...current, ...updates }))
+              }
             />
           </div>
         )}

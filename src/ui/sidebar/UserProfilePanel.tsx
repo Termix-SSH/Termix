@@ -445,7 +445,10 @@ export function UserProfilePanel({
     hiddenRailTabs?: string | null;
     statusColorScheme?: string | null;
   };
-  onPrefsChange?: (prefs: { reopenTabsOnLogin: boolean }) => void;
+  onPrefsChange?: (prefs: {
+    reopenTabsOnLogin?: boolean;
+    storageMode?: "local" | "cloud";
+  }) => void;
 }) {
   const { t } = useTranslation();
   const themeLabel: Record<ThemeId, string> = {
@@ -521,6 +524,12 @@ export function UserProfilePanel({
   const [storageMode, setStorageMode] = useState<"local" | "cloud">(() =>
     userPrefs?.storageMode === "cloud" ? "cloud" : "local",
   );
+
+  useEffect(() => {
+    if (userPrefs?.storageMode) {
+      setStorageMode(userPrefs.storageMode === "cloud" ? "cloud" : "local");
+    }
+  }, [userPrefs?.storageMode]);
 
   // Settings toggles — all backed by localStorage
   const [commandAutocomplete, setCommandAutocomplete] = useState(
@@ -623,6 +632,7 @@ export function UserProfilePanel({
 
   async function handleStorageModeChange(mode: "local" | "cloud") {
     setStorageMode(mode);
+    onPrefsChange?.({ storageMode: mode });
     if (mode === "cloud") {
       // Snapshot current browser localStorage values so any tab can restore them later
       const SNAPSHOT_KEYS = [
