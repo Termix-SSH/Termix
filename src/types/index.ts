@@ -242,7 +242,7 @@ export interface HostData {
     | "agent";
   useWarpgate?: boolean;
   password?: string;
-  key?: File | null;
+  key?: File | string | null;
   keyPassword?: string;
   keyType?: string;
   sudoPassword?: string;
