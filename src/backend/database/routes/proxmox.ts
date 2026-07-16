@@ -9,7 +9,7 @@ import {
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { SSHHost } from "../../../types/index.js";
-import { SSHHostKeyVerifier } from "../../ssh/host-key-verifier.js";
+import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -402,7 +402,7 @@ async function discoverProxmoxGuestsForHost(
       sshConfig.passphrase = resolvedCredentials.keyPassword;
   } else if (authType === "agent") {
     const { applyAgentAuth } =
-      await import("../../ssh/terminal-auth-helpers.js");
+      await import("../../hosts/terminal-auth-helpers.js");
     const result = await applyAgentAuth(
       sshConfig,
       host.terminalConfig as unknown as Record<string, unknown> | undefined,

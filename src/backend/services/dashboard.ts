@@ -1,17 +1,17 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import { createCorsMiddleware } from "./utils/cors-config.js";
-import { dashboardLogger } from "./utils/logger.js";
-import { AuthManager } from "./utils/auth-manager.js";
-import type { AuthenticatedRequest } from "../types/index.js";
-import { dashboardServiceLinksRouter } from "./database/routes/dashboard-service-links-routes.js";
+import { createCorsMiddleware } from "../utils/cors-config.js";
+import { dashboardLogger } from "../utils/logger.js";
+import { AuthManager } from "../utils/auth-manager.js";
+import type { AuthenticatedRequest } from "../../types/index.js";
+import { dashboardServiceLinksRouter } from "../database/routes/dashboard-service-links-routes.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRecentActivityRepository,
   createCurrentRoleRepository,
-} from "./database/repositories/factory.js";
-import { DataCrypto } from "./utils/data-crypto.js";
+} from "../database/repositories/factory.js";
+import { DataCrypto } from "../utils/data-crypto.js";
 
 const app = express();
 const authManager = AuthManager.getInstance();

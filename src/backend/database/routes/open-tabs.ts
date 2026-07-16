@@ -3,7 +3,7 @@ import express from "express";
 import type { Request, Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { sessionManager } from "../../ssh/terminal-session-manager.js";
+import { sessionManager } from "../../hosts/terminal-session-manager.js";
 import {
   getCurrentSettingValue,
   createCurrentOpenTabRepository,

@@ -11,7 +11,7 @@ import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import {
   pickResolvedPassword,
   pickResolvedUsername,
-} from "../../ssh/credential-username.js";
+} from "../../hosts/credential-username.js";
 import {
   createCurrentCommandHistoryRepository,
   createCurrentFileManagerBookmarkRepository,
@@ -2252,7 +2252,7 @@ router.delete(
     }
 
     try {
-      const { deleteOPKSSHToken } = await import("../../ssh/opkssh-auth.js");
+      const { deleteOPKSSHToken } = await import("../../hosts/opkssh-auth.js");
       await deleteOPKSSHToken(userId, hostId);
       res.json({ success: true });
     } catch (error) {

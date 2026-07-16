@@ -1,18 +1,18 @@
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
-import { guacLogger } from "../utils/logger.js";
-import { AuthManager } from "../utils/auth-manager.js";
-import { PermissionManager } from "../utils/permission-manager.js";
+import { guacLogger } from "../../utils/logger.js";
+import { AuthManager } from "../../utils/auth-manager.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { Client } from "ssh2";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
-import type { AuthenticatedRequest } from "../../types/index.js";
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,
-} from "../database/repositories/factory.js";
-import { resolveGuacdOptions } from "../utils/guacd-config.js";
+} from "../../database/repositories/factory.js";
+import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -422,7 +422,7 @@ router.post(
 
       if (jumpHosts.length > 0) {
         try {
-          const { resolveHostById } = await import("../ssh/host-resolver.js");
+          const { resolveHostById } = await import("../host-resolver.js");
           const jumpHost = await resolveHostById(jumpHosts[0].hostId, userId);
           if (jumpHost) {
             const tunnelPort = await new Promise<number>((resolve, reject) => {

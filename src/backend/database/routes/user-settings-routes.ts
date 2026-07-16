@@ -1,6 +1,6 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { restartGuacServer } from "../../guacamole/guacamole-server.js";
+import { restartGuacServer } from "../../hosts/guacamole/guacamole-server.js";
 import {
   authLogger,
   getGlobalLogLevel,

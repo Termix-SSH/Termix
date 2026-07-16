@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { guacLogger } from "../utils/logger.js";
+import { guacLogger } from "../../utils/logger.js";
 
 export interface GuacamoleConnectionSettings {
   type: "rdp" | "vnc" | "telnet";

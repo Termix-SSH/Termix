@@ -11,7 +11,7 @@ import snippetsRoutes from "./routes/snippets.js";
 import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
 import terminalRoutes from "./routes/terminal.js";
 import sessionLogRoutes from "./routes/session-log-routes.js";
-import guacamoleRoutes from "../guacamole/routes.js";
+import guacamoleRoutes from "../hosts/guacamole/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";

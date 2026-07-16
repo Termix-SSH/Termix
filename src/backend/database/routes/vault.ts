@@ -8,7 +8,7 @@ import type { VaultProfileUpdateInput } from "../repositories/vault-profile-repo
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { completeVaultAuth } from "../../ssh/vault-oidc-auth.js";
+import { completeVaultAuth } from "../../hosts/vault-oidc-auth.js";
 
 const router = express.Router();
 

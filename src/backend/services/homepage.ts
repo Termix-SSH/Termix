@@ -1,13 +1,13 @@
 import express from "express";
 import cookieParser from "cookie-parser";
-import { createCorsMiddleware } from "./utils/cors-config.js";
-import { AuthManager } from "./utils/auth-manager.js";
-import { homepageItemsRouter } from "./database/routes/homepage-items-routes.js";
-import { homepageLayoutRouter } from "./database/routes/homepage-layout-routes.js";
-import { homepageFaviconRouter } from "./database/routes/homepage-favicon-routes.js";
-import { homepageRssRouter } from "./database/routes/homepage-rss-routes.js";
-import { homepagePingRouter } from "./database/routes/homepage-ping-routes.js";
-import { homepageProxyRouter } from "./database/routes/homepage-proxy-routes.js";
+import { createCorsMiddleware } from "../utils/cors-config.js";
+import { AuthManager } from "../utils/auth-manager.js";
+import { homepageItemsRouter } from "../database/routes/homepage-items-routes.js";
+import { homepageLayoutRouter } from "../database/routes/homepage-layout-routes.js";
+import { homepageFaviconRouter } from "../database/routes/homepage-favicon-routes.js";
+import { homepageRssRouter } from "../database/routes/homepage-rss-routes.js";
+import { homepagePingRouter } from "../database/routes/homepage-ping-routes.js";
+import { homepageProxyRouter } from "../database/routes/homepage-proxy-routes.js";
 
 const app = express();
 const authManager = AuthManager.getInstance();

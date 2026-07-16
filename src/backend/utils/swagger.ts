@@ -2,7 +2,7 @@ import swaggerJSDoc from "@deadendjs/swagger-jsdoc";
 import path from "path";
 import { fileURLToPath } from "url";
 import { promises as fs } from "fs";
-import { systemLogger } from "./utils/logger.js";
+import { systemLogger } from "./logger.js";
 
 type SwaggerJSDocOptions = Parameters<typeof swaggerJSDoc>[0];
 
@@ -122,11 +122,12 @@ const swaggerOptions: SwaggerJSDocOptions = {
     ],
   },
   apis: [
-    path.join(__dirname, "database", "routes", "*.js").replace(/\\/g, "/"),
-    path.join(__dirname, "dashboard.js").replace(/\\/g, "/"),
-    path.join(__dirname, "ssh", "*.js").replace(/\\/g, "/"),
-    path.join(__dirname, "ssh", "**", "*.js").replace(/\\/g, "/"),
-    path.join(__dirname, "guacamole", "routes.js").replace(/\\/g, "/"),
+    path
+      .join(__dirname, "..", "database", "routes", "*.js")
+      .replace(/\\/g, "/"),
+    path.join(__dirname, "..", "services", "*.js").replace(/\\/g, "/"),
+    path.join(__dirname, "..", "hosts", "*.js").replace(/\\/g, "/"),
+    path.join(__dirname, "..", "hosts", "**", "*.js").replace(/\\/g, "/"),
   ],
 };
 
@@ -138,7 +139,14 @@ async function generateOpenAPISpec() {
 
     const swaggerSpec = await swaggerJSDoc(swaggerOptions);
 
-    const outputPath = path.join(__dirname, "..", "..", "..", "openapi.json");
+    const outputPath = path.join(
+      __dirname,
+      "..",
+      "..",
+      "..",
+      "..",
+      "openapi.json",
+    );
 
     await fs.writeFile(
       outputPath,

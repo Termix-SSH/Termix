@@ -154,16 +154,16 @@ import {
 
     const dbServer = await import("./database/database.js");
     await (dbServer as unknown as { serverReady: Promise<void> }).serverReady;
-    await import("./ssh/terminal.js");
-    await import("./ssh/tunnel/index.js");
-    await import("./ssh/file-manager.js");
-    await import("./ssh/host-metrics.js");
-    await import("./ssh/docker/index.js");
-    await import("./ssh/docker/console.js");
-    await import("./ssh/tmux-monitor.js"); // --- tmux-monitor ---
-    await import("./serial/serial.js");
-    await import("./dashboard.js");
-    await import("./homepage.js");
+    await import("./hosts/terminal.js");
+    await import("./hosts/tunnel/index.js");
+    await import("./hosts/file-manager.js");
+    await import("./hosts/host-metrics.js");
+    await import("./hosts/docker/index.js");
+    await import("./hosts/docker/console.js");
+    await import("./hosts/tmux-monitor.js"); // --- tmux-monitor ---
+    await import("./hosts/serial.js");
+    await import("./services/dashboard.js");
+    await import("./services/homepage.js");
 
     // Initialize log level from database settings
     const { getCurrentSettingValue } =
@@ -180,7 +180,7 @@ import {
     const guacEnabled = getCurrentSettingValue("guac_enabled") !== "false";
 
     if (process.env.ENABLE_GUACAMOLE !== "false" && guacEnabled) {
-      import("./guacamole/guacamole-server.js")
+      import("./hosts/guacamole/guacamole-server.js")
         .then(() => {
           systemLogger.info("Guacamole server initialized", {
             operation: "guac_init",
