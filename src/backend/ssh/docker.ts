@@ -10,6 +10,7 @@ import {
   createCurrentHostResolutionRepository,
 } from "../database/repositories/factory.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
+import { createConnectionLog } from "./connection-log.js";
 import { DataCrypto } from "../utils/data-crypto.js";
 import { AuthManager } from "../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../types/index.js";
@@ -32,20 +33,6 @@ import {
 import { resolveSshConnectConfigHost } from "./ssh-dns.js";
 
 const sshLogger = logger;
-
-function createConnectionLog(
-  type: "info" | "success" | "warning" | "error",
-  stage: ConnectionStage,
-  message: string,
-  details?: Record<string, unknown>,
-): Omit<LogEntry, "id" | "timestamp"> {
-  return {
-    type,
-    stage,
-    message,
-    details,
-  };
-}
 
 interface SSHSession {
   client: SSHClient;

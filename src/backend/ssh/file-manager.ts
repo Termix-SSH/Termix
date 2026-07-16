@@ -28,7 +28,7 @@ import {
   type HostTransferDeps,
 } from "./host-transfer.js";
 import { registerFileContentRoutes } from "./file-manager-content-routes.js";
-import { createConnectionLog } from "./file-manager-log.js";
+import { createConnectionLog } from "./connection-log.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
 import { preparePrivateKeyForSSH2 } from "../utils/ssh-key-utils.js";
 import {

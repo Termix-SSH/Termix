@@ -3,9 +3,9 @@ import { describe, it, expect, vi } from "vitest";
 import {
   supportsMetrics,
   isTcpPingEnabled,
-  createConnectionLog,
   tcpPingThroughJumpHost,
 } from "./host-metrics-helpers.js";
+import { createConnectionLog } from "./connection-log.js";
 
 describe("supportsMetrics", () => {
   it("supports plain ssh hosts", () => {

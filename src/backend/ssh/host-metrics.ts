@@ -47,11 +47,11 @@ import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
 import { createJumpHostChain } from "./jump-host-chain.js";
 import {
-  createConnectionLog,
   isTcpPingEnabled,
   supportsMetrics,
   tcpPingThroughJumpHost,
 } from "./host-metrics-helpers.js";
+import { createConnectionLog } from "./connection-log.js";
 import {
   cleanupMetricsSession,
   getSessionKey,

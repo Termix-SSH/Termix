@@ -1,4 +1,3 @@
-import type { LogEntry, ConnectionStage } from "../../types/connection-log.js";
 import type { Client } from "ssh2";
 
 export type StatsCapableHost = {
@@ -46,18 +45,4 @@ export function tcpPingThroughJumpHost(
       finish(!error && !!stream);
     });
   });
-}
-
-export function createConnectionLog(
-  type: "info" | "success" | "warning" | "error",
-  stage: ConnectionStage,
-  message: string,
-  details?: Record<string, unknown>,
-): Omit<LogEntry, "id" | "timestamp"> {
-  return {
-    type,
-    stage,
-    message,
-    details,
-  };
 }
