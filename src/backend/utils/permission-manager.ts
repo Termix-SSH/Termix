@@ -37,6 +37,7 @@ interface HostAccessInfo {
   hasAccess: boolean;
   isOwner: boolean;
   isShared: boolean;
+  isAdminBypass?: boolean;
   permissionLevel?: SharePermissionLevel;
   expiresAt?: string | null;
 }
@@ -209,6 +210,9 @@ class PermissionManager {
           action === "delete" ||
           LEVEL_RANK[grantedLevel] < LEVEL_RANK[action]
         ) {
+          if (await this.isAdmin(userId)) {
+            return this.adminBypassAccess();
+          }
           return {
             hasAccess: false,
             isOwner: false,
@@ -240,6 +244,10 @@ class PermissionManager {
         };
       }
 
+      if (await this.isAdmin(userId)) {
+        return this.adminBypassAccess();
+      }
+
       return {
         hasAccess: false,
         isOwner: false,
@@ -258,6 +266,18 @@ class PermissionManager {
         isShared: false,
       };
     }
+  }
+
+  // Admins get owner-equivalent access to every host; each connect is
+  // audit-logged in the host resolver.
+  private adminBypassAccess(): HostAccessInfo {
+    return {
+      hasAccess: true,
+      isOwner: false,
+      isShared: false,
+      isAdminBypass: true,
+      permissionLevel: "manage",
+    };
   }
 
   async isAdmin(userId: string): Promise<boolean> {

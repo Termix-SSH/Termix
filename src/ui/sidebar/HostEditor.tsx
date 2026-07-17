@@ -35,6 +35,10 @@ import {
   getUserInfo,
   getVaultProfiles,
   getHostPassword,
+  adminCreateUserHost,
+  adminUpdateUserHost,
+  adminGetHostPassword,
+  adminGetUserSnippets,
 } from "@/main-axios";
 import { getTailscaleDevices, getHostDefaults } from "@/api/settings-api";
 import type { Host, VaultProfile } from "@/types/ui-types";
@@ -77,6 +81,7 @@ export function HostEditor({
   onTabChange,
   hosts,
   credentials,
+  adminTargetUserId,
 }: {
   host: Host | null;
   activeTab: string;
@@ -87,6 +92,9 @@ export function HostEditor({
   onTabChange: (tab: string) => void;
   hosts: Host[];
   credentials: { id: string; name: string; username: string }[];
+  // When set, the editor works on another user's host through the admin
+  // impersonation endpoints instead of the signed-in user's own data.
+  adminTargetUserId?: string;
 }) {
   const { t } = useTranslation();
   const { setPreviewTerminalTheme } = useTabsSafe();
@@ -133,11 +141,14 @@ export function HostEditor({
   }, []);
 
   useEffect(() => {
-    getSnippets()
+    const loadSnippets = adminTargetUserId
+      ? adminGetUserSnippets(adminTargetUserId)
+      : getSnippets();
+    loadSnippets
       .then((res) => setSnippets(mapSnippetResponse(res)))
       .catch(() => {});
     reloadVaultProfiles();
-  }, []);
+  }, [adminTargetUserId]);
 
   useEffect(() => {
     if (host) return;
@@ -150,7 +161,10 @@ export function HostEditor({
     if (!host?.id || form.vncAuthType !== "direct" || form.vncPassword) return;
 
     let cancelled = false;
-    getHostPassword(Number(host.id), "vncPassword").then((password) => {
+    const loadVncPassword = adminTargetUserId
+      ? adminGetHostPassword(adminTargetUserId, Number(host.id), "vncPassword")
+      : getHostPassword(Number(host.id), "vncPassword");
+    loadVncPassword.then((password) => {
       if (cancelled || !password) return;
       setForm((prev) =>
         prev.vncPassword ? prev : { ...prev, vncPassword: password },
@@ -160,7 +174,7 @@ export function HostEditor({
     return () => {
       cancelled = true;
     };
-  }, [form.vncAuthType, form.vncPassword, host?.id]);
+  }, [form.vncAuthType, form.vncPassword, host?.id, adminTargetUserId]);
 
   useEffect(() => {
     if (activeTab !== "tunnels") return;
@@ -184,9 +198,16 @@ export function HostEditor({
     setSaving(true);
     try {
       const data = buildHostEditorPayload(form, protocols);
-      const saved = host
-        ? await updateSSHHost(Number(host.id), data)
-        : await createSSHHost(data);
+      let saved: SSHHost;
+      if (adminTargetUserId) {
+        saved = host
+          ? await adminUpdateUserHost(adminTargetUserId, Number(host.id), data)
+          : await adminCreateUserHost(adminTargetUserId, data);
+      } else {
+        saved = host
+          ? await updateSSHHost(Number(host.id), data)
+          : await createSSHHost(data);
+      }
       toast.success(host ? t("hosts.hostUpdated") : t("hosts.hostCreated"));
       setPreviewTerminalTheme(null);
       onSave(saved);

@@ -23,6 +23,7 @@ const accessState = vi.hoisted(() => ({
     expiresAt: string | null;
   } | null,
   touched: [] as number[],
+  adminIds: new Set<string>(),
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -44,7 +45,8 @@ vi.mock("../../database/repositories/factory.js", () => ({
     userHasAnyRoleName: async () => false,
   }),
   createCurrentUserRepository: () => ({
-    findById: async () => null,
+    findById: async (userId: string) =>
+      accessState.adminIds.has(userId) ? { id: userId, isAdmin: true } : null,
   }),
 }));
 
@@ -116,6 +118,7 @@ describe("PermissionManager.canAccessHost level hierarchy", () => {
     accessState.ownerId = "owner";
     accessState.grant = null;
     accessState.touched = [];
+    accessState.adminIds = new Set();
   });
 
   it("grants the owner every action including delete", async () => {
@@ -164,5 +167,31 @@ describe("PermissionManager.canAccessHost level hierarchy", () => {
     expect(accessState.touched).toEqual([]);
     await manager.canAccessHost("recipient", 42, "connect");
     expect(accessState.touched).toEqual([5]);
+  });
+
+  it("grants admins owner-equivalent access to any host via bypass", async () => {
+    accessState.adminIds = new Set(["adminUser"]);
+    for (const action of actions) {
+      const info = await manager.canAccessHost("adminUser", 42, action);
+      expect(info).toMatchObject({
+        hasAccess: true,
+        isOwner: false,
+        isAdminBypass: true,
+        permissionLevel: "manage",
+      });
+    }
+  });
+
+  it("upgrades an under-privileged admin's share access via bypass", async () => {
+    accessState.adminIds = new Set(["adminUser"]);
+    accessState.grant = { id: 7, permissionLevel: "connect", expiresAt: null };
+    const info = await manager.canAccessHost("adminUser", 42, "manage");
+    expect(info).toMatchObject({ hasAccess: true, isAdminBypass: true });
+  });
+
+  it("does not grant a non-admin stranger admin bypass", async () => {
+    const info = await manager.canAccessHost("stranger", 42, "manage");
+    expect(info.hasAccess).toBe(false);
+    expect(info.isAdminBypass).toBeUndefined();
   });
 });

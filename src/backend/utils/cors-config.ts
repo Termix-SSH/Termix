@@ -36,6 +36,7 @@ export function createCorsMiddleware(
     "User-Agent",
     "X-Electron-App",
     "Cache-Control",
+    "x-admin-target-user",
     ...extraHeaders,
   ];
 

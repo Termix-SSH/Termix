@@ -971,6 +971,7 @@ export interface AuthenticatedRequest extends Request {
   userId: string;
   sessionId?: string;
   apiKeyId?: string;
+  actingAdminUserId?: string;
   user?: {
     id: string;
     username: string;

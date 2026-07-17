@@ -137,8 +137,8 @@ function buildRailButtons(
 }
 
 const btnBase =
-  "relative flex items-center gap-2.5 h-7 rounded shrink-0 transition-colors";
-const btnStyle = { margin: "0 4px", padding: "0 6px" };
+  "relative flex items-center h-7 rounded shrink-0 transition-colors gap-2.5";
+const btnStyle = { margin: "0 4px", padding: "0 8px" };
 
 export function AppRail({
   railView,
@@ -279,8 +279,8 @@ export function AppRail({
                 {item.icon}
               </span>
               <span
-                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${
-                  railExpanded ? "opacity-100 delay-75" : "opacity-0"
+                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${
+                  railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"
                 }`}
               >
                 {item.title}
@@ -304,8 +304,8 @@ export function AppRail({
                 {item.icon}
               </span>
               <span
-                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${
-                  railExpanded ? "opacity-100 delay-75" : "opacity-0"
+                className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${
+                  railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"
                 }`}
               >
                 {item.title}
@@ -362,7 +362,7 @@ export function AppRail({
               )}
             </span>
             <span
-              className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0"}`}
+              className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"}`}
             >
               {item.title}
             </span>
@@ -381,7 +381,7 @@ export function AppRail({
             <LogOut size={16} />
           </span>
           <span
-            className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-opacity duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0"}`}
+            className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"}`}
           >
             {t("common.logout")}
           </span>
@@ -391,7 +391,7 @@ export function AppRail({
       <div className="shrink-0 border-t border-border">
         <button
           className="flex items-center gap-2.5 w-full h-10 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          style={{ padding: "0 6px" }}
+          style={{ padding: "0 8px" }}
         >
           <div
             className="rounded-full bg-accent-brand/20 border border-accent-brand/30 flex items-center justify-center font-bold text-accent-brand shrink-0"

@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   host: null as Record<string, unknown> | null,
   hasAccess: true,
+  isAdminBypass: false,
   overrideCredentialId: null as number | null,
   credentials: new Map<string, Record<string, unknown>>(),
   sharedSecret: null as Record<string, unknown> | null,
+  auditCalls: [] as Record<string, unknown>[],
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -19,12 +21,24 @@ vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentVaultProfileRepository: () => ({
     findById: async () => null,
   }),
+  createCurrentUserRepository: () => ({
+    findById: async (userId: string) => ({ id: userId, username: userId }),
+  }),
+}));
+
+vi.mock("../../utils/audit-logger.js", () => ({
+  logAudit: async (params: Record<string, unknown>) => {
+    state.auditCalls.push(params);
+  },
 }));
 
 vi.mock("../../utils/permission-manager.js", () => ({
   PermissionManager: {
     getInstance: () => ({
-      canAccessHost: async () => ({ hasAccess: state.hasAccess }),
+      canAccessHost: async () => ({
+        hasAccess: state.hasAccess,
+        isAdminBypass: state.isAdminBypass,
+      }),
     }),
   },
 }));
@@ -82,9 +96,11 @@ function baseHost(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   state.host = baseHost();
   state.hasAccess = true;
+  state.isAdminBypass = false;
   state.overrideCredentialId = null;
   state.credentials.clear();
   state.sharedSecret = null;
+  state.auditCalls = [];
 });
 
 describe("resolveHostById", () => {
@@ -175,5 +191,54 @@ describe("resolveHostById", () => {
     state.host = baseHost({ authType: "none", password: null });
     const host = await resolveHostById(42, "recipient");
     expect(host).not.toBeNull();
+  });
+
+  it("resolves an admin bypass like the owner, keeping owner-only secrets", async () => {
+    state.isAdminBypass = true;
+    state.host = baseHost({
+      authType: "credential",
+      credentialId: 9,
+      username: "",
+      password: null,
+    });
+    state.credentials.set("9:owner", {
+      id: 9,
+      username: "cred-user",
+      authType: "key",
+      password: null,
+      privateKey: "OWNER-PRIVATE-KEY",
+      key: null,
+      keyPassword: "kp",
+      keyType: "ssh-ed25519",
+      certPublicKey: null,
+    });
+
+    const host = (await resolveHostById(42, "adminUser")) as Record<
+      string,
+      unknown
+    >;
+    // Owner credential resolved (not the share snapshot path).
+    expect(host.key).toBe("OWNER-PRIVATE-KEY");
+    expect(host.username).toBe("cred-user");
+    // Owner-only operational secrets are NOT stripped for the admin.
+    expect(host.sudoPassword).toBe("owner-sudo");
+    expect(host.autostartPassword).toBe("auto-pass");
+  });
+
+  it("audits every admin-bypass host resolution", async () => {
+    state.isAdminBypass = true;
+    await resolveHostById(42, "adminUser");
+    expect(state.auditCalls).toHaveLength(1);
+    expect(state.auditCalls[0]).toMatchObject({
+      action: "admin_connect_host",
+      resourceType: "host",
+      resourceId: "42",
+      userId: "adminUser",
+    });
+  });
+
+  it("does not audit an ordinary owner resolution", async () => {
+    await resolveHostById(42, "owner");
+    expect(state.auditCalls).toHaveLength(0);
   });
 });

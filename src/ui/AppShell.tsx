@@ -1691,8 +1691,14 @@ export function AppShell({
         )}
 
         {railView === "admin-settings" && isAdmin && (
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <AdminSettingsPanel />
+          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+            <AdminSettingsPanel
+              onEditingChange={setSidebarEditing}
+              onOpenHostTab={(host) => {
+                connectHost(host);
+                if (isMobile) setSidebarOpen(false);
+              }}
+            />
           </div>
         )}
 
@@ -1755,7 +1761,7 @@ export function AppShell({
         {/* Desktop: inline resizable sidebar */}
         {!isMobile && (
           <div
-            className={`relative flex flex-col bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
+            className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
             style={{
               width: sidebarOpen ? (sidebarEditing ? 560 : sidebarWidth) : 0,
               transition: sidebarDragging ? "none" : "width 0.2s",
@@ -1779,7 +1785,7 @@ export function AppShell({
             <SheetContent
               side="left"
               showCloseButton={false}
-              className="p-0 flex flex-col w-[min(85vw,360px)] max-w-full bg-sidebar border-r border-border gap-0"
+              className="p-0 flex flex-col min-h-0 w-[min(85vw,360px)] max-w-full bg-sidebar border-r border-border gap-0"
               style={{ height: "100dvh" }}
             >
               {sidebarHeader}

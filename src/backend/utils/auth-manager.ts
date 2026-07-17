@@ -8,6 +8,7 @@ import {
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger, authLogger } from "./logger.js";
+import { logAudit, getRequestMeta } from "./audit-logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -57,6 +58,7 @@ interface AuthenticatedRequest extends Request {
   apiKeyId?: string;
   pendingTOTP?: boolean;
   dataKey?: Buffer;
+  actingAdminUserId?: string;
 }
 
 interface RequestWithHeaders extends Request {
@@ -64,6 +66,16 @@ interface RequestWithHeaders extends Request {
     "x-forwarded-proto"?: string;
   };
 }
+
+const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
+
+// Data-plane routes an admin may hit on behalf of another user. Everything
+// else (TOTP, sessions, tunnels, file manager, ...) rejects the header.
+const IMPERSONATION_PATH_ALLOWLIST = [
+  /^\/host\/db\//,
+  /^\/credentials(\/|$)/,
+  /^\/snippets(\/|$)/,
+];
 
 class AuthManager {
   private static instance: AuthManager;
@@ -593,6 +605,13 @@ class AuthManager {
     token: string,
     requireAdmin = false,
   ): Promise<void> {
+    if (req.headers[ADMIN_TARGET_USER_HEADER]) {
+      res.status(403).json({
+        error: "Impersonation is not allowed with API key authentication",
+        code: "IMPERSONATION_NOT_ALLOWED",
+      });
+      return;
+    }
     try {
       const tokenPrefix = token.substring(0, 12);
       const apiKeyRepository = createCurrentApiKeyRepository();
@@ -763,8 +782,101 @@ class AuthManager {
       authReq.userId = payload.userId;
       authReq.sessionId = payload.sessionId;
       authReq.pendingTOTP = payload.pendingTOTP;
+
+      if (authReq.headers[ADMIN_TARGET_USER_HEADER]) {
+        const handled = await this.applyAdminImpersonation(
+          authReq,
+          res,
+          payload.userId,
+        );
+        if (handled) return;
+      }
+
       next();
     };
+  }
+
+  /**
+   * Handle the X-Admin-Target-User header: admins may act on another user's
+   * data for an allowlisted set of data-plane routes. On success req.userId
+   * becomes the target user and actingAdminUserId records the real caller.
+   * Returns true when a response was already sent (request must stop).
+   */
+  private async applyAdminImpersonation(
+    req: AuthenticatedRequest,
+    res: Response,
+    adminUserId: string,
+  ): Promise<boolean> {
+    const rawHeader = req.headers[ADMIN_TARGET_USER_HEADER];
+    const targetUserId = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+
+    if (!targetUserId || targetUserId === adminUserId) {
+      return false;
+    }
+
+    const userRepository = createCurrentUserRepository();
+    const admin = await userRepository.findById(adminUserId);
+    if (!admin?.isAdmin) {
+      databaseLogger.warn("Impersonation attempt by non-admin", {
+        operation: "admin_impersonation_denied",
+        userId: adminUserId,
+        targetUserId,
+        path: req.originalUrl,
+      });
+      res.status(403).json({
+        error: "Admin access required",
+        code: "IMPERSONATION_DENIED",
+      });
+      return true;
+    }
+
+    const path = (req.originalUrl || req.url || "").split("?")[0];
+    const allowed = IMPERSONATION_PATH_ALLOWLIST.some((pattern) =>
+      pattern.test(path),
+    );
+    if (!allowed) {
+      res.status(403).json({
+        error: "Impersonation is not allowed for this route",
+        code: "IMPERSONATION_NOT_ALLOWED",
+      });
+      return true;
+    }
+
+    const target = await userRepository.findById(targetUserId);
+    if (!target) {
+      res.status(404).json({
+        error: "Target user not found",
+        code: "TARGET_USER_NOT_FOUND",
+      });
+      return true;
+    }
+
+    if (!DataCrypto.canUserAccessData(targetUserId)) {
+      res.status(423).json({
+        error: "Target user's data stays locked until their next login",
+        code: "TARGET_DATA_LOCKED",
+      });
+      return true;
+    }
+
+    req.userId = targetUserId;
+    req.actingAdminUserId = adminUserId;
+
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    void logAudit({
+      userId: adminUserId,
+      username: admin.username,
+      action: "admin_impersonated_request",
+      resourceType: "user",
+      resourceId: targetUserId,
+      resourceName: target.username,
+      details: JSON.stringify({ method: req.method, path }),
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
+    return false;
   }
 
   createDataAccessMiddleware() {

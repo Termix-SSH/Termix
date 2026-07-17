@@ -13,6 +13,8 @@ import {
   generateKeyPair,
   generatePublicKeyFromPrivate,
   updateCredential,
+  adminCreateUserCredential,
+  adminUpdateUserCredential,
 } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
 
@@ -23,11 +25,15 @@ export function CredentialEditorView({
   activeTab,
   onBack,
   onSave,
+  adminTargetUserId,
 }: {
   credential: Credential | null;
   activeTab: string;
   onBack: () => void;
   onSave: (saved: Record<string, unknown>) => void;
+  // When set, saves go to another user's credentials via the admin
+  // impersonation endpoints.
+  adminTargetUserId?: string;
 }) {
   const [credForm, setCredForm] = useState(() => ({
     name: credential?.name ?? "",
@@ -92,15 +98,28 @@ export function CredentialEditorView({
             : credForm.passphrase || null
           : null,
       };
-      const saved = credential
-        ? await updateCredential(Number(credential.id), data)
-        : await createCredential(data);
+      let saved: Record<string, unknown>;
+      if (adminTargetUserId) {
+        saved = credential
+          ? await adminUpdateUserCredential(
+              adminTargetUserId,
+              Number(credential.id),
+              data,
+            )
+          : await adminCreateUserCredential(adminTargetUserId, data);
+      } else {
+        saved = credential
+          ? await updateCredential(Number(credential.id), data)
+          : await createCredential(data);
+      }
       toast.success(
         credential
           ? t("hosts.credentialUpdated")
           : t("hosts.credentialCreated"),
       );
-      window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
+      if (!adminTargetUserId) {
+        window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
+      }
       onSave(saved);
     } catch (err) {
       const msg = err instanceof Error ? err.message : null;

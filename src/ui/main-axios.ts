@@ -201,6 +201,7 @@ export interface UserInfo {
   is_admin: boolean;
   is_oidc: boolean;
   password_hash?: string;
+  data_unlocked?: boolean;
 }
 
 interface UserCount {
@@ -1953,9 +1954,32 @@ export {
   disableOIDCConfig,
   getCommandHistoryEnabled,
   updateCommandHistoryEnabled,
+  adminResetUserPassword,
+  adminDisableUserTotp,
+  adminExportUserData,
   type ApiKey,
   type CreatedApiKey,
 } from "@/api/user-management-api";
+
+// ADMIN USER DATA MANAGEMENT
+// ============================================================================
+
+export {
+  adminGetUserHosts,
+  adminCreateUserHost,
+  adminUpdateUserHost,
+  adminDeleteUserHost,
+  adminGetHostPassword,
+  adminGetUserCredentials,
+  adminGetUserCredentialDetails,
+  adminCreateUserCredential,
+  adminUpdateUserCredential,
+  adminDeleteUserCredential,
+  adminGetUserSnippets,
+  adminCreateUserSnippet,
+  adminUpdateUserSnippet,
+  adminDeleteUserSnippet,
+} from "@/api/admin-user-data-api";
 
 export {
   setupTOTP,

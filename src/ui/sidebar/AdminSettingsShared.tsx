@@ -34,7 +34,7 @@ export function AccordionSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="border border-border bg-card overflow-hidden">
+    <div className="border border-border bg-card overflow-hidden shrink-0">
       <button
         onClick={onToggle}
         className="flex items-center gap-2 w-full px-3 py-2.5 text-left hover:bg-muted/40 transition-colors"

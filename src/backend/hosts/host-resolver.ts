@@ -1,7 +1,9 @@
 import {
   createCurrentHostResolutionRepository,
   createCurrentVaultProfileRepository,
+  createCurrentUserRepository,
 } from "../database/repositories/factory.js";
+import { logAudit } from "../utils/audit-logger.js";
 import { logger } from "../utils/logger.js";
 import {
   pickResolvedPassword,
@@ -39,7 +41,28 @@ export async function resolveHostById(
 
   const host = resolvedHost as Record<string, unknown>;
 
-  if (userId !== ownerId) {
+  // Admin bypass resolves like the owner would; every such access is audited.
+  const ownerEquivalent = userId === ownerId || access.isAdminBypass === true;
+
+  if (access.isAdminBypass && userId !== ownerId) {
+    try {
+      const admin = await createCurrentUserRepository().findById(userId);
+      void logAudit({
+        userId,
+        username: admin?.username ?? "unknown",
+        action: "admin_connect_host",
+        resourceType: "host",
+        resourceId: String(hostId),
+        resourceName: (host.name as string) || (host.ip as string) || "",
+        details: JSON.stringify({ ownerId }),
+        success: true,
+      });
+    } catch {
+      // never block resolution on audit bookkeeping
+    }
+  }
+
+  if (!ownerEquivalent) {
     // Owner-only operational secrets are never shared.
     host.sudoPassword = null;
     host.autostartPassword = null;
@@ -91,7 +114,7 @@ export async function resolveHostById(
     }
   }
 
-  if (userId !== ownerId) {
+  if (!ownerEquivalent) {
     const resolved = await resolveSharedSshSecrets(
       host,
       hostId,
@@ -133,7 +156,7 @@ export async function resolveHostById(
 
   host.username = await expandOidcUsername(
     host.username as string | undefined,
-    userId,
+    ownerEquivalent ? ownerId : userId,
   );
 
   // Resolve a Vault SSH signer profile (shared settings, no secrets). The

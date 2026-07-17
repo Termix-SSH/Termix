@@ -6,6 +6,7 @@ import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { DataCrypto } from "../../utils/data-crypto.js";
 import {
   createCurrentRoleRepository,
   createCurrentUserRepository,
@@ -51,7 +52,11 @@ export function registerUserAdminRoutes(
    */
   router.get("/list", authenticateJWT, async (req, res) => {
     try {
-      const allUsers = await createCurrentUserRepository().listAll();
+      const userRepository = createCurrentUserRepository();
+      const requester = await userRepository.findById(
+        (req as AuthenticatedRequest).userId,
+      );
+      const allUsers = await userRepository.listAll();
 
       res.json({
         users: allUsers.map((u) => ({
@@ -60,6 +65,14 @@ export function registerUserAdminRoutes(
           is_admin: u.isAdmin,
           is_oidc: u.isOidc,
           password_hash: u.passwordHash ? "set" : null,
+          // Management-only details stay admin-eyes-only; regular users hit
+          // this route to pick sharing targets.
+          ...(requester?.isAdmin
+            ? {
+                data_unlocked: DataCrypto.canUserAccessData(u.id),
+                totp_enabled: !!u.totpEnabled,
+              }
+            : {}),
         })),
       });
     } catch (err) {
@@ -604,6 +617,178 @@ export function registerUserAdminRoutes(
     } catch (err) {
       authLogger.error("Failed to reset user password", err);
       res.status(500).json({ error: "Failed to reset password" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/admin/totp/disable:
+   *   post:
+   *     summary: Disable a user's TOTP (admin only)
+   *     description: Clears another user's TOTP secret, enabled flag and backup codes so they can log in without 2FA.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               userId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: TOTP disabled for the user.
+   *       400:
+   *         description: User ID is required or TOTP is not enabled.
+   *       403:
+   *         description: Admin access required.
+   *       404:
+   *         description: User not found.
+   *       500:
+   *         description: Failed to disable TOTP.
+   */
+  router.post("/admin/totp/disable", authenticateJWT, async (req, res) => {
+    const adminId = (req as AuthenticatedRequest).userId;
+    const { userId: targetUserId } = req.body;
+
+    if (!isNonEmptyString(targetUserId)) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    try {
+      const userRepository = createCurrentUserRepository();
+      const adminUser = await userRepository.findById(adminId);
+      if (!adminUser?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const targetUser = await userRepository.findById(targetUserId.trim());
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      if (!targetUser.totpEnabled) {
+        return res
+          .status(400)
+          .json({ error: "TOTP is not enabled for this user" });
+      }
+
+      await userRepository.update(targetUser.id, {
+        totpSecret: null,
+        totpEnabled: false,
+        totpBackupCodes: null,
+      });
+
+      try {
+        await DatabaseSaveTrigger.forceSave("admin_disable_totp");
+      } catch (saveError) {
+        authLogger.error("Failed to persist TOTP disable to disk", saveError, {
+          operation: "admin_disable_totp_save_failed",
+          userId: targetUser.id,
+        });
+      }
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId: adminId,
+        username: adminUser.username ?? adminId,
+        action: "admin_disable_totp",
+        resourceType: "user",
+        resourceId: targetUser.id,
+        resourceName: targetUser.username,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ message: "TOTP disabled" });
+    } catch (err) {
+      authLogger.error("Failed to disable TOTP for user", err);
+      res.status(500).json({ error: "Failed to disable TOTP" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/admin/export/{userId}:
+   *   get:
+   *     summary: Export a user's data (admin only)
+   *     description: Downloads a JSON export of another user's data (hosts, credentials, file manager bookmarks). Secrets are decrypted server-side, so handle the file carefully.
+   *     tags:
+   *       - Users
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: JSON export of the user's data.
+   *       403:
+   *         description: Admin access required.
+   *       404:
+   *         description: User not found.
+   *       423:
+   *         description: The user's data stays locked until their next login.
+   *       500:
+   *         description: Failed to export user data.
+   */
+  router.get("/admin/export/:userId", authenticateJWT, async (req, res) => {
+    const adminId = (req as AuthenticatedRequest).userId;
+    const targetUserId = Array.isArray(req.params.userId)
+      ? req.params.userId[0]
+      : req.params.userId;
+
+    try {
+      const userRepository = createCurrentUserRepository();
+      const adminUser = await userRepository.findById(adminId);
+      if (!adminUser?.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const targetUser = await userRepository.findById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!DataCrypto.canUserAccessData(targetUser.id)) {
+        return res.status(423).json({
+          error: "Target user's data stays locked until their next login",
+          code: "TARGET_DATA_LOCKED",
+        });
+      }
+
+      const { UserDataExport } =
+        await import("../../utils/user-data-export.js");
+      const exportData = await UserDataExport.exportUserData(targetUser.id, {
+        format: "plaintext",
+        includeCredentials: true,
+      });
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId: adminId,
+        username: adminUser.username ?? adminId,
+        action: "admin_export_user_data",
+        resourceType: "user",
+        resourceId: targetUser.id,
+        resourceName: targetUser.username,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="termix-user-${targetUser.username}-export.json"`,
+      );
+      res.json(exportData);
+    } catch (err) {
+      authLogger.error("Failed to export user data", err);
+      res.status(500).json({ error: "Failed to export user data" });
     }
   });
 }

@@ -18,6 +18,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Settings2,
   Share2,
   Trash2,
   Unlink,
@@ -32,6 +33,8 @@ export type AdminUser = {
   isAdmin: boolean;
   isOidc: boolean;
   passwordHash?: string;
+  dataUnlocked?: boolean;
+  totpEnabled?: boolean;
 };
 
 export type AdminSession = {
@@ -76,6 +79,7 @@ type UsersSectionProps = {
     SetStateAction<{ id: string; username: string } | null>
   >;
   setUnlinkAccountOpen: Dispatch<SetStateAction<boolean>>;
+  onManageUser: (user: AdminUser) => void;
 };
 
 export function AdminUsersSection({
@@ -91,6 +95,7 @@ export function AdminUsersSection({
   setLinkAccountOpen,
   setUnlinkAccountTarget,
   setUnlinkAccountOpen,
+  onManageUser,
 }: UsersSectionProps) {
   const { t } = useTranslation();
 
@@ -159,6 +164,15 @@ export function AdminUsersSection({
                 </div>
               </div>
               <div className="flex items-center gap-0.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 text-muted-foreground hover:text-accent-brand"
+                  title={t("admin.manageUserData")}
+                  onClick={() => onManageUser(user)}
+                >
+                  <Settings2 className="size-3" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"

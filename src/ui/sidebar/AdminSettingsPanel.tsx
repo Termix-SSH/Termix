@@ -87,6 +87,8 @@ import {
   AdminLinkAccountDialog,
   AdminUnlinkAccountDialog,
 } from "./AdminUserDialogs";
+import { AdminUserManagePanel } from "./AdminUserManagePanel";
+import type { Host } from "@/types/ui-types";
 
 type ApiErrorLike = {
   response?: {
@@ -100,11 +102,18 @@ function apiErrorMessage(error: unknown, fallback: string) {
   return (error as ApiErrorLike).response?.data?.error || fallback;
 }
 
-export function AdminSettingsPanel() {
+export function AdminSettingsPanel({
+  onEditingChange,
+  onOpenHostTab,
+}: {
+  onEditingChange?: (editing: boolean) => void;
+  onOpenHostTab?: (host: Host) => void;
+} = {}) {
   const { t } = useTranslation();
   const [openSection, setOpenSection] = useState<AdminSection | null>(
     "general",
   );
+  const [manageUser, setManageUser] = useState<AdminUser | null>(null);
   const [allowRegistration, setAllowRegistration] = useState(true);
   const [allowPasswordLogin, setAllowPasswordLogin] = useState(true);
   const [allowPasswordReset, setAllowPasswordReset] = useState(true);
@@ -207,6 +216,11 @@ export function AdminSettingsPanel() {
   }, []);
 
   useEffect(() => {
+    onEditingChange?.(manageUser !== null);
+    return () => onEditingChange?.(false);
+  }, [manageUser, onEditingChange]);
+
+  useEffect(() => {
     if (editUserOpen && editUserTarget) {
       setEditUserRoles([]);
       setEditUserRolesLoading(true);
@@ -227,6 +241,8 @@ export function AdminSettingsPanel() {
             isAdmin: user.is_admin,
             isOidc: user.is_oidc,
             passwordHash: user.password_hash,
+            dataUnlocked: user.data_unlocked,
+            totpEnabled: user.totp_enabled,
           })),
         ),
       )
@@ -812,8 +828,31 @@ export function AdminSettingsPanel() {
     }
   }
 
+  if (manageUser) {
+    return (
+      <AdminUserManagePanel
+        key={manageUser.id}
+        user={manageUser}
+        roles={roles}
+        onBack={() => setManageUser(null)}
+        onOpenHostTab={onOpenHostTab}
+        onUserDeleted={() => {
+          setUsers((prev) => prev.filter((u) => u.id !== manageUser.id));
+          setManageUser(null);
+        }}
+        onTotpDisabled={() => {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === manageUser.id ? { ...u, totpEnabled: false } : u,
+            ),
+          );
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-2 p-3">
+    <div className="flex flex-col gap-2 p-3 flex-1 min-h-0 overflow-y-auto">
       <AdminGeneralSettingsSection
         open={openSection === "general"}
         onToggle={() => toggle("general")}
@@ -881,6 +920,7 @@ export function AdminSettingsPanel() {
         setLinkAccountOpen={setLinkAccountOpen}
         setUnlinkAccountTarget={setUnlinkAccountTarget}
         setUnlinkAccountOpen={setUnlinkAccountOpen}
+        onManageUser={setManageUser}
       />
 
       <AdminSessionsSection
