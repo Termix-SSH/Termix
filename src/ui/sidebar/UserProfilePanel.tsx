@@ -47,6 +47,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Fingerprint,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
@@ -1674,6 +1675,11 @@ export function UserProfilePanel({
                   id: "credentials",
                   icon: <KeyRound size={12} />,
                   label: t("nav.credentials"),
+                },
+                {
+                  id: "termix-id",
+                  icon: <Fingerprint size={12} />,
+                  label: t("nav.termixId"),
                 },
                 {
                   id: "connections",
