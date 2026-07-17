@@ -378,6 +378,7 @@ function highlightLine(
   const bare = cr ? line.slice(0, -1) : line;
 
   if (!bare.trim()) return line;
+  if (bare.length > MAX_LINE_LENGTH) return line;
   if (isShellPromptLine(bare)) return line;
 
   const segments = parseAnsiSegments(bare);

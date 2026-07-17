@@ -389,17 +389,17 @@ jobs:
             exit 0
           fi
 
-          sed -i "s|version \".*\"|version \"$VERSION\"|g" Casks/termix.rb
-          sed -i "s|sha256 \".*\"|sha256 \"$DMG_SHA256\"|g" Casks/termix.rb
+          sed -i "s|version \".*\"|version \"$VERSION\"|g" packaging/Casks/termix.rb
+          sed -i "s|sha256 \".*\"|sha256 \"$DMG_SHA256\"|g" packaging/Casks/termix.rb
 
-          if git diff --quiet Casks/termix.rb; then
+          if git diff --quiet packaging/Casks/termix.rb; then
             echo "Cask already up to date."
             exit 0
           fi
 
           git config user.name "LukeGus"
           git config user.email "bugattiguy527@gmail.com"
-          git add Casks/termix.rb
+          git add packaging/Casks/termix.rb
           git stash
           git pull --rebase origin main
           git stash pop

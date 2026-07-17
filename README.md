@@ -8,19 +8,19 @@
 
 <p>
   English ·
-  <a href="readme/README-CN.md">中文</a> ·
-  <a href="readme/README-JA.md">日本語</a> ·
-  <a href="readme/README-KO.md">한국어</a> ·
-  <a href="readme/README-FR.md">Français</a> ·
-  <a href="readme/README-DE.md">Deutsch</a> ·
-  <a href="readme/README-ES.md">Español</a> ·
-  <a href="readme/README-PT.md">Português</a> ·
-  <a href="readme/README-RU.md">Русский</a> ·
-  <a href="readme/README-AR.md">العربية</a> ·
-  <a href="readme/README-HI.md">हिन्दी</a> ·
-  <a href="readme/README-TR.md">Türkçe</a> ·
-  <a href="readme/README-VI.md">Tiếng Việt</a> ·
-  <a href="readme/README-IT.md">Italiano</a>
+  <a href="docs/readme/README-CN.md">中文</a> ·
+  <a href="docs/readme/README-JA.md">日本語</a> ·
+  <a href="docs/readme/README-KO.md">한국어</a> ·
+  <a href="docs/readme/README-FR.md">Français</a> ·
+  <a href="docs/readme/README-DE.md">Deutsch</a> ·
+  <a href="docs/readme/README-ES.md">Español</a> ·
+  <a href="docs/readme/README-PT.md">Português</a> ·
+  <a href="docs/readme/README-RU.md">Русский</a> ·
+  <a href="docs/readme/README-AR.md">العربية</a> ·
+  <a href="docs/readme/README-HI.md">हिन्दी</a> ·
+  <a href="docs/readme/README-TR.md">Türkçe</a> ·
+  <a href="docs/readme/README-VI.md">Tiếng Việt</a> ·
+  <a href="docs/readme/README-IT.md">Italiano</a>
 </p>
 
 <p>
@@ -41,13 +41,13 @@ Termix is free and open source. If you find it useful, consider [donating](https
 
 <br />
 
-<img src="./repo-images/Termix Header.png" alt="Termix Banner" width="900" />
+<img src="./docs/repo-images/Termix Header.png" alt="Termix Banner" width="900" />
 
 <br />
 <br />
 
 <p>
-  <img src="repo-images/Repo of the Day.png" alt="Repo of the Day Achievement" width="280" />
+  <img src="docs/repo-images/Repo of the Day.png" alt="Repo of the Day Achievement" width="280" />
   <br />
   <sub>Achieved on September 1st, 2025</sub>
 </p>
@@ -307,7 +307,7 @@ Termix is free and open source with no subscriptions or paid plans. If you find 
 
 <br />
 
-[![YouTube](./repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
+[![YouTube](./docs/repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
 <sub>Watch update overviews on YouTube</sub>
 
@@ -316,36 +316,36 @@ Termix is free and open source with no subscriptions or paid plans. If you find 
 
 <table>
 <tr>
-<td><img src="./repo-images/Image 1.png" alt="Termix Screenshot 1" width="400" /></td>
-<td><img src="./repo-images/Image 2.png" alt="Termix Screenshot 2" width="400" /></td>
+<td><img src="./docs/repo-images/Image 1.png" alt="Termix Screenshot 1" width="400" /></td>
+<td><img src="./docs/repo-images/Image 2.png" alt="Termix Screenshot 2" width="400" /></td>
 </tr>
 <tr>
-<td><img src="./repo-images/Image 3.png" alt="Termix Screenshot 3" width="400" /></td>
-<td><img src="./repo-images/Image 4.png" alt="Termix Screenshot 4" width="400" /></td>
+<td><img src="./docs/repo-images/Image 3.png" alt="Termix Screenshot 3" width="400" /></td>
+<td><img src="./docs/repo-images/Image 4.png" alt="Termix Screenshot 4" width="400" /></td>
 </tr>
 <tr>
-<td><img src="./repo-images/Image 5.png" alt="Termix Screenshot 5" width="400" /></td>
-<td><img src="./repo-images/Image 6.png" alt="Termix Screenshot 6" width="400" /></td>
+<td><img src="./docs/repo-images/Image 5.png" alt="Termix Screenshot 5" width="400" /></td>
+<td><img src="./docs/repo-images/Image 6.png" alt="Termix Screenshot 6" width="400" /></td>
 </tr>
 <tr>
-<td><img src="./repo-images/Image 7.png" alt="Termix Screenshot 7" width="400" /></td>
-<td><img src="./repo-images/Image 8.png" alt="Termix Screenshot 8" width="400" /></td>
+<td><img src="./docs/repo-images/Image 7.png" alt="Termix Screenshot 7" width="400" /></td>
+<td><img src="./docs/repo-images/Image 8.png" alt="Termix Screenshot 8" width="400" /></td>
 </tr>
 <tr>
-<td><img src="./repo-images/Image 9.png" alt="Termix Screenshot 9" width="400" /></td>
-<td><img src="./repo-images/Image 10.png" alt="Termix Screenshot 10" width="400" /></td>
+<td><img src="./docs/repo-images/Image 9.png" alt="Termix Screenshot 9" width="400" /></td>
+<td><img src="./docs/repo-images/Image 10.png" alt="Termix Screenshot 10" width="400" /></td>
 </tr>
 <tr>
-<td><img src="./repo-images/Image 11.png" alt="Termix Screenshot 11" width="400" /></td>
-<td><img src="./repo-images/Image 12.png" alt="Termix Screenshot 12" width="400" /></td>
+<td><img src="./docs/repo-images/Image 11.png" alt="Termix Screenshot 11" width="400" /></td>
+<td><img src="./docs/repo-images/Image 12.png" alt="Termix Screenshot 12" width="400" /></td>
 </tr>
 <tr>
-<td><img src="./repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
-<td><img src="./repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
+<td><img src="./docs/repo-images/Image 13.png" alt="Termix Screenshot 13" width="400" /></td>
+<td><img src="./docs/repo-images/Image 14.png" alt="Termix Screenshot 14" width="400" /></td>
 </tr>
 <tr>
-<td><img src="./repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
-<td><img src="./repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
+<td><img src="./docs/repo-images/Image 15.png" alt="Termix Screenshot 15" width="400" /></td>
+<td><img src="./docs/repo-images/Image 16.png" alt="Termix Screenshot 16" width="400" /></td>
 </tr>
 </table>
 

@@ -95,7 +95,7 @@ function main() {
   const videoId = youtubeId(youtube);
   const embed = [
     `<a href="https://youtu.be/${videoId}">`,
-    `  <img src="./repo-images/YouTube.png" alt="YouTube" width="500">`,
+    `  <img src="./docs/repo-images/YouTube.png" alt="YouTube" width="500">`,
     `</a>`,
   ].join("\n");
 

@@ -299,9 +299,9 @@ jobs:
           CHECKSUM_ARM64=$(sha256sum "release/termix_linux_arm64_appimage.AppImage" | awk '{print $1}')
 
           mkdir -p flatpak-build
-          cp flatpak/com.karmaa.termix.yml flatpak-build/
-          cp flatpak/com.karmaa.termix.desktop flatpak-build/
-          cp flatpak/com.karmaa.termix.metainfo.xml flatpak-build/
+          cp packaging/flatpak/com.karmaa.termix.yml flatpak-build/
+          cp packaging/flatpak/com.karmaa.termix.desktop flatpak-build/
+          cp packaging/flatpak/com.karmaa.termix.metainfo.xml flatpak-build/
           cp public/icon.svg flatpak-build/com.karmaa.termix.svg
           convert public/icon.png -resize 256x256 flatpak-build/icon-256.png
           convert public/icon.png -resize 128x128 flatpak-build/icon-128.png
@@ -333,7 +333,7 @@ jobs:
       - name: Create flatpakref file
         run: |
           VERSION="${{ steps.flatpak-version.outputs.version }}"
-          cp flatpak/com.karmaa.termix.flatpakref release/
+          cp packaging/flatpak/com.karmaa.termix.flatpakref release/
           sed -i "s|VERSION_PLACEHOLDER|release-${VERSION}-tag|g" release/com.karmaa.termix.flatpakref
 
       - name: Upload Flatpak bundle
@@ -545,7 +545,7 @@ jobs:
           CHECKSUM=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
 
           mkdir -p homebrew-generated
-          cp Casks/termix.rb homebrew-generated/termix.rb
+          cp packaging/Casks/termix.rb homebrew-generated/termix.rb
 
           sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-generated/termix.rb
           sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-generated/termix.rb
@@ -632,7 +632,7 @@ jobs:
           $DOWNLOAD_URL = "https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$MSI_NAME"
 
           New-Item -ItemType Directory -Force -Path "choco-build"
-          Copy-Item -Path "chocolatey\*" -Destination "choco-build" -Recurse -Force
+          Copy-Item -Path "packaging\chocolatey\*" -Destination "choco-build" -Recurse -Force
 
           $installScript = Get-Content "choco-build\tools\chocolateyinstall.ps1" -Raw -Encoding UTF8
           $installScript = $installScript -replace 'DOWNLOAD_URL_PLACEHOLDER', $DOWNLOAD_URL
@@ -751,10 +751,10 @@ jobs:
 
           mkdir -p flatpak-submission
 
-          cp flatpak/com.karmaa.termix.yml flatpak-submission/
-          cp flatpak/com.karmaa.termix.desktop flatpak-submission/
-          cp flatpak/com.karmaa.termix.metainfo.xml flatpak-submission/
-          cp flatpak/flathub.json flatpak-submission/
+          cp packaging/flatpak/com.karmaa.termix.yml flatpak-submission/
+          cp packaging/flatpak/com.karmaa.termix.desktop flatpak-submission/
+          cp packaging/flatpak/com.karmaa.termix.metainfo.xml flatpak-submission/
+          cp packaging/flatpak/flathub.json flatpak-submission/
 
           cp public/icon.svg flatpak-submission/com.karmaa.termix.svg
           convert public/icon.png -resize 256x256 flatpak-submission/icon-256.png
@@ -880,7 +880,7 @@ jobs:
 
           mkdir -p homebrew-submission/Casks/t
 
-          cp Casks/termix.rb homebrew-submission/Casks/t/termix.rb
+          cp packaging/Casks/termix.rb homebrew-submission/Casks/t/termix.rb
 
           sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-submission/Casks/t/termix.rb
           sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-submission/Casks/t/termix.rb
