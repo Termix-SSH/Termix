@@ -363,6 +363,8 @@ See [Projects](https://github.com/orgs/Termix-SSH/projects/5) for all planned fe
 
 ## Sponsors
 
+Interested in a paid placement to support development? Email [mail@termix.site](mailto:mail@termix.site).
+
 <div align="center">
 
 <br />
