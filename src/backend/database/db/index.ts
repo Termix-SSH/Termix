@@ -187,7 +187,9 @@ async function initializeCompleteDatabase(): Promise<void> {
         scopes TEXT DEFAULT 'openid email profile',
         totp_secret TEXT,
         totp_enabled INTEGER NOT NULL DEFAULT 0,
-        totp_backup_codes TEXT
+        totp_backup_codes TEXT,
+        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        donation_modal_dismissed INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -763,6 +765,58 @@ const migrateSchema = () => {
   addColumnIfNotExists("users", "totp_secret", "TEXT");
   addColumnIfNotExists("users", "totp_enabled", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("users", "totp_backup_codes", "TEXT");
+
+  const hadRegisteredAtColumn = (() => {
+    try {
+      sqlite.prepare(`SELECT "registered_at" FROM users LIMIT 1`).get();
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  // SQLite's ALTER TABLE ADD COLUMN rejects non-constant defaults like
+  // CURRENT_TIMESTAMP, so the column is added empty and backfilled below.
+  addColumnIfNotExists("users", "registered_at", "TEXT");
+  if (!hadRegisteredAtColumn) {
+    // Pre-existing users are backdated past the 30 day mark so they see the
+    // donation modal immediately on upgrade instead of waiting a fresh
+    // 30 days as if they had just registered.
+    try {
+      sqlite.exec(
+        `UPDATE users SET registered_at = datetime('now', '-31 days') WHERE registered_at IS NULL`,
+      );
+    } catch (backfillError) {
+      databaseLogger.warn("Failed to backfill users.registered_at", {
+        operation: "schema_migration",
+        error:
+          backfillError instanceof Error
+            ? backfillError.message
+            : String(backfillError),
+      });
+    }
+  } else {
+    try {
+      sqlite.exec(
+        `UPDATE users SET registered_at = CURRENT_TIMESTAMP WHERE registered_at IS NULL`,
+      );
+    } catch (backfillError) {
+      databaseLogger.warn(
+        "Failed to backfill NULL users.registered_at values",
+        {
+          operation: "schema_migration",
+          error:
+            backfillError instanceof Error
+              ? backfillError.message
+              : String(backfillError),
+        },
+      );
+    }
+  }
+  addColumnIfNotExists(
+    "users",
+    "donation_modal_dismissed",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
 
   addColumnIfNotExists("sessions", "oidc_sub", "TEXT");
   addColumnIfNotExists("sessions", "oidc_sid", "TEXT");

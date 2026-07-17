@@ -101,7 +101,14 @@ function main() {
 
   const table = buildTable(version, mobileVersion);
 
+  const donateAlert = [
+    "> [!TIP]",
+    "> Termix is free and always will be. If it's useful to you, consider [donating](https://donate.termix.site/donate/) to support development.",
+  ].join("\n");
+
   const body = [
+    donateAlert,
+    "",
     summary,
     "",
     embed,

@@ -54,7 +54,9 @@ describe("UserRepository and SessionRepository", () => {
         scopes TEXT DEFAULT 'openid email profile',
         totp_secret TEXT,
         totp_enabled INTEGER NOT NULL DEFAULT 0,
-        totp_backup_codes TEXT
+        totp_backup_codes TEXT,
+        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        donation_modal_dismissed INTEGER NOT NULL DEFAULT 0
       );
 
       CREATE TABLE sessions (

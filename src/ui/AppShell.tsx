@@ -125,9 +125,11 @@ import {
   createSSHHost,
   getActiveSessions,
   getUserPreferences,
+  dismissDonationModal,
   type UserPreferences,
   type OpenTabRecord,
 } from "@/main-axios";
+import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
@@ -230,6 +232,7 @@ export function AppShell({
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showDonationModal, setShowDonationModal] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
@@ -275,8 +278,14 @@ export function AppShell({
       .then((info) => {
         setIsAdmin(info.is_admin);
         setUserId(info.userId);
+        setShowDonationModal(!!info.show_donation_modal);
       })
       .catch(() => setIsAdmin(false));
+  }, []);
+
+  const handleDismissDonationModal = useCallback(() => {
+    setShowDonationModal(false);
+    dismissDonationModal().catch(() => {});
   }, []);
 
   const toggleAppFullscreen = useCallback(async () => {
@@ -1957,6 +1966,10 @@ export function AppShell({
       <Suspense fallback={null}>
         <AlertManager userId={userId} loggedIn={!!username} />
       </Suspense>
+      <DonationReminderModal
+        open={showDonationModal}
+        onDismiss={handleDismissDonationModal}
+      />
     </ServerStatusProvider>
   );
 }

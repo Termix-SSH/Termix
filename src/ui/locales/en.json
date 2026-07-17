@@ -2371,6 +2371,12 @@
     "serviceLinks": "Service Links",
     "homepagePreview": "Homepage Preview"
   },
+  "donation": {
+    "title": "Enjoying Termix?",
+    "body": "Termix is free and open source, built and maintained by a two-person team in our spare time. If it's replaced a commercial tool you'd otherwise be paying for, a donation helps cover hosting costs and keeps development going.",
+    "cta": "Donate",
+    "dismiss": "Maybe later"
+  },
   "dashboardTab": {
     "stable": "STABLE",
     "hostsOnline": "Hosts Online",
@@ -3113,6 +3119,9 @@
         "executionFailed": "Failed"
       },
       "userProfile": {
+        "donateTitle": "Keep Termix alive",
+        "donateDescription": "Termix is free, self-hosted, and built by only a few people in their spare time. If it's saved you time or money, a crypto donation helps keep it going.",
+        "donateButton": "Donate crypto",
         "storageModeLocal": "Browser",
         "storageModeCloud": "Database",
         "storageModeDescription": "Browser stores settings in this browser only. Database syncs to the server and loads on any device.",

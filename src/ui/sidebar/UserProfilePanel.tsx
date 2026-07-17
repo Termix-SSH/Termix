@@ -1135,6 +1135,24 @@ export function UserProfilePanel({
         userId={userId}
       />
 
+      {/* Donate banner */}
+      <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-brand">
+          {t("newUi.sidebar.userProfile.donateTitle")}
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          {t("newUi.sidebar.userProfile.donateDescription")}
+        </p>
+        <a
+          href="https://donate.termix.site/donate/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-accent-brand text-white px-2 py-1 hover:opacity-90 transition-opacity"
+        >
+          {t("newUi.sidebar.userProfile.donateButton")}
+        </a>
+      </div>
+
       {/* Storage mode toggle */}
       <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

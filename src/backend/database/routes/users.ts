@@ -18,6 +18,7 @@ import {
   isOidcTokenCallback,
 } from "../../utils/oidc-desktop-callback.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
+import { shouldShowDonationModal } from "./donation-modal-utils.js";
 import {
   getOIDCConfigFromEnv,
   isOIDCUserAllowed,
@@ -1763,6 +1764,11 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     const hasOidc = user.isOidc && user.oidcIdentifier;
     const isDualAuth = hasPassword && hasOidc;
 
+    const showDonationModal = shouldShowDonationModal(
+      user.registeredAt,
+      !!user.donationModalDismissed,
+    );
+
     res.json({
       userId: user.id,
       username: user.username,
@@ -1770,12 +1776,55 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
       is_oidc: !!user.isOidc,
       is_dual_auth: isDualAuth,
       totp_enabled: !!user.totpEnabled,
+      show_donation_modal: showDonationModal,
     });
   } catch (err) {
     authLogger.error("Failed to get username", err);
     res.status(500).json({ error: "Failed to get username" });
   }
 });
+
+/**
+ * @openapi
+ * /users/me/dismiss-donation-modal:
+ *   post:
+ *     summary: Permanently dismiss the donation reminder modal
+ *     description: Marks the donation reminder modal as dismissed for the currently authenticated user so it is never shown to them again.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Donation modal dismissed.
+ *       401:
+ *         description: Invalid userId or user not found.
+ *       500:
+ *         description: Failed to dismiss donation modal.
+ */
+router.post(
+  "/me/dismiss-donation-modal",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+
+    if (!isNonEmptyString(userId)) {
+      return res.status(401).json({ error: "Invalid userId" });
+    }
+    try {
+      const updated = await createCurrentUserRepository().update(userId, {
+        donationModalDismissed: true,
+      });
+      if (!updated) {
+        return res.status(401).json({ error: "User not found" });
+      }
+      return res.json({ success: true });
+    } catch (err) {
+      authLogger.error("Failed to dismiss donation modal", err);
+      return res
+        .status(500)
+        .json({ error: "Failed to dismiss donation modal" });
+    }
+  },
+);
 
 /**
  * @openapi

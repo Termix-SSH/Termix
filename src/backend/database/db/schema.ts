@@ -24,6 +24,13 @@ export const users = sqliteTable("users", {
     .notNull()
     .default(false),
   totpBackupCodes: text("totp_backup_codes"),
+
+  registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  donationModalDismissed: integer("donation_modal_dismissed", {
+    mode: "boolean",
+  })
+    .notNull()
+    .default(false),
 });
 
 export const settings = sqliteTable("settings", {
