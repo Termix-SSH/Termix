@@ -42,6 +42,11 @@ on:
         required: false
         type: string
         default: ""
+      version_override:
+        description: "Version string to stamp into built artifacts instead of package.json's version"
+        required: false
+        type: string
+        default: ""
       source_ref:
         description: "Git ref/SHA to build"
         required: false
@@ -78,7 +83,10 @@ jobs:
       - name: Get version
         id: package-version
         run: |
-          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          $VERSION = "${{ inputs.version_override }}"
+          if ([string]::IsNullOrEmpty($VERSION)) {
+            $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          }
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
 
       - name: Build Windows (All Architectures)
@@ -285,7 +293,10 @@ jobs:
       - name: Get version for Flatpak
         id: flatpak-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION="${{ inputs.version_override }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+          fi
           RELEASE_DATE=$(date +%Y-%m-%d)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
@@ -526,7 +537,10 @@ jobs:
       - name: Get version for Homebrew
         id: homebrew-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION="${{ inputs.version_override }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Compute universal DMG checksum
@@ -537,7 +551,7 @@ jobs:
           echo "sha256=$CHECKSUM" >> $GITHUB_OUTPUT
 
       - name: Generate Homebrew Cask
-        if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release')
+        if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && inputs.version_override == '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release')
         run: |
           VERSION="${{ steps.homebrew-version.outputs.version }}"
           DMG_PATH="release/termix_macos_universal_dmg.dmg"
@@ -562,7 +576,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Homebrew Cask to release
-        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.artifact_destination == 'release'
+        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.version_override == '' && inputs.artifact_destination == 'release'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

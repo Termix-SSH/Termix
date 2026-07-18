@@ -1283,6 +1283,35 @@ export function UserProfilePanel({
             </div>
           </div>
 
+          <div className="border-t border-border pt-3 mt-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium">
+                  {t("newUi.sidebar.userProfile.betaProgramTitle")}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.betaProgramDescription")}{" "}
+                  <a
+                    href="https://github.com/Termix-SSH/Support/issues/new?template=beta_feedback.yml"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-brand hover:underline"
+                  >
+                    {t("newUi.sidebar.userProfile.betaProgramFeedback")}
+                  </a>
+                </span>
+              </div>
+              <a
+                href="https://docs.termix.site/install/server/docker#beta-builds"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"
+              >
+                {t("newUi.sidebar.userProfile.betaProgramLearnMore")}
+              </a>
+            </div>
+          </div>
+
           {isElectron() && onChangeServer && (
             <div className="border-t border-border pt-3 mt-3">
               <div className="flex items-center justify-between">

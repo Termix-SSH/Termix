@@ -1,0 +1,179 @@
+name: Weekly Beta Release
+
+on:
+  schedule:
+    - cron: "15 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and test but do not push images, upload installers, or publish a release"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  prep:
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    outputs:
+      dev_branch: ${{ steps.dev.outputs.branch }}
+      beta_version: ${{ steps.dev.outputs.beta_version }}
+      sha: ${{ steps.dev.outputs.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Resolve newest dev branch and compute beta version
+        id: dev
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          REFS=$(gh api "repos/${{ github.repository }}/branches" --paginate -q '.[].name')
+          if DEV_BRANCH=$(printf '%s\n' "$REFS" | node scripts/latest-dev-branch.cjs 2>/dev/null); then
+            echo "Newest dev branch: $DEV_BRANCH"
+          else
+            echo "No dev-X.Y.Z branch open; nothing to snapshot for this week's beta."
+            echo "branch=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE_VERSION=$(node scripts/parse-dev-branch.cjs "$DEV_BRANCH")
+          BETA_VERSION="${BASE_VERSION}-beta.$(date -u +%Y%m%d)"
+          SHA=$(gh api "repos/${{ github.repository }}/branches/$DEV_BRANCH" -q .commit.sha)
+
+          echo "Beta version: $BETA_VERSION"
+          echo "branch=$DEV_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "beta_version=$BETA_VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: [prep]
+    if: ${{ needs.prep.outputs.dev_branch != '' }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prep.outputs.dev_branch }}
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint .
+
+      - name: Run Prettier check
+        run: npx prettier --check .
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  create-release:
+    needs: [prep, verify]
+    if: ${{ needs.prep.outputs.dev_branch != '' && inputs.dry_run != true }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prep.outputs.dev_branch }}
+          fetch-depth: 0
+
+      - name: Resolve previous beta commit
+        id: prev
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          PREV_SHA=$(gh release view beta --repo ${{ github.repository }} --json targetCommitish -q .targetCommitish 2>/dev/null || true)
+          if [ -n "$PREV_SHA" ] && git cat-file -e "$PREV_SHA" 2>/dev/null && git merge-base --is-ancestor "$PREV_SHA" "${{ needs.prep.outputs.sha }}"; then
+            echo "sha=$PREV_SHA" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate rolling beta release notes
+        run: |
+          if [ -n "${{ steps.prev.outputs.sha }}" ]; then
+            CHANGES=$(git log --oneline --no-merges "${{ steps.prev.outputs.sha }}..${{ needs.prep.outputs.sha }}" -- . ':!package-lock.json' | sed 's/^/- /')
+          fi
+          if [ -z "$CHANGES" ]; then
+            CHANGES="- No new commits since the last beta (or this is the first beta build)."
+          fi
+
+          cat > BETA_RELEASE_BODY.md << EOF
+          > [!WARNING]
+          > This is an automated weekly beta build, snapshotted from the \`${{ needs.prep.outputs.dev_branch }}\` branch. It is not a stable release: it may contain unfinished features, regressions, or breaking changes, and this tag is overwritten every week. Do not run it in production.
+          >
+          > Found a bug? [Open a Beta Feedback report](https://github.com/Termix-SSH/Support/issues/new?template=beta_feedback.yml) and mention this build: \`${{ needs.prep.outputs.beta_version }}\`.
+
+          **Snapshot of:** \`${{ needs.prep.outputs.dev_branch }}\` @ \`${{ needs.prep.outputs.sha }}\`
+          **Docker image:** \`ghcr.io/lukegus/termix:beta\` / \`docker.io/bugattiguy527/termix:beta\` (rolling), or pin to \`:beta-${{ needs.prep.outputs.beta_version }}\` for this exact build.
+          **Built:** $(date -u +"%Y-%m-%d %H:%M UTC")
+
+          ### Changes since last beta
+
+          $CHANGES
+          EOF
+
+      - name: Create or update rolling beta release
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          TAG="beta"
+          TITLE="Beta (rolling) - ${{ needs.prep.outputs.beta_version }}"
+          if gh release view "$TAG" --repo ${{ github.repository }} >/dev/null 2>&1; then
+            gh release edit "$TAG" --repo ${{ github.repository }} \
+              --title "$TITLE" --notes-file BETA_RELEASE_BODY.md \
+              --prerelease --target "${{ needs.prep.outputs.sha }}"
+          else
+            gh release create "$TAG" --repo ${{ github.repository }} \
+              --title "$TITLE" --notes-file BETA_RELEASE_BODY.md \
+              --prerelease --target "${{ needs.prep.outputs.sha }}"
+          fi
+
+  docker:
+    needs: [prep, verify, create-release]
+    if: ${{ always() && needs.prep.outputs.dev_branch != '' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') }}
+    uses: ./.github/workflows/docker.yml
+    with:
+      version: ${{ needs.prep.outputs.beta_version }}
+      build_type: Beta
+      dry_run: ${{ inputs.dry_run == true }}
+      source_ref: ${{ needs.prep.outputs.sha }}
+    secrets: inherit
+
+  electron-release:
+    needs: [prep, verify, create-release]
+    if: ${{ always() && needs.prep.outputs.dev_branch != '' && inputs.dry_run != true && needs.create-release.result == 'success' }}
+    uses: ./.github/workflows/electron.yml
+    with:
+      build_type: all
+      artifact_destination: release
+      release_tag: beta
+      version_override: ${{ needs.prep.outputs.beta_version }}
+      source_ref: ${{ needs.prep.outputs.sha }}
+    secrets: inherit
