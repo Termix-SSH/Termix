@@ -31,11 +31,13 @@
   <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
 
+<p>
+  <a href="https://donate.termix.site/"><img alt="Donations this month" src="https://img.shields.io/badge/dynamic/json?style=for-the-badge&label=Donations%20this%20month&query=%24.fiatTotal&prefix=%24&url=https%3A%2F%2Ftermix.site%2Fdonation-snapshot.json&color=F39044&labelColor=1a1a1a" /></a>
+</p>
+
 <br />
 
 Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyetleri ve geliştirme süresine katkıda bulunmak için [bağış yapmayı](https://donate.termix.site/) düşünebilirsiniz.
-
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -56,7 +58,7 @@ Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyet
 
 ## Genel Bakis
 
-Termix, acik kaynakli, sonsuza kadar ucretsiz, kendi sunucunuzda barindirabileceginez hepsi bir arada sunucu yonetim platformudur. Sunucularinizi ve altyapinizi tek bir sezgisel arayuz uzerinden yonetmek icin cok platformlu bir cozum sunar. Termix, SSH terminal erisimi, uzak masaustu kontrolu (RDP, VNC, Telnet), SSH tunelleme yetenekleri, uzak SSH dosya yonetimi ve daha bircok arac saglar. Termix, tum platformlarda kullanilabilen Termius'un mukemmel ucretsiz ve kendi barindirmali alternatifidir.
+Termix, acik kaynakli, sonsuza kadar ucretsiz, kendi sunucunuzda barindirabileceginez hepsi bir arada sunucu yonetim platformudur. Sunucularinizi ve altyapinizi tek bir sezgisel arayuz uzerinden yonetmek icin cok platformlu bir cozum sunar. Termix, SSH terminal erisimi, uzak masaustu kontrolu (RDP, VNC, Telnet), SSH tunelleme yetenekleri, uzak dosya yonetimi ve daha bircok arac saglar. Termix, tum platformlarda kullanilabilen Termius'un mukemmel ucretsiz ve kendi barindirmali alternatifidir.
 
 <br />
 
@@ -81,13 +83,13 @@ Tam ozellestirme ve bolunmus ekran ile tarayici uzerinden RDP, VNC ve Telnet des
 <td width="50%" valign="top">
 
 **SSH Tunel Yonetimi:**
-Otomatik yeniden baglantiya, saglik izleme ve yerel, uzak veya dinamik SOCKS yonlendirme destegi ile sunucular arasi SSH tunelleri olusturun ve yonetin. Masaustu istemci-sunucu tunel ayarlari her masaustu kurulumu icin yerel olarak depolanir; istege bagli C2S hazir ayar anlik goruntuleri sunucuya kaydedilebilir, yeniden adlandirilabilir, yuklenebilir veya silinebilir.
+Otomatik yeniden baglanti, saglik izleme ve yerel, uzak veya dinamik SOCKS yonlendirme ile sunucular arasi SSH tunelleri olusturun ve yonetin. Masaustu istemci-sunucu tunel ayarlari her masaustu kurulumu icin yerel olarak depolanir; istege bagli C2S hazir ayar anlik goruntuleri, yerel bir tunel yapilandirmasini istemciler arasinda tasimak istediginizde sunucuya kaydedilebilir, yeniden adlandirilabilir, yuklenebilir veya silinebilir.
 
 </td>
 <td width="50%" valign="top">
 
 **Uzak Dosya Yoneticisi:**
-Uzak sunuculardaki dosyalari dogrudan yonetin; kod, goruntu, ses ve video goruntuleme ve duzenleme destegi ile. Sudo destegi ile dosyalari sorunsuzca yukleyin, indirin, yeniden adlandirin, silin ve tasiyin.
+Uzak sunuculardaki dosyalari dogrudan yonetin; kod, goruntu, ses ve video goruntuleme ve duzenleme destegi ile. Sudo destegi ile dosyalari sorunsuzca yukleyin, indirin, yeniden adlandirin, silin ve tasiyin. Dosyalari sunucudan sunucuya tasima destegini de icerir.
 
 </td>
 </tr>
@@ -109,13 +111,13 @@ SSH baglantilarinizi etiketler ve klasorlerle (klasor ozellestirme ve ic ice kla
 <td width="50%" valign="top">
 
 **Ana Bilgisayar Metrikleri:**
-Cogu Linux tabanli sunucularda CPU, bellek, disk kullanimi, ag, calisma suresi, sistem bilgisi, guvenlik duvari, port izleme, gunluk goruntuleyici, kullanicilar/izinler, sertifikalar ve daha fazlasini goruntuleyin.
+Cogu Linux tabanli sunucularda calisan CPU, bellek, disk kullanimi, ag, calisma suresi, sistem bilgisi, guvenlik duvari, port izleme, gunluk goruntuleyici, kullanicilar/izinler, sertifikalar ve daha fazlasini goruntuleyin. Zaman serisi gecmis grafiklerini ve ntfy ile webhook destekli esik tabanli uyarilari icerir.
 
 </td>
 <td width="50%" valign="top">
 
 **Kullanici Kimlik Dogrulama:**
-Yonetici kontrolleri, OIDC/LDAP/SSO (erisim kontrollu) ve 2FA (TOTP) destegi ile guvenli kullanici yonetimi. Tum platformlardaki aktif kullanici oturumlarini goruntuleyin ve izinleri iptal edin. OIDC/Yerel hesaplarinizi birbirine baglayin. Tum kullanicilarin islemlerinin denetim gunlugunu goruntuleyin.
+Yonetici kontrolleri (diger kullanicilarin bilgilerini duzenleyebilir), OIDC/LDAP/SSO (erisim kontrollu), 2FA (TOTP) ve passkey (WebAuthn) destegi ile guvenli kullanici yonetimi. Tum platformlardaki aktif kullanici oturumlarini goruntuleyin ve izinleri iptal edin. OIDC/Yerel hesaplarinizi birbirine baglayin. Tum kullanicilarin islemlerinin denetim gunlugunu goruntuleyin.
 
 </td>
 </tr>
@@ -128,8 +130,8 @@ Tailscale aginizdaki cihazlari listeleyerek hizlica ana bilgisayar olarak ekleyi
 </td>
 <td width="50%" valign="top">
 
-**RBAC:**
-Roller olusturun ve ana bilgisayarlari kullanicilar/roller arasinda paylasin.
+**RBAC/Paylasim:**
+Roller olusturun ve ana bilgisayarlari kullanicilar/roller arasinda paylasin. Tum kimlik dogrulama turlerini ve tum ana bilgisayar protokollerini destekler.
 
 </td>
 </tr>
@@ -151,7 +153,7 @@ Ana bilgisayar metrikleri (CPU, bellek, disk vb.) icin esik tabanli uyari kurall
 <td width="50%" valign="top">
 
 **Ana Sayfa:**
-Surukleme ve birakma widget izgarasina sahip tamamen ozerlestirilebilir bir ana sayfa. Ana bilgisayar durumu, hizmet baglantilari, saatler, notlar, RSS besleme, hava durumu, Docker konteynerleri, ana bilgisayar metrik grafikleri, gomulu terminaller, iframe ve daha fazlasi icin widget ekleyin.
+Surukleme ve birakma widget izgarasina sahip tamamen ozellestirilebilir bir ana sayfa. Ana bilgisayar durumu, hizmet baglantilari, saatler, notlar, RSS besleme, hava durumu, Docker konteynerleri, ana bilgisayar metrik grafikleri, gomulu terminaller, iframe ve daha fazlasi icin widget ekleyin.
 
 </td>
 <td width="50%" valign="top">
@@ -206,7 +208,8 @@ Yaklasik 30 dil icin yerlesik destek ([Crowdin](https://docs.termix.site/transla
 - **Hizli Baglanti** - Baglanti verilerini kaydetmeden bir sunucuya baglanin
 - **Komut Paleti** - Sol shift tusuna iki kez basarak SSH baglantilariniza klavyenizle hizlica erisin
 - **Proxmox Entegrasyonu** - Proxmox ornekinizden Termix'e otomatik olarak ana bilgisayar ekleyin
-- **SSH Zengin Ozellikler** - Atlama ana bilgisayarlari, Warpgate, TOTP tabanli baglantilar, SOCKS5, ana bilgisayar anahtar dogrulama, otomatik sifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal gunlukleme vb. destekler.
+- **SSH Zengin Ozellikler** - Atlama ana bilgisayarlari, Warpgate, TOTP tabanli baglantilar, SOCKS5, ana bilgisayar anahtar dogrulama, otomatik sifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal gunlukleme, SSH agent forwarding, Bitwarden SSH agent, HashiCorp Vault SSH imzalama ve dahasini destekler.
+- **Termix ID** - Termix'e entegre edilmis bir sshid.io esdegeri. Bir kullanici adi edinin, genel SSH anahtarlarinizi bir cozumleyici URL'sinde yayinlayin ve SSH sertifikalari vermek icin yerlesik bir CA kullanin.
 
 </details>
 
@@ -249,7 +252,9 @@ Yaklasik 30 dil icin yerlesik destek ([Crowdin](https://docs.termix.site/transla
 
 ## Kurulum
 
-Termix'i tum platformlara nasil kuracaginiz hakkinda daha fazla bilgi icin Termix [Belgelerine](https://docs.termix.site/install) bakin. Ornek bir Docker Compose dosyasini asagida inceleyebilirsiniz (uzak masaustu ozelliklerini kullanmayi planlamiyorsaniz guacd'yi ve agi cikarabilirsiniz):
+Termix'i tum platformlara nasil kuracaginiz hakkinda daha fazla bilgi icin Termix [Belgelerine](https://docs.termix.site/install) bakin.
+
+Ornek bir Docker Compose dosyasi (uzak masaustu ozelliklerini kullanmayi planlamiyorsaniz `guacd` ve agi cikarabilirsiniz):
 
 ```yaml
 services:
@@ -290,9 +295,59 @@ networks:
 
 ## Bağış Yapın
 
-Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyetleri ve geliştirme süresine katkıda bulunmak için [bağış yapmayı](https://donate.termix.site/) düşünebilirsiniz.
+Termix ücretsiz ve açık kaynaklıdır, abonelik veya ücretli plan yoktur. Faydalı buluyorsaniz, sunucu maliyetleri, alan adlari ve gelistirme suresine katkida bulunmak icin bagis yapmayi dusunebilirsiniz. Bagislar ayrica SAML, Kubernetes ve Agent destegi gibi ozellikleri gelistirmek icin gereken arastirma ve ogrenme suresini finanse etmeye yardimci olur. Ilerlemeyi takip edin ve asagidan bagis yapin.
 
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+[Bağış Yapın](https://donate.termix.site/)
+
+<br />
+
+## Sponsorlar
+
+Gelistirmeyi desteklemek icin ucretli bir yerlesim ile ilgileniyor musunuz? [mail@termix.site](mailto:mail@termix.site) adresine e-posta gonderin.
+
+<div align="center">
+
+<br />
+
+<a href="https://www.digitalocean.com/">
+  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://crowdin.com/">
+  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.blacksmith.sh/">
+  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.cloudflare.com/">
+  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://tailscale.com/">
+  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://akamai.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://aws.amazon.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://rackgenius.com/">
+  <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
+</a>
+
+</div>
+
+<br />
+
+## Destek
+
+Termix ile ilgili yardima ihtiyaciniz varsa veya bir ozellik talep etmek istiyorsaniz, [Sorunlar](https://github.com/Termix-SSH/Support/issues) sayfasini ziyaret edin, giris yapin ve `New Issue` butonuna basin. Lutfen sorununuzu mumkun oldugunca ayrintili yazin, tercihen Ingilizce olarak. Ayrica [Discord](https://discord.gg/jVQGdvHDrf) sunucusuna katilabilir ve destek kanalini ziyaret edebilirsiniz, ancak yanit sureleri daha uzun olabilir.
 
 <br />
 
@@ -353,50 +408,6 @@ Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyet
 ## Planlanan Ozellikler
 
 Tum planlanan ozellikler icin [Projeler](https://github.com/orgs/Termix-SSH/projects/5) sayfasina bakin. Katkida bulunmak istiyorsaniz, [Katkida Bulunma](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) sayfasina bakin.
-
-<br />
-
-## Sponsorlar
-
-<div align="center">
-
-<br />
-
-<a href="https://www.digitalocean.com/">
-  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://crowdin.com/">
-  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.blacksmith.sh/">
-  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.cloudflare.com/">
-  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://akamai.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://aws.amazon.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
-</a>
-
-</div>
-
-<br />
-
-## Destek
-
-Termix ile ilgili yardima ihtiyaciniz varsa veya bir ozellik talep etmek istiyorsaniz, [Sorunlar](https://github.com/Termix-SSH/Support/issues) sayfasini ziyaret edin, giris yapin ve `New Issue` butonuna basin. Lutfen sorununuzu mumkun oldugunca ayrintili yazin, tercihen Ingilizce olarak. Ayrica [Discord](https://discord.gg/jVQGdvHDrf) sunucusuna katilabilir ve destek kanalini ziyaret edebilirsiniz, ancak yanit sureleri daha uzun olabilir.
 
 <br />
 

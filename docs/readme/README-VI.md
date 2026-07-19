@@ -31,11 +31,13 @@
   <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
 
+<p>
+  <a href="https://donate.termix.site/"><img alt="Donations this month" src="https://img.shields.io/badge/dynamic/json?style=for-the-badge&label=Donations%20this%20month&query=%24.fiatTotal&prefix=%24&url=https%3A%2F%2Ftermix.site%2Fdonation-snapshot.json&color=F39044&labelColor=1a1a1a" /></a>
+</p>
+
 <br />
 
 Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu ích, hãy cân nhắc [quyên góp](https://donate.termix.site/) để giúp trang trải chi phí máy chủ và thời gian phát triển.
-
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -56,7 +58,7 @@ Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu �
 
 ## Tong Quan
 
-Termix la nen tang quan ly may chu tat ca trong mot, ma nguon mo, mien phi vinh vien, tu luu tru. No cung cap giai phap da nen tang de quan ly may chu va co so ha tang cua ban thong qua mot giao dien truc quan duy nhat. Termix cung cap quyen truy cap terminal SSH, dieu khien may tinh tu xa (RDP, VNC, Telnet), kha nang tao duong ham SSH, quan ly tep SSH tu xa va nhieu cong cu khac. Termix la giai phap thay the mien phi va tu luu tru hoan hao cho Termius, kha dung tren tat ca cac nen tang.
+Termix la nen tang quan ly may chu tat ca trong mot, ma nguon mo, mien phi vinh vien, tu luu tru. No cung cap giai phap da nen tang de quan ly may chu va co so ha tang cua ban thong qua mot giao dien truc quan duy nhat. Termix cung cap quyen truy cap terminal SSH, dieu khien may tinh tu xa (RDP, VNC, Telnet), kha nang tao duong ham SSH, quan ly tep tu xa va nhieu cong cu khac. Termix la giai phap thay the mien phi va tu luu tru hoan hao cho Termius, kha dung tren tat ca cac nen tang.
 
 <br />
 
@@ -81,13 +83,13 @@ Ho tro RDP, VNC va Telnet qua trinh duyet voi day du tuy chinh va chia man hinh.
 <td width="50%" valign="top">
 
 **Quan Ly Duong Ham SSH:**
-Tao va quan ly duong ham SSH giua cac may chu voi tu dong ket noi lai, giam sat suc khoe va chuyen tiep cuc bo, tu xa hoac SOCKS dong. Cai dat duong ham tu may khach desktop den may chu duoc luu tru cuc bo cho moi ban cai dat desktop; cac snapshot C2S preset tuy chon co the duoc luu tren may chu, doi ten, tai hoac xoa de di chuyen cau hinh duong ham cuc bo giua cac may khach.
+Tao va quan ly duong ham SSH giua cac may chu voi tu dong ket noi lai, giam sat suc khoe va chuyen tiep cuc bo, tu xa hoac SOCKS dong. Cai dat duong ham tu may khach desktop den may chu duoc luu tru cuc bo cho moi ban cai dat desktop; cac snapshot C2S preset tuy chon co the duoc luu tren may chu, doi ten, tai hoac xoa khi ban muon di chuyen mot cau hinh duong ham cuc bo giua cac may khach.
 
 </td>
 <td width="50%" valign="top">
 
 **Trinh Quan Ly Tep Tu Xa:**
-Quan ly tep truc tiep tren may chu tu xa voi ho tro xem va chinh sua ma, hinh anh, am thanh va video. Tai len, tai xuong, doi ten, xoa va di chuyen tep lien mach voi ho tro sudo.
+Quan ly tep truc tiep tren may chu tu xa voi ho tro xem va chinh sua ma, hinh anh, am thanh va video. Tai len, tai xuong, doi ten, xoa va di chuyen tep lien mach voi ho tro sudo. Bao gom ho tro di chuyen tep tu may chu nay sang may chu khac.
 
 </td>
 </tr>
@@ -109,13 +111,13 @@ Luu, sap xep va quan ly cac ket noi SSH cua ban voi the va thu muc (ho tro tuy c
 <td width="50%" valign="top">
 
 **Chi So May Chu:**
-Xem muc su dung CPU, bo nho, o dia, mang, thoi gian hoat dong, thong tin he thong, tuong lua, giam sat cong, trinh xem nhat ky, nguoi dung/quyen, chung chi va nhieu hon nua tren hau het cac may chu chay Linux.
+Xem muc su dung CPU, bo nho, o dia, mang, thoi gian hoat dong, thong tin he thong, tuong lua, giam sat cong, trinh xem nhat ky, nguoi dung/quyen, chung chi va nhieu hon nua tren hau het cac may chu chay Linux. Bao gom bieu do lich su theo chuoi thoi gian va canh bao dua tren nguong voi ho tro ntfy va webhook.
 
 </td>
 <td width="50%" valign="top">
 
 **Xac Thuc Nguoi Dung:**
-Quan ly nguoi dung an toan voi quyen quan tri va ho tro OIDC/LDAP/SSO (co kiem soat truy cap) va 2FA (TOTP). Xem phien hoat dong cua nguoi dung tren tat ca cac nen tang va thu hoi quyen. Lien ket tai khoan OIDC/Noi bo cua ban voi nhau. Xem nhat ky kiem toan cac hanh dong cua tat ca nguoi dung.
+Quan ly nguoi dung an toan voi quyen quan tri (co the chinh sua thong tin cua nguoi dung khac) va ho tro OIDC/LDAP/SSO (co kiem soat truy cap), 2FA (TOTP) va passkey (WebAuthn). Xem phien hoat dong cua nguoi dung tren tat ca cac nen tang va thu hoi quyen. Lien ket tai khoan OIDC/Noi bo cua ban voi nhau. Xem nhat ky kiem toan cac hanh dong cua tat ca nguoi dung.
 
 </td>
 </tr>
@@ -128,8 +130,8 @@ Liet ke cac thiet bi trong mang Tailscale de nhanh chong them vao lam may chu, v
 </td>
 <td width="50%" valign="top">
 
-**RBAC:**
-Tao vai tro va chia se may chu giua nguoi dung/vai tro.
+**RBAC/Chia Se:**
+Tao vai tro va chia se may chu giua nguoi dung/vai tro. Ho tro tat ca cac loai xac thuc va tat ca cac giao thuc may chu.
 
 </td>
 </tr>
@@ -143,7 +145,7 @@ Ket noi voi cac thiet bi noi tiep (router, switch, vi dieu khien, v.v.) truc tie
 <td width="50%" valign="top">
 
 **Canh Bao:**
-Dat cac quy tac canh bao dua tren nguong cho chi so may chu (CPU, bo nho, o dia, v.v.) va nhan thong bao qua ntfy hoac webhook khi chung khi toa. Xem canh bao dang kich hoat va da giai quyet trong nhat ky lich su.
+Dat cac quy tac canh bao dua tren nguong cho chi so may chu (CPU, bo nho, o dia, v.v.) va nhan thong bao qua ntfy hoac webhook khi chung kich hoat. Xem canh bao dang kich hoat va da giai quyet trong nhat ky lich su.
 
 </td>
 </tr>
@@ -206,7 +208,8 @@ Ho tro tich hop khoang 30 ngon ngu (duoc quan ly boi [Crowdin](https://docs.term
 - **Ket Noi Nhanh** - Ket noi den may chu ma khong can luu du lieu ket noi
 - **Bang Lenh** - Nhan dup phim shift trai de truy cap nhanh cac ket noi SSH bang ban phim
 - **Tich Hop Proxmox** - Tu dong them may chu vao Termix tu instance Proxmox cua ban
-- **SSH Giau Tinh Nang** - Ho tro jump host, Warpgate, ket noi dua tren TOTP, SOCKS5, xac minh khoa may chu, tu dong dien mat khau, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, ghi nhat ky terminal, v.v.
+- **SSH Giau Tinh Nang** - Ho tro jump host, Warpgate, ket noi dua tren TOTP, SOCKS5, xac minh khoa may chu, tu dong dien mat khau, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, ghi nhat ky terminal, chuyen tiep SSH agent, Bitwarden SSH agent, ky SSH bang HashiCorp Vault va nhieu hon nua.
+- **Termix ID** - Mot tuong duong cua sshid.io duoc tich hop san trong Termix. Dang ky mot ten dinh danh, cong bo khoa SSH cong khai cua ban tai mot URL phan giai va su dung CA tich hop san de cap chung chi SSH.
 
 </details>
 
@@ -249,7 +252,9 @@ Ho tro tich hop khoang 30 ngon ngu (duoc quan ly boi [Crowdin](https://docs.term
 
 ## Cai Dat
 
-Truy cap [Tai Lieu](https://docs.termix.site/install) Termix de biet them thong tin ve cach cai dat Termix tren tat ca cac nen tang. Ngoai ra, xem tep Docker Compose mau tai day (ban co the bo qua guacd va mang neu khong co y dinh su dung cac tinh nang dieu khien may tinh tu xa):
+Truy cap [Tai Lieu](https://docs.termix.site/install) Termix de biet them thong tin ve cach cai dat Termix tren tat ca cac nen tang.
+
+Tep Docker Compose mau (ban co the bo qua `guacd` va mang neu khong co y dinh su dung cac tinh nang dieu khien may tinh tu xa):
 
 ```yaml
 services:
@@ -290,9 +295,59 @@ networks:
 
 ## Quyên góp
 
-Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu ích, hãy cân nhắc [quyên góp](https://donate.termix.site/) để giúp trang trải chi phí máy chủ và thời gian phát triển.
+Termix là dự án miễn phí và mã nguồn mở, không có gói đăng ký hay trả phí. Nếu bạn thấy hữu ích, hãy cân nhắc quyên góp để giúp trang trải chi phí máy chủ, tên miền và thời gian phát triển. Các khoản quyên góp cũng giúp tài trợ thời gian nghiên cứu và tìm hiểu những gì cần thiết để xây dựng các tính năng như SAML, Kubernetes và hỗ trợ Agent. Theo dõi tiến độ và quyên góp bên dưới.
 
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+[Quyên góp](https://donate.termix.site/)
+
+<br />
+
+## Nha Tai Tro
+
+Ban quan tam den viec dat quang cao tra phi de ho tro phat trien? Gui email toi [mail@termix.site](mailto:mail@termix.site).
+
+<div align="center">
+
+<br />
+
+<a href="https://www.digitalocean.com/">
+  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://crowdin.com/">
+  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.blacksmith.sh/">
+  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.cloudflare.com/">
+  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://tailscale.com/">
+  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://akamai.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://aws.amazon.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://rackgenius.com/">
+  <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
+</a>
+
+</div>
+
+<br />
+
+## Ho Tro
+
+Neu ban can tro giup hoac muon yeu cau tinh nang voi Termix, hay truy cap trang [Van De](https://github.com/Termix-SSH/Support/issues), dang nhap va nhan `New Issue`. Vui long mo ta van de cang chi tiet cang tot, uu tien viet bang tieng Anh. Ban cung co the tham gia may chu [Discord](https://discord.gg/jVQGdvHDrf) va truy cap kenh ho tro, tuy nhien thoi gian phan hoi co the lau hon.
 
 <br />
 
@@ -353,50 +408,6 @@ Termix là dự án miễn phí và mã nguồn mở. Nếu bạn thấy hữu �
 ## Tinh Nang Du Kien
 
 Xem [Du An](https://github.com/orgs/Termix-SSH/projects/5) de biet tat ca cac tinh nang du kien. Neu ban muon dong gop, xem [Dong Gop](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
-
-<br />
-
-## Nha Tai Tro
-
-<div align="center">
-
-<br />
-
-<a href="https://www.digitalocean.com/">
-  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://crowdin.com/">
-  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.blacksmith.sh/">
-  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.cloudflare.com/">
-  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://akamai.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://aws.amazon.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
-</a>
-
-</div>
-
-<br />
-
-## Ho Tro
-
-Neu ban can tro giup hoac muon yeu cau tinh nang voi Termix, hay truy cap trang [Van De](https://github.com/Termix-SSH/Support/issues), dang nhap va nhan `New Issue`. Vui long mo ta van de cang chi tiet cang tot, uu tien viet bang tieng Anh. Ban cung co the tham gia may chu [Discord](https://discord.gg/jVQGdvHDrf) va truy cap kenh ho tro, tuy nhien thoi gian phan hoi co the lau hon.
 
 <br />
 

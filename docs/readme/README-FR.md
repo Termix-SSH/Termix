@@ -31,11 +31,13 @@
   <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
 
+<p>
+  <a href="https://donate.termix.site/"><img alt="Donations this month" src="https://img.shields.io/badge/dynamic/json?style=for-the-badge&label=Donations%20this%20month&query=%24.fiatTotal&prefix=%24&url=https%3A%2F%2Ftermix.site%2Fdonation-snapshot.json&color=F39044&labelColor=1a1a1a" /></a>
+</p>
+
 <br />
 
 Termix est gratuit et open source. Si vous le trouvez utile, pensez à [faire un don](https://donate.termix.site/) pour aider à couvrir les coûts de serveur et le temps de développement.
-
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -87,7 +89,7 @@ Creez et gerez des tunnels SSH de serveur a serveur avec reconnexion automatique
 <td width="50%" valign="top">
 
 **Gestionnaire de fichiers distant:**
-Gerez les fichiers directement sur les serveurs distants avec support de la visualisation et de l'edition de code, images, audio et video. Televersez, telechargez, renommez, supprimez et deplacez des fichiers de maniere fluide avec support sudo.
+Gerez les fichiers directement sur les serveurs distants avec support de la visualisation et de l'edition de code, images, audio et video. Televersez, telechargez, renommez, supprimez et deplacez des fichiers de maniere fluide avec support sudo. Inclut la prise en charge du deplacement de fichiers de serveur a serveur.
 
 </td>
 </tr>
@@ -109,13 +111,13 @@ Enregistrez, organisez et gerez vos connexions SSH avec des tags et des dossiers
 <td width="50%" valign="top">
 
 **Metriques d'hote:**
-Visualisez l'utilisation du CPU, de la memoire, du disque, le reseau, le temps de fonctionnement, les informations systeme, le pare-feu, le moniteur de ports, le visualiseur de journaux, les utilisateurs/permissions, les certificats et bien plus encore sur la plupart des serveurs Linux.
+Visualisez l'utilisation du CPU, de la memoire, du disque, le reseau, le temps de fonctionnement, les informations systeme, le pare-feu, le moniteur de ports, le visualiseur de journaux, les utilisateurs/permissions, les certificats et bien plus encore sur la plupart des serveurs Linux. Inclut des graphiques d'historique en serie temporelle et des alertes basees sur des seuils avec support ntfy et webhook.
 
 </td>
 <td width="50%" valign="top">
 
 **Authentification des utilisateurs:**
-Gestion securisee des utilisateurs avec controles administrateur et support OIDC/LDAP/SSO (avec controle d'acces) et 2FA (TOTP). Visualisez les sessions utilisateur actives sur toutes les plateformes et revoquez les permissions. Liez vos comptes OIDC/locaux ensemble. Consultez le journal d'audit des actions de tous les utilisateurs.
+Gestion securisee des utilisateurs avec controles administrateur (peut modifier les informations des autres utilisateurs) et support OIDC/LDAP/SSO (avec controle d'acces), 2FA (TOTP), et support des passkeys (WebAuthn). Visualisez les sessions utilisateur actives sur toutes les plateformes et revoquez les permissions. Liez vos comptes OIDC/locaux ensemble. Consultez le journal d'audit des actions de tous les utilisateurs.
 
 </td>
 </tr>
@@ -128,8 +130,8 @@ Listez les appareils de votre reseau Tailscale pour les ajouter rapidement comme
 </td>
 <td width="50%" valign="top">
 
-**RBAC:**
-Creez des roles et partagez des hotes entre utilisateurs/roles.
+**RBAC/Partage:**
+Creez des roles et partagez des hotes entre utilisateurs/roles. Prend en charge tous les types d'authentification et tous les protocoles d'hote.
 
 </td>
 </tr>
@@ -206,7 +208,8 @@ Support integre d'environ 30 langues (gere par [Crowdin](https://docs.termix.sit
 - **Connexion rapide** - Connectez-vous a un serveur sans avoir a sauvegarder les donnees de connexion
 - **Palette de commandes** - Appuyez deux fois sur Shift gauche pour acceder rapidement aux connexions SSH avec votre clavier
 - **Integration Proxmox** - Ajoutez automatiquement des hotes dans Termix depuis votre instance Proxmox
-- **SSH riche en fonctionnalites** - Support des hotes de rebond, Warpgate, connexions basees sur TOTP, SOCKS5, verification des cles d'hote, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, journalisation du terminal, etc.
+- **SSH riche en fonctionnalites** - Support des hotes de rebond, Warpgate, connexions basees sur TOTP, SOCKS5, verification des cles d'hote, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, journalisation du terminal, transfert d'agent SSH, agent SSH Bitwarden, signature SSH HashiCorp Vault, et plus encore.
+- **Termix ID** - Un equivalent de sshid.io integre a Termix. Reservez un identifiant, publiez vos cles SSH publiques a une URL de resolution, et utilisez une autorite de certification integree pour emettre des certificats SSH.
 
 </details>
 
@@ -249,7 +252,9 @@ Support integre d'environ 30 langues (gere par [Crowdin](https://docs.termix.sit
 
 ## Installation
 
-Visitez la [documentation](https://docs.termix.site/install) de Termix pour plus d'informations sur l'installation de Termix sur toutes les plateformes. Voici un exemple de fichier Docker Compose (vous pouvez omettre guacd et le reseau si vous ne prevoyez pas d'utiliser les fonctionnalites de bureau a distance) :
+Visitez la [documentation](https://docs.termix.site/install) de Termix pour des instructions d'installation completes sur toutes les plateformes.
+
+Voici un exemple de fichier Docker Compose (vous pouvez omettre guacd et le reseau si vous ne prevoyez pas d'utiliser les fonctionnalites de bureau a distance) :
 
 ```yaml
 services:
@@ -290,9 +295,59 @@ networks:
 
 ## Faire un don
 
-Termix est gratuit et open source. Si vous le trouvez utile, pensez à [faire un don](https://donate.termix.site/) pour aider à couvrir les coûts de serveur et le temps de développement.
+Termix est gratuit et open source, sans abonnement ni plan payant. Si vous le trouvez utile, pensez a faire un don pour aider a couvrir les couts de serveur, les domaines et le temps de developpement. Les dons contribuent egalement a financer le temps necessaire pour rechercher et apprendre ce qui est requis pour construire des fonctionnalites comme SAML, Kubernetes et le support des agents. Suivez la progression et faites un don ci-dessous.
 
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+[Faire un don](https://donate.termix.site/)
+
+<br />
+
+## Sponsors
+
+Interesse par un placement payant pour soutenir le developpement ? Envoyez un email a [mail@termix.site](mailto:mail@termix.site).
+
+<div align="center">
+
+<br />
+
+<a href="https://www.digitalocean.com/">
+  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://crowdin.com/">
+  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.blacksmith.sh/">
+  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.cloudflare.com/">
+  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://tailscale.com/">
+  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://akamai.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://aws.amazon.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://rackgenius.com/">
+  <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
+</a>
+
+</div>
+
+<br />
+
+## Support
+
+Si vous avez besoin d'aide ou souhaitez demander une fonctionnalite pour Termix, visitez la page [Issues](https://github.com/Termix-SSH/Support/issues), connectez-vous et appuyez sur `New Issue`. Veuillez etre aussi detaille que possible dans votre issue, de preference redigee en anglais. Vous pouvez egalement rejoindre le serveur [Discord](https://discord.gg/jVQGdvHDrf) et visiter le canal de support, cependant les temps de reponse peuvent etre plus longs.
 
 <br />
 
@@ -353,50 +408,6 @@ Termix est gratuit et open source. Si vous le trouvez utile, pensez à [faire un
 ## Fonctionnalites prevues
 
 Consultez les [Projects](https://github.com/orgs/Termix-SSH/projects/5) pour toutes les fonctionnalites prevues. Si vous souhaitez contribuer, consultez [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
-
-<br />
-
-## Sponsors
-
-<div align="center">
-
-<br />
-
-<a href="https://www.digitalocean.com/">
-  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://crowdin.com/">
-  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.blacksmith.sh/">
-  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.cloudflare.com/">
-  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://akamai.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://aws.amazon.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
-</a>
-
-</div>
-
-<br />
-
-## Support
-
-Si vous avez besoin d'aide ou souhaitez demander une fonctionnalite pour Termix, visitez la page [Issues](https://github.com/Termix-SSH/Support/issues), connectez-vous et appuyez sur `New Issue`. Veuillez etre aussi detaille que possible dans votre issue, de preference redigee en anglais. Vous pouvez egalement rejoindre le serveur [Discord](https://discord.gg/jVQGdvHDrf) et visiter le canal de support, cependant les temps de reponse peuvent etre plus longs.
 
 <br />
 

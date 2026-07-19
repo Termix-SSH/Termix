@@ -31,11 +31,13 @@
   <a href="https://donate.termix.site/"><img alt="Donate" src="https://img.shields.io/badge/Donate-Support%20Termix-F39044?style=flat&labelColor=1a1a1a" /></a>
 </p>
 
+<p>
+  <a href="https://donate.termix.site/"><img alt="Donazioni di questo mese" src="https://img.shields.io/badge/dynamic/json?style=for-the-badge&label=Donazioni%20di%20questo%20mese&query=%24.fiatTotal&prefix=%24&url=https%3A%2F%2Ftermix.site%2Fdonation-snapshot.json&color=F39044&labelColor=1a1a1a" /></a>
+</p>
+
 <br />
 
 Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https://donate.termix.site/) per aiutare a coprire i costi del server e il tempo di sviluppo.
-
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
 
 <br />
 
@@ -56,11 +58,11 @@ Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https
 
 ## Panoramica
 
-Termix e una piattaforma di gestione server tutto-in-uno, open-source, per sempre gratuita e self-hosted. Fornisce una soluzione multipiattaforma per gestire i tuoi server e la tua infrastruttura attraverso un'unica interfaccia intuitiva. Termix offre accesso al terminale SSH, controllo remoto del desktop (RDP, VNC, Telnet), funzionalita di tunneling SSH, gestione remota dei file SSH e molti altri strumenti. Termix e la perfetta alternativa gratuita e self-hosted a Termius, disponibile per tutte le piattaforme.
+Termix è una piattaforma di gestione server tutto-in-uno, open-source, per sempre gratuita e self-hosted. Fornisce una soluzione multipiattaforma per gestire i tuoi server e la tua infrastruttura attraverso un'unica interfaccia intuitiva. Termix offre accesso al terminale SSH, controllo remoto del desktop (RDP, VNC, Telnet), funzionalità di tunneling SSH, gestione remota dei file e molti altri strumenti. Termix è la perfetta alternativa gratuita e self-hosted a Termius, disponibile per tutte le piattaforme.
 
 <br />
 
-## Funzionalita
+## Funzionalità
 
 <table>
 <tr>
@@ -87,7 +89,7 @@ Crea e gestisci tunnel SSH da server a server con riconnessione automatica, moni
 <td width="50%" valign="top">
 
 **Gestore File Remoto:**
-Gestisci i file direttamente sui server remoti con supporto per la visualizzazione e la modifica di codice, immagini, audio e video. Carica, scarica, rinomina, elimina e sposta file senza problemi con supporto sudo.
+Gestisci i file direttamente sui server remoti con supporto per la visualizzazione e la modifica di codice, immagini, audio e video. Carica, scarica, rinomina, elimina e sposta file senza problemi con supporto sudo. Include il supporto per spostare file da server a server.
 
 </td>
 </tr>
@@ -95,7 +97,7 @@ Gestisci i file direttamente sui server remoti con supporto per la visualizzazio
 <td width="50%" valign="top">
 
 **Gestione Docker e Podman:**
-Avvia, ferma, metti in pausa, rimuovi container. Visualizza le statistiche dei container. Controlla i container tramite terminale docker exec. Supporta sia Docker che Podman come runtime dei container. Non e stato creato per sostituire Portainer o Dockge, ma piuttosto per gestire semplicemente i tuoi container rispetto alla loro creazione.
+Avvia, ferma, metti in pausa, rimuovi container. Visualizza le statistiche dei container. Controlla i container tramite terminale docker exec. Supporta sia Docker che Podman come runtime dei container. Non è stato creato per sostituire Portainer o Dockge, ma piuttosto per gestire semplicemente i tuoi container rispetto alla loro creazione.
 
 </td>
 <td width="50%" valign="top">
@@ -109,13 +111,13 @@ Salva, organizza e gestisci le tue connessioni SSH con tag e cartelle (con perso
 <td width="50%" valign="top">
 
 **Metriche Host:**
-Visualizza l'utilizzo di CPU, memoria, disco, rete, uptime, informazioni di sistema, firewall, monitoraggio porte, visualizzatore di log, utenti/permessi, certificati e molto altro sulla maggior parte dei server basati su Linux.
+Visualizza CPU, memoria, utilizzo del disco, rete, uptime, informazioni di sistema, firewall, monitoraggio porte, visualizzatore di log, utenti/permessi, certificati e molto altro, funzionanti sulla maggior parte dei server basati su Linux. Include grafici storici delle serie temporali e avvisi basati su soglie con supporto ntfy e webhook.
 
 </td>
 <td width="50%" valign="top">
 
 **Autenticazione Utente:**
-Gestione utenti sicura con controlli amministrativi e supporto OIDC/LDAP/SSO (con controllo degli accessi) e 2FA (TOTP). Visualizza le sessioni utente attive su tutte le piattaforme e revoca i permessi. Collega i tuoi account OIDC/Locali tra loro. Visualizza il log di controllo delle azioni di tutti gli utenti.
+Gestione utenti sicura con controlli amministrativi (può modificare le informazioni di altri utenti) e OIDC/LDAP/SSO (con controllo degli accessi), 2FA (TOTP) e supporto passkey (WebAuthn). Visualizza le sessioni utente attive su tutte le piattaforme e revoca i permessi. Collega i tuoi account OIDC/Locali tra loro. Visualizza il log di controllo delle azioni di tutti gli utenti.
 
 </td>
 </tr>
@@ -128,8 +130,8 @@ Elenca i dispositivi della tua rete Tailscale per aggiungerli rapidamente come h
 </td>
 <td width="50%" valign="top">
 
-**RBAC:**
-Crea ruoli e condividi host tra utenti/ruoli.
+**RBAC/Condivisione:**
+Crea ruoli e condividi host tra utenti/ruoli. Supporta tutti i tipi di autenticazione e tutti i protocolli host.
 
 </td>
 </tr>
@@ -137,7 +139,7 @@ Crea ruoli e condividi host tra utenti/ruoli.
 <td width="50%" valign="top">
 
 **Connessioni Seriali:**
-Connettiti a dispositivi seriali (router, switch, microcontrollori, ecc.) direttamente dal browser o dall'app desktop. Configura baud rate, bit di dati, bit di stop e parita. Utilizza la Web Serial API nei browser supportati o un backend nativo nell'app Electron.
+Connettiti a dispositivi seriali (router, switch, microcontrollori, ecc.) direttamente dal browser o dall'app desktop. Configura baud rate, bit di dati, bit di stop e parità. Utilizza la Web Serial API nei browser supportati o un backend nativo nell'app Electron.
 
 </td>
 <td width="50%" valign="top">
@@ -157,7 +159,7 @@ Una homepage completamente personalizzabile con una griglia di widget drag-and-d
 <td width="50%" valign="top">
 
 **Crittografia Database:**
-Il backend e archiviato come file di database SQLite crittografati. Consulta la [documentazione](https://docs.termix.site/security) per maggiori informazioni.
+Il backend è archiviato come file di database SQLite crittografati. Consulta la [documentazione](https://docs.termix.site/security) per maggiori informazioni.
 
 </td>
 </tr>
@@ -171,7 +173,7 @@ Personalizza la tua Dashboard per visualizzare il tuo homelab basato sulle conne
 <td width="50%" valign="top">
 
 **Strumenti SSH:**
-Crea snippet di comandi riutilizzabili che si eseguono con un singolo clic. Esegui un comando simultaneamente su piu terminali aperti.
+Crea snippet di comandi riutilizzabili che si eseguono con un singolo clic. Esegui un comando simultaneamente su più terminali aperti.
 
 </td>
 </tr>
@@ -194,7 +196,7 @@ Supporto integrato per circa 30 lingue (gestito da [Crowdin](https://docs.termix
 <br />
 
 <details>
-<summary><b>Altre funzionalita</b></summary>
+<summary><b>Altre funzionalità</b></summary>
 <br />
 
 - **Dashboard** - Visualizza le informazioni del server a colpo d'occhio sulla tua dashboard
@@ -206,7 +208,8 @@ Supporto integrato per circa 30 lingue (gestito da [Crowdin](https://docs.termix
 - **Connessione Rapida** - Connettiti a un server senza dover salvare i dati di connessione
 - **Palette Comandi** - Premi due volte shift sinistro per accedere rapidamente alle connessioni SSH con la tastiera
 - **Integrazione Proxmox** - Aggiungi automaticamente host a Termix dalla tua istanza Proxmox
-- **SSH Ricco di Funzionalita** - Supporta jump host, Warpgate, connessioni basate su TOTP, SOCKS5, verifica chiave host, compilazione automatica password, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, registrazione terminale, ecc.
+- **SSH Ricco di Funzionalità** - Supporta jump host, Warpgate, connessioni basate su TOTP, SOCKS5, verifica chiave host, compilazione automatica password, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, registrazione terminale, SSH agent forwarding, Bitwarden SSH agent, firma SSH HashiCorp Vault e altro ancora
+- **Termix ID** - L'equivalente di sshid.io integrato in Termix. Rivendica un handle, pubblica le tue chiavi SSH pubbliche su un URL resolver e utilizza una CA integrata per emettere certificati SSH
 
 </details>
 
@@ -225,7 +228,7 @@ Supporto integrato per circa 30 lingue (gestito da [Crowdin](https://docs.termix
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Portable · MSI Installer · Chocolatey</td>
+<td>Portable · Installer MSI · Chocolatey</td>
 </tr>
 <tr>
 <td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
@@ -249,7 +252,9 @@ Supporto integrato per circa 30 lingue (gestito da [Crowdin](https://docs.termix
 
 ## Installazione
 
-Visita la [Documentazione](https://docs.termix.site/install) di Termix per maggiori informazioni su come installare Termix su tutte le piattaforme. In alternativa, visualizza un file Docker Compose di esempio qui (puoi omettere guacd e la rete se non prevedi di utilizzare le funzioni di desktop remoto):
+Visita la [Documentazione Termix](https://docs.termix.site/install) per le istruzioni complete di installazione su tutte le piattaforme.
+
+File Docker Compose di esempio (puoi omettere `guacd` e la rete se non prevedi di utilizzare le funzioni di desktop remoto):
 
 ```yaml
 services:
@@ -290,9 +295,59 @@ networks:
 
 ## Dona
 
-Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https://donate.termix.site/) per aiutare a coprire i costi del server e il tempo di sviluppo.
+Termix è gratuito e open source, senza abbonamenti o piani a pagamento. Se lo trovi utile, considera di donare per aiutare a coprire i costi del server, i domini e il tempo di sviluppo. Le donazioni aiutano anche a finanziare il tempo necessario per ricercare e imparare ciò che serve per costruire funzionalità come SAML, Kubernetes e supporto Agent. Segui i progressi e dona qui sotto.
 
-<a href="https://donate.termix.site/"><img src="../repo-images/donation-goal.svg" alt="Monthly donation goal" /></a>
+[Dona](https://donate.termix.site/)
+
+<br />
+
+## Sponsor
+
+Interessato a un posizionamento a pagamento per supportare lo sviluppo? Scrivi a [mail@termix.site](mailto:mail@termix.site).
+
+<div align="center">
+
+<br />
+
+<a href="https://www.digitalocean.com/">
+  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://crowdin.com/">
+  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.blacksmith.sh/">
+  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://www.cloudflare.com/">
+  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://tailscale.com/">
+  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://akamai.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://aws.amazon.com/">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
+</a>
+&nbsp;&nbsp;&nbsp;
+<a href="https://rackgenius.com/">
+  <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
+</a>
+
+</div>
+
+<br />
+
+## Supporto
+
+Se hai bisogno di aiuto o vuoi richiedere una funzionalità per Termix, visita la pagina [Issues](https://github.com/Termix-SSH/Support/issues), accedi e premi `New Issue`. Per favore, sii il più dettagliato possibile nella tua segnalazione, preferibilmente scritta in inglese. Puoi anche unirti al server [Discord](https://discord.gg/jVQGdvHDrf) e visitare il canale di supporto, tuttavia i tempi di risposta potrebbero essere più lunghi.
 
 <br />
 
@@ -344,59 +399,15 @@ Termix è gratuito e open source. Se lo trovi utile, considera di [donare](https
 </tr>
 </table>
 
-<sub>Alcuni video e immagini potrebbero non essere aggiornati o potrebbero non mostrare perfettamente le funzionalita.</sub>
+<sub>Alcuni video e immagini potrebbero non essere aggiornati o potrebbero non mostrare perfettamente le funzionalità.</sub>
 
 </div>
 
 <br />
 
-## Funzionalita Pianificate
+## Funzionalità Pianificate
 
-Consulta [Progetti](https://github.com/orgs/Termix-SSH/projects/5) per tutte le funzionalita pianificate. Se desideri contribuire, consulta [Contribuire](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
-
-<br />
-
-## Sponsor
-
-<div align="center">
-
-<br />
-
-<a href="https://www.digitalocean.com/">
-  <img src="https://opensource.nyc3.cdn.digitaloceanspaces.com/attribution/assets/SVG/DO_Logo_horizontal_blue.svg" height="40" alt="DigitalOcean" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://crowdin.com/">
-  <img src="https://support.crowdin.com/assets/logos/core-logo/svg/crowdin-core-logo-cDark.svg" height="40" alt="Crowdin" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.blacksmith.sh/">
-  <img src="https://cdn.prod.website-files.com/681bfb0c9a4601bc6e288ec4/683ca9e2c5186757092611b8_e8cb22127df4da0811c4120a523722d2_logo-backsmith-wordmark-light.svg" height="40" alt="Blacksmith" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://www.cloudflare.com/">
-  <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://akamai.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
-</a>
-&nbsp;&nbsp;&nbsp;
-<a href="https://aws.amazon.com/">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Amazon_Web_Services_Logo.svg/960px-Amazon_Web_Services_Logo.svg.png" height="40" alt="AWS" />
-</a>
-
-</div>
-
-<br />
-
-## Supporto
-
-Se hai bisogno di aiuto o vuoi richiedere una funzionalita per Termix, visita la pagina [Segnalazioni](https://github.com/Termix-SSH/Support/issues), accedi e premi `New Issue`. Per favore, sii il piu dettagliato possibile nella tua segnalazione, preferibilmente scritta in inglese. Puoi anche unirti al server [Discord](https://discord.gg/jVQGdvHDrf) e visitare il canale di supporto, tuttavia i tempi di risposta potrebbero essere piu lunghi.
+Consulta [Projects](https://github.com/orgs/Termix-SSH/projects/5) per tutte le funzionalità pianificate. Se desideri contribuire, consulta [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
 
