@@ -23,6 +23,8 @@ https://youtu.be/c3UD4q2jW_8
 - Proxmox guest auto sync
 - Complete database refactor
 - 30-day donation reminder and new donation milestones that support research: (donate.termix.site)
+- Improve site performance with cache and poll pauses
+- Save quick connect sessions as hosts
 <!-- /UPDATE_LOG -->
 
 <!-- BUG_FIXES -->
