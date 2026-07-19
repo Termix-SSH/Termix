@@ -1813,6 +1813,34 @@ export function SidebarTree({
     mode: "create" | "edit";
     folder?: HostFolder;
   } | null>(null);
+  const [compactHostView, setCompactHostView] = useState(
+    () => localStorage.getItem("compactHostView") === "true",
+  );
+  const [trayOnClick, setTrayOnClick] = useState(
+    () => localStorage.getItem("hostTrayOnClick") === "true",
+  );
+
+  useEffect(() => {
+    const handler = () =>
+      setCompactHostView(localStorage.getItem("compactHostView") === "true");
+    window.addEventListener("storage", handler);
+    window.addEventListener("compactHostViewChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("compactHostViewChanged", handler);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = () =>
+      setTrayOnClick(localStorage.getItem("hostTrayOnClick") === "true");
+    window.addEventListener("storage", handler);
+    window.addEventListener("hostTrayOnClickChanged", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("hostTrayOnClickChanged", handler);
+    };
+  }, []);
 
   function handleDragHostStart(hostId: string) {
     // When the dragged host is part of an active selection, move the whole set.
@@ -2051,6 +2079,10 @@ export function SidebarTree({
   const visibleRows = collectVisibleRows(children, query, openFolders);
   const parentRef = useRef<HTMLDivElement>(null);
 
+  const isTouchOnly =
+    typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
+  const clickTrayActive = trayOnClick || isTouchOnly;
+
   const virtualizer = useVirtualizer({
     count: visibleRows.length,
     getScrollElement: () => parentRef.current,
@@ -2058,9 +2090,15 @@ export function SidebarTree({
       const row = visibleRows[index];
       if (!row) return 36;
       if (isFolder(row.item)) return 36;
-      // Expanded action tray is taller than a single host row.
-      if (openTrayHostId === row.item.id) return 88;
-      return 40;
+      const isOpen = openTrayHostId === row.item.id;
+      if (compactHostView) {
+        // Compact rows are a single line; the tray adds a second wrapped row.
+        return isOpen ? 88 : 32;
+      }
+      // Default rows show name + address (+ optional tags), taller to start with.
+      // Click-tray mode also keeps the connection buttons visible even when closed.
+      const base = clickTrayActive ? 76 : 56;
+      return isOpen ? base + 96 : base;
     },
     overscan: 12,
     getItemKey: (index) => {
@@ -2072,10 +2110,22 @@ export function SidebarTree({
     },
   });
 
-  // Remeasure when tray open state or tree shape changes (variable row heights).
+  // Remeasure when the tree shape changes (rows added/removed/reordered), so
+  // stale cached sizes from before don't leak onto different rows. Tray
+  // open/close is intentionally excluded — `measureElement`'s ResizeObserver
+  // already tracks that live via the CSS transition, and force-resetting the
+  // cache here would snap rows back to the rough estimate mid-animation and
+  // cause visible jitter.
   useLayoutEffect(() => {
     virtualizer.measure();
-  }, [virtualizer, openTrayHostId, openFolders, query, visibleRows.length]);
+  }, [
+    virtualizer,
+    openFolders,
+    query,
+    visibleRows.length,
+    compactHostView,
+    trayOnClick,
+  ]);
 
   if (loading) {
     return (

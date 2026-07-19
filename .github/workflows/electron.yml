@@ -1016,16 +1016,6 @@ jobs:
 
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
-      - name: Build macOS App Store Package
-        if: steps.check_certs.outputs.has_certs == 'true'
-        env:
-          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_OPTIONS: --max-old-space-size=4096
-        run: |
-          BUILD_VERSION="${{ github.run_number }}"
-          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
-
       - name: Check for App Store Connect API credentials
         id: check_asc_creds
         run: |
@@ -1044,24 +1034,16 @@ jobs:
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         run: gem install fastlane -N
 
-      - name: Upload and submit to Mac App Store
+      - name: Write App Store Connect API key
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         env:
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
           APPLE_ISSUER_ID: ${{ secrets.APPLE_ISSUER_ID }}
           APPLE_KEY_CONTENT: ${{ secrets.APPLE_KEY_CONTENT }}
         run: |
-          PKG_FILE=$(find release -name "termix_macos_universal_mas.pkg" -type f | head -n 1)
-          if [ -z "$PKG_FILE" ]; then
-            echo "PKG file not found in release/; aborting."
-            exit 1
-          fi
-
-          VERSION=$(node -p "require('./package.json').version")
-
-          # Write API key JSON that Fastlane deliver expects; the PEM's
-          # newlines must be preserved as literal \n escapes, not stripped,
-          # or spaceship fails to parse the key (invalid curve name).
+          # Write API key JSON that Fastlane expects; the PEM's newlines
+          # must be preserved as literal \n escapes, not stripped, or
+          # spaceship fails to parse the key (invalid curve name).
           mkdir -p /tmp/asc_keys
           KEY_P8_PATH="/tmp/asc_keys/AuthKey_${APPLE_KEY_ID}.p8"
           API_KEY_JSON="/tmp/asc_keys/api_key.json"
@@ -1079,6 +1061,65 @@ jobs:
                 in_house: false,
               }, null, 2) + "\n");
             ' > "$API_KEY_JSON"
+
+      - name: Resolve next build number from App Store Connect
+        id: build_number
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          OUT_FILE="$RUNNER_TEMP/latest_build_number.txt"
+          LANE_DIR="$RUNNER_TEMP/asc_lane/fastlane"
+          mkdir -p "$LANE_DIR"
+
+          cat > "$LANE_DIR/Fastfile" <<EOF
+          default_platform(:mac)
+
+          lane :fetch_build_number do
+            number = app_store_build_number(
+              live: false,
+              api_key_path: "/tmp/asc_keys/api_key.json",
+              app_identifier: "com.karmaa.termix",
+              version: "$APP_VERSION",
+              initial_build_number: 0,
+            )
+            File.write("$OUT_FILE", number.to_s)
+          end
+          EOF
+
+          (cd "$RUNNER_TEMP/asc_lane" && fastlane fetch_build_number) 2>&1 || true
+
+          LATEST=""
+          if [ -f "$OUT_FILE" ]; then
+            LATEST=$(cat "$OUT_FILE" | tr -d '[:space:]')
+          fi
+
+          if ! [[ "$LATEST" =~ ^[0-9]+$ ]]; then
+            echo "Could not resolve latest build number from App Store Connect; falling back to run number."
+            LATEST="${{ github.run_number }}"
+          fi
+          echo "build_version=$((LATEST + 1))" >> "$GITHUB_OUTPUT"
+
+      - name: Build macOS App Store Package
+        if: steps.check_certs.outputs.has_certs == 'true'
+        env:
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: |
+          BUILD_VERSION="${{ steps.build_number.outputs.build_version || github.run_number }}"
+          npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
+
+      - name: Upload and submit to Mac App Store
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          PKG_FILE=$(find release -name "termix_macos_universal_mas.pkg" -type f | head -n 1)
+          if [ -z "$PKG_FILE" ]; then
+            echo "PKG file not found in release/; aborting."
+            exit 1
+          fi
+
+          VERSION=$(node -p "require('./package.json').version")
+          API_KEY_JSON="/tmp/asc_keys/api_key.json"
 
           fastlane deliver \
             --pkg "$PKG_FILE" \
