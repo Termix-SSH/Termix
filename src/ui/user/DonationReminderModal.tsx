@@ -39,6 +39,7 @@ export function DonationReminderModal({
         <DialogHeader>
           <DialogTitle>{t("donation.title")}</DialogTitle>
           <DialogDescription>{t("donation.body")}</DialogDescription>
+          <DialogDescription>{t("donation.milestones")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={onDismiss}>

@@ -1143,8 +1143,11 @@ export function UserProfilePanel({
         <p className="text-[10px] text-muted-foreground leading-relaxed">
           {t("newUi.sidebar.userProfile.donateDescription")}
         </p>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          {t("newUi.sidebar.userProfile.donateMilestones")}
+        </p>
         <a
-          href="https://donate.termix.site/donate/"
+          href="https://donate.termix.site/"
           target="_blank"
           rel="noopener noreferrer"
           className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-accent-brand text-white px-2 py-1 hover:opacity-90 transition-opacity"

@@ -2374,6 +2374,7 @@
   "donation": {
     "title": "Enjoying Termix?",
     "body": "Termix is free and open source, built and maintained by a two-person team in our spare time. If it's replaced a commercial tool you'd otherwise be paying for, a donation helps cover hosting costs and keeps development going.",
+    "milestones": "Donations also help fund the time to research and learn what's needed to build features like SAML and Kubernetes support. See the progress on the donate page.",
     "cta": "Donate",
     "dismiss": "Maybe later"
   },
@@ -3121,6 +3122,7 @@
       "userProfile": {
         "donateTitle": "Keep Termix alive",
         "donateDescription": "Termix is free, self-hosted, and built by only a few people in their spare time. If it's saved you time or money, a crypto donation helps keep it going.",
+        "donateMilestones": "Donations help fund the time to research and learn what's needed to build SAML, Kubernetes, and Agent support. See the progress and donate.",
         "donateButton": "Donate crypto",
         "storageModeLocal": "Browser",
         "storageModeCloud": "Database",
