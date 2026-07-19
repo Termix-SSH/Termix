@@ -30,6 +30,26 @@ const PROVIDER_TYPE_OPTIONS: { value: SSOProviderType; label: string }[] = [
   { value: "ldap", label: "LDAP" },
 ];
 
+const githubDefaults = {
+  authorization_url: "https://github.com/login/oauth/authorize",
+  token_url: "https://github.com/login/oauth/access_token",
+  issuer_url: "https://token.actions.githubusercontent.com",
+  userinfo_url: "https://api.github.com/user",
+  scopes: "read:user user:email",
+  identifier_path: "id",
+  name_path: "name",
+};
+
+const googleDefaults = {
+  authorization_url: "https://accounts.google.com/o/oauth2/v2/auth",
+  token_url: "https://oauth2.googleapis.com/token",
+  issuer_url: "https://accounts.google.com",
+  userinfo_url: "https://openidconnect.googleapis.com/v1/userinfo",
+  scopes: "openid email profile",
+  identifier_path: "sub",
+  name_path: "name",
+};
+
 type SSOProviderDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -408,24 +428,6 @@ function OIDCConfigFields({
   simplified: boolean;
   t: (key: string) => string;
 }) {
-  const githubDefaults = {
-    authorization_url: "https://github.com/login/oauth/authorize",
-    token_url: "https://github.com/login/oauth/access_token",
-    issuer_url: "https://token.actions.githubusercontent.com",
-    userinfo_url: "https://api.github.com/user",
-    scopes: "read:user user:email",
-    identifier_path: "id",
-    name_path: "name",
-  };
-  const googleDefaults = {
-    authorization_url: "https://accounts.google.com/o/oauth2/v2/auth",
-    token_url: "https://oauth2.googleapis.com/token",
-    issuer_url: "https://accounts.google.com",
-    userinfo_url: "https://openidconnect.googleapis.com/v1/userinfo",
-    scopes: "openid email profile",
-    identifier_path: "sub",
-    name_path: "name",
-  };
   const docsHref = simplified
     ? "https://docs.termix.site/features/authentication/github-google"
     : "https://docs.termix.site/features/authentication/oidc";
