@@ -1059,18 +1059,26 @@ jobs:
 
           VERSION=$(node -p "require('./package.json').version")
 
-          # Write API key JSON that Fastlane deliver expects
+          # Write API key JSON that Fastlane deliver expects; the PEM's
+          # newlines must be preserved as literal \n escapes, not stripped,
+          # or spaceship fails to parse the key (invalid curve name).
           mkdir -p /tmp/asc_keys
           KEY_P8_PATH="/tmp/asc_keys/AuthKey_${APPLE_KEY_ID}.p8"
           API_KEY_JSON="/tmp/asc_keys/api_key.json"
 
           echo "$APPLE_KEY_CONTENT" | base64 --decode > "$KEY_P8_PATH"
 
-          printf '{\n  "key_id": "%s",\n  "issuer_id": "%s",\n  "key": "%s",\n  "in_house": false\n}\n' \
-            "$APPLE_KEY_ID" \
-            "$APPLE_ISSUER_ID" \
-            "$(tr -d '\n' < "$KEY_P8_PATH")" \
-            > "$API_KEY_JSON"
+          KEY_ID="$APPLE_KEY_ID" ISSUER_ID="$APPLE_ISSUER_ID" KEY_P8_PATH="$KEY_P8_PATH" \
+            node -e '
+              const fs = require("fs");
+              const key = fs.readFileSync(process.env.KEY_P8_PATH, "utf8");
+              process.stdout.write(JSON.stringify({
+                key_id: process.env.KEY_ID,
+                issuer_id: process.env.ISSUER_ID,
+                key,
+                in_house: false,
+              }, null, 2) + "\n");
+            ' > "$API_KEY_JSON"
 
           fastlane deliver \
             --pkg "$PKG_FILE" \
