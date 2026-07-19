@@ -537,6 +537,11 @@ jobs:
     if: ${{ always() && (inputs.mode == 'Everything' || inputs.mode == 'Skip submit') && needs.merge-to-main.result == 'success' && needs.electron-release.result == 'success' }}
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
       - name: Delete dev branch in Termix
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
