@@ -1,17 +1,21 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, Response } from "express";
-import { and, asc, eq } from "drizzle-orm";
 import { dashboardLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { dashboardServiceLinks } from "../db/schema.js";
+import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { isNonEmptyString } from "./host-normalizers.js";
-import {
-  isValidServiceLinkUrl,
-  normalizeServiceLinkUrl,
-} from "./service-link-url.js";
 import express from "express";
+import { createCurrentDashboardServiceLinkRepository } from "../repositories/factory.js";
 
 export const dashboardServiceLinksRouter = express.Router();
+
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * @openapi
@@ -30,11 +34,8 @@ export const dashboardServiceLinksRouter = express.Router();
 dashboardServiceLinksRouter.get("/", async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const links = await db
-      .select()
-      .from(dashboardServiceLinks)
-      .where(eq(dashboardServiceLinks.userId, userId))
-      .orderBy(asc(dashboardServiceLinks.order), asc(dashboardServiceLinks.id));
+    const links =
+      await createCurrentDashboardServiceLinkRepository().listByUserId(userId);
     res.json(links);
   } catch (err) {
     dashboardLogger.error("Failed to fetch service links", err);
@@ -79,34 +80,23 @@ dashboardServiceLinksRouter.post("/", async (req: Request, res: Response) => {
   if (!isNonEmptyString(label) || !isNonEmptyString(url)) {
     return res.status(400).json({ error: "label and url are required" });
   }
-  const normalizedUrl = normalizeServiceLinkUrl(url);
-  if (!isValidServiceLinkUrl(normalizedUrl)) {
+  if (!isValidUrl(url)) {
     return res
       .status(400)
       .json({ error: "url must be a valid http or https URL" });
   }
 
   try {
-    const existing = await db
-      .select({ order: dashboardServiceLinks.order })
-      .from(dashboardServiceLinks)
-      .where(eq(dashboardServiceLinks.userId, userId))
-      .orderBy(asc(dashboardServiceLinks.order));
-
-    const nextOrder =
-      existing.length > 0 ? existing[existing.length - 1].order + 1 : 0;
-
-    const [created] = await db
-      .insert(dashboardServiceLinks)
-      .values({
+    const created =
+      await createCurrentDashboardServiceLinkRepository().createForUser(
         userId,
-        label: label.trim(),
-        url: normalizedUrl,
-        order: nextOrder,
-        createdAt: new Date().toISOString(),
-      })
-      .returning();
+        {
+          label: label.trim(),
+          url: url.trim(),
+        },
+      );
 
+    DatabaseSaveTrigger.triggerSave("dashboard_service_link_created");
     res.status(201).json(created);
   } catch (err) {
     dashboardLogger.error("Failed to create service link", err);
@@ -152,29 +142,22 @@ dashboardServiceLinksRouter.delete(
     }
 
     try {
-      const existing = await db
-        .select()
-        .from(dashboardServiceLinks)
-        .where(
-          and(
-            eq(dashboardServiceLinks.id, id),
-            eq(dashboardServiceLinks.userId, userId),
-          ),
+      const existing =
+        await createCurrentDashboardServiceLinkRepository().findByIdForUser(
+          userId,
+          id,
         );
 
-      if (existing.length === 0) {
+      if (!existing) {
         return res.status(404).json({ error: "Not found" });
       }
 
-      await db
-        .delete(dashboardServiceLinks)
-        .where(
-          and(
-            eq(dashboardServiceLinks.id, id),
-            eq(dashboardServiceLinks.userId, userId),
-          ),
-        );
+      await createCurrentDashboardServiceLinkRepository().deleteForUser(
+        userId,
+        id,
+      );
 
+      DatabaseSaveTrigger.triggerSave("dashboard_service_link_deleted");
       res.json({ message: "Service link deleted" });
     } catch (err) {
       dashboardLogger.error("Failed to delete service link", err);
@@ -229,49 +212,39 @@ dashboardServiceLinksRouter.put("/:id", async (req: Request, res: Response) => {
   if (isNaN(id)) {
     return res.status(400).json({ error: "Invalid id" });
   }
-  const normalizedUrl = isNonEmptyString(url)
-    ? normalizeServiceLinkUrl(url)
-    : undefined;
-  if (normalizedUrl !== undefined && !isValidServiceLinkUrl(normalizedUrl)) {
+  if (url !== undefined && !isValidUrl(url)) {
     return res
       .status(400)
       .json({ error: "url must be a valid http or https URL" });
   }
 
   try {
-    const existing = await db
-      .select()
-      .from(dashboardServiceLinks)
-      .where(
-        and(
-          eq(dashboardServiceLinks.id, id),
-          eq(dashboardServiceLinks.userId, userId),
-        ),
+    const existing =
+      await createCurrentDashboardServiceLinkRepository().findByIdForUser(
+        userId,
+        id,
       );
 
-    if (existing.length === 0) {
+    if (!existing) {
       return res.status(404).json({ error: "Not found" });
     }
 
     const updates: Partial<{ label: string; url: string }> = {};
     if (isNonEmptyString(label)) updates.label = label.trim();
-    if (normalizedUrl !== undefined) updates.url = normalizedUrl;
+    if (isNonEmptyString(url)) updates.url = url.trim();
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "Nothing to update" });
     }
 
-    const [updated] = await db
-      .update(dashboardServiceLinks)
-      .set(updates)
-      .where(
-        and(
-          eq(dashboardServiceLinks.id, id),
-          eq(dashboardServiceLinks.userId, userId),
-        ),
-      )
-      .returning();
+    const updated =
+      await createCurrentDashboardServiceLinkRepository().updateForUser(
+        userId,
+        id,
+        updates,
+      );
 
+    DatabaseSaveTrigger.triggerSave("dashboard_service_link_updated");
     res.json(updated);
   } catch (err) {
     dashboardLogger.error("Failed to update service link", err);

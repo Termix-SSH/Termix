@@ -55,8 +55,13 @@ import {
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
+import { Save } from "lucide-react";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
+import {
+  getNextTerminalFontSize,
+  getTerminalFontZoomDirection,
+} from "./terminal-font-zoom.ts";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
 type HostKeyVerificationData = Omit<
@@ -81,10 +86,10 @@ interface SSHTerminalProps {
   previewTheme?: string | null;
   /** When true, suppress automatic focus on connect/visibility change. */
   disableAutoFocus?: boolean;
+  isQuickConnect?: boolean;
+  onSaveQuickConnect?: () => Promise<void>;
 }
 
-const TERMINAL_FONT_ZOOM_MIN = 8;
-const TERMINAL_FONT_ZOOM_MAX = 36;
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
 
 function updateAlternateScreenMode(output: string, currentMode: boolean) {
@@ -116,6 +121,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       onOpenFileInEditor,
       previewTheme,
       disableAutoFocus = false,
+      isQuickConnect = false,
+      onSaveQuickConnect,
     },
     ref,
   ) {
@@ -157,6 +164,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const pongReceivedRef = useRef(true);
     const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [isSavingQuickConnect, setIsSavingQuickConnect] = useState(false);
+    const [isQuickConnectSaved, setIsQuickConnectSaved] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isFitted, setIsFitted] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -222,6 +231,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [linkClickDialog, setLinkClickDialog] = useState<{
       url: string;
     } | null>(null);
+
+    useEffect(() => {
+      if (!linkClickDialog) return;
+
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopPropagation();
+        setLinkClickDialog(null);
+      };
+
+      window.addEventListener("keydown", handleKeyDown, true);
+      return () => window.removeEventListener("keydown", handleKeyDown, true);
+    }, [linkClickDialog]);
 
     const [tmuxSessionPicker, setTmuxSessionPicker] = useState<{
       sessions: Array<{
@@ -416,20 +439,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [isVisible]);
 
     useEffect(() => {
-      const checkAuth = () => {
-        setIsAuthenticated((prev) => {
-          if (!prev) {
-            return true;
-          }
-          return prev;
-        });
-      };
-
-      checkAuth();
-
-      const authCheckInterval = setInterval(checkAuth, 5000);
-
-      return () => clearInterval(authCheckInterval);
+      // One-shot: historical code polled every 5s but only ever flipped false→true.
+      setIsAuthenticated(true);
     }, []);
 
     function hardRefresh() {
@@ -483,16 +494,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
     }
 
-    function zoomTerminalFont(deltaY: number) {
-      const direction = deltaY < 0 ? 1 : -1;
+    function changeTerminalFontSize(direction: -1 | 1) {
       const currentFontSize =
         terminal.options.fontSize ??
         terminalFontSizeRef.current ??
         DEFAULT_TERMINAL_CONFIG.fontSize;
-      const nextFontSize = Math.min(
-        TERMINAL_FONT_ZOOM_MAX,
-        Math.max(TERMINAL_FONT_ZOOM_MIN, currentFontSize + direction),
-      );
+      const nextFontSize = getNextTerminalFontSize(currentFontSize, direction);
 
       if (nextFontSize === currentFontSize) {
         return;
@@ -2153,7 +2160,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       terminal.attachCustomWheelEventHandler((ev) => {
         if (ev.ctrlKey || ev.metaKey) {
-          zoomTerminalFont(ev.deltaY);
+          changeTerminalFontSize(ev.deltaY < 0 ? 1 : -1);
           return false;
         }
 
@@ -2276,9 +2283,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       element?.addEventListener("keydown", handleTabCapture, true);
 
       const resizeObserver = new ResizeObserver(() => {
+        // Background keep-alive tabs still observe layout; skip fit work.
+        if (!isVisibleRef.current) return;
         if (resizeTimeout.current) clearTimeout(resizeTimeout.current);
         resizeTimeout.current = setTimeout(() => {
-          if (isVisible) {
+          if (isVisibleRef.current) {
             performFit();
           }
         }, 50);
@@ -2382,6 +2391,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             globalShortcutHandler.current?.(e);
             return false;
           }
+        }
+
+        const fontZoomDirection = getTerminalFontZoomDirection(e);
+        if (fontZoomDirection !== 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          changeTerminalFontSize(fontZoomDirection);
+          return false;
         }
 
         if (
@@ -2800,6 +2817,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           </button>
         )}
 
+        {isQuickConnect &&
+          isConnected &&
+          !isQuickConnectSaved &&
+          onSaveQuickConnect && (
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={isSavingQuickConnect}
+              onClick={async () => {
+                setIsSavingQuickConnect(true);
+                try {
+                  await onSaveQuickConnect();
+                  setIsQuickConnectSaved(true);
+                } catch {
+                  // The shell reports the failure with a toast.
+                } finally {
+                  setIsSavingQuickConnect(false);
+                }
+              }}
+              className="absolute top-2 left-2 z-[110] h-7 gap-1.5 bg-black/60 text-white/80 hover:bg-black/80 hover:text-white"
+            >
+              <Save className="size-3.5" />
+              {t("hosts.addHost")}
+            </Button>
+          )}
+
         <SimpleLoader
           visible={isConnecting && !isConnectionLogExpanded}
           message={t("terminal.connecting")}
@@ -3092,10 +3135,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             <div
               className="fixed inset-0 flex items-center justify-center z-[10000]"
               style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+              onClick={() => setLinkClickDialog(null)}
             >
               <div
                 className="flex flex-col gap-3 p-4 rounded shadow-lg max-w-sm w-full mx-4"
                 style={{ backgroundColor }}
+                onClick={(event) => event.stopPropagation()}
               >
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                   {t("terminal.linkDialogTitle")}

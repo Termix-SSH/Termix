@@ -105,12 +105,25 @@ export function SshToolsPanel({
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
     e.preventDefault();
     e.stopPropagation();
+    const text = e.clipboardData.getData("text");
+    if (text) broadcast(text);
+  }
 
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     const ctrl = e.ctrlKey;
     const { key } = e;
+
+    // Let Ctrl/Cmd+V fall through so the browser fires a paste event
+    // instead of being swallowed by the preventDefault() below.
+    if ((ctrl || e.metaKey) && key.toLowerCase() === "v") {
+      return;
+    }
+
+    e.preventDefault();
+    e.stopPropagation();
 
     if (ctrl) {
       const ctrlMap: Record<string, string> = {
@@ -280,8 +293,15 @@ export function SshToolsPanel({
         {keyRecording && (
           <input
             ref={inputRef}
-            readOnly
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
+            onChange={(e) => {
+              // Keystrokes are broadcast directly via handleKeyDown; the
+              // field itself must stay empty. This also catches paste
+              // insertion on browsers that fire "input" before we can
+              // intercept it in onPaste.
+              e.target.value = "";
+            }}
             placeholder={t("newUi.sidebar.sshTools.broadcastInputPlaceholder")}
             className="w-full px-2.5 py-2 text-xs bg-background border border-accent-brand/40 text-foreground placeholder:text-muted-foreground/40 outline-none focus:border-accent-brand/70 caret-transparent"
           />

@@ -1,14 +1,17 @@
 import type { Router } from "express";
 import type { LDAPProviderConfig } from "../../../types/index.js";
-import { db } from "../db/index.js";
-import { ssoProviders, users, roles, userRoles } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseUserAgent } from "../../utils/user-agent-parser.js";
 import { isOIDCUserAllowed, loadProviderConfig } from "./user-oidc-utils.js";
 import ldap from "ldapjs";
+import {
+  createCurrentRoleRepository,
+  createCurrentSettingsRepository,
+  createCurrentSsoProviderRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 const authManager = AuthManager.getInstance();
 
@@ -120,12 +123,9 @@ export function registerLDAPAuthRoutes(router: Router): void {
     }
 
     try {
-      const rows = await db
-        .select()
-        .from(ssoProviders)
-        .where(eq(ssoProviders.id, providerId))
-        .limit(1);
-      if (rows.length === 0 || rows[0].type !== "ldap" || !rows[0].enabled) {
+      const provider =
+        await createCurrentSsoProviderRepository().findById(providerId);
+      if (!provider || provider.type !== "ldap" || !provider.enabled) {
         return res.status(404).json({ error: "LDAP provider not found" });
       }
     } catch (err) {
@@ -268,22 +268,19 @@ export function registerLDAPAuthRoutes(router: Router): void {
 
       const deviceInfo = parseUserAgent(req);
       const oidcIdentifier = `ldap:${providerId}:${ldapIdentifier}`;
+      const userRepository = createCurrentUserRepository();
 
-      let existingUsers = await db
-        .select()
-        .from(users)
-        .where(eq(users.oidcIdentifier, oidcIdentifier));
+      let existingUser =
+        await userRepository.findByOidcIdentifier(oidcIdentifier);
 
       let userId: string;
-      if (existingUsers.length === 0) {
+      if (!existingUser) {
         let autoProvision = false;
         try {
-          const r = db.$client
-            .prepare(
-              "SELECT value FROM settings WHERE key = 'oidc_auto_provision'",
-            )
-            .get() as { value: string } | undefined;
-          if (r) autoProvision = r.value === "true";
+          autoProvision = await createCurrentSettingsRepository().getBoolean(
+            "oidc_auto_provision",
+            false,
+          );
         } catch {
           /* */
         }
@@ -292,50 +289,31 @@ export function registerLDAPAuthRoutes(router: Router): void {
             (process.env.OIDC_ALLOW_REGISTRATION || "").trim().toLowerCase() ===
             "true";
 
-        const countRow = db.$client
-          .prepare("SELECT COUNT(*) as count FROM users")
-          .get() as { count?: number };
-        const isFirst = (countRow?.count || 0) === 0;
+        const isFirst = (await userRepository.countAll()) === 0;
 
         if (!isFirst && !autoProvision) {
           return res.status(403).json({ error: "Registration is disabled" });
         }
 
         userId = nanoid();
-        const isFirstFinal = db.$client.transaction(() => {
-          const c =
-            (
-              db.$client
-                .prepare("SELECT COUNT(*) as count FROM users")
-                .get() as { count?: number }
-            )?.count || 0;
-          const first = c === 0;
-          db.$client
-            .prepare(
-              "INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, sso_provider_id) VALUES (?, ?, ?, ?, 1, ?, ?)",
-            )
-            .run(
-              userId,
-              displayName,
-              "",
-              first || isAdmin ? 1 : 0,
-              oidcIdentifier,
-              providerId,
-            );
-          return first;
-        })();
+        const createdUser = await userRepository.createFirstSsoUser({
+          id: userId,
+          username: displayName,
+          passwordHash: "",
+          isAdmin,
+          isOidc: true,
+          oidcIdentifier,
+          ssoProviderId: providerId,
+        });
+        const isFirstFinal = createdUser.isFirstUser;
 
         try {
           const defaultRoleName = isFirstFinal || isAdmin ? "admin" : "user";
-          const defaultRole = await db
-            .select({ id: roles.id })
-            .from(roles)
-            .where(eq(roles.name, defaultRoleName))
-            .limit(1);
-          if (defaultRole.length > 0)
-            await db
-              .insert(userRoles)
-              .values({ userId, roleId: defaultRole[0].id, grantedBy: userId });
+          await createCurrentRoleRepository().assignRoleNameToUser({
+            userId,
+            roleName: defaultRoleName,
+            grantedBy: userId,
+          });
         } catch {
           /* */
         }
@@ -347,7 +325,7 @@ export function registerLDAPAuthRoutes(router: Router): void {
               : 24 * 60 * 60 * 1000;
           await authManager.registerOIDCUser(userId, sessionDurationMs);
         } catch (encryptionError) {
-          await db.delete(users).where(eq(users.id, userId));
+          await userRepository.delete(userId);
           authLogger.error(
             "Failed to setup LDAP user encryption",
             encryptionError,
@@ -357,47 +335,26 @@ export function registerLDAPAuthRoutes(router: Router): void {
             .json({ error: "Failed to setup user security" });
         }
 
-        existingUsers = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId));
+        existingUser = await userRepository.findById(userId);
+        if (!existingUser) {
+          throw new Error("Created LDAP user could not be loaded");
+        }
       } else {
-        userId = existingUsers[0].id;
+        userId = existingUser.id;
 
         // Sync admin status from group membership
-        if (config.adminGroup && !!existingUsers[0].isAdmin !== isAdmin) {
-          await db.update(users).set({ isAdmin }).where(eq(users.id, userId));
-          existingUsers[0].isAdmin = isAdmin;
+        if (config.adminGroup && !!existingUser.isAdmin !== isAdmin) {
+          existingUser =
+            (await userRepository.update(userId, { isAdmin })) ?? existingUser;
           try {
             const newRoleName = isAdmin ? "admin" : "user";
             const oldRoleName = isAdmin ? "user" : "admin";
-            const newRole = await db
-              .select({ id: roles.id })
-              .from(roles)
-              .where(eq(roles.name, newRoleName))
-              .limit(1);
-            const oldRole = await db
-              .select({ id: roles.id })
-              .from(roles)
-              .where(eq(roles.name, oldRoleName))
-              .limit(1);
-            if (oldRole.length > 0) {
-              await db
-                .delete(userRoles)
-                .where(
-                  and(
-                    eq(userRoles.userId, userId),
-                    eq(userRoles.roleId, oldRole[0].id),
-                  ),
-                );
-            }
-            if (newRole.length > 0) {
-              await db.insert(userRoles).values({
-                userId,
-                roleId: newRole[0].id,
-                grantedBy: userId,
-              });
-            }
+            await createCurrentRoleRepository().switchUserRoleName({
+              userId,
+              addRoleName: newRoleName,
+              removeRoleName: oldRoleName,
+              grantedBy: userId,
+            });
           } catch {
             /* non-fatal */
           }
@@ -405,17 +362,15 @@ export function registerLDAPAuthRoutes(router: Router): void {
 
         // Update display name if not dual-auth
         const isDualAuth =
-          existingUsers[0].passwordHash &&
-          existingUsers[0].passwordHash.trim() !== "";
-        if (!isDualAuth && existingUsers[0].username !== displayName) {
-          await db
-            .update(users)
-            .set({ username: displayName })
-            .where(eq(users.id, userId));
+          existingUser.passwordHash && existingUser.passwordHash.trim() !== "";
+        if (!isDualAuth && existingUser.username !== displayName) {
+          existingUser =
+            (await userRepository.update(userId, { username: displayName })) ??
+            existingUser;
         }
       }
 
-      const userRecord = existingUsers[0];
+      const userRecord = existingUser;
       try {
         await authManager.authenticateOIDCUser(userRecord.id, deviceInfo.type);
       } catch {

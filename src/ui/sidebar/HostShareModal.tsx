@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
+  Check,
   ListChecks,
-  Plus,
+  Search,
+  Share2,
   Shield,
   User,
   Users,
@@ -12,16 +14,42 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
-import { SectionCard } from "@/components/section-card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/dropdown-menu";
 import {
   getHostAccess,
   shareHost,
+  updateHostAccess,
   revokeHostAccess,
   getUserList,
   getRoles,
   type AccessRecord,
+  type SharePermissionLevel,
+  type ShareTarget,
 } from "@/main-axios";
 import type { Host } from "@/types/ui-types";
+
+const PERMISSION_LEVELS: SharePermissionLevel[] = [
+  "connect",
+  "view",
+  "edit",
+  "manage",
+];
+
+const EXPIRY_PRESETS = [
+  { key: "never", hours: null },
+  { key: "oneHour", hours: 1 },
+  { key: "oneDay", hours: 24 },
+  { key: "sevenDays", hours: 24 * 7 },
+  { key: "thirtyDays", hours: 24 * 30 },
+  { key: "custom", hours: undefined },
+] as const;
+
+type ExpiryPresetKey = (typeof EXPIRY_PRESETS)[number]["key"];
 
 export function HostShareModal({
   open,
@@ -33,18 +61,28 @@ export function HostShareModal({
   host: Host | null;
 }) {
   const { t } = useTranslation();
-  const [shareType, setShareType] = useState<"user" | "role">("user");
-  const [shareGranteeId, setShareGranteeId] = useState("");
-  const [shareExpiryHours, setShareExpiryHours] = useState("");
+  const [targetTab, setTargetTab] = useState<"user" | "role">("user");
+  const [search, setSearch] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedRoleIds, setSelectedRoleIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [permissionLevel, setPermissionLevel] =
+    useState<SharePermissionLevel>("connect");
+  const [expiryPreset, setExpiryPreset] = useState<ExpiryPresetKey>("never");
+  const [customHours, setCustomHours] = useState("");
   const [accessList, setAccessList] = useState<AccessRecord[]>([]);
   const [shareUsers, setShareUsers] = useState<
     { id: string; username: string }[]
   >([]);
-  const [shareRoles, setShareRoles] = useState<{ id: string; name: string }[]>(
-    [],
-  );
+  const [shareRoles, setShareRoles] = useState<
+    { id: number; name: string; displayName?: string }[]
+  >([]);
   const [sharingLoaded, setSharingLoaded] = useState(false);
   const [sharingLoadError, setSharingLoadError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open || !host) return;
@@ -64,10 +102,13 @@ export function HostShareModal({
           })),
         );
         setShareRoles(
-          (rolesRes.roles ?? []).map((r) => ({
-            id: String(r.id),
-            name: r.name,
-          })),
+          (rolesRes.roles ?? [])
+            .filter((r) => !r.isSystem)
+            .map((r) => ({
+              id: Number(r.id),
+              name: r.name,
+              displayName: r.displayName,
+            })),
         );
       })
       .catch(() => setSharingLoadError(true));
@@ -77,10 +118,45 @@ export function HostShareModal({
     setSharingLoaded(false);
     setSharingLoadError(false);
     setAccessList([]);
-    setShareGranteeId("");
-    setShareExpiryHours("");
-    setShareType("user");
+    setSearch("");
+    setSelectedUserIds(new Set());
+    setSelectedRoleIds(new Set());
+    setPermissionLevel("connect");
+    setExpiryPreset("never");
+    setCustomHours("");
+    setTargetTab("user");
   }, [host?.id]);
+
+  const filteredUsers = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q
+      ? shareUsers.filter((u) => u.username.toLowerCase().includes(q))
+      : shareUsers;
+  }, [shareUsers, search]);
+
+  const filteredRoles = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q
+      ? shareRoles.filter(
+          (r) =>
+            r.name.toLowerCase().includes(q) ||
+            (r.displayName ?? "").toLowerCase().includes(q),
+        )
+      : shareRoles;
+  }, [shareRoles, search]);
+
+  const selectedCount = selectedUserIds.size + selectedRoleIds.size;
+
+  const durationHours = (() => {
+    if (expiryPreset === "never") return undefined;
+    if (expiryPreset === "custom") {
+      const hours = Number(customHours);
+      return Number.isFinite(hours) && hours > 0 ? hours : undefined;
+    }
+    return (
+      EXPIRY_PRESETS.find((p) => p.key === expiryPreset)?.hours ?? undefined
+    );
+  })();
 
   async function refreshAccessList() {
     if (!host) return;
@@ -88,10 +164,56 @@ export function HostShareModal({
     setAccessList(res.accessList ?? []);
   }
 
-  if (!open) return null;
+  async function handleShare() {
+    if (!host || selectedCount === 0) return;
+    const targets: ShareTarget[] = [
+      ...[...selectedUserIds].map(
+        (id) => ({ type: "user", id }) as ShareTarget,
+      ),
+      ...[...selectedRoleIds].map(
+        (id) => ({ type: "role", id }) as ShareTarget,
+      ),
+    ];
 
-  const hasCredential =
-    !!host?.credentialId || !!host?.rdpCredentialId || !!host?.vncCredentialId;
+    setSubmitting(true);
+    try {
+      await shareHost(Number(host.id), {
+        targets,
+        permissionLevel,
+        ...(durationHours ? { durationHours } : {}),
+      });
+      await refreshAccessList();
+      setSelectedUserIds(new Set());
+      setSelectedRoleIds(new Set());
+      toast.success(t("hosts.hostSharedSuccessfully"));
+    } catch {
+      toast.error(t("hosts.failedToShareHost"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleLevelChange(
+    record: AccessRecord,
+    level: SharePermissionLevel,
+  ) {
+    if (!host || record.permissionLevel === level) return;
+    try {
+      await updateHostAccess(Number(host.id), record.id, {
+        permissionLevel: level,
+      });
+      setAccessList((prev) =>
+        prev.map((entry) =>
+          entry.id === record.id ? { ...entry, permissionLevel: level } : entry,
+        ),
+      );
+      toast.success(t("hosts.sharing.accessUpdated"));
+    } catch {
+      toast.error(t("hosts.sharing.accessUpdateFailed"));
+    }
+  }
+
+  if (!open) return null;
 
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-sidebar">
@@ -101,227 +223,338 @@ export function HostShareModal({
         className="flex items-center gap-2 px-3 py-2 shrink-0 border-b border-border text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left"
       >
         <ArrowLeft className="size-3.5 shrink-0" />
-        <span>{t("hosts.shareHostTitle", { name: host?.name ?? "" })}</span>
+        <span className="truncate">
+          {t("hosts.shareHostTitle", { name: host?.name ?? "" })}
+        </span>
       </button>
 
-      {/* Scrollable content */}
-      <div className="flex flex-col flex-1 min-h-0 overflow-y-auto p-3 gap-3">
-        {!hasCredential && host !== null && (
-          <div className="flex items-start gap-3 p-3 border border-yellow-500/30 bg-yellow-500/5 text-xs text-yellow-500">
-            <Shield className="size-3.5 shrink-0 mt-0.5" />
-            <div>{t("hosts.sharing.requiresCredential")}</div>
-          </div>
-        )}
+      {sharingLoadError && (
+        <div className="flex items-start gap-2 px-3 py-2 shrink-0 border-b border-destructive/30 bg-destructive/5 text-xs text-destructive">
+          <Shield className="size-3.5 shrink-0 mt-0.5" />
+          <div>{t("hosts.sharing.loadError")}</div>
+        </div>
+      )}
 
-        {sharingLoadError && hasCredential && (
-          <div className="flex items-start gap-3 p-3 border border-destructive/30 bg-destructive/5 text-xs text-destructive">
-            <Shield className="size-3.5 shrink-0 mt-0.5" />
-            <div>{t("hosts.guac.sharingLoadError")}</div>
+      {/* Share form: fixed, non-scrolling */}
+      <div className="flex flex-col gap-2 p-3 shrink-0 border-b border-border">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <Users className="size-3.5" />
+            {t("hosts.sharing.shareWithSection")}
           </div>
-        )}
+          <a
+            href="https://docs.termix.site/features/authentication/rbac"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[10px] text-accent-brand hover:underline shrink-0"
+          >
+            {t("hosts.docsLink")}
+          </a>
+        </div>
 
-        {hasCredential && (
-          <>
-            <SectionCard
-              title={t("hosts.guac.shareHostSection")}
-              icon={<Users className="size-3.5" />}
-              action={
-                <a
-                  href="https://docs.termix.site/features/authentication/rbac"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[10px] text-accent-brand hover:underline normal-case tracking-normal font-normal"
-                >
-                  {t("hosts.docsLink")}
-                </a>
-              }
+        <div className="flex gap-1.5">
+          {(["user", "role"] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setTargetTab(tab)}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${targetTab === tab ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
             >
-              <div className="flex flex-col gap-4 py-3">
-                <div className="flex gap-2">
-                  {(["user", "role"] as const).map((shareTypeOpt) => (
-                    <button
-                      key={shareTypeOpt}
-                      onClick={() => {
-                        setShareType(shareTypeOpt);
-                        setShareGranteeId("");
-                      }}
-                      className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${shareType === shareTypeOpt ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                    >
-                      {shareTypeOpt === "user" ? (
-                        <>
-                          <User className="size-3 inline mr-1" />
-                          {t("hosts.guac.shareWithUser")}
-                        </>
-                      ) : (
-                        <>
-                          <Shield className="size-3 inline mr-1" />
-                          {t("hosts.guac.shareWithRole")}
-                        </>
-                      )}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {shareType === "user"
-                      ? t("hosts.guac.selectUser")
-                      : t("hosts.guac.selectRole")}
-                  </label>
-                  <select
-                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                    value={shareGranteeId}
-                    onChange={(e) => setShareGranteeId(e.target.value)}
-                  >
-                    <option value="">
-                      {shareType === "user"
-                        ? t("hosts.guac.selectUserOption")
-                        : t("hosts.guac.selectRoleOption")}
-                    </option>
-                    {shareType === "user"
-                      ? shareUsers.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.username}
-                          </option>
-                        ))
-                      : shareRoles.map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.name}
-                          </option>
-                        ))}
-                  </select>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hosts.guac.expiresInHours")}
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder={t("hosts.guac.noExpiryPlaceholder")}
-                    value={shareExpiryHours}
-                    onChange={(e) => setShareExpiryHours(e.target.value)}
-                    className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
-                    disabled={!shareGranteeId}
-                    onClick={async () => {
-                      try {
-                        await shareHost(Number(host!.id), {
-                          targetType: shareType,
-                          ...(shareType === "user"
-                            ? { targetUserId: shareGranteeId }
-                            : { targetRoleId: Number(shareGranteeId) }),
-                          permissionLevel: "view",
-                          ...(shareExpiryHours
-                            ? { durationHours: Number(shareExpiryHours) }
-                            : {}),
-                        });
-                        await refreshAccessList();
-                        setShareGranteeId("");
-                        setShareExpiryHours("");
-                        toast.success(t("hosts.hostSharedSuccessfully"));
-                      } catch {
-                        toast.error(t("hosts.failedToShareHost"));
-                      }
-                    }}
-                  >
-                    <Plus className="size-3.5 mr-1.5" />
-                    {t("hosts.guac.shareBtn")}
-                  </Button>
-                </div>
+              {tab === "user" ? (
+                <User className="size-3 shrink-0" />
+              ) : (
+                <Shield className="size-3 shrink-0" />
+              )}
+              {tab === "user"
+                ? t("hosts.sharing.usersTab")
+                : t("hosts.sharing.rolesTab")}
+              {tab === "user" && selectedUserIds.size > 0 && (
+                <span>({selectedUserIds.size})</span>
+              )}
+              {tab === "role" && selectedRoleIds.size > 0 && (
+                <span>({selectedRoleIds.size})</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground/50" />
+          <Input
+            placeholder={t("hosts.sharing.searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+
+        <div className="flex flex-col border border-border h-28 overflow-y-auto">
+          {targetTab === "user" &&
+            (filteredUsers.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-muted-foreground/50 text-center">
+                {t("hosts.sharing.noMatches")}
               </div>
-            </SectionCard>
-
-            <SectionCard
-              title={t("hosts.guac.currentAccess")}
-              icon={<ListChecks className="size-3.5" />}
-            >
-              <div className="py-2">
-                {accessList.length === 0 && (
-                  <div className="px-2 py-4 text-xs text-muted-foreground/50 text-center">
-                    {t("hosts.guac.noAccessEntries")}
-                  </div>
-                )}
-                {accessList.map((r, i) => {
-                  const expired =
-                    r.expiresAt && new Date(r.expiresAt) < new Date();
-                  return (
+            ) : (
+              filteredUsers.map((user) => {
+                const isSelected = selectedUserIds.has(user.id);
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() =>
+                      setSelectedUserIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(user.id)) next.delete(user.id);
+                        else next.add(user.id);
+                        return next;
+                      })
+                    }
+                    className={`flex items-center gap-2 px-2.5 py-1.5 text-xs text-left border-b border-border/50 last:border-0 transition-colors shrink-0 ${isSelected ? "bg-accent-brand/10 text-accent-brand" : "hover:bg-muted/40"}`}
+                  >
                     <div
-                      key={i}
-                      className="flex flex-col gap-1 px-2 py-2.5 border-b border-border last:border-0 text-xs"
+                      className={`size-3.5 border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          {r.targetType === "user" ? (
-                            <User className="size-3 text-muted-foreground shrink-0" />
-                          ) : (
-                            <Shield className="size-3 text-muted-foreground shrink-0" />
-                          )}
-                          <span className="font-semibold truncate">
-                            {r.username ??
-                              r.roleName ??
-                              r.roleDisplayName ??
-                              r.userId ??
-                              r.roleId}
-                          </span>
-                          <span className="text-muted-foreground capitalize shrink-0">
-                            ({r.targetType})
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10 shrink-0"
-                          onClick={async () => {
-                            try {
-                              await revokeHostAccess(Number(host!.id), r.id);
-                              setAccessList((prev) =>
-                                prev.filter((_, idx) => idx !== i),
-                              );
-                              toast.success(t("hosts.accessRevoked"));
-                            } catch {
-                              toast.error(t("hosts.failedToRevokeAccess"));
-                            }
-                          }}
-                        >
-                          {t("hosts.guac.revokeBtn")}
-                        </Button>
-                      </div>
-                      <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-4">
-                        <span>
-                          {t("hosts.guac.grantedByHeader")}:{" "}
-                          <span className="text-foreground/70">
-                            {r.grantedByUsername ?? "—"}
-                          </span>
-                        </span>
-                        <span className={expired ? "text-destructive" : ""}>
-                          {t("hosts.guac.expiresHeader")}:{" "}
-                          {expired ? (
-                            <span className="inline-flex items-center gap-0.5 text-destructive">
-                              <X className="size-3" />
-                              {t("hosts.guac.expiredLabel")}
-                            </span>
-                          ) : r.expiresAt ? (
-                            <span className="text-foreground/70">
-                              {new Date(r.expiresAt).toLocaleDateString()}
-                            </span>
-                          ) : (
-                            <span className="text-foreground/70">
-                              {t("hosts.guac.neverLabel")}
-                            </span>
-                          )}
-                        </span>
-                      </div>
+                      {isSelected && (
+                        <Check className="size-2.5 text-background" />
+                      )}
                     </div>
-                  );
-                })}
+                    <User className="size-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">{user.username}</span>
+                  </button>
+                );
+              })
+            ))}
+          {targetTab === "role" &&
+            (filteredRoles.length === 0 ? (
+              <div className="px-3 py-4 text-xs text-muted-foreground/50 text-center">
+                {t("hosts.sharing.noMatches")}
               </div>
-            </SectionCard>
-          </>
+            ) : (
+              filteredRoles.map((role) => {
+                const isSelected = selectedRoleIds.has(role.id);
+                return (
+                  <button
+                    key={role.id}
+                    onClick={() =>
+                      setSelectedRoleIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(role.id)) next.delete(role.id);
+                        else next.add(role.id);
+                        return next;
+                      })
+                    }
+                    className={`flex items-center gap-2 px-2.5 py-1.5 text-xs text-left border-b border-border/50 last:border-0 transition-colors shrink-0 ${isSelected ? "bg-accent-brand/10 text-accent-brand" : "hover:bg-muted/40"}`}
+                  >
+                    <div
+                      className={`size-3.5 border flex items-center justify-center shrink-0 transition-colors ${isSelected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+                    >
+                      {isSelected && (
+                        <Check className="size-2.5 text-background" />
+                      )}
+                    </div>
+                    <Shield className="size-3 text-muted-foreground shrink-0" />
+                    <span className="truncate">
+                      {role.displayName || role.name}
+                    </span>
+                  </button>
+                );
+              })
+            ))}
+        </div>
+
+        <div className="flex items-end gap-2">
+          <div className="flex flex-col gap-1 flex-1 min-w-0">
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.sharing.permissionLevelLabel")}
+            </span>
+            <select
+              value={permissionLevel}
+              onChange={(e) =>
+                setPermissionLevel(e.target.value as SharePermissionLevel)
+              }
+              className="h-8 w-full px-2.5 text-xs border border-border bg-background hover:bg-muted/40 transition-colors"
+            >
+              {PERMISSION_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {t(`hosts.sharing.levels.${level}.label`)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex flex-col gap-1 shrink-0">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground text-left">
+                  {t("hosts.sharing.expiryLabel")}
+                </span>
+                <span className="h-8 flex items-center justify-center px-2.5 text-xs border border-border hover:bg-muted/40 transition-colors whitespace-nowrap">
+                  {t(`hosts.sharing.expiry.${expiryPreset}`)}
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="text-xs">
+              {EXPIRY_PRESETS.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.key}
+                  onClick={() => setExpiryPreset(preset.key)}
+                >
+                  {expiryPreset === preset.key ? (
+                    <Check className="size-3 mr-1.5" />
+                  ) : (
+                    <span className="size-3 mr-1.5" />
+                  )}
+                  {t(`hosts.sharing.expiry.${preset.key}`)}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            variant="outline"
+            className="h-8 shrink-0 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            disabled={
+              selectedCount === 0 ||
+              submitting ||
+              (expiryPreset === "custom" && !durationHours)
+            }
+            onClick={handleShare}
+          >
+            <Share2 className="size-3.5 mr-1.5" />
+            {selectedCount > 0
+              ? t("hosts.sharing.shareWithCount", { count: selectedCount })
+              : t("hosts.sharing.shareButton")}
+          </Button>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          {t(`hosts.sharing.levels.${permissionLevel}.description`)}
+        </p>
+
+        {expiryPreset === "custom" && (
+          <Input
+            type="number"
+            autoFocus
+            placeholder={t("hosts.sharing.customHoursPlaceholder")}
+            value={customHours}
+            onChange={(e) => setCustomHours(e.target.value)}
+            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
         )}
+      </div>
+
+      {/* Current access: takes remaining space, scrolls independently */}
+      <div className="flex flex-col flex-1 min-h-0">
+        <div className="flex items-center gap-1.5 px-3 py-2 shrink-0 border-b border-border text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <ListChecks className="size-3.5" />
+          {t("hosts.sharing.currentAccess")}
+          {accessList.length > 0 && (
+            <span className="text-muted-foreground/40">
+              ({accessList.length})
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {accessList.length === 0 && (
+            <div className="px-3 py-6 text-xs text-muted-foreground/50 text-center">
+              {t("hosts.sharing.noAccessEntries")}
+            </div>
+          )}
+          {accessList.map((record) => {
+            const expired =
+              record.expiresAt && new Date(record.expiresAt) < new Date();
+            return (
+              <div
+                key={record.id}
+                className="flex flex-col gap-1 px-3 py-2 border-b border-border/60 last:border-0 text-xs"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {record.targetType === "user" ? (
+                      <User className="size-3 text-muted-foreground shrink-0" />
+                    ) : (
+                      <Shield className="size-3 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="font-semibold truncate">
+                      {record.username ??
+                        record.roleDisplayName ??
+                        record.roleName ??
+                        record.userId ??
+                        record.roleId}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-accent-brand/30 bg-accent-brand/10 text-accent-brand transition-colors hover:bg-accent-brand/20">
+                          {t(
+                            `hosts.sharing.levels.${record.permissionLevel ?? "connect"}.label`,
+                          )}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="text-xs">
+                        {PERMISSION_LEVELS.map((level) => (
+                          <DropdownMenuItem
+                            key={level}
+                            onClick={() => handleLevelChange(record, level)}
+                          >
+                            {record.permissionLevel === level ? (
+                              <Check className="size-3 mr-1.5" />
+                            ) : (
+                              <span className="size-3 mr-1.5" />
+                            )}
+                            {t(`hosts.sharing.levels.${level}.label`)}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
+                      onClick={async () => {
+                        try {
+                          await revokeHostAccess(Number(host!.id), record.id);
+                          setAccessList((prev) =>
+                            prev.filter((entry) => entry.id !== record.id),
+                          );
+                          toast.success(t("hosts.accessRevoked"));
+                        } catch {
+                          toast.error(t("hosts.failedToRevokeAccess"));
+                        }
+                      }}
+                    >
+                      {t("hosts.sharing.revoke")}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-4">
+                  <span>
+                    {t("hosts.sharing.grantedBy")}:{" "}
+                    <span className="text-foreground/70">
+                      {record.grantedByUsername ?? "?"}
+                    </span>
+                  </span>
+                  <span className={expired ? "text-destructive" : ""}>
+                    {t("hosts.sharing.expires")}:{" "}
+                    {expired ? (
+                      <span className="inline-flex items-center gap-0.5 text-destructive">
+                        <X className="size-3" />
+                        {t("hosts.sharing.expired")}
+                      </span>
+                    ) : record.expiresAt ? (
+                      <span className="text-foreground/70">
+                        {new Date(record.expiresAt).toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-foreground/70">
+                        {t("hosts.sharing.never")}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

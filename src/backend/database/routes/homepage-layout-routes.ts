@@ -1,11 +1,8 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, Response } from "express";
-import { eq } from "drizzle-orm";
 import { homepageLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { homepageLayouts } from "../db/schema.js";
-import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import express from "express";
+import { createCurrentHomepageLayoutRepository } from "../repositories/factory.js";
 
 export const homepageLayoutRouter = express.Router();
 
@@ -26,16 +23,13 @@ export const homepageLayoutRouter = express.Router();
 homepageLayoutRouter.get("/", async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const rows = await db
-      .select()
-      .from(homepageLayouts)
-      .where(eq(homepageLayouts.userId, userId));
+    const row =
+      await createCurrentHomepageLayoutRepository().findByUserId(userId);
 
-    if (rows.length === 0) {
+    if (!row) {
       return res.json(null);
     }
 
-    const row = rows[0];
     const parsed = JSON.parse(row.layout || "{}");
     res.json({ ...row, layout: parsed });
   } catch (err) {
@@ -76,32 +70,15 @@ homepageLayoutRouter.put("/", async (req: Request, res: Response) => {
   const layoutData = req.body;
 
   try {
-    const existing = await db
-      .select({ id: homepageLayouts.id })
-      .from(homepageLayouts)
-      .where(eq(homepageLayouts.userId, userId));
-
     const layoutJson = JSON.stringify(layoutData);
     const now = new Date().toISOString();
-
-    if (existing.length === 0) {
-      const [created] = await db
-        .insert(homepageLayouts)
-        .values({ userId, layout: layoutJson, updatedAt: now })
-        .returning();
-      const parsed = JSON.parse(created.layout);
-      DatabaseSaveTrigger.triggerSave("homepage_layout_saved");
-      return res.json({ ...created, layout: parsed });
-    }
-
-    const [updated] = await db
-      .update(homepageLayouts)
-      .set({ layout: layoutJson, updatedAt: now })
-      .where(eq(homepageLayouts.userId, userId))
-      .returning();
+    const updated = await createCurrentHomepageLayoutRepository().upsertForUser(
+      userId,
+      layoutJson,
+      now,
+    );
 
     const parsed = JSON.parse(updated.layout);
-    DatabaseSaveTrigger.triggerSave("homepage_layout_saved");
     res.json({ ...updated, layout: parsed });
   } catch (err) {
     homepageLogger.error("Failed to save homepage layout", err);

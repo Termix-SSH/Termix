@@ -410,7 +410,7 @@ export async function uploadSSHFile(
         form.append("totalSize", String(file.size));
         form.append("chunk", chunkBlob, fileName);
 
-        const response = await fileManagerApi.post(
+        const response = await fileManagerApi.postForm(
           "/ssh/uploadFileChunk",
           form,
           { timeout: 0 },

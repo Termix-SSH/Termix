@@ -1,21 +1,17 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { Request, Response } from "express";
-import { db } from "../db/index.js";
 import {
-  termixIdentities,
-  termixIdentityKeys,
-  sshCredentials,
-  termixIdentityCa,
-  users,
-} from "../db/schema.js";
-import { and, eq, asc } from "drizzle-orm";
+  createCurrentCredentialRepository,
+  createCurrentTermixIdentityRepository,
+  createCurrentTermixIdentityCaRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 // ssh2 is CommonJS; Node's cjs-module-lexer does not surface its `utils` named
 // export, so we use a default import (esModuleInterop) and read `.utils` off it.
 import ssh2 from "ssh2";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { SimpleDBOps } from "../../utils/simple-db-ops.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import { parsePublicKey, matchesAlgoFilter } from "./termix-id-keys.js";
 import {
@@ -37,17 +33,6 @@ const RESERVED_HANDLES = new Set(["u", "me", "keys", "check", "admin", "api"]);
 
 // Max stored length for a free-text description.
 const MAX_DESCRIPTION_LENGTH = 500;
-
-// Decrypted ssh_credentials fields this route reads. A type alias (not an
-// interface) so it satisfies the generic bound on SimpleDBOps.select.
-type CredentialRow = {
-  name?: string | null;
-  authType?: string | null;
-  publicKey?: string | null;
-  privateKey?: string | null;
-  key?: string | null;
-  keyPassword?: string | null;
-};
 
 function cleanDescription(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;
@@ -93,29 +78,18 @@ async function derivePublicFromPrivate(
 }
 
 async function getIdentityForUser(userId: string) {
-  const rows = await db
-    .select()
-    .from(termixIdentities)
-    .where(eq(termixIdentities.userId, userId))
-    .limit(1);
-  return rows[0] ?? null;
+  return createCurrentTermixIdentityRepository().findIdentityForUser(userId);
 }
 
 // Resolve the real username for audit_logs (the column expects a username, not
 // the user id), matching how the credentials/snippets routes log.
 async function getActorUsername(userId: string): Promise<string> {
-  const rows = await db
-    .select({ username: users.username })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-  return rows[0]?.username ?? userId;
+  const user = await createCurrentUserRepository().findById(userId);
+  return user?.username ?? userId;
 }
 
-// ---------------------------------------------------------------------------
 // Public resolver — UNAUTHENTICATED. Serves authorized_keys (text/plain) or a
 // small HTML viewer for browsers, keyed by handle, with optional /<ALGO> filter.
-// ---------------------------------------------------------------------------
 
 // Never let an intermediary/CDN cache a public resolver feed (a disabled/removed
 // key could keep being served after revocation), and keep it out of search
@@ -137,26 +111,19 @@ async function resolveHandle(req: Request, res: Response) {
   }
 
   try {
-    const identity = await db
-      .select()
-      .from(termixIdentities)
-      .where(eq(termixIdentities.handle, handle))
-      .limit(1);
+    const identity =
+      await createCurrentTermixIdentityRepository().findIdentityByHandle(
+        handle,
+      );
 
-    if (identity.length === 0) {
+    if (!identity) {
       return res.status(404).type("text/plain").send("Not found\n");
     }
 
-    let keys = await db
-      .select()
-      .from(termixIdentityKeys)
-      .where(
-        and(
-          eq(termixIdentityKeys.identityId, identity[0].id),
-          eq(termixIdentityKeys.enabled, true),
-        ),
-      )
-      .orderBy(asc(termixIdentityKeys.id));
+    let keys =
+      await createCurrentTermixIdentityRepository().listEnabledKeysByIdentityId(
+        identity.id,
+      );
 
     if (algoFilter) {
       keys = keys.filter((k) => matchesAlgoFilter(k.algorithm, algoFilter));
@@ -280,25 +247,23 @@ async function caResolver(req: Request, res: Response) {
     return res.status(404).type("text/plain").send("Not found\n");
   }
   try {
-    const identity = await db
-      .select({ id: termixIdentities.id })
-      .from(termixIdentities)
-      .where(eq(termixIdentities.handle, handle))
-      .limit(1);
-    if (identity.length === 0) {
+    const identity =
+      await createCurrentTermixIdentityRepository().findIdentityByHandle(
+        handle,
+      );
+    if (!identity) {
       return res.status(404).type("text/plain").send("Not found\n");
     }
-    const ca = await db
-      .select({ publicKey: termixIdentityCa.publicKey })
-      .from(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identity[0].id))
-      .limit(1);
+    const ca =
+      await createCurrentTermixIdentityCaRepository().findPublicByIdentityId(
+        identity.id,
+      );
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    if (ca.length === 0) {
+    if (!ca) {
       return res.status(404).send("No CA configured\n");
     }
-    return res.send(`${ca[0].publicKey} termix-id-ca@${handle}\n`);
+    return res.send(`${ca.publicKey} termix-id-ca@${handle}\n`);
   } catch (err) {
     authLogger.error("Termix ID CA resolve failed", err);
     return res.status(500).type("text/plain").send("Internal Server Error\n");
@@ -309,9 +274,7 @@ router.get("/u/:handle/ca", caResolver);
 router.get("/u/:handle", resolveHandle);
 router.get("/u/:handle/:algo", resolveHandle);
 
-// ---------------------------------------------------------------------------
 // Authenticated management API.
-// ---------------------------------------------------------------------------
 
 /**
  * @openapi
@@ -332,11 +295,10 @@ router.get("/me", authenticateJWT, async (req: Request, res: Response) => {
     if (!identity) {
       return res.json({ identity: null, keys: [] });
     }
-    const keys = await db
-      .select()
-      .from(termixIdentityKeys)
-      .where(eq(termixIdentityKeys.identityId, identity.id))
-      .orderBy(asc(termixIdentityKeys.id));
+    const keys =
+      await createCurrentTermixIdentityRepository().listKeysByIdentityId(
+        identity.id,
+      );
     res.json({
       identity: {
         ...identity,
@@ -377,12 +339,9 @@ router.get(
       return res.json({ available: false, valid: false });
     }
     try {
-      const existing = await db
-        .select({ id: termixIdentities.id })
-        .from(termixIdentities)
-        .where(eq(termixIdentities.handle, handle))
-        .limit(1);
-      res.json({ available: existing.length === 0, valid: true });
+      const taken =
+        await createCurrentTermixIdentityRepository().isHandleTaken(handle);
+      res.json({ available: !taken, valid: true });
     } catch (err) {
       authLogger.error("Failed to check Termix ID handle", err);
       res.status(500).json({ error: "Failed to check handle" });
@@ -433,19 +392,17 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
       });
     }
 
-    const taken = await db
-      .select({ id: termixIdentities.id })
-      .from(termixIdentities)
-      .where(eq(termixIdentities.handle, handle))
-      .limit(1);
-    if (taken.length > 0) {
+    const termixIdentityRepository = createCurrentTermixIdentityRepository();
+    const taken = await termixIdentityRepository.isHandleTaken(handle);
+    if (taken) {
       return res.status(409).json({ error: "Handle already taken" });
     }
 
-    const inserted = await db
-      .insert(termixIdentities)
-      .values({ userId, handle, description })
-      .returning();
+    const inserted = await termixIdentityRepository.createIdentity({
+      userId,
+      handle,
+      description,
+    });
 
     databaseLogger.info("Termix ID created", {
       operation: "termix_id_create",
@@ -459,14 +416,14 @@ router.post("/", authenticateJWT, async (req: Request, res: Response) => {
       username: await getActorUsername(userId),
       action: "create_termix_id",
       resourceType: "termix_id",
-      resourceId: String(inserted[0].id),
+      resourceId: String(inserted.id),
       resourceName: handle,
       ipAddress,
       userAgent,
       success: true,
     });
 
-    res.status(201).json(inserted[0]);
+    res.status(201).json(inserted);
   } catch (err) {
     // The check-then-insert above is not atomic; the UNIQUE constraints on
     // handle and user_id are the real guard, so map a violation to 409.
@@ -516,12 +473,9 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
         return res.status(400).json({ error: "Invalid handle" });
       }
       if (handle !== identity.handle) {
-        const taken = await db
-          .select({ id: termixIdentities.id })
-          .from(termixIdentities)
-          .where(eq(termixIdentities.handle, handle))
-          .limit(1);
-        if (taken.length > 0) {
+        const taken =
+          await createCurrentTermixIdentityRepository().isHandleTaken(handle);
+        if (taken) {
           return res.status(409).json({ error: "Handle already taken" });
         }
       }
@@ -532,11 +486,11 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
       updates.description = cleanDescription(req.body.description);
     }
 
-    const updated = await db
-      .update(termixIdentities)
-      .set({ ...updates, updatedAt: new Date().toISOString() })
-      .where(eq(termixIdentities.userId, userId))
-      .returning();
+    const updated =
+      await createCurrentTermixIdentityRepository().updateIdentityForUser(
+        userId,
+        { ...updates, updatedAt: new Date().toISOString() },
+      );
 
     const { ipAddress, userAgent } = getRequestMeta(req);
     await logAudit({
@@ -545,7 +499,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
       action: "update_termix_id",
       resourceType: "termix_id",
       resourceId: String(identity.id),
-      resourceName: updated[0]?.handle ?? identity.handle,
+      resourceName: updated?.handle ?? identity.handle,
       details:
         updates.handle && updates.handle !== identity.handle
           ? `renamed ${identity.handle} -> ${updates.handle}`
@@ -555,7 +509,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
       success: true,
     });
 
-    res.json(updated[0]);
+    res.json(updated);
   } catch (err) {
     if (isUniqueConstraintError(err)) {
       return res.status(409).json({ error: "Handle already taken" });
@@ -584,9 +538,7 @@ router.delete("/", authenticateJWT, async (req: Request, res: Response) => {
     if (!identity) {
       return res.status(404).json({ error: "No Termix ID found" });
     }
-    await db
-      .delete(termixIdentities)
-      .where(eq(termixIdentities.userId, userId));
+    await createCurrentTermixIdentityRepository().deleteIdentityForUser(userId);
 
     databaseLogger.info("Termix ID deleted", {
       operation: "termix_id_delete",
@@ -665,23 +617,14 @@ router.post(
       let resolvedLabel = label;
 
       if (credentialId) {
-        const credResult = await SimpleDBOps.select<CredentialRow>(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(
-              and(
-                eq(sshCredentials.id, credentialId),
-                eq(sshCredentials.userId, userId),
-              ),
-            ),
-          "ssh_credentials",
-          userId,
-        );
-        if (credResult.length === 0) {
+        const cred =
+          await createCurrentCredentialRepository().findDecryptedByIdForUser(
+            userId,
+            credentialId,
+          );
+        if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
         }
-        const cred = credResult[0];
         // The UI only offers key credentials, but the UI is not authoritative —
         // reject non-key credentials server-side before treating cred.key as a
         // private key.
@@ -721,31 +664,25 @@ router.post(
       }
 
       // Dedupe within this identity by normalized "<type> <blob>".
-      const existing = await db
-        .select({
-          id: termixIdentityKeys.id,
-          publicKey: termixIdentityKeys.publicKey,
-        })
-        .from(termixIdentityKeys)
-        .where(eq(termixIdentityKeys.identityId, identity.id));
+      const termixIdentityRepository = createCurrentTermixIdentityRepository();
+      const existing = await termixIdentityRepository.listKeysByIdentityId(
+        identity.id,
+      );
       if (existing.some((k) => k.publicKey === parsed.normalized)) {
         return res.status(409).json({ error: "This key is already published" });
       }
 
-      const inserted = await db
-        .insert(termixIdentityKeys)
-        .values({
-          identityId: identity.id,
-          userId,
-          publicKey: parsed.normalized,
-          keyType: parsed.type,
-          algorithm: parsed.algorithm,
-          label: resolvedLabel,
-          comment: parsed.comment || null,
-          source,
-          credentialId: credentialId || null,
-        })
-        .returning();
+      const inserted = await termixIdentityRepository.createKey({
+        identityId: identity.id,
+        userId,
+        publicKey: parsed.normalized,
+        keyType: parsed.type,
+        algorithm: parsed.algorithm,
+        label: resolvedLabel,
+        comment: parsed.comment || null,
+        source,
+        credentialId: credentialId || null,
+      });
 
       databaseLogger.info("Termix ID key added", {
         operation: "termix_id_key_add",
@@ -760,7 +697,7 @@ router.post(
         username: await getActorUsername(userId),
         action: "add_termix_id_key",
         resourceType: "termix_id_key",
-        resourceId: String(inserted[0].id),
+        resourceId: String(inserted.id),
         resourceName: identity.handle,
         details: `${parsed.algorithm} (${source})`,
         ipAddress,
@@ -768,7 +705,7 @@ router.post(
         success: true,
       });
 
-      res.status(201).json(inserted[0]);
+      res.status(201).json(inserted);
     } catch (err) {
       authLogger.error("Failed to add Termix ID key", err);
       res.status(500).json({ error: "Failed to add key" });
@@ -863,34 +800,31 @@ router.post(
           usageCount: 0,
           lastUsed: null,
         };
-        const created = (await SimpleDBOps.insert(
-          sshCredentials,
-          "ssh_credentials",
-          credData,
-          userId,
-        )) as typeof credData & { id: number };
+        const created =
+          await createCurrentCredentialRepository().createEncryptedForUser(
+            userId,
+            credData,
+          );
         credentialId = created.id;
       }
 
-      // There is no single transaction here (SimpleDBOps.insert is async and
-      // better-sqlite3 transactions are sync), so if publishing the key fails
+      // There is no single transaction here because credential encryption is async,
+      // so if publishing the key fails
       // after the vault credential was created, compensate by deleting it to
       // avoid leaving an orphaned credential behind.
+      const termixIdentityRepository = createCurrentTermixIdentityRepository();
       const runInsert = () =>
-        db
-          .insert(termixIdentityKeys)
-          .values({
-            identityId: identity.id,
-            userId,
-            publicKey: parsed.normalized,
-            keyType: parsed.type,
-            algorithm: parsed.algorithm,
-            label: label || `Generated ${parsed.algorithm}`,
-            comment: parsed.comment || null,
-            source: "generated",
-            credentialId,
-          })
-          .returning();
+        termixIdentityRepository.createKey({
+          identityId: identity.id,
+          userId,
+          publicKey: parsed.normalized,
+          keyType: parsed.type,
+          algorithm: parsed.algorithm,
+          label: label || `Generated ${parsed.algorithm}`,
+          comment: parsed.comment || null,
+          source: "generated",
+          credentialId,
+        });
 
       let inserted: Awaited<ReturnType<typeof runInsert>>;
       try {
@@ -898,14 +832,10 @@ router.post(
       } catch (insertErr) {
         if (credentialId !== null) {
           try {
-            await db
-              .delete(sshCredentials)
-              .where(
-                and(
-                  eq(sshCredentials.id, credentialId),
-                  eq(sshCredentials.userId, userId),
-                ),
-              );
+            await createCurrentCredentialRepository().deleteForUser(
+              userId,
+              credentialId,
+            );
           } catch {
             // best-effort cleanup
           }
@@ -926,7 +856,7 @@ router.post(
         username: await getActorUsername(userId),
         action: "generate_termix_id_key",
         resourceType: "termix_id_key",
-        resourceId: String(inserted[0].id),
+        resourceId: String(inserted.id),
         resourceName: identity.handle,
         details: `${parsed.algorithm}${credentialId !== null ? " (saved to credentials)" : ""}`,
         ipAddress,
@@ -937,7 +867,7 @@ router.post(
       // The private key is also returned once so the user can download it; when
       // saveCredential is true it additionally lives (encrypted) in the vault.
       res.status(201).json({
-        key: inserted[0],
+        key: inserted,
         privateKey: pair.private,
         publicKey: parsed.normalized,
         credentialId,
@@ -997,17 +927,13 @@ router.patch(
             ? req.body.label.trim() || null
             : null;
       }
-      const updated = await db
-        .update(termixIdentityKeys)
-        .set(updates)
-        .where(
-          and(
-            eq(termixIdentityKeys.id, id),
-            eq(termixIdentityKeys.userId, userId),
-          ),
-        )
-        .returning();
-      if (updated.length === 0) {
+      const updated =
+        await createCurrentTermixIdentityRepository().updateKeyForUser(
+          userId,
+          id,
+          updates,
+        );
+      if (!updated) {
         return res.status(404).json({ error: "Key not found" });
       }
 
@@ -1018,7 +944,7 @@ router.patch(
         action: "update_termix_id_key",
         resourceType: "termix_id_key",
         resourceId: String(id),
-        resourceName: String(updated[0].label ?? updated[0].algorithm),
+        resourceName: String(updated.label ?? updated.algorithm),
         details:
           updates.enabled !== undefined
             ? `enabled: ${updates.enabled}`
@@ -1028,7 +954,7 @@ router.patch(
         success: true,
       });
 
-      res.json(updated[0]);
+      res.json(updated);
     } catch (err) {
       authLogger.error("Failed to update Termix ID key", err);
       res.status(500).json({ error: "Failed to update key" });
@@ -1064,16 +990,12 @@ router.delete(
       return res.status(400).json({ error: "Invalid key id" });
     }
     try {
-      const deleted = await db
-        .delete(termixIdentityKeys)
-        .where(
-          and(
-            eq(termixIdentityKeys.id, id),
-            eq(termixIdentityKeys.userId, userId),
-          ),
-        )
-        .returning();
-      if (deleted.length === 0) {
+      const deleted =
+        await createCurrentTermixIdentityRepository().deleteKeyForUser(
+          userId,
+          id,
+        );
+      if (!deleted) {
         return res.status(404).json({ error: "Key not found" });
       }
 
@@ -1098,9 +1020,7 @@ router.delete(
   },
 );
 
-// ---------------------------------------------------------------------------
 // Certificate authority — central revocation (rotate) + expiry (validity).
-// ---------------------------------------------------------------------------
 
 type CaRow = {
   id: number;
@@ -1122,15 +1042,12 @@ async function getCaForUser(
   userId: string,
   identityId: number,
 ): Promise<CaRow | undefined> {
-  const rows = await SimpleDBOps.select<CaRow>(
-    db
-      .select()
-      .from(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identityId)),
-    "termix_identity_ca",
-    userId,
+  return (
+    (await createCurrentTermixIdentityCaRepository().findDecryptedByIdentityId(
+      userId,
+      identityId,
+    )) ?? undefined
   );
-  return rows[0];
 }
 
 /**
@@ -1150,19 +1067,15 @@ router.get("/ca", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const identity = await getIdentityForUser(userId);
     if (!identity) return res.json({ ca: null });
-    const ca = await db
-      .select({
-        publicKey: termixIdentityCa.publicKey,
-        validityDays: termixIdentityCa.validityDays,
-      })
-      .from(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identity.id))
-      .limit(1);
-    if (ca.length === 0) return res.json({ ca: null });
+    const ca =
+      await createCurrentTermixIdentityCaRepository().findPublicByIdentityId(
+        identity.id,
+      );
+    if (!ca) return res.json({ ca: null });
     res.json({
       ca: {
-        publicKey: ca[0].publicKey,
-        validityDays: ca[0].validityDays,
+        publicKey: ca.publicKey,
+        validityDays: ca.validityDays,
         resolverPath: `/termix-id/u/${identity.handle}/ca`,
       },
     });
@@ -1205,29 +1118,21 @@ router.post(
           .status(400)
           .json({ error: "Create a Termix ID handle first" });
       }
-      const existing = await db
-        .select({ id: termixIdentityCa.id })
-        .from(termixIdentityCa)
-        .where(eq(termixIdentityCa.identityId, identity.id))
-        .limit(1);
-      if (existing.length > 0) {
+      const caRepository = createCurrentTermixIdentityCaRepository();
+      const existing = await caRepository.findPublicByIdentityId(identity.id);
+      if (existing) {
         return res.status(409).json({ error: "CA already exists" });
       }
 
       const validityDays = clampValidityDays(req.body?.validityDays, 90);
       const generated = generateCa();
-      await SimpleDBOps.insert(
-        termixIdentityCa,
-        "termix_identity_ca",
-        {
-          identityId: identity.id,
-          userId,
-          publicKey: generated.publicKeyLine,
-          privateKey: generated.privateKeyPem,
-          validityDays,
-        },
+      await caRepository.createEncryptedForUser(userId, {
+        identityId: identity.id,
         userId,
-      );
+        publicKey: generated.publicKeyLine,
+        privateKey: generated.privateKeyPem,
+        validityDays,
+      });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
@@ -1283,37 +1188,25 @@ router.post(
       const identity = await getIdentityForUser(userId);
       if (!identity)
         return res.status(404).json({ error: "No Termix ID found" });
-      const existing = await db
-        .select({
-          id: termixIdentityCa.id,
-          validityDays: termixIdentityCa.validityDays,
-        })
-        .from(termixIdentityCa)
-        .where(eq(termixIdentityCa.identityId, identity.id))
-        .limit(1);
-      if (existing.length === 0) {
+      const caRepository = createCurrentTermixIdentityCaRepository();
+      const existing = await caRepository.findPublicByIdentityId(identity.id);
+      if (!existing) {
         return res.status(404).json({ error: "No CA to rotate" });
       }
 
       const validityDays = clampValidityDays(
         req.body?.validityDays,
-        existing[0].validityDays,
+        existing.validityDays,
       );
       const generated = generateCa();
       // Rotating invalidates every previously issued certificate — this IS the
       // central revocation mechanism.
-      await SimpleDBOps.update(
-        termixIdentityCa,
-        "termix_identity_ca",
-        eq(termixIdentityCa.identityId, identity.id),
-        {
-          publicKey: generated.publicKeyLine,
-          privateKey: generated.privateKeyPem,
-          validityDays,
-          updatedAt: new Date().toISOString(),
-        },
-        userId,
-      );
+      await caRepository.updateEncryptedForIdentity(userId, identity.id, {
+        publicKey: generated.publicKeyLine,
+        privateKey: generated.privateKeyPem,
+        validityDays,
+        updatedAt: new Date().toISOString(),
+      });
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({
@@ -1356,11 +1249,11 @@ router.delete("/ca", authenticateJWT, async (req: Request, res: Response) => {
   try {
     const identity = await getIdentityForUser(userId);
     if (!identity) return res.status(404).json({ error: "No Termix ID found" });
-    const deleted = await db
-      .delete(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identity.id))
-      .returning();
-    if (deleted.length === 0) {
+    const deleted =
+      await createCurrentTermixIdentityCaRepository().deleteByIdentityId(
+        identity.id,
+      );
+    if (!deleted) {
       return res.status(404).json({ error: "No CA to delete" });
     }
 
@@ -1424,20 +1317,13 @@ router.post(
       return res.status(400).json({ error: "Invalid key id" });
     }
     try {
-      const keyRows = await db
-        .select()
-        .from(termixIdentityKeys)
-        .where(
-          and(
-            eq(termixIdentityKeys.id, id),
-            eq(termixIdentityKeys.userId, userId),
-          ),
-        )
-        .limit(1);
-      if (keyRows.length === 0) {
+      const key = await createCurrentTermixIdentityRepository().findKeyForUser(
+        userId,
+        id,
+      );
+      if (!key) {
         return res.status(404).json({ error: "Key not found" });
       }
-      const key = keyRows[0];
       if (!ed25519RawFromLine(key.publicKey)) {
         return res.status(400).json({
           error: "Certificates are only supported for Ed25519 keys",
@@ -1523,22 +1409,10 @@ router.get(
     try {
       const identity = await getIdentityForUser(userId);
       if (!identity) return res.json({ credentialIds: [] });
-      const keys = await db
-        .select({ credentialId: termixIdentityKeys.credentialId })
-        .from(termixIdentityKeys)
-        .where(
-          and(
-            eq(termixIdentityKeys.identityId, identity.id),
-            eq(termixIdentityKeys.enabled, true),
-          ),
+      const credentialIds =
+        await createCurrentTermixIdentityRepository().listLinkedCredentialIds(
+          identity.id,
         );
-      const credentialIds = [
-        ...new Set(
-          keys
-            .map((k) => k.credentialId)
-            .filter((cid): cid is number => cid !== null),
-        ),
-      ];
       res.json({ credentialIds });
     } catch (err) {
       authLogger.error("Failed to fetch linked credential IDs", err);

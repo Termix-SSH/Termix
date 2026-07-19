@@ -10,6 +10,7 @@ import { GRID_SIZE } from "@/types/homepage-types";
 import { getVersionInfo, getDatabaseHealth } from "@/api/system-status-api";
 import { getUptime } from "@/api/dashboard-api";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 interface InfoRowProps {
   label: string;
@@ -65,8 +66,9 @@ function SystemOverviewWidget({
 
   useEffect(() => {
     fetchData();
-    const iv = setInterval(fetchData, 300_000);
-    return () => clearInterval(iv);
+    return runVisibleInterval(() => {
+      void fetchData();
+    }, 300_000);
   }, [showVersion, showDbHealth, showUptime]);
 
   const accent =

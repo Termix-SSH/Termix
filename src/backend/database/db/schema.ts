@@ -24,6 +24,13 @@ export const users = sqliteTable("users", {
     .notNull()
     .default(false),
   totpBackupCodes: text("totp_backup_codes"),
+
+  registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  donationModalDismissed: integer("donation_modal_dismissed", {
+    mode: "boolean",
+  })
+    .notNull()
+    .default(false),
 });
 
 export const settings = sqliteTable("settings", {
@@ -54,6 +61,9 @@ export const sessions = sqliteTable("sessions", {
   jwtToken: text("jwt_token").notNull(),
   deviceType: text("device_type").notNull(),
   deviceInfo: text("device_info").notNull(),
+  oidcSub: text("oidc_sub"),
+  oidcSid: text("oidc_sid"),
+  ssoProviderId: integer("sso_provider_id"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -341,9 +351,6 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
 
   certPublicKey: text("cert_public_key", { length: 8192 }),
 
-  systemPassword: text("system_password"),
-  systemKey: text("system_key", { length: 16384 }),
-  systemKeyPassword: text("system_key_password"),
 
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
@@ -523,7 +530,7 @@ export const hostAccess = sqliteTable("host_access", {
 
   permissionLevel: text("permission_level")
     .notNull()
-    .default("view"),
+    .default("connect"),
 
   expiresAt: text("expires_at"),
 
@@ -538,27 +545,32 @@ export const hostAccess = sqliteTable("host_access", {
   ),
 });
 
-export const sharedCredentials = sqliteTable("shared_credentials", {
+export const sharedHostSecrets = sqliteTable("shared_host_secrets", {
   id: integer("id").primaryKey({ autoIncrement: true }),
 
   hostAccessId: integer("host_access_id")
     .notNull()
     .references(() => hostAccess.id, { onDelete: "cascade" }),
 
-  originalCredentialId: integer("original_credential_id")
-    .notNull()
-    .references(() => sshCredentials.id, { onDelete: "cascade" }),
-
   targetUserId: text("target_user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 
-  encryptedUsername: text("encrypted_username").notNull(),
-  encryptedAuthType: text("encrypted_auth_type").notNull(),
+  protocol: text("protocol").notNull().default("ssh"),
+  sourceType: text("source_type").notNull().default("credential"),
+
+  originalCredentialId: integer("original_credential_id").references(
+    () => sshCredentials.id,
+    { onDelete: "cascade" },
+  ),
+
+  encryptedUsername: text("encrypted_username"),
+  encryptedAuthType: text("encrypted_auth_type"),
   encryptedPassword: text("encrypted_password"),
   encryptedKey: text("encrypted_key", { length: 16384 }),
   encryptedKeyPassword: text("encrypted_key_password"),
   encryptedKeyType: text("encrypted_key_type"),
+  encryptedDomain: text("encrypted_domain"),
 
   createdAt: text("created_at")
     .notNull()
@@ -566,10 +578,6 @@ export const sharedCredentials = sqliteTable("shared_credentials", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-
-  needsReEncryption: integer("needs_re_encryption", { mode: "boolean" })
-    .notNull()
-    .default(false),
 });
 
 export const roles = sqliteTable("roles", {
@@ -657,6 +665,8 @@ export const sessionRecordings = sqliteTable("session_recordings", {
   dangerousActions: text("dangerous_actions"),
 
   recordingPath: text("recording_path"),
+  protocol: text("protocol").notNull().default("ssh"),
+  format: text("format").notNull().default("text"),
 
   terminatedByOwner: integer("terminated_by_owner", { mode: "boolean" })
     .default(false),

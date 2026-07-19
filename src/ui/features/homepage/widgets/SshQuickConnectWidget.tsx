@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Zap, Terminal, FolderOpen, Container } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { registerWidget } from "./WidgetRegistry";
@@ -8,9 +8,9 @@ import type {
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
-import { getAllServerStatuses } from "@/api/host-metrics-status-api";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { WidgetTitle } from "./WidgetTitle";
+import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 
 function getAccentColor(): string {
   return (
@@ -51,39 +51,24 @@ function SshQuickConnectWidget({
   const [hosts, setHosts] = useState<SSHHostWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
-      const [allHosts, statuses] = await Promise.all([
-        getSSHHosts(),
-        getAllServerStatuses().catch(
-          () => ({}) as Record<number, { status: string }>,
-        ),
-      ]);
+      const allHosts = await getSSHHosts();
       const filtered =
         hostIds.length > 0
           ? allHosts.filter((h) => hostIds.includes(h.id))
           : allHosts;
-      setHosts(
-        filtered.map((h) => ({
-          ...h,
-          status:
-            (statuses as Record<number, { status: string }>)[h.id]?.status ??
-            h.status ??
-            "unknown",
-        })),
-      );
+      setHosts(filtered);
     } catch {
       /* ignore */
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchData();
-    const iv = setInterval(fetchData, 10_000);
-    return () => clearInterval(iv);
   }, [hostIds.join(",")]);
+
+  usePageVisibleInterval(() => {
+    void fetchData();
+  }, 30_000);
 
   if (loading) {
     return (

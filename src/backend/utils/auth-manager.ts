@@ -1,16 +1,29 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { UserCrypto } from "./user-crypto.js";
+import { UserKeyManager } from "./user-keys.js";
+import {
+  adoptRecoveredDEK,
+  migratePasswordUserAtLogin,
+} from "./crypto-migration/dek-migration.js";
 import { SystemCrypto } from "./system-crypto.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger, authLogger } from "./logger.js";
+import { logAudit, getRequestMeta } from "./audit-logger.js";
 import type { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
-import { db } from "../database/db/index.js";
-import { sessions, trustedDevices, apiKeys } from "../database/db/schema.js";
-import { eq, and, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { and, eq, inArray } from "drizzle-orm";
 import type { DeviceType } from "./user-agent-parser.js";
+import { getDb } from "../database/db/index.js";
+import { sessions } from "../database/db/schema.js";
+import {
+  createCurrentSettingsRepository,
+  createCurrentSessionRepository,
+  createCurrentUserRepository,
+  createCurrentApiKeyRepository,
+  createCurrentTrustedDeviceRepository,
+  getCurrentSettingValue,
+} from "../database/repositories/factory.js";
 
 interface AuthenticationResult {
   success: boolean;
@@ -42,8 +55,10 @@ interface WrappedDataKey {
 interface AuthenticatedRequest extends Request {
   userId?: string;
   sessionId?: string;
+  apiKeyId?: string;
   pendingTOTP?: boolean;
   dataKey?: Buffer;
+  actingAdminUserId?: string;
 }
 
 interface RequestWithHeaders extends Request {
@@ -52,18 +67,24 @@ interface RequestWithHeaders extends Request {
   };
 }
 
+const ADMIN_TARGET_USER_HEADER = "x-admin-target-user";
+
+// Data-plane routes an admin may hit on behalf of another user. Everything
+// else (TOTP, sessions, tunnels, file manager, ...) rejects the header.
+const IMPERSONATION_PATH_ALLOWLIST = [
+  /^\/host\/db\//,
+  /^\/credentials(\/|$)/,
+  /^\/snippets(\/|$)/,
+];
+
 class AuthManager {
   private static instance: AuthManager;
   private systemCrypto: SystemCrypto;
-  private userCrypto: UserCrypto;
+  private userKeys: UserKeyManager;
 
   private constructor() {
     this.systemCrypto = SystemCrypto.getInstance();
-    this.userCrypto = UserCrypto.getInstance();
-
-    this.userCrypto.setSessionExpiredCallback((userId: string) => {
-      this.invalidateUserTokens(userId);
-    });
+    this.userKeys = UserKeyManager.getInstance();
 
     setInterval(
       () => {
@@ -92,88 +113,65 @@ class AuthManager {
     await this.systemCrypto.initializeJWTSecret();
   }
 
-  async registerUser(userId: string, password: string): Promise<void> {
-    await this.userCrypto.setupUserEncryption(userId, password);
+  async registerUser(userId: string, _password?: string): Promise<void> {
+    if (!this.userKeys.hasUserDEK(userId)) {
+      await this.userKeys.createUserDEK(userId);
+    }
   }
 
   async registerOIDCUser(
     userId: string,
-    sessionDurationMs: number,
+    _sessionDurationMs?: number,
   ): Promise<void> {
-    await this.userCrypto.setupOIDCUserEncryption(userId, sessionDurationMs);
+    if (!this.userKeys.hasUserDEK(userId)) {
+      await this.userKeys.createUserDEK(userId);
+    }
+  }
+
+  private async ensureUserDEK(userId: string): Promise<boolean> {
+    if (this.userKeys.tryGetUserDEK(userId)) {
+      await this.performLazyEncryptionMigration(userId);
+      return true;
+    }
+    return false;
   }
 
   async authenticateOIDCUser(
     userId: string,
-    deviceType?: DeviceType,
+    _deviceType?: DeviceType,
   ): Promise<boolean> {
-    const sessionDurationMs =
-      deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
-
-    const authenticated = await this.userCrypto.authenticateOIDCUser(
-      userId,
-      sessionDurationMs,
-    );
-
-    if (authenticated) {
-      await this.performLazyEncryptionMigration(userId);
+    if (!this.userKeys.hasUserDEK(userId)) {
+      await this.userKeys.createUserDEK(userId);
     }
-
-    return authenticated;
+    return this.ensureUserDEK(userId);
   }
 
   async authenticateUser(
     userId: string,
     password: string,
-    deviceType?: DeviceType,
+    _deviceType?: DeviceType,
   ): Promise<boolean> {
-    const sessionDurationMs =
-      deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
+    // Password-wrapped legacy DEKs can only be recovered while the password
+    // is in hand, so login is where those users migrate to the v3 wrap.
+    const migrated = await migratePasswordUserAtLogin(userId, password);
 
-    const authenticated = await this.userCrypto.authenticateUser(
-      userId,
-      password,
-      sessionDurationMs,
-    );
-
-    if (authenticated) {
-      await this.performLazyEncryptionMigration(userId);
+    if (!migrated && !this.userKeys.hasUserDEK(userId)) {
+      const raw = getCurrentSettingValue(`user_encrypted_dek_${userId}`);
+      if (raw) {
+        // A legacy wrap exists but the password could not unwrap it.
+        return false;
+      }
+      await this.userKeys.createUserDEK(userId);
     }
 
-    return authenticated;
-  }
-
-  async setupWebAuthnUserEncryption(userId: string): Promise<void> {
-    await this.userCrypto.setupWebAuthnUserEncryption(userId);
+    return this.ensureUserDEK(userId);
   }
 
   async authenticateWebAuthnUser(
     userId: string,
-    deviceType?: DeviceType,
+    _deviceType?: DeviceType,
   ): Promise<boolean> {
-    const sessionDurationMs =
-      deviceType === "desktop" || deviceType === "mobile"
-        ? 30 * 24 * 60 * 60 * 1000
-        : 24 * 60 * 60 * 1000;
-
-    const authenticated = await this.userCrypto.authenticateWebAuthnUser(
-      userId,
-      sessionDurationMs,
-    );
-
-    if (authenticated) {
-      await this.performLazyEncryptionMigration(userId);
-    }
-
-    return authenticated;
-  }
-
-  async convertToOIDCEncryption(userId: string): Promise<void> {
-    await this.userCrypto.convertToOIDCEncryption(userId);
+    return this.ensureUserDEK(userId);
   }
 
   private async performLazyEncryptionMigration(userId: string): Promise<void> {
@@ -190,37 +188,7 @@ class AuthManager {
         return;
       }
 
-      const { getSqlite, saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-
-      const sqlite = getSqlite();
-
-      const migrationResult = await DataCrypto.migrateUserSensitiveFields(
-        userId,
-        userDataKey,
-        sqlite,
-      );
-
-      if (migrationResult.migrated) {
-        await saveMemoryDatabaseToFile();
-      }
-
-      try {
-        const { CredentialSystemEncryptionMigration } =
-          await import("./credential-system-encryption-migration.js");
-        const credMigration = new CredentialSystemEncryptionMigration();
-        const credResult = await credMigration.migrateUserCredentials(userId);
-
-        if (credResult.migrated > 0) {
-          await saveMemoryDatabaseToFile();
-        }
-      } catch (error) {
-        databaseLogger.warn("Credential migration failed during login", {
-          operation: "login_credential_migration_failed",
-          userId,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-      }
+      await DataCrypto.migrateCurrentUserSensitiveFields(userId, userDataKey);
     } catch (error) {
       databaseLogger.error("Lazy encryption migration failed", error, {
         operation: "lazy_encryption_migration_error",
@@ -232,27 +200,6 @@ class AuthManager {
 
   private getDataKeyAAD(userId: string, sessionId?: string): Buffer {
     return Buffer.from(`${userId}:${sessionId || ""}`, "utf8");
-  }
-
-  private async wrapUserDataKey(
-    userId: string,
-    sessionId: string | undefined,
-    dataKey: Buffer,
-  ): Promise<WrappedDataKey> {
-    const encryptionKey = await this.systemCrypto.getEncryptionKey();
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv("aes-256-gcm", encryptionKey, iv);
-    cipher.setAAD(this.getDataKeyAAD(userId, sessionId));
-
-    const encrypted = Buffer.concat([cipher.update(dataKey), cipher.final()]);
-    const tag = cipher.getAuthTag();
-
-    return {
-      version: "v1",
-      iv: iv.toString("base64url"),
-      tag: tag.toString("base64url"),
-      data: encrypted.toString("base64url"),
-    };
   }
 
   private async unwrapUserDataKey(
@@ -281,41 +228,11 @@ class AuthManager {
     ]);
   }
 
-  private async addWrappedDataKey(payload: JWTPayload): Promise<void> {
-    if (payload.pendingTOTP) {
-      return;
-    }
-
-    const dataKey = this.userCrypto.getUserDataKey(payload.userId);
-    if (!dataKey) {
-      return;
-    }
-
-    payload.dataKeyWrap = await this.wrapUserDataKey(
-      payload.userId,
-      payload.sessionId,
-      dataKey,
-    );
-  }
-
-  private async restoreDataKeyFromPayload(
-    payload: JWTPayload,
-    sessionExpiresAt?: string,
-  ): Promise<void> {
-    if (
-      !payload.dataKeyWrap ||
-      this.userCrypto.getUserDataKey(payload.userId)
-    ) {
-      return;
-    }
-
-    const expiresAt = sessionExpiresAt
-      ? new Date(sessionExpiresAt).getTime()
-      : payload.exp
-        ? payload.exp * 1000
-        : Date.now();
-
-    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+  // Upgrade shim, remove in the release after 2.5: tokens issued before the
+  // v3 key wrap carried the user's DEK wrapped with the system ENCRYPTION_KEY.
+  // Adopting it here silently migrates password users with live sessions.
+  private async migrateDataKeyFromPayload(payload: JWTPayload): Promise<void> {
+    if (!payload.dataKeyWrap || this.userKeys.hasUserDEK(payload.userId)) {
       return;
     }
 
@@ -325,11 +242,10 @@ class AuthManager {
         payload.sessionId,
         payload.dataKeyWrap,
       );
-      this.userCrypto.restoreUserDataKey(payload.userId, dataKey, expiresAt);
-      dataKey.fill(0);
+      await adoptRecoveredDEK(payload.userId, dataKey);
     } catch (error) {
-      databaseLogger.warn("Failed to restore data key from session token", {
-        operation: "session_data_key_restore_failed",
+      databaseLogger.warn("Failed to migrate data key from session token", {
+        operation: "session_data_key_migrate_failed",
         userId: payload.userId,
         sessionId: payload.sessionId,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -345,14 +261,17 @@ class AuthManager {
       rememberMe?: boolean;
       deviceType?: DeviceType;
       deviceInfo?: string;
+      oidcSub?: string | null;
+      oidcSid?: string | null;
+      ssoProviderId?: number | null;
     } = {},
   ): Promise<string> {
     const jwtSecret = await this.systemCrypto.getJWTSecret();
 
-    const timeoutRow = db.$client
-      .prepare("SELECT value FROM settings WHERE key = 'session_timeout_hours'")
-      .get() as { value: string } | undefined;
-    const defaultExpiry = `${timeoutRow ? parseInt(timeoutRow.value, 10) || 24 : 24}h`;
+    const timeoutValue = await createCurrentSettingsRepository().get(
+      "session_timeout_hours",
+    );
+    const defaultExpiry = `${timeoutValue ? parseInt(timeoutValue, 10) || 24 : 24}h`;
 
     let expiresIn = options.expiresIn;
     if (!expiresIn && !options.pendingTOTP) {
@@ -373,7 +292,6 @@ class AuthManager {
     if (!options.pendingTOTP && options.deviceType && options.deviceInfo) {
       const sessionId = nanoid();
       payload.sessionId = sessionId;
-      await this.addWrappedDataKey(payload);
 
       const token = jwt.sign(payload, jwtSecret, {
         expiresIn,
@@ -385,31 +303,19 @@ class AuthManager {
       const createdAt = now.toISOString();
 
       try {
-        await db.insert(sessions).values({
+        await createCurrentSessionRepository().create({
           id: sessionId,
           userId,
           jwtToken: token,
           deviceType: options.deviceType,
           deviceInfo: options.deviceInfo,
+          oidcSub: options.oidcSub ?? null,
+          oidcSid: options.oidcSid ?? null,
+          ssoProviderId: options.ssoProviderId ?? null,
           createdAt,
           expiresAt,
           lastActiveAt: createdAt,
         });
-
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch (saveError) {
-          databaseLogger.error(
-            "Failed to save database after session creation",
-            saveError,
-            {
-              operation: "session_create_db_save_failed",
-              sessionId,
-            },
-          );
-        }
       } catch (error) {
         databaseLogger.error("Failed to create session", error, {
           operation: "session_create_failed",
@@ -421,7 +327,6 @@ class AuthManager {
       return token;
     }
 
-    await this.addWrappedDataKey(payload);
     return jwt.sign(payload, jwtSecret, { expiresIn } as jwt.SignOptions);
   }
 
@@ -454,13 +359,11 @@ class AuthManager {
 
       if (payload.sessionId) {
         try {
-          const sessionRecords = await db
-            .select()
-            .from(sessions)
-            .where(eq(sessions.id, payload.sessionId))
-            .limit(1);
+          const sessionRecord = await createCurrentSessionRepository().findById(
+            payload.sessionId,
+          );
 
-          if (sessionRecords.length === 0) {
+          if (!sessionRecord) {
             databaseLogger.warn("Session not found during JWT verification", {
               operation: "jwt_verify_session_not_found",
               sessionId: payload.sessionId,
@@ -469,10 +372,7 @@ class AuthManager {
             return null;
           }
 
-          await this.restoreDataKeyFromPayload(
-            payload,
-            sessionRecords[0].expiresAt,
-          );
+          await this.migrateDataKeyFromPayload(payload);
         } catch (dbError) {
           databaseLogger.error(
             "Failed to check session in database during JWT verification",
@@ -485,7 +385,7 @@ class AuthManager {
           return null;
         }
       } else {
-        await this.restoreDataKeyFromPayload(payload);
+        await this.migrateDataKeyFromPayload(payload);
       }
       return payload;
     } catch (error) {
@@ -502,51 +402,26 @@ class AuthManager {
     userId: string,
     sessionId: string,
   ): Promise<{ token: string; maxAge: number } | null> {
-    const sessionRecords = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.id, sessionId))
-      .limit(1);
+    const sessionRecord =
+      await createCurrentSessionRepository().findById(sessionId);
 
-    if (sessionRecords.length === 0 || sessionRecords[0].userId !== userId) {
+    if (!sessionRecord || sessionRecord.userId !== userId) {
       return null;
     }
 
-    const expiresAt = new Date(sessionRecords[0].expiresAt).getTime();
+    const expiresAt = new Date(sessionRecord.expiresAt).getTime();
     const maxAge = expiresAt - Date.now();
     if (!Number.isFinite(maxAge) || maxAge <= 0) {
       return null;
     }
 
     const payload: JWTPayload = { userId, sessionId };
-    await this.addWrappedDataKey(payload);
 
     const token = jwt.sign(payload, await this.systemCrypto.getJWTSecret(), {
       expiresIn: Math.ceil(maxAge / 1000),
     } as jwt.SignOptions);
 
-    await db
-      .update(sessions)
-      .set({
-        jwtToken: token,
-        lastActiveAt: new Date().toISOString(),
-      })
-      .where(eq(sessions.id, sessionId));
-
-    try {
-      const { saveMemoryDatabaseToFile } =
-        await import("../database/db/index.js");
-      await saveMemoryDatabaseToFile();
-    } catch (saveError) {
-      databaseLogger.error(
-        "Failed to save database after session token refresh",
-        saveError,
-        {
-          operation: "session_token_refresh_db_save_failed",
-          sessionId,
-        },
-      );
-    }
+    await createCurrentSessionRepository().updateToken(sessionId, token);
 
     return { token, maxAge };
   }
@@ -566,22 +441,7 @@ class AuthManager {
         sessionId,
       });
 
-      await db.delete(sessions).where(eq(sessions.id, sessionId));
-
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after session revocation",
-          saveError,
-          {
-            operation: "session_revoke_db_save_failed",
-            sessionId,
-          },
-        );
-      }
+      await createCurrentSessionRepository().revoke(sessionId);
 
       return true;
     } catch (error) {
@@ -598,10 +458,8 @@ class AuthManager {
     exceptSessionId?: string,
   ): Promise<number> {
     try {
-      const userSessions = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.userId, userId));
+      const sessionRepository = createCurrentSessionRepository();
+      const userSessions = await sessionRepository.listByUserId(userId);
 
       const deletedCount = userSessions.filter(
         (s) => !exceptSessionId || s.id !== exceptSessionId,
@@ -613,33 +471,7 @@ class AuthManager {
         sessionCount: deletedCount,
       });
 
-      if (exceptSessionId) {
-        await db
-          .delete(sessions)
-          .where(
-            and(
-              eq(sessions.userId, userId),
-              sql`${sessions.id} != ${exceptSessionId}`,
-            ),
-          );
-      } else {
-        await db.delete(sessions).where(eq(sessions.userId, userId));
-      }
-
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after revoking all user sessions",
-          saveError,
-          {
-            operation: "user_sessions_revoke_db_save_failed",
-            userId,
-          },
-        );
-      }
+      await sessionRepository.revokeAllForUser(userId, exceptSessionId);
 
       return deletedCount;
     } catch (error) {
@@ -651,12 +483,58 @@ class AuthManager {
     }
   }
 
-  async cleanupExpiredSessions(): Promise<number> {
+  async revokeSessionsByOidc(params: {
+    ssoProviderId?: number | null;
+    sub?: string | null;
+    sid?: string | null;
+  }): Promise<number> {
+    const { ssoProviderId, sub, sid } = params;
+    if (!sub && !sid) return 0;
+
     try {
-      const expiredSessions = await db
+      const conditions = [
+        sid ? eq(sessions.oidcSid, sid) : eq(sessions.oidcSub, sub!),
+      ];
+      if (ssoProviderId != null)
+        conditions.push(eq(sessions.ssoProviderId, ssoProviderId));
+
+      const db = getDb();
+      const matched = await db
         .select()
         .from(sessions)
-        .where(sql`${sessions.expiresAt} < datetime('now')`);
+        .where(conditions.length === 1 ? conditions[0] : and(...conditions));
+
+      if (matched.length === 0) return 0;
+
+      const matchedIds = matched.map((s) => s.id);
+      const affectedUsers = new Set(matched.map((s) => s.userId));
+
+      await db.delete(sessions).where(inArray(sessions.id, matchedIds));
+
+      authLogger.info("Sessions revoked via OIDC back-channel logout", {
+        operation: "oidc_backchannel_logout",
+        ssoProviderId,
+        sessionCount: matchedIds.length,
+      });
+
+      const { saveMemoryDatabaseToFile } =
+        await import("../database/db/index.js");
+      await saveMemoryDatabaseToFile();
+
+      return matchedIds.length;
+    } catch (error) {
+      databaseLogger.error("Failed to revoke sessions via OIDC", error, {
+        operation: "oidc_backchannel_logout_failed",
+      });
+      throw error;
+    }
+  }
+
+  async cleanupExpiredSessions(): Promise<number> {
+    try {
+      const sessionRepository = createCurrentSessionRepository();
+      const now = new Date();
+      const expiredSessions = await sessionRepository.listExpired(now);
 
       const expiredCount = expiredSessions.length;
 
@@ -664,35 +542,7 @@ class AuthManager {
         return 0;
       }
 
-      await db
-        .delete(sessions)
-        .where(sql`${sessions.expiresAt} < datetime('now')`);
-
-      try {
-        const { saveMemoryDatabaseToFile } =
-          await import("../database/db/index.js");
-        await saveMemoryDatabaseToFile();
-      } catch (saveError) {
-        databaseLogger.error(
-          "Failed to save database after cleaning up expired sessions",
-          saveError,
-          {
-            operation: "sessions_cleanup_db_save_failed",
-          },
-        );
-      }
-
-      const affectedUsers = new Set(expiredSessions.map((s) => s.userId));
-      for (const userId of affectedUsers) {
-        const remainingSessions = await db
-          .select()
-          .from(sessions)
-          .where(eq(sessions.userId, userId));
-
-        if (remainingSessions.length === 0) {
-          this.userCrypto.logoutUser(userId);
-        }
-      }
+      await sessionRepository.deleteExpired(now);
 
       return expiredCount;
     } catch (error) {
@@ -705,8 +555,7 @@ class AuthManager {
 
   async getAllSessions(): Promise<Record<string, unknown>[]> {
     try {
-      const allSessions = await db.select().from(sessions);
-      return allSessions;
+      return createCurrentSessionRepository().listAll();
     } catch (error) {
       databaseLogger.error("Failed to get all sessions", error, {
         operation: "sessions_get_all_failed",
@@ -717,11 +566,7 @@ class AuthManager {
 
   async getUserSessions(userId: string): Promise<Record<string, unknown>[]> {
     try {
-      const userSessions = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.userId, userId));
-      return userSessions;
+      return createCurrentSessionRepository().listByUserId(userId);
     } catch (error) {
       databaseLogger.error("Failed to get user sessions", error, {
         operation: "sessions_get_user_failed",
@@ -760,15 +605,19 @@ class AuthManager {
     token: string,
     requireAdmin = false,
   ): Promise<void> {
+    if (req.headers[ADMIN_TARGET_USER_HEADER]) {
+      res.status(403).json({
+        error: "Impersonation is not allowed with API key authentication",
+        code: "IMPERSONATION_NOT_ALLOWED",
+      });
+      return;
+    }
     try {
       const tokenPrefix = token.substring(0, 12);
+      const apiKeyRepository = createCurrentApiKeyRepository();
 
-      const candidates = await db
-        .select()
-        .from(apiKeys)
-        .where(
-          and(eq(apiKeys.tokenPrefix, tokenPrefix), eq(apiKeys.isActive, true)),
-        );
+      const candidates =
+        await apiKeyRepository.listActiveByTokenPrefix(tokenPrefix);
 
       if (candidates.length === 0) {
         res.status(401).json({ error: "Invalid API key" });
@@ -794,21 +643,17 @@ class AuthManager {
       }
 
       if (requireAdmin) {
-        const { users } = await import("../database/db/schema.js");
-        const userRows = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, matchedKey.userId))
-          .limit(1);
-        if (!userRows[0]?.isAdmin) {
+        const user = await createCurrentUserRepository().findById(
+          matchedKey.userId,
+        );
+        if (!user?.isAdmin) {
           res.status(403).json({ error: "Admin access required" });
           return;
         }
       }
 
-      db.update(apiKeys)
-        .set({ lastUsedAt: new Date().toISOString() })
-        .where(eq(apiKeys.id, matchedKey.id))
+      apiKeyRepository
+        .updateLastUsedAt(matchedKey.id, new Date().toISOString())
         .then(() => {})
         .catch((err) => {
           databaseLogger.warn("Failed to update API key lastUsedAt", {
@@ -819,6 +664,7 @@ class AuthManager {
         });
 
       req.userId = matchedKey.userId;
+      req.apiKeyId = matchedKey.id;
       next();
     } catch (error) {
       databaseLogger.error("API key authentication failed", error, {
@@ -866,13 +712,10 @@ class AuthManager {
 
       if (payload.sessionId) {
         try {
-          const sessionRecords = await db
-            .select()
-            .from(sessions)
-            .where(eq(sessions.id, payload.sessionId))
-            .limit(1);
+          const sessionRepository = createCurrentSessionRepository();
+          const session = await sessionRepository.findById(payload.sessionId);
 
-          if (sessionRecords.length === 0) {
+          if (!session) {
             databaseLogger.warn("Session not found in middleware", {
               operation: "middleware_session_not_found",
               sessionId: payload.sessionId,
@@ -886,8 +729,6 @@ class AuthManager {
                 code: "SESSION_NOT_FOUND",
               });
           }
-
-          const session = sessionRecords[0];
 
           const sessionExpiryTime = new Date(session.expiresAt).getTime();
           const currentTime = Date.now();
@@ -903,43 +744,12 @@ class AuthManager {
               difference: currentTime - sessionExpiryTime,
             });
 
-            db.delete(sessions)
-              .where(eq(sessions.id, payload.sessionId))
-              .then(async () => {
-                try {
-                  const { saveMemoryDatabaseToFile } =
-                    await import("../database/db/index.js");
-                  await saveMemoryDatabaseToFile();
-
-                  const remainingSessions = await db
-                    .select()
-                    .from(sessions)
-                    .where(eq(sessions.userId, payload.userId));
-
-                  if (remainingSessions.length === 0) {
-                    this.userCrypto.logoutUser(payload.userId);
-                  }
-                } catch (cleanupError) {
-                  databaseLogger.error(
-                    "Failed to cleanup after expired session",
-                    cleanupError,
-                    {
-                      operation: "expired_session_cleanup_failed",
-                      sessionId: payload.sessionId,
-                    },
-                  );
-                }
-              })
-              .catch((error) => {
-                databaseLogger.error(
-                  "Failed to delete expired session",
-                  error,
-                  {
-                    operation: "expired_session_delete_failed",
-                    sessionId: payload.sessionId,
-                  },
-                );
+            sessionRepository.revoke(payload.sessionId).catch((error) => {
+              databaseLogger.error("Failed to delete expired session", error, {
+                operation: "expired_session_delete_failed",
+                sessionId: payload.sessionId,
               });
+            });
 
             return res
               .clearCookie("jwt", this.getClearCookieOptions(req))
@@ -950,9 +760,8 @@ class AuthManager {
               });
           }
 
-          db.update(sessions)
-            .set({ lastActiveAt: new Date().toISOString() })
-            .where(eq(sessions.id, payload.sessionId))
+          sessionRepository
+            .touch(payload.sessionId)
             .then(() => {})
             .catch((error) => {
               databaseLogger.warn("Failed to update session lastActiveAt", {
@@ -973,8 +782,101 @@ class AuthManager {
       authReq.userId = payload.userId;
       authReq.sessionId = payload.sessionId;
       authReq.pendingTOTP = payload.pendingTOTP;
+
+      if (authReq.headers[ADMIN_TARGET_USER_HEADER]) {
+        const handled = await this.applyAdminImpersonation(
+          authReq,
+          res,
+          payload.userId,
+        );
+        if (handled) return;
+      }
+
       next();
     };
+  }
+
+  /**
+   * Handle the X-Admin-Target-User header: admins may act on another user's
+   * data for an allowlisted set of data-plane routes. On success req.userId
+   * becomes the target user and actingAdminUserId records the real caller.
+   * Returns true when a response was already sent (request must stop).
+   */
+  private async applyAdminImpersonation(
+    req: AuthenticatedRequest,
+    res: Response,
+    adminUserId: string,
+  ): Promise<boolean> {
+    const rawHeader = req.headers[ADMIN_TARGET_USER_HEADER];
+    const targetUserId = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+
+    if (!targetUserId || targetUserId === adminUserId) {
+      return false;
+    }
+
+    const userRepository = createCurrentUserRepository();
+    const admin = await userRepository.findById(adminUserId);
+    if (!admin?.isAdmin) {
+      databaseLogger.warn("Impersonation attempt by non-admin", {
+        operation: "admin_impersonation_denied",
+        userId: adminUserId,
+        targetUserId,
+        path: req.originalUrl,
+      });
+      res.status(403).json({
+        error: "Admin access required",
+        code: "IMPERSONATION_DENIED",
+      });
+      return true;
+    }
+
+    const path = (req.originalUrl || req.url || "").split("?")[0];
+    const allowed = IMPERSONATION_PATH_ALLOWLIST.some((pattern) =>
+      pattern.test(path),
+    );
+    if (!allowed) {
+      res.status(403).json({
+        error: "Impersonation is not allowed for this route",
+        code: "IMPERSONATION_NOT_ALLOWED",
+      });
+      return true;
+    }
+
+    const target = await userRepository.findById(targetUserId);
+    if (!target) {
+      res.status(404).json({
+        error: "Target user not found",
+        code: "TARGET_USER_NOT_FOUND",
+      });
+      return true;
+    }
+
+    if (!DataCrypto.canUserAccessData(targetUserId)) {
+      res.status(423).json({
+        error: "Target user's data stays locked until their next login",
+        code: "TARGET_DATA_LOCKED",
+      });
+      return true;
+    }
+
+    req.userId = targetUserId;
+    req.actingAdminUserId = adminUserId;
+
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    void logAudit({
+      userId: adminUserId,
+      username: admin.username,
+      action: "admin_impersonated_request",
+      resourceType: "user",
+      resourceId: targetUserId,
+      resourceName: target.username,
+      details: JSON.stringify({ method: req.method, path }),
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+
+    return false;
   }
 
   createDataAccessMiddleware() {
@@ -985,8 +887,7 @@ class AuthManager {
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      const dataKey = this.userCrypto.getUserDataKey(userId);
-      authReq.dataKey = dataKey || undefined;
+      authReq.dataKey = this.userKeys.tryGetUserDEK(userId) ?? undefined;
       next();
     };
   }
@@ -1033,16 +934,11 @@ class AuthManager {
       }
 
       try {
-        const { db } = await import("../database/db/index.js");
-        const { users } = await import("../database/db/schema.js");
-        const { eq } = await import("drizzle-orm");
+        const user = await createCurrentUserRepository().findById(
+          payload.userId,
+        );
 
-        const user = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, payload.userId));
-
-        if (!user || user.length === 0 || !user[0].isAdmin) {
+        if (!user?.isAdmin) {
           databaseLogger.warn(
             "Non-admin user attempted to access admin endpoint",
             {
@@ -1072,92 +968,40 @@ class AuthManager {
   }
 
   async logoutUser(userId: string, sessionId?: string): Promise<void> {
-    if (sessionId) {
-      try {
-        await db.delete(sessions).where(eq(sessions.id, sessionId));
+    const sessionRepository = createCurrentSessionRepository();
 
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch (saveError) {
-          databaseLogger.error(
-            "Failed to save database after logout",
-            saveError,
-            {
-              operation: "logout_db_save_failed",
-              userId,
-              sessionId,
-            },
-          );
-        }
-
-        const remainingSessions = await db
-          .select()
-          .from(sessions)
-          .where(eq(sessions.userId, userId));
-
-        if (remainingSessions.length === 0) {
-          this.userCrypto.logoutUser(userId);
-        } else {
-          // expected - other sessions still active, keep user crypto state
-        }
-      } catch (error) {
-        databaseLogger.error("Failed to delete session on logout", error, {
-          operation: "session_delete_logout_failed",
-          userId,
-          sessionId,
-        });
+    try {
+      if (sessionId) {
+        await sessionRepository.revoke(sessionId);
+      } else {
+        await sessionRepository.revokeAllForUser(userId);
       }
-    } else {
-      try {
-        await db.delete(sessions).where(eq(sessions.userId, userId));
-
-        try {
-          const { saveMemoryDatabaseToFile } =
-            await import("../database/db/index.js");
-          await saveMemoryDatabaseToFile();
-        } catch {
-          // best effort
-        }
-      } catch (error) {
-        databaseLogger.error("Failed to revoke all sessions on logout", error, {
-          operation: "session_revoke_all_failed",
-          userId,
-        });
-      }
-      this.userCrypto.logoutUser(userId);
+    } catch (error) {
+      databaseLogger.error("Failed to revoke sessions on logout", error, {
+        operation: "session_delete_logout_failed",
+        userId,
+        sessionId,
+      });
     }
   }
 
   getUserDataKey(userId: string): Buffer | null {
-    return this.userCrypto.getUserDataKey(userId);
+    return this.userKeys.tryGetUserDEK(userId);
   }
 
   isUserUnlocked(userId: string): boolean {
-    return this.userCrypto.isUserUnlocked(userId);
+    return this.userKeys.tryGetUserDEK(userId) !== null;
   }
 
   async changeUserPassword(
     userId: string,
     oldPassword: string,
-    newPassword: string,
+    _newPassword?: string,
   ): Promise<boolean> {
-    return await this.userCrypto.changeUserPassword(
-      userId,
-      oldPassword,
-      newPassword,
-    );
-  }
-
-  async resetUserPasswordWithPreservedDEK(
-    userId: string,
-    newPassword: string,
-  ): Promise<boolean> {
-    return await this.userCrypto.resetUserPasswordWithPreservedDEK(
-      userId,
-      newPassword,
-    );
+    // The DEK is no longer derived from the password; the old password is
+    // only needed when the user still has a legacy password-wrapped key.
+    await migratePasswordUserAtLogin(userId, oldPassword);
+    return this.userKeys.tryGetUserDEK(userId) !== null;
   }
 
   async isTrustedDevice(
@@ -1165,38 +1009,29 @@ class AuthManager {
     deviceFingerprint: string,
   ): Promise<boolean> {
     try {
-      const device = await db
-        .select()
-        .from(trustedDevices)
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        )
-        .limit(1);
+      const trustedDeviceRepository = createCurrentTrustedDeviceRepository();
+      const device = await trustedDeviceRepository.findByUserAndFingerprint(
+        userId,
+        deviceFingerprint,
+      );
 
-      if (!device || device.length === 0) {
+      if (!device) {
         return false;
       }
 
       const now = new Date();
-      const expiresAt = new Date(device[0].expiresAt);
+      const expiresAt = new Date(device.expiresAt);
 
       if (now > expiresAt) {
         await this.removeTrustedDevice(userId, deviceFingerprint);
         return false;
       }
 
-      await db
-        .update(trustedDevices)
-        .set({ lastUsedAt: now.toISOString() })
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        );
+      await trustedDeviceRepository.touch(
+        userId,
+        deviceFingerprint,
+        now.toISOString(),
+      );
 
       return true;
     } catch (error) {
@@ -1214,56 +1049,26 @@ class AuthManager {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const existingDevice = await db
-      .select()
-      .from(trustedDevices)
-      .where(
-        and(
-          eq(trustedDevices.userId, userId),
-          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-        ),
-      )
-      .limit(1);
-
-    if (existingDevice && existingDevice.length > 0) {
-      await db
-        .update(trustedDevices)
-        .set({
-          expiresAt: expiresAt.toISOString(),
-          lastUsedAt: now.toISOString(),
-        })
-        .where(
-          and(
-            eq(trustedDevices.userId, userId),
-            eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-          ),
-        );
-    } else {
-      await db.insert(trustedDevices).values({
-        id: nanoid(),
-        userId,
-        deviceFingerprint,
-        deviceType,
-        deviceInfo,
-        createdAt: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        lastUsedAt: now.toISOString(),
-      });
-    }
+    await createCurrentTrustedDeviceRepository().upsert({
+      id: nanoid(),
+      userId,
+      deviceFingerprint,
+      deviceType,
+      deviceInfo,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      lastUsedAt: now.toISOString(),
+    });
   }
 
   async removeTrustedDevice(
     userId: string,
     deviceFingerprint: string,
   ): Promise<void> {
-    await db
-      .delete(trustedDevices)
-      .where(
-        and(
-          eq(trustedDevices.userId, userId),
-          eq(trustedDevices.deviceFingerprint, deviceFingerprint),
-        ),
-      );
+    await createCurrentTrustedDeviceRepository().deleteByUserAndFingerprint(
+      userId,
+      deviceFingerprint,
+    );
   }
 }
 

@@ -52,7 +52,7 @@ export function registerHostOpksshRoutes(router: Router): void {
 
       try {
         const { getActiveAuthSession, registerOAuthState } =
-          await import("../../ssh/opkssh-auth.js");
+          await import("../../hosts/opkssh-auth.js");
         const session = getActiveAuthSession(requestId);
 
         if (!session) {
@@ -562,7 +562,7 @@ export function registerHostOpksshRoutes(router: Router): void {
         getActiveAuthSession,
         getRequestIdByOAuthState,
         clearOAuthState,
-      } = await import("../../ssh/opkssh-auth.js");
+      } = await import("../../hosts/opkssh-auth.js");
 
       const userId = await getUserIdFromRequest({
         cookies: req.cookies,
@@ -729,7 +729,7 @@ export function registerHostOpksshRoutes(router: Router): void {
 
       try {
         const { getActiveAuthSession } =
-          await import("../../ssh/opkssh-auth.js");
+          await import("../../hosts/opkssh-auth.js");
         const session = getActiveAuthSession(requestId);
 
         if (!session) {

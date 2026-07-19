@@ -43,31 +43,43 @@ const localeLoaders = {
   "zh-TW": () => import("../locales/translated/zh_TW.json"),
 } satisfies Record<string, () => Promise<LocaleModule>>;
 
-const supportedLngs = ["en", ...Object.keys(localeLoaders)];
+export const supportedLngs = ["en", ...Object.keys(localeLoaders)];
+
+export function normalizeLanguageCode(language?: string | null): string {
+  if (!language) return "en";
+
+  const normalized = language.replaceAll("_", "-");
+  if (supportedLngs.includes(normalized)) return normalized;
+
+  const exactMatch = supportedLngs.find(
+    (supported) => supported.toLowerCase() === normalized.toLowerCase(),
+  );
+  if (exactMatch) return exactMatch;
+
+  const baseLanguage = normalized.split("-")[0];
+  return supportedLngs.includes(baseLanguage) ? baseLanguage : "en";
+}
 
 const localeBackend: BackendModule = {
   type: "backend",
   init: () => {},
   read: (language, _namespace, callback) => {
-    if (language === "en") {
+    const normalizedLanguage = normalizeLanguageCode(language);
+
+    if (normalizedLanguage === "en") {
       callback(null, enTranslation);
       return;
     }
 
-    const loadLocale = localeLoaders[language];
+    const loadLocale = localeLoaders[normalizedLanguage];
     if (!loadLocale) {
-      callback(new Error(`Unsupported language: ${language}`), false);
+      callback(null, enTranslation);
       return;
     }
 
     loadLocale()
       .then((module) => callback(null, module.default))
-      .catch((error: unknown) => {
-        callback(
-          error instanceof Error ? error : new Error(String(error)),
-          false,
-        );
-      });
+      .catch(() => callback(null, enTranslation));
   },
 };
 
@@ -103,5 +115,12 @@ i18n
       useSuspense: false,
     },
   });
+
+export async function changeAppLanguage(language: string): Promise<string> {
+  const normalizedLanguage = normalizeLanguageCode(language);
+  await i18n.changeLanguage(normalizedLanguage);
+  localStorage.setItem("i18nextLng", normalizedLanguage);
+  return normalizedLanguage;
+}
 
 export default i18n;

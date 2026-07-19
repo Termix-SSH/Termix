@@ -1,90 +1,100 @@
-import { eq } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
 import {
-  auditLogs,
-  commandHistory,
-  dismissedAlerts,
-  fileManagerPinned,
-  fileManagerRecent,
-  fileManagerShortcuts,
-  hostAccess,
-  hosts,
-  networkTopology,
-  opksshTokens,
-  recentActivity,
-  sessionRecordings,
-  sessions,
-  sharedCredentials,
-  snippetFolders,
-  snippets,
-  sshCredentialUsage,
-  sshCredentials,
-  sshFolders,
-  transferRecent,
-  userOpenTabs,
-  userPreferences,
-  userRoles,
-  users,
-} from "../db/schema.js";
+  createCurrentAlertRepository,
+  createCurrentApiKeyRepository,
+  createCurrentAuditLogRepository,
+  createCurrentC2sTunnelPresetRepository,
+  createCurrentCommandHistoryRepository,
+  createCurrentCredentialRepository,
+  createCurrentDashboardServiceLinkRepository,
+  createCurrentDismissedAlertRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentHomepageItemRepository,
+  createCurrentHomepageLayoutRepository,
+  createCurrentHostHealthRepository,
+  createCurrentHostFolderRepository,
+  createCurrentHostMetricsPreferenceRepository,
+  createCurrentHostRepository,
+  createCurrentNetworkTopologyRepository,
+  createCurrentOpksshTokenRepository,
+  createCurrentOpenTabRepository,
+  createCurrentRecentActivityRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentSessionRepository,
+  createCurrentSessionRecordingRepository,
+  createCurrentSettingsRepository,
+  createCurrentSharedHostSecretsRepository,
+  createCurrentSnippetRepository,
+  createCurrentSshCredentialUsageRepository,
+  createCurrentTermixIdentityCaRepository,
+  createCurrentTermixIdentityRepository,
+  createCurrentTmuxSessionTagRepository,
+  createCurrentTrustedDeviceRepository,
+  createCurrentUserPreferenceRepository,
+  createCurrentUserRepository,
+  createCurrentTransferRecentRepository,
+  createCurrentVaultProfileRepository,
+  createCurrentVaultTokenRepository,
+} from "../repositories/factory.js";
 
 export async function deleteUserAndRelatedData(userId: string): Promise<void> {
   try {
-    await db
-      .delete(sharedCredentials)
-      .where(eq(sharedCredentials.targetUserId, userId));
+    await createCurrentSharedHostSecretsRepository().deleteByTargetUserId(
+      userId,
+    );
 
-    await db
-      .delete(sessionRecordings)
-      .where(eq(sessionRecordings.userId, userId));
+    await createCurrentSessionRecordingRepository().deleteByUserId(userId);
 
-    await db.delete(hostAccess).where(eq(hostAccess.userId, userId));
-    await db.delete(hostAccess).where(eq(hostAccess.grantedBy, userId));
+    await createCurrentRbacAccessRepository().deleteHostAccessForUserReferences(
+      userId,
+    );
 
-    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await createCurrentSessionRepository().revokeAllForUser(userId);
+    await createCurrentApiKeyRepository().deleteByUserId(userId);
+    await createCurrentTrustedDeviceRepository().deleteByUserId(userId);
 
-    await db.delete(userRoles).where(eq(userRoles.userId, userId));
-    await db.delete(auditLogs).where(eq(auditLogs.userId, userId));
+    await createCurrentRoleRepository().removeAllRolesFromUser(userId);
+    await createCurrentAlertRepository().deleteByUserId(userId);
+    await createCurrentAuditLogRepository().deleteByUserId(userId);
 
-    await db
-      .delete(sshCredentialUsage)
-      .where(eq(sshCredentialUsage.userId, userId));
+    await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 
-    await db
-      .delete(fileManagerRecent)
-      .where(eq(fileManagerRecent.userId, userId));
-    await db
-      .delete(fileManagerPinned)
-      .where(eq(fileManagerPinned.userId, userId));
-    await db
-      .delete(fileManagerShortcuts)
-      .where(eq(fileManagerShortcuts.userId, userId));
+    await createCurrentFileManagerBookmarkRepository().deleteByUserId(userId);
 
-    await db.delete(transferRecent).where(eq(transferRecent.userId, userId));
+    await createCurrentTransferRecentRepository().deleteByUserId(userId);
 
-    await db.delete(recentActivity).where(eq(recentActivity.userId, userId));
-    await db.delete(dismissedAlerts).where(eq(dismissedAlerts.userId, userId));
+    await createCurrentRecentActivityRepository().deleteByUserId(userId);
+    await createCurrentDismissedAlertRepository().deleteByUserId(userId);
 
-    await db.delete(snippets).where(eq(snippets.userId, userId));
-    await db.delete(snippetFolders).where(eq(snippetFolders.userId, userId));
+    await createCurrentSnippetRepository().deleteByUserId(userId);
 
-    await db.delete(sshFolders).where(eq(sshFolders.userId, userId));
+    await createCurrentHostFolderRepository().deleteByUserId(userId);
 
-    await db.delete(commandHistory).where(eq(commandHistory.userId, userId));
+    await createCurrentCommandHistoryRepository().deleteByUserId(userId);
 
-    await db.delete(hosts).where(eq(hosts.userId, userId));
-    await db.delete(sshCredentials).where(eq(sshCredentials.userId, userId));
+    await createCurrentHostHealthRepository().deleteByUserId(userId);
+    await createCurrentHostMetricsPreferenceRepository().deleteByUserId(userId);
+    await createCurrentHostRepository().deleteByUserId(userId);
+    await createCurrentCredentialRepository().deleteByUserId(userId);
 
-    await db.delete(networkTopology).where(eq(networkTopology.userId, userId));
-    await db.delete(opksshTokens).where(eq(opksshTokens.userId, userId));
-    await db.delete(userOpenTabs).where(eq(userOpenTabs.userId, userId));
-    await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
+    await createCurrentNetworkTopologyRepository().deleteByUserId(userId);
+    await createCurrentDashboardServiceLinkRepository().deleteByUserId(userId);
+    await createCurrentHomepageItemRepository().deleteByUserId(userId);
+    await createCurrentHomepageLayoutRepository().deleteByUserId(userId);
+    await createCurrentC2sTunnelPresetRepository().deleteByUserId(userId);
+    await createCurrentOpksshTokenRepository().deleteByUserId(userId);
+    await createCurrentVaultTokenRepository().deleteByUserId(userId);
+    await createCurrentVaultProfileRepository().deleteByUserId(userId);
+    await createCurrentTermixIdentityCaRepository().deleteByUserId(userId);
+    await createCurrentTermixIdentityRepository().deleteByUserId(userId);
+    await createCurrentTmuxSessionTagRepository().deleteByUserId(userId);
+    await createCurrentOpenTabRepository().deleteByUserId(userId);
+    await createCurrentUserPreferenceRepository().deleteByUserId(userId);
 
-    db.$client
-      .prepare("DELETE FROM settings WHERE key LIKE ?")
-      .run(`user_%_${userId}`);
+    await createCurrentSettingsRepository().deleteLike(`user_%_${userId}`);
 
-    await db.delete(users).where(eq(users.id, userId));
+    await createCurrentUserRepository().delete(userId);
 
     authLogger.success("User and all related data deleted successfully", {
       operation: "delete_user_and_related_data_complete",

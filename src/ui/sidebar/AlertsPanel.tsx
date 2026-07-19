@@ -37,6 +37,7 @@ const SEVERITY_CLASS: Record<string, string> = {
 
 function timeAgo(isoStr: string): string {
   const ms = Date.now() - new Date(isoStr).getTime();
+  if (!Number.isFinite(ms)) return "";
   const sec = Math.floor(ms / 1000);
   if (sec < 60) return `${sec}s ago`;
   const min = Math.floor(sec / 60);
@@ -321,7 +322,7 @@ export function AlertsPanel() {
                       {rule.name}
                     </div>
                     <div className="text-[10px] text-muted-foreground">
-                      {rule.triggerType.replace(/_/g, " ")}
+                      {(rule.triggerType || "").replace(/_/g, " ")}
                     </div>
                   </div>
                   <div

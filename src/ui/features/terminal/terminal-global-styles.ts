@@ -66,7 +66,6 @@ style.innerHTML = `
 }
 
 .xterm .xterm-screen {
-  font-family: 'Caskaydia Cove Nerd Font Mono', 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace !important;
   font-variant-ligatures: none;
 }
 

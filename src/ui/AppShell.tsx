@@ -6,30 +6,101 @@ import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
 import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
-import { useState, useRef, useCallback, useEffect, createRef } from "react";
+import {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  createRef,
+  lazy,
+  Suspense,
+} from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
-import { CommandPalette } from "@/shell/CommandPalette";
 import { AppRail } from "@/sidebar/AppRail";
 import type { RailView } from "@/sidebar/AppRail";
-import { HostsPanel } from "@/sidebar/HostsPanel";
-import { QuickConnectPanel } from "@/sidebar/QuickConnectPanel";
-import { SerialPanel } from "@/sidebar/SerialPanel";
-import { SshToolsPanel } from "@/sidebar/SshToolsPanel";
-import { SnippetsPanel } from "@/sidebar/SnippetsPanel";
-import { HistoryPanel } from "@/sidebar/HistoryPanel";
-import { SessionLogsPanel } from "@/sidebar/SessionLogsPanel";
-import { SplitScreenPanel } from "@/sidebar/SplitScreenPanel";
-import { UserProfilePanel } from "@/sidebar/UserProfilePanel";
-import { AdminSettingsPanel } from "@/sidebar/AdminSettingsPanel";
-import { AlertsPanel } from "@/sidebar/AlertsPanel";
-import { CredentialsPanel } from "@/sidebar/CredentialsPanel";
-import { TermixIdPanel } from "@/sidebar/TermixIdPanel";
 import { SplitView } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
-import { AlertManager } from "@/dashboard/panels/alerts/AlertManager";
 import { TabBar } from "@/shell/TabBar";
+
+// Shell surfaces that are not needed for first paint.
+const CommandPalette = lazy(() =>
+  import("@/shell/CommandPalette").then((m) => ({
+    default: m.CommandPalette,
+  })),
+);
+const HostsPanel = lazy(() =>
+  import("@/sidebar/HostsPanel").then((m) => ({ default: m.HostsPanel })),
+);
+const QuickConnectPanel = lazy(() =>
+  import("@/sidebar/QuickConnectPanel").then((m) => ({
+    default: m.QuickConnectPanel,
+  })),
+);
+const SerialPanel = lazy(() =>
+  import("@/sidebar/SerialPanel").then((m) => ({ default: m.SerialPanel })),
+);
+const SplitScreenPanel = lazy(() =>
+  import("@/sidebar/SplitScreenPanel").then((m) => ({
+    default: m.SplitScreenPanel,
+  })),
+);
+const AlertManager = lazy(() =>
+  import("@/dashboard/panels/alerts/AlertManager").then((m) => ({
+    default: m.AlertManager,
+  })),
+);
+
+// Secondary rail panels — load on first open, not with the shell critical path.
+const SshToolsPanel = lazy(() =>
+  import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
+);
+const SnippetsPanel = lazy(() =>
+  import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
+);
+const HistoryPanel = lazy(() =>
+  import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
+);
+const SessionLogsPanel = lazy(() =>
+  import("@/sidebar/SessionLogsPanel").then((m) => ({
+    default: m.SessionLogsPanel,
+  })),
+);
+const UserProfilePanel = lazy(() =>
+  import("@/sidebar/UserProfilePanel").then((m) => ({
+    default: m.UserProfilePanel,
+  })),
+);
+const AdminSettingsPanel = lazy(() =>
+  import("@/sidebar/AdminSettingsPanel").then((m) => ({
+    default: m.AdminSettingsPanel,
+  })),
+);
+const AlertsPanel = lazy(() =>
+  import("@/sidebar/AlertsPanel").then((m) => ({ default: m.AlertsPanel })),
+);
+const CredentialsPanel = lazy(() =>
+  import("@/sidebar/CredentialsPanel").then((m) => ({
+    default: m.CredentialsPanel,
+  })),
+);
+const TermixIdPanel = lazy(() =>
+  import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
+);
+const ConnectionsPanel = lazy(() =>
+  import("@/sidebar/ConnectionsPanel").then((m) => ({
+    default: m.ConnectionsPanel,
+  })),
+);
+
+function SidebarPanelFallback() {
+  return (
+    <div className="flex flex-1 items-center justify-center p-6">
+      <div className="size-5 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground/70 animate-spin" />
+    </div>
+  );
+}
 import type {
   Tab,
   TabType,
@@ -51,18 +122,22 @@ import {
   addOpenTab,
   deleteOpenTab,
   patchOpenTab,
+  createSSHHost,
   getActiveSessions,
   getUserPreferences,
+  dismissDonationModal,
   type UserPreferences,
   type OpenTabRecord,
 } from "@/main-axios";
+import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
-import { ConnectionsPanel } from "@/sidebar/ConnectionsPanel";
 import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
+import { changeAppLanguage } from "@/i18n/i18n";
+import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
 
 function buildHostTree(
   hosts: SSHHostWithStatus[],
@@ -157,6 +232,7 @@ export function AppShell({
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showDonationModal, setShowDonationModal] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
@@ -202,8 +278,14 @@ export function AppShell({
       .then((info) => {
         setIsAdmin(info.is_admin);
         setUserId(info.userId);
+        setShowDonationModal(!!info.show_donation_modal);
       })
       .catch(() => setIsAdmin(false));
+  }, []);
+
+  const handleDismissDonationModal = useCallback(() => {
+    setShowDonationModal(false);
+    dismissDonationModal().catch(() => {});
   }, []);
 
   const toggleAppFullscreen = useCallback(async () => {
@@ -618,8 +700,7 @@ export function AppShell({
             applyAccentColor(prefs.accentColor);
           }
           if (prefs.language && prefs.language !== i18n.language) {
-            localStorage.setItem("i18nextLng", prefs.language);
-            void i18n.changeLanguage(prefs.language);
+            void changeAppLanguage(prefs.language);
           }
           if (
             prefs.commandAutocomplete !== null &&
@@ -738,8 +819,17 @@ export function AppShell({
   }, [loadHosts]);
 
   useEffect(() => {
-    window.addEventListener("termix:hosts-changed", loadHosts);
-    return () => window.removeEventListener("termix:hosts-changed", loadHosts);
+    const onHostsChanged = () => {
+      void loadHosts();
+    };
+    window.addEventListener("termix:hosts-changed", onHostsChanged);
+    window.addEventListener("ssh-hosts:changed", onHostsChanged);
+    window.addEventListener("hosts:refresh", onHostsChanged);
+    return () => {
+      window.removeEventListener("termix:hosts-changed", onHostsChanged);
+      window.removeEventListener("ssh-hosts:changed", onHostsChanged);
+      window.removeEventListener("hosts:refresh", onHostsChanged);
+    };
   }, [loadHosts]);
 
   // Sync tab host data when allHosts updates (e.g. after editing terminal theme in host settings)
@@ -1012,6 +1102,21 @@ export function AppShell({
     }
     openTab(host, type);
   }
+
+  const saveQuickConnectHost = useCallback(
+    async (tab: Tab, host: Host) => {
+      try {
+        const savedHost = await createSSHHost(quickConnectHostToPayload(host));
+        await patchOpenTab(tab.instanceId, { hostId: savedHost.id });
+        await loadHosts();
+        toast.success(t("hosts.hostCreated"));
+      } catch (error) {
+        toast.error(t("hosts.failedToSave"));
+        throw error;
+      }
+    },
+    [loadHosts, t],
+  );
 
   function openSerialTab(config: SerialConfig) {
     const pseudoHost: Host = {
@@ -1437,169 +1542,182 @@ export function AppShell({
 
   // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
   const sidebarPanelContent = (
-    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-      <div
-        className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
-      >
-        <HostsPanel
-          onOpenTab={(host, type) => {
-            connectHost(host, type);
-            if (isMobile) setSidebarOpen(false);
-          }}
-          onEditHost={editHostInManager}
-          hostTree={realHostTree ?? undefined}
-          loading={hostsLoading}
-          onEditingChange={setSidebarEditing}
-          active={railView === "hosts"}
-        />
-      </div>
-
-      <div
-        className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
-      >
-        <CredentialsPanel
-          onEditingChange={setSidebarEditing}
-          active={railView === "credentials"}
-        />
-      </div>
-
-      {railView === "termix-id" && (
-        <div className="flex flex-col flex-1 min-h-0">
-          <TermixIdPanel />
-        </div>
-      )}
-
-      {railView === "serial" && (
-        <SerialPanel
-          onConnect={(config) => {
-            openSerialTab(config);
-            if (isMobile) setSidebarOpen(false);
-          }}
-        />
-      )}
-
-      {railView === "quick-connect" && (
-        <QuickConnectPanel
-          onConnect={(host, type) => {
-            openTab(host, type);
-            if (isMobile) setSidebarOpen(false);
-          }}
-        />
-      )}
-
-      {railView === "ssh-tools" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <SshToolsPanel
-            terminalTabs={terminalTabs}
-            activeTabId={activeTabId}
-          />
-        </div>
-      )}
-
-      {railView === "snippets" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <SnippetsPanel
-            terminalTabs={terminalTabs}
-            activeTabId={activeTabId}
-          />
-        </div>
-      )}
-
-      {railView === "history" && (
-        <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
-          <HistoryPanel terminalTabs={terminalTabs} activeTabId={activeTabId} />
-        </div>
-      )}
-
-      {railView === "split-screen" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <SplitScreenPanel
-            tabs={tabs}
-            splitMode={splitMode}
-            setSplitMode={setSplitMode}
-            paneTabIds={paneTabIds}
-            setPaneTabIds={setPaneTabIds}
-            onAssignPane={assignPane}
-          />
-        </div>
-      )}
-
-      {railView === "connections" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <ConnectionsPanel
-            tabs={tabs}
-            activeTabId={activeTabId}
-            allHosts={allHosts}
-            backgroundTabRecords={backgroundTabRecords}
-            onSwitchToTab={(tabId) => {
-              setActiveTabId(tabId);
+    <Suspense fallback={<SidebarPanelFallback />}>
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div
+          className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
+        >
+          <HostsPanel
+            onOpenTab={(host, type) => {
+              connectHost(host, type);
               if (isMobile) setSidebarOpen(false);
             }}
-            onCloseTab={closeTab}
-            onReopenTab={(record, restoredSessionId) => {
-              const host = record.hostId
-                ? allHosts.find((h) => h.id === String(record.hostId))
-                : undefined;
-              const hostlessTypes: TabType[] = ["tunnel"];
-              if (!host && !hostlessTypes.includes(record.tabType as TabType))
-                return;
-              setBackgroundTabRecords((prev) =>
-                prev.filter((r) => r.id !== record.id),
-              );
-              if (host) {
-                const effectiveSessionId =
-                  restoredSessionId ?? record.backendSessionId ?? null;
-                openTab(host, record.tabType as TabType, {
-                  instanceId: record.id,
-                  restoredSessionId: effectiveSessionId,
-                  savedLabel: record.label,
-                });
-              } else {
-                openSingletonTab(record.tabType as TabType);
+            onEditHost={editHostInManager}
+            hostTree={realHostTree ?? undefined}
+            loading={hostsLoading}
+            onEditingChange={setSidebarEditing}
+            active={railView === "hosts"}
+          />
+        </div>
+
+        <div
+          className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
+        >
+          <CredentialsPanel
+            onEditingChange={setSidebarEditing}
+            active={railView === "credentials"}
+          />
+        </div>
+
+        {railView === "termix-id" && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <TermixIdPanel />
+          </div>
+        )}
+
+        {railView === "serial" && (
+          <SerialPanel
+            onConnect={(config) => {
+              openSerialTab(config);
+              if (isMobile) setSidebarOpen(false);
+            }}
+          />
+        )}
+
+        {railView === "quick-connect" && (
+          <QuickConnectPanel
+            onConnect={(host, type) => {
+              openTab(host, type);
+              if (isMobile) setSidebarOpen(false);
+            }}
+          />
+        )}
+
+        {railView === "ssh-tools" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <SshToolsPanel
+              terminalTabs={terminalTabs}
+              activeTabId={activeTabId}
+            />
+          </div>
+        )}
+
+        {railView === "snippets" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <SnippetsPanel
+              terminalTabs={terminalTabs}
+              activeTabId={activeTabId}
+            />
+          </div>
+        )}
+
+        {railView === "history" && (
+          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+            <HistoryPanel
+              terminalTabs={terminalTabs}
+              activeTabId={activeTabId}
+            />
+          </div>
+        )}
+
+        {railView === "split-screen" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <SplitScreenPanel
+              tabs={tabs}
+              splitMode={splitMode}
+              setSplitMode={setSplitMode}
+              paneTabIds={paneTabIds}
+              setPaneTabIds={setPaneTabIds}
+              onAssignPane={assignPane}
+            />
+          </div>
+        )}
+
+        {railView === "connections" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <ConnectionsPanel
+              tabs={tabs}
+              activeTabId={activeTabId}
+              allHosts={allHosts}
+              backgroundTabRecords={backgroundTabRecords}
+              onSwitchToTab={(tabId) => {
+                setActiveTabId(tabId);
+                if (isMobile) setSidebarOpen(false);
+              }}
+              onCloseTab={closeTab}
+              onReopenTab={(record, restoredSessionId) => {
+                const host = record.hostId
+                  ? allHosts.find((h) => h.id === String(record.hostId))
+                  : undefined;
+                const hostlessTypes: TabType[] = ["tunnel"];
+                if (!host && !hostlessTypes.includes(record.tabType as TabType))
+                  return;
+                setBackgroundTabRecords((prev) =>
+                  prev.filter((r) => r.id !== record.id),
+                );
+                if (host) {
+                  const effectiveSessionId =
+                    restoredSessionId ?? record.backendSessionId ?? null;
+                  openTab(host, record.tabType as TabType, {
+                    instanceId: record.id,
+                    restoredSessionId: effectiveSessionId,
+                    savedLabel: record.label,
+                  });
+                } else {
+                  openSingletonTab(record.tabType as TabType);
+                }
+                if (isMobile) setSidebarOpen(false);
+              }}
+              onForgetBackground={(recordId) => {
+                setBackgroundTabRecords((prev) =>
+                  prev.filter((r) => r.id !== recordId),
+                );
+              }}
+              onRenameTab={renameTab}
+              onReorderTabs={setTabs}
+            />
+          </div>
+        )}
+
+        {railView === "session-logs" && (
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            <SessionLogsPanel />
+          </div>
+        )}
+
+        {railView === "user-profile" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <UserProfilePanel
+              username={username}
+              onLogout={onLogout}
+              onChangeServer={onChangeServer}
+              userPrefs={userPrefs}
+              onPrefsChange={(updates) =>
+                setUserPrefs((current) => ({ ...current, ...updates }))
               }
-              if (isMobile) setSidebarOpen(false);
-            }}
-            onForgetBackground={(recordId) => {
-              setBackgroundTabRecords((prev) =>
-                prev.filter((r) => r.id !== recordId),
-              );
-            }}
-            onRenameTab={renameTab}
-            onReorderTabs={setTabs}
-          />
-        </div>
-      )}
+            />
+          </div>
+        )}
 
-      {railView === "session-logs" && (
-        <div className="relative flex-1 min-h-0 flex flex-col">
-          <SessionLogsPanel />
-        </div>
-      )}
+        {railView === "admin-settings" && isAdmin && (
+          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
+            <AdminSettingsPanel
+              onEditingChange={setSidebarEditing}
+              onOpenHostTab={(host) => {
+                connectHost(host);
+                if (isMobile) setSidebarOpen(false);
+              }}
+            />
+          </div>
+        )}
 
-      {railView === "user-profile" && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <UserProfilePanel
-            username={username}
-            onLogout={onLogout}
-            onChangeServer={onChangeServer}
-            userPrefs={userPrefs}
-            onPrefsChange={setUserPrefs}
-          />
-        </div>
-      )}
-
-      {railView === "admin-settings" && isAdmin && (
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <AdminSettingsPanel />
-        </div>
-      )}
-
-      {railView === "alerts" && (
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-          <AlertsPanel />
-        </div>
-      )}
-    </div>
+        {railView === "alerts" && (
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+            <AlertsPanel />
+          </div>
+        )}
+      </div>
+    </Suspense>
   );
 
   // Sidebar header — shared
@@ -1652,7 +1770,7 @@ export function AppShell({
         {/* Desktop: inline resizable sidebar */}
         {!isMobile && (
           <div
-            className={`relative flex flex-col bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
+            className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
             style={{
               width: sidebarOpen ? (sidebarEditing ? 560 : sidebarWidth) : 0,
               transition: sidebarDragging ? "none" : "width 0.2s",
@@ -1676,7 +1794,7 @@ export function AppShell({
             <SheetContent
               side="left"
               showCloseButton={false}
-              className="p-0 flex flex-col w-[min(85vw,360px)] max-w-full bg-sidebar border-r border-border gap-0"
+              className="p-0 flex flex-col min-h-0 w-[min(85vw,360px)] max-w-full bg-sidebar border-r border-border gap-0"
               style={{ height: "100dvh" }}
             >
               {sidebarHeader}
@@ -1713,6 +1831,10 @@ export function AppShell({
               onAddToSplit={addTabToSplit}
               onRemoveFromSplit={removeTabFromSplit}
               onRenameTab={renameTab}
+              onOpenFileManager={(tabId) => {
+                const targetTab = tabs.find((t) => t.id === tabId);
+                if (targetTab?.host) openTab(targetTab.host, "files");
+              }}
               isAppFullscreen={isAppFullscreen}
               onToggleAppFullscreen={toggleAppFullscreen}
             />
@@ -1789,6 +1911,7 @@ export function AppShell({
                           initialFilePath: path,
                         }),
                       renameTab,
+                      saveQuickConnectHost,
                     ),
                     tabNode,
                     tab.id,
@@ -1808,35 +1931,45 @@ export function AppShell({
         </div>
       </div>
 
-      <CommandPalette
-        isOpen={commandPaletteOpen}
-        setIsOpen={setCommandPaletteOpen}
-        hosts={allHosts}
-        onOpenTab={(type, label, pendingEvent) => {
-          if (
-            [
-              "dashboard",
-              "host-manager",
-              "user-profile",
-              "admin-settings",
-            ].includes(type)
-          ) {
-            openSingletonTab(type, pendingEvent);
-          } else if (type === "tmux_monitor") {
-            // --- tmux-monitor --- singleton tab, optionally preselecting a host
-            openSingletonTab(
-              type,
-              undefined,
-              label ? allHosts.find((h) => h.name === label) : undefined,
-            );
-          } else if (label) {
-            const host = allHosts.find((h) => h.name === label);
-            if (host) openTab(host, type);
-          }
-        }}
-      />
+      {commandPaletteOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={commandPaletteOpen}
+            setIsOpen={setCommandPaletteOpen}
+            hosts={allHosts}
+            onOpenTab={(type, label, pendingEvent) => {
+              if (
+                [
+                  "dashboard",
+                  "host-manager",
+                  "user-profile",
+                  "admin-settings",
+                ].includes(type)
+              ) {
+                openSingletonTab(type, pendingEvent);
+              } else if (type === "tmux_monitor") {
+                // --- tmux-monitor --- singleton tab, optionally preselecting a host
+                openSingletonTab(
+                  type,
+                  undefined,
+                  label ? allHosts.find((h) => h.name === label) : undefined,
+                );
+              } else if (label) {
+                const host = allHosts.find((h) => h.name === label);
+                if (host) openTab(host, type);
+              }
+            }}
+          />
+        </Suspense>
+      )}
       <TransferMonitor />
-      <AlertManager userId={userId} loggedIn={!!username} />
+      <Suspense fallback={null}>
+        <AlertManager userId={userId} loggedIn={!!username} />
+      </Suspense>
+      <DonationReminderModal
+        open={showDonationModal}
+        onDismiss={handleDismissDonationModal}
+      />
     </ServerStatusProvider>
   );
 }

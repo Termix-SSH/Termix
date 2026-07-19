@@ -15,7 +15,7 @@ export interface Role {
   displayName: string;
   description: string | null;
   isSystem: boolean;
-  permissions: string | null;
+  permissions: string[] | string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,7 +40,7 @@ export interface AccessRecord {
   roleDisplayName: string | null;
   grantedBy: string;
   grantedByUsername: string;
-  permissionLevel: "view";
+  permissionLevel: "connect" | "view" | "edit" | "manage";
   expiresAt: string | null;
   createdAt: string;
 }
@@ -188,7 +188,6 @@ export interface AuthResponse {
   userId?: string;
   is_oidc?: boolean;
   totp_enabled?: boolean;
-  data_unlocked?: boolean;
   requires_totp?: boolean;
   temp_token?: string;
   rememberMe?: boolean;
@@ -201,8 +200,9 @@ export interface UserInfo {
   username: string;
   is_admin: boolean;
   is_oidc: boolean;
-  data_unlocked: boolean;
   password_hash?: string;
+  data_unlocked?: boolean;
+  show_donation_modal?: boolean;
 }
 
 interface UserCount {
@@ -1517,6 +1517,7 @@ export {
   bulkImportSSHHosts,
   importSSHConfigHosts,
   discoverProxmoxGuests,
+  syncProxmoxGuests,
   bulkUpdateSSHHosts,
   deleteSSHHost,
   getSSHHostById,
@@ -1715,7 +1716,6 @@ export async function loginUser(
       rememberMe: response.data.rememberMe,
       is_oidc: response.data.is_oidc,
       totp_enabled: response.data.totp_enabled,
-      data_unlocked: response.data.data_unlocked,
       token: response.data.token,
     };
   } catch (error) {
@@ -1776,6 +1776,14 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
+  }
+}
+
+export async function dismissDonationModal(): Promise<void> {
+  try {
+    await authApi.post("/users/me/dismiss-donation-modal");
+  } catch (error) {
+    handleApiError(error, "dismiss donation modal");
   }
 }
 
@@ -1887,12 +1895,14 @@ export async function completePasswordReset(
   username: string,
   tempToken: string,
   newPassword: string,
+  confirmDataWipe = false,
 ): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/users/complete-reset", {
       username,
       tempToken,
       newPassword,
+      confirmDataWipe,
     });
     return response.data;
   } catch (error) {
@@ -1953,9 +1963,32 @@ export {
   disableOIDCConfig,
   getCommandHistoryEnabled,
   updateCommandHistoryEnabled,
+  adminResetUserPassword,
+  adminDisableUserTotp,
+  adminExportUserData,
   type ApiKey,
   type CreatedApiKey,
 } from "@/api/user-management-api";
+
+// ADMIN USER DATA MANAGEMENT
+// ============================================================================
+
+export {
+  adminGetUserHosts,
+  adminCreateUserHost,
+  adminUpdateUserHost,
+  adminDeleteUserHost,
+  adminGetHostPassword,
+  adminGetUserCredentials,
+  adminGetUserCredentialDetails,
+  adminCreateUserCredential,
+  adminUpdateUserCredential,
+  adminDeleteUserCredential,
+  adminGetUserSnippets,
+  adminCreateUserSnippet,
+  adminUpdateUserSnippet,
+  adminDeleteUserSnippet,
+} from "@/api/admin-user-data-api";
 
 export {
   setupTOTP,
@@ -2087,12 +2120,20 @@ export {
   assignRoleToUser,
   removeRoleFromUser,
   shareHost,
+  updateHostAccess,
   getHostAccess,
   revokeHostAccess,
+  getPermissionsCatalog,
+  getSharedHosts,
   shareSnippet,
   getSnippetAccess,
   revokeSnippetAccess,
   getSharedSnippets,
+} from "@/api/rbac-api";
+export type {
+  SharePermissionLevel,
+  ShareTarget,
+  PermissionCatalogEntry,
 } from "@/api/rbac-api";
 
 // ============================================================================

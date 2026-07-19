@@ -531,6 +531,10 @@ function HostStatusCard({
   );
 }
 
+function isStatusCheckEnabled(host: Host): boolean {
+  return host.statsConfig?.statusCheckEnabled !== false;
+}
+
 function RecentActivityCard({
   activity,
   hosts,
@@ -797,6 +801,7 @@ function CardItem({
   onAddServiceLink,
   onDeleteServiceLink,
   statusLoading,
+  isVisible = true,
 }: {
   slot: CardSlot;
   editMode: boolean;
@@ -826,6 +831,7 @@ function CardItem({
   onAddServiceLink: (label: string, url: string) => Promise<void>;
   onDeleteServiceLink: (id: number) => Promise<void>;
   statusLoading?: boolean;
+  isVisible?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement | null>(null);
 
@@ -922,6 +928,7 @@ function CardItem({
         {slot.id === "network_graph" && (
           <NetworkGraphCard
             embedded={true}
+            isVisible={isVisible}
             onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
           />
         )}
@@ -1051,6 +1058,7 @@ type PanelColumnProps = {
   onAddServiceLink: (label: string, url: string) => Promise<void>;
   onDeleteServiceLink: (id: number) => Promise<void>;
   statusLoading: boolean;
+  isVisible?: boolean;
 };
 
 function PanelColumn({
@@ -1082,6 +1090,7 @@ function PanelColumn({
   onAddServiceLink,
   onDeleteServiceLink,
   statusLoading,
+  isVisible = true,
 }: PanelColumnProps) {
   const { t } = useTranslation();
   const sorted = [...slots].sort((a, b) => a.order - b.order);
@@ -1138,6 +1147,7 @@ function PanelColumn({
             onAddServiceLink={onAddServiceLink}
             onDeleteServiceLink={onDeleteServiceLink}
             statusLoading={statusLoading}
+            isVisible={isVisible}
           />
         </div>
       ))}
@@ -1188,9 +1198,12 @@ function ColumnDivider({
 export function DashboardTab({
   onOpenSingletonTab,
   onOpenTab,
+  isVisible = true,
 }: {
   onOpenSingletonTab: (type: TabType, pendingEvent?: string) => void;
   onOpenTab: (host: Host, type: TabType) => void;
+  /** When false, pause dashboard metrics refresh while the tab stays mounted. */
+  isVisible?: boolean;
 }) {
   const { t, i18n } = useTranslation();
   const { initialLoadComplete } = useServerStatus();
@@ -1283,6 +1296,7 @@ export function DashboardTab({
     Map<string, { cpu: number | null; ram: number | null; disk: number | null }>
   >(new Map());
   const viewerSessionsRef = useRef<Map<number, string>>(new Map());
+  const statusCheckHosts = hosts.filter(isStatusCheckEnabled);
 
   const fetchMetrics = useCallback(async (hostList: Host[]) => {
     let statuses: Record<number, { status?: string }> = {};
@@ -1342,8 +1356,11 @@ export function DashboardTab({
     const load = async () => {
       const raw = await getSSHHosts().catch(() => []);
       const mapped = raw.map(sshHostToHost);
+      const statusHosts = mapped.filter(isStatusCheckEnabled);
       if (mounted) setHosts(mapped);
-      fetchMetrics(mapped).catch(() => {});
+      if (isVisible) {
+        fetchMetrics(statusHosts).catch(() => {});
+      }
     };
     load();
 
@@ -1393,28 +1410,37 @@ export function DashboardTab({
       })
       .catch(() => {});
 
+    if (!isVisible) {
+      return () => {
+        mounted = false;
+      };
+    }
+
     const metricsInterval = setInterval(async () => {
+      if (document.visibilityState === "hidden") return;
       const raw = await getSSHHosts().catch(() => []);
       const mapped = raw.map(sshHostToHost);
+      const statusHosts = mapped.filter(isStatusCheckEnabled);
       if (mounted) setHosts(mapped);
-      fetchMetrics(mapped).catch(() => {});
+      fetchMetrics(statusHosts).catch(() => {});
     }, 30000);
 
     return () => {
       mounted = false;
       clearInterval(metricsInterval);
     };
-  }, [fetchMetrics]);
+  }, [fetchMetrics, isVisible]);
 
   useEffect(() => {
-    if (viewerSessionsRef.current.size === 0) return;
+    if (!isVisible || viewerSessionsRef.current.size === 0) return;
     const heartbeat = setInterval(async () => {
+      if (document.visibilityState === "hidden") return;
       for (const [, sessionId] of viewerSessionsRef.current) {
         sendMetricsHeartbeat(sessionId).catch(() => {});
       }
     }, 30000);
     return () => clearInterval(heartbeat);
-  }, [hostMetrics]);
+  }, [hostMetrics, isVisible]);
 
   const handleClearActivity = async () => {
     try {
@@ -1587,6 +1613,7 @@ export function DashboardTab({
     onAddServiceLink: handleAddServiceLink,
     onDeleteServiceLink: handleDeleteServiceLink,
     statusLoading,
+    isVisible,
   };
 
   const isMobile = useIsMobile();
@@ -1707,7 +1734,7 @@ export function DashboardTab({
               )}
               {slot.id === "host_status" && (
                 <HostStatusCard
-                  hosts={hosts}
+                  hosts={statusCheckHosts}
                   hostMetrics={hostMetrics}
                   onOpenTab={onOpenTab}
                   isAdmin={isAdmin}
@@ -1726,6 +1753,7 @@ export function DashboardTab({
               {slot.id === "network_graph" && (
                 <NetworkGraphCard
                   embedded={true}
+                  isVisible={isVisible}
                   onOpenInNewTab={() => onOpenSingletonTab("network_graph")}
                 />
               )}

@@ -95,13 +95,20 @@ function main() {
   const videoId = youtubeId(youtube);
   const embed = [
     `<a href="https://youtu.be/${videoId}">`,
-    `  <img src="./repo-images/YouTube.png" alt="YouTube" width="500">`,
+    `  <img src="./docs/repo-images/YouTube.png" alt="YouTube" width="500">`,
     `</a>`,
   ].join("\n");
 
   const table = buildTable(version, mobileVersion);
 
+  const donateAlert = [
+    "> [!TIP]",
+    "> Termix is free and always will be. If it's useful to you, consider [donating](https://donate.termix.site/donate/) to support development.",
+  ].join("\n");
+
   const body = [
+    donateAlert,
+    "",
     summary,
     "",
     embed,

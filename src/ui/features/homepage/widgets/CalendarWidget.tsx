@@ -8,6 +8,7 @@ import type {
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 function getMonthData(year: number, month: number, startOnMonday: boolean) {
   const firstDay = new Date(year, month, 1).getDay();
@@ -27,8 +28,7 @@ function CalendarWidget({
   const [viewMonth, setViewMonth] = useState(now.getMonth());
 
   useEffect(() => {
-    const iv = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(iv);
+    return runVisibleInterval(() => setNow(new Date()), 60_000);
   }, []);
 
   const { daysInMonth, offset } = getMonthData(

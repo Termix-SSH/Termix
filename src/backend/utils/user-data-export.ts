@@ -1,15 +1,10 @@
-import { getDb } from "../database/db/index.js";
 import {
-  users,
-  hosts,
-  sshCredentials,
-  fileManagerRecent,
-  fileManagerPinned,
-  fileManagerShortcuts,
-  transferRecent,
-  dismissedAlerts,
-} from "../database/db/schema.js";
-import { eq } from "drizzle-orm";
+  createCurrentDismissedAlertRepository,
+  createCurrentFileManagerBookmarkRepository,
+  createCurrentTransferRecentRepository,
+  createCurrentUserDataExportRepository,
+  createCurrentUserRepository,
+} from "../database/repositories/factory.js";
 import { DataCrypto } from "./data-crypto.js";
 import { databaseLogger } from "./logger.js";
 
@@ -54,15 +49,10 @@ class UserDataExport {
     } = options;
 
     try {
-      const user = await getDb()
-        .select()
-        .from(users)
-        .where(eq(users.id, userId));
-      if (!user || user.length === 0) {
+      const userRecord = await createCurrentUserRepository().findById(userId);
+      if (!userRecord) {
         throw new Error(`User not found: ${userId}`);
       }
-
-      const userRecord = user[0];
 
       let userDataKey: Buffer | null = null;
       if (format === "plaintext") {
@@ -74,10 +64,8 @@ class UserDataExport {
         }
       }
 
-      const sshHosts = await getDb()
-        .select()
-        .from(hosts)
-        .where(eq(hosts.userId, userId));
+      const exportRepository = createCurrentUserDataExportRepository();
+      const sshHosts = await exportRepository.listHostsByUserId(userId);
       const processedSshHosts =
         format === "plaintext" && userDataKey
           ? sshHosts.map((host) =>
@@ -87,10 +75,8 @@ class UserDataExport {
 
       let sshCredentialsData: unknown[] = [];
       if (includeCredentials) {
-        const credentials = await getDb()
-          .select()
-          .from(sshCredentials)
-          .where(eq(sshCredentials.userId, userId));
+        const credentials =
+          await exportRepository.listCredentialsByUserId(userId);
         sshCredentialsData =
           format === "plaintext" && userDataKey
             ? credentials.map((cred) =>
@@ -106,28 +92,20 @@ class UserDataExport {
 
       const [recentFiles, pinnedFiles, shortcuts, transferRecentData] =
         await Promise.all([
-          getDb()
-            .select()
-            .from(fileManagerRecent)
-            .where(eq(fileManagerRecent.userId, userId)),
-          getDb()
-            .select()
-            .from(fileManagerPinned)
-            .where(eq(fileManagerPinned.userId, userId)),
-          getDb()
-            .select()
-            .from(fileManagerShortcuts)
-            .where(eq(fileManagerShortcuts.userId, userId)),
-          getDb()
-            .select()
-            .from(transferRecent)
-            .where(eq(transferRecent.userId, userId)),
+          createCurrentFileManagerBookmarkRepository().listRecentByUserId(
+            userId,
+          ),
+          createCurrentFileManagerBookmarkRepository().listPinnedByUserId(
+            userId,
+          ),
+          createCurrentFileManagerBookmarkRepository().listShortcutsByUserId(
+            userId,
+          ),
+          createCurrentTransferRecentRepository().listByUserId(userId),
         ]);
 
-      const alerts = await getDb()
-        .select()
-        .from(dismissedAlerts)
-        .where(eq(dismissedAlerts.userId, userId));
+      const alerts =
+        await createCurrentDismissedAlertRepository().listByUserId(userId);
 
       const exportData: UserExportData = {
         version: this.EXPORT_VERSION,

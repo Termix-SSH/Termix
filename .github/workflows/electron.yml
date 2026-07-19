@@ -23,6 +23,10 @@ on:
           - file
           - release
           - submit
+      source_ref:
+        description: "Git ref/SHA to build (defaults to the workflow ref)"
+        required: false
+        default: ""
   workflow_call:
     inputs:
       build_type:
@@ -35,6 +39,16 @@ on:
         type: string
       release_tag:
         description: "Explicit release tag to upload assets to (defaults to latest release when empty)"
+        required: false
+        type: string
+        default: ""
+      version_override:
+        description: "Version string to stamp into built artifacts instead of package.json's version"
+        required: false
+        type: string
+        default: ""
+      source_ref:
+        description: "Git ref/SHA to build"
         required: false
         type: string
         default: ""
@@ -54,6 +68,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -68,7 +83,10 @@ jobs:
       - name: Get version
         id: package-version
         run: |
-          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          $VERSION = "${{ inputs.version_override }}"
+          if ([string]::IsNullOrEmpty($VERSION)) {
+            $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          }
           echo "version=$VERSION" >> $env:GITHUB_OUTPUT
 
       - name: Build Windows (All Architectures)
@@ -144,6 +162,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -274,7 +293,10 @@ jobs:
       - name: Get version for Flatpak
         id: flatpak-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION="${{ inputs.version_override }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+          fi
           RELEASE_DATE=$(date +%Y-%m-%d)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "release_date=$RELEASE_DATE" >> $GITHUB_OUTPUT
@@ -288,9 +310,9 @@ jobs:
           CHECKSUM_ARM64=$(sha256sum "release/termix_linux_arm64_appimage.AppImage" | awk '{print $1}')
 
           mkdir -p flatpak-build
-          cp flatpak/com.karmaa.termix.yml flatpak-build/
-          cp flatpak/com.karmaa.termix.desktop flatpak-build/
-          cp flatpak/com.karmaa.termix.metainfo.xml flatpak-build/
+          cp packaging/flatpak/com.karmaa.termix.yml flatpak-build/
+          cp packaging/flatpak/com.karmaa.termix.desktop flatpak-build/
+          cp packaging/flatpak/com.karmaa.termix.metainfo.xml flatpak-build/
           cp public/icon.svg flatpak-build/com.karmaa.termix.svg
           convert public/icon.png -resize 256x256 flatpak-build/icon-256.png
           convert public/icon.png -resize 128x128 flatpak-build/icon-128.png
@@ -322,7 +344,7 @@ jobs:
       - name: Create flatpakref file
         run: |
           VERSION="${{ steps.flatpak-version.outputs.version }}"
-          cp flatpak/com.karmaa.termix.flatpakref release/
+          cp packaging/flatpak/com.karmaa.termix.flatpakref release/
           sed -i "s|VERSION_PLACEHOLDER|release-${VERSION}-tag|g" release/com.karmaa.termix.flatpakref
 
       - name: Upload Flatpak bundle
@@ -354,6 +376,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -514,7 +537,10 @@ jobs:
       - name: Get version for Homebrew
         id: homebrew-version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION="${{ inputs.version_override }}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Compute universal DMG checksum
@@ -525,7 +551,7 @@ jobs:
           echo "sha256=$CHECKSUM" >> $GITHUB_OUTPUT
 
       - name: Generate Homebrew Cask
-        if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release')
+        if: hashFiles('release/termix_macos_universal_dmg.dmg') != '' && inputs.version_override == '' && (inputs.artifact_destination == 'file' || inputs.artifact_destination == 'release')
         run: |
           VERSION="${{ steps.homebrew-version.outputs.version }}"
           DMG_PATH="release/termix_macos_universal_dmg.dmg"
@@ -533,7 +559,7 @@ jobs:
           CHECKSUM=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')
 
           mkdir -p homebrew-generated
-          cp Casks/termix.rb homebrew-generated/termix.rb
+          cp packaging/Casks/termix.rb homebrew-generated/termix.rb
 
           sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-generated/termix.rb
           sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-generated/termix.rb
@@ -550,7 +576,7 @@ jobs:
           retention-days: 30
 
       - name: Upload Homebrew Cask to release
-        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.artifact_destination == 'release'
+        if: hashFiles('homebrew-generated/termix.rb') != '' && inputs.version_override == '' && inputs.artifact_destination == 'release'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -580,6 +606,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Get version from package.json
@@ -619,7 +646,7 @@ jobs:
           $DOWNLOAD_URL = "https://github.com/Termix-SSH/Termix/releases/download/release-$VERSION-tag/$MSI_NAME"
 
           New-Item -ItemType Directory -Force -Path "choco-build"
-          Copy-Item -Path "chocolatey\*" -Destination "choco-build" -Recurse -Force
+          Copy-Item -Path "packaging\chocolatey\*" -Destination "choco-build" -Recurse -Force
 
           $installScript = Get-Content "choco-build\tools\chocolateyinstall.ps1" -Raw -Encoding UTF8
           $installScript = $installScript -replace 'DOWNLOAD_URL_PLACEHOLDER', $DOWNLOAD_URL
@@ -686,6 +713,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Get version from package.json
@@ -737,10 +765,10 @@ jobs:
 
           mkdir -p flatpak-submission
 
-          cp flatpak/com.karmaa.termix.yml flatpak-submission/
-          cp flatpak/com.karmaa.termix.desktop flatpak-submission/
-          cp flatpak/com.karmaa.termix.metainfo.xml flatpak-submission/
-          cp flatpak/flathub.json flatpak-submission/
+          cp packaging/flatpak/com.karmaa.termix.yml flatpak-submission/
+          cp packaging/flatpak/com.karmaa.termix.desktop flatpak-submission/
+          cp packaging/flatpak/com.karmaa.termix.metainfo.xml flatpak-submission/
+          cp packaging/flatpak/flathub.json flatpak-submission/
 
           cp public/icon.svg flatpak-submission/com.karmaa.termix.svg
           convert public/icon.png -resize 256x256 flatpak-submission/icon-256.png
@@ -823,6 +851,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Get version from package.json
@@ -865,7 +894,7 @@ jobs:
 
           mkdir -p homebrew-submission/Casks/t
 
-          cp Casks/termix.rb homebrew-submission/Casks/t/termix.rb
+          cp packaging/Casks/termix.rb homebrew-submission/Casks/t/termix.rb
 
           sed -i '' "s/VERSION_PLACEHOLDER/$VERSION/g" homebrew-submission/Casks/t/termix.rb
           sed -i '' "s/CHECKSUM_PLACEHOLDER/$CHECKSUM/g" homebrew-submission/Casks/t/termix.rb
@@ -933,6 +962,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
 
       - name: Setup Node.js
@@ -1029,18 +1059,26 @@ jobs:
 
           VERSION=$(node -p "require('./package.json').version")
 
-          # Write API key JSON that Fastlane deliver expects
+          # Write API key JSON that Fastlane deliver expects; the PEM's
+          # newlines must be preserved as literal \n escapes, not stripped,
+          # or spaceship fails to parse the key (invalid curve name).
           mkdir -p /tmp/asc_keys
           KEY_P8_PATH="/tmp/asc_keys/AuthKey_${APPLE_KEY_ID}.p8"
           API_KEY_JSON="/tmp/asc_keys/api_key.json"
 
           echo "$APPLE_KEY_CONTENT" | base64 --decode > "$KEY_P8_PATH"
 
-          printf '{\n  "key_id": "%s",\n  "issuer_id": "%s",\n  "key": "%s",\n  "in_house": false\n}\n' \
-            "$APPLE_KEY_ID" \
-            "$APPLE_ISSUER_ID" \
-            "$(tr -d '\n' < "$KEY_P8_PATH")" \
-            > "$API_KEY_JSON"
+          KEY_ID="$APPLE_KEY_ID" ISSUER_ID="$APPLE_ISSUER_ID" KEY_P8_PATH="$KEY_P8_PATH" \
+            node -e '
+              const fs = require("fs");
+              const key = fs.readFileSync(process.env.KEY_P8_PATH, "utf8");
+              process.stdout.write(JSON.stringify({
+                key_id: process.env.KEY_ID,
+                issuer_id: process.env.ISSUER_ID,
+                key,
+                in_house: false,
+              }, null, 2) + "\n");
+            ' > "$API_KEY_JSON"
 
           fastlane deliver \
             --pkg "$PKG_FILE" \

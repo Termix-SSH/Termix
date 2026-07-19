@@ -113,6 +113,10 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5Password: h.socks5Password,
     socks5ProxyChain: parseJson(h.socks5ProxyChain) ?? [],
     overrideCredentialUsername: h.overrideCredentialUsername ?? false,
+    isShared: h.isShared ?? false,
+    permissionLevel: h.permissionLevel,
+    sharedExpiresAt: h.sharedExpiresAt,
+    ownerUsername: h.ownerUsername,
   };
 }
 

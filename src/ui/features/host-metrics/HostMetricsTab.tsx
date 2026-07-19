@@ -286,8 +286,8 @@ function HostMetricsInner({
   }, [hostConfig?.id]);
 
   React.useEffect(() => {
-    if (!statusCheckEnabled || !currentHostConfig?.id) {
-      setServerStatus("offline");
+    if (!statusCheckEnabled || !currentHostConfig?.id || !isActuallyVisible) {
+      if (!statusCheckEnabled) setServerStatus("offline");
       return;
     }
     let cancelled = false;
@@ -314,6 +314,7 @@ function HostMetricsInner({
     currentHostConfig?.id,
     statusCheckEnabled,
     statsConfig.statusCheckInterval,
+    isActuallyVisible,
   ]);
 
   React.useEffect(() => {

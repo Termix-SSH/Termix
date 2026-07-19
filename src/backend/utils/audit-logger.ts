@@ -1,9 +1,5 @@
 import type { Request } from "express";
-import { db } from "../database/db/index.js";
-import { auditLogs } from "../database/db/schema.js";
-
-const PRUNE_MAX = 10000;
-const PRUNE_TARGET = 9000;
+import { createCurrentAuditLogRepository } from "../database/repositories/factory.js";
 
 export interface AuditLogParams {
   userId: string;
@@ -21,7 +17,7 @@ export interface AuditLogParams {
 
 export async function logAudit(params: AuditLogParams): Promise<void> {
   try {
-    await db.insert(auditLogs).values({
+    await createCurrentAuditLogRepository().create({
       userId: params.userId,
       username: params.username,
       action: params.action,
@@ -34,21 +30,6 @@ export async function logAudit(params: AuditLogParams): Promise<void> {
       success: params.success,
       errorMessage: params.errorMessage ?? null,
     });
-
-    const countResult = db.$client
-      .prepare("SELECT COUNT(*) as count FROM audit_logs")
-      .get() as { count: number };
-
-    if (countResult.count >= PRUNE_MAX) {
-      const deleteCount = countResult.count - PRUNE_TARGET;
-      db.$client
-        .prepare(
-          `DELETE FROM audit_logs WHERE id IN (
-            SELECT id FROM audit_logs ORDER BY timestamp ASC LIMIT ?
-          )`,
-        )
-        .run(deleteCount);
-    }
   } catch {
     // audit logging must never throw and break the caller
   }

@@ -1,10 +1,8 @@
 import express from "express";
-import { eq } from "drizzle-orm";
-import { getDb } from "../db/index.js";
-import { networkTopology } from "../db/schema.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { databaseLogger } from "../../utils/logger.js";
+import { createCurrentNetworkTopologyRepository } from "../repositories/factory.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -70,14 +68,11 @@ router.get(
         return res.status(401).json({ error: "User not authenticated" });
       }
 
-      const db = getDb();
-      const result = await db
-        .select()
-        .from(networkTopology)
-        .where(eq(networkTopology.userId, userId));
+      const record =
+        await createCurrentNetworkTopologyRepository().findByUserId(userId);
 
-      if (result.length > 0) {
-        const topologyStr = result[0].topology;
+      if (record) {
+        const topologyStr = record.topology;
         const topology = topologyStr ? JSON.parse(topologyStr) : null;
         return res.json(topology);
       } else {
@@ -157,26 +152,13 @@ router.post(
         return res.status(400).json({ error: "Topology data is required" });
       }
 
-      const db = getDb();
-
       const topologyStr =
         typeof topology === "string" ? topology : JSON.stringify(topology);
 
-      const existing = await db
-        .select()
-        .from(networkTopology)
-        .where(eq(networkTopology.userId, userId));
-
-      if (existing.length > 0) {
-        await db
-          .update(networkTopology)
-          .set({ topology: topologyStr })
-          .where(eq(networkTopology.userId, userId));
-      } else {
-        await db
-          .insert(networkTopology)
-          .values({ userId, topology: topologyStr });
-      }
+      await createCurrentNetworkTopologyRepository().upsertForUser(
+        userId,
+        topologyStr,
+      );
 
       return res.json({ success: true });
     } catch (error) {

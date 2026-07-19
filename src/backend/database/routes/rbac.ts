@@ -1,22 +1,25 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import {
-  hostAccess,
-  hosts,
-  users,
-  roles,
-  userRoles,
-  sharedCredentials,
-  snippets,
-  snippetAccess,
-  sshCredentials,
-} from "../db/schema.js";
-import { eq, and, desc, sql, or, isNull, gte } from "drizzle-orm";
 import type { Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { PermissionManager } from "../../utils/permission-manager.js";
+import {
+  PermissionManager,
+  SHARE_PERMISSION_LEVELS,
+  type SharePermissionLevel,
+} from "../../utils/permission-manager.js";
+import {
+  PERMISSION_CATALOG,
+  isValidPermission,
+} from "../../utils/permission-catalog.js";
+import {
+  createCurrentCredentialRepository,
+  createCurrentHostResolutionRepository,
+  createCurrentRbacAccessRepository,
+  createCurrentRoleRepository,
+  createCurrentSnippetRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 
@@ -29,12 +32,69 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+function isSharePermissionLevel(value: unknown): value is SharePermissionLevel {
+  return SHARE_PERMISSION_LEVELS.includes(value as SharePermissionLevel);
+}
+
+function expiryFromDuration(durationHours: unknown): string | null {
+  if (durationHours && typeof durationHours === "number" && durationHours > 0) {
+    const expiryDate = new Date();
+    expiryDate.setTime(expiryDate.getTime() + durationHours * 60 * 60 * 1000);
+    return expiryDate.toISOString();
+  }
+  return null;
+}
+
+// Sharing is controlled by the owner or any recipient holding "manage".
+async function canManageHostSharing(
+  userId: string,
+  hostId: number,
+): Promise<{ allowed: boolean; isOwner: boolean }> {
+  const access = await permissionManager.canAccessHost(
+    userId,
+    hostId,
+    "manage",
+  );
+  return { allowed: access.hasAccess, isOwner: access.isOwner };
+}
+
+interface ShareTarget {
+  type: "user" | "role";
+  id: string | number;
+}
+
+function parseShareTargets(
+  body: Record<string, unknown>,
+): ShareTarget[] | null {
+  const rawTargets = body.targets;
+  if (!Array.isArray(rawTargets) || rawTargets.length === 0) return null;
+
+  const targets: ShareTarget[] = [];
+  for (const raw of rawTargets) {
+    if (!raw || typeof raw !== "object") return null;
+    const { type, id } = raw as { type?: unknown; id?: unknown };
+    if (type === "user" && isNonEmptyString(id)) {
+      targets.push({ type: "user", id });
+    } else if (
+      type === "role" &&
+      typeof id === "number" &&
+      Number.isInteger(id)
+    ) {
+      targets.push({ type: "role", id });
+    } else {
+      return null;
+    }
+  }
+
+  return targets;
+}
+
 /**
  * @openapi
  * /rbac/host/{id}/share:
  *   post:
  *     summary: Share a host
- *     description: Shares a host with a user or a role.
+ *     description: Shares a host with one or more users and/or roles at a permission level (connect, view, edit, manage). Allowed for the host owner or recipients holding the manage level. Every auth type is shareable; per-recipient secret snapshots are created automatically.
  *     tags:
  *       - RBAC
  *     parameters:
@@ -49,26 +109,32 @@ function isNonEmptyString(value: unknown): value is string {
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [targets]
  *             properties:
- *               targetType:
- *                 type: string
- *                 enum: [user, role]
- *               targetUserId:
- *                 type: string
- *               targetRoleId:
- *                 type: integer
- *               durationHours:
- *                 type: number
+ *               targets:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [user, role]
+ *                     id:
+ *                       oneOf:
+ *                         - type: string
+ *                         - type: integer
  *               permissionLevel:
  *                 type: string
- *                 enum: [view]
+ *                 enum: [connect, view, edit, manage]
+ *               durationHours:
+ *                 type: number
  *     responses:
  *       200:
  *         description: Host shared successfully.
  *       400:
  *         description: Invalid request body.
  *       403:
- *         description: Not host owner.
+ *         description: Caller may not share this host.
  *       404:
  *         description: Target user or role not found.
  *       500:
@@ -87,38 +153,25 @@ router.post(
     }
 
     try {
-      const {
-        targetType = "user",
-        targetUserId,
-        targetRoleId,
-        durationHours,
-        permissionLevel = "view",
-      } = req.body;
-
-      if (!["user", "role"].includes(targetType)) {
-        return res
-          .status(400)
-          .json({ error: "Invalid target type. Must be 'user' or 'role'" });
+      const targets = parseShareTargets(req.body ?? {});
+      if (!targets) {
+        return res.status(400).json({
+          error:
+            "targets must be a non-empty array of { type: 'user'|'role', id } entries",
+        });
       }
 
-      if (targetType === "user" && !isNonEmptyString(targetUserId)) {
-        return res
-          .status(400)
-          .json({ error: "Target user ID is required when sharing with user" });
-      }
-      if (targetType === "role" && !targetRoleId) {
-        return res
-          .status(400)
-          .json({ error: "Target role ID is required when sharing with role" });
+      const { durationHours, permissionLevel = "connect" } = req.body;
+
+      if (!isSharePermissionLevel(permissionLevel)) {
+        return res.status(400).json({
+          error: "Invalid permission level",
+          validLevels: SHARE_PERMISSION_LEVELS,
+        });
       }
 
-      const host = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-        .limit(1);
-
-      if (host.length === 0) {
+      const sharing = await canManageHostSharing(userId, hostId);
+      if (!sharing.allowed) {
         databaseLogger.warn("Permission denied", {
           operation: "rbac_permission_denied",
           userId,
@@ -126,174 +179,126 @@ router.post(
           resourceId: hostId,
           action: "share",
         });
-        return res.status(403).json({ error: "Not host owner" });
+        return res.status(403).json({ error: "You may not share this host" });
       }
 
-      if (
-        !host[0].credentialId &&
-        !host[0].rdpCredentialId &&
-        !host[0].vncCredentialId &&
-        host[0].authType !== "opkssh"
-      ) {
-        return res.status(400).json({
-          error:
-            "Only hosts using credentials or OPKSSH can be shared. Please create a credential and assign it to this host before sharing.",
-          code: "CREDENTIAL_REQUIRED_FOR_SHARING",
-        });
+      const host =
+        await createCurrentHostResolutionRepository().findHostUpdateState(
+          hostId,
+        );
+      if (!host) {
+        return res.status(404).json({ error: "Host not found" });
       }
+      const ownerId = host.userId;
 
-      if (targetType === "user") {
-        const targetUser = await db
-          .select({ id: users.id, username: users.username })
-          .from(users)
-          .where(eq(users.id, targetUserId))
-          .limit(1);
+      const userRepository = createCurrentUserRepository();
+      const roleRepository = createCurrentRoleRepository();
 
-        if (targetUser.length === 0) {
-          return res.status(404).json({ error: "Target user not found" });
-        }
-      } else {
-        const targetRole = await db
-          .select({ id: roles.id, name: roles.name })
-          .from(roles)
-          .where(eq(roles.id, targetRoleId))
-          .limit(1);
-
-        if (targetRole.length === 0) {
-          return res.status(404).json({ error: "Target role not found" });
-        }
-      }
-
-      let expiresAt: string | null = null;
-      if (
-        durationHours &&
-        typeof durationHours === "number" &&
-        durationHours > 0
-      ) {
-        const expiryDate = new Date();
-        expiryDate.setHours(expiryDate.getHours() + durationHours);
-        expiresAt = expiryDate.toISOString();
-      }
-
-      const validLevels = ["view"];
-      if (!validLevels.includes(permissionLevel)) {
-        return res.status(400).json({
-          error: "Invalid permission level. Only 'view' is supported.",
-          validLevels,
-        });
-      }
-
-      const whereConditions = [eq(hostAccess.hostId, hostId)];
-      if (targetType === "user") {
-        whereConditions.push(eq(hostAccess.userId, targetUserId));
-      } else {
-        whereConditions.push(eq(hostAccess.roleId, targetRoleId));
-      }
-
-      const existing = await db
-        .select()
-        .from(hostAccess)
-        .where(and(...whereConditions))
-        .limit(1);
-
-      if (existing.length > 0) {
-        await db
-          .update(hostAccess)
-          .set({
-            permissionLevel,
-            expiresAt,
-          })
-          .where(eq(hostAccess.id, existing[0].id));
-
-        await db
-          .delete(sharedCredentials)
-          .where(eq(sharedCredentials.hostAccessId, existing[0].id));
-
-        const activeCredentialId =
-          host[0].credentialId ??
-          host[0].rdpCredentialId ??
-          host[0].vncCredentialId;
-        if (activeCredentialId) {
-          const { SharedCredentialManager } =
-            await import("../../utils/shared-credential-manager.js");
-          const sharedCredManager = SharedCredentialManager.getInstance();
-          if (targetType === "user") {
-            await sharedCredManager.createSharedCredentialForUser(
-              existing[0].id,
-              activeCredentialId,
-              targetUserId!,
-              userId,
-            );
-          } else {
-            await sharedCredManager.createSharedCredentialsForRole(
-              existing[0].id,
-              activeCredentialId,
-              targetRoleId!,
-              userId,
-            );
+      for (const target of targets) {
+        if (target.type === "user") {
+          if (target.id === ownerId) {
+            return res
+              .status(400)
+              .json({ error: "Cannot share a host with its owner" });
+          }
+          const targetUser = await userRepository.findById(target.id as string);
+          if (!targetUser) {
+            return res.status(404).json({
+              error: "Target user not found",
+              targetId: target.id,
+            });
+          }
+        } else {
+          const targetRole = await roleRepository.findRoleById(
+            target.id as number,
+          );
+          if (!targetRole) {
+            return res.status(404).json({
+              error: "Target role not found",
+              targetId: target.id,
+            });
           }
         }
-        databaseLogger.info("Permission granted", {
-          operation: "rbac_permission_grant",
-          adminId: userId,
+      }
+
+      const expiresAt = expiryFromDuration(durationHours);
+
+      const rbacAccessRepository = createCurrentRbacAccessRepository();
+      const { SharedHostSecretsManager } =
+        await import("../../utils/shared-host-secrets-manager.js");
+      const secretsManager = SharedHostSecretsManager.getInstance();
+
+      const results: Array<{
+        type: "user" | "role";
+        id: string | number;
+        accessId: number;
+        created: boolean;
+      }> = [];
+
+      for (const target of targets) {
+        const accessGrant = await rbacAccessRepository.upsertHostAccess({
           hostId,
-          resource: "host",
-          action: "view",
-        });
-
-        return res.json({
-          success: true,
-          message: "Host access updated",
+          grantedBy: userId,
+          permissionLevel,
           expiresAt,
+          ...(target.type === "user"
+            ? { targetType: "user" as const, targetUserId: target.id as string }
+            : {
+                targetType: "role" as const,
+                targetRoleId: target.id as number,
+              }),
+        });
+
+        try {
+          if (target.type === "user") {
+            await secretsManager.snapshotForUser(
+              accessGrant.id,
+              hostId,
+              target.id as string,
+              ownerId,
+            );
+          } else {
+            await secretsManager.snapshotForRole(
+              accessGrant.id,
+              hostId,
+              target.id as number,
+              ownerId,
+            );
+          }
+        } catch (snapshotError) {
+          databaseLogger.warn("Share created but secret snapshot failed", {
+            operation: "rbac_host_share_snapshot_failed",
+            hostId,
+            accessId: accessGrant.id,
+            error:
+              snapshotError instanceof Error
+                ? snapshotError.message
+                : "Unknown error",
+          });
+        }
+
+        results.push({
+          type: target.type,
+          id: target.id,
+          accessId: accessGrant.id,
+          created: accessGrant.created,
         });
       }
 
-      const result = await db.insert(hostAccess).values({
-        hostId,
-        userId: targetType === "user" ? targetUserId : null,
-        roleId: targetType === "role" ? targetRoleId : null,
-        grantedBy: userId,
-        permissionLevel,
-        expiresAt,
-      });
-
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
-      const sharedCredManager = SharedCredentialManager.getInstance();
-
-      const activeCredentialId =
-        host[0].credentialId ??
-        host[0].rdpCredentialId ??
-        host[0].vncCredentialId;
-      if (activeCredentialId) {
-        if (targetType === "user") {
-          await sharedCredManager.createSharedCredentialForUser(
-            result.lastInsertRowid as number,
-            activeCredentialId,
-            targetUserId!,
-            userId,
-          );
-        } else {
-          await sharedCredManager.createSharedCredentialsForRole(
-            result.lastInsertRowid as number,
-            activeCredentialId,
-            targetRoleId!,
-            userId,
-          );
-        }
-      }
       databaseLogger.success("Host shared successfully", {
         operation: "rbac_host_share_success",
         userId,
         hostId,
-        targetUserId: targetType === "user" ? targetUserId : undefined,
+        targets: results.length,
         permissionLevel,
       });
 
       res.json({
         success: true,
-        message: `Host shared successfully with ${targetType}`,
+        message: "Host shared successfully",
+        permissionLevel,
         expiresAt,
+        results,
       });
     } catch (error) {
       databaseLogger.error("Failed to share host", error, {
@@ -302,6 +307,143 @@ router.post(
         userId,
       });
       res.status(500).json({ error: "Failed to share host" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/host/{id}/access/{accessId}:
+ *   patch:
+ *     summary: Update a host access grant
+ *     description: Changes the permission level and/or expiry of an existing host access grant. Allowed for the host owner or recipients holding the manage level.
+ *     tags:
+ *       - RBAC
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: accessId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               permissionLevel:
+ *                 type: string
+ *                 enum: [connect, view, edit, manage]
+ *               durationHours:
+ *                 type: number
+ *                 nullable: true
+ *                 description: Hours from now until the grant expires; null clears the expiry.
+ *     responses:
+ *       200:
+ *         description: Grant updated successfully.
+ *       400:
+ *         description: Invalid request.
+ *       403:
+ *         description: Caller may not manage sharing on this host.
+ *       404:
+ *         description: Grant not found.
+ *       500:
+ *         description: Failed to update grant.
+ */
+router.patch(
+  "/host/:id/access/:accessId",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const accessIdParam = Array.isArray(req.params.accessId)
+      ? req.params.accessId[0]
+      : req.params.accessId;
+    const hostId = parseInt(id, 10);
+    const accessId = parseInt(accessIdParam, 10);
+    const userId = req.userId!;
+
+    if (isNaN(hostId) || isNaN(accessId)) {
+      return res.status(400).json({ error: "Invalid ID" });
+    }
+
+    try {
+      const sharing = await canManageHostSharing(userId, hostId);
+      if (!sharing.allowed) {
+        return res
+          .status(403)
+          .json({ error: "You may not manage sharing on this host" });
+      }
+
+      const { permissionLevel, durationHours } = req.body ?? {};
+
+      if (permissionLevel === undefined && durationHours === undefined) {
+        return res.status(400).json({
+          error: "At least one of permissionLevel or durationHours is required",
+        });
+      }
+
+      if (
+        permissionLevel !== undefined &&
+        !isSharePermissionLevel(permissionLevel)
+      ) {
+        return res.status(400).json({
+          error: "Invalid permission level",
+          validLevels: SHARE_PERMISSION_LEVELS,
+        });
+      }
+
+      const rbacAccessRepository = createCurrentRbacAccessRepository();
+      const grant = await rbacAccessRepository.findHostAccessById(
+        accessId,
+        hostId,
+      );
+      if (!grant) {
+        return res.status(404).json({ error: "Access grant not found" });
+      }
+
+      const update: { permissionLevel?: string; expiresAt?: string | null } =
+        {};
+      if (permissionLevel !== undefined) {
+        update.permissionLevel = permissionLevel;
+      }
+      if (durationHours !== undefined) {
+        update.expiresAt =
+          durationHours === null ? null : expiryFromDuration(durationHours);
+      }
+
+      await rbacAccessRepository.updateHostAccessGrant(
+        accessId,
+        hostId,
+        update,
+      );
+
+      databaseLogger.info("Host access grant updated", {
+        operation: "rbac_host_access_update",
+        userId,
+        hostId,
+        accessId,
+        permissionLevel,
+      });
+
+      res.json({
+        success: true,
+        message: "Access updated",
+        expiresAt: update.expiresAt ?? grant.expiresAt,
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to update host access", error, {
+        operation: "update_host_access",
+        hostId,
+        accessId,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to update access" });
     }
   },
 );
@@ -331,7 +473,7 @@ router.post(
  *       400:
  *         description: Invalid ID.
  *       403:
- *         description: Not host owner.
+ *         description: Caller may not manage sharing on this host.
  *       500:
  *         description: Failed to revoke access.
  */
@@ -352,17 +494,17 @@ router.delete(
     }
 
     try {
-      const host = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-        .limit(1);
-
-      if (host.length === 0) {
-        return res.status(403).json({ error: "Not host owner" });
+      const sharing = await canManageHostSharing(userId, hostId);
+      if (!sharing.allowed) {
+        return res
+          .status(403)
+          .json({ error: "You may not manage sharing on this host" });
       }
 
-      await db.delete(hostAccess).where(eq(hostAccess.id, accessId));
+      await createCurrentRbacAccessRepository().revokeHostAccess(
+        accessId,
+        hostId,
+      );
       databaseLogger.info("Permission revoked", {
         operation: "rbac_permission_revoke",
         adminId: userId,
@@ -399,11 +541,11 @@ router.delete(
  *           type: integer
  *     responses:
  *       200:
- *         description: The access list for the host.
+ *         description: The access list for the host, including each grant's permission level.
  *       400:
  *         description: Invalid host ID.
  *       403:
- *         description: Not host owner.
+ *         description: Caller may not manage sharing on this host.
  *       500:
  *         description: Failed to get access list.
  */
@@ -420,52 +562,17 @@ router.get(
     }
 
     try {
-      const host = await db
-        .select()
-        .from(hosts)
-        .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-        .limit(1);
-
-      if (host.length === 0) {
-        return res.status(403).json({ error: "Not host owner" });
+      const sharing = await canManageHostSharing(userId, hostId);
+      if (!sharing.allowed) {
+        return res
+          .status(403)
+          .json({ error: "You may not manage sharing on this host" });
       }
 
-      const rawAccessList = await db
-        .select({
-          id: hostAccess.id,
-          userId: hostAccess.userId,
-          roleId: hostAccess.roleId,
-          username: users.username,
-          roleName: roles.name,
-          roleDisplayName: roles.displayName,
-          grantedBy: hostAccess.grantedBy,
-          grantedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${hostAccess.grantedBy})`,
-          permissionLevel: hostAccess.permissionLevel,
-          expiresAt: hostAccess.expiresAt,
-          createdAt: hostAccess.createdAt,
-        })
-        .from(hostAccess)
-        .leftJoin(users, eq(hostAccess.userId, users.id))
-        .leftJoin(roles, eq(hostAccess.roleId, roles.id))
-        .where(eq(hostAccess.hostId, hostId))
-        .orderBy(desc(hostAccess.createdAt));
+      const accessList =
+        await createCurrentRbacAccessRepository().listHostAccess(hostId);
 
-      const accessList = rawAccessList.map((access) => ({
-        id: access.id,
-        targetType: access.userId ? "user" : "role",
-        userId: access.userId,
-        roleId: access.roleId,
-        username: access.username,
-        roleName: access.roleName,
-        roleDisplayName: access.roleDisplayName,
-        grantedBy: access.grantedBy,
-        grantedByUsername: access.grantedByUsername,
-        permissionLevel: access.permissionLevel,
-        expiresAt: access.expiresAt,
-        createdAt: access.createdAt,
-      }));
-
-      res.json({ accessList });
+      res.json({ accessList, isOwner: sharing.isOwner });
     } catch (error) {
       databaseLogger.error("Failed to get host access list", error, {
         operation: "get_host_access_list",
@@ -498,46 +605,13 @@ router.get(
     const userId = req.userId!;
 
     try {
-      const now = new Date().toISOString();
-
-      const userRoleIds = await db
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
-      const roleIds = userRoleIds.map((r) => r.roleId);
-
-      const sharedHosts = await db
-        .select({
-          id: hosts.id,
-          name: hosts.name,
-          ip: hosts.ip,
-          port: hosts.port,
-          username: hosts.username,
-          folder: hosts.folder,
-          tags: hosts.tags,
-          permissionLevel: hostAccess.permissionLevel,
-          expiresAt: hostAccess.expiresAt,
-          grantedBy: hostAccess.grantedBy,
-          ownerUsername: users.username,
-        })
-        .from(hostAccess)
-        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
-        .innerJoin(users, eq(hosts.userId, users.id))
-        .where(
-          and(
-            or(
-              eq(hostAccess.userId, userId),
-              roleIds.length > 0
-                ? sql`${hostAccess.roleId} IN (${sql.join(
-                    roleIds.map((id) => sql`${id}`),
-                    sql`, `,
-                  )})`
-                : sql`false`,
-            ),
-            or(isNull(hostAccess.expiresAt), gte(hostAccess.expiresAt, now)),
-          ),
-        )
-        .orderBy(desc(hostAccess.createdAt));
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
+      const sharedHosts =
+        await createCurrentRbacAccessRepository().listSharedHosts(
+          userId,
+          roleIds,
+        );
 
       res.json({ sharedHosts });
     } catch (error) {
@@ -569,18 +643,38 @@ router.get(
   authenticateJWT,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const rolesList = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          displayName: roles.displayName,
-          description: roles.description,
-          isSystem: roles.isSystem,
-          createdAt: roles.createdAt,
-          updatedAt: roles.updatedAt,
-        })
-        .from(roles)
-        .orderBy(roles.isSystem, roles.name);
+      const rolesList = (await createCurrentRoleRepository().listRoles()).map(
+        ({
+          id,
+          name,
+          displayName,
+          description,
+          isSystem,
+          permissions,
+          createdAt,
+          updatedAt,
+        }) => {
+          let parsedPermissions: string[] = [];
+          try {
+            parsedPermissions = permissions
+              ? (JSON.parse(permissions) as string[])
+              : [];
+          } catch {
+            parsedPermissions = [];
+          }
+
+          return {
+            id,
+            name,
+            displayName,
+            description,
+            isSystem,
+            permissions: parsedPermissions,
+            createdAt,
+            updatedAt,
+          };
+        },
+      );
 
       res.json({ roles: rolesList });
     } catch (error) {
@@ -644,27 +738,21 @@ router.post(
     }
 
     try {
-      const existing = await db
-        .select({ id: roles.id })
-        .from(roles)
-        .where(eq(roles.name, name))
-        .limit(1);
+      const existing = await createCurrentRoleRepository().findRoleByName(name);
 
-      if (existing.length > 0) {
+      if (existing) {
         return res.status(409).json({
           error: "A role with this name already exists",
         });
       }
 
-      const result = await db.insert(roles).values({
+      const newRoleId = await createCurrentRoleRepository().createRole({
         name,
         displayName,
         description: description || null,
         isSystem: false,
         permissions: null,
       });
-
-      const newRoleId = result.lastInsertRowid;
 
       res.status(201).json({
         success: true,
@@ -706,6 +794,11 @@ router.post(
  *                 type: string
  *               description:
  *                 type: string
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: Permission strings validated against the permissions catalog (wildcards like hosts.* and * allowed).
  *     responses:
  *       200:
  *         description: Role updated successfully.
@@ -723,36 +816,56 @@ router.put(
   async (req: AuthenticatedRequest, res: Response) => {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const roleId = parseInt(id, 10);
-    const { displayName, description } = req.body;
+    const { displayName, description, permissions } = req.body;
 
     if (isNaN(roleId)) {
       return res.status(400).json({ error: "Invalid role ID" });
     }
 
-    if (!displayName && description === undefined) {
+    if (
+      !displayName &&
+      description === undefined &&
+      permissions === undefined
+    ) {
       return res.status(400).json({
-        error: "At least one field (displayName or description) is required",
+        error:
+          "At least one field (displayName, description or permissions) is required",
       });
     }
 
-    try {
-      const existingRole = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          isSystem: roles.isSystem,
-        })
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+    if (permissions !== undefined) {
+      if (
+        !Array.isArray(permissions) ||
+        permissions.some((perm) => typeof perm !== "string")
+      ) {
+        return res
+          .status(400)
+          .json({ error: "permissions must be an array of strings" });
+      }
 
-      if (existingRole.length === 0) {
+      const invalid = (permissions as string[]).filter(
+        (perm) => !isValidPermission(perm),
+      );
+      if (invalid.length > 0) {
+        return res.status(400).json({
+          error: "Unknown permissions",
+          invalid,
+        });
+      }
+    }
+
+    try {
+      const roleRepository = createCurrentRoleRepository();
+      const existingRole = await roleRepository.findRoleById(roleId);
+
+      if (!existingRole) {
         return res.status(404).json({ error: "Role not found" });
       }
 
       const updates: {
         displayName?: string;
         description?: string | null;
+        permissions?: string | null;
         updatedAt: string;
       } = {
         updatedAt: new Date().toISOString(),
@@ -766,7 +879,18 @@ router.put(
         updates.description = description || null;
       }
 
-      await db.update(roles).set(updates).where(eq(roles.id, roleId));
+      if (permissions !== undefined) {
+        updates.permissions = JSON.stringify(permissions);
+      }
+
+      await roleRepository.updateRole(roleId, updates);
+
+      if (permissions !== undefined) {
+        const memberIds = await roleRepository.listRoleUserIds(roleId);
+        for (const memberId of memberIds) {
+          permissionManager.invalidateUserPermissionCache(memberId);
+        }
+      }
 
       res.json({
         success: true,
@@ -779,6 +903,26 @@ router.put(
       });
       res.status(500).json({ error: "Failed to update role" });
     }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/permissions/catalog:
+ *   get:
+ *     summary: Get the role permissions catalog
+ *     description: Returns the grouped catalog of role permission strings used by the role permissions editor.
+ *     tags:
+ *       - RBAC
+ *     responses:
+ *       200:
+ *         description: The permissions catalog.
+ */
+router.get(
+  "/permissions/catalog",
+  authenticateJWT,
+  async (_req: AuthenticatedRequest, res: Response) => {
+    res.json({ catalog: PERMISSION_CATALOG });
   },
 );
 
@@ -821,38 +965,24 @@ router.delete(
     }
 
     try {
-      const role = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          isSystem: roles.isSystem,
-        })
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+      const role = await createCurrentRoleRepository().findRoleById(roleId);
 
-      if (role.length === 0) {
+      if (!role) {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      if (role[0].isSystem) {
+      if (role.isSystem) {
         return res.status(403).json({
           error: "Cannot delete system roles",
         });
       }
 
-      const deletedUserRoles = await db
-        .delete(userRoles)
-        .where(eq(userRoles.roleId, roleId))
-        .returning({ userId: userRoles.userId });
+      const { deletedUserIds } =
+        await createCurrentRoleRepository().deleteRole(roleId);
 
-      for (const { userId } of deletedUserRoles) {
+      for (const userId of deletedUserIds) {
         permissionManager.invalidateUserPermissionCache(userId);
       }
-
-      await db.delete(hostAccess).where(eq(hostAccess.roleId, roleId));
-
-      await db.delete(roles).where(eq(roles.id, roleId));
 
       res.json({
         success: true,
@@ -922,83 +1052,58 @@ router.post(
         return res.status(400).json({ error: "Role ID is required" });
       }
 
-      const targetUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, targetUserId))
-        .limit(1);
+      const targetUser =
+        await createCurrentUserRepository().findById(targetUserId);
 
-      if (targetUser.length === 0) {
+      if (!targetUser) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const role = await db
-        .select()
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+      const role = await createCurrentRoleRepository().findRoleById(roleId);
 
-      if (role.length === 0) {
+      if (!role) {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      if (role[0].isSystem) {
+      if (role.isSystem) {
         return res.status(403).json({
           error:
             "System roles (admin, user) are automatically assigned and cannot be manually assigned",
         });
       }
 
-      const existing = await db
-        .select()
-        .from(userRoles)
-        .where(
-          and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
-        )
-        .limit(1);
+      const existing = await createCurrentRoleRepository().findUserRole(
+        targetUserId,
+        roleId,
+      );
 
-      if (existing.length > 0) {
+      if (existing) {
         return res.status(409).json({ error: "Role already assigned" });
       }
 
-      await db.insert(userRoles).values({
+      await createCurrentRoleRepository().assignRoleToUser({
         userId: targetUserId,
         roleId,
         grantedBy: currentUserId,
       });
 
-      const hostsSharedWithRole = await db
-        .select()
-        .from(hostAccess)
-        .innerJoin(hosts, eq(hostAccess.hostId, hosts.id))
-        .where(eq(hostAccess.roleId, roleId));
-
-      const { SharedCredentialManager } =
-        await import("../../utils/shared-credential-manager.js");
-      const sharedCredManager = SharedCredentialManager.getInstance();
-
-      for (const { host_access, ssh_data } of hostsSharedWithRole) {
-        if (ssh_data.credentialId) {
-          try {
-            await sharedCredManager.createSharedCredentialForUser(
-              host_access.id,
-              ssh_data.credentialId,
-              targetUserId,
-              ssh_data.userId,
-            );
-          } catch (error) {
-            databaseLogger.error(
-              "Failed to create shared credential for new role member",
-              error,
-              {
-                operation: "assign_role_create_credentials",
-                targetUserId,
-                roleId,
-                hostId: ssh_data.id,
-              },
-            );
-          }
-        }
+      try {
+        const { SharedHostSecretsManager } =
+          await import("../../utils/shared-host-secrets-manager.js");
+        await SharedHostSecretsManager.getInstance().snapshotForRoleMember(
+          roleId,
+          targetUserId,
+        );
+      } catch (error) {
+        databaseLogger.error(
+          "Failed to snapshot shared host secrets for new role member",
+          error,
+          {
+            operation: "assign_role_snapshot_secrets",
+            targetUserId,
+            roleId,
+          },
+        );
       }
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
@@ -1007,7 +1112,7 @@ router.post(
         adminId: currentUserId,
         targetUserId,
         roleId,
-        roleName: role[0].name,
+        roleName: role.name,
       });
 
       res.json({
@@ -1073,32 +1178,45 @@ router.delete(
     }
 
     try {
-      const role = await db
-        .select({
-          id: roles.id,
-          name: roles.name,
-          isSystem: roles.isSystem,
-        })
-        .from(roles)
-        .where(eq(roles.id, roleId))
-        .limit(1);
+      const role = await createCurrentRoleRepository().findRoleById(roleId);
 
-      if (role.length === 0) {
+      if (!role) {
         return res.status(404).json({ error: "Role not found" });
       }
 
-      if (role[0].isSystem) {
+      if (role.isSystem) {
         return res.status(403).json({
           error:
             "System roles (admin, user) are automatically assigned and cannot be removed",
         });
       }
 
-      await db
-        .delete(userRoles)
-        .where(
-          and(eq(userRoles.userId, targetUserId), eq(userRoles.roleId, roleId)),
+      await createCurrentRoleRepository().removeRoleFromUser(
+        targetUserId,
+        roleId,
+      );
+
+      try {
+        const { createCurrentSharedHostSecretsRepository } =
+          await import("../repositories/factory.js");
+        await createCurrentSharedHostSecretsRepository().deleteForRoleMember(
+          roleId,
+          targetUserId,
         );
+      } catch (cleanupError) {
+        databaseLogger.warn(
+          "Failed to clean shared host secrets after role removal",
+          {
+            operation: "remove_role_secret_cleanup",
+            targetUserId,
+            roleId,
+            error:
+              cleanupError instanceof Error
+                ? cleanupError.message
+                : "Unknown error",
+          },
+        );
+      }
 
       permissionManager.invalidateUserPermissionCache(targetUserId);
       databaseLogger.info("Role removed from user", {
@@ -1162,19 +1280,8 @@ router.get(
     }
 
     try {
-      const userRolesList = await db
-        .select({
-          id: userRoles.id,
-          roleId: roles.id,
-          roleName: roles.name,
-          roleDisplayName: roles.displayName,
-          description: roles.description,
-          isSystem: roles.isSystem,
-          grantedAt: userRoles.grantedAt,
-        })
-        .from(userRoles)
-        .innerJoin(roles, eq(userRoles.roleId, roles.id))
-        .where(eq(userRoles.userId, targetUserId));
+      const userRolesList =
+        await createCurrentRoleRepository().listUserRoles(targetUserId);
 
       res.json({ roles: userRolesList });
     } catch (error) {
@@ -1187,9 +1294,7 @@ router.get(
   },
 );
 
-// ============================================================================
 // SNIPPET SHARING
-// ============================================================================
 
 /**
  * @openapi
@@ -1237,32 +1342,25 @@ router.post(
           .json({ error: "Target role ID is required when sharing with role" });
       }
 
-      const snippet = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-        .limit(1);
+      const snippet = await createCurrentSnippetRepository().findOwnedById(
+        userId,
+        snippetId,
+      );
 
-      if (snippet.length === 0) {
+      if (!snippet) {
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
       if (targetType === "user") {
-        const targetUser = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.id, targetUserId))
-          .limit(1);
-        if (targetUser.length === 0) {
+        const targetUser =
+          await createCurrentUserRepository().findById(targetUserId);
+        if (!targetUser) {
           return res.status(404).json({ error: "Target user not found" });
         }
       } else {
-        const targetRole = await db
-          .select({ id: roles.id })
-          .from(roles)
-          .where(eq(roles.id, targetRoleId))
-          .limit(1);
-        if (targetRole.length === 0) {
+        const targetRole =
+          await createCurrentRoleRepository().findRoleById(targetRoleId);
+        if (!targetRole) {
           return res.status(404).json({ error: "Target role not found" });
         }
       }
@@ -1278,40 +1376,23 @@ router.post(
         expiresAt = expiryDate.toISOString();
       }
 
-      const whereConditions = [eq(snippetAccess.snippetId, snippetId)];
-      if (targetType === "user") {
-        whereConditions.push(eq(snippetAccess.userId, targetUserId));
-      } else {
-        whereConditions.push(eq(snippetAccess.roleId, targetRoleId));
-      }
+      const accessGrant =
+        await createCurrentRbacAccessRepository().upsertSnippetAccess({
+          snippetId,
+          grantedBy: userId,
+          expiresAt,
+          ...(targetType === "user"
+            ? { targetType: "user" as const, targetUserId: targetUserId! }
+            : { targetType: "role" as const, targetRoleId: targetRoleId! }),
+        });
 
-      const existing = await db
-        .select()
-        .from(snippetAccess)
-        .where(and(...whereConditions))
-        .limit(1);
-
-      if (existing.length > 0) {
-        await db
-          .update(snippetAccess)
-          .set({ expiresAt })
-          .where(eq(snippetAccess.id, existing[0].id));
-
+      if (!accessGrant.created) {
         return res.json({
           success: true,
           message: "Snippet access updated",
           expiresAt,
         });
       }
-
-      await db.insert(snippetAccess).values({
-        snippetId,
-        userId: targetType === "user" ? targetUserId : null,
-        roleId: targetType === "role" ? targetRoleId : null,
-        grantedBy: userId,
-        permissionLevel: "view",
-        expiresAt,
-      });
 
       databaseLogger.success("Snippet shared successfully", {
         operation: "rbac_snippet_share",
@@ -1359,17 +1440,19 @@ router.delete(
     }
 
     try {
-      const snippet = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-        .limit(1);
+      const snippet = await createCurrentSnippetRepository().findOwnedById(
+        userId,
+        snippetId,
+      );
 
-      if (snippet.length === 0) {
+      if (!snippet) {
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
-      await db.delete(snippetAccess).where(eq(snippetAccess.id, accessId));
+      await createCurrentRbacAccessRepository().revokeSnippetAccess(
+        accessId,
+        snippetId,
+      );
 
       res.json({ success: true, message: "Snippet access revoked" });
     } catch (error) {
@@ -1404,50 +1487,17 @@ router.get(
     }
 
     try {
-      const snippet = await db
-        .select()
-        .from(snippets)
-        .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-        .limit(1);
+      const snippet = await createCurrentSnippetRepository().findOwnedById(
+        userId,
+        snippetId,
+      );
 
-      if (snippet.length === 0) {
+      if (!snippet) {
         return res.status(403).json({ error: "Not snippet owner" });
       }
 
-      const rawAccessList = await db
-        .select({
-          id: snippetAccess.id,
-          userId: snippetAccess.userId,
-          roleId: snippetAccess.roleId,
-          username: users.username,
-          roleName: roles.name,
-          roleDisplayName: roles.displayName,
-          grantedBy: snippetAccess.grantedBy,
-          grantedByUsername: sql<string>`(SELECT username FROM users WHERE id = ${snippetAccess.grantedBy})`,
-          permissionLevel: snippetAccess.permissionLevel,
-          expiresAt: snippetAccess.expiresAt,
-          createdAt: snippetAccess.createdAt,
-        })
-        .from(snippetAccess)
-        .leftJoin(users, eq(snippetAccess.userId, users.id))
-        .leftJoin(roles, eq(snippetAccess.roleId, roles.id))
-        .where(eq(snippetAccess.snippetId, snippetId))
-        .orderBy(desc(snippetAccess.createdAt));
-
-      const accessList = rawAccessList.map((access) => ({
-        id: access.id,
-        targetType: access.userId ? "user" : "role",
-        userId: access.userId,
-        roleId: access.roleId,
-        username: access.username,
-        roleName: access.roleName,
-        roleDisplayName: access.roleDisplayName,
-        grantedBy: access.grantedBy,
-        grantedByUsername: access.grantedByUsername,
-        permissionLevel: access.permissionLevel,
-        expiresAt: access.expiresAt,
-        createdAt: access.createdAt,
-      }));
+      const accessList =
+        await createCurrentRbacAccessRepository().listSnippetAccess(snippetId);
 
       res.json({ accessList });
     } catch (error) {
@@ -1476,72 +1526,15 @@ router.get(
     const userId = req.userId!;
 
     try {
-      const now = new Date().toISOString();
-
-      const directShared = await db
-        .select({
-          id: snippets.id,
-          name: snippets.name,
-          content: snippets.content,
-          description: snippets.description,
-          folder: snippets.folder,
-          ownerUsername: users.username,
-          permissionLevel: snippetAccess.permissionLevel,
-          expiresAt: snippetAccess.expiresAt,
-        })
-        .from(snippetAccess)
-        .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-        .innerJoin(users, eq(snippets.userId, users.id))
-        .where(
-          and(
-            eq(snippetAccess.userId, userId),
-            or(
-              isNull(snippetAccess.expiresAt),
-              gte(snippetAccess.expiresAt, now),
-            ),
-          ),
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
+      const sharedSnippets =
+        await createCurrentRbacAccessRepository().listSharedSnippets(
+          userId,
+          roleIds,
         );
 
-      const userRoleRows = await db
-        .select({ roleId: userRoles.roleId })
-        .from(userRoles)
-        .where(eq(userRoles.userId, userId));
-      const roleIds = userRoleRows.map((r) => r.roleId);
-
-      let roleShared: typeof directShared = [];
-      if (roleIds.length > 0) {
-        const directIds = directShared.map((s) => s.id);
-        const roleResults = await db
-          .select({
-            id: snippets.id,
-            name: snippets.name,
-            content: snippets.content,
-            description: snippets.description,
-            folder: snippets.folder,
-            ownerUsername: users.username,
-            permissionLevel: snippetAccess.permissionLevel,
-            expiresAt: snippetAccess.expiresAt,
-          })
-          .from(snippetAccess)
-          .innerJoin(snippets, eq(snippetAccess.snippetId, snippets.id))
-          .innerJoin(users, eq(snippets.userId, users.id))
-          .where(
-            and(
-              or(
-                isNull(snippetAccess.expiresAt),
-                gte(snippetAccess.expiresAt, now),
-              ),
-              sql`${snippetAccess.roleId} IN (${sql.join(
-                roleIds.map((id) => sql`${id}`),
-                sql`, `,
-              )})`,
-            ),
-          );
-
-        roleShared = roleResults.filter((s) => !directIds.includes(s.id));
-      }
-
-      res.json({ sharedSnippets: [...directShared, ...roleShared] });
+      res.json({ sharedSnippets });
     } catch (error) {
       databaseLogger.error("Failed to get shared snippets", error, {
         operation: "get_shared_snippets",
@@ -1564,39 +1557,31 @@ router.put(
         return res.status(400).json({ error: "Invalid host ID" });
       }
 
-      const access = await db
-        .select()
-        .from(hostAccess)
-        .where(
-          and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)),
-        )
-        .limit(1);
+      const access =
+        await createCurrentRbacAccessRepository().findDirectHostAccess(
+          hostId,
+          userId,
+        );
 
-      if (access.length === 0) {
+      if (!access) {
         return res.status(403).json({ error: "No access to this host" });
       }
 
       if (credentialId) {
-        const cred = await db
-          .select({ id: sshCredentials.id })
-          .from(sshCredentials)
-          .where(
-            and(
-              eq(sshCredentials.id, credentialId),
-              eq(sshCredentials.userId, userId),
-            ),
-          )
-          .limit(1);
+        const cred = await createCurrentCredentialRepository().findByIdForUser(
+          userId,
+          credentialId,
+        );
 
-        if (cred.length === 0) {
+        if (!cred) {
           return res.status(404).json({ error: "Credential not found" });
         }
       }
 
-      await db
-        .update(hostAccess)
-        .set({ overrideCredentialId: credentialId || null })
-        .where(eq(hostAccess.id, access[0].id));
+      await createCurrentRbacAccessRepository().updateHostAccessOverrideCredential(
+        access.id,
+        credentialId || null,
+      );
 
       res.json({ success: true });
     } catch (error) {

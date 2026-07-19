@@ -10,6 +10,7 @@ import { Toaster } from "@/components/sonner";
 import { Auth, getStoredAuth, clearStoredAuth } from "@/auth/Auth";
 import { getUserInfo, getCurrentToken, appReadyPromise } from "@/main-axios";
 import { applyAccentColor, applyFontSize } from "@/lib/theme";
+import { installElectronWheelZoomGuard } from "@/lib/electron-wheel-zoom";
 import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
@@ -339,6 +340,8 @@ function RootApp() {
 
   return <App />;
 }
+
+installElectronWheelZoomGuard();
 
 prepareClientCacheVersion().finally(() => {
   createRoot(document.getElementById("root")!).render(

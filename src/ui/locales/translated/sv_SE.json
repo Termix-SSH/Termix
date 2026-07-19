@@ -864,6 +864,21 @@
     "proxmoxDockerDetectionDesc": "Kommaavgränsade namnmönster som gör det möjligt för Docker att matcha gäster",
     "proxmoxPreferredRanges": "Föredragna IP-intervall",
     "proxmoxPreferredRangesDesc": "Kommaavgränsade prefix i prioritetsordning för IP-val när en gäst har flera gränssnitt",
+    "proxmoxAutoSync": "Synkronisera gäster automatiskt",
+    "proxmoxAutoSyncDesc": "Upptäck regelbundet denna Proxmox-nod och skapa eller uppdatera importerade gästvärdar medan din session är upplåst.",
+    "proxmoxSyncInterval": "Synkroniseringsintervall (minuter)",
+    "proxmoxSyncIntervalDesc": "Minst 5 minuter. Schemaläggaren hoppar över låsta användarsessioner.",
+    "proxmoxMarkMissing": "Markera saknade gäster",
+    "proxmoxMarkMissingDesc": "Lägg till en proxmox-missing-tagg när en tidigare importerad gäst försvinner istället för att ta bort den.",
+    "proxmoxLastSync": "Senaste synkronisering",
+    "proxmoxLastSyncNever": "Inte synkroniserad än",
+    "proxmoxLastSyncNoResult": "Inga resultatdetaljer",
+    "proxmoxLastSyncSummary": "{{created}} skapad, {{updated}} uppdaterad, {{markedMissing}} saknas, {{skipped}} hoppad över",
+    "proxmoxLastSyncStatus": {
+      "success": "Framgång",
+      "error": "Misslyckades",
+      "pending": "I avvaktan på"
+    },
     "proxmoxDiscoverAction": "Upptäck och importera Proxmox-gäster",
     "proxmoxImportTitle": "Importera från Proxmox",
     "proxmoxSelectHost": "Välj en Proxmox-värd…",
@@ -1167,7 +1182,57 @@
     "shareHost": "Dela värd",
     "shareHostTitle": "Dela: {{name}}",
     "sharing": {
-      "requiresCredential": "Den här värden måste använda en autentiseringsuppgift för att aktivera delning. Redigera värden och tilldela en autentiseringsuppgift först."
+      "loadError": "Misslyckades med att ladda delningsdata. Försök igen.",
+      "shareWithSection": "Dela med",
+      "usersTab": "Användare",
+      "rolesTab": "Roller",
+      "searchPlaceholder": "Sök användare eller roller...",
+      "noMatches": "Inga träffar hittades",
+      "permissionLevelLabel": "Behörighetsnivå",
+      "levels": {
+        "connect": {
+          "label": "Ansluta",
+          "description": "Endast öppna sessioner: terminal, fjärrskrivbord, filhanterare, tunnlar och Docker. Ingen åtkomst till värdkonfigurationen."
+        },
+        "view": {
+          "label": "Se",
+          "description": "Anslut, plus se värdkonfigurationen. Hemligheter visas aldrig."
+        },
+        "edit": {
+          "label": "Redigera",
+          "description": "Visa och ändra värden. Hemligheter kan ersättas men aldrig läsas; tilldelningar av autentiseringsuppgifter förblir endast ägarens ansvar."
+        },
+        "manage": {
+          "label": "Hantera",
+          "description": "Redigera, plus dela värden med andra, ändra behörighetsnivåer och återkalla åtkomst."
+        }
+      },
+      "expiryLabel": "Åtkomstutgång",
+      "expiry": {
+        "never": "Aldrig",
+        "oneHour": "1 timme",
+        "oneDay": "24 timmar",
+        "sevenDays": "7 dagar",
+        "thirtyDays": "30 dagar",
+        "custom": "Beställnings"
+      },
+      "customHoursPlaceholder": "Timmar tills åtkomsten upphör",
+      "shareButton": "Dela",
+      "shareWithCount": "Dela ({{count}})",
+      "currentAccess": "Nuvarande åtkomst",
+      "noAccessEntries": "Denna värd har inte delats ännu",
+      "grantedBy": "Beviljad av",
+      "expires": "Utgår",
+      "expired": "Utgången",
+      "never": "Aldrig",
+      "revoke": "Återkalla",
+      "accessUpdated": "Åtkomst uppdaterad",
+      "accessUpdateFailed": "Misslyckades med att uppdatera åtkomsten",
+      "sharedBadge": "Delad",
+      "sharedBadgeTooltip": "Delad av {{owner}} ({{level}} åtkomst)",
+      "viewOnlyBanner": "Denna värd delas med dig av {{owner}} med läsbehörighet. Konfigurationen är skrivskyddad.",
+      "sharedEditBanner": "Denna värd delas med dig av {{owner}} med redigeringsåtkomst. Ändringarna gäller för den verkliga värden; autentiseringsreferenser kan endast ändras av ägaren.",
+      "ownerOnlyControl": "Endast värdägaren kan ändra detta"
     },
     "guac": {
       "connection": "Förbindelse",
@@ -1302,28 +1367,10 @@
       "backspaceKey": "Backstegstangenten",
       "saveHostFirst": "Spara värden först.",
       "sharingOptionsAfterSave": "Delningsalternativ är tillgängliga efter att värden har sparats.",
-      "sharingLoadError": "Misslyckades med att ladda delningsdata. Kontrollera din anslutning och försök igen.",
-      "shareHostSection": "Dela värd",
-      "shareWithUser": "Dela med användaren",
-      "shareWithRole": "Dela med roll",
-      "selectUser": "Välj användare",
-      "selectRole": "Välj roll",
-      "selectUserOption": "Välj en användare...",
-      "selectRoleOption": "Välj en roll...",
       "permissionLevel": "Behörighetsnivå",
-      "expiresInHours": "Utgår om (timmar)",
-      "noExpiryPlaceholder": "Lämna tomt för inget utgångsdatum",
-      "shareBtn": "Dela",
-      "currentAccess": "Nuvarande åtkomst",
       "typeHeader": "Typ",
       "targetHeader": "Mål",
       "permissionHeader": "Tillstånd",
-      "grantedByHeader": "Beviljad av",
-      "expiresHeader": "Utgår",
-      "noAccessEntries": "Inga åtkomstposter ännu.",
-      "expiredLabel": "Utgången",
-      "neverLabel": "Aldrig",
-      "revokeBtn": "Återkalla",
       "cancelBtn": "Avboka",
       "savingBtn": "Sparande...",
       "updateHostBtn": "Uppdatera värd",
@@ -2190,7 +2237,8 @@
     "passwordLoginDisabledDesc": "Lösenordsinloggning är inaktiverad. Använd en lösenordsnyckel eller en extern autentiseringsleverantör.",
     "signInWithPasskey": "Logga in med lösenord",
     "passkeyLoginFailed": "Inloggning med lösenordsnyckel misslyckades",
-    "attemptsRemaining": "{{count}} försök återstår"
+    "attemptsRemaining": "{{count}} försök återstår",
+    "confirmResetDataWipe": "Det här kontot har inte loggats in sedan krypteringsuppgraderingen, så dess lagrade data kan inte återställas utan det gamla lösenordet. Om du återställer kontot tas dess värdar, inloggningsuppgifter och kodavsnitt permanent bort. Vill du fortsätta?"
   },
   "hostKey": {
     "verifyNewHost": "Verifiera SSH-värdnyckel",
@@ -2322,6 +2370,13 @@
     "justNow": "just nu",
     "serviceLinks": "Servicelänkar",
     "homepagePreview": "Förhandsvisning av startsidan"
+  },
+  "donation": {
+    "title": "Gillar du Termix?",
+    "body": "Termix är gratis och öppen källkod, byggt och underhållet av ett team på två personer på vår fritid. Om det ersätter ett kommersiellt verktyg som du annars skulle betala för, hjälper en donation till att täcka hostingkostnader och hålla utvecklingen igång. För närvarande är donationer endast kryptovalutor.",
+    "milestones": "Donationer hjälper också till att finansiera tiden som krävs för att undersöka och lära sig vad som behövs för att bygga funktioner som SAML och Kubernetes-stöd. Se framstegen på donationssidan.",
+    "cta": "Donera",
+    "dismiss": "Kanske senare"
   },
   "dashboardTab": {
     "stable": "STABIL",
@@ -2790,6 +2845,71 @@
     "updateAdminStatusFailed": "Misslyckades med att uppdatera administratörsstatusen",
     "allSessionsRevoked": "Alla sessioner återkallade",
     "revokeSessionsFailed": "Misslyckades med att återkalla sessioner",
+    "manageUserData": "Hantera användardata",
+    "backToUsers": "Tillbaka till användarna",
+    "manageTabAccount": "Konto",
+    "manageTabHosts": "Värdar",
+    "manageTabCredentials": "Referenser",
+    "manageTabSnippets": "Snuttar",
+    "manageTabSessions": "Sessioner",
+    "manageTabDanger": "Fara",
+    "manageEditorBack": "Tillbaka till {{username}}s data",
+    "dataLockedBadge": "LÅST",
+    "dataLockedNotice": "{{username}}s data förblir låsta tills de loggar in nästa gång. Deras värdar, inloggningsuppgifter och utdrag kan inte visas eller redigeras förrän då.",
+    "resetPasswordTitle": "Återställ lösenord",
+    "resetPasswordOidcOnly": "Den här användaren loggar in via en extern leverantör och har inget lösenord.",
+    "resetPasswordPlaceholder": "Nytt lösenord",
+    "resetPasswordBtn": "Återställa",
+    "resetPasswordWorking": "Återställer...",
+    "resetPasswordSuccess": "Återställning av lösenord",
+    "resetPasswordSuccessWiped": "Lösenordsåterställning. Användarens krypterade data har raderats.",
+    "resetPasswordFailed": "Misslyckades med att återställa lösenordet",
+    "resetPasswordConfirmWipe": "{{username}} har inte loggat in sedan krypteringsuppgraderingen, så deras data kan inte återställas. Om du återställer nu raderas deras värdar, inloggningsuppgifter och kodavsnitt. Vill du fortsätta?",
+    "totpSectionTitle": "Tvåfaktorsautentisering",
+    "totpStatusEnabled": "TOTP är aktiverat för den här användaren",
+    "totpStatusDisabled": "TOTP är inte aktiverat för den här användaren",
+    "disableTotp": "Inaktivera",
+    "disableTotpConfirm": "Inaktivera tvåfaktorsautentisering för {{username}}? De kommer bara att kunna logga in med sitt lösenord.",
+    "totpDisabledSuccess": "TOTP inaktiverad",
+    "totpDisableFailed": "Misslyckades med att inaktivera TOTP",
+    "manageApiKeys": "API-nycklar",
+    "apiKeyNamePlaceholder": "Nyckelnamn",
+    "apiKeyCopyNotice": "Kopiera den här nyckeln nu, den kommer inte att visas igen.",
+    "noApiKeysForUser": "Inga API-nycklar",
+    "apiKeyDeleteFailed": "Misslyckades med att ta bort API-nyckeln",
+    "exportUserData": "Dataexport",
+    "exportUserDataDesc": "Ladda ner den här användarens värdar, inloggningsuppgifter och filhanteringsdata som JSON. Hemligheterna dekrypteras.",
+    "exportUserDataSuccess": "Användardata exporterad",
+    "exportUserDataFailed": "Misslyckades med att exportera användardata",
+    "hostsCount": "{{count}} värdar",
+    "addHostForUser": "Lägg till värd",
+    "noHostsForUser": "Den här användaren har inga värdar",
+    "connectToHost": "Ansluta",
+    "deleteHostConfirm": "Radera värden \"{{name}}\" som tillhör {{username}}?",
+    "hostDeletedSuccess": "Värd borttagen",
+    "hostDeleteFailed": "Misslyckades med att ta bort värden",
+    "credentialsCount": "{{count}} inloggningsuppgifter",
+    "addCredentialForUser": "Lägg till autentiseringsuppgifter",
+    "noCredentialsForUser": "Den här användaren har inga inloggningsuppgifter",
+    "deleteCredentialConfirm": "Ta bort inloggningsuppgifterna \"{{name}}\" som tillhör {{username}}?",
+    "credentialDeletedSuccess": "Inloggningsuppgifter raderade",
+    "credentialDeleteFailed": "Misslyckades med att ta bort inloggningsuppgifter",
+    "snippetsCount": "{{count}} utdrag",
+    "addSnippetForUser": "Lägg till utdrag",
+    "noSnippetsForUser": "Den här användaren har inga utdrag",
+    "snippetRequiredFields": "Namn och innehåll på utdrag krävs",
+    "snippetNamePlaceholder": "Namn på utdrag",
+    "snippetContentPlaceholder": "Kommandoinnehåll",
+    "snippetFolderPlaceholder": "Mapp (valfritt)",
+    "snippetSaved": "Utdrag sparat",
+    "snippetSaveFailed": "Kunde inte spara utdraget",
+    "deleteSnippetConfirm": "Ta bort utdraget \"{{name}}\" som tillhör {{username}}?",
+    "snippetDeletedSuccess": "Utdraget raderat",
+    "snippetDeleteFailed": "Misslyckades med att ta bort utdraget",
+    "noSessionsForUser": "Inga aktiva sessioner",
+    "deleteUserDangerDesc": "Ta bort {{username}} och all dess data (värdar, inloggningsuppgifter, kodavsnitt, historik) permanent. Detta kan inte ångras.",
+    "deleteUserConfirm": "Vill du permanent radera {{username}} och all deras data?",
+    "deleteUserAdminBlocked": "Ta bort administratörsstatus innan du tar bort den här användaren.",
     "createRoleRequired": "Namn och visningsnamn krävs",
     "createRoleSuccess": "Rollen \"{{name}}\" skapades",
     "createRoleFailed": "Misslyckades med att skapa rollen",
@@ -2822,7 +2942,16 @@
     "hostDefaultsCommandHistory": "Kommandohistorik",
     "hostDefaultsCommandHistoryDesc": "Spåra kommandohistorik på nya värdar som standard",
     "hostDefaultsSaved": "Värdstandardvärden sparade",
-    "hostDefaultsSaveFailed": "Misslyckades med att spara värdens standardinställningar"
+    "hostDefaultsSaveFailed": "Misslyckades med att spara värdens standardinställningar",
+    "rolePermissions": {
+      "count": "{{count}} behörigheter",
+      "editAction": "Redigera behörigheter",
+      "loadError": "Det gick inte att läsa in behörighetskatalogen",
+      "saved": "Rollbehörigheter sparade",
+      "saveError": "Kunde inte spara rollbehörigheter",
+      "save": "Spara",
+      "saving": "Sparande..."
+    }
   },
   "newUi": {
     "sidebar": {
@@ -2991,6 +3120,10 @@
         "executionFailed": "Misslyckades"
       },
       "userProfile": {
+        "donateTitle": "Håll Termix vid liv",
+        "donateDescription": "Termix är gratis, självhostat och byggt av endast ett fåtal personer på sin fritid. Om det har sparat dig tid eller pengar, hjälper en kryptodonation till att hålla det igång.",
+        "donateMilestones": "Donationer hjälper till att finansiera tiden för att undersöka och lära sig vad som behövs för att bygga stöd för SAML, Kubernetes och agenter. Se framstegen och donera.",
+        "donateButton": "Donera krypto",
         "storageModeLocal": "Webbläsare",
         "storageModeCloud": "Databas",
         "storageModeDescription": "Webbläsaren lagrar inställningar endast i den här webbläsaren. Databasen synkroniseras med servern och laddas på valfri enhet.",
@@ -3011,6 +3144,10 @@
         "twoFaOn": "På",
         "twoFaOff": "Av",
         "versionLabel": "Version",
+        "betaProgramTitle": "Betaprogram",
+        "betaProgramDescription": "Testa kommande funktioner tidigt med den veckovisa rullande :beta Docker-taggen. Instabil, inte för produktion.",
+        "betaProgramFeedback": "Hittat ett fel? Rapportera det här.",
+        "betaProgramLearnMore": "Läs mer",
         "deleteAccount": "Ta bort konto",
         "deleteAccountDescription": "Ta bort ditt konto permanent",
         "changeServerDescription": "Byt till en annan Termix-backendserver",

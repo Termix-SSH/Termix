@@ -101,7 +101,7 @@ export function AdminAuditLogSection({
       .catch(() => {});
     fetchLogs(buildFilters(), 1);
     setPage(1);
-  }, [open]);
+  }, [open, buildFilters, fetchLogs]);
 
   useEffect(() => {
     if (!open) return;
@@ -114,6 +114,9 @@ export function AdminAuditLogSection({
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [
+    open,
+    buildFilters,
+    fetchLogs,
     filterUserId,
     filterAction,
     filterResourceType,
@@ -179,7 +182,7 @@ export function AdminAuditLogSection({
               onChange={(e) => setFilterUserId(e.target.value)}
             >
               <option value="">{t("admin.auditLogFilterAll")}</option>
-              {users.map((u) => (
+              {(Array.isArray(users) ? users : []).map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.username}
                 </option>
@@ -318,7 +321,7 @@ export function AdminAuditLogSection({
                   <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[10px] font-semibold text-foreground">
-                        {log.action.replace(/_/g, " ")}
+                        {(log.action || "unknown").replace(/_/g, " ")}
                       </span>
                       <span className="text-[9px] px-1 py-px border border-border text-muted-foreground">
                         {log.resourceType}

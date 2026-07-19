@@ -114,6 +114,9 @@ export function createHostEditorForm(
       windowsPatterns: "win, windows",
       dockerPatterns: "docker",
       preferredPrefixes: "10., 192.168.",
+      autoSyncEnabled: false,
+      syncIntervalMinutes: 15,
+      markMissingGuests: true,
     },
     enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
@@ -273,7 +276,8 @@ export function buildHostEditorPayload(
     pin: form.pin,
     authType: form.authType,
     useWarpgate: form.useWarpgate,
-    password: usesPassword || usesKey ? form.password || null : null,
+    password:
+      usesPassword || usesKey || usesCredential ? form.password || null : null,
     key: usesKey
       ? form.key === "existing_key"
         ? undefined
@@ -406,7 +410,7 @@ export function buildHostEditorPayload(
           agentForwarding: form.agentForwarding,
           autoMosh: form.autoMosh,
           autoTmux: form.autoTmux,
-          sudoPasswordAutoFill: false,
+          sudoPasswordAutoFill: form.sudoPasswordAutoFill,
           sudoPassword: form.sudoPassword || null,
           keepaliveInterval: Number(form.keepaliveInterval),
           keepaliveCountMax: Number(form.keepaliveCountMax),

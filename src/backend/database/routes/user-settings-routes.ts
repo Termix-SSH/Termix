@@ -1,19 +1,21 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
-import { eq } from "drizzle-orm";
-import { restartGuacServer } from "../../guacamole/guacamole-server.js";
+import { restartGuacServer } from "../../hosts/guacamole/guacamole-server.js";
 import {
   authLogger,
   getGlobalLogLevel,
   setGlobalLogLevel,
 } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
-  formatGuacdOptions,
-  resolveGuacdOptions,
-} from "../../utils/guacd-config.js";
+  createCurrentSettingsRepository,
+  createCurrentUserRepository,
+} from "../repositories/factory.js";
+import type { UserRecord } from "../repositories/user-repository.js";
+
+function getDefaultGuacUrl(): string {
+  return `${process.env.GUACD_HOST || "localhost"}:${process.env.GUACD_PORT || "4822"}`;
+}
 
 export type HostDefaults = {
   useSocks5?: boolean;
@@ -32,6 +34,14 @@ export type HostDefaults = {
   enableSessionLogging?: boolean;
   enableCommandHistory?: boolean;
 };
+
+async function getAdminActor(
+  userId: string | undefined,
+): Promise<UserRecord | null> {
+  if (!userId) return null;
+  const user = await createCurrentUserRepository().findById(userId);
+  return user?.isAdmin ? user : null;
+}
 
 export function registerUserSettingsRoutes(
   router: Router,
@@ -62,15 +72,12 @@ export function registerUserSettingsRoutes(
    */
   router.get("/guacamole-settings", authenticateJWT, async (_req, res) => {
     try {
-      const enabledRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
-        .get() as { value: string } | undefined;
-      const urlRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-        .get() as { value: string } | undefined;
+      const settings = createCurrentSettingsRepository();
+      const enabled = await settings.getBoolean("guac_enabled", true);
+      const url = await settings.get("guac_url");
       res.json({
-        enabled: enabledRow ? enabledRow.value !== "false" : true,
-        url: formatGuacdOptions(resolveGuacdOptions(urlRow?.value)),
+        enabled,
+        url: url ?? getDefaultGuacUrl(),
       });
     } catch (err) {
       authLogger.error("Failed to get guacamole settings", err);
@@ -108,24 +115,17 @@ export function registerUserSettingsRoutes(
   router.patch("/guacamole-settings", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { enabled, url } = req.body;
+      const settings = createCurrentSettingsRepository();
       if (typeof enabled === "boolean") {
-        db.$client
-          .prepare(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES ('guac_enabled', ?)",
-          )
-          .run(enabled ? "true" : "false");
+        await settings.set("guac_enabled", enabled ? "true" : "false");
       }
       if (typeof url === "string") {
-        db.$client
-          .prepare(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES ('guac_url', ?)",
-          )
-          .run(url);
+        await settings.set("guac_url", url);
         try {
           await restartGuacServer();
         } catch (err) {
@@ -135,22 +135,13 @@ export function registerUserSettingsRoutes(
           );
         }
       }
-      const enabledRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
-        .get() as { value: string } | undefined;
-      const urlRow = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-        .get() as { value: string } | undefined;
+      const currentEnabled = await settings.getBoolean("guac_enabled", true);
+      const currentUrl = await settings.get("guac_url");
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_guacamole_settings",
         resourceType: "setting",
         details: JSON.stringify({ enabled, url }),
@@ -160,8 +151,8 @@ export function registerUserSettingsRoutes(
       });
 
       res.json({
-        enabled: enabledRow ? enabledRow.value !== "false" : true,
-        url: formatGuacdOptions(resolveGuacdOptions(urlRow?.value)),
+        enabled: currentEnabled,
+        url: currentUrl ?? getDefaultGuacUrl(),
       });
     } catch (err) {
       authLogger.error("Failed to update guacamole settings", err);
@@ -183,11 +174,9 @@ export function registerUserSettingsRoutes(
    */
   router.get("/log-level", authenticateJWT, async (_req, res) => {
     try {
-      const row = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'log_level'")
-        .get() as { value: string } | undefined;
+      const level = await createCurrentSettingsRepository().get("log_level");
       res.json({
-        level: row ? row.value : getGlobalLogLevel(),
+        level: level ?? getGlobalLogLevel(),
       });
     } catch (err) {
       authLogger.error("Failed to get log level", err);
@@ -214,8 +203,8 @@ export function registerUserSettingsRoutes(
   router.patch("/log-level", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { level } = req.body;
@@ -225,22 +214,13 @@ export function registerUserSettingsRoutes(
           .status(400)
           .json({ error: "level must be one of: debug, info, warn, error" });
       }
-      db.$client
-        .prepare(
-          "INSERT OR REPLACE INTO settings (key, value) VALUES ('log_level', ?)",
-        )
-        .run(level);
+      await createCurrentSettingsRepository().set("log_level", level);
       setGlobalLogLevel(level);
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_log_level",
         resourceType: "setting",
         details: JSON.stringify({ level }),
@@ -270,13 +250,11 @@ export function registerUserSettingsRoutes(
    */
   router.get("/session-timeout", authenticateJWT, async (_req, res) => {
     try {
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'session_timeout_hours'",
-        )
-        .get() as { value: string } | undefined;
+      const value = await createCurrentSettingsRepository().get(
+        "session_timeout_hours",
+      );
       res.json({
-        timeoutHours: row ? parseInt(row.value, 10) : 24,
+        timeoutHours: value ? parseInt(value, 10) : 24,
       });
     } catch (err) {
       authLogger.error("Failed to get session timeout", err);
@@ -303,8 +281,8 @@ export function registerUserSettingsRoutes(
   router.patch("/session-timeout", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { timeoutHours } = req.body;
@@ -317,21 +295,15 @@ export function registerUserSettingsRoutes(
           .status(400)
           .json({ error: "timeoutHours must be between 1 and 720" });
       }
-      db.$client
-        .prepare(
-          "INSERT OR REPLACE INTO settings (key, value) VALUES ('session_timeout_hours', ?)",
-        )
-        .run(String(timeoutHours));
+      await createCurrentSettingsRepository().set(
+        "session_timeout_hours",
+        String(timeoutHours),
+      );
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_session_timeout",
         resourceType: "setting",
         details: JSON.stringify({ timeoutHours }),
@@ -371,10 +343,9 @@ export function registerUserSettingsRoutes(
    */
   router.get("/tailscale-settings", authenticateJWT, async (_req, res) => {
     try {
-      const row = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'tailscale_api_key'")
-        .get() as { value: string } | undefined;
-      const apiKey = row?.value ?? "";
+      const apiKey =
+        (await createCurrentSettingsRepository().get("tailscale_api_key")) ??
+        "";
       res.json({
         apiKey: apiKey
           ? `${apiKey.slice(0, 6)}${"*".repeat(Math.max(0, apiKey.length - 6))}`
@@ -415,29 +386,20 @@ export function registerUserSettingsRoutes(
   router.patch("/tailscale-settings", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const { apiKey } = req.body;
       if (typeof apiKey !== "string") {
         return res.status(400).json({ error: "apiKey must be a string" });
       }
-      db.$client
-        .prepare(
-          "INSERT OR REPLACE INTO settings (key, value) VALUES ('tailscale_api_key', ?)",
-        )
-        .run(apiKey);
+      await createCurrentSettingsRepository().set("tailscale_api_key", apiKey);
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_tailscale_settings",
         resourceType: "setting",
         details: JSON.stringify({ hasApiKey: !!apiKey }),
@@ -474,12 +436,12 @@ export function registerUserSettingsRoutes(
    */
   router.get("/command-history-enabled", authenticateJWT, async (_req, res) => {
     try {
-      const row = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'command_history_enabled'",
-        )
-        .get() as { value: string } | undefined;
-      res.json({ enabled: row ? row.value !== "false" : true });
+      res.json({
+        enabled: await createCurrentSettingsRepository().getBoolean(
+          "command_history_enabled",
+          true,
+        ),
+      });
     } catch (err) {
       authLogger.error("Failed to get command history enabled setting", err);
       res
@@ -519,29 +481,23 @@ export function registerUserSettingsRoutes(
     async (req, res) => {
       const userId = (req as AuthenticatedRequest).userId;
       try {
-        const user = await db.select().from(users).where(eq(users.id, userId));
-        if (!user || user.length === 0 || !user[0].isAdmin) {
+        const actor = await getAdminActor(userId);
+        if (!actor) {
           return res.status(403).json({ error: "Not authorized" });
         }
         const { enabled } = req.body;
         if (typeof enabled !== "boolean") {
           return res.status(400).json({ error: "enabled must be a boolean" });
         }
-        db.$client
-          .prepare(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES ('command_history_enabled', ?)",
-          )
-          .run(enabled ? "true" : "false");
+        await createCurrentSettingsRepository().set(
+          "command_history_enabled",
+          enabled ? "true" : "false",
+        );
 
         const { ipAddress, userAgent } = getRequestMeta(req);
-        const actorRecord = await db
-          .select({ username: users.username })
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1);
         await logAudit({
           userId,
-          username: actorRecord[0]?.username ?? userId,
+          username: actor.username ?? userId,
           action: "update_command_history_enabled",
           resourceType: "setting",
           details: JSON.stringify({ enabled }),
@@ -579,10 +535,9 @@ export function registerUserSettingsRoutes(
    */
   router.get("/host-defaults", authenticateJWT, async (_req, res) => {
     try {
-      const row = db.$client
-        .prepare("SELECT value FROM settings WHERE key = 'host_defaults'")
-        .get() as { value: string } | undefined;
-      const defaults: HostDefaults = row ? JSON.parse(row.value) : {};
+      const value =
+        await createCurrentSettingsRepository().get("host_defaults");
+      const defaults: HostDefaults = value ? JSON.parse(value) : {};
       res.json(defaults);
     } catch (err) {
       authLogger.error("Failed to get host defaults", err);
@@ -615,26 +570,20 @@ export function registerUserSettingsRoutes(
   router.patch("/host-defaults", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user || user.length === 0 || !user[0].isAdmin) {
+      const actor = await getAdminActor(userId);
+      if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
       const defaults: HostDefaults = req.body;
-      db.$client
-        .prepare(
-          "INSERT OR REPLACE INTO settings (key, value) VALUES ('host_defaults', ?)",
-        )
-        .run(JSON.stringify(defaults));
+      await createCurrentSettingsRepository().set(
+        "host_defaults",
+        JSON.stringify(defaults),
+      );
 
       const { ipAddress, userAgent } = getRequestMeta(req);
-      const actorRecord = await db
-        .select({ username: users.username })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
       await logAudit({
         userId,
-        username: actorRecord[0]?.username ?? userId,
+        username: actor.username ?? userId,
         action: "update_host_defaults",
         resourceType: "setting",
         details: JSON.stringify(defaults),

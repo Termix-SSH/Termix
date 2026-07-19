@@ -138,6 +138,18 @@ export function ProxmoxDiscoverDialog({
           enableDocker: g.enableDocker,
           connectionType: g.connectionType,
           tags: ["proxmox", g.type, g.node],
+          proxmoxConfig: {
+            source: {
+              source: "proxmox",
+              sourceHostId: Number(effectiveHostId),
+              node: g.node,
+              vmid: g.vmid,
+              type: g.type,
+              lastSeenAt: new Date().toISOString(),
+              lastStatus: g.status,
+              missingSince: null,
+            },
+          },
         }));
 
       const result = await bulkImportSSHHosts(toImport, false);

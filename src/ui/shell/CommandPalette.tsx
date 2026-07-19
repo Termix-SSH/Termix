@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
+import { canEditHost } from "@/sidebar/host-permissions";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -126,14 +127,18 @@ export function CommandPalette({
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
         setIsOpen(false);
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setIsOpen]);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [isOpen, setIsOpen]);
 
   const filteredHosts = hosts.filter(
     (h) =>
@@ -399,6 +404,11 @@ export function CommandPalette({
                               <span className="text-sm font-semibold truncate">
                                 {host.name}
                               </span>
+                              {host.isShared && (
+                                <span className="text-[9px] px-1 py-px border border-accent-brand/30 bg-accent-brand/10 text-accent-brand shrink-0 leading-none uppercase tracking-wider">
+                                  {t("hosts.sharing.sharedBadge")}
+                                </span>
+                              )}
                               {host.online && (
                                 <span className="size-1.5 rounded-full bg-accent-brand animate-pulse shrink-0" />
                               )}
@@ -477,25 +487,32 @@ export function CommandPalette({
                                 Telnet
                               </button>
                             )}
-                            <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
-                            <button
-                              title="Edit Host"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIsOpen(false);
-                                onOpenTab("host-manager");
-                                setTimeout(() => {
-                                  window.dispatchEvent(
-                                    new CustomEvent("host-manager:edit-host", {
-                                      detail: host.id,
-                                    }),
-                                  );
-                                }, 100);
-                              }}
-                              className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
-                            >
-                              <Pencil className="size-3.5" />
-                            </button>
+                            {canEditHost(host) && (
+                              <>
+                                <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
+                                <button
+                                  title="Edit Host"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsOpen(false);
+                                    onOpenTab("host-manager");
+                                    setTimeout(() => {
+                                      window.dispatchEvent(
+                                        new CustomEvent(
+                                          "host-manager:edit-host",
+                                          {
+                                            detail: host.id,
+                                          },
+                                        ),
+                                      );
+                                    }, 100);
+                                  }}
+                                  className="flex items-center justify-center size-7 rounded text-muted-foreground/50 hover:text-foreground hover:bg-muted-foreground/10 transition-colors"
+                                >
+                                  <Pencil className="size-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </CommandItem>
                       ))}

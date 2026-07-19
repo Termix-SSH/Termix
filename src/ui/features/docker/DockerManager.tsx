@@ -335,7 +335,10 @@ function DockerManagerInner({
     };
 
     pollContainers();
-    const interval = setInterval(pollContainers, 5000);
+    const interval = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      void pollContainers();
+    }, 5000);
 
     return () => {
       cancelled = true;

@@ -28,6 +28,7 @@ export async function updateRole(
   roleData: {
     displayName?: string;
     description?: string | null;
+    permissions?: string[];
   },
 ): Promise<{ role: Role }> {
   try {
@@ -88,16 +89,30 @@ export async function removeRoleFromUser(
   }
 }
 
+export type SharePermissionLevel = "connect" | "view" | "edit" | "manage";
+
+export interface ShareTarget {
+  type: "user" | "role";
+  id: string | number;
+}
+
 export async function shareHost(
   hostId: number,
   shareData: {
-    targetType: "user" | "role";
-    targetUserId?: string;
-    targetRoleId?: number;
-    permissionLevel: "view";
+    targets: ShareTarget[];
+    permissionLevel: SharePermissionLevel;
     durationHours?: number;
   },
-): Promise<{ success: boolean }> {
+): Promise<{
+  success: boolean;
+  expiresAt: string | null;
+  results: Array<{
+    type: "user" | "role";
+    id: string | number;
+    accessId: number;
+    created: boolean;
+  }>;
+}> {
   try {
     const response = await rbacApi.post(
       `/rbac/host/${hostId}/share`,
@@ -109,14 +124,72 @@ export async function shareHost(
   }
 }
 
+export async function updateHostAccess(
+  hostId: number,
+  accessId: number,
+  update: {
+    permissionLevel?: SharePermissionLevel;
+    durationHours?: number | null;
+  },
+): Promise<{ success: boolean; expiresAt: string | null }> {
+  try {
+    const response = await rbacApi.patch(
+      `/rbac/host/${hostId}/access/${accessId}`,
+      update,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update host access");
+  }
+}
+
 export async function getHostAccess(
   hostId: number,
-): Promise<{ accessList: AccessRecord[] }> {
+): Promise<{ accessList: AccessRecord[]; isOwner?: boolean }> {
   try {
     const response = await rbacApi.get(`/rbac/host/${hostId}/access`);
     return response.data;
   } catch (error) {
     throw handleApiError(error, "fetch host access");
+  }
+}
+
+export interface PermissionCatalogEntry {
+  group: string;
+  permissions: string[];
+}
+
+export async function getPermissionsCatalog(): Promise<{
+  catalog: PermissionCatalogEntry[];
+}> {
+  try {
+    const response = await rbacApi.get("/rbac/permissions/catalog");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch permissions catalog");
+  }
+}
+
+export async function getSharedHosts(): Promise<{
+  sharedHosts: Array<{
+    id: number;
+    name: string | null;
+    ip: string;
+    port: number;
+    username: string;
+    folder: string | null;
+    tags: string | null;
+    permissionLevel: SharePermissionLevel;
+    expiresAt: string | null;
+    grantedBy: string;
+    ownerUsername: string;
+  }>;
+}> {
+  try {
+    const response = await rbacApi.get("/rbac/shared-hosts");
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch shared hosts");
   }
 }
 

@@ -92,6 +92,8 @@ interface NetworkGraphCardProps {
   rightSidebarWidth?: number;
   embedded?: boolean;
   onOpenInNewTab?: () => void;
+  /** When false, pause status refresh while the surface stays mounted. */
+  isVisible?: boolean;
 }
 
 type NetworkElement = NetworkTopologyNode | NetworkTopologyEdge;
@@ -195,6 +197,7 @@ function buildNodeSvg(
 export function NetworkGraphCard({
   embedded = true,
   onOpenInNewTab,
+  isVisible = true,
 }: NetworkGraphCardProps): React.ReactElement {
   const { t } = useTranslation();
   const { addTab } = useTabsSafe();
@@ -269,8 +272,19 @@ export function NetworkGraphCard({
   }, [hostMap]);
 
   useEffect(() => {
+    if (!isVisible) {
+      if (statusIntervalRef.current) {
+        clearInterval(statusIntervalRef.current);
+        statusIntervalRef.current = null;
+      }
+      return;
+    }
+
     loadData();
-    statusIntervalRef.current = setInterval(updateHostStatuses, 30000);
+    statusIntervalRef.current = setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      updateHostStatuses();
+    }, 30000);
     const onClickOutside = (e: MouseEvent) => {
       if (
         contextMenuRef.current &&
@@ -293,7 +307,7 @@ export function NetworkGraphCard({
       document.removeEventListener("mousedown", onClickOutside, true);
       themeObserver.disconnect();
     };
-  }, []);
+  }, [isVisible]);
 
   const loadData = async () => {
     setLoading(true);

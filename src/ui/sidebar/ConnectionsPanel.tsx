@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/tooltip";
+import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 
 const CONNECTION_TAB_TYPES: TabType[] = [
   "terminal",
@@ -47,6 +48,28 @@ function formatDuration(ms: number): string {
   if (m < 60) return `${m}m ${s % 60}s`;
   const h = Math.floor(m / 60);
   return `${h}h ${m % 60}m`;
+}
+
+function sessionsUnchanged(
+  prev: ActiveSessionInfo[],
+  next: ActiveSessionInfo[],
+): boolean {
+  if (prev.length !== next.length) return false;
+  for (let i = 0; i < prev.length; i++) {
+    const a = prev[i];
+    const b = next[i];
+    if (
+      a.sessionId !== b.sessionId ||
+      a.hostId !== b.hostId ||
+      a.hostName !== b.hostName ||
+      a.tabInstanceId !== b.tabInstanceId ||
+      a.isConnected !== b.isConnected ||
+      a.createdAt !== b.createdAt
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 function formatExpiry(updatedAt: string): string {
@@ -285,7 +308,6 @@ export function ConnectionsPanel({
   const [now, setNow] = useState(Date.now());
   const [activeSessions, setActiveSessions] = useState<ActiveSessionInfo[]>([]);
   const [search, setSearch] = useState("");
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Drag-to-reorder state
   const [dragTabId, setDragTabId] = useState<string | null>(null);
@@ -322,17 +344,15 @@ export function ConnectionsPanel({
       })
     : backgroundTabs;
 
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  // Duration labels only need minute-level freshness; 1s ticks re-render the whole panel.
+  usePageVisibleInterval(() => setNow(Date.now()), 15_000);
 
   const refresh = useCallback(async () => {
     try {
       const sessions = await getActiveSessions();
       setActiveSessions((prev) => {
         const next = Array.isArray(sessions) ? sessions : [];
-        if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
+        if (sessionsUnchanged(prev, next)) return prev;
         return next;
       });
     } catch {
@@ -340,13 +360,10 @@ export function ConnectionsPanel({
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-    pollTimerRef.current = setInterval(refresh, 5000);
-    return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    };
-  }, [refresh]);
+  // Initial fetch + visibility-aware poll (hook fires once on mount).
+  usePageVisibleInterval(() => {
+    void refresh();
+  }, 5_000);
 
   // Global pointer listeners for drag reorder
   useEffect(() => {

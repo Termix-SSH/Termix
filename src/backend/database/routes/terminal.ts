@@ -1,11 +1,13 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
-import { db } from "../db/index.js";
-import { commandHistory, hosts } from "../db/schema.js";
-import { eq, and, desc, sql } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import {
+  createCurrentCommandHistoryRepository,
+  createCurrentHostResolutionRepository,
+  createCurrentSettingsRepository,
+} from "../repositories/factory.js";
 
 const router = express.Router();
 
@@ -88,12 +90,11 @@ router.post(
       });
     }
 
-    const globalEnabledRow = db.$client
-      .prepare(
-        "SELECT value FROM settings WHERE key = 'command_history_enabled'",
-      )
-      .get() as { value: string } | undefined;
-    if (globalEnabledRow && globalEnabledRow.value === "false") {
+    const globalEnabled = await createCurrentSettingsRepository().getBoolean(
+      "command_history_enabled",
+      true,
+    );
+    if (!globalEnabled) {
       return res.status(201).json({
         id: 0,
         userId,
@@ -103,12 +104,12 @@ router.post(
       });
     }
 
-    const hostRecord = await db
-      .select({ enableCommandHistory: hosts.enableCommandHistory })
-      .from(hosts)
-      .where(eq(hosts.id, parseInt(hostId, 10)))
-      .limit(1);
-    if (hostRecord.length > 0 && hostRecord[0].enableCommandHistory === false) {
+    const hostRecord =
+      await createCurrentHostResolutionRepository().findHostById(
+        parseInt(hostId, 10),
+        userId,
+      );
+    if (hostRecord?.enableCommandHistory === false) {
       return res.status(201).json({
         id: 0,
         userId,
@@ -119,18 +120,13 @@ router.post(
     }
 
     try {
-      const insertData = {
+      const result = await createCurrentCommandHistoryRepository().create(
         userId,
-        hostId: parseInt(hostId, 10),
-        command: trimmedCommand,
-      };
+        parseInt(hostId, 10),
+        trimmedCommand,
+      );
 
-      const result = await db
-        .insert(commandHistory)
-        .values(insertData)
-        .returning();
-
-      res.status(201).json(result[0]);
+      res.status(201).json(result);
     } catch (err) {
       authLogger.error("Failed to save command to history", err);
       res.status(500).json({
@@ -182,23 +178,11 @@ router.get(
     }
 
     try {
-      const result = await db
-        .select({
-          command: commandHistory.command,
-          maxExecutedAt: sql<number>`MAX(${commandHistory.executedAt})`,
-        })
-        .from(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.userId, userId),
-            eq(commandHistory.hostId, hostIdNum),
-          ),
-        )
-        .groupBy(commandHistory.command)
-        .orderBy(desc(sql`MAX(${commandHistory.executedAt})`))
-        .limit(500);
-
-      const uniqueCommands = result.map((r) => r.command);
+      const uniqueCommands =
+        await createCurrentCommandHistoryRepository().listUniqueCommandsForHost(
+          userId,
+          hostIdNum,
+        );
 
       res.json(uniqueCommands);
     } catch (err) {
@@ -258,15 +242,11 @@ router.post(
     try {
       const hostIdNum = parseInt(hostId, 10);
 
-      await db
-        .delete(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.userId, userId),
-            eq(commandHistory.hostId, hostIdNum),
-            eq(commandHistory.command, command.trim()),
-          ),
-        );
+      await createCurrentCommandHistoryRepository().deleteCommandForHost(
+        userId,
+        hostIdNum,
+        command.trim(),
+      );
 
       res.json({ success: true });
     } catch (err) {
@@ -317,14 +297,10 @@ router.delete(
     }
 
     try {
-      await db
-        .delete(commandHistory)
-        .where(
-          and(
-            eq(commandHistory.userId, userId),
-            eq(commandHistory.hostId, hostIdNum),
-          ),
-        );
+      await createCurrentCommandHistoryRepository().deleteByUserAndHost(
+        userId,
+        hostIdNum,
+      );
       databaseLogger.info("Terminal history cleared", {
         operation: "terminal_history_clear",
         userId,
@@ -360,20 +336,18 @@ router.get(
   authenticateJWT,
   async (_req: Request, res: Response) => {
     try {
-      const timeoutRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
-        )
-        .get() as { value: string } | undefined;
-      const enabledRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'terminal_session_persistence_enabled'",
-        )
-        .get() as { value: string } | undefined;
+      const settings = createCurrentSettingsRepository();
+      const timeoutValue = await settings.get(
+        "terminal_session_timeout_minutes",
+      );
+      const enabled = await settings.getBoolean(
+        "terminal_session_persistence_enabled",
+        true,
+      );
 
       res.json({
-        timeoutMinutes: timeoutRow ? parseInt(timeoutRow.value, 10) : 30,
-        enabled: enabledRow ? enabledRow.value === "true" : true,
+        timeoutMinutes: timeoutValue ? parseInt(timeoutValue, 10) : 30,
+        enabled,
       });
     } catch (err) {
       authLogger.error("Failed to fetch session settings", err);
@@ -429,20 +403,19 @@ router.post(
     }
 
     try {
+      const settings = createCurrentSettingsRepository();
       if (timeoutMinutes !== undefined) {
-        db.$client
-          .prepare(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_timeout_minutes', ?)",
-          )
-          .run(String(timeoutMinutes));
+        await settings.set(
+          "terminal_session_timeout_minutes",
+          String(timeoutMinutes),
+        );
       }
 
       if (enabled !== undefined) {
-        db.$client
-          .prepare(
-            "INSERT OR REPLACE INTO settings (key, value) VALUES ('terminal_session_persistence_enabled', ?)",
-          )
-          .run(String(enabled));
+        await settings.set(
+          "terminal_session_persistence_enabled",
+          String(enabled),
+        );
       }
 
       res.json({ success: true });

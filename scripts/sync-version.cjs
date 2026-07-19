@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?$/;
 
 function readJsonWithTrailingNewline(filePath) {
   const raw = fs.readFileSync(filePath, "utf8");

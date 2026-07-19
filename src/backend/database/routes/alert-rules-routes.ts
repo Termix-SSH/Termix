@@ -1,8 +1,7 @@
 import express, { type Request, type Response } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import { getDb } from "../db/index.js";
+import { createCurrentAlertRepository } from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { DatabaseSaveTrigger } from "../db/index.js";
 import { databaseLogger } from "../../utils/logger.js";
 import { sendWebhook, sendNtfy } from "../../utils/notification-sender.js";
 
@@ -36,14 +35,11 @@ router.use(authenticateJWT);
  *       200:
  *         description: List of notification channels.
  */
-router.get("/notification-channels", (req, res) => {
+router.get("/notification-channels", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const rows = getDb()
-      .$client.prepare(
-        "SELECT * FROM notification_channels WHERE user_id = ? ORDER BY id ASC",
-      )
-      .all(userId);
+    const rows =
+      await createCurrentAlertRepository().listNotificationChannels(userId);
     res.json(rows);
   } catch (err) {
     databaseLogger.error("Failed to list notification channels", {
@@ -62,7 +58,7 @@ router.get("/notification-channels", (req, res) => {
  *     tags:
  *       - Alerts
  */
-router.post("/notification-channels", (req, res) => {
+router.post("/notification-channels", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const { name, type, config, enabled } = req.body as {
     name: string;
@@ -94,22 +90,13 @@ router.post("/notification-channels", (req, res) => {
   }
 
   try {
-    const result = getDb()
-      .$client.prepare(
-        `INSERT INTO notification_channels (user_id, name, type, config, enabled)
-         VALUES (?, ?, ?, ?, ?)`,
-      )
-      .run(
-        userId,
-        name.trim(),
-        type,
-        JSON.stringify(config),
-        enabled !== false ? 1 : 0,
-      );
-    const row = getDb()
-      .$client.prepare("SELECT * FROM notification_channels WHERE id = ?")
-      .get(result.lastInsertRowid);
-    DatabaseSaveTrigger.triggerSave("notification_channel_created");
+    const row = await createCurrentAlertRepository().createNotificationChannel({
+      userId,
+      name: name.trim(),
+      type,
+      config: JSON.stringify(config),
+      enabled: enabled !== false,
+    });
     res.status(201).json(row);
   } catch (err) {
     databaseLogger.error("Failed to create notification channel", {
@@ -128,69 +115,61 @@ router.post("/notification-channels", (req, res) => {
  *     tags:
  *       - Alerts
  */
-router.put("/notification-channels/:id", (req: Request, res: Response) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const channelId = Number(req.params.id);
-  const { name, type, config, enabled } = req.body as {
-    name?: string;
-    type?: string;
-    config?: unknown;
-    enabled?: boolean;
-  };
+router.put(
+  "/notification-channels/:id",
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const channelId = Number(req.params.id);
+    const { name, type, config, enabled } = req.body as {
+      name?: string;
+      type?: string;
+      config?: unknown;
+      enabled?: boolean;
+    };
 
-  const existing = getDb()
-    .$client.prepare(
-      "SELECT id FROM notification_channels WHERE id = ? AND user_id = ?",
-    )
-    .get(channelId, userId);
-  if (!existing) return res.status(404).json({ error: "Channel not found" });
+    const repository = createCurrentAlertRepository();
+    const existing = await repository.findNotificationChannelForUser(
+      channelId,
+      userId,
+    );
+    if (!existing) return res.status(404).json({ error: "Channel not found" });
 
-  if (type && type !== "webhook" && type !== "ntfy") {
-    return res.status(400).json({ error: "type must be 'webhook' or 'ntfy'" });
-  }
-
-  try {
-    const updates: string[] = [];
-    const params: unknown[] = [];
-    if (name !== undefined) {
-      updates.push("name = ?");
-      params.push(name.trim());
+    if (type && type !== "webhook" && type !== "ntfy") {
+      return res
+        .status(400)
+        .json({ error: "type must be 'webhook' or 'ntfy'" });
     }
-    if (type !== undefined) {
-      updates.push("type = ?");
-      params.push(type);
-    }
-    if (config !== undefined) {
-      updates.push("config = ?");
-      params.push(JSON.stringify(config));
-    }
-    if (enabled !== undefined) {
-      updates.push("enabled = ?");
-      params.push(enabled ? 1 : 0);
+    if (
+      name === undefined &&
+      type === undefined &&
+      config === undefined &&
+      enabled === undefined
+    ) {
+      return res.json({ success: true });
     }
 
-    if (updates.length === 0) return res.json({ success: true });
-
-    params.push(channelId, userId);
-    getDb()
-      .$client.prepare(
-        `UPDATE notification_channels SET ${updates.join(", ")} WHERE id = ? AND user_id = ?`,
-      )
-      .run(...params);
-
-    const row = getDb()
-      .$client.prepare("SELECT * FROM notification_channels WHERE id = ?")
-      .get(channelId);
-    DatabaseSaveTrigger.triggerSave("notification_channel_updated");
-    res.json(row);
-  } catch (err) {
-    databaseLogger.error("Failed to update notification channel", {
-      operation: "update_channel",
-      error: err,
-    });
-    res.status(500).json({ error: "Failed to update channel" });
-  }
-});
+    try {
+      const row = await repository.updateNotificationChannel(
+        channelId,
+        userId,
+        {
+          ...(name !== undefined ? { name: name.trim() } : {}),
+          ...(type !== undefined ? { type } : {}),
+          ...(config !== undefined ? { config: JSON.stringify(config) } : {}),
+          ...(enabled !== undefined ? { enabled } : {}),
+        },
+      );
+      if (!row) return res.status(404).json({ error: "Channel not found" });
+      res.json(row);
+    } catch (err) {
+      databaseLogger.error("Failed to update notification channel", {
+        operation: "update_channel",
+        error: err,
+      });
+      res.status(500).json({ error: "Failed to update channel" });
+    }
+  },
+);
 
 /**
  * @openapi
@@ -200,21 +179,20 @@ router.put("/notification-channels/:id", (req: Request, res: Response) => {
  *     tags:
  *       - Alerts
  */
-router.delete("/notification-channels/:id", (req: Request, res: Response) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const channelId = Number(req.params.id);
-  const existing = getDb()
-    .$client.prepare(
-      "SELECT id FROM notification_channels WHERE id = ? AND user_id = ?",
-    )
-    .get(channelId, userId);
-  if (!existing) return res.status(404).json({ error: "Channel not found" });
-  getDb()
-    .$client.prepare("DELETE FROM notification_channels WHERE id = ?")
-    .run(channelId);
-  DatabaseSaveTrigger.triggerSave("notification_channel_deleted");
-  res.json({ success: true });
-});
+router.delete(
+  "/notification-channels/:id",
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const channelId = Number(req.params.id);
+    const deleted =
+      await createCurrentAlertRepository().deleteNotificationChannel(
+        channelId,
+        userId,
+      );
+    if (!deleted) return res.status(404).json({ error: "Channel not found" });
+    res.json({ success: true });
+  },
+);
 
 /**
  * @openapi
@@ -229,11 +207,11 @@ router.post(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     const channelId = Number(req.params.id);
-    const row = getDb()
-      .$client.prepare(
-        "SELECT * FROM notification_channels WHERE id = ? AND user_id = ?",
-      )
-      .get(channelId, userId) as { type: string; config: string } | undefined;
+    const row =
+      await createCurrentAlertRepository().findNotificationChannelForUser(
+        channelId,
+        userId,
+      );
     if (!row) return res.status(404).json({ error: "Channel not found" });
 
     const testPayload = {
@@ -288,33 +266,10 @@ router.post(
  *     tags:
  *       - Alerts
  */
-router.get("/alert-rules", (req, res) => {
+router.get("/alert-rules", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
-    const rules = getDb()
-      .$client.prepare(
-        "SELECT * FROM alert_rules WHERE user_id = ? ORDER BY id ASC",
-      )
-      .all(userId) as Array<{ id: number }>;
-
-    const channelMap = new Map<number, number[]>();
-    for (const rule of rules) {
-      const channels = getDb()
-        .$client.prepare(
-          "SELECT channel_id FROM alert_rule_channels WHERE rule_id = ?",
-        )
-        .all(rule.id) as Array<{ channel_id: number }>;
-      channelMap.set(
-        rule.id,
-        channels.map((c) => c.channel_id),
-      );
-    }
-
-    const result = rules.map((r) => ({
-      ...r,
-      channels: channelMap.get(r.id) ?? [],
-    }));
-    res.json(result);
+    res.json(await createCurrentAlertRepository().listAlertRules(userId));
   } catch (err) {
     databaseLogger.error("Failed to list alert rules", {
       operation: "list_alert_rules",
@@ -332,7 +287,7 @@ router.get("/alert-rules", (req, res) => {
  *     tags:
  *       - Alerts
  */
-router.post("/alert-rules", (req, res) => {
+router.post("/alert-rules", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const {
     name,
@@ -373,45 +328,18 @@ router.post("/alert-rules", (req, res) => {
 
   try {
     const now = new Date().toISOString();
-    const result = getDb()
-      .$client.prepare(
-        `INSERT INTO alert_rules
-           (user_id, host_id, name, enabled, trigger_type, threshold_value,
-            threshold_duration_seconds, cooldown_minutes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        userId,
-        hostId ?? null,
-        name.trim(),
-        enabled !== false ? 1 : 0,
-        triggerType,
-        thresholdValue ?? null,
-        thresholdDurationSeconds ?? null,
-        cooldownMinutes ?? 15,
-        now,
-        now,
-      );
-    const ruleId = result.lastInsertRowid as number;
-
-    for (const channelId of channels) {
-      const owned = getDb()
-        .$client.prepare(
-          "SELECT id FROM notification_channels WHERE id = ? AND user_id = ?",
-        )
-        .get(channelId, userId);
-      if (!owned) continue;
-      getDb()
-        .$client.prepare(
-          "INSERT OR IGNORE INTO alert_rule_channels (rule_id, channel_id) VALUES (?, ?)",
-        )
-        .run(ruleId, channelId);
-    }
-
-    const row = getDb()
-      .$client.prepare("SELECT * FROM alert_rules WHERE id = ?")
-      .get(ruleId) as Record<string, unknown>;
-    DatabaseSaveTrigger.triggerSave("alert_rule_created");
+    const row = await createCurrentAlertRepository().createAlertRule({
+      userId,
+      hostId: hostId ?? null,
+      name: name.trim(),
+      enabled: enabled !== false,
+      triggerType,
+      thresholdValue: thresholdValue ?? null,
+      thresholdDurationSeconds: thresholdDurationSeconds ?? null,
+      cooldownMinutes: cooldownMinutes ?? 15,
+      channels,
+      now,
+    });
     res.status(201).json({ ...row, channels });
   } catch (err) {
     databaseLogger.error("Failed to create alert rule", {
@@ -430,13 +358,12 @@ router.post("/alert-rules", (req, res) => {
  *     tags:
  *       - Alerts
  */
-router.put("/alert-rules/:id", (req: Request, res: Response) => {
+router.put("/alert-rules/:id", async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   const ruleId = Number(req.params.id);
 
-  const existing = getDb()
-    .$client.prepare("SELECT id FROM alert_rules WHERE id = ? AND user_id = ?")
-    .get(ruleId, userId);
+  const repository = createCurrentAlertRepository();
+  const existing = await repository.findAlertRuleForUser(ruleId, userId);
   if (!existing) return res.status(404).json({ error: "Alert rule not found" });
 
   const {
@@ -464,76 +391,23 @@ router.put("/alert-rules/:id", (req: Request, res: Response) => {
   }
 
   try {
-    const updates: string[] = ["updated_at = ?"];
-    const params: unknown[] = [new Date().toISOString()];
-    if (name !== undefined) {
-      updates.push("name = ?");
-      params.push(name.trim());
-    }
-    if (hostId !== undefined) {
-      updates.push("host_id = ?");
-      params.push(hostId ?? null);
-    }
-    if (enabled !== undefined) {
-      updates.push("enabled = ?");
-      params.push(enabled ? 1 : 0);
-    }
-    if (triggerType !== undefined) {
-      updates.push("trigger_type = ?");
-      params.push(triggerType);
-    }
-    if (thresholdValue !== undefined) {
-      updates.push("threshold_value = ?");
-      params.push(thresholdValue ?? null);
-    }
-    if (thresholdDurationSeconds !== undefined) {
-      updates.push("threshold_duration_seconds = ?");
-      params.push(thresholdDurationSeconds ?? null);
-    }
-    if (cooldownMinutes !== undefined) {
-      updates.push("cooldown_minutes = ?");
-      params.push(cooldownMinutes);
-    }
-    params.push(ruleId, userId);
-
-    getDb()
-      .$client.prepare(
-        `UPDATE alert_rules SET ${updates.join(", ")} WHERE id = ? AND user_id = ?`,
-      )
-      .run(...params);
-
-    if (channels !== undefined) {
-      getDb()
-        .$client.prepare("DELETE FROM alert_rule_channels WHERE rule_id = ?")
-        .run(ruleId);
-      for (const channelId of channels) {
-        const owned = getDb()
-          .$client.prepare(
-            "SELECT id FROM notification_channels WHERE id = ? AND user_id = ?",
-          )
-          .get(channelId, userId);
-        if (!owned) continue;
-        getDb()
-          .$client.prepare(
-            "INSERT OR IGNORE INTO alert_rule_channels (rule_id, channel_id) VALUES (?, ?)",
-          )
-          .run(ruleId, channelId);
-      }
-    }
-
-    const row = getDb()
-      .$client.prepare("SELECT * FROM alert_rules WHERE id = ?")
-      .get(ruleId) as Record<string, unknown>;
-    const linkedChannels = (
-      getDb()
-        .$client.prepare(
-          "SELECT channel_id FROM alert_rule_channels WHERE rule_id = ?",
-        )
-        .all(ruleId) as Array<{ channel_id: number }>
-    ).map((c) => c.channel_id);
-
-    DatabaseSaveTrigger.triggerSave("alert_rule_updated");
-    res.json({ ...row, channels: linkedChannels });
+    const row = await repository.updateAlertRule(ruleId, userId, {
+      ...(name !== undefined ? { name: name.trim() } : {}),
+      ...(hostId !== undefined ? { hostId: hostId ?? null } : {}),
+      ...(enabled !== undefined ? { enabled } : {}),
+      ...(triggerType !== undefined ? { triggerType } : {}),
+      ...(thresholdValue !== undefined
+        ? { thresholdValue: thresholdValue ?? null }
+        : {}),
+      ...(thresholdDurationSeconds !== undefined
+        ? { thresholdDurationSeconds: thresholdDurationSeconds ?? null }
+        : {}),
+      ...(cooldownMinutes !== undefined ? { cooldownMinutes } : {}),
+      ...(channels !== undefined ? { channels } : {}),
+      now: new Date().toISOString(),
+    });
+    if (!row) return res.status(404).json({ error: "Alert rule not found" });
+    res.json(row);
   } catch (err) {
     databaseLogger.error("Failed to update alert rule", {
       operation: "update_alert_rule",
@@ -551,15 +425,14 @@ router.put("/alert-rules/:id", (req: Request, res: Response) => {
  *     tags:
  *       - Alerts
  */
-router.delete("/alert-rules/:id", (req: Request, res: Response) => {
+router.delete("/alert-rules/:id", async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   const ruleId = Number(req.params.id);
-  const existing = getDb()
-    .$client.prepare("SELECT id FROM alert_rules WHERE id = ? AND user_id = ?")
-    .get(ruleId, userId);
-  if (!existing) return res.status(404).json({ error: "Alert rule not found" });
-  getDb().$client.prepare("DELETE FROM alert_rules WHERE id = ?").run(ruleId);
-  DatabaseSaveTrigger.triggerSave("alert_rule_deleted");
+  const deleted = await createCurrentAlertRepository().deleteAlertRule(
+    ruleId,
+    userId,
+  );
+  if (!deleted) return res.status(404).json({ error: "Alert rule not found" });
   res.json({ success: true });
 });
 
@@ -573,42 +446,27 @@ router.delete("/alert-rules/:id", (req: Request, res: Response) => {
  *     tags:
  *       - Alerts
  */
-router.get("/alert-firings", (req, res) => {
+router.get("/alert-firings", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
   const limit = Math.min(Number(req.query.limit) || 50, 200);
   const offset = Number(req.query.offset) || 0;
   const acknowledgedParam = req.query.acknowledged;
 
   try {
-    let whereClause = "af.user_id = ?";
-    const params: unknown[] = [userId];
-
-    if (acknowledgedParam === "true") {
-      whereClause += " AND af.acknowledged = 1";
-    } else if (acknowledgedParam === "false") {
-      whereClause += " AND af.acknowledged = 0";
-    }
-
-    const rows = getDb()
-      .$client.prepare(
-        `SELECT af.*, ar.name as rule_name
-         FROM alert_firings af
-         LEFT JOIN alert_rules ar ON ar.id = af.rule_id
-         WHERE ${whereClause}
-         ORDER BY af.fired_at DESC
-         LIMIT ? OFFSET ?`,
-      )
-      .all(...params, limit, offset);
-
-    const total = (
-      getDb()
-        .$client.prepare(
-          `SELECT COUNT(*) as c FROM alert_firings af WHERE ${whereClause}`,
-        )
-        .get(...params) as { c: number }
-    ).c;
-
-    res.json({ firings: rows, total });
+    const acknowledged =
+      acknowledgedParam === "true"
+        ? true
+        : acknowledgedParam === "false"
+          ? false
+          : undefined;
+    res.json(
+      await createCurrentAlertRepository().listAlertFirings({
+        userId,
+        acknowledged,
+        limit,
+        offset,
+      }),
+    );
   } catch (err) {
     databaseLogger.error("Failed to list alert firings", {
       operation: "list_alert_firings",
@@ -626,17 +484,15 @@ router.get("/alert-firings", (req, res) => {
  *     tags:
  *       - Alerts
  */
-router.post("/alert-firings/:id/acknowledge", (req: Request, res: Response) => {
-  const userId = (req as AuthenticatedRequest).userId;
-  const firingId = Number(req.params.id);
-  getDb()
-    .$client.prepare(
-      "UPDATE alert_firings SET acknowledged = 1 WHERE id = ? AND user_id = ?",
-    )
-    .run(firingId, userId);
-  DatabaseSaveTrigger.triggerSave("alert_firing_acknowledged");
-  res.json({ success: true });
-});
+router.post(
+  "/alert-firings/:id/acknowledge",
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const firingId = Number(req.params.id);
+    await createCurrentAlertRepository().acknowledgeFiring(firingId, userId);
+    res.json({ success: true });
+  },
+);
 
 /**
  * @openapi
@@ -646,14 +502,9 @@ router.post("/alert-firings/:id/acknowledge", (req: Request, res: Response) => {
  *     tags:
  *       - Alerts
  */
-router.post("/alert-firings/acknowledge-all", (req, res) => {
+router.post("/alert-firings/acknowledge-all", async (req, res) => {
   const userId = (req as AuthenticatedRequest).userId;
-  getDb()
-    .$client.prepare(
-      "UPDATE alert_firings SET acknowledged = 1 WHERE user_id = ?",
-    )
-    .run(userId);
-  DatabaseSaveTrigger.triggerSave("alert_firings_acknowledged_all");
+  await createCurrentAlertRepository().acknowledgeAllFirings(userId);
   res.json({ success: true });
 });
 

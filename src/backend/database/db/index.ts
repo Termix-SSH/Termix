@@ -25,6 +25,28 @@ let memoryDatabase: Database.Database;
 let isNewDatabase = false;
 let sqlite: Database.Database;
 
+function getRawSettingValue(key: string): string | null {
+  const row = sqlite
+    .prepare("SELECT value FROM settings WHERE key = ?")
+    .get(key) as { value?: string } | undefined;
+
+  return row?.value ?? null;
+}
+
+function setRawSettingValue(key: string, value: string): void {
+  sqlite
+    .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+    .run(key, value);
+}
+
+function ensureRawSettingDefault(key: string, value: string): void {
+  if (getRawSettingValue(key) === null) {
+    sqlite
+      .prepare("INSERT INTO settings (key, value) VALUES (?, ?)")
+      .run(key, value);
+  }
+}
+
 async function initializeDatabaseAsync(): Promise<void> {
   const systemCrypto = SystemCrypto.getInstance();
 
@@ -165,7 +187,9 @@ async function initializeCompleteDatabase(): Promise<void> {
         scopes TEXT DEFAULT 'openid email profile',
         totp_secret TEXT,
         totp_enabled INTEGER NOT NULL DEFAULT 0,
-        totp_backup_codes TEXT
+        totp_backup_codes TEXT,
+        registered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        donation_modal_dismissed INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -460,6 +484,8 @@ async function initializeCompleteDatabase(): Promise<void> {
         commands TEXT,
         dangerous_actions TEXT,
         recording_path TEXT,
+        protocol TEXT NOT NULL DEFAULT 'ssh',
+        format TEXT NOT NULL DEFAULT 'text',
         terminated_by_owner INTEGER DEFAULT 0,
         termination_reason TEXT,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
@@ -564,12 +590,30 @@ async function initializeCompleteDatabase(): Promise<void> {
 `);
 
   try {
-    sqlite.prepare("DELETE FROM user_open_tabs").run();
-    databaseLogger.info("Open tabs cleared on startup", {
-      operation: "db_init_open_tabs_cleanup",
-    });
+    const timeoutRow = sqlite
+      .prepare(
+        "SELECT value FROM settings WHERE key = 'terminal_session_timeout_minutes'",
+      )
+      .get() as { value: string } | undefined;
+    const timeoutMinutes = timeoutRow
+      ? parseInt(timeoutRow.value, 10)
+      : 30;
+    const ttlMs =
+      !isNaN(timeoutMinutes) && timeoutMinutes > 0
+        ? timeoutMinutes * 60_000
+        : 30 * 60_000;
+    const cutoff = new Date(Date.now() - ttlMs).toISOString();
+    const result = sqlite
+      .prepare("DELETE FROM user_open_tabs WHERE updated_at <= ?")
+      .run(cutoff);
+    if (result.changes > 0) {
+      databaseLogger.info("Expired open tabs cleared on startup", {
+        operation: "db_init_open_tabs_cleanup",
+        count: result.changes,
+      });
+    }
   } catch (e) {
-    databaseLogger.warn("Could not clear open tabs on startup", {
+    databaseLogger.warn("Could not clear expired open tabs on startup", {
       operation: "db_init_open_tabs_cleanup_failed",
       error: e,
     });
@@ -595,16 +639,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   migrateSchema();
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'allow_registration'")
-      .get();
-    if (!row) {
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('allow_registration', 'true')",
-        )
-        .run();
-    }
+    ensureRawSettingDefault("allow_registration", "true");
   } catch (e) {
     databaseLogger.warn("Could not initialize default settings", {
       operation: "db_init",
@@ -613,16 +648,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'allow_password_login'")
-      .get();
-    if (!row) {
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('allow_password_login', 'true')",
-        )
-        .run();
-    }
+    ensureRawSettingDefault("allow_password_login", "true");
   } catch (e) {
     databaseLogger.warn("Could not initialize allow_password_login setting", {
       operation: "db_init",
@@ -631,16 +657,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'guac_enabled'")
-      .get();
-    if (!row) {
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('guac_enabled', 'true')",
-        )
-        .run();
-    }
+    ensureRawSettingDefault("guac_enabled", "true");
   } catch (e) {
     databaseLogger.warn("Could not initialize guac_enabled setting", {
       operation: "db_init",
@@ -649,16 +666,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   try {
-    const row = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'guac_url'")
-      .get();
-    if (!row) {
-      sqlite
-        .prepare(
-          "INSERT INTO settings (key, value) VALUES ('guac_url', ?)",
-        )
-        .run(getDefaultGuacdUrl());
-    }
+    ensureRawSettingDefault("guac_url", getDefaultGuacdUrl());
   } catch (e) {
     databaseLogger.warn("Could not initialize guac_url setting", {
       operation: "db_init",
@@ -695,6 +703,17 @@ const addColumnIfNotExists = (
 };
 
 const migrateSchema = () => {
+  addColumnIfNotExists(
+    "session_recordings",
+    "protocol",
+    "TEXT NOT NULL DEFAULT 'ssh'",
+  );
+  addColumnIfNotExists(
+    "session_recordings",
+    "format",
+    "TEXT NOT NULL DEFAULT 'text'",
+  );
+
   addColumnIfNotExists("user_preferences", "theme", "TEXT");
   addColumnIfNotExists("user_preferences", "font_size", "TEXT");
   addColumnIfNotExists("user_preferences", "accent_color", "TEXT");
@@ -746,6 +765,62 @@ const migrateSchema = () => {
   addColumnIfNotExists("users", "totp_secret", "TEXT");
   addColumnIfNotExists("users", "totp_enabled", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("users", "totp_backup_codes", "TEXT");
+
+  const hadRegisteredAtColumn = (() => {
+    try {
+      sqlite.prepare(`SELECT "registered_at" FROM users LIMIT 1`).get();
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  // SQLite's ALTER TABLE ADD COLUMN rejects non-constant defaults like
+  // CURRENT_TIMESTAMP, so the column is added empty and backfilled below.
+  addColumnIfNotExists("users", "registered_at", "TEXT");
+  if (!hadRegisteredAtColumn) {
+    // Pre-existing users are backdated past the 30 day mark so they see the
+    // donation modal immediately on upgrade instead of waiting a fresh
+    // 30 days as if they had just registered.
+    try {
+      sqlite.exec(
+        `UPDATE users SET registered_at = datetime('now', '-31 days') WHERE registered_at IS NULL`,
+      );
+    } catch (backfillError) {
+      databaseLogger.warn("Failed to backfill users.registered_at", {
+        operation: "schema_migration",
+        error:
+          backfillError instanceof Error
+            ? backfillError.message
+            : String(backfillError),
+      });
+    }
+  } else {
+    try {
+      sqlite.exec(
+        `UPDATE users SET registered_at = CURRENT_TIMESTAMP WHERE registered_at IS NULL`,
+      );
+    } catch (backfillError) {
+      databaseLogger.warn(
+        "Failed to backfill NULL users.registered_at values",
+        {
+          operation: "schema_migration",
+          error:
+            backfillError instanceof Error
+              ? backfillError.message
+              : String(backfillError),
+        },
+      );
+    }
+  }
+  addColumnIfNotExists(
+    "users",
+    "donation_modal_dismissed",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+
+  addColumnIfNotExists("sessions", "oidc_sub", "TEXT");
+  addColumnIfNotExists("sessions", "oidc_sid", "TEXT");
+  addColumnIfNotExists("sessions", "sso_provider_id", "INTEGER");
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS webauthn_credentials (
@@ -918,10 +993,6 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("ssh_credentials", "cert_public_key", "TEXT");
 
-  addColumnIfNotExists("ssh_credentials", "system_password", "TEXT");
-  addColumnIfNotExists("ssh_credentials", "system_key", "TEXT");
-  addColumnIfNotExists("ssh_credentials", "system_key_password", "TEXT");
-
   try {
     const tableInfo = sqlite.prepare("PRAGMA table_info(ssh_credentials)").all() as Array<{
       cid: number;
@@ -959,9 +1030,6 @@ const migrateSchema = () => {
           private_key TEXT,
           public_key TEXT,
           detected_key_type TEXT,
-          system_password TEXT,
-          system_key TEXT,
-          system_key_password TEXT,
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         );
 
@@ -1553,6 +1621,8 @@ const migrateSchema = () => {
           commands TEXT,
           dangerous_actions TEXT,
           recording_path TEXT,
+          protocol TEXT NOT NULL DEFAULT 'ssh',
+          format TEXT NOT NULL DEFAULT 'text',
           terminated_by_owner INTEGER DEFAULT 0,
           termination_reason TEXT,
           FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
@@ -1569,35 +1639,52 @@ const migrateSchema = () => {
   }
 
   try {
-    sqlite.prepare("SELECT id FROM shared_credentials LIMIT 1").get();
+    sqlite.prepare("SELECT id FROM shared_host_secrets LIMIT 1").get();
   } catch {
     try {
       sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS shared_credentials (
+        CREATE TABLE IF NOT EXISTS shared_host_secrets (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           host_access_id INTEGER NOT NULL,
-          original_credential_id INTEGER NOT NULL,
           target_user_id TEXT NOT NULL,
-          encrypted_username TEXT NOT NULL,
-          encrypted_auth_type TEXT NOT NULL,
+          protocol TEXT NOT NULL DEFAULT 'ssh',
+          source_type TEXT NOT NULL DEFAULT 'credential',
+          original_credential_id INTEGER,
+          encrypted_username TEXT,
+          encrypted_auth_type TEXT,
           encrypted_password TEXT,
           encrypted_key TEXT,
           encrypted_key_password TEXT,
           encrypted_key_type TEXT,
+          encrypted_domain TEXT,
           created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          needs_re_encryption INTEGER NOT NULL DEFAULT 0,
+          UNIQUE(host_access_id, target_user_id, protocol),
           FOREIGN KEY (host_access_id) REFERENCES host_access (id) ON DELETE CASCADE,
           FOREIGN KEY (original_credential_id) REFERENCES ssh_credentials (id) ON DELETE CASCADE,
           FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
         );
       `);
     } catch (createError) {
-      databaseLogger.warn("Failed to create shared_credentials table", {
+      databaseLogger.warn("Failed to create shared_host_secrets table", {
         operation: "schema_migration",
         error: createError,
       });
     }
+  }
+
+  try {
+    if (getRawSettingValue("rbac_permission_levels_v2") === null) {
+      sqlite.exec(
+        "UPDATE host_access SET permission_level = 'connect' WHERE permission_level = 'view'",
+      );
+      setRawSettingValue("rbac_permission_levels_v2", "done");
+    }
+  } catch (migrateError) {
+    databaseLogger.warn("Failed to migrate legacy view permission level", {
+      operation: "schema_migration",
+      error: migrateError,
+    });
   }
 
   try {
@@ -1900,31 +1987,30 @@ const migrateSchema = () => {
 
   // Migrate legacy single oidc_config settings blob into sso_providers table
   try {
-    const migrationDone = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'sso_migration_v1'")
-      .get();
+    const migrationDone = getRawSettingValue("sso_migration_v1");
     if (!migrationDone) {
       const providerCount = (
-        sqlite.prepare("SELECT COUNT(*) as c FROM sso_providers").get() as { c: number }
+        sqlite.prepare("SELECT COUNT(*) as c FROM sso_providers").get() as {
+          c: number;
+        }
       ).c;
       if (providerCount === 0) {
-        const legacyRow = sqlite
-          .prepare("SELECT value FROM settings WHERE key = 'oidc_config'")
-          .get() as { value: string } | undefined;
-        if (legacyRow) {
+        const legacyConfig = getRawSettingValue("oidc_config");
+        if (legacyConfig) {
           sqlite
             .prepare(
               "INSERT INTO sso_providers (name, type, enabled, display_order, config) VALUES (?, 'oidc', 1, 0, ?)",
             )
-            .run("OIDC", legacyRow.value);
-          databaseLogger.info("Migrated legacy oidc_config into sso_providers table", {
-            operation: "sso_migration_v1",
-          });
+            .run("OIDC", legacyConfig);
+          databaseLogger.info(
+            "Migrated legacy oidc_config into sso_providers table",
+            {
+              operation: "sso_migration_v1",
+            },
+          );
         }
       }
-      sqlite
-        .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('sso_migration_v1', 'true')")
-        .run();
+      setRawSettingValue("sso_migration_v1", "true");
     }
   } catch (e) {
     databaseLogger.warn("Failed to run SSO migration v1", {
@@ -2063,19 +2149,15 @@ const migrateSchema = () => {
 
   // Seed default metrics history retention setting
   try {
-    const retentionRow = sqlite
-      .prepare("SELECT value FROM settings WHERE key = 'metrics_history_retention_days'")
-      .get();
-    if (!retentionRow) {
-      sqlite
-        .prepare("INSERT INTO settings (key, value) VALUES ('metrics_history_retention_days', '7')")
-        .run();
-    }
+    ensureRawSettingDefault("metrics_history_retention_days", "7");
   } catch (e) {
-    databaseLogger.warn("Could not initialize metrics_history_retention_days setting", {
-      operation: "schema_migration",
-      error: e,
-    });
+    databaseLogger.warn(
+      "Could not initialize metrics_history_retention_days setting",
+      {
+        operation: "schema_migration",
+        error: e,
+      },
+    );
   }
 
   // --- homepage begin ---
@@ -2166,20 +2248,22 @@ async function saveMemoryDatabaseToFile(): Promise<void> {
 }
 
 async function handlePostInitFileEncryption() {
-  if (!enableFileEncryption) return;
-
   try {
     if (memoryDatabase) {
-      await saveMemoryDatabaseToFile();
+      DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
+
+      if (enableFileEncryption) {
+        await saveMemoryDatabaseToFile();
+      }
 
       setInterval(() => {
         if (DatabaseSaveTrigger.isDirty) {
           saveMemoryDatabaseToFile();
         }
       }, 5 * 60 * 1000);
-
-      DatabaseSaveTrigger.initialize(saveMemoryDatabaseToFile);
     }
+
+    if (!enableFileEncryption) return;
 
     try {
       const migration = new DatabaseMigration(dataDir);

@@ -3,12 +3,10 @@ import type {
   OIDCProviderConfig,
 } from "../../../types/index.js";
 import type { Router } from "express";
-import { db } from "../db/index.js";
-import { ssoProviders } from "../db/schema.js";
-import { eq, asc } from "drizzle-orm";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { SSOProviderType } from "../../../types/index.js";
+import { createCurrentSsoProviderRepository } from "../repositories/factory.js";
 import { getOIDCConfigFromEnv } from "./user-oidc-utils.js";
 
 const authManager = AuthManager.getInstance();
@@ -91,7 +89,6 @@ function applyProviderDefaults(
 }
 
 export function registerSSOProviderRoutes(router: Router): void {
-  const authenticateJWT = authManager.createAuthMiddleware();
   const requireAdmin = authManager.createAdminMiddleware();
 
   /**
@@ -108,16 +105,8 @@ export function registerSSOProviderRoutes(router: Router): void {
    */
   router.get("/sso-providers", async (_req, res) => {
     try {
-      const providers = await db
-        .select({
-          id: ssoProviders.id,
-          name: ssoProviders.name,
-          type: ssoProviders.type,
-          displayOrder: ssoProviders.displayOrder,
-        })
-        .from(ssoProviders)
-        .where(eq(ssoProviders.enabled, true))
-        .orderBy(asc(ssoProviders.displayOrder), asc(ssoProviders.id));
+      const providers =
+        await createCurrentSsoProviderRepository().listEnabledPublic();
 
       // If no DB providers exist, synthesize one from env vars so SSO login
       // remains available when configured purely via environment variables.
@@ -150,10 +139,7 @@ export function registerSSOProviderRoutes(router: Router): void {
   router.get("/sso-providers/admin", requireAdmin, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const rows = await db
-        .select()
-        .from(ssoProviders)
-        .orderBy(asc(ssoProviders.displayOrder), asc(ssoProviders.id));
+      const rows = await createCurrentSsoProviderRepository().listAll();
 
       const result = rows.map((row) => ({
         ...row,
@@ -273,16 +259,13 @@ export function registerSSOProviderRoutes(router: Router): void {
         tempId,
       );
 
-      const [inserted] = await db
-        .insert(ssoProviders)
-        .values({
-          name: name.trim(),
-          type,
-          enabled,
-          displayOrder,
-          config: encryptedConfig,
-        })
-        .returning();
+      const inserted = await createCurrentSsoProviderRepository().create({
+        name: name.trim(),
+        type,
+        enabled,
+        displayOrder,
+        config: encryptedConfig,
+      });
 
       authLogger.info("SSO provider created", {
         operation: "sso_provider_create",
@@ -327,12 +310,9 @@ export function registerSSOProviderRoutes(router: Router): void {
       return res.status(400).json({ error: "Invalid provider ID" });
     }
     try {
-      const existing = await db
-        .select()
-        .from(ssoProviders)
-        .where(eq(ssoProviders.id, providerId))
-        .limit(1);
-      if (existing.length === 0) {
+      const providerRepository = createCurrentSsoProviderRepository();
+      const existing = await providerRepository.findById(providerId);
+      if (!existing) {
         return res.status(404).json({ error: "SSO provider not found" });
       }
 
@@ -350,10 +330,10 @@ export function registerSSOProviderRoutes(router: Router): void {
         config?: Record<string, unknown>;
       };
 
-      let encryptedConfig = existing[0].config;
+      let encryptedConfig = existing.config;
       if (rawConfig !== undefined) {
         const existingDecrypted = decryptProviderConfig(
-          existing[0].config,
+          existing.config,
           userId,
         );
         const mergedConfig = {
@@ -369,18 +349,18 @@ export function registerSSOProviderRoutes(router: Router): void {
         );
       }
 
-      const [updated] = await db
-        .update(ssoProviders)
-        .set({
-          ...(name !== undefined ? { name: name.trim() } : {}),
-          ...(type !== undefined ? { type } : {}),
-          ...(enabled !== undefined ? { enabled } : {}),
-          ...(displayOrder !== undefined ? { displayOrder } : {}),
-          config: encryptedConfig,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(ssoProviders.id, providerId))
-        .returning();
+      const updated = await providerRepository.update(providerId, {
+        ...(name !== undefined ? { name: name.trim() } : {}),
+        ...(type !== undefined ? { type } : {}),
+        ...(enabled !== undefined ? { enabled } : {}),
+        ...(displayOrder !== undefined ? { displayOrder } : {}),
+        config: encryptedConfig,
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (!updated) {
+        return res.status(404).json({ error: "SSO provider not found" });
+      }
 
       authLogger.info("SSO provider updated", {
         operation: "sso_provider_update",
@@ -426,27 +406,21 @@ export function registerSSOProviderRoutes(router: Router): void {
       return res.status(400).json({ error: "Invalid provider ID" });
     }
     try {
-      const existing = await db
-        .select()
-        .from(ssoProviders)
-        .where(eq(ssoProviders.id, providerId))
-        .limit(1);
-      if (existing.length === 0) {
+      const providerRepository = createCurrentSsoProviderRepository();
+      const existing = await providerRepository.findById(providerId);
+      if (!existing) {
         return res.status(404).json({ error: "SSO provider not found" });
       }
 
-      const associatedUsers = db.$client
-        .prepare(
-          "SELECT COUNT(*) as count FROM users WHERE sso_provider_id = ?",
-        )
-        .get(providerId) as { count: number };
-      if (associatedUsers.count > 0) {
+      const associatedUserCount =
+        await providerRepository.countUsersByProviderId(providerId);
+      if (associatedUserCount > 0) {
         return res.status(409).json({
-          error: `Cannot delete provider: ${associatedUsers.count} user(s) are associated with it`,
+          error: `Cannot delete provider: ${associatedUserCount} user(s) are associated with it`,
         });
       }
 
-      await db.delete(ssoProviders).where(eq(ssoProviders.id, providerId));
+      await providerRepository.delete(providerId);
       authLogger.info("SSO provider deleted", {
         operation: "sso_provider_delete",
         userId,

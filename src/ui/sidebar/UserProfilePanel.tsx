@@ -47,6 +47,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Fingerprint,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
@@ -78,7 +79,7 @@ import type { ApiKey } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
 import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
-import i18n from "@/i18n/i18n";
+import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 
 type UserProfileSection =
   | "account"
@@ -445,7 +446,10 @@ export function UserProfilePanel({
     hiddenRailTabs?: string | null;
     statusColorScheme?: string | null;
   };
-  onPrefsChange?: (prefs: { reopenTabsOnLogin: boolean }) => void;
+  onPrefsChange?: (prefs: {
+    reopenTabsOnLogin?: boolean;
+    storageMode?: "local" | "cloud";
+  }) => void;
 }) {
   const { t } = useTranslation();
   const themeLabel: Record<ThemeId, string> = {
@@ -515,12 +519,18 @@ export function UserProfilePanel({
   const [fontSize, setFontSize] = useState<FontSizeId>(
     () => (localStorage.getItem("termix-font-size") as FontSizeId) ?? "md",
   );
-  const [language, setLanguage] = useState(
-    () => localStorage.getItem("i18nextLng") ?? "en",
+  const [language, setLanguage] = useState(() =>
+    normalizeLanguageCode(localStorage.getItem("i18nextLng")),
   );
   const [storageMode, setStorageMode] = useState<"local" | "cloud">(() =>
     userPrefs?.storageMode === "cloud" ? "cloud" : "local",
   );
+
+  useEffect(() => {
+    if (userPrefs?.storageMode) {
+      setStorageMode(userPrefs.storageMode === "cloud" ? "cloud" : "local");
+    }
+  }, [userPrefs?.storageMode]);
 
   // Settings toggles — all backed by localStorage
   const [commandAutocomplete, setCommandAutocomplete] = useState(
@@ -623,6 +633,7 @@ export function UserProfilePanel({
 
   async function handleStorageModeChange(mode: "local" | "cloud") {
     setStorageMode(mode);
+    onPrefsChange?.({ storageMode: mode });
     if (mode === "cloud") {
       // Snapshot current browser localStorage values so any tab can restore them later
       const SNAPSHOT_KEYS = [
@@ -662,9 +673,8 @@ export function UserProfilePanel({
           applyAccentColor(prefs.accentColor);
         }
         if (prefs.language) {
-          setLanguage(prefs.language);
-          localStorage.setItem("i18nextLng", prefs.language);
-          void i18n.changeLanguage(prefs.language);
+          const language = await changeAppLanguage(prefs.language);
+          setLanguage(language);
         }
         if (prefs.commandAutocomplete != null) {
           setCommandAutocomplete(prefs.commandAutocomplete);
@@ -772,8 +782,7 @@ export function UserProfilePanel({
     localStorage.setItem("termix-accent", DEFAULT_ACCENT);
     applyAccentColor(DEFAULT_ACCENT);
     setLanguage("en");
-    localStorage.setItem("i18nextLng", "en");
-    void i18n.changeLanguage("en");
+    void changeAppLanguage("en");
     setCommandAutocomplete(false);
     localStorage.setItem("commandAutocomplete", "false");
     setCommandPaletteEnabled(true);
@@ -862,10 +871,9 @@ export function UserProfilePanel({
     localStorage.setItem("termix-accent", restoredAccent);
     applyAccentColor(restoredAccent);
 
-    const restoredLang = restore("i18nextLng", "en") ?? "en";
+    const restoredLang = normalizeLanguageCode(restore("i18nextLng", "en"));
     setLanguage(restoredLang);
-    localStorage.setItem("i18nextLng", restoredLang);
-    void i18n.changeLanguage(restoredLang);
+    void changeAppLanguage(restoredLang);
 
     const restoredAutocomplete =
       restore("commandAutocomplete", "false") === "true";
@@ -984,10 +992,12 @@ export function UserProfilePanel({
   }
 
   function handleLanguageChange(code: string) {
-    setLanguage(code);
-    localStorage.setItem("i18nextLng", code);
-    i18n.changeLanguage(code);
-    if (storageMode === "cloud") saveToCloud({ language: code });
+    void changeAppLanguage(code)
+      .then((language) => {
+        setLanguage(language);
+        if (storageMode === "cloud") saveToCloud({ language });
+      })
+      .catch(() => {});
   }
 
   function toggle(id: UserProfileSection) {
@@ -1125,6 +1135,27 @@ export function UserProfilePanel({
         userId={userId}
       />
 
+      {/* Donate banner */}
+      <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 flex flex-col gap-1.5">
+        <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-brand">
+          {t("newUi.sidebar.userProfile.donateTitle")}
+        </div>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          {t("newUi.sidebar.userProfile.donateDescription")}
+        </p>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          {t("newUi.sidebar.userProfile.donateMilestones")}
+        </p>
+        <a
+          href="https://donate.termix.site/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-accent-brand text-white px-2 py-1 hover:opacity-90 transition-opacity"
+        >
+          {t("newUi.sidebar.userProfile.donateButton")}
+        </a>
+      </div>
+
       {/* Storage mode toggle */}
       <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
         <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -1252,6 +1283,35 @@ export function UserProfilePanel({
                     ? t("dashboard.updateAvailable").toUpperCase()
                     : t("dashboardTab.stable")}
               </span>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-3 mt-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs font-medium">
+                  {t("newUi.sidebar.userProfile.betaProgramTitle")}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {t("newUi.sidebar.userProfile.betaProgramDescription")}{" "}
+                  <a
+                    href="https://github.com/Termix-SSH/Support/issues/new?template=beta_feedback.yml"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent-brand hover:underline"
+                  >
+                    {t("newUi.sidebar.userProfile.betaProgramFeedback")}
+                  </a>
+                </span>
+              </div>
+              <a
+                href="https://docs.termix.site/install/server/docker#beta-builds"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 ml-3 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1.5 hover:bg-muted/40 transition-colors"
+              >
+                {t("newUi.sidebar.userProfile.betaProgramLearnMore")}
+              </a>
             </div>
           </div>
 
@@ -1665,6 +1725,11 @@ export function UserProfilePanel({
                   id: "credentials",
                   icon: <KeyRound size={12} />,
                   label: t("nav.credentials"),
+                },
+                {
+                  id: "termix-id",
+                  icon: <Fingerprint size={12} />,
+                  label: t("nav.termixId"),
                 },
                 {
                   id: "connections",

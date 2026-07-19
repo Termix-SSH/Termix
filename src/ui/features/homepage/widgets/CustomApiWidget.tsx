@@ -9,6 +9,7 @@ import type {
 import { GRID_SIZE } from "@/types/homepage-types";
 import { homepageApi } from "@/main-axios";
 import { WidgetTitle } from "./WidgetTitle";
+import { runVisibleInterval } from "../use-visible-interval";
 
 function resolvePath(obj: unknown, path: string): unknown {
   return path.split(".").reduce((acc: unknown, key) => {
@@ -70,8 +71,9 @@ function CustomApiWidget({
 
   useEffect(() => {
     fetchData();
-    const iv = setInterval(fetchData, interval * 1000);
-    return () => clearInterval(iv);
+    return runVisibleInterval(() => {
+      void fetchData();
+    }, interval * 1000);
   }, [url, interval]);
 
   const accent =

@@ -161,6 +161,48 @@ export async function deleteAccount(
   }
 }
 
+// Raw axios errors propagate here so callers can detect the 409
+// DATA_WIPE_REQUIRED code and re-submit with confirmDataWipe.
+export async function adminResetUserPassword(
+  userId: string,
+  newPassword: string,
+  confirmDataWipe = false,
+): Promise<{ message: string; dataWiped?: boolean }> {
+  const response = await authApi.post("/users/admin/reset-password", {
+    userId,
+    newPassword,
+    confirmDataWipe,
+  });
+  return response.data;
+}
+
+export async function adminDisableUserTotp(
+  userId: string,
+): Promise<{ message: string }> {
+  try {
+    const response = await authApi.post("/users/admin/totp/disable", {
+      userId,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "disable user TOTP");
+  }
+}
+
+export async function adminExportUserData(
+  userId: string,
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await authApi.get(
+      `/users/admin/export/${encodeURIComponent(userId)}`,
+      { timeout: 120000 },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "export user data");
+  }
+}
+
 export async function updateRegistrationAllowed(
   allowed: boolean,
 ): Promise<Record<string, unknown>> {

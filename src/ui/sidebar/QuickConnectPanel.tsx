@@ -5,6 +5,7 @@ import { Input } from "@/components/input";
 import type { Host } from "@/types/ui-types";
 import { getCredentials } from "@/api/credentials-api";
 import { mapCredentials } from "./HostManagerData";
+import { createQuickConnectHost } from "./quick-connect-host";
 
 interface QuickConnectPanelProps {
   onConnect: (host: Host, type: "terminal" | "files") => void;
@@ -34,38 +35,15 @@ export function QuickConnectPanel({ onConnect }: QuickConnectPanelProps) {
 
   const connect = (type: "terminal" | "files") => {
     if (!host || !username) return;
-    const hostConfig: Host = {
-      id: `quick-connect-${Date.now()}`,
-      name: `${username}@${host}`,
+    const hostConfig = createQuickConnectHost({
       ip: host,
       port: parseInt(port) || 22,
       username,
       authType,
-      password: authType === "password" ? password : undefined,
-      key: authType === "key" ? privateKey : undefined,
-      credentialId: authType === "credential" ? credentialId : undefined,
-      folder: "",
-      online: false,
-      cpu: null,
-      ram: null,
-      lastAccess: new Date().toISOString(),
-      pin: false,
-      defaultPath: "",
-      serverTunnels: [],
-      quickActions: [],
-      enableTerminal: true,
-      enableFileManager: true,
-      enableTunnel: true,
-      enableDocker: true,
-      enableSsh: true,
-      enableRdp: false,
-      enableVnc: false,
-      enableTelnet: false,
-      sshPort: parseInt(port) || 22,
-      rdpPort: 3389,
-      vncPort: 5900,
-      telnetPort: 23,
-    };
+      password,
+      key: privateKey,
+      credentialId,
+    });
     onConnect(hostConfig, type);
   };
 

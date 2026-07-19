@@ -3,12 +3,9 @@ import type {
   CredentialBackend,
 } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { eq } from "drizzle-orm";
 import ssh2Pkg from "ssh2";
-import { db } from "../db/index.js";
-import { hosts, sshCredentials } from "../db/schema.js";
+import { createCurrentHostResolutionRepository } from "../repositories/factory.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
-import { applyAgentAuth } from "../../ssh/terminal-auth-helpers.js";
 
 const { Client } = ssh2Pkg;
 
@@ -87,6 +84,10 @@ async function deploySSHKeyToHost(
             }
 
             const keyPattern = keyParts[1];
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(keyPattern)) {
+              clearTimeout(checkTimeout);
+              return rejectCheck(new Error("Invalid public key data"));
+            }
 
             conn.exec(
               `if [ -f ~/.ssh/authorized_keys ]; then grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?; else echo 1; fi`,
@@ -192,6 +193,10 @@ async function deploySSHKeyToHost(
             }
 
             const keyPattern = keyParts[1];
+            if (!/^[A-Za-z0-9+/]+={0,2}$/.test(keyPattern)) {
+              clearTimeout(verifyTimeout);
+              return rejectVerify(new Error("Invalid public key data"));
+            }
             conn.exec(
               `grep -F "${keyPattern}" ~/.ssh/authorized_keys >/dev/null 2>&1; echo $?`,
               (err, stream) => {
@@ -265,100 +270,88 @@ async function deploySSHKeyToHost(
       resolve({ success: false, error: errorMessage });
     });
 
-    void (async () => {
-      try {
-        const connectionConfig: Record<string, unknown> = {
-          host: hostConfig.ip,
-          port: hostConfig.port || 22,
-          username: hostConfig.username,
-          readyTimeout: 60000,
-          keepaliveInterval: 30000,
-          keepaliveCountMax: 3,
-          tcpKeepAlive: true,
-          tcpKeepAliveInitialDelay: 30000,
-          algorithms: {
-            kex: [
-              "diffie-hellman-group14-sha256",
-              "diffie-hellman-group14-sha1",
-              "diffie-hellman-group1-sha1",
-              "diffie-hellman-group-exchange-sha256",
-              "diffie-hellman-group-exchange-sha1",
-              "ecdh-sha2-nistp256",
-              "ecdh-sha2-nistp384",
-              "ecdh-sha2-nistp521",
-            ],
-            cipher: [
-              "aes128-ctr",
-              "aes192-ctr",
-              "aes256-ctr",
-              "aes128-gcm@openssh.com",
-              "aes256-gcm@openssh.com",
-              "aes128-cbc",
-              "aes192-cbc",
-              "aes256-cbc",
-              "3des-cbc",
-            ],
-            hmac: [
-              "hmac-sha2-256-etm@openssh.com",
-              "hmac-sha2-512-etm@openssh.com",
-              "hmac-sha2-256",
-              "hmac-sha2-512",
-              "hmac-sha1",
-              "hmac-md5",
-            ],
-            compress: ["none", "zlib@openssh.com", "zlib"],
-          },
-        };
+    try {
+      const connectionConfig: Record<string, unknown> = {
+        host: hostConfig.ip,
+        port: hostConfig.port || 22,
+        username: hostConfig.username,
+        readyTimeout: 60000,
+        keepaliveInterval: 30000,
+        keepaliveCountMax: 3,
+        tcpKeepAlive: true,
+        tcpKeepAliveInitialDelay: 30000,
+        algorithms: {
+          kex: [
+            "diffie-hellman-group14-sha256",
+            "diffie-hellman-group14-sha1",
+            "diffie-hellman-group1-sha1",
+            "diffie-hellman-group-exchange-sha256",
+            "diffie-hellman-group-exchange-sha1",
+            "ecdh-sha2-nistp256",
+            "ecdh-sha2-nistp384",
+            "ecdh-sha2-nistp521",
+          ],
+          cipher: [
+            "aes128-ctr",
+            "aes192-ctr",
+            "aes256-ctr",
+            "aes128-gcm@openssh.com",
+            "aes256-gcm@openssh.com",
+            "aes128-cbc",
+            "aes192-cbc",
+            "aes256-cbc",
+            "3des-cbc",
+          ],
+          hmac: [
+            "hmac-sha2-256-etm@openssh.com",
+            "hmac-sha2-512-etm@openssh.com",
+            "hmac-sha2-256",
+            "hmac-sha2-512",
+            "hmac-sha1",
+            "hmac-md5",
+          ],
+          compress: ["none", "zlib@openssh.com", "zlib"],
+        },
+      };
 
-        if (hostConfig.authType === "password" && hostConfig.password) {
-          connectionConfig.password = hostConfig.password;
-        } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
-          try {
-            const privateKey = hostConfig.privateKey as string;
-            connectionConfig.privateKey = preparePrivateKeyForSSH2(
-              privateKey,
-              hostConfig.keyPassword as string | undefined,
-            );
-
-            if (hostConfig.keyPassword) {
-              connectionConfig.passphrase = hostConfig.keyPassword;
-            }
-          } catch (keyError) {
-            clearTimeout(connectionTimeout);
-            resolve({
-              success: false,
-              error: `Invalid SSH key format: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
-            });
-            return;
-          }
-        } else if (hostConfig.authType === "agent") {
-          const result = await applyAgentAuth(
-            connectionConfig,
-            hostConfig.terminalConfig as Record<string, unknown> | undefined,
+      if (hostConfig.authType === "password" && hostConfig.password) {
+        connectionConfig.password = hostConfig.password;
+      } else if (hostConfig.authType === "key" && hostConfig.privateKey) {
+        try {
+          const privateKey = hostConfig.privateKey as string;
+          connectionConfig.privateKey = preparePrivateKeyForSSH2(
+            privateKey,
+            hostConfig.keyPassword as string | undefined,
           );
-          if ("error" in result) {
-            clearTimeout(connectionTimeout);
-            resolve({ success: false, error: result.error });
-            return;
+
+          if (hostConfig.keyPassword) {
+            connectionConfig.passphrase = hostConfig.keyPassword;
           }
-        } else {
+        } catch (keyError) {
           clearTimeout(connectionTimeout);
           resolve({
             success: false,
-            error: `Invalid authentication configuration. Auth type: ${hostConfig.authType}, has password: ${!!hostConfig.password}, has key: ${!!hostConfig.privateKey}`,
+            error: `Invalid SSH key format: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
           });
           return;
         }
-
-        conn.connect(connectionConfig);
-      } catch (error) {
+      } else {
         clearTimeout(connectionTimeout);
         resolve({
           success: false,
-          error: error instanceof Error ? error.message : "Connection failed",
+          error: `Invalid authentication configuration. Auth type: ${hostConfig.authType}, has password: ${!!hostConfig.password}, has key: ${!!hostConfig.privateKey}`,
         });
+        return;
       }
-    })();
+
+      conn.connect(connectionConfig);
+    } catch (error) {
+      clearTimeout(connectionTimeout);
+      resolve({
+        success: false,
+        error: error instanceof Error ? error.message : "Connection failed",
+      });
+    }
   });
 }
 
@@ -427,25 +420,20 @@ export function registerCredentialDeployRoutes(
           });
         }
 
-        const { SimpleDBOps } = await import("../../utils/simple-db-ops.js");
-        const credential = await SimpleDBOps.select(
-          db
-            .select()
-            .from(sshCredentials)
-            .where(eq(sshCredentials.id, credentialId))
-            .limit(1),
-          "ssh_credentials",
+        const repository = createCurrentHostResolutionRepository();
+        const credential = await repository.findCredentialByIdForUser(
+          credentialId,
           userId,
         );
 
-        if (!credential || credential.length === 0) {
+        if (!credential) {
           return res.status(404).json({
             success: false,
             error: "Credential not found",
           });
         }
 
-        const credData = credential[0] as unknown as CredentialBackend;
+        const credData = credential as unknown as CredentialBackend;
 
         if (credData.authType !== "key") {
           return res.status(400).json({
@@ -461,20 +449,17 @@ export function registerCredentialDeployRoutes(
             error: "Public key is required for deployment",
           });
         }
-        const targetHost = await SimpleDBOps.select(
-          db.select().from(hosts).where(eq(hosts.id, targetHostId)).limit(1),
-          "ssh_data",
+        const hostData = await repository.findHostByIdForUser(
+          targetHostId,
           userId,
         );
 
-        if (!targetHost || targetHost.length === 0) {
+        if (!hostData) {
           return res.status(404).json({
             success: false,
             error: "Target host not found",
           });
         }
-
-        const hostData = targetHost[0];
 
         const hostConfig = {
           ip: hostData.ip,
@@ -484,7 +469,6 @@ export function registerCredentialDeployRoutes(
           password: hostData.password,
           privateKey: hostData.key,
           keyPassword: hostData.keyPassword,
-          terminalConfig: hostData.terminalConfig,
         };
 
         if (hostData.authType === "credential" && hostData.credentialId) {
@@ -497,29 +481,21 @@ export function registerCredentialDeployRoutes(
           }
 
           try {
-            const { SimpleDBOps } =
-              await import("../../utils/simple-db-ops.js");
-            const hostCredential = await SimpleDBOps.select(
-              db
-                .select()
-                .from(sshCredentials)
-                .where(eq(sshCredentials.id, hostData.credentialId as number))
-                .limit(1),
-              "ssh_credentials",
+            const hostCredential = await repository.findCredentialByIdForUser(
+              hostData.credentialId as number,
               userId,
             );
 
-            if (hostCredential && hostCredential.length > 0) {
-              const cred = hostCredential[0];
+            if (hostCredential) {
+              hostConfig.authType = hostCredential.authType;
+              hostConfig.username = hostCredential.username;
 
-              hostConfig.authType = cred.authType;
-              hostConfig.username = cred.username;
-
-              if (cred.authType === "password") {
-                hostConfig.password = cred.password;
-              } else if (cred.authType === "key") {
-                hostConfig.privateKey = cred.privateKey || cred.key;
-                hostConfig.keyPassword = cred.keyPassword;
+              if (hostCredential.authType === "password") {
+                hostConfig.password = hostCredential.password;
+              } else if (hostCredential.authType === "key") {
+                hostConfig.privateKey =
+                  hostCredential.privateKey || hostCredential.key;
+                hostConfig.keyPassword = hostCredential.keyPassword;
               }
             } else {
               return res.status(400).json({

@@ -13,7 +13,12 @@ on:
         type: choice
         options:
           - Development
+          - Beta
           - Production
+      source_ref:
+        description: "Git ref/SHA to build (defaults to the workflow ref)"
+        required: false
+        default: ""
   workflow_call:
     inputs:
       version:
@@ -29,6 +34,11 @@ on:
         required: false
         type: boolean
         default: false
+      source_ref:
+        description: "Git ref/SHA to build"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   build:
@@ -37,7 +47,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.source_ref || github.ref }}
           fetch-depth: 1
+
+      - name: Resolve source revision
+        run: echo "SOURCE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -62,6 +76,12 @@ jobs:
               ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
               ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
             done
+          elif [ "$BUILD_TYPE" = "Beta" ]; then
+            TAGS+=("beta" "beta-$VERSION")
+            for tag in "${TAGS[@]}"; do
+              ALL_TAGS+=("ghcr.io/lukegus/termix:$tag")
+              ALL_TAGS+=("docker.io/bugattiguy527/termix:$tag")
+            done
           else
             TAGS+=("dev-$VERSION")
             for tag in "${TAGS[@]}"; do
@@ -79,8 +99,8 @@ jobs:
           username: lukegus
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Login to Docker Hub (prod only)
-        if: ${{ inputs.build_type == 'Production' && !inputs.dry_run }}
+      - name: Login to Docker Hub (prod and beta only)
+        if: ${{ (inputs.build_type == 'Production' || inputs.build_type == 'Beta') && !inputs.dry_run }}
         uses: docker/login-action@v4
         with:
           username: bugattiguy527
@@ -98,7 +118,7 @@ jobs:
             BUILDKIT_CONTEXT_KEEP_GIT_DIR=1
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.created=${{ github.run_id }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

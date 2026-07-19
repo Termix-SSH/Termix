@@ -10,6 +10,7 @@ services:
     environment:
       PORT: "8080"
       GUACD_HOST: "guacd"
+      GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
     depends_on:
       - guacd
     networks:
@@ -19,6 +20,8 @@ services:
     image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
+    volumes:
+      - termix-data:/termix-data
     networks:
       - termix-net
 

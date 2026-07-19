@@ -1,13 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
-import { and, desc, eq } from "drizzle-orm";
 import { sshLogger } from "../../utils/logger.js";
-import { db } from "../db/index.js";
-import {
-  fileManagerPinned,
-  fileManagerRecent,
-  fileManagerShortcuts,
-} from "../db/schema.js";
+import { createCurrentFileManagerBookmarkRepository } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
 export function registerHostFileManagerBookmarkRoutes(
@@ -57,17 +51,12 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        const recentFiles = await db
-          .select()
-          .from(fileManagerRecent)
-          .where(
-            and(
-              eq(fileManagerRecent.userId, userId),
-              eq(fileManagerRecent.hostId, hostId),
-            ),
-          )
-          .orderBy(desc(fileManagerRecent.lastOpened))
-          .limit(20);
+        const recentFiles =
+          await createCurrentFileManagerBookmarkRepository().listRecentForHost(
+            userId,
+            hostId,
+            20,
+          );
 
         res.json(recentFiles);
       } catch (err) {
@@ -119,31 +108,14 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        const existing = await db
-          .select()
-          .from(fileManagerRecent)
-          .where(
-            and(
-              eq(fileManagerRecent.userId, userId),
-              eq(fileManagerRecent.hostId, hostId),
-              eq(fileManagerRecent.path, path),
-            ),
-          );
-
-        if (existing.length > 0) {
-          await db
-            .update(fileManagerRecent)
-            .set({ lastOpened: new Date().toISOString() })
-            .where(eq(fileManagerRecent.id, existing[0].id));
-        } else {
-          await db.insert(fileManagerRecent).values({
-            userId,
+        await createCurrentFileManagerBookmarkRepository().upsertRecent(
+          userId,
+          {
             hostId,
             path,
-            name: name || path.split("/").pop() || "Unknown",
-            lastOpened: new Date().toISOString(),
-          });
-        }
+            name,
+          },
+        );
 
         res.json({ message: "Recent file added" });
       } catch (err) {
@@ -193,15 +165,10 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        await db
-          .delete(fileManagerRecent)
-          .where(
-            and(
-              eq(fileManagerRecent.userId, userId),
-              eq(fileManagerRecent.hostId, hostId),
-              eq(fileManagerRecent.path, path),
-            ),
-          );
+        await createCurrentFileManagerBookmarkRepository().deleteRecentForHostPath(
+          userId,
+          { hostId, path },
+        );
 
         res.json({ message: "Recent file removed" });
       } catch (err) {
@@ -254,16 +221,11 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        const pinnedFiles = await db
-          .select()
-          .from(fileManagerPinned)
-          .where(
-            and(
-              eq(fileManagerPinned.userId, userId),
-              eq(fileManagerPinned.hostId, hostId),
-            ),
-          )
-          .orderBy(desc(fileManagerPinned.pinnedAt));
+        const pinnedFiles =
+          await createCurrentFileManagerBookmarkRepository().listPinnedForHost(
+            userId,
+            hostId,
+          );
 
         res.json(pinnedFiles);
       } catch (err) {
@@ -317,28 +279,15 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        const existing = await db
-          .select()
-          .from(fileManagerPinned)
-          .where(
-            and(
-              eq(fileManagerPinned.userId, userId),
-              eq(fileManagerPinned.hostId, hostId),
-              eq(fileManagerPinned.path, path),
-            ),
+        const created =
+          await createCurrentFileManagerBookmarkRepository().createPinned(
+            userId,
+            { hostId, path, name },
           );
 
-        if (existing.length > 0) {
+        if (!created) {
           return res.status(409).json({ error: "File already pinned" });
         }
-
-        await db.insert(fileManagerPinned).values({
-          userId,
-          hostId,
-          path,
-          name: name || path.split("/").pop() || "Unknown",
-          pinnedAt: new Date().toISOString(),
-        });
 
         res.json({ message: "File pinned" });
       } catch (err) {
@@ -388,15 +337,10 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        await db
-          .delete(fileManagerPinned)
-          .where(
-            and(
-              eq(fileManagerPinned.userId, userId),
-              eq(fileManagerPinned.hostId, hostId),
-              eq(fileManagerPinned.path, path),
-            ),
-          );
+        await createCurrentFileManagerBookmarkRepository().deletePinnedForHostPath(
+          userId,
+          { hostId, path },
+        );
 
         res.json({ message: "Pinned file removed" });
       } catch (err) {
@@ -449,16 +393,11 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        const shortcuts = await db
-          .select()
-          .from(fileManagerShortcuts)
-          .where(
-            and(
-              eq(fileManagerShortcuts.userId, userId),
-              eq(fileManagerShortcuts.hostId, hostId),
-            ),
-          )
-          .orderBy(desc(fileManagerShortcuts.createdAt));
+        const shortcuts =
+          await createCurrentFileManagerBookmarkRepository().listShortcutsForHost(
+            userId,
+            hostId,
+          );
 
         res.json(shortcuts);
       } catch (err) {
@@ -512,28 +451,15 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        const existing = await db
-          .select()
-          .from(fileManagerShortcuts)
-          .where(
-            and(
-              eq(fileManagerShortcuts.userId, userId),
-              eq(fileManagerShortcuts.hostId, hostId),
-              eq(fileManagerShortcuts.path, path),
-            ),
+        const created =
+          await createCurrentFileManagerBookmarkRepository().createShortcut(
+            userId,
+            { hostId, path, name },
           );
 
-        if (existing.length > 0) {
+        if (!created) {
           return res.status(409).json({ error: "Shortcut already exists" });
         }
-
-        await db.insert(fileManagerShortcuts).values({
-          userId,
-          hostId,
-          path,
-          name: name || path.split("/").pop() || "Unknown",
-          createdAt: new Date().toISOString(),
-        });
 
         res.json({ message: "Shortcut added" });
       } catch (err) {
@@ -583,15 +509,10 @@ export function registerHostFileManagerBookmarkRoutes(
       }
 
       try {
-        await db
-          .delete(fileManagerShortcuts)
-          .where(
-            and(
-              eq(fileManagerShortcuts.userId, userId),
-              eq(fileManagerShortcuts.hostId, hostId),
-              eq(fileManagerShortcuts.path, path),
-            ),
-          );
+        await createCurrentFileManagerBookmarkRepository().deleteShortcutForHostPath(
+          userId,
+          { hostId, path },
+        );
 
         res.json({ message: "Shortcut removed" });
       } catch (err) {

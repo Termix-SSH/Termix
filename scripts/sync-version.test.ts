@@ -69,6 +69,13 @@ describe("syncVersion", () => {
     expect(() => syncVersion("2.4", { root })).toThrow(/invalid version/);
   });
 
+  it("accepts a prerelease suffix", () => {
+    const changed = syncVersion("2.6.0-beta.20260720", { root });
+    expect(changed).toEqual(["package.json", "package-lock.json"]);
+    expect(pkg().version).toBe("2.6.0-beta.20260720");
+    expect(lock().version).toBe("2.6.0-beta.20260720");
+  });
+
   it("works when only the lock root version is stale", () => {
     fs.writeFileSync(
       path.join(root, "package.json"),

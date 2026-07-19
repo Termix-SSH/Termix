@@ -12,7 +12,6 @@ import {
   verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from "@simplewebauthn/server";
-import { and, eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -21,8 +20,12 @@ import {
   generateDeviceFingerprint,
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
-import { db, saveMemoryDatabaseToFile } from "../db/index.js";
-import { users, webauthnCredentials } from "../db/schema.js";
+import {
+  createCurrentUserRepository,
+  createCurrentWebauthnCredentialRepository,
+  getCurrentSettingValue,
+} from "../repositories/factory.js";
+import type { WebauthnCredentialRecord } from "../repositories/webauthn-credential-repository.js";
 
 type UserVerification = "discouraged" | "preferred" | "required";
 type NativeAppRequestChecker = (req: Request) => boolean;
@@ -113,7 +116,7 @@ function parseTransports(value: string | null): AuthenticatorTransportFuture[] {
 }
 
 function getCredentialForVerification(
-  credential: typeof webauthnCredentials.$inferSelect,
+  credential: WebauthnCredentialRecord,
 ): WebAuthnCredential {
   return {
     id: credential.credentialId as Base64URLString,
@@ -129,16 +132,28 @@ export function registerUserWebAuthnRoutes(
   router: Router,
   { authenticateJWT, authManager, isNativeAppRequest }: WebAuthnRoutesDeps,
 ): void {
+  /**
+   * @openapi
+   * /users/webauthn/credentials:
+   *   get:
+   *     summary: List passkeys
+   *     description: Lists the authenticated user's registered passkeys.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: List of passkeys.
+   *       401:
+   *         description: Authentication required.
+   */
   router.get("/webauthn/credentials", authenticateJWT, async (req, res) => {
     const userId = (req as AuthenticatedRequest).userId;
     if (!userId) {
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    const credentials = await db
-      .select()
-      .from(webauthnCredentials)
-      .where(eq(webauthnCredentials.userId, userId));
+    const credentials =
+      await createCurrentWebauthnCredentialRepository().listByUserId(userId);
 
     res.json({
       credentials: credentials.map((credential) => ({
@@ -154,6 +169,22 @@ export function registerUserWebAuthnRoutes(
     });
   });
 
+  /**
+   * @openapi
+   * /users/webauthn/register/options:
+   *   post:
+   *     summary: Start passkey registration
+   *     description: Generates WebAuthn registration options for the authenticated user.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Registration options and challenge id.
+   *       401:
+   *         description: Authentication required.
+   *       404:
+   *         description: User not found.
+   */
   router.post(
     "/webauthn/register/options",
     authenticateJWT,
@@ -169,15 +200,13 @@ export function registerUserWebAuthnRoutes(
         });
       }
 
-      const user = await db.select().from(users).where(eq(users.id, userId));
-      if (!user.length) {
+      const user = await createCurrentUserRepository().findById(userId);
+      if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const existing = await db
-        .select()
-        .from(webauthnCredentials)
-        .where(eq(webauthnCredentials.userId, userId));
+      const existing =
+        await createCurrentWebauthnCredentialRepository().listByUserId(userId);
 
       const origin = getRequestOrigin(req);
       const rpID = getRpID(origin);
@@ -189,8 +218,8 @@ export function registerUserWebAuthnRoutes(
         rpName: "Termix",
         rpID,
         userID: Buffer.from(userId, "utf8"),
-        userName: user[0].username,
-        userDisplayName: user[0].username,
+        userName: user.username,
+        userDisplayName: user.username,
         attestationType: "none",
         excludeCredentials: existing.map((credential) => ({
           id: credential.credentialId as Base64URLString,
@@ -214,6 +243,22 @@ export function registerUserWebAuthnRoutes(
     },
   );
 
+  /**
+   * @openapi
+   * /users/webauthn/register/verify:
+   *   post:
+   *     summary: Finish passkey registration
+   *     description: Verifies the WebAuthn registration response and stores the passkey.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Passkey registered.
+   *       400:
+   *         description: Registration failed or challenge expired.
+   *       401:
+   *         description: Authentication required.
+   */
   router.post(
     "/webauthn/register/verify",
     authenticateJWT,
@@ -252,14 +297,12 @@ export function registerUserWebAuthnRoutes(
           (req.body?.response as RegistrationResponseJSON | undefined)?.response
             ?.transports ?? [];
 
-        await authManager.setupWebAuthnUserEncryption(userId);
-
         const name =
           typeof req.body?.name === "string" && req.body.name.trim()
             ? req.body.name.trim().slice(0, 80)
             : "Passkey";
 
-        await db.insert(webauthnCredentials).values({
+        await createCurrentWebauthnCredentialRepository().create({
           id: nanoid(),
           userId,
           name,
@@ -273,7 +316,6 @@ export function registerUserWebAuthnRoutes(
           createdAt: new Date().toISOString(),
         });
 
-        await saveMemoryDatabaseToFile();
         res.json({ success: true });
       } catch (error) {
         authLogger.warn("WebAuthn registration failed", {
@@ -286,6 +328,20 @@ export function registerUserWebAuthnRoutes(
     },
   );
 
+  /**
+   * @openapi
+   * /users/webauthn/authenticate/options:
+   *   post:
+   *     summary: Start passkey login
+   *     description: Generates WebAuthn authentication options, optionally scoped to a username.
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Authentication options and challenge id.
+   *       404:
+   *         description: No passkeys found for the user.
+   */
   router.post("/webauthn/authenticate/options", async (req, res) => {
     const origin = getRequestOrigin(req);
     const rpID = getRpID(origin);
@@ -301,19 +357,14 @@ export function registerUserWebAuthnRoutes(
       | undefined;
 
     if (username) {
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-      if (!user.length) {
+      const user = await createCurrentUserRepository().findByUsername(username);
+      if (!user) {
         return res.status(404).json({ error: "No passkeys found" });
       }
 
-      userId = user[0].id;
-      const credentials = await db
-        .select()
-        .from(webauthnCredentials)
-        .where(eq(webauthnCredentials.userId, userId));
+      userId = user.id;
+      const credentials =
+        await createCurrentWebauthnCredentialRepository().listByUserId(userId);
 
       if (!credentials.length) {
         return res.status(404).json({ error: "No passkeys found" });
@@ -342,6 +393,22 @@ export function registerUserWebAuthnRoutes(
     res.json({ options, challengeId });
   });
 
+  /**
+   * @openapi
+   * /users/webauthn/authenticate/verify:
+   *   post:
+   *     summary: Finish passkey login
+   *     description: Verifies the WebAuthn assertion and issues a session token (or a TOTP challenge).
+   *     tags:
+   *       - WebAuthn
+   *     responses:
+   *       200:
+   *         description: Login succeeded or TOTP verification required.
+   *       400:
+   *         description: Challenge expired or invalid response.
+   *       401:
+   *         description: Passkey not recognized or authentication failed.
+   */
   router.post("/webauthn/authenticate/verify", async (req, res) => {
     const challenge = takeChallenge(
       authenticationChallenges,
@@ -360,16 +427,15 @@ export function registerUserWebAuthnRoutes(
       return res.status(400).json({ error: "Invalid passkey response" });
     }
 
-    const credentials = await db
-      .select()
-      .from(webauthnCredentials)
-      .where(eq(webauthnCredentials.credentialId, response.id));
+    const credential =
+      await createCurrentWebauthnCredentialRepository().findByCredentialId(
+        response.id,
+      );
 
-    if (!credentials.length) {
+    if (!credential) {
       return res.status(401).json({ error: "Passkey not recognized" });
     }
 
-    const credential = credentials[0];
     if (challenge.userId && challenge.userId !== credential.userId) {
       return res.status(401).json({ error: "Passkey not recognized" });
     }
@@ -391,37 +457,35 @@ export function registerUserWebAuthnRoutes(
         return res.status(401).json({ error: "Passkey authentication failed" });
       }
 
-      const user = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, credential.userId));
-      if (!user.length) {
+      const userRecord = await createCurrentUserRepository().findById(
+        credential.userId,
+      );
+      if (!userRecord) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const userRecord = user[0];
       const deviceInfo = parseUserAgent(req);
-      const dataUnlocked = await authManager.authenticateWebAuthnUser(
+      const authenticated = await authManager.authenticateWebAuthnUser(
         userRecord.id,
         deviceInfo.type,
       );
 
-      if (!dataUnlocked) {
+      if (!authenticated) {
         return res.status(401).json({
           error:
             "Passkey cannot unlock this account. Log in with password and register the passkey again.",
         });
       }
 
-      await db
-        .update(webauthnCredentials)
-        .set({
+      await createCurrentWebauthnCredentialRepository().updateAuthState(
+        credential.id,
+        {
           counter: verification.authenticationInfo.newCounter,
           backedUp: verification.authenticationInfo.credentialBackedUp,
           deviceType: verification.authenticationInfo.credentialDeviceType,
           lastUsedAt: new Date().toISOString(),
-        })
-        .where(eq(webauthnCredentials.id, credential.id));
+        },
+      );
 
       if (userRecord.totpEnabled) {
         const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
@@ -431,7 +495,6 @@ export function registerUserWebAuthnRoutes(
         );
 
         if (!isTrusted) {
-          await saveMemoryDatabaseToFile();
           const tempToken = await authManager.generateJWTToken(userRecord.id, {
             pendingTOTP: true,
             expiresIn: "10m",
@@ -451,15 +514,9 @@ export function registerUserWebAuthnRoutes(
         deviceInfo: deviceInfo.deviceInfo,
       });
 
-      await saveMemoryDatabaseToFile();
-
-      const timeoutRow = db.$client
-        .prepare(
-          "SELECT value FROM settings WHERE key = 'session_timeout_hours'",
-        )
-        .get() as { value: string } | undefined;
-      const timeoutHours = timeoutRow
-        ? parseInt(timeoutRow.value, 10) || 24
+      const timeoutSetting = getCurrentSettingValue("session_timeout_hours");
+      const timeoutHours = timeoutSetting
+        ? parseInt(timeoutSetting, 10) || 24
         : 24;
       const maxAge = req.body?.rememberMe
         ? 30 * 24 * 60 * 60 * 1000
@@ -473,7 +530,6 @@ export function registerUserWebAuthnRoutes(
         userId: userRecord.id,
         is_oidc: !!userRecord.isOidc,
         totp_enabled: !!userRecord.totpEnabled,
-        data_unlocked: true,
         ...(isNativeAppRequest(req) ? { token } : {}),
       });
     } catch (error) {
@@ -487,6 +543,25 @@ export function registerUserWebAuthnRoutes(
     }
   });
 
+  /**
+   * @openapi
+   * /users/webauthn/credentials/{credentialId}:
+   *   delete:
+   *     summary: Delete a passkey
+   *     description: Removes one of the authenticated user's passkeys.
+   *     tags:
+   *       - WebAuthn
+   *     parameters:
+   *       - in: path
+   *         name: credentialId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200:
+   *         description: Passkey deleted.
+   *       401:
+   *         description: Authentication required.
+   */
   router.delete(
     "/webauthn/credentials/:credentialId",
     authenticateJWT,
@@ -498,15 +573,10 @@ export function registerUserWebAuthnRoutes(
 
       const credentialId = String(req.params.credentialId);
 
-      await db
-        .delete(webauthnCredentials)
-        .where(
-          and(
-            eq(webauthnCredentials.id, credentialId),
-            eq(webauthnCredentials.userId, userId),
-          ),
-        );
-      await saveMemoryDatabaseToFile();
+      await createCurrentWebauthnCredentialRepository().deleteForUser(
+        userId,
+        credentialId,
+      );
 
       res.json({ success: true });
     },
