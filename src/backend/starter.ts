@@ -61,6 +61,8 @@ import {
         }
       }
     }
+    process.env.VERSION = version;
+
     versionLogger.info(`Termix Backend starting - Version: ${version}`, {
       operation: "startup",
       version: version,
