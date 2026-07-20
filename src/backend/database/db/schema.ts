@@ -462,6 +462,9 @@ export const sshFolders = sqliteTable("ssh_folders", {
   name: text("name").notNull(),
   color: text("color"),
   icon: text("icon"),
+  credentialId: integer("credential_id").references(() => sshCredentials.id, {
+    onDelete: "set null",
+  }),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

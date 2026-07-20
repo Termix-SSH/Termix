@@ -72,13 +72,20 @@ export class HostFolderRepository {
     name: string,
     color: string | null | undefined,
     icon: string | null | undefined,
+    credentialId?: number | null,
     now = new Date().toISOString(),
   ): Promise<{ folder: HostFolderRecord; created: boolean }> {
     const existing = await this.findFolder(userId, name);
     if (existing) {
       const [updated] = await this.context.drizzle
         .update(sshFolders)
-        .set({ color, icon, updatedAt: now })
+        .set({
+          color,
+          icon,
+          credentialId:
+            credentialId === undefined ? existing.credentialId : credentialId,
+          updatedAt: now,
+        })
         .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)))
         .returning();
 
@@ -93,6 +100,7 @@ export class HostFolderRepository {
         name,
         color,
         icon,
+        credentialId: credentialId ?? null,
         createdAt: now,
         updatedAt: now,
       })

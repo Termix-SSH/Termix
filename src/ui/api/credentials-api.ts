@@ -200,6 +200,7 @@ export async function updateFolderMetadata(
   name: string,
   color?: string,
   icon?: string,
+  credentialId?: number | null,
 ): Promise<void> {
   try {
     sshLogger.info("Updating folder metadata", {
@@ -207,12 +208,14 @@ export async function updateFolderMetadata(
       name,
       color,
       icon,
+      credentialId,
     });
 
     await authApi.put("/host/folders/metadata", {
       name,
       color,
       icon,
+      credentialId,
     });
 
     sshLogger.success("Folder metadata updated successfully", {

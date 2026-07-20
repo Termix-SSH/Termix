@@ -343,6 +343,7 @@ export interface SSHFolder {
   name: string;
   color?: string;
   icon?: string;
+  credentialId?: number | null;
   createdAt: string;
   updatedAt: string;
 }

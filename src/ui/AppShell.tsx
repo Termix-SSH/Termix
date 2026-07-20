@@ -141,7 +141,10 @@ import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
 
 function buildHostTree(
   hosts: SSHHostWithStatus[],
-  folderMeta?: Map<string, { color?: string; icon?: string }>,
+  folderMeta?: Map<
+    string,
+    { color?: string; icon?: string; credentialId?: number | null }
+  >,
 ): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
   const folderMap = new Map<string, HostFolder>();
@@ -159,6 +162,7 @@ function buildHostTree(
           path: accumulated,
           color: meta?.color,
           icon: meta?.icon,
+          credentialId: meta?.credentialId ?? null,
           children: [],
         };
         folderMap.set(accumulated, folder);
@@ -798,11 +802,15 @@ export function AppShell({
       ]);
       const converted = raw.map(sshHostToHost);
       setAllHosts(converted);
-      const folderMeta = new Map<string, { color?: string; icon?: string }>();
+      const folderMeta = new Map<
+        string,
+        { color?: string; icon?: string; credentialId?: number | null }
+      >();
       for (const f of folders) {
         folderMeta.set(f.name, {
           color: f.color ?? undefined,
           icon: f.icon ?? undefined,
+          credentialId: f.credentialId ?? null,
         });
       }
       setRealHostTree(buildHostTree(raw, folderMeta));

@@ -221,6 +221,7 @@ export type HostFolder = {
   path?: string;
   color?: string;
   icon?: string;
+  credentialId?: number | null;
 };
 
 export type TabType =

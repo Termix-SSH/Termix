@@ -14,6 +14,7 @@ import {
 } from "../../hosts/credential-username.js";
 import {
   createCurrentCommandHistoryRepository,
+  createCurrentCredentialRepository,
   createCurrentFileManagerBookmarkRepository,
   createCurrentOpksshTokenRepository,
   createCurrentRecentActivityRepository,
@@ -1726,9 +1727,16 @@ router.get(
  * /host/db/hosts/export:
  *   get:
  *     summary: Export all SSH hosts
- *     description: Exports all SSH hosts for the current user with decrypted credentials.
+ *     description: Exports all SSH hosts for the current user. By default credentials are decrypted and embedded. With `share=1`, secrets are omitted and credential-authenticated hosts instead reference a scrubbed `credentials` array by alias, suitable for handing off to another user.
  *     tags:
  *       - SSH
+ *     parameters:
+ *       - in: query
+ *         name: share
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: Set to "1" to export without embedded secrets.
  *     responses:
  *       200:
  *         description: All exported SSH hosts.
@@ -1743,6 +1751,7 @@ router.get(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
+    const shareMode = req.query.share === "1" || req.query.share === "true";
 
     if (!isNonEmptyString(userId)) {
       return res.status(400).json({ error: "Invalid userId" });
@@ -1753,10 +1762,12 @@ router.get(
         await createCurrentHostResolutionRepository().findHostsByUserId(userId);
 
       const exportedHosts = [];
+      const usedCredentialIds = new Set<number>();
 
       for (const host of allHosts) {
-        const resolvedHost =
-          (await resolveHostCredentials(host, userId)) || host;
+        const resolvedHost = shareMode
+          ? host
+          : (await resolveHostCredentials(host, userId)) || host;
 
         const exportedConnectionType =
           (resolvedHost.connectionType as string) || "ssh";
@@ -1770,7 +1781,7 @@ router.get(
           ip: resolvedHost.ip,
           port: resolvedHost.port,
           username: resolvedHost.username,
-          password: resolvedHost.password || null,
+          password: shareMode ? null : resolvedHost.password || null,
           folder: resolvedHost.folder,
           tags:
             typeof resolvedHost.tags === "string"
@@ -1793,8 +1804,8 @@ router.get(
           : {
               ...baseExportData,
               authType: resolvedHost.authType,
-              key: resolvedHost.key || null,
-              keyPassword: resolvedHost.keyPassword || null,
+              key: shareMode ? null : resolvedHost.key || null,
+              keyPassword: shareMode ? null : resolvedHost.keyPassword || null,
               keyType: resolvedHost.keyType || null,
               credentialId: resolvedHost.credentialId || null,
               overrideCredentialUsername:
@@ -1811,7 +1822,9 @@ router.get(
               showDockerInSidebar: !!resolvedHost.showDockerInSidebar,
               showServerStatsInSidebar: !!resolvedHost.showServerStatsInSidebar,
               defaultPath: resolvedHost.defaultPath,
-              sudoPassword: resolvedHost.sudoPassword || null,
+              sudoPassword: shareMode
+                ? null
+                : resolvedHost.sudoPassword || null,
               tunnelConnections: resolvedHost.tunnelConnections
                 ? JSON.parse(resolvedHost.tunnelConnections as string)
                 : [],
@@ -1839,22 +1852,92 @@ router.get(
               socks5Host: resolvedHost.socks5Host || null,
               socks5Port: resolvedHost.socks5Port || null,
               socks5Username: resolvedHost.socks5Username || null,
-              socks5Password: resolvedHost.socks5Password || null,
+              socks5Password: shareMode
+                ? null
+                : resolvedHost.socks5Password || null,
               socks5ProxyChain: resolvedHost.socks5ProxyChain
                 ? JSON.parse(resolvedHost.socks5ProxyChain as string)
                 : null,
             };
 
+        if (
+          shareMode &&
+          !isRemoteDesktop &&
+          resolvedHost.authType === "credential" &&
+          resolvedHost.credentialId
+        ) {
+          usedCredentialIds.add(resolvedHost.credentialId as number);
+        }
+
         exportedHosts.push(exportData);
       }
 
-      sshLogger.success("All hosts exported with decrypted credentials", {
-        operation: "hosts_export_all",
+      if (!shareMode) {
+        sshLogger.success("All hosts exported with decrypted credentials", {
+          operation: "hosts_export_all",
+          count: exportedHosts.length,
+          userId,
+        });
+
+        return res.json({ hosts: exportedHosts });
+      }
+
+      const exportedCredentials: Record<string, unknown>[] = [];
+      if (usedCredentialIds.size > 0) {
+        const credentialRepository = createCurrentCredentialRepository();
+        const ownedCredentials =
+          await credentialRepository.listDecryptedByUserId(userId);
+        const credentialById = new Map(
+          ownedCredentials.map((credential) => [credential.id, credential]),
+        );
+
+        for (const host of exportedHosts as Record<string, unknown>[]) {
+          const credentialId = host.credentialId as number | null;
+          if (!credentialId) continue;
+          const credential = credentialById.get(credentialId);
+          if (!credential) continue;
+
+          host.credentialAlias = credential.name;
+
+          if (
+            !exportedCredentials.some(
+              (entry) => entry.alias === credential.name,
+            )
+          ) {
+            exportedCredentials.push({
+              alias: credential.name,
+              name: credential.name,
+              description: credential.description || null,
+              folder: credential.folder || null,
+              tags:
+                typeof credential.tags === "string"
+                  ? credential.tags.split(",").filter(Boolean)
+                  : [],
+              authType: credential.authType,
+              username: credential.username || null,
+              keyType: credential.keyType || null,
+            });
+          }
+        }
+      }
+
+      for (const host of exportedHosts as Record<string, unknown>[]) {
+        delete host.credentialId;
+      }
+
+      sshLogger.success("All hosts exported for sharing without secrets", {
+        operation: "hosts_export_all_share",
         count: exportedHosts.length,
+        credentialCount: exportedCredentials.length,
         userId,
       });
 
-      res.json({ hosts: exportedHosts });
+      res.json({
+        version: "1",
+        exportedAt: new Date().toISOString(),
+        credentials: exportedCredentials,
+        hosts: exportedHosts,
+      });
     } catch (err) {
       sshLogger.error("Failed to export all SSH hosts", err, {
         operation: "hosts_export_all",

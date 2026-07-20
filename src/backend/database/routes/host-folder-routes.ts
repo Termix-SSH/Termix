@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import { databaseLogger, sshLogger } from "../../utils/logger.js";
 import {
   createCurrentCommandHistoryRepository,
+  createCurrentCredentialRepository,
   createCurrentFileManagerBookmarkRepository,
   createCurrentHostFolderRepository,
   createCurrentRecentActivityRepository,
@@ -138,7 +139,7 @@ export function registerHostFolderRoutes(
    * /host/folders/metadata:
    *   put:
    *     summary: Update folder metadata
-   *     description: Updates the metadata (color, icon) of a folder.
+   *     description: Updates the metadata (color, icon, assigned credential) of a folder.
    *     tags:
    *       - SSH
    *     requestBody:
@@ -154,6 +155,9 @@ export function registerHostFolderRoutes(
    *                 type: string
    *               icon:
    *                 type: string
+   *               credentialId:
+   *                 type: integer
+   *                 nullable: true
    *     responses:
    *       200:
    *         description: Folder metadata updated successfully.
@@ -167,19 +171,46 @@ export function registerHostFolderRoutes(
     authenticateJWT,
     async (req: Request, res: Response) => {
       const userId = (req as AuthenticatedRequest).userId;
-      const { name, color, icon } = req.body;
+      const { name, color, icon, credentialId } = req.body;
 
       if (!isNonEmptyString(userId) || !name) {
         return res.status(400).json({ error: "Folder name is required" });
       }
 
+      const normalizedCredentialId =
+        credentialId === undefined
+          ? undefined
+          : credentialId === null || credentialId === ""
+            ? null
+            : Number(credentialId);
+
+      if (
+        normalizedCredentialId !== undefined &&
+        normalizedCredentialId !== null &&
+        !Number.isInteger(normalizedCredentialId)
+      ) {
+        return res.status(400).json({ error: "Invalid credential ID" });
+      }
+
       try {
+        if (normalizedCredentialId) {
+          const credential =
+            await createCurrentCredentialRepository().findByIdForUser(
+              userId,
+              normalizedCredentialId,
+            );
+          if (!credential) {
+            return res.status(404).json({ error: "Credential not found" });
+          }
+        }
+
         const { folder, created } =
           await createCurrentHostFolderRepository().upsertMetadata(
             userId,
             name,
             color,
             icon,
+            normalizedCredentialId,
           );
 
         if (!created) {

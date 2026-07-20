@@ -2120,6 +2120,7 @@ export {
   assignRoleToUser,
   removeRoleFromUser,
   shareHost,
+  shareFolder,
   updateHostAccess,
   getHostAccess,
   revokeHostAccess,

@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
-import { hostAccess, hosts, sshCredentials } from "../db/schema.js";
+import { hostAccess, hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 
@@ -313,6 +313,34 @@ export class HostResolutionRepository {
       .limit(1);
 
     return rows[0]?.overrideCredentialId ?? null;
+  }
+
+  /**
+   * Resolve the nearest assigned credential for a folder path, walking up
+   * through parent folders (e.g. "Switches / Floor1" falls back to
+   * "Switches" if the child folder has no credential of its own).
+   */
+  async findFolderCredentialId(
+    userId: string,
+    folderPath: string,
+  ): Promise<number | null> {
+    const segments = folderPath.split(" / ").filter(Boolean);
+    if (segments.length === 0) return null;
+
+    const paths = segments.map((_, i) => segments.slice(0, i + 1).join(" / "));
+    const rows = await this.context.drizzle
+      .select({ name: sshFolders.name, credentialId: sshFolders.credentialId })
+      .from(sshFolders)
+      .where(
+        and(eq(sshFolders.userId, userId), inArray(sshFolders.name, paths)),
+      );
+
+    const byName = new Map(rows.map((row) => [row.name, row.credentialId]));
+    for (let i = paths.length - 1; i >= 0; i--) {
+      const credentialId = byName.get(paths[i]);
+      if (credentialId) return credentialId;
+    }
+    return null;
   }
 
   private decryptOne<T extends Record<string, unknown>>(

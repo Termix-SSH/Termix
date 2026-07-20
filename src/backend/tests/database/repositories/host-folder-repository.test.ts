@@ -139,6 +139,7 @@ describe("HostFolderRepository", () => {
         name TEXT NOT NULL,
         color TEXT,
         icon TEXT,
+        credential_id INTEGER,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -216,6 +217,7 @@ describe("HostFolderRepository", () => {
         "prod",
         "#abcdef",
         "folder",
+        undefined,
         "2026-02-01T00:00:00.000Z",
       ),
     ).resolves.toMatchObject({
@@ -228,6 +230,7 @@ describe("HostFolderRepository", () => {
         "new",
         null,
         null,
+        null,
         "2026-03-01T00:00:00.000Z",
       ),
     ).resolves.toMatchObject({
@@ -235,6 +238,28 @@ describe("HostFolderRepository", () => {
       folder: { name: "new" },
     });
     expect(writes).toBe(2);
+  });
+
+  it("assigns a credential to a folder and resolves it for nested paths", async () => {
+    const { repository } = await createRepository();
+
+    await expect(
+      repository.upsertMetadata(
+        "user-1",
+        "prod",
+        undefined,
+        undefined,
+        1,
+        "2026-02-01T00:00:00.000Z",
+      ),
+    ).resolves.toMatchObject({
+      created: false,
+      folder: { credentialId: 1 },
+    });
+
+    const folders = await repository.listFolders("user-1");
+    const prodFolder = folders.find((f) => f.name === "prod");
+    expect(prodFolder?.credentialId).toBe(1);
   });
 
   it("lists and deletes hosts and folder records in a folder tree", async () => {

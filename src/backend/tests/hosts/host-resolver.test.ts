@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   credentials: new Map<string, Record<string, unknown>>(),
   sharedSecret: null as Record<string, unknown> | null,
   auditCalls: [] as Record<string, unknown>[],
+  folderCredentialId: null as number | null,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
@@ -17,6 +18,7 @@ vi.mock("../../database/repositories/factory.js", () => ({
     findOverrideCredentialId: async () => state.overrideCredentialId,
     findCredentialByIdForUser: async (credentialId: number, userId: string) =>
       state.credentials.get(`${credentialId}:${userId}`) ?? null,
+    findFolderCredentialId: async () => state.folderCredentialId,
   }),
   createCurrentVaultProfileRepository: () => ({
     findById: async () => null,
@@ -101,6 +103,7 @@ beforeEach(() => {
   state.credentials.clear();
   state.sharedSecret = null;
   state.auditCalls = [];
+  state.folderCredentialId = null;
 });
 
 describe("resolveHostById", () => {
@@ -136,6 +139,63 @@ describe("resolveHostById", () => {
     expect(host.username).toBe("cred-user");
     expect(host.authType).toBe("key");
     expect(host.sudoPassword).toBe("owner-sudo");
+  });
+
+  it("falls back to the host's folder-assigned credential when none is set on the host", async () => {
+    state.host = baseHost({
+      authType: "credential",
+      credentialId: null,
+      folder: "switches",
+      username: "",
+      password: null,
+    });
+    state.folderCredentialId = 11;
+    state.credentials.set("11:owner", {
+      id: 11,
+      username: "folder-user",
+      authType: "password",
+      password: "folder-pass",
+      privateKey: null,
+      key: null,
+      keyPassword: null,
+      keyType: null,
+    });
+
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.password).toBe("folder-pass");
+    expect(host.username).toBe("folder-user");
+    expect(host.authType).toBe("password");
+  });
+
+  it("prefers the host's own credential over its folder's credential", async () => {
+    state.host = baseHost({
+      authType: "credential",
+      credentialId: 9,
+      folder: "switches",
+      username: "",
+      password: null,
+    });
+    state.folderCredentialId = 11;
+    state.credentials.set("9:owner", {
+      id: 9,
+      username: "host-user",
+      authType: "password",
+      password: "host-pass",
+      privateKey: null,
+      key: null,
+      keyPassword: null,
+      keyType: null,
+    });
+
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.username).toBe("host-user");
+    expect(host.password).toBe("host-pass");
   });
 
   it("uses the share snapshot for a non-owner and strips owner-only secrets", async () => {

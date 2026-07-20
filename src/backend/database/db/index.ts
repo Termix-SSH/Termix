@@ -390,9 +390,11 @@ async function initializeCompleteDatabase(): Promise<void> {
         name TEXT NOT NULL,
         color TEXT,
         icon TEXT,
+        credential_id INTEGER,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS recent_activity (
@@ -1372,6 +1374,19 @@ const migrateSchema = () => {
       sqlite.exec("ALTER TABLE host_access ADD COLUMN override_credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL");
     } catch (alterError) {
       databaseLogger.warn("Failed to add override_credential_id column", {
+        operation: "schema_migration",
+        error: alterError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT credential_id FROM ssh_folders LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec("ALTER TABLE ssh_folders ADD COLUMN credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL");
+    } catch (alterError) {
+      databaseLogger.warn("Failed to add credential_id column to ssh_folders", {
         operation: "schema_migration",
         error: alterError,
       });

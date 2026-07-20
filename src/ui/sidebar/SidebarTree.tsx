@@ -71,6 +71,7 @@ import {
   canShareHost,
 } from "@/sidebar/host-permissions";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
+import { HostShareModal } from "@/sidebar/HostShareModal";
 import {
   useStatusColorScheme,
   getStatusClasses,
@@ -319,7 +320,7 @@ export function HostItem({
   const metricsEnabled =
     host.enableSsh && host.statsConfig?.metricsEnabled !== false;
   const [trayOnClick, setTrayOnClick] = useState(
-    () => localStorage.getItem("hostTrayOnClick") === "true",
+    () => localStorage.getItem("hostTrayOnClick") !== "false",
   );
   const [showHostTags, setShowHostTags] = useState<boolean>(() => {
     const v = localStorage.getItem("showHostTags");
@@ -362,7 +363,7 @@ export function HostItem({
 
   useEffect(() => {
     const handler = () =>
-      setTrayOnClick(localStorage.getItem("hostTrayOnClick") === "true");
+      setTrayOnClick(localStorage.getItem("hostTrayOnClick") !== "false");
     window.addEventListener("storage", handler);
     window.addEventListener("hostTrayOnClickChanged", handler);
     return () => {
@@ -1561,6 +1562,7 @@ export function FolderItem({
   onManageFolder,
   onDeleteFolder,
   onOpenAllSessions,
+  onShareFolder,
   onMoveHostsToFolder,
   draggedHostIds,
   onDragHostStart,
@@ -1591,6 +1593,7 @@ export function FolderItem({
   onManageFolder: (folder: HostFolder) => void;
   onDeleteFolder: (folder: HostFolder) => void;
   onOpenAllSessions: (folder: HostFolder) => void;
+  onShareFolder?: (folder: HostFolder) => void;
   onMoveHostsToFolder: (hostIds: string[], targetPath: string) => void;
   draggedHostIds: string[] | null;
   onDragHostStart: (hostId: string) => void;
@@ -1674,6 +1677,18 @@ export function FolderItem({
                 >
                   <FolderOpen className="size-2.5" />
                 </span>
+                {onShareFolder && (
+                  <span
+                    title={t("hosts.shareFolder")}
+                    className="text-muted-foreground/50 hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onShareFolder(folder);
+                    }}
+                  >
+                    <Share2 className="size-2.5" />
+                  </span>
+                )}
                 <span
                   title={t("hosts.editFolder")}
                   className="text-muted-foreground/50 hover:text-foreground"
@@ -1727,6 +1742,7 @@ export function FolderItem({
                 onManageFolder={onManageFolder}
                 onDeleteFolder={onDeleteFolder}
                 onOpenAllSessions={onOpenAllSessions}
+                onShareFolder={onShareFolder}
                 onMoveHostsToFolder={onMoveHostsToFolder}
                 draggedHostIds={draggedHostIds}
                 onDragHostStart={onDragHostStart}
@@ -1813,11 +1829,14 @@ export function SidebarTree({
     mode: "create" | "edit";
     folder?: HostFolder;
   } | null>(null);
+  const [shareFolderTarget, setShareFolderTarget] = useState<string | null>(
+    null,
+  );
   const [compactHostView, setCompactHostView] = useState(
     () => localStorage.getItem("compactHostView") === "true",
   );
   const [trayOnClick, setTrayOnClick] = useState(
-    () => localStorage.getItem("hostTrayOnClick") === "true",
+    () => localStorage.getItem("hostTrayOnClick") !== "false",
   );
 
   useEffect(() => {
@@ -1833,7 +1852,7 @@ export function SidebarTree({
 
   useEffect(() => {
     const handler = () =>
-      setTrayOnClick(localStorage.getItem("hostTrayOnClick") === "true");
+      setTrayOnClick(localStorage.getItem("hostTrayOnClick") !== "false");
     window.addEventListener("storage", handler);
     window.addEventListener("hostTrayOnClickChanged", handler);
     return () => {
@@ -1886,6 +1905,7 @@ export function SidebarTree({
     name: string;
     color: string;
     icon: string;
+    credentialId: number | null;
   }) {
     const existing = folderDialog?.folder;
     try {
@@ -1898,9 +1918,19 @@ export function SidebarTree({
         if (newPath !== oldPath) {
           await renameFolder(oldPath, newPath);
         }
-        await updateFolderMetadata(newPath, value.color, value.icon);
+        await updateFolderMetadata(
+          newPath,
+          value.color,
+          value.icon,
+          value.credentialId,
+        );
       } else {
-        await updateFolderMetadata(value.name, value.color, value.icon);
+        await updateFolderMetadata(
+          value.name,
+          value.color,
+          value.icon,
+          value.credentialId,
+        );
       }
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(t("hosts.folderSaved"));
@@ -2224,6 +2254,9 @@ export function SidebarTree({
                       onManageFolder={handleManageFolder}
                       onDeleteFolder={handleDeleteFolder}
                       onOpenAllSessions={handleOpenAllSessions}
+                      onShareFolder={(folder) =>
+                        setShareFolderTarget(folder.path ?? folder.name)
+                      }
                       onMoveHostsToFolder={handleMoveHostsToFolder}
                       draggedHostIds={draggedHostIds}
                       onDragHostStart={handleDragHostStart}
@@ -2541,11 +2574,19 @@ export function SidebarTree({
                 name: folderDialog.folder.name,
                 color: folderDialog.folder.color,
                 icon: folderDialog.folder.icon,
+                credentialId: folderDialog.folder.credentialId,
               }
             : undefined
         }
         onOpenChange={(v) => !v && setFolderDialog(null)}
         onSubmit={handleSaveFolderMetadata}
+      />
+
+      <HostShareModal
+        open={shareFolderTarget !== null}
+        onClose={() => setShareFolderTarget(null)}
+        host={null}
+        folder={shareFolderTarget}
       />
     </div>
   );

@@ -464,8 +464,8 @@ export function UserProfilePanel({
     "one-dark": t("newUi.sidebar.userProfile.themeOneDark"),
     gruvbox: t("newUi.sidebar.userProfile.themeGruvbox"),
   };
-  const [openSection, setOpenSection] = useState<UserProfileSection | null>(
-    "account",
+  const [openSections, setOpenSections] = useState<Set<UserProfileSection>>(
+    () => new Set(["account"]),
   );
 
   // User info
@@ -548,7 +548,7 @@ export function UserProfilePanel({
     return v !== null ? v === "true" : true;
   });
   const [hostTrayOnClick, setHostTrayOnClick] = useState(
-    () => localStorage.getItem("hostTrayOnClick") === "true",
+    () => localStorage.getItem("hostTrayOnClick") !== "false",
   );
   const [compactHostView, setCompactHostView] = useState(
     () => localStorage.getItem("compactHostView") === "true",
@@ -790,8 +790,8 @@ export function UserProfilePanel({
     setShowHostTags(true);
     localStorage.setItem("showHostTags", "true");
     window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
-    setHostTrayOnClick(false);
-    localStorage.setItem("hostTrayOnClick", "false");
+    setHostTrayOnClick(true);
+    localStorage.setItem("hostTrayOnClick", "true");
     setCompactHostView(false);
     localStorage.setItem("compactHostView", "false");
     window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
@@ -824,7 +824,7 @@ export function UserProfilePanel({
         commandAutocomplete: false,
         commandPaletteEnabled: true,
         showHostTags: true,
-        hostTrayOnClick: false,
+        hostTrayOnClick: true,
         compactHostView: false,
         pinAppRail: false,
         expandAppRailOnHover: true,
@@ -893,7 +893,7 @@ export function UserProfilePanel({
     localStorage.setItem("showHostTags", String(restoredHostTags));
     window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
 
-    const restoredTrayOnClick = restore("hostTrayOnClick", "false") === "true";
+    const restoredTrayOnClick = restore("hostTrayOnClick", "true") !== "false";
     setHostTrayOnClick(restoredTrayOnClick);
     localStorage.setItem("hostTrayOnClick", String(restoredTrayOnClick));
 
@@ -1001,7 +1001,12 @@ export function UserProfilePanel({
   }
 
   function toggle(id: UserProfileSection) {
-    setOpenSection((prev) => (prev === id ? null : id));
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function handleStartTotpSetup() {
@@ -1200,7 +1205,7 @@ export function UserProfilePanel({
         id="account"
         label={t("newUi.sidebar.userProfile.sectionAccount")}
         icon={<User className="size-3.5" />}
-        open={openSection === "account"}
+        open={openSections.has("account")}
         onToggle={() => toggle("account")}
       >
         <div className="flex flex-col gap-0 pt-2">
@@ -1367,7 +1372,7 @@ export function UserProfilePanel({
         id="appearance"
         label={t("newUi.sidebar.userProfile.sectionAppearance")}
         icon={<Palette className="size-3.5" />}
-        open={openSection === "appearance"}
+        open={openSections.has("appearance")}
         onToggle={() => toggle("appearance")}
       >
         <div className="flex flex-col gap-4 pt-3">
@@ -1873,7 +1878,7 @@ export function UserProfilePanel({
         id="security"
         label={t("newUi.sidebar.userProfile.sectionSecurity")}
         icon={<Shield className="size-3.5" />}
-        open={openSection === "security"}
+        open={openSections.has("security")}
         onToggle={() => toggle("security")}
       >
         <div className="flex flex-col gap-4 pt-3">
@@ -2204,7 +2209,7 @@ export function UserProfilePanel({
         id="api-keys"
         label={t("newUi.sidebar.userProfile.sectionApiKeys")}
         icon={<Network className="size-3.5" />}
-        open={openSection === "api-keys"}
+        open={openSections.has("api-keys")}
         onToggle={() => toggle("api-keys")}
       >
         <div className="flex flex-col gap-2 pt-3">
@@ -2310,7 +2315,7 @@ export function UserProfilePanel({
           id="c2s-tunnels"
           label={t("newUi.sidebar.userProfile.sectionC2sTunnels")}
           icon={<Activity className="size-3.5" />}
-          open={openSection === "c2s-tunnels"}
+          open={openSections.has("c2s-tunnels")}
           onToggle={() => toggle("c2s-tunnels")}
         >
           <C2STunnelPresetManager />

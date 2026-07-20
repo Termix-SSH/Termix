@@ -165,6 +165,17 @@ describe("HostResolutionRepository", () => {
         override_credential_id INTEGER
       );
 
+      CREATE TABLE ssh_folders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        color TEXT,
+        icon TEXT,
+        credential_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
       INSERT INTO ssh_data (
@@ -185,6 +196,11 @@ describe("HostResolutionRepository", () => {
         host_id, user_id, granted_by, permission_level, override_credential_id
       )
       VALUES (1, 'user-2', 'user-1', 'execute', 8);
+      INSERT INTO ssh_folders (user_id, name, credential_id)
+      VALUES
+        ('user-1', 'switches', 7),
+        ('user-1', 'switches / floor1', NULL),
+        ('user-1', 'no-cred', NULL);
     `);
 
     return new HostResolutionRepository(context, onWrite);
@@ -490,6 +506,26 @@ describe("HostResolutionRepository", () => {
     ).resolves.toBe(8);
     await expect(
       repository.findOverrideCredentialId(1, "user-1"),
+    ).resolves.toBeNull();
+  });
+
+  it("resolves a folder's assigned credential, walking up to parent folders", async () => {
+    const repository = await createRepository();
+
+    await expect(
+      repository.findFolderCredentialId("user-1", "switches"),
+    ).resolves.toBe(7);
+    await expect(
+      repository.findFolderCredentialId("user-1", "switches / floor1"),
+    ).resolves.toBe(7);
+    await expect(
+      repository.findFolderCredentialId("user-1", "no-cred"),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findFolderCredentialId("user-1", "unknown"),
+    ).resolves.toBeNull();
+    await expect(
+      repository.findFolderCredentialId("user-1", ""),
     ).resolves.toBeNull();
   });
 });

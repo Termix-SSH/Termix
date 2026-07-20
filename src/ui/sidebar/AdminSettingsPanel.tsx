@@ -110,8 +110,8 @@ export function AdminSettingsPanel({
   onOpenHostTab?: (host: Host) => void;
 } = {}) {
   const { t } = useTranslation();
-  const [openSection, setOpenSection] = useState<AdminSection | null>(
-    "general",
+  const [openSections, setOpenSections] = useState<Set<AdminSection>>(
+    () => new Set(["general"]),
   );
   const [manageUser, setManageUser] = useState<AdminUser | null>(null);
   const [allowRegistration, setAllowRegistration] = useState(true);
@@ -347,7 +347,12 @@ export function AdminSettingsPanel({
   }
 
   function toggle(id: AdminSection) {
-    setOpenSection((prev) => (prev === id ? null : id));
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function handleSaveHostDefaults() {
@@ -854,7 +859,7 @@ export function AdminSettingsPanel({
   return (
     <div className="flex flex-col gap-2 p-3 flex-1 min-h-0 overflow-y-auto">
       <AdminGeneralSettingsSection
-        open={openSection === "general"}
+        open={openSections.has("general")}
         onToggle={() => toggle("general")}
         allowRegistration={allowRegistration}
         handleToggleRegistration={handleToggleRegistration}
@@ -891,7 +896,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminSSOSection
-        open={openSection === "sso"}
+        open={openSections.has("sso")}
         onToggle={() => toggle("sso")}
         providers={ssoProviders}
         onAddProvider={handleAddProvider}
@@ -908,7 +913,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminUsersSection
-        open={openSection === "users"}
+        open={openSections.has("users")}
         onToggle={() => toggle("users")}
         users={users}
         setUsers={setUsers}
@@ -924,7 +929,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminSessionsSection
-        open={openSection === "sessions"}
+        open={openSections.has("sessions")}
         onToggle={() => toggle("sessions")}
         sessions={sessions}
         setSessions={setSessions}
@@ -932,7 +937,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminRolesSection
-        open={openSection === "roles"}
+        open={openSections.has("roles")}
         onToggle={() => toggle("roles")}
         roles={roles}
         setRoles={setRoles}
@@ -949,7 +954,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminHostDefaultsSection
-        open={openSection === "host-defaults"}
+        open={openSections.has("host-defaults")}
         onToggle={() => toggle("host-defaults")}
         defaults={hostDefaults}
         setDefaults={setHostDefaults}
@@ -957,7 +962,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminDatabaseSection
-        open={openSection === "database"}
+        open={openSections.has("database")}
         onToggle={() => toggle("database")}
         importFile={importFile}
         setImportFile={setImportFile}
@@ -968,7 +973,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminSSLSection
-        open={openSection === "ssl"}
+        open={openSections.has("ssl")}
         onToggle={() => toggle("ssl")}
         settings={acmeSettings}
         setSettings={setAcmeSettings}
@@ -980,7 +985,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminApiKeysSection
-        open={openSection === "api-keys"}
+        open={openSections.has("api-keys")}
         onToggle={() => toggle("api-keys")}
         apiKeys={apiKeys}
         setApiKeys={setApiKeys}
@@ -1001,7 +1006,7 @@ export function AdminSettingsPanel({
       />
 
       <AdminAuditLogSection
-        open={openSection === "audit-log"}
+        open={openSections.has("audit-log")}
         onToggle={() => toggle("audit-log")}
         users={users}
       />
