@@ -56,16 +56,22 @@ const newVersionBlock =
 const oldTimezone = "if (protocolVersion === '1_1_0') {";
 const newTimezone = "if (protocolVersion !== '1_0_0') {";
 
-// Patch 3: send the `name` handshake instruction for protocol >= 1.3.0.
-// The Guacamole protocol added the `name` instruction in 1.3.0 (an optional
-// human-readable identifier for the joining user). guacd 1.6.0 began requiring
-// it during the VNC handshake even when negotiating older protocol versions,
-// causing connections to silently drop right after "User joined". See
+// Patch 3: send the `name` handshake instruction for all protocol versions >= 1.1.0.
+// The Guacamole protocol added `name` in 1.3.0, but guacd 1.6.0 began requiring it
+// during the VNC handshake even when negotiating VERSION_1_1_0, causing connections to
+// silently drop right after "User joined". Sending it for all non-1.0.0 sessions is
+// harmless (guacd ignores unknown handshake instructions for older versions). See
 // Termix-SSH/Support#567 and #734.
 const oldConnect =
   "        this.sendInstruction(['connect'].concat(connectArgs));";
-const newConnect =
+const oldNameConnect =
   "        if (protocolVersion === '1_3_0' || protocolVersion === '1_5_0') {\n" +
+  "            this.sendInstruction(['name', this.connectionSettings.name || 'guacamole-lite']);\n" +
+  "        }\n" +
+  "\n" +
+  "        this.sendInstruction(['connect'].concat(connectArgs));";
+const newConnect =
+  "        if (protocolVersion !== '1_0_0') {\n" +
   "            this.sendInstruction(['name', this.connectionSettings.name || 'guacamole-lite']);\n" +
   "        }\n" +
   "\n" +
@@ -156,13 +162,16 @@ if (!guacdClientContent.includes(newTimezone)) {
 }
 
 if (!guacdClientContent.includes(newConnect)) {
-  if (!guacdClientContent.includes(oldConnect)) {
+  if (guacdClientContent.includes(oldNameConnect)) {
+    guacdClientContent = guacdClientContent.replace(oldNameConnect, newConnect);
+  } else if (guacdClientContent.includes(oldConnect)) {
+    guacdClientContent = guacdClientContent.replace(oldConnect, newConnect);
+  } else {
     console.log(
       "[patch-guacamole-lite] Connect target not found, skipping name patch",
     );
     process.exit(0);
   }
-  guacdClientContent = guacdClientContent.replace(oldConnect, newConnect);
   patched = true;
 }
 

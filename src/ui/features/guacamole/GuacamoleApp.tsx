@@ -8,6 +8,7 @@ import React, {
 import {
   GuacamoleDisplay,
   type GuacamoleDisplayHandle,
+  type GuacamoleTouchMode,
 } from "@/features/guacamole/GuacamoleDisplay.tsx";
 import {
   getGuacamoleTokenFromHost,
@@ -114,6 +115,12 @@ const GuacamoleAppInner = React.forwardRef<
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [touchMode, setTouchMode] = useState<GuacamoleTouchMode | null>(() =>
+    typeof window !== "undefined" &&
+    (navigator.maxTouchPoints > 0 || "ontouchstart" in window)
+      ? "touchscreen"
+      : null,
+  );
   const displayRef = useRef<GuacamoleDisplayHandle>(null);
 
   useImperativeHandle(ref, () => ({
@@ -245,7 +252,7 @@ const GuacamoleAppInner = React.forwardRef<
         </div>
       )}
       <GuacamoleDisplay
-        key={token}
+        key={`${token}-${touchMode}`}
         ref={displayRef}
         connectionConfig={{
           token,
@@ -257,9 +264,15 @@ const GuacamoleAppInner = React.forwardRef<
               : undefined,
         }}
         isVisible={true}
+        touchMode={touchMode}
         onError={(err) => setConnectionError(err)}
       />
-      <GuacamoleToolbar displayRef={displayRef} protocol={resolvedProtocol} />
+      <GuacamoleToolbar
+        displayRef={displayRef}
+        protocol={resolvedProtocol}
+        touchMode={touchMode}
+        onTouchModeChange={setTouchMode}
+      />
     </div>
   );
 });

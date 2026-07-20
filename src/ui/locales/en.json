@@ -602,6 +602,7 @@
     "overrideCredentialUsername": "Override Credential Username",
     "overrideCredentialUsernameDesc": "Use the username specified above instead of the credential's username",
     "oidcUsernameHint": "Use $oidc.preferred_username to substitute your OIDC login name.",
+    "tailscaleUsernameHint": "This must be a Unix user your Tailscale identity is granted in the tailnet's SSH ACL, not necessarily root.",
     "jumpHostChain": "Jump Host Chain",
     "portKnocking": "Port Knocking",
     "addKnock": "Add Port",
@@ -895,6 +896,7 @@
     "proxmoxResultImported": "{{count}} imported",
     "proxmoxResultUpdated": "{{count}} updated",
     "proxmoxResultFailed": "{{count}} failed",
+    "proxmoxResultSkippedNoIp": "{{count}} skipped (no IP found)",
     "proxmoxImportComplete": "Proxmox import complete: {{summary}}",
     "proxmoxDiscoveryFailed": "Discovery failed",
     "proxmoxImportFailed": "Import failed",
@@ -1461,7 +1463,9 @@
       "reconnect": "Reconnect Session",
       "collapse": "Collapse toolbar",
       "expand": "Expand toolbar",
-      "dragHandle": "Drag to reposition"
+      "dragHandle": "Drag to reposition",
+      "switchToTrackpad": "Switch to trackpad mode (drag to move cursor, tap to click)",
+      "switchToTouch": "Switch to touch mode (tap directly where you want to click)"
     }
   },
   "terminal": {
@@ -3379,6 +3383,7 @@
     "pageUp": "PgUp",
     "pageDown": "PgDn",
     "delete": "Del",
+    "paste": "Paste",
     "editQuickKeys": "Edit quick keys",
     "quickKeysTitle": "Quick Keys",
     "quickKeysDesc": "Tap × to remove. Supports up to 8 characters.",

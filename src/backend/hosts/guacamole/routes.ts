@@ -3,16 +3,17 @@ import { GuacamoleTokenService } from "./token-service.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
-import { Client } from "ssh2";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import type { AuthenticatedRequest, ProxyNode } from "../../../types/index.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,
 } from "../../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
+import { createJumpHostChain } from "../jump-host-chain.js";
+import type { SOCKS5Config } from "../../utils/socks5-helper.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -463,65 +464,91 @@ router.post(
 
       if (jumpHosts.length > 0) {
         try {
-          const { resolveHostById } = await import("../host-resolver.js");
-          const jumpHost = await resolveHostById(jumpHosts[0].hostId, userId);
-          if (jumpHost) {
-            const tunnelPort = await new Promise<number>((resolve, reject) => {
-              const sshClient = new Client();
-              sshClient.on("ready", () => {
-                const server = net.createServer((sock) => {
-                  sshClient.forwardOut(
-                    "127.0.0.1",
-                    0,
-                    hostname,
-                    port,
-                    (err, stream) => {
-                      if (err) {
-                        sock.destroy();
-                        return;
-                      }
-                      sock.pipe(stream).pipe(sock);
-                    },
-                  );
-                });
-                server.listen(0, "127.0.0.1", () => {
-                  const addr = server.address() as net.AddressInfo;
-                  // Auto-cleanup after 1 hour
-                  setTimeout(
-                    () => {
-                      server.close();
-                      sshClient.end();
-                    },
-                    60 * 60 * 1000,
-                  );
-                  resolve(addr.port);
-                });
-              });
-              sshClient.on("error", reject);
+          let socks5ProxyChain: ProxyNode[] = [];
+          if (hostRecord.socks5ProxyChain) {
+            try {
+              socks5ProxyChain =
+                typeof hostRecord.socks5ProxyChain === "string"
+                  ? JSON.parse(hostRecord.socks5ProxyChain as string)
+                  : (hostRecord.socks5ProxyChain as ProxyNode[]);
+            } catch {
+              socks5ProxyChain = [];
+            }
+          }
 
-              const connectOpts: Record<string, unknown> = {
-                host: jumpHost.ip,
-                port: jumpHost.port || 22,
-                username: jumpHost.username,
-                readyTimeout: 30000,
-              };
-              if (jumpHost.key) {
-                connectOpts.privateKey = jumpHost.key;
-                if (jumpHost.keyPassword)
-                  connectOpts.passphrase = jumpHost.keyPassword;
-              } else if (jumpHost.password) {
-                connectOpts.password = jumpHost.password;
-              }
-              sshClient.connect(connectOpts);
-            });
-            hostname = "127.0.0.1";
-            port = tunnelPort;
-            guacLogger.info("SSH tunnel established for guacamole", {
-              operation: "guac_ssh_tunnel",
-              hostId,
-              tunnelPort,
+          const proxyConfig: SOCKS5Config | null =
+            hostRecord.useSocks5 &&
+            (hostRecord.socks5Host || socks5ProxyChain.length > 0)
+              ? {
+                  useSocks5: hostRecord.useSocks5 as boolean,
+                  socks5Host: hostRecord.socks5Host as string | undefined,
+                  socks5Port: hostRecord.socks5Port as number | undefined,
+                  socks5Username: hostRecord.socks5Username as
+                    | string
+                    | undefined,
+                  socks5Password: hostRecord.socks5Password as
+                    | string
+                    | undefined,
+                  socks5ProxyChain,
+                }
+              : null;
+
+          const jumpClient = await createJumpHostChain(
+            jumpHosts,
+            userId,
+            proxyConfig,
+          );
+
+          if (!jumpClient) {
+            guacLogger.error(
+              "Failed to establish jump host chain for guacamole",
+              undefined,
+              { operation: "guac_ssh_tunnel_error", hostId },
+            );
+            return res.status(500).json({
+              error: "Failed to establish SSH tunnel to remote host",
             });
           }
+
+          const targetHostname = hostname;
+          const targetPort = port;
+          const tunnelPort = await new Promise<number>((resolve, reject) => {
+            const server = net.createServer((sock) => {
+              jumpClient.forwardOut(
+                "127.0.0.1",
+                0,
+                targetHostname,
+                targetPort,
+                (err, stream) => {
+                  if (err) {
+                    sock.destroy();
+                    return;
+                  }
+                  sock.pipe(stream).pipe(sock);
+                },
+              );
+            });
+            server.on("error", reject);
+            server.listen(0, "127.0.0.1", () => {
+              const addr = server.address() as net.AddressInfo;
+              // Auto-cleanup after 1 hour
+              setTimeout(
+                () => {
+                  server.close();
+                  jumpClient.end();
+                },
+                60 * 60 * 1000,
+              );
+              resolve(addr.port);
+            });
+          });
+          hostname = "127.0.0.1";
+          port = tunnelPort;
+          guacLogger.info("SSH tunnel established for guacamole", {
+            operation: "guac_ssh_tunnel",
+            hostId,
+            tunnelPort,
+          });
         } catch (tunnelError) {
           guacLogger.error("Failed to establish SSH tunnel", tunnelError, {
             operation: "guac_ssh_tunnel_error",

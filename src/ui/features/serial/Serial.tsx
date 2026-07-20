@@ -14,6 +14,7 @@ import { isEmbeddedMode } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
 import type { SerialConfig } from "@/types/ui-types";
 import type { SerialHandle } from "./serial-types";
 
@@ -67,6 +68,7 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
     const fontConfig = TERMINAL_FONTS.find(
       (f) => f.value === DEFAULT_TERMINAL_CONFIG.fontFamily,
     );
+    ensureTerminalFontsLoaded(fontConfig?.value ?? TERMINAL_FONTS[0].value);
     terminal.options.theme = {
       background: themeColors.background,
       foreground: themeColors.foreground,

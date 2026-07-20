@@ -263,6 +263,14 @@ describe("highlightTerminalOutput", () => {
     expect(out).toContain(`${ESC}[91mERROR`);
   });
 
+  it("does not highlight a log-level-like username split across ANSI segments in a colored SSH heading", () => {
+    // Prompt themes often color the user and host portions of "[user@host]"
+    // separately, so the heading is not one contiguous plain-text segment.
+    const chunk = `[${ESC}[1;33mwarning${ESC}[0m@host] some command output`;
+    const out = highlightTerminalOutput(chunk);
+    expect(out).toBe(chunk);
+  });
+
   it("does not highlight 'success' when immediately followed by a path (cd output)", () => {
     // Some shells print "success~/new/dir" or "success/path" after a cd command
     const out = highlightTerminalOutput("success~/home/user/projects");

@@ -5,11 +5,13 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Clipboard,
   Pencil,
   X,
   Plus,
   RotateCcw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -252,6 +254,18 @@ export function MobileTerminalKeyboard({
     terminalRef.current?.sendInput?.(seq);
   }
 
+  async function handlePaste() {
+    try {
+      const text = window.electronClipboard
+        ? await window.electronClipboard.readText()
+        : ((await navigator.clipboard?.readText?.()) ?? "");
+      if (text) terminalRef.current?.paste?.(text);
+      else toast.error(t("terminal.clipboardReadFailed"));
+    } catch {
+      toast.error(t("terminal.clipboardReadFailed"));
+    }
+  }
+
   function toggleCtrl() {
     setCtrlActive((v) => !v);
     setShiftActive(false);
@@ -320,6 +334,18 @@ export function MobileTerminalKeyboard({
           title={shiftActive ? "Shift+Tab" : t("mobileKeyboard.tab")}
         >
           {shiftActive ? t("mobileKeyboard.backTab") : t("mobileKeyboard.tab")}
+        </button>
+
+        {/* Paste */}
+        <button
+          className={cn(KEY_BASE, KEY_NORMAL, KEY_SM)}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            handlePaste();
+          }}
+          title={t("mobileKeyboard.paste")}
+        >
+          <Clipboard className="size-4" />
         </button>
 
         <div className={SEP} />

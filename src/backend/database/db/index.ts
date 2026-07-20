@@ -1985,6 +1985,74 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
 
+  try {
+    const usersTableInfo = sqlite.prepare("PRAGMA table_info(users)").all() as Array<{
+      cid: number;
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }>;
+    const legacyNotNullColumns = new Set([
+      "client_id",
+      "client_secret",
+      "issuer_url",
+      "authorization_url",
+      "token_url",
+      "identifier_path",
+      "name_path",
+      "scopes",
+    ]);
+    const hasStaleNotNull = usersTableInfo.some(
+      (col) => legacyNotNullColumns.has(col.name) && col.notnull === 1,
+    );
+
+    if (hasStaleNotNull) {
+      const tempTableName = "users_temp_migration";
+      const columnDefs = usersTableInfo
+        .map((col) => {
+          const parts = [`"${col.name}"`, col.type || "TEXT"];
+          if (col.pk === 1) parts.push("PRIMARY KEY");
+          if (col.notnull === 1 && !legacyNotNullColumns.has(col.name)) {
+            parts.push("NOT NULL");
+          }
+          if (col.dflt_value !== null) {
+            parts.push(`DEFAULT ${col.dflt_value}`);
+          }
+          return parts.join(" ");
+        })
+        .join(",\n          ");
+      const allColumns = usersTableInfo.map((col) => `"${col.name}"`).join(", ");
+
+      sqlite.exec(`PRAGMA foreign_keys = OFF`);
+      sqlite.exec(`
+        CREATE TABLE ${tempTableName} (
+          ${columnDefs}
+        );
+
+        INSERT INTO ${tempTableName} SELECT ${allColumns} FROM users;
+
+        DROP TABLE users;
+
+        ALTER TABLE ${tempTableName} RENAME TO users;
+      `);
+      sqlite.exec(`PRAGMA foreign_keys = ON`);
+
+      databaseLogger.info(
+        "Successfully migrated users table to remove legacy OIDC NOT NULL constraints",
+        {
+          operation: "schema_migration_users_oidc_nullable",
+        },
+      );
+    }
+  } catch (migrationError) {
+    databaseLogger.warn("Failed to migrate users table legacy OIDC columns", {
+      operation: "schema_migration",
+      error: migrationError,
+    });
+  }
+
   // Migrate legacy single oidc_config settings blob into sso_providers table
   try {
     const migrationDone = getRawSettingValue("sso_migration_v1");

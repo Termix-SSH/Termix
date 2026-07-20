@@ -26,14 +26,14 @@ export function CredentialEditorView({
   onBack,
   onSave,
   adminTargetUserId,
+  existingFolders = [],
 }: {
   credential: Credential | null;
   activeTab: string;
   onBack: () => void;
   onSave: (saved: Record<string, unknown>) => void;
-  // When set, saves go to another user's credentials via the admin
-  // impersonation endpoints.
   adminTargetUserId?: string;
+  existingFolders?: string[];
 }) {
   const [credForm, setCredForm] = useState(() => ({
     name: credential?.name ?? "",
@@ -155,7 +155,15 @@ export function CredentialEditorView({
                 placeholder="e.g. Server Keys"
                 value={credForm.folder}
                 onChange={(e) => setCredField("folder", e.target.value)}
+                list="cred-folder-suggestions"
               />
+              {existingFolders.length > 0 && (
+                <datalist id="cred-folder-suggestions">
+                  {existingFolders.map((f) => (
+                    <option key={f} value={f} />
+                  ))}
+                </datalist>
+              )}
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

@@ -39,7 +39,7 @@ import {
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
 } from "@/lib/terminal-themes.ts";
-import "./terminal-global-styles.ts";
+import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
@@ -823,6 +823,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           if (webSocketRef.current?.readyState === 1) {
             webSocketRef.current.send(JSON.stringify({ type: "input", data }));
           }
+        },
+        paste: (text: string) => {
+          terminal?.paste(text);
         },
         notifyResize: () => {
           try {
@@ -1986,6 +1989,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         (f) => f.value === config.fontFamily,
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
+      ensureTerminalFontsLoaded(fontConfig?.value || TERMINAL_FONTS[0].value);
 
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
@@ -2053,6 +2057,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         (f) => f.value === config.fontFamily,
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
+      ensureTerminalFontsLoaded(fontConfig?.value || TERMINAL_FONTS[0].value);
 
       const activeTheme = previewTheme || config.theme;
       const themeColors = resolveTermixThemeColors(

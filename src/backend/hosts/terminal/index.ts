@@ -1288,39 +1288,56 @@ wss.on("connection", async (ws: WebSocket, req) => {
       };
     }
 
-    sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    const connectsViaJumpHosts = !!(
+      hostConfig.jumpHosts &&
+      hostConfig.jumpHosts.length > 0 &&
+      hostConfig.userId
+    );
+
     let connectHost = ip;
-    try {
-      const resolution = await resolveHostForSshConnect(ip);
-      connectHost = resolution.host;
-      if (resolution.resolvedAddress && resolution.resolvedAddress !== ip) {
-        sendLog(
-          "dns",
-          "success",
-          `Resolved ${ip} to ${resolution.resolvedAddress}`,
-          { attempts: resolution.attempts },
-        );
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      sshLogger.error("SSH hostname resolution failed", error, {
-        operation: "terminal_dns_resolve",
-        hostId: id,
-        ip,
-        port,
-        transient: isRetriableDnsError(error),
-      });
-      sendLog("dns", "error", `DNS resolution failed for ${ip}: ${message}`);
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: isRetriableDnsError(error)
-            ? "SSH error: DNS lookup temporarily failed. Check the Docker/container DNS configuration or try again."
-            : "SSH error: Could not resolve hostname from the Termix server container.",
-        }),
+    if (connectsViaJumpHosts) {
+      // The target is only reachable through the jump host's network (e.g. a
+      // VPN-only address), so DNS must be resolved there, not on this host.
+      sendLog(
+        "dns",
+        "info",
+        `Skipping local address resolution of ${ip} (resolved by jump host)`,
       );
-      cleanupAuthState(connectionTimeout);
-      return;
+    } else {
+      sendLog("dns", "info", `Starting address resolution of ${ip}`);
+      try {
+        const resolution = await resolveHostForSshConnect(ip);
+        connectHost = resolution.host;
+        if (resolution.resolvedAddress && resolution.resolvedAddress !== ip) {
+          sendLog(
+            "dns",
+            "success",
+            `Resolved ${ip} to ${resolution.resolvedAddress}`,
+            { attempts: resolution.attempts },
+          );
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        sshLogger.error("SSH hostname resolution failed", error, {
+          operation: "terminal_dns_resolve",
+          hostId: id,
+          ip,
+          port,
+          transient: isRetriableDnsError(error),
+        });
+        sendLog("dns", "error", `DNS resolution failed for ${ip}: ${message}`);
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: isRetriableDnsError(error)
+              ? "SSH error: DNS lookup temporarily failed. Check the Docker/container DNS configuration or try again."
+              : "SSH error: Could not resolve hostname from the Termix server container.",
+          }),
+        );
+        cleanupAuthState(connectionTimeout);
+        return;
+      }
     }
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
@@ -2014,7 +2031,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sendLog(
           "auth",
           "error",
-          "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
+          `Tailscale SSH authentication failed for user "${username}". Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy grants the "${username}" user to your identity (check tailscale.com/s/ssh for the check/action ACL syntax). If your Tailscale identity maps to a different Unix user, update the username on this host.`,
         );
         if (currentSessionId) {
           sessionManager.destroySession(currentSessionId);
@@ -2024,8 +2041,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message:
-              "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
+            message: `Tailscale SSH authentication failed for user "${username}". Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy grants the "${username}" user to your identity. If your Tailscale identity maps to a different Unix user, update the username on this host.`,
           }),
         );
         return;

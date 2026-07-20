@@ -12,6 +12,10 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
+  TERMINAL_FONT_ZOOM_MIN,
+  TERMINAL_FONT_ZOOM_MAX,
+} from "@/features/terminal/terminal-font-zoom";
+import {
   Globe,
   Layers, // --- tmux-monitor ---
   Network,
@@ -383,6 +387,11 @@ export function HostEditor({
                       {isOidcUser && (
                         <p className="text-[10px] text-muted-foreground/60">
                           {t("hosts.oidcUsernameHint")}
+                        </p>
+                      )}
+                      {authMethod === "tailscale" && (
+                        <p className="text-[10px] text-muted-foreground/60">
+                          {t("hosts.tailscaleUsernameHint")}
                         </p>
                       )}
                     </div>
@@ -950,8 +959,8 @@ export function HostEditor({
                         </span>
                       </div>
                       <Slider
-                        min={8}
-                        max={24}
+                        min={TERMINAL_FONT_ZOOM_MIN}
+                        max={TERMINAL_FONT_ZOOM_MAX}
                         step={1}
                         value={[form.fontSize]}
                         onValueChange={([v]) => setField("fontSize", v)}

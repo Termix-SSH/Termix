@@ -431,6 +431,13 @@ export function HostManager({
                   : (editingCredential as Credential)
               }
               activeTab={activeCredentialTab}
+              existingFolders={Array.from(
+                new Set(
+                  credentials
+                    .map((c) => c.folder)
+                    .filter((f): f is string => !!f),
+                ),
+              ).sort()}
               onBack={() => {
                 setEditingCredential(null);
                 setActiveCredentialTab("general");

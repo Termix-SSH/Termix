@@ -1593,16 +1593,23 @@ function getC2SRelayUrl() {
 }
 
 async function getC2SRelayHeaders(relayUrl) {
-  if (!mainWindow?.webContents?.session) return {};
-
   const cookieUrl = relayUrl
     .replace(/^ws:/, "http:")
     .replace(/^wss:/, "https:");
-  const cookies = await mainWindow.webContents.session.cookies.get({
-    url: cookieUrl,
-    name: "jwt",
-  });
-  const jwt = cookies[0]?.value;
+
+  let jwt;
+  if (mainWindow?.webContents?.session) {
+    const cookies = await mainWindow.webContents.session.cookies.get({
+      url: cookieUrl,
+      name: "jwt",
+    });
+    jwt = cookies[0]?.value;
+  }
+
+  if (!jwt) {
+    jwt = getRememberedElectronAuthCookie("jwt", cookieUrl)?.value;
+  }
+
   if (!jwt) return {};
 
   return {

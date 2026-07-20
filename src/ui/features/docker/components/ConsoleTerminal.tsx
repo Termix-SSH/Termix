@@ -23,6 +23,7 @@ import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
 import { useTheme } from "@/components/theme-provider";
 
 interface ConsoleTerminalProps {
@@ -77,6 +78,7 @@ export function ConsoleTerminal({
       (f) => f.value === terminalConfig.fontFamily,
     );
     const fontFamily = fontConfig?.fallback ?? TERMINAL_FONTS[0].fallback;
+    ensureTerminalFontsLoaded(fontConfig?.value ?? TERMINAL_FONTS[0].value);
 
     terminal.options.cursorBlink = terminalConfig.cursorBlink;
     terminal.options.cursorStyle = terminalConfig.cursorStyle;
