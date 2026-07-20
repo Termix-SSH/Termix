@@ -84,17 +84,34 @@ async function main() {
     throw new Error("project has no target languages configured");
   }
 
+  const requestedLanguageIds = (process.env.CROWDIN_LANGUAGE_IDS || "")
+    .split(",")
+    .map((languageId) => languageId.trim())
+    .filter(Boolean);
+  const languageIds =
+    requestedLanguageIds.length === 0
+      ? targetLanguageIds
+      : requestedLanguageIds;
+  const unknownLanguageIds = languageIds.filter(
+    (languageId) => !targetLanguageIds.includes(languageId),
+  );
+  if (unknownLanguageIds.length > 0) {
+    throw new Error(
+      `project does not contain target languages: ${unknownLanguageIds.join(", ")}`,
+    );
+  }
+
   const fileId = await resolveFileId(projectId);
 
   console.log(
-    `Pre-translating project ${projectId}, file ${fileId}, ${targetLanguageIds.length} languages via MT engine ${ENGINE_ID}`,
+    `Pre-translating project ${projectId}, file ${fileId}, ${languageIds.length} languages via MT engine ${ENGINE_ID}`,
   );
 
   const { data } = await request(
     "POST",
     `/projects/${projectId}/pre-translations`,
     {
-      languageIds: targetLanguageIds,
+      languageIds,
       fileIds: [fileId],
       method: "mt",
       engineId: ENGINE_ID,

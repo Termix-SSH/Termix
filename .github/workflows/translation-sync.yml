@@ -1,0 +1,98 @@
+name: Translation Sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      language:
+        description: "Crowdin language ID to synchronize (for example zh-CN)"
+        required: true
+        default: "zh-CN"
+        type: string
+      pretranslate_missing:
+        description: "Machine-translate strings that have no translation"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: startsWith(github.ref, 'refs/heads/dev-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Upload source strings
+        uses: crowdin/github-action@v2
+        with:
+          upload_sources: true
+          upload_translations: false
+          download_translations: false
+          create_pull_request: false
+          push_translations: false
+          token: ${{ secrets.CROWDIN_API_KEY }}
+          project_id: "858252"
+        env:
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
+
+      - name: Upload reviewed translation
+        uses: crowdin/github-action@v2
+        with:
+          upload_sources: false
+          upload_translations: true
+          upload_language: ${{ inputs.language }}
+          auto_approve_imported: false
+          download_translations: false
+          create_pull_request: false
+          push_translations: false
+          token: ${{ secrets.CROWDIN_API_KEY }}
+          project_id: "858252"
+        env:
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
+
+      - name: Machine-translate missing strings
+        if: inputs.pretranslate_missing
+        env:
+          CROWDIN_API_KEY: ${{ secrets.CROWDIN_API_KEY }}
+          CROWDIN_LANGUAGE_IDS: ${{ inputs.language }}
+        run: node scripts/crowdin-pretranslate.cjs
+
+      - name: Download synchronized translation
+        uses: crowdin/github-action@v2
+        with:
+          upload_sources: false
+          upload_translations: false
+          download_translations: true
+          download_language: ${{ inputs.language }}
+          create_pull_request: false
+          push_translations: false
+          token: ${{ secrets.CROWDIN_API_KEY }}
+          project_id: "858252"
+        env:
+          CROWDIN_API_TOKEN: ${{ secrets.CROWDIN_API_KEY }}
+
+      - name: Validate translation files
+        run: |
+          node -e 'for (const file of require("fs").readdirSync("src/ui/locales/translated")) JSON.parse(require("fs").readFileSync(`src/ui/locales/translated/${file}`))'
+
+      - name: Commit synchronized translation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/ui/locales/translated
+          if git diff --cached --quiet; then
+            echo "No translation changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: sync ${{ inputs.language }} translations"
+          git push origin HEAD:${GITHUB_REF_NAME}
