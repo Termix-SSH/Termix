@@ -515,12 +515,12 @@ export function HostItem({
               </button>
             )}
             {!selectionMode && !shouldUseClickTray && (
-              <span className="text-[11px] text-muted-foreground/45 truncate leading-none ml-auto shrink-0 group-hover:hidden">
+              <span className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto shrink-0 group-hover:hidden">
                 {host.ip}
               </span>
             )}
             {selectionMode && (
-              <span className="text-[11px] text-muted-foreground/45 truncate leading-none ml-auto shrink-0">
+              <span className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto shrink-0">
                 {host.ip}
               </span>
             )}
@@ -529,7 +529,7 @@ export function HostItem({
           {/* Click-tray mode: always-visible action buttons */}
           {shouldUseClickTray && !selectionMode && (
             <div
-              className={`overflow-hidden transition-all duration-150 ease-out ${isTrayOpen || isMenuOpen ? "max-h-[200px] opacity-100" : "max-h-0 opacity-0"}`}
+              className={`overflow-hidden transition-all duration-150 ease-out ${isTrayOpen || isMenuOpen ? "max-h-[72px] opacity-100" : "max-h-0 opacity-0"}`}
             >
               <div className="flex items-center flex-wrap gap-1 px-2 pb-1">
                 {getSshActions(host).map(({ type, icon: Icon, label }) => (
@@ -730,7 +730,7 @@ export function HostItem({
 
           {/* Hover tray (non-click-tray mode) */}
           {!shouldUseClickTray && !selectionMode && (
-            <div className="max-h-0 opacity-0 overflow-hidden transition-all duration-150 ease-out group-hover:max-h-[200px] group-hover:opacity-100">
+            <div className="max-h-0 opacity-0 overflow-hidden transition-all duration-150 ease-out group-hover:max-h-[72px] group-hover:opacity-100">
               <div className="flex items-center flex-wrap gap-1 px-2 pb-1">
                 {getSshActions(host).map(({ type, icon: Icon, label }) => (
                   <button
@@ -1054,7 +1054,7 @@ export function HostItem({
         </div>
 
         {/* Address — always visible */}
-        <span className="text-[11px] text-muted-foreground/45 truncate leading-none pl-3">
+        <span className="text-[11px] text-muted-foreground/70 truncate leading-none pl-3">
           {host.username}@{host.ip}
         </span>
 
@@ -1158,7 +1158,7 @@ export function HostItem({
 
         {/* Action tray — slides open on hover (default) or via chevron in click-tray mode */}
         <div
-          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!shouldUseClickTray ? "group-hover:max-h-[300px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (shouldUseClickTray && isTrayOpen)) && !selectionMode ? "!max-h-[300px] !opacity-100" : ""}`}
+          className={`overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!shouldUseClickTray ? "group-hover:max-h-[130px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${(isMenuOpen || (shouldUseClickTray && isTrayOpen)) && !selectionMode ? "!max-h-[130px] !opacity-100" : ""}`}
         >
           {isOnline &&
             ((host.cpu != null && host.cpu > 0) ||

@@ -152,7 +152,7 @@ export type Host = {
   vncPort: number;
   telnetPort: number;
 
-  rdpAuthType?: "direct" | "credential";
+  rdpAuthType?: "direct" | "credential" | "none";
   rdpCredentialId?: string;
   rdpUser?: string;
   rdpPassword?: string;

@@ -99,7 +99,12 @@ export async function adminDeleteUserHost(
 export async function adminGetHostPassword(
   targetUserId: string,
   hostId: number,
-  field: "password" | "sudoPassword" | "vncPassword" = "password",
+  field:
+    | "password"
+    | "sudoPassword"
+    | "vncPassword"
+    | "key"
+    | "keyPassword" = "password",
 ): Promise<string | null> {
   try {
     const response = await sshHostApi.get(

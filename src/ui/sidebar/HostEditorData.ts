@@ -205,7 +205,8 @@ export function createHostEditorForm(
     rdpAuthType: (host?.rdpAuthType ??
       (host?.rdpCredentialId ? "credential" : "direct")) as
       | "direct"
-      | "credential",
+      | "credential"
+      | "none",
     vncAuthType: (host?.vncAuthType ??
       (host?.vncCredentialId ? "credential" : "direct")) as
       | "direct"

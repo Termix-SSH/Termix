@@ -166,6 +166,12 @@ router.post("/token", async (req, res) => {
  *                 type: string
  *                 enum: [rdp, vnc, telnet]
  *                 description: Override the host's default connection type
+ *               promptedUsername:
+ *                 type: string
+ *                 description: Username for this connection only, used when the host's RDP auth type is "none". Not persisted.
+ *               promptedPassword:
+ *                 type: string
+ *                 description: Password for this connection only, used when the host's RDP auth type is "none". Not persisted.
  *     responses:
  *       200:
  *         description: Connection token generated successfully
@@ -422,12 +428,22 @@ router.post(
       let username: string;
       let password: string;
 
+      const rdpAuthTypeForConnect = isSharedConnection
+        ? null
+        : (host.rdpAuthType as string) ||
+          (host.rdpCredentialId ? "credential" : "direct");
+
       switch (connectionType) {
         case "rdp":
-          username =
-            (host.rdpUser as string) || (host.username as string) || "";
-          password =
-            (host.rdpPassword as string) || (host.password as string) || "";
+          if (rdpAuthTypeForConnect === "none") {
+            username = String(req.body?.promptedUsername || "");
+            password = String(req.body?.promptedPassword || "");
+          } else {
+            username =
+              (host.rdpUser as string) || (host.username as string) || "";
+            password =
+              (host.rdpPassword as string) || (host.password as string) || "";
+          }
           port = (host.rdpPort as number) || port || 3389;
           break;
         case "vnc":

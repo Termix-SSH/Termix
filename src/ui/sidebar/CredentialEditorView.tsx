@@ -17,6 +17,7 @@ import {
   adminUpdateUserCredential,
 } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
+import { FolderPathPicker } from "./FolderPathPicker";
 
 type CredentialWithCertificate = Credential & { certPublicKey?: string };
 
@@ -151,19 +152,11 @@ export function CredentialEditorView({
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.folder")}
               </label>
-              <Input
-                placeholder="e.g. Server Keys"
+              <FolderPathPicker
                 value={credForm.folder}
-                onChange={(e) => setCredField("folder", e.target.value)}
-                list="cred-folder-suggestions"
+                onChange={(path) => setCredField("folder", path)}
+                folderPaths={existingFolders}
               />
-              {existingFolders.length > 0 && (
-                <datalist id="cred-folder-suggestions">
-                  {existingFolders.map((f) => (
-                    <option key={f} value={f} />
-                  ))}
-                </datalist>
-              )}
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

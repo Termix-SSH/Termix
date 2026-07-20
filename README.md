@@ -293,6 +293,14 @@ networks:
 
 <br />
 
+## Telemetry
+
+Termix sends a small anonymous usage ping once every 24 hours to help understand how many instances are running and which features are actually used. This only includes a randomly generated instance ID, a count of users and hosts, the app version, and whether certain features (terminal, file manager, tunnels, docker, etc.) were used in the last 24 hours. It never includes usernames, hostnames, IP addresses, credentials, or any other identifying or connection data.
+
+This is opt-out and enabled by default. You can disable it at any time in Admin Settings under **General**.
+
+<br />
+
 ## Donate
 
 Termix is free and open source with no subscriptions or paid plans. If you find it useful, consider donating to help cover server costs, domains, and development time. Donations also help fund the time to research and learn what's needed to build features like SAML, Kubernetes, and Agent support. Track progress and donate below.

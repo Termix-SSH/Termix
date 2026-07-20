@@ -170,6 +170,9 @@ import {
         });
     }
 
+    const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
+    startAnalyticsHeartbeat();
+
     systemLogger.success("Termix backend started successfully", {
       operation: "backend_init_complete",
       port: process.env.PORT || 4090,

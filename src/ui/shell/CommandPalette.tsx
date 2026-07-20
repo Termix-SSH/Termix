@@ -140,12 +140,15 @@ export function CommandPalette({
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [isOpen, setIsOpen]);
 
-  const filteredHosts = hosts.filter(
-    (h) =>
-      h.name.toLowerCase().includes(search.toLowerCase()) ||
-      h.ip.toLowerCase().includes(search.toLowerCase()) ||
-      h.username.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredHosts = hosts.filter((h) => {
+    const query = search.toLowerCase();
+    return (
+      h.name.toLowerCase().includes(query) ||
+      h.ip.toLowerCase().includes(query) ||
+      h.username.toLowerCase().includes(query) ||
+      h.tags?.some((tag) => tag.toLowerCase().includes(query))
+    );
+  });
 
   // Group hosts by folder; ungrouped hosts appear first under an implicit root group
   const groupedHosts: { folder: string | null; hosts: Host[] }[] = [];

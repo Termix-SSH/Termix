@@ -1483,7 +1483,7 @@ router.get(
  *         name: field
  *         schema:
  *           type: string
- *           enum: [password, sudoPassword, vncPassword]
+ *           enum: [password, sudoPassword, vncPassword, key, keyPassword]
  *     responses:
  *       200:
  *         description: The requested password value.
@@ -1499,7 +1499,11 @@ router.get(
     const userId = (req as AuthenticatedRequest).userId;
     const field = (req.query.field as string) || "password";
 
-    if (!["password", "sudoPassword", "vncPassword"].includes(field)) {
+    if (
+      !["password", "sudoPassword", "vncPassword", "key", "keyPassword"].includes(
+        field,
+      )
+    ) {
       return res.status(400).json({ error: "Invalid field" });
     }
 

@@ -112,7 +112,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.2115 0.0042 128.68);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: oklch(0.44 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.2115 0.0042 128.68);
   --destructive: oklch(0.577 0.245 27.325);
@@ -479,19 +479,19 @@
 
 /* Font size scale applied to html element */
 html.fs-xs {
-  font-size: 11px;
+  font-size: 12px;
 }
 html.fs-sm {
-  font-size: 12px;
+  font-size: 13px;
 }
 html.fs-md {
   font-size: 14px;
 }
 html.fs-lg {
-  font-size: 16px;
+  font-size: 17px;
 }
 html.fs-xl {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 @supports (padding-bottom: env(safe-area-inset-bottom)) {

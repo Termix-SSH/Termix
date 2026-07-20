@@ -222,11 +222,14 @@ export function AppShell({
   const [splitMode, setSplitMode] = useState<SplitMode>(
     () => (localStorage.getItem("termix_splitMode") as SplitMode) ?? "none",
   );
-  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(
-    () =>
-      JSON.parse(localStorage.getItem("termix_paneTabIds") ?? "null") ??
-      Array(6).fill(null),
+  // paneTabIds holds live tab.id values, which change on every restore, so we
+  // can't restore it from storage directly. It starts empty and gets filled in
+  // once by the reconciliation effect below, keyed off the stable instanceId
+  // values saved in termix_paneInstanceIds.
+  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(() =>
+    Array(6).fill(null),
   );
+  const paneLayoutRestoredRef = useRef(false);
   useEffect(() => {
     paneTabIdsRef.current = paneTabIds;
   }, [paneTabIds]);
@@ -262,8 +265,18 @@ export function AppShell({
   }, [splitMode]);
 
   useEffect(() => {
-    localStorage.setItem("termix_paneTabIds", JSON.stringify(paneTabIds));
-  }, [paneTabIds]);
+    // Don't overwrite the saved layout with the empty initial state before
+    // reconciliation has had a chance to restore it.
+    if (!paneLayoutRestoredRef.current) return;
+    const instanceIds = paneTabIds.map((id) => {
+      if (id == null) return null;
+      return tabs.find((t) => t.id === id)?.instanceId ?? null;
+    });
+    localStorage.setItem(
+      "termix_paneInstanceIds",
+      JSON.stringify(instanceIds),
+    );
+  }, [paneTabIds, tabs]);
 
   const isMobile = useIsMobile();
 
@@ -975,6 +988,35 @@ export function AppShell({
 
     loadSavedTabs();
   }, [hostsLoaded, userPrefsLoaded]);
+
+  // Restore split-screen pane assignments once tabs are settled. Saved assignments are
+  // keyed by instanceId (stable across reloads) and remapped to the live tab.id here,
+  // since tab.id is regenerated every time a tab is (re)opened.
+  useEffect(() => {
+    if (!tabsReady || paneLayoutRestoredRef.current) return;
+    paneLayoutRestoredRef.current = true;
+
+    try {
+      const savedInstanceIds: (string | null)[] = JSON.parse(
+        localStorage.getItem("termix_paneInstanceIds") ?? "null",
+      );
+      if (!Array.isArray(savedInstanceIds)) return;
+
+      const restored = savedInstanceIds.map((instanceId) => {
+        if (instanceId == null) return null;
+        return tabs.find((t) => t.instanceId === instanceId)?.id ?? null;
+      });
+      if (restored.some((id) => id != null)) {
+        setPaneTabIds(restored);
+      } else {
+        // None of the saved panes could be restored (e.g. reopen-tabs-on-login
+        // is disabled), so drop back to a single view instead of an empty split.
+        setSplitMode("none");
+      }
+    } catch {
+      // silently fail
+    }
+  }, [tabsReady, tabs]);
 
   // Debounced tab-order sync: when tab order changes, patch each persistent tab's tabOrder in DB.
   const orderSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(

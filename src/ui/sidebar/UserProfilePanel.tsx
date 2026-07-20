@@ -16,7 +16,9 @@ import {
   getUserRoles,
   saveUserPreferences,
   getUserPreferences,
+  getConfiguredServerUrl,
 } from "@/main-axios";
+import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
   deleteWebAuthnCredential,
   listWebAuthnCredentials,
@@ -45,6 +47,7 @@ import {
   ChevronDown,
   Clock,
   Copy,
+  Database,
   Eye,
   EyeOff,
   Fingerprint,
@@ -86,6 +89,7 @@ type UserProfileSection =
   | "appearance"
   | "security"
   | "api-keys"
+  | "data"
   | "c2s-tunnels";
 
 const THEMES: { id: ThemeId; preview: string }[] = [
@@ -501,6 +505,11 @@ export function UserProfilePanel({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Data export/import
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
 
   // UI state
   const [showPassword, setShowPassword] = useState(false);
@@ -1126,6 +1135,116 @@ export function UserProfilePanel({
         apiErrorMessage(e, t("newUi.sidebar.userProfile.deleteFailed")),
       );
       setDeleteLoading(false);
+    }
+  }
+
+  async function handleExportData() {
+    setExportLoading(true);
+    try {
+      const apiUrl = getDatabaseTransferUrl("export", {
+        electron: isElectron(),
+        configuredServerUrl: getConfiguredServerUrl(),
+        location: window.location,
+      });
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get("content-disposition");
+        const filename =
+          contentDisposition?.match(/filename="([^"]+)"/)?.[1] ||
+          "termix-export.sqlite";
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success(t("newUi.sidebar.userProfile.exportSuccess"));
+      } else {
+        const err = await response.json().catch(() => ({}));
+        toast.error(
+          err.error || t("newUi.sidebar.userProfile.exportFailed"),
+        );
+      }
+    } catch {
+      toast.error(t("newUi.sidebar.userProfile.exportFailed"));
+    } finally {
+      setExportLoading(false);
+    }
+  }
+
+  async function handleImportData() {
+    if (!importFile) {
+      toast.error(t("newUi.sidebar.userProfile.importSelectFile"));
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const apiUrl = getDatabaseTransferUrl("import", {
+        electron: isElectron(),
+        configuredServerUrl: getConfiguredServerUrl(),
+        location: window.location,
+      });
+
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          const s = result.summary;
+          const total =
+            (s.sshHostsImported || 0) +
+            (s.sshCredentialsImported || 0) +
+            (s.fileManagerItemsImported || 0) +
+            (s.dismissedAlertsImported || 0) +
+            (s.settingsImported || 0);
+          toast.success(
+            t("newUi.sidebar.userProfile.importCompleted", {
+              total,
+              skipped: s.skippedItems || 0,
+            }),
+          );
+          setImportFile(null);
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          toast.error(
+            t("newUi.sidebar.userProfile.importFailed", {
+              error: result.summary?.errors?.join(", ") || "Unknown error",
+            }),
+          );
+        }
+      } else {
+        const err = await response.json().catch(() => ({}));
+        toast.error(
+          t("newUi.sidebar.userProfile.importFailed", {
+            error: err.error || "Unknown error",
+          }),
+        );
+      }
+    } catch {
+      toast.error(
+        t("newUi.sidebar.userProfile.importFailed", {
+          error: "Unknown error",
+        }),
+      );
+    } finally {
+      setImportLoading(false);
     }
   }
 
@@ -2306,6 +2425,80 @@ export function UserProfilePanel({
               {t("newUi.sidebar.userProfile.apiKeyUsageHintHeader")}
             </p>
             <p>{t("newUi.sidebar.userProfile.apiKeyPermissionsHint")}</p>
+          </div>
+        </div>
+      </AccordionSection>
+
+      <AccordionSection
+        id="data"
+        label={t("newUi.sidebar.userProfile.sectionData")}
+        icon={<Database className="size-3.5" />}
+        open={openSections.has("data")}
+        onToggle={() => toggle("data")}
+      >
+        <div className="flex flex-col gap-3 pt-3">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium">
+              {t("newUi.sidebar.userProfile.exportData")}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {t("newUi.sidebar.userProfile.exportDataDesc")}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand mt-1"
+              onClick={handleExportData}
+              disabled={exportLoading}
+            >
+              {exportLoading
+                ? t("newUi.sidebar.userProfile.exporting")
+                : t("newUi.sidebar.userProfile.export")}
+            </Button>
+          </div>
+          <div className="flex flex-col gap-1.5 border-t border-border pt-3">
+            <span className="text-xs font-medium">
+              {t("newUi.sidebar.userProfile.importData")}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {importFile
+                ? t("newUi.sidebar.userProfile.importDataSelected", {
+                    name: importFile.name,
+                  })
+                : t("newUi.sidebar.userProfile.importDataDesc")}
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".sqlite,.db"
+                  onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="pointer-events-none text-xs"
+                >
+                  {importFile
+                    ? t("newUi.sidebar.userProfile.changeFile")
+                    : t("newUi.sidebar.userProfile.selectFile")}
+                </Button>
+              </div>
+              {importFile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                  onClick={handleImportData}
+                  disabled={importLoading}
+                >
+                  {importLoading
+                    ? t("newUi.sidebar.userProfile.importing")
+                    : t("newUi.sidebar.userProfile.import")}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </AccordionSection>

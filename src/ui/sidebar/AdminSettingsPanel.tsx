@@ -41,12 +41,15 @@ import {
   updateTailscaleSettings,
   getHostDefaults,
   updateHostDefaults,
+  getAnalyticsEnabled,
+  updateAnalyticsEnabled,
   type HostDefaults,
 } from "@/api/settings-api";
 import {
   getAcmeSslSettings,
   updateAcmeSslSettings,
   requestAcmeCertificate,
+  uploadManualSslCertificate,
   type AcmeSettings,
 } from "@/api/acme-ssl-api";
 import {
@@ -126,6 +129,7 @@ export function AdminSettingsPanel({
   const [logLevel, setLogLevel] = useState("info");
   const [tailscaleApiKey, setTailscaleApiKey] = useState("");
   const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
 
   // SSO / auto-provision state
@@ -200,6 +204,9 @@ export function AdminSettingsPanel({
     useState<AcmeSettings>(defaultAcmeSettings);
   const [cloudflareTokenDraft, setCloudflareTokenDraft] = useState("");
   const [acmeRequesting, setAcmeRequesting] = useState(false);
+  const [manualCertDraft, setManualCertDraft] = useState("");
+  const [manualKeyDraft, setManualKeyDraft] = useState("");
+  const [manualUploading, setManualUploading] = useState(false);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [sessions, setSessions] = useState<AdminSession[]>([]);
@@ -281,6 +288,7 @@ export function AdminSettingsPanel({
         oidcSilent,
         tailscale,
         cmdHistory,
+        analytics,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -293,6 +301,7 @@ export function AdminSettingsPanel({
         getOidcSilentLoginDefault(),
         getTailscaleSettings(),
         getCommandHistoryEnabled(),
+        getAnalyticsEnabled(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -323,6 +332,9 @@ export function AdminSettingsPanel({
       }
       if (cmdHistory.status === "fulfilled") {
         setCommandHistoryEnabled(cmdHistory.value.enabled);
+      }
+      if (analytics.status === "fulfilled") {
+        setAnalyticsEnabled(analytics.value.enabled);
       }
     } catch {
       // non-fatal
@@ -428,6 +440,17 @@ export function AdminSettingsPanel({
     } catch {
       setCommandHistoryEnabled(!newVal);
       toast.error(t("admin.updateCommandHistoryFailed"));
+    }
+  }
+
+  async function handleToggleAnalytics() {
+    const newVal = !analyticsEnabled;
+    setAnalyticsEnabled(newVal);
+    try {
+      await updateAnalyticsEnabled(newVal);
+    } catch {
+      setAnalyticsEnabled(!newVal);
+      toast.error(t("admin.updateAnalyticsFailed"));
     }
   }
 
@@ -589,6 +612,28 @@ export function AdminSettingsPanel({
       toast.error(apiErrorMessage(e, t("admin.sslRequestCertFailed")));
     } finally {
       setAcmeRequesting(false);
+    }
+  }
+
+  async function handleManualSslUpload() {
+    if (!manualCertDraft.trim() || !manualKeyDraft.trim()) {
+      toast.error(t("admin.sslManualRequiresFields"));
+      return;
+    }
+    setManualUploading(true);
+    try {
+      const result = await uploadManualSslCertificate({
+        certificate: manualCertDraft,
+        privateKey: manualKeyDraft,
+      });
+      setAcmeSettings(result);
+      setManualCertDraft("");
+      setManualKeyDraft("");
+      toast.success(t("admin.sslManualUploadSuccess"));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("admin.sslManualUploadFailed")));
+    } finally {
+      setManualUploading(false);
     }
   }
 
@@ -861,6 +906,8 @@ export function AdminSettingsPanel({
       <AdminGeneralSettingsSection
         open={openSections.has("general")}
         onToggle={() => toggle("general")}
+        analyticsEnabled={analyticsEnabled}
+        handleToggleAnalytics={handleToggleAnalytics}
         allowRegistration={allowRegistration}
         handleToggleRegistration={handleToggleRegistration}
         allowPasswordLogin={allowPasswordLogin}
@@ -982,6 +1029,12 @@ export function AdminSettingsPanel({
         requesting={acmeRequesting}
         handleSave={handleSaveAcmeSettings}
         handleRequest={handleRequestAcmeCertificate}
+        manualCertDraft={manualCertDraft}
+        setManualCertDraft={setManualCertDraft}
+        manualKeyDraft={manualKeyDraft}
+        setManualKeyDraft={setManualKeyDraft}
+        manualUploading={manualUploading}
+        handleManualUpload={handleManualSslUpload}
       />
 
       <AdminApiKeysSection

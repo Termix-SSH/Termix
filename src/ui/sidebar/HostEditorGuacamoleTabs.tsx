@@ -174,88 +174,106 @@ export function HostEditorRdpTab({
         icon={<Shield className="size-3.5" />}
       >
         <div className="flex flex-col gap-4 py-3">
-          {credentials && credentials.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.guac.authMethod")}
-              </label>
-              <div className="flex gap-2">
-                {(["direct", "credential"] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setField("rdpAuthType", m)}
-                    className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${
-                      form.rdpAuthType === m
-                        ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
-                        : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("hosts.guac.authMethod")}
+            </label>
+            <div className="flex gap-2">
+              {(
+                [
+                  "direct",
+                  ...(credentials && credentials.length > 0
+                    ? (["credential"] as const)
+                    : []),
+                  "none",
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setField("rdpAuthType", m)}
+                  className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border transition-colors ${
+                    form.rdpAuthType === m
+                      ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand"
+                      : "border-border text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t(
+                    `hosts.guac.authType${m.charAt(0).toUpperCase() + m.slice(1)}`,
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          {form.rdpAuthType === "none" ? (
+            <p className="text-[10px] text-muted-foreground">
+              {t("hosts.guac.authTypeNoneDesc")}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {form.rdpAuthType === "credential" &&
+              credentials &&
+              credentials.length > 0 ? (
+                <div className="flex flex-col gap-1.5 col-span-full">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    {t("hosts.guac.storedCredential")}
+                  </label>
+                  <select
+                    value={form.rdpCredentialId}
+                    onChange={(e) =>
+                      setField("rdpCredentialId", e.target.value)
+                    }
+                    className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                   >
-                    {t(
-                      `hosts.guac.authType${m.charAt(0).toUpperCase() + m.slice(1)}`,
-                    )}
-                  </button>
-                ))}
+                    <option value="">
+                      {t("hosts.guac.selectCredential")}
+                    </option>
+                    {credentials.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.username ? `${c.name} (${c.username})` : c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.guac.username")}
+                    </label>
+                    <Input
+                      placeholder="Administrator"
+                      value={form.rdpUser}
+                      onChange={(e) => setField("rdpUser", e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.guac.password")}
+                    </label>
+                    <PasswordInput
+                      className="h-8 text-xs pr-8"
+                      placeholder="••••••••"
+                      value={form.rdpPassword}
+                      onChange={(e) =>
+                        setField("rdpPassword", e.target.value)
+                      }
+                    />
+                  </div>
+                </>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  {t("hosts.guac.domain")}
+                </label>
+                <Input
+                  placeholder="WORKGROUP"
+                  value={form.domain}
+                  onChange={(e) => setField("domain", e.target.value)}
+                />
               </div>
             </div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {form.rdpAuthType === "credential" &&
-            credentials &&
-            credentials.length > 0 ? (
-              <div className="flex flex-col gap-1.5 col-span-full">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  {t("hosts.guac.storedCredential")}
-                </label>
-                <select
-                  value={form.rdpCredentialId}
-                  onChange={(e) => setField("rdpCredentialId", e.target.value)}
-                  className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">{t("hosts.guac.selectCredential")}</option>
-                  {credentials.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.username ? `${c.name} (${c.username})` : c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hosts.guac.username")}
-                  </label>
-                  <Input
-                    placeholder="Administrator"
-                    value={form.rdpUser}
-                    onChange={(e) => setField("rdpUser", e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {t("hosts.guac.password")}
-                  </label>
-                  <PasswordInput
-                    className="h-8 text-xs pr-8"
-                    placeholder="••••••••"
-                    value={form.rdpPassword}
-                    onChange={(e) => setField("rdpPassword", e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.guac.domain")}
-              </label>
-              <Input
-                placeholder="WORKGROUP"
-                value={form.domain}
-                onChange={(e) => setField("domain", e.target.value)}
-              />
-            </div>
-          </div>
         </div>
       </SectionCard>
 

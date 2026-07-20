@@ -1,5 +1,6 @@
 import { authApi } from "@/main-axios";
 import { createTtlRequestCache } from "@/lib/ttl-request-cache";
+import type { TerminalTheme } from "@/lib/terminal-themes";
 
 // OPEN TABS API
 // ============================================================================
@@ -82,6 +83,12 @@ export async function getActiveSessions(): Promise<ActiveSessionInfo[]> {
 // USER PREFERENCES API
 // ============================================================================
 
+export interface SavedCustomTheme {
+  id: string;
+  name: string;
+  colors: TerminalTheme["colors"];
+}
+
 export interface UserPreferences {
   reopenTabsOnLogin: boolean;
   theme?: string | null;
@@ -102,6 +109,17 @@ export interface UserPreferences {
   hiddenRailTabs?: string | null;
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
+  customThemes?: string | null;
+}
+
+export function parseCustomThemes(raw?: string | null): SavedCustomTheme[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function getUserPreferences(): Promise<UserPreferences> {
