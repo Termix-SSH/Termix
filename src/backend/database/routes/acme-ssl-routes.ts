@@ -460,9 +460,9 @@ export function registerAcmeSSLRoutes(
         !certificate.includes("BEGIN CERTIFICATE") ||
         !privateKey.includes("PRIVATE KEY")
       ) {
-        return res
-          .status(400)
-          .json({ error: "A valid PEM certificate and private key are required" });
+        return res.status(400).json({
+          error: "A valid PEM certificate and private key are required",
+        });
       }
 
       await fs.mkdir(SSL_DIR, { recursive: true });
@@ -485,7 +485,8 @@ export function registerAcmeSSLRoutes(
           );
         } catch {
           return res.status(400).json({
-            error: "The provided certificate or private key is not valid PEM data",
+            error:
+              "The provided certificate or private key is not valid PEM data",
           });
         }
 

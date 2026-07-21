@@ -32,6 +32,7 @@ import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
+import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
 import { SsoProviderRepository } from "./sso-provider-repository.js";
 import { TermixIdentityCaRepository } from "./termix-identity-ca-repository.js";
 import { TermixIdentityRepository } from "./termix-identity-repository.js";
@@ -123,6 +124,13 @@ export function createCurrentDashboardServiceLinkRepository(): DashboardServiceL
   return new DashboardServiceLinkRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("dashboard_service_link_repository_write"),
+  );
+}
+
+export function createCurrentSyncTombstoneRepository(): SyncTombstoneRepository {
+  return new SyncTombstoneRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("sync_tombstone_repository_write"),
   );
 }
 

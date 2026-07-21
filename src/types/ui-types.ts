@@ -71,6 +71,7 @@ export type Host = {
   useSocks5?: boolean;
   socks5Host?: string;
   socks5Port?: number;
+  connectionOrigin?: "local" | "remote" | null;
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: {

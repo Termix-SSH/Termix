@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { getAlertFirings } from "@/api/alerts-api";
+import { isElectron } from "@/lib/electron";
 
 export type RailView =
   | "hosts"
@@ -247,8 +248,44 @@ export function AppRail({
     return () => window.removeEventListener("hiddenRailTabsChanged", handler);
   }, []);
 
+  // Termix ID publishes SSH public keys under a claimed public handle for
+  // other servers to fetch -- meaningless for a standalone desktop install
+  // with no synced multi-device account, so it stays hidden until a remote
+  // server is actually connected.
+  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState(
+    () => !isElectron(),
+  );
+
+  useEffect(() => {
+    if (!isElectron()) return;
+    let cancelled = false;
+    const refreshSyncStatus = () => {
+      window.electronAPI
+        ?.invoke?.("get-remote-sync-config")
+        .then((config) => {
+          if (!cancelled) {
+            setIsRemoteSyncConnected(
+              !!(config as { serverUrl?: string } | null)?.serverUrl,
+            );
+          }
+        })
+        .catch(() => {});
+    };
+    refreshSyncStatus();
+    const unsubscribe = window.electronAPI?.onRemoteSyncStatusChanged?.(() =>
+      refreshSyncStatus(),
+    );
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
+
   const railExpanded = pinned || (expandOnHover && hovered);
-  const railButtons = buildRailButtons(splitMode, t, hiddenTabs);
+  const effectiveHiddenTabs = isRemoteSyncConnected
+    ? hiddenTabs
+    : new Set([...hiddenTabs, "termix-id"]);
+  const railButtons = buildRailButtons(splitMode, t, effectiveHiddenTabs);
 
   return (
     <div

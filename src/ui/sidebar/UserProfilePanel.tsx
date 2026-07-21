@@ -16,7 +16,6 @@ import {
   getUserRoles,
   saveUserPreferences,
   getUserPreferences,
-  getConfiguredServerUrl,
 } from "@/main-axios";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import {
@@ -29,6 +28,7 @@ import {
 import type { UserRole } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
+import { RemoteSyncPanel } from "@/settings/RemoteSyncPanel.tsx";
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -426,13 +426,11 @@ function PasswordChangeSection({
 export function UserProfilePanel({
   username,
   onLogout,
-  onChangeServer,
   userPrefs,
   onPrefsChange,
 }: {
   username?: string;
   onLogout?: () => void;
-  onChangeServer?: () => void;
   userPrefs?: {
     reopenTabsOnLogin: boolean;
     storageMode?: string | null;
@@ -540,6 +538,46 @@ export function UserProfilePanel({
       setStorageMode(userPrefs.storageMode === "cloud" ? "cloud" : "local");
     }
   }, [userPrefs?.storageMode]);
+
+  // Remote sync is not connected by default on the desktop app (it's an
+  // opt-in feature configured from this same panel). "cloud" storage mode
+  // and Termix ID both assume a real multi-device server account, so they
+  // stay hidden/forced-off until the user actually connects one.
+  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState(
+    () => !isElectron(),
+  );
+
+  useEffect(() => {
+    if (!isElectron()) return;
+    let cancelled = false;
+    const refreshSyncStatus = () => {
+      window.electronAPI
+        ?.invoke?.("get-remote-sync-config")
+        .then((config) => {
+          if (!cancelled) {
+            setIsRemoteSyncConnected(
+              !!(config as { serverUrl?: string } | null)?.serverUrl,
+            );
+          }
+        })
+        .catch(() => {});
+    };
+    refreshSyncStatus();
+    const unsubscribe = window.electronAPI?.onRemoteSyncStatusChanged?.(() =>
+      refreshSyncStatus(),
+    );
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isElectron() && !isRemoteSyncConnected && storageMode === "cloud") {
+      setStorageMode("local");
+      onPrefsChange?.({ storageMode: "local" });
+    }
+  }, [isRemoteSyncConnected, storageMode, onPrefsChange]);
 
   // Settings toggles — all backed by localStorage
   const [commandAutocomplete, setCommandAutocomplete] = useState(
@@ -1143,7 +1181,7 @@ export function UserProfilePanel({
     try {
       const apiUrl = getDatabaseTransferUrl("export", {
         electron: isElectron(),
-        configuredServerUrl: getConfiguredServerUrl(),
+        configuredServerUrl: null,
         location: window.location,
       });
 
@@ -1171,9 +1209,7 @@ export function UserProfilePanel({
         toast.success(t("newUi.sidebar.userProfile.exportSuccess"));
       } else {
         const err = await response.json().catch(() => ({}));
-        toast.error(
-          err.error || t("newUi.sidebar.userProfile.exportFailed"),
-        );
+        toast.error(err.error || t("newUi.sidebar.userProfile.exportFailed"));
       }
     } catch {
       toast.error(t("newUi.sidebar.userProfile.exportFailed"));
@@ -1191,7 +1227,7 @@ export function UserProfilePanel({
     try {
       const apiUrl = getDatabaseTransferUrl("import", {
         electron: isElectron(),
-        configuredServerUrl: getConfiguredServerUrl(),
+        configuredServerUrl: null,
         location: window.location,
       });
 
@@ -1280,44 +1316,48 @@ export function UserProfilePanel({
         </a>
       </div>
 
-      {/* Storage mode toggle */}
-      <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          {t("newUi.sidebar.userProfile.storageModeSwitch")}
-        </span>
-        <div className="flex border border-border overflow-hidden w-full">
+      {/* Storage mode toggle — only meaningful once a remote server is
+          connected; with no sync there's nowhere for "cloud" to sync to,
+          so this stays forced to local storage and hidden. */}
+      {(!isElectron() || isRemoteSyncConnected) && (
+        <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {t("newUi.sidebar.userProfile.storageModeSwitch")}
+          </span>
+          <div className="flex border border-border overflow-hidden w-full">
+            <button
+              onClick={() => handleStorageModeChange("local")}
+              className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                storageMode === "local"
+                  ? "bg-accent-brand text-white"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              {t("newUi.sidebar.userProfile.storageModeLocal")}
+            </button>
+            <button
+              onClick={() => handleStorageModeChange("cloud")}
+              className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                storageMode === "cloud"
+                  ? "bg-accent-brand text-white"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+              }`}
+            >
+              {t("newUi.sidebar.userProfile.storageModeCloud")}
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            {t("newUi.sidebar.userProfile.storageModeDescription")}
+          </p>
           <button
-            onClick={() => handleStorageModeChange("local")}
-            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-              storageMode === "local"
-                ? "bg-accent-brand text-white"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            }`}
+            onClick={resetToDefaults}
+            className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
           >
-            {t("newUi.sidebar.userProfile.storageModeLocal")}
-          </button>
-          <button
-            onClick={() => handleStorageModeChange("cloud")}
-            className={`flex-1 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${
-              storageMode === "cloud"
-                ? "bg-accent-brand text-white"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-            }`}
-          >
-            {t("newUi.sidebar.userProfile.storageModeCloud")}
+            <RotateCcw className="size-3" />
+            {t("newUi.sidebar.userProfile.resetToDefaults")}
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
-          {t("newUi.sidebar.userProfile.storageModeDescription")}
-        </p>
-        <button
-          onClick={resetToDefaults}
-          className="self-start flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <RotateCcw className="size-3" />
-          {t("newUi.sidebar.userProfile.resetToDefaults")}
-        </button>
-      </div>
+      )}
 
       {/* Account */}
       <AccordionSection
@@ -1439,27 +1479,9 @@ export function UserProfilePanel({
             </div>
           </div>
 
-          {isElectron() && onChangeServer && (
+          {isElectron() && (
             <div className="border-t border-border pt-3 mt-3">
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-medium">
-                    {t("serverConfig.changeServer")}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("newUi.sidebar.userProfile.changeServerDescription")}
-                  </span>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 ml-3 text-[10px] h-7"
-                  onClick={onChangeServer}
-                >
-                  <Server className="size-3" />
-                  {t("serverConfig.changeServer")}
-                </Button>
-              </div>
+              <RemoteSyncPanel />
             </div>
           )}
 

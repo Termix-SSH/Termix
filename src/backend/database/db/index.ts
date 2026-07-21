@@ -726,12 +726,16 @@ const addColumnIfNotExists = (
       sqlite.exec(`ALTER TABLE ${table}
                 ADD COLUMN "${column}" ${definition};`);
     } catch (alterError) {
-      databaseLogger.warn(`Failed to add column ${column} to ${table}`, {
-        operation: "schema_migration",
-        table,
-        column,
-        error: alterError,
-      });
+      const message =
+        alterError instanceof Error ? alterError.message : String(alterError);
+      databaseLogger.warn(
+        `Failed to add column ${column} to ${table}: ${message}`,
+        {
+          operation: "schema_migration",
+          table,
+          column,
+        },
+      );
     }
   }
 };
@@ -1489,6 +1493,7 @@ const migrateSchema = () => {
     { column: "vnc_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_auth_type TEXT" },
     { column: "telnet_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_auth_type TEXT" },
     { column: "allow_session_sharing", sql: "ALTER TABLE ssh_data ADD COLUMN allow_session_sharing INTEGER NOT NULL DEFAULT 1" },
+    { column: "connection_origin", sql: "ALTER TABLE ssh_data ADD COLUMN connection_origin TEXT" },
   ];
 
   for (const migration of sshDataMigrations) {
@@ -2392,6 +2397,104 @@ const migrateSchema = () => {
       });
     }
   }
+
+  // --- sync begin ---
+  // Stable per-row identity used to match rows across two independently-
+  // seeded databases (the embedded desktop backend and a connected remote
+  // server) during sync. Local autoincrement ids collide across instances,
+  // so a randomly-generated id is the join key instead. SQLite refuses a
+  // non-constant DEFAULT (e.g. randomblob()) on ALTER TABLE ADD COLUMN for
+  // tables with existing constraints ("Cannot add a column with
+  // non-constant default"), so the column is added as plain nullable TEXT;
+  // repositories set syncId explicitly on insert going forward, and
+  // existing rows are backfilled by the UPDATE loop below.
+  addColumnIfNotExists("ssh_data", "sync_id", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "sync_id", "TEXT");
+  addColumnIfNotExists("ssh_folders", "sync_id", "TEXT");
+  addColumnIfNotExists("snippets", "sync_id", "TEXT");
+  addColumnIfNotExists("snippet_folders", "sync_id", "TEXT");
+  addColumnIfNotExists("vault_profiles", "sync_id", "TEXT");
+  addColumnIfNotExists("dashboard_service_links", "sync_id", "TEXT");
+  // SQLite also rejects NOT NULL DEFAULT CURRENT_TIMESTAMP here for the same
+  // "non-constant default" reason -- add nullable, then backfill from
+  // created_at below and rely on the repository layer to keep it current.
+  addColumnIfNotExists("dashboard_service_links", "updated_at", "TEXT");
+  try {
+    sqlite.exec(
+      "UPDATE dashboard_service_links SET updated_at = created_at WHERE updated_at IS NULL",
+    );
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    databaseLogger.warn(
+      `Failed to backfill dashboard_service_links.updated_at: ${message}`,
+      { operation: "schema_migration", table: "dashboard_service_links" },
+    );
+  }
+  addColumnIfNotExists("homepage_items", "sync_id", "TEXT");
+
+  const syncIdTables = [
+    "ssh_data",
+    "ssh_credentials",
+    "ssh_folders",
+    "snippets",
+    "snippet_folders",
+    "vault_profiles",
+    "dashboard_service_links",
+    "homepage_items",
+  ];
+
+  for (const table of syncIdTables) {
+    try {
+      const result = sqlite
+        .prepare(
+          `UPDATE ${table} SET sync_id = lower(hex(randomblob(16))) WHERE sync_id IS NULL`,
+        )
+        .run();
+      if (result.changes > 0) {
+        databaseLogger.info(
+          `Backfilled sync_id for ${result.changes} row(s) in ${table}`,
+          { operation: "sync_id_backfill", table },
+        );
+      }
+      sqlite.exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_sync_id ON ${table}(sync_id)`,
+      );
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      databaseLogger.warn(
+        `Failed to backfill sync_id for ${table}: ${message}`,
+        {
+          operation: "sync_id_backfill",
+          table,
+        },
+      );
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM sync_tombstones LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS sync_tombstones (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          entity_type TEXT NOT NULL,
+          sync_id TEXT NOT NULL,
+          deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_sync_tombstones_user_entity ON sync_tombstones(user_id, entity_type)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create sync_tombstones table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- sync end ---
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",

@@ -240,6 +240,12 @@ export const hosts = sqliteTable("ssh_data", {
   socks5Password: text("socks5_password"),
   socks5ProxyChain: text("socks5_proxy_chain"),
 
+  // null = use the desktop app's global default; "local" | "remote" pins
+  // this specific host's SSH/Docker-console/Serial connections to originate
+  // from the embedded local backend or a connected remote sync server.
+  // Ignored for rdp/vnc/telnet, which always require the remote server.
+  connectionOrigin: text("connection_origin"),
+
   macAddress: text("mac_address"),
   wolBroadcastAddress: text("wol_broadcast_address"),
   portKnockSequence: text("port_knock_sequence"),
@@ -250,6 +256,11 @@ export const hosts = sqliteTable("ssh_data", {
   hostKeyFirstSeen: text("host_key_first_seen"),
   hostKeyLastVerified: text("host_key_last_verified"),
   hostKeyChangedCount: integer("host_key_changed_count").default(0),
+
+  // Stable identity used to match this row across two independently-seeded
+  // databases (the embedded backend and a connected remote server) during
+  // sync -- local autoincrement ids collide across instances.
+  syncId: text("sync_id").unique(),
 
   createdAt: text("created_at")
     .notNull()
@@ -357,6 +368,7 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
 
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -391,6 +403,7 @@ export const snippets = sqliteTable("snippets", {
   description: text("description"),
   folder: text("folder"),
   order: integer("order").notNull().default(0),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -408,6 +421,7 @@ export const snippetFolders = sqliteTable("snippet_folders", {
   name: text("name").notNull(),
   color: text("color"),
   icon: text("icon"),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -468,6 +482,7 @@ export const sshFolders = sqliteTable("ssh_folders", {
   credentialId: integer("credential_id").references(() => sshCredentials.id, {
     onDelete: "set null",
   }),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -786,6 +801,7 @@ export const vaultProfiles = sqliteTable("vault_profiles", {
   keyType: text("key_type"),
   // When true the profile is visible/usable by all users on the server
   shared: integer("shared", { mode: "boolean" }).notNull().default(false),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -942,7 +958,11 @@ export const dashboardServiceLinks = sqliteTable("dashboard_service_links", {
   label: text("label").notNull(),
   url: text("url").notNull(),
   order: integer("order").notNull().default(0),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1130,6 +1150,7 @@ export const homepageItems = sqliteTable("homepage_items", {
   title: text("title"),
   config: text("config").notNull().default("{}"),
   folderId: integer("folder_id"),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -1151,3 +1172,20 @@ export const homepageLayouts = sqliteTable("homepage_layouts", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- homepage end ---
+
+// --- sync begin ---
+// Records a delete for a synced entity type so the other side of a sync
+// pair (embedded desktop backend <-> connected remote server) learns about
+// the deletion instead of re-creating the row on its next pull.
+export const syncTombstones = sqliteTable("sync_tombstones", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  syncId: text("sync_id").notNull(),
+  deletedAt: text("deleted_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- sync end ---

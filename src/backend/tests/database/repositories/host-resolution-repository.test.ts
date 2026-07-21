@@ -125,6 +125,8 @@ describe("HostResolutionRepository", () => {
         host_key_first_seen TEXT,
         host_key_last_verified TEXT,
         host_key_changed_count INTEGER DEFAULT 0,
+        connection_origin TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -148,6 +150,7 @@ describe("HostResolutionRepository", () => {
         cert_public_key TEXT,
         usage_count INTEGER NOT NULL DEFAULT 0,
         last_used TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -173,6 +176,7 @@ describe("HostResolutionRepository", () => {
         color TEXT,
         icon TEXT,
         credential_id INTEGER,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );

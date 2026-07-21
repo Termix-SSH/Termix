@@ -10,7 +10,6 @@ import { FitAddon } from "@xterm/addon-fit";
 import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
 import { isElectron } from "@/lib/electron";
-import { isEmbeddedMode } from "@/main-axios";
 import { useTheme } from "@/components/theme-provider";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
@@ -101,30 +100,10 @@ export const Serial = forwardRef<SerialHandle, SerialProps>(function Serial(
   // ── WebSocket (Electron) path ──────────────────────────────────────────
 
   const buildWsUrl = useCallback(() => {
-    const isDev =
-      !isElectron() &&
-      process.env.NODE_ENV === "development" &&
-      (window.location.port === "3000" ||
-        window.location.port === "5173" ||
-        window.location.port === "");
-
-    if (isDev || isEmbeddedMode()) {
-      const token = localStorage.getItem("jwt");
-      const base = "ws://127.0.0.1:30011";
-      return token ? `${base}?token=${encodeURIComponent(token)}` : base;
-    }
-
-    const configuredUrl = (window as { configuredServerUrl?: string | null })
-      .configuredServerUrl;
-
-    if (!configuredUrl) return null;
-
-    const wsProtocol = configuredUrl.startsWith("https://")
-      ? "wss://"
-      : "ws://";
-    const wsHost = configuredUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    // Serial is always local -- the device is physically attached to this
+    // desktop machine, so it never routes through a remote server.
     const token = localStorage.getItem("jwt");
-    const base = `${wsProtocol}${wsHost}/serial/websocket/`;
+    const base = "ws://127.0.0.1:30011";
     return token ? `${base}?token=${encodeURIComponent(token)}` : base;
   }, []);
 

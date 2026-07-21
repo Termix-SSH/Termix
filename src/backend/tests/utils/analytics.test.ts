@@ -11,9 +11,8 @@ function makeChain(resolveValue: unknown) {
   for (const m of methods) {
     chain[m] = vi.fn(() => chain);
   }
-  (chain as unknown as Promise<unknown>).then = (
-    cb: (v: unknown) => unknown,
-  ) => Promise.resolve(resolveValue).then(cb);
+  (chain as unknown as Promise<unknown>).then = (cb: (v: unknown) => unknown) =>
+    Promise.resolve(resolveValue).then(cb);
   return chain;
 }
 
@@ -72,9 +71,7 @@ describe("analytics", () => {
 
   it("getOrCreateInstanceId returns the existing id without generating one", async () => {
     mockGet.mockResolvedValue("existing-id");
-    const { getOrCreateInstanceId } = await import(
-      "../../utils/analytics.js"
-    );
+    const { getOrCreateInstanceId } = await import("../../utils/analytics.js");
 
     const id = await getOrCreateInstanceId();
 
@@ -84,9 +81,7 @@ describe("analytics", () => {
 
   it("getOrCreateInstanceId generates and persists a new id when absent", async () => {
     mockGet.mockResolvedValue(null);
-    const { getOrCreateInstanceId } = await import(
-      "../../utils/analytics.js"
-    );
+    const { getOrCreateInstanceId } = await import("../../utils/analytics.js");
 
     const id = await getOrCreateInstanceId();
 
@@ -96,9 +91,8 @@ describe("analytics", () => {
 
   it("collectAndSendHeartbeat does not call PostHog when POSTHOG_API_KEY is unset", async () => {
     delete process.env.POSTHOG_API_KEY;
-    const { collectAndSendHeartbeat } = await import(
-      "../../utils/analytics.js"
-    );
+    const { collectAndSendHeartbeat } =
+      await import("../../utils/analytics.js");
 
     await collectAndSendHeartbeat();
 
@@ -108,9 +102,8 @@ describe("analytics", () => {
   it("collectAndSendHeartbeat does not call PostHog when analytics is disabled", async () => {
     process.env.POSTHOG_API_KEY = "phc_test";
     mockGetBoolean.mockResolvedValue(false);
-    const { collectAndSendHeartbeat } = await import(
-      "../../utils/analytics.js"
-    );
+    const { collectAndSendHeartbeat } =
+      await import("../../utils/analytics.js");
 
     await collectAndSendHeartbeat();
 
@@ -122,9 +115,8 @@ describe("analytics", () => {
     mockGetBoolean.mockResolvedValue(true);
     mockGet.mockResolvedValue("instance-123");
     mockPost.mockResolvedValue({});
-    const { collectAndSendHeartbeat } = await import(
-      "../../utils/analytics.js"
-    );
+    const { collectAndSendHeartbeat } =
+      await import("../../utils/analytics.js");
 
     await collectAndSendHeartbeat();
 

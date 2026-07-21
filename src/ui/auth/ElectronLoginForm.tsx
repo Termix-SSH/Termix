@@ -7,6 +7,12 @@ interface ElectronLoginFormProps {
   serverUrl: string;
   onAuthSuccess: (token: string | null) => void | Promise<void>;
   onChangeServer: () => void;
+  // "local" (default): the app's own login, JWT goes to localStorage like
+  // every other client. "remoteSync": this iframe is authenticating a
+  // Settings-triggered connection to a remote Termix server for the sync
+  // engine -- the JWT is handed to the Electron main process's encrypted
+  // store instead, never exposed to the renderer's localStorage.
+  targetPurpose?: "local" | "remoteSync";
 }
 
 const AUTH_MESSAGE_SOURCES = new Set([
@@ -19,6 +25,7 @@ export function ElectronLoginForm({
   serverUrl,
   onAuthSuccess,
   onChangeServer,
+  targetPurpose = "local",
 }: ElectronLoginFormProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -43,7 +50,11 @@ export function ElectronLoginForm({
 
       try {
         if (token) {
-          localStorage.setItem("jwt", token);
+          if (targetPurpose === "remoteSync") {
+            await window.electronAPI?.invoke?.("save-remote-sync-jwt", token);
+          } else {
+            localStorage.setItem("jwt", token);
+          }
         }
         await onAuthSuccessRef.current(token);
       } catch {
@@ -53,7 +64,7 @@ export function ElectronLoginForm({
         hasAuthenticatedRef.current = false;
       }
     },
-    [t],
+    [t, targetPurpose],
   );
 
   // postMessage from server Auth.tsx after the backend has set the HttpOnly cookie.

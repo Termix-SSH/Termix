@@ -15,7 +15,9 @@ import {
   getGuacdStatus,
   getSSHHosts,
   logActivity,
+  isElectron,
 } from "@/main-axios.ts";
+import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
@@ -172,19 +174,34 @@ const GuacamoleAppInner = React.forwardRef<
     setToken(null);
     setGuacamoleConnectionId(null);
     setError(null);
-    getGuacdStatus()
-      .then((status) => {
+
+    (async () => {
+      if (isElectron()) {
+        const origin = await resolveConnectionOrigin({
+          connectionType: resolvedProtocolForConnect,
+        });
+        if (origin === "remote") {
+          const remoteConfig = (await window.electronAPI?.invoke?.(
+            "get-remote-sync-config",
+          )) as { serverUrl?: string } | null;
+          if (!remoteConfig?.serverUrl) {
+            setError(t("errors.remoteServerRequired"));
+            return;
+          }
+        }
+      }
+
+      try {
+        const status = await getGuacdStatus();
         if (status.guacd.status !== "connected") {
           setError(t("guacamole.guacdUnavailable"));
           return;
         }
-        return getGuacamoleTokenFromHost(
+        const result = await getGuacamoleTokenFromHost(
           hostId,
           protocol,
           promptedCredentials ?? undefined,
         );
-      })
-      .then((result) => {
         if (result) {
           setToken(result.token);
           setGuacamoleConnectionId(result.guacamoleConnectionId ?? null);
@@ -192,8 +209,12 @@ const GuacamoleAppInner = React.forwardRef<
             () => {},
           );
         }
-      })
-      .catch((err) => setError(err?.message || t("guacamole.failedToConnect")));
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : t("guacamole.failedToConnect");
+        setError(message || t("guacamole.failedToConnect"));
+      }
+    })();
   }, [
     hostId,
     hostName,

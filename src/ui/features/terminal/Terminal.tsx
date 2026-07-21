@@ -18,15 +18,17 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { getBasePath } from "@/lib/base-path";
 import {
+  resolveConnectionOrigin,
+  buildOriginWsUrl,
+} from "@/lib/connection-origin.ts";
+import {
   getCookie,
   isElectron,
-  isEmbeddedMode,
   logActivity,
   getSnippets,
   deleteCommandFromHistory,
   getCommandHistory,
   getHostPassword,
-  getServerConfig,
 } from "@/main-axios.ts";
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
@@ -973,52 +975,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
       } else if (isElectron()) {
-        let configuredUrl = (window as { configuredServerUrl?: string | null })
-          .configuredServerUrl;
-
-        if (!configuredUrl && !isEmbeddedMode()) {
-          try {
-            const serverConfig = await getServerConfig();
-            configuredUrl = serverConfig?.serverUrl || null;
-            if (configuredUrl) {
-              (
-                window as Window &
-                  typeof globalThis & {
-                    configuredServerUrl?: string | null;
-                  }
-              ).configuredServerUrl = configuredUrl;
-            }
-          } catch (error) {
-            console.error("Failed to resolve Electron server URL:", error);
-          }
-        }
-
-        if (isEmbeddedMode()) {
-          baseWsUrl = "ws://127.0.0.1:30002";
-          const storedJwt = localStorage.getItem("jwt");
-          if (storedJwt) {
-            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
-          }
-        } else if (!configuredUrl) {
-          console.error("No configured server URL available for Electron SSH");
+        const origin = await resolveConnectionOrigin({
+          connectionType: "ssh",
+          connectionOrigin: hostConfig.connectionOrigin as
+            | "local"
+            | "remote"
+            | null
+            | undefined,
+        });
+        const resolvedUrl = await buildOriginWsUrl({
+          origin,
+          localPort: 30002,
+          localPath: "",
+          remotePath: "/ssh/websocket/",
+        });
+        if (!resolvedUrl) {
           setIsConnected(false);
           setIsConnecting(false);
-          updateConnectionError(t("errors.failedToLoadServer"));
+          updateConnectionError(t("errors.remoteServerRequired"));
           isConnectingRef.current = false;
           return;
-        } else {
-          const wsProtocol = configuredUrl.startsWith("https://")
-            ? "wss://"
-            : "ws://";
-          const wsHost = configuredUrl
-            .replace(/^https?:\/\//, "")
-            .replace(/\/$/, "");
-          baseWsUrl = `${wsProtocol}${wsHost}/ssh/websocket/`;
-          const storedJwt = localStorage.getItem("jwt");
-          if (storedJwt) {
-            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
-          }
         }
+        baseWsUrl = resolvedUrl;
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
       }

@@ -33,7 +33,6 @@ import {
   getCommandHistoryEnabled,
   updateCommandHistoryEnabled,
   isElectron,
-  getConfiguredServerUrl,
   getUserRoles,
 } from "@/main-axios";
 import {
@@ -808,7 +807,7 @@ export function AdminSettingsPanel({
     try {
       const apiUrl = getDatabaseTransferUrl("export", {
         electron: isElectron(),
-        configuredServerUrl: getConfiguredServerUrl(),
+        configuredServerUrl: null,
         location: window.location,
       });
 
@@ -854,7 +853,7 @@ export function AdminSettingsPanel({
     try {
       const apiUrl = getDatabaseTransferUrl("import", {
         electron: isElectron(),
-        configuredServerUrl: getConfiguredServerUrl(),
+        configuredServerUrl: null,
         location: window.location,
       });
 

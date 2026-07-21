@@ -1,5 +1,13 @@
 import axios from "axios";
-import { authApi, fileManagerApi, handleApiError } from "@/main-axios";
+import {
+  authApi,
+  fileManagerApi,
+  handleApiError,
+  getFileManagerApiForSession,
+  setSessionOrigin,
+  clearSessionOrigin,
+} from "@/main-axios";
+import { resolveConnectionOrigin } from "@/lib/connection-origin";
 import { fileLogger } from "@/lib/frontend-logger";
 import type { SSHHost } from "@/types/index";
 
@@ -72,7 +80,7 @@ export async function connectSSH(
   },
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post(
+    const response = await getFileManagerApiForSession(sessionId).post(
       "/ssh/connect",
       { sessionId, ...config },
       { timeout: 120000 },
@@ -121,12 +129,15 @@ export async function disconnectSSH(
   sessionId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/disconnect", {
-      sessionId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/disconnect",
+      { sessionId },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "disconnect SSH");
+  } finally {
+    clearSessionOrigin(sessionId);
   }
 }
 
@@ -135,10 +146,10 @@ export async function verifySSHTOTP(
   totpCode: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/connect-totp", {
-      sessionId,
-      totpCode,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/connect-totp",
+      { sessionId, totpCode },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "verify SSH TOTP");
@@ -149,9 +160,10 @@ export async function verifySSHWarpgate(
   sessionId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/connect-warpgate", {
-      sessionId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/connect-warpgate",
+      { sessionId },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "verify SSH Warpgate");
@@ -239,9 +251,10 @@ export async function getSSHStatus(
   sessionId: string,
 ): Promise<{ connected: boolean }> {
   try {
-    const response = await fileManagerApi.get("/ssh/status", {
-      params: { sessionId },
-    });
+    const response = await getFileManagerApiForSession(sessionId).get(
+      "/ssh/status",
+      { params: { sessionId } },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "get SSH status");
@@ -252,9 +265,10 @@ export async function keepSSHAlive(
   sessionId: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/keepalive", {
-      sessionId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/keepalive",
+      { sessionId },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "SSH keepalive");
@@ -266,9 +280,10 @@ export async function listSSHFiles(
   path: string,
 ): Promise<{ files: unknown[]; path: string }> {
   try {
-    const response = await fileManagerApi.get("/ssh/listFiles", {
-      params: { sessionId, path },
-    });
+    const response = await getFileManagerApiForSession(sessionId).get(
+      "/ssh/listFiles",
+      { params: { sessionId, path } },
+    );
     return response.data || { files: [], path };
   } catch (error) {
     handleApiError(error, "list SSH files");
@@ -281,9 +296,10 @@ export async function identifySSHSymlink(
   path: string,
 ): Promise<{ path: string; target: string; type: "directory" | "file" }> {
   try {
-    const response = await fileManagerApi.get("/ssh/identifySymlink", {
-      params: { sessionId, path },
-    });
+    const response = await getFileManagerApiForSession(sessionId).get(
+      "/ssh/identifySymlink",
+      { params: { sessionId, path } },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "identify SSH symlink");
@@ -295,9 +311,10 @@ export async function resolveSSHPath(
   path: string,
 ): Promise<string> {
   try {
-    const response = await fileManagerApi.get("/ssh/resolvePath", {
-      params: { sessionId, path },
-    });
+    const response = await getFileManagerApiForSession(sessionId).get(
+      "/ssh/resolvePath",
+      { params: { sessionId, path } },
+    );
     return response.data?.resolvedPath || path;
   } catch {
     return path;
@@ -313,9 +330,10 @@ export async function readSSHFile(
   encoding?: "base64" | "utf8";
 }> {
   try {
-    const response = await fileManagerApi.get("/ssh/readFile", {
-      params: { sessionId, path },
-    });
+    const response = await getFileManagerApiForSession(sessionId).get(
+      "/ssh/readFile",
+      { params: { sessionId, path } },
+    );
     return response.data;
   } catch (error: unknown) {
     if (error.response?.status === 404) {
@@ -340,13 +358,10 @@ export async function writeSSHFile(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/writeFile", {
-      sessionId,
-      path,
-      content,
-      hostId,
-      userId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/writeFile",
+      { sessionId, path, content, hostId, userId },
+    );
 
     if (
       response.data &&
@@ -410,7 +425,7 @@ export async function uploadSSHFile(
         form.append("totalSize", String(file.size));
         form.append("chunk", chunkBlob, fileName);
 
-        const response = await fileManagerApi.postForm(
+        const response = await getFileManagerApiForSession(sessionId).postForm(
           "/ssh/uploadFileChunk",
           form,
           { timeout: 0 },
@@ -444,7 +459,7 @@ export async function uploadSSHFile(
     if (userId !== undefined) form.append("userId", userId);
     form.append("file", file, fileName);
 
-    const response = await fileManagerApi.postForm(
+    const response = await getFileManagerApiForSession(sessionId).postForm(
       "/ssh/uploadFileStream",
       form,
       {
@@ -464,7 +479,7 @@ export async function downloadSSHFile(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post(
+    const response = await getFileManagerApiForSession(sessionId).post(
       "/ssh/downloadFile",
       {
         sessionId,
@@ -484,7 +499,7 @@ export async function downloadSSHFileStream(
   sessionId: string,
   filePath: string,
 ): Promise<void> {
-  const response = await fileManagerApi.post(
+  const response = await getFileManagerApiForSession(sessionId).post(
     "/ssh/downloadFileStream",
     { sessionId, path: filePath },
     { responseType: "blob", timeout: 0 },
@@ -503,14 +518,10 @@ export async function createSSHFile(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/createFile", {
-      sessionId,
-      path,
-      fileName,
-      content,
-      hostId,
-      userId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/createFile",
+      { sessionId, path, fileName, content, hostId, userId },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "create SSH file");
@@ -525,13 +536,10 @@ export async function createSSHFolder(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post("/ssh/createFolder", {
-      sessionId,
-      path,
-      folderName,
-      hostId,
-      userId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/createFolder",
+      { sessionId, path, folderName, hostId, userId },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "create SSH folder");
@@ -546,15 +554,18 @@ export async function deleteSSHItem(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.delete("/ssh/deleteItem", {
-      data: {
-        sessionId,
-        path,
-        isDirectory,
-        hostId,
-        userId,
+    const response = await getFileManagerApiForSession(sessionId).delete(
+      "/ssh/deleteItem",
+      {
+        data: {
+          sessionId,
+          path,
+          isDirectory,
+          hostId,
+          userId,
+        },
       },
-    });
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "delete SSH item");
@@ -566,7 +577,7 @@ export async function setSudoPassword(
   password: string,
 ): Promise<void> {
   try {
-    await fileManagerApi.post("/sudo-password", {
+    await getFileManagerApiForSession(sessionId).post("/sudo-password", {
       sessionId,
       password,
     });
@@ -583,7 +594,7 @@ export async function copySSHItem(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.post(
+    const response = await getFileManagerApiForSession(sessionId).post(
       "/ssh/copyItem",
       {
         sessionId,
@@ -611,13 +622,10 @@ export async function renameSSHItem(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.put("/ssh/renameItem", {
-      sessionId,
-      oldPath,
-      newName,
-      hostId,
-      userId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).put(
+      "/ssh/renameItem",
+      { sessionId, oldPath, newName, hostId, userId },
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "rename SSH item");
@@ -633,7 +641,7 @@ export async function moveSSHItem(
   userId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    const response = await fileManagerApi.put(
+    const response = await getFileManagerApiForSession(sessionId).put(
       "/ssh/moveItem",
       {
         sessionId,
@@ -670,13 +678,10 @@ export async function changeSSHPermissions(
       userId,
     });
 
-    const response = await fileManagerApi.post("/ssh/changePermissions", {
-      sessionId,
-      path,
-      permissions,
-      hostId,
-      userId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/changePermissions",
+      { sessionId, path, permissions, hostId, userId },
+    );
 
     fileLogger.success("SSH file permissions changed successfully", {
       operation: "change_permissions",
@@ -715,13 +720,10 @@ export async function extractSSHArchive(
       userId,
     });
 
-    const response = await fileManagerApi.post("/ssh/extractArchive", {
-      sessionId,
-      archivePath,
-      extractPath,
-      hostId,
-      userId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/extractArchive",
+      { sessionId, archivePath, extractPath, hostId, userId },
+    );
 
     fileLogger.success("Archive extracted successfully", {
       operation: "extract_archive",
@@ -762,14 +764,17 @@ export async function compressSSHFiles(
       userId,
     });
 
-    const response = await fileManagerApi.post("/ssh/compressFiles", {
-      sessionId,
-      paths,
-      archiveName,
-      format: format || "zip",
-      hostId,
-      userId,
-    });
+    const response = await getFileManagerApiForSession(sessionId).post(
+      "/ssh/compressFiles",
+      {
+        sessionId,
+        paths,
+        archiveName,
+        format: format || "zip",
+        hostId,
+        userId,
+      },
+    );
 
     fileLogger.success("Files compressed successfully", {
       operation: "compress_files",
@@ -811,6 +816,12 @@ export async function ensureSSHSessionForHost(
   host: SSHHost,
 ): Promise<EnsureSSHSessionResult> {
   const sessionId = host.id.toString();
+  const origin = await resolveConnectionOrigin({
+    connectionType: host.connectionType,
+    connectionOrigin: host.connectionOrigin,
+  });
+  setSessionOrigin(sessionId, origin);
+
   try {
     const status = await getSSHStatus(sessionId);
     if (status?.connected) {

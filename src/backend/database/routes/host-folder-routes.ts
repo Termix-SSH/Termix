@@ -11,6 +11,7 @@ import {
   createCurrentSshCredentialUsageRepository,
   createCurrentSessionRecordingRepository,
   createCurrentTransferRecentRepository,
+  createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 
@@ -318,9 +319,17 @@ export function registerHostFolderRoutes(
           );
         }
 
-        await hostFolderRepository.deleteHostsAndFolderRecords(
+        const { hostSyncIds, folderSyncIds } =
+          await hostFolderRepository.deleteHostsAndFolderRecords(
+            userId,
+            folderName,
+          );
+        const tombstoneRepository = createCurrentSyncTombstoneRepository();
+        await tombstoneRepository.recordMany(userId, "hosts", hostSyncIds);
+        await tombstoneRepository.recordMany(
           userId,
-          folderName,
+          "sshFolders",
+          folderSyncIds,
         );
 
         try {

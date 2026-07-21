@@ -9,7 +9,6 @@ import {
   getServerConfig,
   saveServerConfig,
   getEmbeddedServerStatus,
-  setEmbeddedMode,
   type ServerConfig,
 } from "@/main-axios.ts";
 import { Server, Monitor, Loader2, ChevronDown, X } from "lucide-react";
@@ -103,7 +102,7 @@ export function ElectronServerConfig({
   const checkEmbeddedBackend = async () => {
     try {
       const status = await getEmbeddedServerStatus();
-      setEmbeddedAvailable(!!status?.embedded);
+      setEmbeddedAvailable(!!status?.running);
     } catch {
       setEmbeddedAvailable(true);
     }
@@ -144,7 +143,6 @@ export function ElectronServerConfig({
       const maxRetries = 15;
       for (let i = 0; i < maxRetries; i++) {
         if (await probeBackend()) {
-          setEmbeddedMode(true);
           if (onUseEmbedded) {
             onUseEmbedded();
           } else {

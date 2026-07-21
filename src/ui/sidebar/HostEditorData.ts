@@ -97,6 +97,10 @@ export function createHostEditorForm(
       ? "chain"
       : "single") as "single" | "chain",
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
+    connectionOrigin: (host?.connectionOrigin ?? null) as
+      | "local"
+      | "remote"
+      | null,
     enableTerminal: host?.enableTerminal ?? true,
     enableSessionLogging:
       host?.enableSessionLogging ?? d?.enableSessionLogging ?? true,
@@ -322,6 +326,7 @@ export function buildHostEditorPayload(
       form.socks5ProxyMode === "single" ? form.socks5Password || null : null,
     socks5ProxyChain:
       form.socks5ProxyMode === "chain" ? form.socks5ProxyChain : null,
+    connectionOrigin: form.connectionOrigin,
     enableSsh: protocols.enableSsh,
     enableRdp: protocols.enableRdp,
     enableVnc: protocols.enableVnc,

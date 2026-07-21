@@ -35,6 +35,7 @@ describe("HostFolderRepository", () => {
         name TEXT NOT NULL,
         folder TEXT,
         auth_type TEXT NOT NULL,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -130,6 +131,8 @@ describe("HostFolderRepository", () => {
         host_key_first_seen TEXT,
         host_key_last_verified TEXT,
         host_key_changed_count INTEGER DEFAULT 0,
+        connection_origin TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -141,6 +144,7 @@ describe("HostFolderRepository", () => {
         color TEXT,
         icon TEXT,
         credential_id INTEGER,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );

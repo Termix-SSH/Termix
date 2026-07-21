@@ -8,10 +8,14 @@ import {
 } from "react";
 import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
-import { getGuacamoleToken, isElectron, isEmbeddedMode } from "@/main-axios.ts";
+import { getGuacamoleToken, isElectron } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { getBasePath } from "@/lib/base-path.ts";
 import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
+import {
+  resolveConnectionOrigin,
+  buildOriginWsUrl,
+} from "@/lib/connection-origin.ts";
 import {
   isFirefoxBrowser,
   isPasteShortcut,
@@ -169,15 +173,31 @@ export const GuacamoleDisplay = forwardRef<
           connectionConfig.dpi,
         );
 
-        const wsBase = buildGuacamoleWebSocketBaseUrl({
-          isDev,
-          isElectronApp: isElectron(),
-          isEmbeddedApp: isEmbeddedMode(),
-          configuredServerUrl: (window as { configuredServerUrl?: string })
-            .configuredServerUrl,
-          basePath: getBasePath(),
-          location: window.location,
-        });
+        let wsBase: string | null;
+        if (isElectron()) {
+          const origin = await resolveConnectionOrigin({
+            connectionType: connectionProtocol,
+          });
+          wsBase = await buildOriginWsUrl({
+            origin,
+            localPort: 30008,
+            localPath: "/guacamole/websocket/",
+            remotePath: "/guacamole/websocket/",
+            includeLocalJwt: false,
+          });
+          if (!wsBase) {
+            onError?.(t("errors.remoteServerRequired"));
+            return null;
+          }
+        } else {
+          wsBase = buildGuacamoleWebSocketBaseUrl({
+            isDev,
+            isElectronApp: false,
+            isEmbeddedApp: false,
+            basePath: getBasePath(),
+            location: window.location,
+          });
+        }
 
         const params = new URLSearchParams({
           token,
@@ -193,7 +213,7 @@ export const GuacamoleDisplay = forwardRef<
         return null;
       }
     },
-    [connectionConfig, onError],
+    [connectionConfig, onError, t],
   );
 
   const refreshKeyboardHandlers = useCallback(() => {

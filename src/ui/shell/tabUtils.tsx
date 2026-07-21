@@ -124,6 +124,7 @@ function hostToSSHHost(h: Host): SSHHost {
     defaultPath: h.defaultPath ?? "",
     tunnelConnections: [],
     connectionType: "ssh",
+    connectionOrigin: h.connectionOrigin ?? null,
     createdAt: "",
     updatedAt: "",
   } as SSHHost;

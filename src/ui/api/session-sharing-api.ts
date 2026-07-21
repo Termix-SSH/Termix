@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
-import { authApi, getServerConfig, handleApiError } from "@/main-axios";
+import { authApi, handleApiError } from "@/main-axios";
 
 export interface ResolvedShareLink {
   protocol: "ssh" | "rdp" | "vnc" | "telnet";
@@ -30,17 +30,18 @@ const isDev = (): boolean =>
     window.location.port === "");
 
 // Guests have no session/JWT, so this deliberately builds a bare base URL
-// rather than going through main-axios's authenticated instances.
+// rather than going through main-axios's authenticated instances. The
+// desktop app always runs its embedded local backend as the source of
+// truth, so a share link opened there always resolves against it --
+// joining a session hosted on someone else's remote server isn't
+// supported from the desktop app today.
 async function resolveApiBaseUrl(): Promise<string> {
   if (isDev()) {
     const protocol = window.location.protocol === "https:" ? "https" : "http";
     return `${protocol}://localhost:30001`;
   }
   if (isElectron()) {
-    const serverConfig = await getServerConfig();
-    const configuredUrl = serverConfig?.serverUrl;
-    if (configuredUrl) return configuredUrl.replace(/\/$/, "");
-    return "http://localhost:30001";
+    return "http://127.0.0.1:30001";
   }
   return getBasePath();
 }

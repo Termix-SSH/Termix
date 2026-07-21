@@ -26,6 +26,7 @@ import {
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
   createCurrentUserRepository,
+  createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import {
   isNonEmptyString,
@@ -201,6 +202,7 @@ router.post(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      connectionOrigin,
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
@@ -331,6 +333,10 @@ router.post(
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
         : null,
+      connectionOrigin:
+        connectionOrigin === "local" || connectionOrigin === "remote"
+          ? connectionOrigin
+          : null,
       macAddress: macAddress || null,
       wolBroadcastAddress: wolBroadcastAddress || null,
       portKnockSequence: portKnockSequence
@@ -843,6 +849,7 @@ router.put(
       socks5Username,
       socks5Password,
       socks5ProxyChain,
+      connectionOrigin,
       portKnockSequence,
       overrideCredentialUsername,
       macAddress,
@@ -970,6 +977,10 @@ router.put(
       socks5ProxyChain: socks5ProxyChain
         ? JSON.stringify(socks5ProxyChain)
         : null,
+      connectionOrigin:
+        connectionOrigin === "local" || connectionOrigin === "remote"
+          ? connectionOrigin
+          : null,
       macAddress: macAddress || null,
       wolBroadcastAddress: wolBroadcastAddress || null,
       portKnockSequence: portKnockSequence
@@ -2054,6 +2065,13 @@ router.delete(
       );
 
       await createCurrentHostRepository().deleteForUser(userId, numericHostId);
+      if (hostToDelete.syncId) {
+        await createCurrentSyncTombstoneRepository().record(
+          userId,
+          "hosts",
+          hostToDelete.syncId,
+        );
+      }
 
       databaseLogger.success("SSH host deleted", {
         operation: "host_delete_success",

@@ -39,6 +39,19 @@ const nanHeaderPatched = patchFile(path.join(nanDir, "nan.h"), [
 # define __builtin_frame_address(level) _AddressOfReturnAddress()
 #endif
 
+// v8::External::New()/->Value() gained a mandatory ExternalPointerTypeTag
+// argument in V8 15 (Electron 43+). Plain Node (V8 <= 13.x as of Node 24)
+// still uses the old 2-arg signatures, so this must be conditional rather
+// than assumed - a build can target either header set.
+#include <v8-version.h>
+#if defined(V8_MAJOR_VERSION) && V8_MAJOR_VERSION >= 15
+# define NAN_EXTERNAL_TAG_ARG , static_cast<v8::ExternalPointerTypeTag>(0)
+# define NAN_EXTERNAL_TAG_PARAM static_cast<v8::ExternalPointerTypeTag>(0)
+#else
+# define NAN_EXTERNAL_TAG_ARG
+# define NAN_EXTERNAL_TAG_PARAM
+#endif
+
 #define NODE_0_10_MODULE_VERSION 11`,
   },
 ]);
@@ -63,23 +76,24 @@ const bindingPatched = patchFile(bindingPath, [
   },
 ]);
 
-// 2. nan_implementation_12_inl.h: replace v8::External::New() with the 3-arg form.
-//    Electron 42 / V8 13+ requires an ExternalPointerTypeTag as the third argument.
+// 2. nan_implementation_12_inl.h: replace v8::External::New() with a form that
+//    passes NAN_EXTERNAL_TAG_ARG - a macro (defined in the nan.h patch above)
+//    that expands to the ExternalPointerTypeTag argument only when the target
+//    V8 headers actually declare it (V8 15+ / Electron 43+).
 const implPath = path.join(nanDir, "nan_implementation_12_inl.h");
 let implPatched = false;
 if (fs.existsSync(implPath)) {
   let src = fs.readFileSync(implPath, "utf8");
   const before = src;
 
-  const TAG = "static_cast<v8::ExternalPointerTypeTag>(0)";
-  if (!src.includes(TAG)) {
+  if (!src.includes("NAN_EXTERNAL_TAG_ARG")) {
     src = src.replace(
-      /v8::External::New\(v8::Isolate::GetCurrent\(\),\s*value\)/g,
-      `v8::External::New(v8::Isolate::GetCurrent(), value, ${TAG})`,
+      /v8::External::New\(v8::Isolate::GetCurrent\(\),\s*value(?:,\s*static_cast<v8::ExternalPointerTypeTag>\(0\))?\)/g,
+      `v8::External::New(v8::Isolate::GetCurrent(), value NAN_EXTERNAL_TAG_ARG)`,
     );
     src = src.replace(
-      /v8::External::New\(isolate,\s*reinterpret_cast<void \*>\(callback\)\)/g,
-      `v8::External::New(isolate, reinterpret_cast<void *>(callback), ${TAG})`,
+      /v8::External::New\(isolate,\s*reinterpret_cast<void \*>\(callback\)(?:,\s*static_cast<v8::ExternalPointerTypeTag>\(0\))?\)/g,
+      `v8::External::New(isolate, reinterpret_cast<void *>(callback) NAN_EXTERNAL_TAG_ARG)`,
     );
   }
 
@@ -89,20 +103,19 @@ if (fs.existsSync(implPath)) {
   }
 }
 
-// 3. nan_callbacks_12_inl.h: replace ->Value() with ->Value(tag) on v8::External.
-//    The new API requires an ExternalPointerTypeTag argument.
+// 3. nan_callbacks_12_inl.h: replace ->Value() with ->Value(NAN_EXTERNAL_TAG_PARAM)
+//    on v8::External, same conditional-tag reasoning as above.
 const callbacksPath = path.join(nanDir, "nan_callbacks_12_inl.h");
 let callbacksPatched = false;
 if (fs.existsSync(callbacksPath)) {
   let src = fs.readFileSync(callbacksPath, "utf8");
   const before = src;
 
-  const TAG = "static_cast<v8::ExternalPointerTypeTag>(0)";
-  if (!src.includes(TAG)) {
-    // Pattern: .As<v8::External>()->Value()) — always followed by ))
+  if (!src.includes("NAN_EXTERNAL_TAG_PARAM")) {
+    // Pattern: .As<v8::External>()->Value()) or ->Value(<old hardcoded tag>))
     src = src.replace(
-      /\.As<v8::External>\(\)->Value\(\)\)/g,
-      `.As<v8::External>()->Value(${TAG}))`,
+      /\.As<v8::External>\(\)->Value\((?:static_cast<v8::ExternalPointerTypeTag>\(0\))?\)\)/g,
+      `.As<v8::External>()->Value(NAN_EXTERNAL_TAG_PARAM))`,
     );
   }
 

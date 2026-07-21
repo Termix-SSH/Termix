@@ -1,4 +1,5 @@
 import { and, asc, eq, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import { snippetFolders, snippets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 
@@ -151,6 +152,7 @@ export class SnippetRepository {
     const rows = await this.context.drizzle
       .insert(snippets)
       .values({
+        syncId: randomUUID(),
         userId,
         name: input.name.trim(),
         content: input.content.trim(),
@@ -343,6 +345,7 @@ export class SnippetRepository {
 
         const maxOrder = await this.maxOrderForFolder(userId, folderVal);
         await this.context.drizzle.insert(snippets).values({
+          syncId: randomUUID(),
           userId,
           name: snippet.name.trim(),
           content: snippet.content.trim(),
@@ -377,6 +380,7 @@ export class SnippetRepository {
     const rows = await this.context.drizzle
       .insert(snippetFolders)
       .values({
+        syncId: randomUUID(),
         userId,
         name: name.trim(),
         color: color?.trim() || null,
@@ -452,19 +456,24 @@ export class SnippetRepository {
     return { status: "renamed" };
   }
 
-  async deleteFolder(userId: string, name: string): Promise<void> {
+  async deleteFolder(
+    userId: string,
+    name: string,
+  ): Promise<{ syncId: string | null } | null> {
     await this.context.drizzle
       .update(snippets)
       .set({ folder: null })
       .where(and(eq(snippets.userId, userId), eq(snippets.folder, name)));
 
-    await this.context.drizzle
+    const rows = await this.context.drizzle
       .delete(snippetFolders)
       .where(
         and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
-      );
+      )
+      .returning({ syncId: snippetFolders.syncId });
 
     await this.afterWrite();
+    return rows[0] ?? null;
   }
 
   private async findFolderByName(

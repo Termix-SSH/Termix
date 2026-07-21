@@ -32,7 +32,9 @@ describe("DashboardServiceLinkRepository", () => {
         label TEXT NOT NULL,
         url TEXT NOT NULL,
         "order" INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        sync_id TEXT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
       INSERT INTO users (id, username, password_hash)
@@ -99,8 +101,10 @@ describe("DashboardServiceLinkRepository", () => {
     );
     expect(writeCount).toBe(2);
 
-    expect(await repo.deleteForUser("user-2", link.id)).toBe(false);
-    expect(await repo.deleteForUser("user-1", link.id)).toBe(true);
+    expect(await repo.deleteForUser("user-2", link.id)).toBeNull();
+    expect(await repo.deleteForUser("user-1", link.id)).toEqual({
+      syncId: expect.any(String),
+    });
     expect(writeCount).toBe(3);
   });
 

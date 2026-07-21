@@ -180,6 +180,7 @@ function App() {
     stored?.loggedIn ? "verifying" : "idle-auth",
   );
   const [authUsername, setAuthUsername] = useState(stored?.username ?? "");
+  const [verifyRetryCount, setVerifyRetryCount] = useState(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Track whether fading-in came from a fresh login (vs. session verification on page load).
   // When session-verified, Auth must not mount during the transition — it would trigger
@@ -219,11 +220,36 @@ function App() {
         setPhase("fading-in");
         timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
       })
-      .catch(() => {
-        clearStoredAuth();
-        setPhase("idle-auth");
+      .catch((err: unknown) => {
+        // Only treat a genuine auth rejection (401/403) as "not logged in".
+        // Anything else (network hiccup, backend still starting up, a
+        // transient 5xx) is not proof the session is invalid -- clearing
+        // stored auth here would drop the user back to Auth.tsx, which in
+        // Electron immediately mints a brand-new auto-session, silently
+        // swapping out the JWT/cookie from under any still-in-flight
+        // requests and causing spurious "Session expired" toasts.
+        const status =
+          (err as { status?: number; response?: { status?: number } })
+            ?.status ??
+          (err as { response?: { status?: number } })?.response?.status;
+        if (status === 401 || status === 403) {
+          clearStoredAuth();
+          setPhase("idle-auth");
+          return;
+        }
+        // Transient failure: retry shortly rather than logging out. Cap
+        // retries so a genuinely broken backend still surfaces the login
+        // screen eventually instead of spinning forever.
+        if (verifyRetryCount >= 5) {
+          clearStoredAuth();
+          setPhase("idle-auth");
+          return;
+        }
+        timerRef.current = setTimeout(() => {
+          setVerifyRetryCount((c) => c + 1);
+        }, 3000);
       });
-  }, [phase]);
+  }, [phase, verifyRetryCount]);
 
   function handleLogin(u: string) {
     setAuthUsername(u);
@@ -232,6 +258,12 @@ function App() {
     timerRef.current = setTimeout(() => setPhase("idle-app"), 450);
     if (isElectron()) {
       window.electronAPI?.startC2SAutoStartTunnels?.().catch(() => {});
+      const localJwt = localStorage.getItem("jwt");
+      if (localJwt) {
+        window.electronAPI
+          ?.invoke?.("notify-local-login", localJwt)
+          .catch(() => {});
+      }
     }
   }
 
@@ -242,11 +274,6 @@ function App() {
       setAuthUsername("");
       setPhase("idle-auth");
     }, 450);
-  }
-
-  function handleChangeServer() {
-    localStorage.setItem("termix_show_server_config", "true");
-    handleLogout();
   }
 
   const showApp =
@@ -294,11 +321,7 @@ function App() {
           }}
         >
           <Suspense fallback={null}>
-            <AppShell
-              username={authUsername}
-              onLogout={handleLogout}
-              onChangeServer={handleChangeServer}
-            />
+            <AppShell username={authUsername} onLogout={handleLogout} />
           </Suspense>
         </div>
       )}

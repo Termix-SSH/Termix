@@ -225,9 +225,7 @@ export function HostEditorRdpTab({
                     }
                     className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
                   >
-                    <option value="">
-                      {t("hosts.guac.selectCredential")}
-                    </option>
+                    <option value="">{t("hosts.guac.selectCredential")}</option>
                     {credentials.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.username ? `${c.name} (${c.username})` : c.name}
@@ -255,9 +253,7 @@ export function HostEditorRdpTab({
                       className="h-8 text-xs pr-8"
                       placeholder="••••••••"
                       value={form.rdpPassword}
-                      onChange={(e) =>
-                        setField("rdpPassword", e.target.value)
-                      }
+                      onChange={(e) => setField("rdpPassword", e.target.value)}
                     />
                   </div>
                 </>

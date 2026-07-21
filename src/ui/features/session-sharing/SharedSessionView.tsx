@@ -11,7 +11,6 @@ import {
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
-import { getServerConfig } from "@/main-axios";
 import { GuacamoleDisplay } from "@/features/guacamole/GuacamoleDisplay.tsx";
 
 const PING_INTERVAL_MS = 30000;
@@ -24,6 +23,9 @@ interface TerminalWsMessage {
 
 // Mirrors Terminal.tsx's baseWsUrl construction (dev/electron/embedded/prod).
 // Duplicated rather than extracted from that file to avoid touching it here.
+// A shared session link is always resolved against the desktop app's
+// embedded local backend -- joining a session hosted on someone else's
+// remote server isn't supported from the desktop app today.
 async function resolveTerminalWsBaseUrl(): Promise<string> {
   const isDev =
     !isElectron() &&
@@ -36,17 +38,6 @@ async function resolveTerminalWsBaseUrl(): Promise<string> {
     return `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
   }
   if (isElectron()) {
-    const serverConfig = await getServerConfig();
-    const configuredUrl = serverConfig?.serverUrl;
-    if (configuredUrl) {
-      const wsProtocol = configuredUrl.startsWith("https://")
-        ? "wss://"
-        : "ws://";
-      const wsHost = configuredUrl
-        .replace(/^https?:\/\//, "")
-        .replace(/\/$/, "");
-      return `${wsProtocol}${wsHost}/ssh/websocket/`;
-    }
     return "ws://127.0.0.1:30002";
   }
   const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";

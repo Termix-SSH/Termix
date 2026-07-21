@@ -25,7 +25,10 @@ const POSTHOG_HOST = process.env.POSTHOG_HOST || "https://us.i.posthog.com";
 const HEARTBEAT_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export async function isAnalyticsEnabled(): Promise<boolean> {
-  return createCurrentSettingsRepository().getBoolean("analytics_enabled", true);
+  return createCurrentSettingsRepository().getBoolean(
+    "analytics_enabled",
+    true,
+  );
 }
 
 export async function getOrCreateInstanceId(): Promise<string> {
@@ -120,10 +123,9 @@ export async function collectAndSendHeartbeat(): Promise<void> {
 
 export function startAnalyticsHeartbeat(): void {
   if (!process.env.POSTHOG_API_KEY) {
-    analyticsLogger.info(
-      "Analytics disabled: POSTHOG_API_KEY not set",
-      { operation: "analytics_disabled_no_key" },
-    );
+    analyticsLogger.info("Analytics disabled: POSTHOG_API_KEY not set", {
+      operation: "analytics_disabled_no_key",
+    });
     return;
   }
 

@@ -1,6 +1,15 @@
 import { handleApiError, statsApi } from "@/main-axios";
 import type { HostMetricsLayout } from "@/types/host-metrics";
 
+// Every function below is keyed by a host's numeric database id, and the
+// receiving backend must own that host in its own database -- a synced
+// host has a different numeric id on each side (only its syncId matches
+// across them). These calls always target the embedded local backend; see
+// getAllServerStatuses in host-metrics-status-api.ts for the one metrics
+// call that IS safely merged across local + remote (a process-local,
+// in-memory aggregate keyed by whichever host ids that process happens to
+// know about, not a per-host lookup).
+
 export interface MetricsHistoryRow {
   ts: string;
   cpu_percent: number | null;
