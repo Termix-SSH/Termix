@@ -541,7 +541,8 @@ router.post(
           ? { guacdPort: perConnectionGuacdPort }
           : {}),
       };
-      const recordingEnabled = host.enableSessionLogging !== false;
+      const recordingEnabled =
+        connectionType !== "vnc" && host.enableSessionLogging !== false;
       const recordingName = `${crypto.randomUUID()}.guac`;
       const recordingPath =
         process.env.GUACD_RECORDING_PATH ||
@@ -600,7 +601,6 @@ router.post(
             password,
             {
               port,
-              security: "any",
               ...guacConfig,
               ...guacdOverrides,
             },
