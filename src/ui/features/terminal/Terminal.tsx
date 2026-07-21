@@ -57,6 +57,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { Save } from "lucide-react";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
+import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 import {
   getNextTerminalFontSize,
@@ -164,6 +165,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const pongReceivedRef = useRef(true);
     const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
     const [isSavingQuickConnect, setIsSavingQuickConnect] = useState(false);
     const [isQuickConnectSaved, setIsQuickConnectSaved] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -849,8 +851,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             onOpenFileManager?.("/");
           }
         },
+        openShareModal: () => setShareModalOpen(true),
+        canShare: () =>
+          isConnected &&
+          !isQuickConnect &&
+          !hostConfig.joinShareId &&
+          typeof hostConfig.id === "number",
       }),
-      [isConnected, terminal],
+      [
+        isConnected,
+        terminal,
+        isQuickConnect,
+        hostConfig.joinShareId,
+        hostConfig.id,
+      ],
     );
 
     function getUseRightClickCopyPaste() {
@@ -1079,7 +1093,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         const restoredSessionId = pendingRestoredSessionIdRef.current;
         pendingRestoredSessionIdRef.current = null;
 
-        if (restoredSessionId) {
+        if (hostConfig.joinShareId) {
+          isAttachingSessionRef.current = true;
+
+          ws.send(
+            JSON.stringify({
+              type: "joinSharedSession",
+              data: {
+                shareId: hostConfig.joinShareId,
+                tabInstanceId: hostConfig.instanceId,
+              },
+            }),
+          );
+        } else if (restoredSessionId) {
           sessionIdRef.current = restoredSessionId;
           isAttachingSessionRef.current = true;
 
@@ -3189,6 +3215,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             </div>,
             document.body,
           )}
+
+        {shareModalOpen && typeof hostConfig.id === "number" && (
+          <ShareSessionModal
+            open={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+            hostId={hostConfig.id}
+            sessionId={sessionIdRef.current}
+            protocol="ssh"
+            tabInstanceId={hostConfig.instanceId}
+          />
+        )}
       </div>
     );
   },

@@ -140,8 +140,7 @@ export function HostEditor({
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
   const [showVaultManager, setShowVaultManager] = useState(false);
   const [quickCredentialName, setQuickCredentialName] = useState("");
-  const [creatingQuickCredential, setCreatingQuickCredential] =
-    useState(false);
+  const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
   const [showQuickCredentialDialog, setShowQuickCredentialDialog] =
     useState(false);
   const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>([]);
@@ -1254,9 +1253,7 @@ export function HostEditor({
                                       background: theme.colors.background,
                                     }}
                                   />
-                                  <span className="truncate">
-                                    {theme.name}
-                                  </span>
+                                  <span className="truncate">{theme.name}</span>
                                 </button>
                                 <button
                                   type="button"
@@ -1600,6 +1597,15 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.enableSessionLogging}
                       onChange={(v) => setField("enableSessionLogging", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
+                    label={t("hosts.allowSessionSharing")}
+                    description={t("hosts.allowSessionSharingDesc")}
+                  >
+                    <FakeSwitch
+                      checked={form.allowSessionSharing}
+                      onChange={(v) => setField("allowSessionSharing", v)}
                     />
                   </SettingRow>
                   <SettingRow

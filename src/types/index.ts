@@ -151,6 +151,7 @@ export interface Host {
   enableDocker: boolean;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
+  allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | null;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
@@ -272,6 +273,7 @@ export interface HostData {
   enableDocker?: boolean;
   enableProxmox?: boolean;
   enableTmuxMonitor?: boolean;
+  allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   showTerminalInSidebar?: boolean;
   showFileManagerInSidebar?: boolean;

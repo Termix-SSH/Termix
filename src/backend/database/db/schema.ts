@@ -153,6 +153,9 @@ export const hosts = sqliteTable("ssh_data", {
   enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
     .notNull()
     .default(true),
+  allowSessionSharing: integer("allow_session_sharing", { mode: "boolean" })
+    .notNull()
+    .default(true),
   enableCommandHistory: integer("enable_command_history", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -675,6 +678,62 @@ export const sessionRecordings = sqliteTable("session_recordings", {
     .default(false),
   terminationReason: text("termination_reason"),
 });
+
+export const sessionShares = sqliteTable("session_shares", {
+  id: text("id").primaryKey(),
+
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  ownerUserId: text("owner_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  protocol: text("protocol").notNull(),
+
+  // Live-session binding: TerminalSessionManager's session.id for SSH, or
+  // guacd's own guacamoleConnectionId for rdp/vnc/telnet. Neither is a DB
+  // row (process-local, in-memory) so this intentionally has no FK.
+  sessionId: text("session_id").notNull(),
+  tabInstanceId: text("tab_instance_id"),
+
+  shareType: text("share_type").notNull(), // "link" | "user"
+  targetUserId: text("target_user_id").references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  linkToken: text("link_token").unique(),
+
+  permissionLevel: text("permission_level").notNull().default("read-only"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  revokedAt: text("revoked_at"),
+
+  lastJoinedAt: text("last_joined_at"),
+  joinCount: integer("join_count").notNull().default(0),
+});
+
+export const sessionShareParticipants = sqliteTable(
+  "session_share_participants",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    shareId: text("share_id")
+      .notNull()
+      .references(() => sessionShares.id, { onDelete: "cascade" }),
+
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    guestLabel: text("guest_label"),
+
+    joinedAt: text("joined_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    leftAt: text("left_at"),
+  },
+);
 
 export const opksshTokens = sqliteTable("opkssh_tokens", {
   id: integer("id").primaryKey({ autoIncrement: true }),

@@ -281,6 +281,9 @@ export type Tab = {
   host?: Host;
   openedAt: number;
   restoredSessionId?: string | null;
+  /** Set when this tab joins someone else's live shared session instead of connecting/attaching its own. */
+  joinSharedSessionId?: string | null;
+  joinShareId?: string | null;
   initialFilePath?: string;
   serialConfig?: SerialConfig;
   terminalRef?: import("react").RefObject<{
@@ -291,6 +294,8 @@ export type Tab = {
     fit?: () => void;
     notifyResize?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
+    openShareModal?: () => void;
+    canShare?: () => boolean;
   } | null>;
 };
 

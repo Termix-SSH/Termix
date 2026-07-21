@@ -32,6 +32,8 @@ type GeneralSettingsSectionProps = {
   onToggle: () => void;
   analyticsEnabled: boolean;
   handleToggleAnalytics: () => void;
+  sessionSharingGloballyEnabled: boolean;
+  handleToggleSessionSharingGloballyEnabled: () => void;
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
   allowPasswordLogin: boolean;
@@ -71,6 +73,8 @@ export function AdminGeneralSettingsSection({
   onToggle,
   analyticsEnabled,
   handleToggleAnalytics,
+  sessionSharingGloballyEnabled,
+  handleToggleSessionSharingGloballyEnabled,
   allowRegistration,
   handleToggleRegistration,
   allowPasswordLogin,
@@ -119,6 +123,15 @@ export function AdminGeneralSettingsSection({
           description={t("admin.analyticsEnabledDesc")}
         >
           <AdminToggle on={analyticsEnabled} onToggle={handleToggleAnalytics} />
+        </SettingRow>
+        <SettingRow
+          label={t("admin.sessionSharingGloballyEnabled")}
+          description={t("admin.sessionSharingGloballyEnabledDesc")}
+        >
+          <AdminToggle
+            on={sessionSharingGloballyEnabled}
+            onToggle={handleToggleSessionSharingGloballyEnabled}
+          />
         </SettingRow>
         <SettingRow
           label={t("admin.allowRegistration")}

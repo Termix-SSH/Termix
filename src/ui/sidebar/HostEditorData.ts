@@ -107,6 +107,7 @@ export function createHostEditorForm(
     enableDocker: host?.enableDocker ?? false,
     dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
+    allowSessionSharing: host?.allowSessionSharing ?? true,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
       defaultCredentialId: null as number | null,
@@ -306,6 +307,7 @@ export function buildHostEditorPayload(
     enableDocker: form.enableDocker,
     dockerConfig: form.enableDocker ? form.dockerConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
+    allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
     proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
     defaultPath: form.defaultPath || "/",

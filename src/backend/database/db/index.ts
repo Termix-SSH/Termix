@@ -495,6 +495,38 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS session_shares (
+        id TEXT PRIMARY KEY,
+        host_id INTEGER NOT NULL,
+        owner_user_id TEXT NOT NULL,
+        protocol TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        tab_instance_id TEXT,
+        share_type TEXT NOT NULL,
+        target_user_id TEXT,
+        link_token TEXT UNIQUE,
+        permission_level TEXT NOT NULL DEFAULT 'read-only',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        revoked_at TEXT,
+        last_joined_at TEXT,
+        join_count INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS session_share_participants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        share_id TEXT NOT NULL,
+        user_id TEXT,
+        guest_label TEXT,
+        joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        left_at TEXT,
+        FOREIGN KEY (share_id) REFERENCES session_shares (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -1456,6 +1488,7 @@ const migrateSchema = () => {
     { column: "rdp_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_auth_type TEXT" },
     { column: "vnc_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_auth_type TEXT" },
     { column: "telnet_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_auth_type TEXT" },
+    { column: "allow_session_sharing", sql: "ALTER TABLE ssh_data ADD COLUMN allow_session_sharing INTEGER NOT NULL DEFAULT 1" },
   ];
 
   for (const migration of sshDataMigrations) {
@@ -2289,6 +2322,76 @@ const migrateSchema = () => {
     }
   }
   // --- homepage end ---
+
+  try {
+    sqlite.prepare("SELECT id FROM session_shares LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS session_shares (
+          id TEXT PRIMARY KEY,
+          host_id INTEGER NOT NULL,
+          owner_user_id TEXT NOT NULL,
+          protocol TEXT NOT NULL,
+          session_id TEXT NOT NULL,
+          tab_instance_id TEXT,
+          share_type TEXT NOT NULL,
+          target_user_id TEXT,
+          link_token TEXT UNIQUE,
+          permission_level TEXT NOT NULL DEFAULT 'read-only',
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          expires_at TEXT NOT NULL,
+          revoked_at TEXT,
+          last_joined_at TEXT,
+          join_count INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+          FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_shares_link_token ON session_shares(link_token)",
+      );
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_shares_target_user ON session_shares(target_user_id)",
+      );
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_shares_host ON session_shares(host_id)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create session_shares table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM session_share_participants LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS session_share_participants (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          share_id TEXT NOT NULL,
+          user_id TEXT,
+          guest_label TEXT,
+          joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          left_at TEXT,
+          FOREIGN KEY (share_id) REFERENCES session_shares (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_share_participants_share ON session_share_participants(share_id)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create session_share_participants table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",

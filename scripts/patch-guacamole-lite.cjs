@@ -17,14 +17,27 @@ const cryptPath = path.join(
   "lib",
   "Crypt.js",
 );
+const clientConnectionPath = path.join(
+  __dirname,
+  "..",
+  "node_modules",
+  "guacamole-lite",
+  "lib",
+  "ClientConnection.js",
+);
 
-if (!fs.existsSync(guacdClientPath) || !fs.existsSync(cryptPath)) {
+if (
+  !fs.existsSync(guacdClientPath) ||
+  !fs.existsSync(cryptPath) ||
+  !fs.existsSync(clientConnectionPath)
+) {
   console.log("[patch-guacamole-lite] File not found, skipping");
   process.exit(0);
 }
 
 let guacdClientContent = fs.readFileSync(guacdClientPath, "utf8");
 let cryptContent = fs.readFileSync(cryptPath, "utf8");
+let clientConnectionContent = fs.readFileSync(clientConnectionPath, "utf8");
 
 // Patch 1: protocol version negotiation.
 // guacamole-lite originally only accepted 1.0.0/1.1.0. Support the protocol
@@ -268,6 +281,94 @@ if (!cryptContent.includes(newDecryptBlock)) {
   patched = true;
 }
 
+// Patch 7: drop client-to-guacd input instructions from read-only session-share
+// joins. guacd has no native read-only enforcement in the versions this project
+// targets, so Termix must gate here. Denylist (not allowlist) on purpose: an
+// unrecognized opcode is far more likely to be protocol plumbing (sync, blob,
+// clipboard streams) than a new input vector, so failing open is the safer
+// default for a client we already control.
+const oldSendMessageToGuacd =
+  "    sendMessageToGuacd(message) {\n" +
+  "        this.lastActivity = Date.now();\n" +
+  "        this.logger.log(LOGLEVEL.DEBUG, '[ >>> #     ]    Received from WS: ```' + message + '```');\n" +
+  "\n" +
+  "        if (this.guacdClient) {\n" +
+  "            this.guacdClient.send(message, true);\n" +
+  "        }\n" +
+  "    }";
+const newSendMessageToGuacd =
+  "    sendMessageToGuacd(message) {\n" +
+  "        this.lastActivity = Date.now();\n" +
+  "        this.logger.log(LOGLEVEL.DEBUG, '[ >>> #     ]    Received from WS: ```' + message + '```');\n" +
+  "\n" +
+  "        if (this.isReadOnlyJoin() && this.isInputInstruction(message)) {\n" +
+  "            return;\n" +
+  "        }\n" +
+  "\n" +
+  "        if (this.guacdClient) {\n" +
+  "            this.guacdClient.send(message, true);\n" +
+  "        }\n" +
+  "    }\n" +
+  "\n" +
+  "    isReadOnlyJoin() {\n" +
+  "        const connection = this.connectionSettings && this.connectionSettings.connection;\n" +
+  "        return !!(connection && connection.join && connection.readOnly === true);\n" +
+  "    }\n" +
+  "\n" +
+  "    // Termix-only read-only gate, not part of the vendored library: extracts just\n" +
+  "    // the leading opcode from a raw '<len>.<opcode>,...;' instruction without the\n" +
+  "    // overhead of a full stateful parse.\n" +
+  "    isInputInstruction(message) {\n" +
+  "        const dot = message.indexOf('.');\n" +
+  "        if (dot === -1) return false;\n" +
+  "        const len = parseInt(message.substring(0, dot), 10);\n" +
+  "        if (isNaN(len)) return false;\n" +
+  "        const opcode = message.substring(dot + 1, dot + 1 + len);\n" +
+  "        return ['mouse', 'key', 'touch', 'size'].includes(opcode);\n" +
+  "    }";
+
+if (!clientConnectionContent.includes("isReadOnlyJoin()")) {
+  if (!clientConnectionContent.includes(oldSendMessageToGuacd)) {
+    console.log(
+      "[patch-guacamole-lite] sendMessageToGuacd target not found, skipping read-only patch",
+    );
+    process.exit(0);
+  }
+  clientConnectionContent = clientConnectionContent.replace(
+    oldSendMessageToGuacd,
+    newSendMessageToGuacd,
+  );
+  patched = true;
+}
+
+// Patch 8: mergeConnectionOptions only preserves `join` across the settings
+// merge, dropping Termix's `readOnly` flag before sendMessageToGuacd can see it.
+const oldPreserveJoin =
+  "        // For join connections, preserve the join property\n" +
+  "        if (this.connectionSettings.connection.join) {\n" +
+  "            compiledSettings.join = this.connectionSettings.connection.join;\n" +
+  "        }";
+const newPreserveJoin =
+  "        // For join connections, preserve the join property\n" +
+  "        if (this.connectionSettings.connection.join) {\n" +
+  "            compiledSettings.join = this.connectionSettings.connection.join;\n" +
+  "            compiledSettings.readOnly = this.connectionSettings.connection.readOnly === true;\n" +
+  "        }";
+
+if (!clientConnectionContent.includes("compiledSettings.readOnly")) {
+  if (!clientConnectionContent.includes(oldPreserveJoin)) {
+    console.log(
+      "[patch-guacamole-lite] join-preserve target not found, skipping readOnly propagation patch",
+    );
+    process.exit(0);
+  }
+  clientConnectionContent = clientConnectionContent.replace(
+    oldPreserveJoin,
+    newPreserveJoin,
+  );
+  patched = true;
+}
+
 if (!patched) {
   console.log("[patch-guacamole-lite] Already patched");
   process.exit(0);
@@ -275,6 +376,7 @@ if (!patched) {
 
 fs.writeFileSync(guacdClientPath, guacdClientContent);
 fs.writeFileSync(cryptPath, cryptContent);
+fs.writeFileSync(clientConnectionPath, clientConnectionContent);
 console.log(
-  "[patch-guacamole-lite] Patched protocol VERSION_1_3_0/1_5_0 support, name handshake, required arguments, and UTF-8 token decrypt",
+  "[patch-guacamole-lite] Patched protocol VERSION_1_3_0/1_5_0 support, name handshake, required arguments, UTF-8 token decrypt, and read-only join input filtering",
 );

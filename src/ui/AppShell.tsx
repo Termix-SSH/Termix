@@ -272,10 +272,7 @@ export function AppShell({
       if (id == null) return null;
       return tabs.find((t) => t.id === id)?.instanceId ?? null;
     });
-    localStorage.setItem(
-      "termix_paneInstanceIds",
-      JSON.stringify(instanceIds),
-    );
+    localStorage.setItem("termix_paneInstanceIds", JSON.stringify(instanceIds));
   }, [paneTabIds, tabs]);
 
   const isMobile = useIsMobile();
@@ -1056,6 +1053,8 @@ export function AppShell({
       savedLabel?: string;
       initialFilePath?: string;
       serialConfig?: SerialConfig;
+      joinSharedSessionId?: string | null;
+      joinShareId?: string | null;
     },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
@@ -1072,6 +1071,8 @@ export function AppShell({
     const savedLabel = restore?.savedLabel;
     const initialFilePath = restore?.initialFilePath;
     const serialConfig = restore?.serialConfig;
+    const joinSharedSessionId = restore?.joinSharedSessionId ?? null;
+    const joinShareId = restore?.joinShareId ?? null;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
     const isCustomLabel =
       savedLabel != null &&
@@ -1093,6 +1094,8 @@ export function AppShell({
             openedAt,
             terminalRef: ref,
             restoredSessionId: restore?.restoredSessionId ?? null,
+            joinSharedSessionId,
+            joinShareId,
             initialFilePath,
             serialConfig,
           },
@@ -1125,6 +1128,8 @@ export function AppShell({
           openedAt,
           terminalRef: ref,
           restoredSessionId: restore?.restoredSessionId ?? null,
+          joinSharedSessionId,
+          joinShareId,
           initialFilePath,
           serialConfig,
         },
@@ -1377,6 +1382,17 @@ export function AppShell({
       window.dispatchEvent(
         new CustomEvent("termix:refresh-guacamole", { detail: { tabId: id } }),
       );
+    }
+  }
+
+  function openShareForTab(id: string) {
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    const ref = tab.terminalRef?.current;
+    if (ref?.canShare?.()) {
+      ref.openShareModal?.();
+    } else {
+      toast.error(t("sessionSharing.notReadyToShare"));
     }
   }
 
@@ -1725,6 +1741,56 @@ export function AppShell({
               }}
               onRenameTab={renameTab}
               onReorderTabs={setTabs}
+              onJoinSharedSession={(session) => {
+                if (!session.shareId) return;
+                const existingHost = allHosts.find(
+                  (h) => h.id === String(session.hostId),
+                );
+                const host: Host = existingHost ?? {
+                  id: String(session.hostId),
+                  name: session.hostName,
+                  username: "",
+                  ip: "",
+                  port: 0,
+                  folder: "",
+                  online: false,
+                  cpu: null,
+                  ram: null,
+                  lastAccess: new Date().toISOString(),
+                  authType: "none",
+                  enableTerminal: false,
+                  enableCommandHistory: false,
+                  enableTunnel: false,
+                  enableFileManager: false,
+                  enableDocker: false,
+                  enableProxmox: false,
+                  enableTmuxMonitor: false,
+                  enableSsh: false,
+                  enableRdp: false,
+                  enableVnc: false,
+                  enableTelnet: false,
+                  sshPort: 22,
+                  rdpPort: 3389,
+                  vncPort: 5900,
+                  telnetPort: 23,
+                  serverTunnels: [],
+                  quickActions: [],
+                };
+                const instanceId =
+                  typeof crypto.randomUUID === "function"
+                    ? crypto.randomUUID()
+                    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+                openTab(host, "terminal", {
+                  instanceId,
+                  restoredSessionId: null,
+                  joinSharedSessionId: session.sessionId,
+                  joinShareId: session.shareId,
+                  savedLabel: t("connections.sharedSessionLabel", {
+                    hostName: session.hostName,
+                  }),
+                });
+                if (isMobile) setSidebarOpen(false);
+              }}
             />
           </div>
         )}
@@ -1885,6 +1951,7 @@ export function AppShell({
                 const targetTab = tabs.find((t) => t.id === tabId);
                 if (targetTab?.host) openTab(targetTab.host, "files");
               }}
+              onOpenShare={openShareForTab}
               isAppFullscreen={isAppFullscreen}
               onToggleAppFullscreen={toggleAppFullscreen}
             />

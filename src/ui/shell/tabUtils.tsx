@@ -234,6 +234,8 @@ function TerminalTabContent({
                 sshPort: host.sshPort ?? host.port,
                 instanceId: tab.instanceId ?? tab.id,
                 restoredSessionId: tab.restoredSessionId ?? null,
+                joinSharedSessionId: tab.joinSharedSessionId ?? null,
+                joinShareId: tab.joinShareId ?? null,
               } as TerminalHostConfig
             }
             isVisible={isVisible}

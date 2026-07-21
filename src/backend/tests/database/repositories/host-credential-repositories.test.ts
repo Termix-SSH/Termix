@@ -87,6 +87,7 @@ describe("HostRepository and CredentialRepository", () => {
         vault_profile_id INTEGER,
         enable_terminal INTEGER NOT NULL DEFAULT 1,
         enable_session_logging INTEGER NOT NULL DEFAULT 1,
+        allow_session_sharing INTEGER NOT NULL DEFAULT 1,
         enable_command_history INTEGER NOT NULL DEFAULT 1,
         enable_tunnel INTEGER NOT NULL DEFAULT 1,
         tunnel_connections TEXT,

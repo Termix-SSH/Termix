@@ -4,6 +4,9 @@ export interface TerminalHostConfig {
   id?: number;
   instanceId?: string;
   restoredSessionId?: string | null;
+  /** Set when this tab joins someone else's live shared SSH session instead of connecting/attaching. */
+  joinSharedSessionId?: string | null;
+  joinShareId?: string | null;
   ip: string;
   port: number;
   username: string;
@@ -28,4 +31,6 @@ export interface TerminalHandle {
   notifyResize: () => void;
   refresh: () => void;
   getApplicationCursorKeysMode: () => boolean;
+  openShareModal: () => void;
+  canShare: () => boolean;
 }

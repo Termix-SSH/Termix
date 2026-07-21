@@ -175,6 +175,7 @@ router.post(
       enableDocker,
       enableProxmox,
       enableTmuxMonitor,
+      allowSessionSharing,
       showTerminalInSidebar,
       showFileManagerInSidebar,
       showTunnelInSidebar,
@@ -288,6 +289,7 @@ router.post(
       enableDocker: enableDocker ? 1 : 0,
       enableProxmox: enableProxmox ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
+      allowSessionSharing: allowSessionSharing === false ? 0 : 1,
       showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
       showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
       showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
@@ -815,6 +817,7 @@ router.put(
       enableDocker,
       enableProxmox,
       enableTmuxMonitor,
+      allowSessionSharing,
       showTerminalInSidebar,
       showFileManagerInSidebar,
       showTunnelInSidebar,
@@ -925,6 +928,7 @@ router.put(
       enableDocker: enableDocker ? 1 : 0,
       enableProxmox: enableProxmox ? 1 : 0,
       enableTmuxMonitor: enableTmuxMonitor ? 1 : 0,
+      allowSessionSharing: allowSessionSharing === false ? 0 : 1,
       showTerminalInSidebar: showTerminalInSidebar ? 1 : 0,
       showFileManagerInSidebar: showFileManagerInSidebar ? 1 : 0,
       showTunnelInSidebar: showTunnelInSidebar ? 1 : 0,
@@ -1500,9 +1504,13 @@ router.get(
     const field = (req.query.field as string) || "password";
 
     if (
-      !["password", "sudoPassword", "vncPassword", "key", "keyPassword"].includes(
-        field,
-      )
+      ![
+        "password",
+        "sudoPassword",
+        "vncPassword",
+        "key",
+        "keyPassword",
+      ].includes(field)
     ) {
       return res.status(400).json({ error: "Invalid field" });
     }

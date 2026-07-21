@@ -72,6 +72,7 @@ export interface GuacamoleTokenRequest {
 
 export interface GuacamoleTokenResponse {
   token: string;
+  guacamoleConnectionId?: string | null;
 }
 
 type GuacamoleConfigSource = {

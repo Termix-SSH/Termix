@@ -15,6 +15,16 @@ const DEFAULT_TIMEOUT_MINUTES = 30;
 const HEALTH_CHECK_INTERVAL_MS = 60_000;
 const MAX_SESSIONS_PER_USER = 10;
 
+export interface SessionParticipant {
+  ws: WebSocket;
+  userId: string | null; // null for anonymous link guests
+  permissionLevel: "read-write" | "read-only";
+  isOwner: boolean;
+  guestLabel?: string;
+  tabInstanceId?: string;
+  joinedViaShareId?: string;
+}
+
 export interface TerminalSession {
   id: string;
   userId: string;
@@ -32,7 +42,7 @@ export interface TerminalSession {
   isConnected: boolean;
   createdAt: number;
 
-  attachedWs: WebSocket | null;
+  participants: Map<string, SessionParticipant>;
   lastDetachedAt: number | null;
   detachTimeout: NodeJS.Timeout | null;
 
@@ -48,6 +58,33 @@ export interface TerminalSession {
   sessionLoggingEnabled: boolean;
   sessionStartedAt: number;
   lastPersistedBytes: number;
+  terminatedByOwner: boolean;
+  terminationReason: string | null;
+}
+
+/** Message types a non-owner participant may legally send. */
+const NON_OWNER_ALLOWED_MESSAGE_TYPES = new Set([
+  "input",
+  "ping",
+  "disconnect",
+]);
+
+/**
+ * Server-side gate for whether a participant may send a given WS message
+ * type. The owner may send anything; non-owners are limited to input (if
+ * read-write), ping, and disconnect. Pure function so read-only enforcement
+ * is unit-testable without a real WebSocketServer.
+ */
+export function isMessageAllowedForParticipant(
+  participant: Pick<SessionParticipant, "isOwner" | "permissionLevel"> | null,
+  messageType: string,
+): boolean {
+  if (!participant || participant.isOwner) return true;
+  if (!NON_OWNER_ALLOWED_MESSAGE_TYPES.has(messageType)) return false;
+  if (messageType === "input" && participant.permissionLevel === "read-only") {
+    return false;
+  }
+  return true;
 }
 
 class TerminalSessionManager {
@@ -81,7 +118,7 @@ class TerminalSessionManager {
     const userSessions = this.getUserSessions(userId);
     if (userSessions.length >= MAX_SESSIONS_PER_USER) {
       const detached = userSessions
-        .filter((s) => s.attachedWs === null)
+        .filter((s) => this.getOwnerParticipant(s) === null)
         .sort(
           (a, b) =>
             (a.lastDetachedAt ?? a.createdAt) -
@@ -109,7 +146,7 @@ class TerminalSessionManager {
               operation: "session_tab_duplicate_skip",
               existingSessionId: existing.id,
               tabInstanceId,
-              hasAttachedWs: existing.attachedWs !== null,
+              hasAttachedWs: this.getOwnerParticipant(existing) !== null,
             },
           );
           return existing.id;
@@ -151,7 +188,7 @@ class TerminalSessionManager {
       rows,
       isConnected: false,
       createdAt: now,
-      attachedWs: null,
+      participants: new Map(),
       lastDetachedAt: null,
       detachTimeout: null,
       outputBuffer: [],
@@ -166,6 +203,8 @@ class TerminalSessionManager {
       sessionLoggingEnabled,
       sessionStartedAt: now,
       lastPersistedBytes: 0,
+      terminatedByOwner: false,
+      terminationReason: null,
     };
     this.sessions.set(id, session);
 
@@ -197,6 +236,25 @@ class TerminalSessionManager {
     session.sshStream = stream;
     session.jumpClient = jumpClient ?? null;
     session.isConnected = true;
+  }
+
+  /** Finds the owner's participant entry, if currently attached. */
+  private getOwnerParticipant(
+    session: TerminalSession,
+  ): SessionParticipant | null {
+    for (const participant of session.participants.values()) {
+      if (participant.isOwner) return participant;
+    }
+    return null;
+  }
+
+  private getOwnerEntry(
+    session: TerminalSession,
+  ): [string, SessionParticipant] | null {
+    for (const entry of session.participants.entries()) {
+      if (entry[1].isOwner) return entry;
+    }
+    return null;
   }
 
   attachWs(
@@ -234,8 +292,9 @@ class TerminalSessionManager {
       return null;
     }
 
+    const ownerParticipant = this.getOwnerParticipant(session);
     const isDetached =
-      !session.attachedWs || session.attachedWs.readyState !== WebSocket.OPEN;
+      !ownerParticipant || ownerParticipant.ws.readyState !== WebSocket.OPEN;
     const isOriginalTab =
       (session.attachedTabInstanceId ?? session.tabInstanceId) ===
       tabInstanceId;
@@ -282,9 +341,10 @@ class TerminalSessionManager {
       );
     }
 
-    if (session.attachedWs && session.attachedWs !== ws) {
+    const ownerEntry = this.getOwnerEntry(session);
+    if (ownerEntry && ownerEntry[1].ws !== ws) {
       try {
-        session.attachedWs.send(
+        ownerEntry[1].ws.send(
           JSON.stringify({
             type: "sessionTakenOver",
             sessionId,
@@ -294,7 +354,7 @@ class TerminalSessionManager {
       } catch {
         /* ignore */
       }
-      session.attachedWs = null;
+      session.participants.delete(ownerEntry[0]);
     }
 
     if (session.detachTimeout) {
@@ -302,7 +362,14 @@ class TerminalSessionManager {
       session.detachTimeout = null;
     }
 
-    session.attachedWs = ws;
+    const participantId = crypto.randomUUID();
+    session.participants.set(participantId, {
+      ws,
+      userId,
+      permissionLevel: "read-write",
+      isOwner: true,
+      tabInstanceId,
+    });
     session.attachedTabInstanceId = tabInstanceId;
     session.lastDetachedAt = null;
 
@@ -316,6 +383,110 @@ class TerminalSessionManager {
     return session;
   }
 
+  /**
+   * Adds a non-owner participant (in-app share join or anonymous link guest).
+   * Purely additive - never evicts the owner or any other participant.
+   */
+  joinAsParticipant(
+    sessionId: string,
+    ws: WebSocket,
+    opts: {
+      userId: string | null;
+      permissionLevel: "read-write" | "read-only";
+      guestLabel?: string;
+      tabInstanceId?: string;
+      shareId?: string;
+    },
+  ): TerminalSession | null {
+    const session = this.sessions.get(sessionId);
+    if (!session || !session.isConnected) return null;
+
+    const participantId = crypto.randomUUID();
+    session.participants.set(participantId, {
+      ws,
+      userId: opts.userId,
+      permissionLevel: opts.permissionLevel,
+      isOwner: false,
+      guestLabel: opts.guestLabel,
+      tabInstanceId: opts.tabInstanceId,
+      joinedViaShareId: opts.shareId,
+    });
+
+    sshLogger.info("Participant joined shared session", {
+      operation: "session_join_participant",
+      sessionId,
+      userId: opts.userId,
+      permissionLevel: opts.permissionLevel,
+      shareId: opts.shareId,
+    });
+
+    return session;
+  }
+
+  /** Fans out a message to every OPEN participant socket; skips closed ones and send failures. */
+  broadcast(sessionId: string, message: object): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    const payload = JSON.stringify(message);
+    for (const participant of session.participants.values()) {
+      if (participant.ws.readyState !== WebSocket.OPEN) continue;
+      try {
+        participant.ws.send(payload);
+      } catch {
+        /* ignore individual send failures, keep broadcasting to the rest */
+      }
+    }
+  }
+
+  /** Finds the participant entry (owner or not) for a given socket. */
+  getParticipantForWs(
+    session: TerminalSession,
+    ws: WebSocket,
+  ): SessionParticipant | null {
+    for (const participant of session.participants.values()) {
+      if (participant.ws === ws) return participant;
+    }
+    return null;
+  }
+
+  /**
+   * Removes a non-owner participant's socket. No detach timeout or session
+   * destruction side effects - a guest leaving must never end the session.
+   */
+  removeParticipant(sessionId: string, ws: WebSocket): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    for (const [id, participant] of session.participants.entries()) {
+      if (participant.ws === ws && !participant.isOwner) {
+        session.participants.delete(id);
+        sshLogger.info("Participant left shared session", {
+          operation: "session_leave_participant",
+          sessionId,
+          userId: participant.userId,
+        });
+        return;
+      }
+    }
+  }
+
+  /** Broadcasts termination to all guests, then destroys the session. */
+  ownerEndSession(sessionId: string, reason: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+
+    this.broadcast(sessionId, { type: "sessionTerminatedByOwner", reason });
+    session.terminatedByOwner = true;
+    session.terminationReason = reason;
+
+    sshLogger.info("Owner ended shared session", {
+      operation: "session_owner_end",
+      sessionId,
+      reason,
+    });
+
+    this.destroySession(sessionId);
+  }
+
   detachWs(sessionId: string): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
@@ -325,7 +496,10 @@ class TerminalSessionManager {
       session.detachTimeout = null;
     }
 
-    session.attachedWs = null;
+    const ownerEntry = this.getOwnerEntry(session);
+    if (ownerEntry) {
+      session.participants.delete(ownerEntry[0]);
+    }
     session.lastDetachedAt = Date.now();
 
     // Persist log immediately when the user detaches so it appears right away,
@@ -364,6 +538,23 @@ class TerminalSessionManager {
     if (session.recordingPath && session.recordingBytes === 0) {
       fs.promises.unlink(session.recordingPath).catch(() => {});
     }
+
+    for (const participant of session.participants.values()) {
+      if (participant.isOwner) continue;
+      if (participant.ws.readyState !== WebSocket.OPEN) continue;
+      try {
+        participant.ws.send(
+          JSON.stringify({
+            type: "sessionExpired",
+            sessionId,
+            message: "Session has ended",
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+    session.participants.clear();
 
     if (session.sshStream) {
       try {
@@ -440,12 +631,16 @@ class TerminalSessionManager {
           recordingPath: session.recordingPath,
           protocol: "ssh",
           format: "asciicast",
+          terminatedByOwner: session.terminatedByOwner || undefined,
+          terminationReason: session.terminationReason ?? undefined,
         });
         session.recordingId = created.id;
       } else {
         await repo.updateEnded(session.recordingId, {
           endedAt: new Date(endedAt).toISOString(),
           duration,
+          terminatedByOwner: session.terminatedByOwner || undefined,
+          terminationReason: session.terminationReason ?? undefined,
         });
       }
     } catch (err) {
@@ -569,10 +764,10 @@ class TerminalSessionManager {
     for (const [id, session] of this.sessions) {
       if (!session.isConnected) continue;
 
-      if (
-        session.attachedWs &&
-        session.attachedWs.readyState === WebSocket.OPEN
-      ) {
+      const hasOpenParticipant = Array.from(session.participants.values()).some(
+        (p) => p.ws.readyState === WebSocket.OPEN,
+      );
+      if (hasOpenParticipant) {
         continue;
       }
 

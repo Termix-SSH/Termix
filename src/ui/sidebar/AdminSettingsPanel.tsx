@@ -46,6 +46,10 @@ import {
   type HostDefaults,
 } from "@/api/settings-api";
 import {
+  getSessionSharingGloballyEnabled,
+  updateSessionSharingGloballyEnabled,
+} from "@/api/session-sharing-api";
+import {
   getAcmeSslSettings,
   updateAcmeSslSettings,
   requestAcmeCertificate,
@@ -130,6 +134,8 @@ export function AdminSettingsPanel({
   const [tailscaleApiKey, setTailscaleApiKey] = useState("");
   const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
+  const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
+    useState(true);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
 
   // SSO / auto-provision state
@@ -289,6 +295,7 @@ export function AdminSettingsPanel({
         tailscale,
         cmdHistory,
         analytics,
+        sessionSharingEnabled,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -302,6 +309,7 @@ export function AdminSettingsPanel({
         getTailscaleSettings(),
         getCommandHistoryEnabled(),
         getAnalyticsEnabled(),
+        getSessionSharingGloballyEnabled(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -335,6 +343,9 @@ export function AdminSettingsPanel({
       }
       if (analytics.status === "fulfilled") {
         setAnalyticsEnabled(analytics.value.enabled);
+      }
+      if (sessionSharingEnabled.status === "fulfilled") {
+        setSessionSharingGloballyEnabled(sessionSharingEnabled.value.enabled);
       }
     } catch {
       // non-fatal
@@ -451,6 +462,17 @@ export function AdminSettingsPanel({
     } catch {
       setAnalyticsEnabled(!newVal);
       toast.error(t("admin.updateAnalyticsFailed"));
+    }
+  }
+
+  async function handleToggleSessionSharingGloballyEnabled() {
+    const newVal = !sessionSharingGloballyEnabled;
+    setSessionSharingGloballyEnabled(newVal);
+    try {
+      await updateSessionSharingGloballyEnabled(newVal);
+    } catch {
+      setSessionSharingGloballyEnabled(!newVal);
+      toast.error(t("admin.updateSessionSharingFailed"));
     }
   }
 
@@ -908,6 +930,10 @@ export function AdminSettingsPanel({
         onToggle={() => toggle("general")}
         analyticsEnabled={analyticsEnabled}
         handleToggleAnalytics={handleToggleAnalytics}
+        sessionSharingGloballyEnabled={sessionSharingGloballyEnabled}
+        handleToggleSessionSharingGloballyEnabled={
+          handleToggleSessionSharingGloballyEnabled
+        }
         allowRegistration={allowRegistration}
         handleToggleRegistration={handleToggleRegistration}
         allowPasswordLogin={allowPasswordLogin}

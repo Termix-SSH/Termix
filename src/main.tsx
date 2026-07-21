@@ -65,6 +65,12 @@ const ElectronVersionCheck = lazy(() =>
   })),
 );
 
+// Anonymous guest view for shared terminal/RDP/VNC/Telnet sessions (?view=shared&token=<linkToken>).
+// Rendered outside FullscreenAppGate since guests never have a JWT/cookie to verify.
+const SharedSessionView = lazy(
+  () => import("@/features/session-sharing/SharedSessionView"),
+);
+
 type Phase =
   | "verifying"
   | "idle-auth"
@@ -321,6 +327,16 @@ function RootApp() {
 
   const searchParams = new URLSearchParams(window.location.search);
   const isFullscreen = searchParams.has("view");
+
+  // Anonymous guests have no cookie/JWT at all, so this bypasses FullscreenAppGate's
+  // auth check entirely rather than waiting on a getUserInfo() call that would always fail.
+  if (searchParams.get("view") === "shared") {
+    return (
+      <Suspense fallback={null}>
+        <SharedSessionView />
+      </Suspense>
+    );
+  }
 
   if (isFullscreen) {
     return (

@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/dialog.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { SSHHost } from "@/types";
 
 interface GuacamoleAppProps {
@@ -41,6 +42,8 @@ interface GuacamoleAppProps {
 export interface GuacamoleAppHandle {
   disconnect: () => void;
   isConnected: () => boolean;
+  openShareModal: () => void;
+  canShare: () => boolean;
 }
 
 const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
@@ -124,6 +127,10 @@ const GuacamoleAppInner = React.forwardRef<
 ) {
   const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
+  const [guacamoleConnectionId, setGuacamoleConnectionId] = useState<
+    string | null
+  >(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -152,6 +159,8 @@ const GuacamoleAppInner = React.forwardRef<
   useImperativeHandle(ref, () => ({
     disconnect: () => displayRef.current?.disconnect(),
     isConnected: () => displayRef.current?.isConnected() === true,
+    openShareModal: () => setShareModalOpen(true),
+    canShare: () => guacamoleConnectionId !== null,
   }));
 
   useEffect(() => {
@@ -161,6 +170,7 @@ const GuacamoleAppInner = React.forwardRef<
     }
 
     setToken(null);
+    setGuacamoleConnectionId(null);
     setError(null);
     getGuacdStatus()
       .then((status) => {
@@ -177,6 +187,7 @@ const GuacamoleAppInner = React.forwardRef<
       .then((result) => {
         if (result) {
           setToken(result.token);
+          setGuacamoleConnectionId(result.guacamoleConnectionId ?? null);
           logActivity(resolvedProtocolForConnect, hostId, hostName).catch(
             () => {},
           );
@@ -380,6 +391,16 @@ const GuacamoleAppInner = React.forwardRef<
         touchMode={touchMode}
         onTouchModeChange={setTouchMode}
       />
+      {shareModalOpen && guacamoleConnectionId && (
+        <ShareSessionModal
+          open={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          hostId={hostId}
+          sessionId={guacamoleConnectionId}
+          protocol={resolvedProtocol}
+          tabInstanceId={tabId}
+        />
+      )}
     </div>
   );
 });

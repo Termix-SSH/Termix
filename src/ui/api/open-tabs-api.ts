@@ -42,6 +42,10 @@ export interface ActiveSessionInfo {
   tabInstanceId: string | null;
   isConnected: boolean;
   createdAt: number;
+  isOwnSession: boolean;
+  sharedByUsername: string | null;
+  permissionLevel: string | null;
+  shareId: string | null;
 }
 
 const activeSessionsCache = createTtlRequestCache<ActiveSessionInfo[]>(2_000);

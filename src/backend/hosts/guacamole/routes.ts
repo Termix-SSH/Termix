@@ -14,6 +14,7 @@ import {
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
 import type { SOCKS5Config } from "../../utils/socks5-helper.js";
+import { waitForGuacdOpen } from "./guacamole-server.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -183,6 +184,10 @@ router.post("/token", async (req, res) => {
  *                 token:
  *                   type: string
  *                   description: Encrypted connection token
+ *                 guacamoleConnectionId:
+ *                   type: string
+ *                   nullable: true
+ *                   description: guacd's own connection id for this session, once the handshake completes. Used to mint session-share join tokens.
  *       400:
  *         description: Invalid request or unsupported connection type
  *       403:
@@ -607,6 +612,14 @@ router.post(
         guacConfig["recording-include-keys"] = true;
       }
 
+      const termixConnectId = crypto.randomUUID();
+      const termixMeta = {
+        termixConnectId,
+        hostId,
+        ownerUserId: userId,
+        protocol: connectionType as "rdp" | "vnc" | "telnet",
+      };
+
       switch (connectionType) {
         case "rdp":
           if (guacConfig["enable-drive"] && !guacConfig["drive-path"]) {
@@ -634,6 +647,7 @@ router.post(
               ...guacdOverrides,
             },
             recordingMetadata,
+            termixMeta,
           );
           break;
         case "vnc":
@@ -648,6 +662,7 @@ router.post(
               ...guacdOverrides,
             },
             recordingMetadata,
+            termixMeta,
           );
           break;
         case "telnet":
@@ -661,13 +676,19 @@ router.post(
               ...guacdOverrides,
             },
             recordingMetadata,
+            termixMeta,
           );
           break;
         default:
           return res.status(400).json({ error: "Invalid connection type" });
       }
 
-      res.json({ token });
+      const sessionInfo = await waitForGuacdOpen(termixConnectId, 10000);
+
+      res.json({
+        token,
+        guacamoleConnectionId: sessionInfo?.guacamoleConnectionId ?? null,
+      });
     } catch (error) {
       guacLogger.error("Failed to generate guacamole token for host", error, {
         operation: "guac_host_token_error",

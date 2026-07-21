@@ -618,6 +618,110 @@ export function registerUserSettingsRoutes(
 
   /**
    * @openapi
+   * /users/session-sharing-enabled:
+   *   get:
+   *     summary: Get session sharing globally enabled setting
+   *     description: Returns whether live session sharing (terminal/RDP/VNC/Telnet share links and in-app joins) is allowed instance-wide. Overrides every per-host toggle when false.
+   *     tags:
+   *       - Users
+   *     responses:
+   *       200:
+   *         description: Session sharing enabled status.
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 enabled:
+   *                   type: boolean
+   */
+  router.get("/session-sharing-enabled", authenticateJWT, async (_req, res) => {
+    try {
+      res.json({
+        enabled: await createCurrentSettingsRepository().getBoolean(
+          "session_sharing_globally_enabled",
+          true,
+        ),
+      });
+    } catch (err) {
+      authLogger.error("Failed to get session sharing enabled setting", err);
+      res
+        .status(500)
+        .json({ error: "Failed to get session sharing enabled setting" });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/session-sharing-enabled:
+   *   patch:
+   *     summary: Update session sharing globally enabled setting (admin only)
+   *     description: Enables or disables live session sharing instance-wide, overriding every per-host allowSessionSharing toggle.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               enabled:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Setting updated.
+   *       403:
+   *         description: Not authorized.
+   *       500:
+   *         description: Failed to update setting.
+   */
+  router.patch(
+    "/session-sharing-enabled",
+    authenticateJWT,
+    async (req, res) => {
+      const userId = (req as AuthenticatedRequest).userId;
+      try {
+        const actor = await getAdminActor(userId);
+        if (!actor) {
+          return res.status(403).json({ error: "Not authorized" });
+        }
+        const { enabled } = req.body;
+        if (typeof enabled !== "boolean") {
+          return res.status(400).json({ error: "enabled must be a boolean" });
+        }
+        await createCurrentSettingsRepository().set(
+          "session_sharing_globally_enabled",
+          enabled ? "true" : "false",
+        );
+
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId,
+          username: actor.username ?? userId,
+          action: "update_session_sharing_enabled",
+          resourceType: "setting",
+          details: JSON.stringify({ enabled }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+
+        res.json({ enabled });
+      } catch (err) {
+        authLogger.error(
+          "Failed to update session sharing enabled setting",
+          err,
+        );
+        res
+          .status(500)
+          .json({ error: "Failed to update session sharing enabled setting" });
+      }
+    },
+  );
+
+  /**
+   * @openapi
    * /users/host-defaults:
    *   get:
    *     summary: Get host creation defaults
