@@ -64,6 +64,15 @@ export interface ElectronAPI {
     started: number;
     errors: string[];
   }>;
+  onRemoteSyncStatusChanged?: (
+    callback: (status: {
+      connected: boolean;
+      syncing: boolean;
+      lastSyncedAt: string | null;
+      lastError: string | null;
+      needsReauth: boolean;
+    }) => void,
+  ) => () => void;
   clearSessionCookies: () => Promise<void>;
   getSessionCookie: (
     name: string,
@@ -157,7 +166,6 @@ declare global {
   interface Window {
     electronAPI: ElectronAPI;
     IS_ELECTRON: boolean;
-    configuredServerUrl?: string | null;
     electronClipboard?: {
       writeText(text: string): Promise<boolean>;
       readText(): Promise<string>;

@@ -27,10 +27,12 @@ import { RecentActivityRepository } from "./recent-activity-repository.js";
 import { RoleRepository } from "./role-repository.js";
 import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
+import { SessionShareRepository } from "./session-share-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
+import { SyncTombstoneRepository } from "./sync-tombstone-repository.js";
 import { SsoProviderRepository } from "./sso-provider-repository.js";
 import { TermixIdentityCaRepository } from "./termix-identity-ca-repository.js";
 import { TermixIdentityRepository } from "./termix-identity-repository.js";
@@ -122,6 +124,13 @@ export function createCurrentDashboardServiceLinkRepository(): DashboardServiceL
   return new DashboardServiceLinkRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("dashboard_service_link_repository_write"),
+  );
+}
+
+export function createCurrentSyncTombstoneRepository(): SyncTombstoneRepository {
+  return new SyncTombstoneRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("sync_tombstone_repository_write"),
   );
 }
 
@@ -250,6 +259,13 @@ export function createCurrentSessionRepository(): SessionRepository {
   return new SessionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("session_repository_write"),
+  );
+}
+
+export function createCurrentSessionShareRepository(): SessionShareRepository {
+  return new SessionShareRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("session_share_repository_write"),
   );
 }
 

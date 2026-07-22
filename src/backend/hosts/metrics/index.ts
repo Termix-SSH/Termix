@@ -32,6 +32,7 @@ import { collectSystemMetrics } from "./widgets/system-collector.js";
 import { collectLoginStats } from "./widgets/login-stats-collector.js";
 import { collectPortsMetrics } from "./widgets/ports-collector.js";
 import { collectFirewallMetrics } from "./widgets/firewall-collector.js";
+import { collectTemperatureMetrics } from "./widgets/temperature-collector.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -146,6 +147,7 @@ const DEFAULT_STATS_CONFIG: StatsConfig = {
     "processes",
     "ports",
     "firewall",
+    "temperature",
   ],
   statusCheckEnabled: true,
   statusCheckInterval: 60,
@@ -1582,6 +1584,21 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           // expected
         }
 
+        let temperature: {
+          source: "sysfs" | "sensors" | "none";
+          highestCelsius: number | null;
+          sensors: Array<{ label: string; celsius: number }>;
+        } = {
+          source: "none",
+          highestCelsius: null,
+          sensors: [],
+        };
+        try {
+          temperature = await collectTemperatureMetrics(client);
+        } catch {
+          // expected
+        }
+
         const result = {
           cpu,
           memory,
@@ -1593,6 +1610,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
           login_stats,
           ports,
           firewall,
+          temperature,
         };
 
         metricsCache.set(host.id, result);

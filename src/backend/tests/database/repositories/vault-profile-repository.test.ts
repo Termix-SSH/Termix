@@ -40,6 +40,7 @@ describe("VaultProfileRepository", () => {
         valid_principals TEXT,
         key_type TEXT,
         shared INTEGER NOT NULL DEFAULT 0,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -119,8 +120,8 @@ describe("VaultProfileRepository", () => {
     });
 
     expect(await repo.updateById(999, { name: "missing" })).toBeNull();
-    expect(await repo.deleteById(1)).toBe(true);
-    expect(await repo.deleteById(1)).toBe(false);
+    expect(await repo.deleteById(1)).toEqual({ syncId: null });
+    expect(await repo.deleteById(1)).toBeNull();
     expect(await repo.findById(1)).toBeNull();
     expect(writeCount).toBe(2);
   });

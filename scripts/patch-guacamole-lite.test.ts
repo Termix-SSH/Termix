@@ -69,6 +69,31 @@ describe("patch-guacamole-lite", () => {
     ]);
   });
 
+  it("sends name instruction for VERSION_1_1_0 to fix guacd 1.6.0 VNC drops", () => {
+    const client = createPatchedClient({
+      hostname: "192.0.2.10",
+      port: 5900,
+      password: "secret",
+      width: 1280,
+      height: 720,
+      dpi: 96,
+    });
+
+    client.sendHandshakeReply(["VERSION_1_1_0", "hostname", "port"]);
+
+    expect(client.sendInstruction).toHaveBeenCalledWith(["timezone"]);
+    expect(client.sendInstruction).toHaveBeenCalledWith([
+      "name",
+      "guacamole-lite",
+    ]);
+    expect(client.sendInstruction).toHaveBeenCalledWith([
+      "connect",
+      "VERSION_1_1_0",
+      "192.0.2.10",
+      5900,
+    ]);
+  });
+
   it("answers required credentials through argument value streams", () => {
     const client = createPatchedClient({
       username: "",

@@ -51,7 +51,6 @@ import {
   tunnelLogger,
   fileLogger,
   statsLogger,
-  systemLogger,
   dashboardLogger,
   type LogContext,
 } from "@/lib/frontend-logger";
@@ -646,8 +645,6 @@ function isDev(): boolean {
 }
 
 const apiHost = import.meta.env.VITE_API_HOST || "localhost";
-let configuredServerUrl: string | null = null;
-let embeddedMode = false;
 
 export interface ServerConfig {
   serverUrl: string;
@@ -665,6 +662,13 @@ interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
 }
 
+/**
+ * Reads the remote-sync connection record (repurposed from the old
+ * server-config.json startup-gate file). Not used to route the app's own
+ * API instances anymore -- see getApiUrl, which always targets the
+ * embedded backend in Electron. This is only consumed by the Remote Sync
+ * settings panel (Phase 3).
+ */
 export async function getServerConfig(): Promise<ServerConfig | null> {
   if (!isElectron()) return null;
 
@@ -674,7 +678,6 @@ export async function getServerConfig(): Promise<ServerConfig | null> {
         typeof globalThis & {
           IS_ELECTRON?: boolean;
           electronAPI?: unknown;
-          configuredServerUrl?: string;
         }
     ).electronAPI?.invoke("get-server-config");
     return result;
@@ -693,31 +696,13 @@ export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
         typeof globalThis & {
           IS_ELECTRON?: boolean;
           electronAPI?: unknown;
-          configuredServerUrl?: string;
         }
     ).electronAPI?.invoke("save-server-config", config);
-    if (result?.success) {
-      configuredServerUrl = config.serverUrl;
-      (
-        window as Window &
-          typeof globalThis & {
-            IS_ELECTRON?: boolean;
-            electronAPI?: unknown;
-            configuredServerUrl?: string;
-          }
-      ).configuredServerUrl = configuredServerUrl;
-      updateApiInstances();
-      return true;
-    }
-    return false;
+    return !!result?.success;
   } catch (error) {
     console.error("Failed to save server config:", error);
     return false;
   }
-}
-
-export function getConfiguredServerUrl(): string | null {
-  return configuredServerUrl;
 }
 
 export async function testServerConnection(
@@ -732,7 +717,6 @@ export async function testServerConnection(
         typeof globalThis & {
           IS_ELECTRON?: boolean;
           electronAPI?: unknown;
-          configuredServerUrl?: string;
         }
     ).electronAPI?.invoke("test-server-connection", serverUrl);
     return result;
@@ -767,7 +751,6 @@ export async function checkElectronUpdate(): Promise<{
         typeof globalThis & {
           IS_ELECTRON?: boolean;
           electronAPI?: unknown;
-          configuredServerUrl?: string;
         }
     ).electronAPI?.invoke("check-electron-update");
     return result;
@@ -777,9 +760,13 @@ export async function checkElectronUpdate(): Promise<{
   }
 }
 
+/**
+ * Reports whether the local embedded backend process is alive. The desktop
+ * app always runs the embedded backend now, so this is purely a liveness
+ * check -- it no longer reflects a "mode" the app could be in.
+ */
 export async function getEmbeddedServerStatus(): Promise<{
   running: boolean;
-  embedded: boolean;
   dataDir: string | null;
 } | null> {
   if (!isElectron()) return null;
@@ -796,23 +783,10 @@ export async function getEmbeddedServerStatus(): Promise<{
     ).electronAPI?.invoke("get-embedded-server-status");
     return result as {
       running: boolean;
-      embedded: boolean;
       dataDir: string | null;
     } | null;
   } catch {
     return null;
-  }
-}
-
-export function isEmbeddedMode(): boolean {
-  return embeddedMode;
-}
-
-export function setEmbeddedMode(value: boolean): void {
-  embeddedMode = value;
-  if (value) {
-    configuredServerUrl = null;
-    initializeApiInstances();
   }
 }
 
@@ -821,16 +795,11 @@ function getApiUrl(path: string, defaultPort: number): string {
   const electronMode = isElectron();
 
   if (electronMode) {
-    if (embeddedMode && !configuredServerUrl) {
-      return `http://localhost:${defaultPort}${path}`;
-    }
-    if (configuredServerUrl) {
-      const baseUrl = configuredServerUrl.replace(/\/$/, "");
-      const url = `${baseUrl}${path}`;
-      return url;
-    }
-    console.warn("Electron mode but no server configured!");
-    return "http://no-server-configured";
+    // The desktop app always runs its embedded local backend as the
+    // source of truth. A configured remote sync server is a separate,
+    // narrow connection used only by the sync engine (see
+    // remote-sync-axios.ts), not by these shared instances.
+    return `http://localhost:${defaultPort}${path}`;
   } else if (devMode) {
     const protocol = window.location.protocol === "https:" ? "https" : "http";
     const sslPort = protocol === "https" ? 8443 : defaultPort;
@@ -839,6 +808,116 @@ function getApiUrl(path: string, defaultPort: number): string {
   } else {
     return getBasePath() + path;
   }
+}
+
+// ============================================================================
+// PER-HOST ORIGIN ROUTING (Electron desktop only)
+// ============================================================================
+//
+// hostApi/fileManagerApi/tunnelApi/statsApi above always point at the
+// embedded local backend -- they're the shared, always-on instances. When a
+// host's connection origin resolves to "remote" (see
+// src/ui/lib/connection-origin.ts), the backend that actually holds that
+// host's live SSH session is the connected remote server instead, so file
+// manager, tunnel, and stats calls for that host must follow it there.
+//
+// These dynamically-baseURL'd instances resolve the remote server's URL and
+// JWT fresh on every request (cheap, and correct even if the user
+// connects/disconnects remote sync without an app reload).
+
+function createRemoteOriginApiInstance(path: string): AxiosInstance {
+  const instance = axios.create({
+    headers: { "Content-Type": "application/json" },
+    timeout: 30000,
+  });
+
+  instance.interceptors.request.use(async (config: AxiosRequestConfig) => {
+    const [remoteConfig, remoteJwt] = await Promise.all([
+      window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
+        serverUrl?: string;
+      } | null>,
+      window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
+        string | null
+      >,
+    ]);
+
+    const baseUrl = (remoteConfig?.serverUrl || "").replace(/\/$/, "");
+    config.baseURL = baseUrl
+      ? `${baseUrl}${path}`
+      : "http://no-server-configured";
+
+    if (config.headers.set) {
+      config.headers.set("X-Electron-App", "true");
+      if (remoteJwt) config.headers.set("Authorization", `Bearer ${remoteJwt}`);
+    } else {
+      config.headers["X-Electron-App"] = "true";
+      if (remoteJwt) config.headers["Authorization"] = `Bearer ${remoteJwt}`;
+    }
+
+    return config;
+  });
+
+  return instance;
+}
+
+let remoteFileManagerApi: AxiosInstance | null = null;
+let remoteTunnelApi: AxiosInstance | null = null;
+let remoteStatsApi: AxiosInstance | null = null;
+
+export function getRemoteFileManagerApi(): AxiosInstance {
+  if (!remoteFileManagerApi) {
+    remoteFileManagerApi = createRemoteOriginApiInstance("/ssh/file_manager");
+  }
+  return remoteFileManagerApi;
+}
+
+export function getRemoteTunnelApi(): AxiosInstance {
+  if (!remoteTunnelApi) {
+    remoteTunnelApi = createRemoteOriginApiInstance("/ssh");
+  }
+  return remoteTunnelApi;
+}
+
+export function getRemoteStatsApi(): AxiosInstance {
+  if (!remoteStatsApi) {
+    remoteStatsApi = createRemoteOriginApiInstance("");
+  }
+  return remoteStatsApi;
+}
+
+// Maps a live SSH session (keyed by sessionId, which today is the host's
+// numeric id as a string -- see ensureSSHSessionForHost) to the resolved
+// origin it was connected through, so every subsequent file-manager call
+// for that session reaches the backend that actually holds it.
+const sessionOrigins = new Map<string, "local" | "remote">();
+
+export function setSessionOrigin(
+  sessionId: string,
+  origin: "local" | "remote",
+): void {
+  sessionOrigins.set(sessionId, origin);
+}
+
+export function clearSessionOrigin(sessionId: string): void {
+  sessionOrigins.delete(sessionId);
+}
+
+export function getFileManagerApiForSession(sessionId: string): AxiosInstance {
+  return sessionOrigins.get(sessionId) === "remote"
+    ? getRemoteFileManagerApi()
+    : fileManagerApi;
+}
+
+export function getTunnelApiForOrigin(
+  origin: "local" | "remote",
+): AxiosInstance {
+  return origin === "remote" ? getRemoteTunnelApi() : tunnelApi;
+}
+
+export function getStatsApiForOrigin(
+  origin: "local" | "remote",
+): AxiosInstance {
+  return origin === "remote" ? getRemoteStatsApi() : statsApi;
 }
 
 function initializeApiInstances() {
@@ -921,72 +1000,14 @@ export const appReadyPromise: Promise<void> = new Promise((resolve) => {
 });
 
 function initializeApp() {
-  if (isElectron()) {
-    Promise.all([getServerConfig(), getEmbeddedServerStatus()])
-      .then(([config, status]) => {
-        if (status?.embedded && status?.running && !config?.serverUrl) {
-          embeddedMode = true;
-        }
-        if (config?.serverUrl) {
-          configuredServerUrl = config.serverUrl;
-          (
-            window as Window &
-              typeof globalThis & {
-                IS_ELECTRON?: boolean;
-                electronAPI?: unknown;
-                configuredServerUrl?: string;
-              }
-          ).configuredServerUrl = configuredServerUrl;
-        } else if (embeddedMode) {
-          // Embedded backend running, no remote server needed
-        } else {
-          console.warn("No server URL in config");
-        }
-        initializeApiInstances();
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to load server config, initializing with default:",
-          error,
-        );
-        initializeApiInstances();
-      })
-      .finally(() => {
-        _resolveAppReady();
-      });
-  } else {
-    initializeApiInstances();
-    _resolveAppReady();
-  }
+  initializeApiInstances();
+  _resolveAppReady();
 }
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initializeApp);
 } else {
   initializeApp();
-}
-
-function updateApiInstances() {
-  systemLogger.info("Updating API instances with new server configuration", {
-    operation: "api_instance_update",
-    configuredServerUrl,
-  });
-
-  initializeApiInstances();
-
-  (
-    window as Window &
-      typeof globalThis & {
-        IS_ELECTRON?: boolean;
-        electronAPI?: unknown;
-        configuredServerUrl?: string;
-      }
-  ).configuredServerUrl = configuredServerUrl;
-
-  systemLogger.success("All API instances updated successfully", {
-    operation: "api_instance_update_complete",
-    configuredServerUrl,
-  });
 }
 
 // ============================================================================
@@ -1856,6 +1877,49 @@ export async function getSetupRequired(): Promise<{ setup_required: boolean }> {
   }
 }
 
+// Module-level (not per-component) so concurrent/duplicate mounts -- e.g.
+// React StrictMode's intentional double-invoke of effects in dev, or any
+// other double-call -- share one in-flight request instead of each minting
+// its own session. Minting more than one session here is not just wasted
+// work: the backend sets a fresh `jwt` cookie on every call, and since the
+// auth middleware prefers the cookie over the Authorization header, a
+// second mint silently invalidates whichever token the app already started
+// using, surfacing as a spurious "session expired/revoked" on the very
+// next request.
+let desktopAutoSessionRequest: Promise<AuthResponse | null> | null = null;
+
+/**
+ * Electron-only, non-iframed local login: exchanges the embedded backend's
+ * single auto-provisioned local user for a session without ever showing a
+ * login form. Only succeeds when exactly one user exists locally (a synced
+ * or otherwise multi-user install never satisfies this, and falls through
+ * to a normal login screen instead).
+ */
+export async function requestDesktopAutoSession(): Promise<AuthResponse | null> {
+  if (desktopAutoSessionRequest) return desktopAutoSessionRequest;
+
+  desktopAutoSessionRequest = (async () => {
+    try {
+      const response = await authApi.post("/users/internal/auto-session");
+      if (response.data?.token) {
+        localStorage.setItem("jwt", response.data.token);
+      }
+      if (response.data?.success) {
+        markUserAuthenticated();
+      }
+      return response.data;
+    } catch {
+      return null;
+    }
+  })();
+
+  try {
+    return await desktopAutoSessionRequest;
+  } finally {
+    desktopAutoSessionRequest = null;
+  }
+}
+
 export async function getUserCount(): Promise<UserCount> {
   try {
     const response = await authApi.get("/users/count");
@@ -2120,6 +2184,7 @@ export {
   assignRoleToUser,
   removeRoleFromUser,
   shareHost,
+  shareFolder,
   updateHostAccess,
   getHostAccess,
   revokeHostAccess,

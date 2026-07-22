@@ -7,6 +7,7 @@ import { sessionManager } from "../../hosts/terminal/session-manager.js";
 import {
   getCurrentSettingValue,
   createCurrentOpenTabRepository,
+  createCurrentSessionShareRepository,
 } from "../repositories/factory.js";
 
 const router = express.Router();
@@ -277,12 +278,15 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
  * /open-tabs/active-sessions:
  *   get:
  *     summary: Get all active backend sessions for the current user
- *     description: Returns live terminal sessions from the session manager. Used by the Active Connections panel and tab restore logic.
+ *     description: >
+ *       Returns live terminal sessions from the session manager, both sessions the
+ *       caller owns and SSH sessions shared to the caller by another user (via
+ *       an in-app session share). Used by the Active Connections panel and tab restore logic.
  *     tags:
  *       - Open Tabs
  *     responses:
  *       200:
- *         description: List of active sessions.
+ *         description: List of active sessions (own and shared-with-me).
  *         content:
  *           application/json:
  *             schema:
@@ -302,6 +306,17 @@ router.delete("/:id", authenticateJWT, async (req: Request, res: Response) => {
  *                     type: boolean
  *                   createdAt:
  *                     type: number
+ *                   isOwnSession:
+ *                     type: boolean
+ *                   sharedByUsername:
+ *                     type: string
+ *                     nullable: true
+ *                   permissionLevel:
+ *                     type: string
+ *                     nullable: true
+ *                   shareId:
+ *                     type: string
+ *                     nullable: true
  */
 router.get(
   "/active-sessions",
@@ -309,17 +324,46 @@ router.get(
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
     try {
-      const sessions = sessionManager.getUserSessions(userId);
-      return res.json(
-        sessions.map((s) => ({
-          sessionId: s.id,
-          hostId: s.hostId,
-          hostName: s.hostName,
-          tabInstanceId: s.attachedTabInstanceId ?? s.tabInstanceId ?? null,
-          isConnected: s.isConnected,
-          createdAt: s.createdAt,
-        })),
-      );
+      const ownSessions = sessionManager.getUserSessions(userId);
+      const result = ownSessions.map((s) => ({
+        sessionId: s.id,
+        hostId: s.hostId,
+        hostName: s.hostName,
+        tabInstanceId: s.attachedTabInstanceId ?? s.tabInstanceId ?? null,
+        isConnected: s.isConnected,
+        createdAt: s.createdAt,
+        isOwnSession: true,
+        sharedByUsername: null as string | null,
+        permissionLevel: null as string | null,
+        shareId: null as string | null,
+      }));
+
+      const sharedWithMe =
+        await createCurrentSessionShareRepository().findSharesTargetingUser(
+          userId,
+        );
+      for (const share of sharedWithMe) {
+        if (share.protocol !== "ssh") continue;
+        const sharedSession = sessionManager.getSession(share.sessionId);
+        if (!sharedSession || !sharedSession.isConnected) continue;
+        result.push({
+          sessionId: sharedSession.id,
+          hostId: sharedSession.hostId,
+          hostName: sharedSession.hostName,
+          tabInstanceId:
+            sharedSession.attachedTabInstanceId ??
+            sharedSession.tabInstanceId ??
+            null,
+          isConnected: sharedSession.isConnected,
+          createdAt: sharedSession.createdAt,
+          isOwnSession: false,
+          sharedByUsername: share.ownerUsername,
+          permissionLevel: share.permissionLevel,
+          shareId: share.id,
+        });
+      }
+
+      return res.json(result);
     } catch (e) {
       databaseLogger.error("Failed to get active sessions", e, {
         operation: "get_active_sessions",

@@ -126,10 +126,12 @@ import {
   getActiveSessions,
   getUserPreferences,
   dismissDonationModal,
+  isElectron,
   type UserPreferences,
   type OpenTabRecord,
 } from "@/main-axios";
 import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
+import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
@@ -141,7 +143,10 @@ import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
 
 function buildHostTree(
   hosts: SSHHostWithStatus[],
-  folderMeta?: Map<string, { color?: string; icon?: string }>,
+  folderMeta?: Map<
+    string,
+    { color?: string; icon?: string; credentialId?: number | null }
+  >,
 ): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
   const folderMap = new Map<string, HostFolder>();
@@ -159,6 +164,7 @@ function buildHostTree(
           path: accumulated,
           color: meta?.color,
           icon: meta?.icon,
+          credentialId: meta?.credentialId ?? null,
           children: [],
         };
         folderMap.set(accumulated, folder);
@@ -189,11 +195,9 @@ export { tabIcon, renderTabContent } from "@/shell/tabUtils";
 export function AppShell({
   username,
   onLogout,
-  onChangeServer,
 }: {
   username: string;
   onLogout: () => void;
-  onChangeServer?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const { setTheme } = useTheme();
@@ -218,11 +222,14 @@ export function AppShell({
   const [splitMode, setSplitMode] = useState<SplitMode>(
     () => (localStorage.getItem("termix_splitMode") as SplitMode) ?? "none",
   );
-  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(
-    () =>
-      JSON.parse(localStorage.getItem("termix_paneTabIds") ?? "null") ??
-      Array(6).fill(null),
+  // paneTabIds holds live tab.id values, which change on every restore, so we
+  // can't restore it from storage directly. It starts empty and gets filled in
+  // once by the reconciliation effect below, keyed off the stable instanceId
+  // values saved in termix_paneInstanceIds.
+  const [paneTabIds, setPaneTabIds] = useState<(string | null)[]>(() =>
+    Array(6).fill(null),
   );
+  const paneLayoutRestoredRef = useRef(false);
   useEffect(() => {
     paneTabIdsRef.current = paneTabIds;
   }, [paneTabIds]);
@@ -231,6 +238,13 @@ export function AppShell({
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Remote sync is not yet configurable (added in a later phase), so this
+  // is always false for now -- admin/user-management UI stays hidden until
+  // the desktop app is connected to a remote Termix server, since a
+  // standalone local install has exactly one implicit user and nothing to
+  // administer.
+  const [isRemoteSyncConnected] = useState(false);
+  const showMultiUserUI = isAdmin && (!isElectron() || isRemoteSyncConnected);
   const [userId, setUserId] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
@@ -258,8 +272,15 @@ export function AppShell({
   }, [splitMode]);
 
   useEffect(() => {
-    localStorage.setItem("termix_paneTabIds", JSON.stringify(paneTabIds));
-  }, [paneTabIds]);
+    // Don't overwrite the saved layout with the empty initial state before
+    // reconciliation has had a chance to restore it.
+    if (!paneLayoutRestoredRef.current) return;
+    const instanceIds = paneTabIds.map((id) => {
+      if (id == null) return null;
+      return tabs.find((t) => t.id === id)?.instanceId ?? null;
+    });
+    localStorage.setItem("termix_paneInstanceIds", JSON.stringify(instanceIds));
+  }, [paneTabIds, tabs]);
 
   const isMobile = useIsMobile();
 
@@ -798,11 +819,15 @@ export function AppShell({
       ]);
       const converted = raw.map(sshHostToHost);
       setAllHosts(converted);
-      const folderMeta = new Map<string, { color?: string; icon?: string }>();
+      const folderMeta = new Map<
+        string,
+        { color?: string; icon?: string; credentialId?: number | null }
+      >();
       for (const f of folders) {
         folderMeta.set(f.name, {
           color: f.color ?? undefined,
           icon: f.icon ?? undefined,
+          credentialId: f.credentialId ?? null,
         });
       }
       setRealHostTree(buildHostTree(raw, folderMeta));
@@ -968,6 +993,35 @@ export function AppShell({
     loadSavedTabs();
   }, [hostsLoaded, userPrefsLoaded]);
 
+  // Restore split-screen pane assignments once tabs are settled. Saved assignments are
+  // keyed by instanceId (stable across reloads) and remapped to the live tab.id here,
+  // since tab.id is regenerated every time a tab is (re)opened.
+  useEffect(() => {
+    if (!tabsReady || paneLayoutRestoredRef.current) return;
+    paneLayoutRestoredRef.current = true;
+
+    try {
+      const savedInstanceIds: (string | null)[] = JSON.parse(
+        localStorage.getItem("termix_paneInstanceIds") ?? "null",
+      );
+      if (!Array.isArray(savedInstanceIds)) return;
+
+      const restored = savedInstanceIds.map((instanceId) => {
+        if (instanceId == null) return null;
+        return tabs.find((t) => t.instanceId === instanceId)?.id ?? null;
+      });
+      if (restored.some((id) => id != null)) {
+        setPaneTabIds(restored);
+      } else {
+        // None of the saved panes could be restored (e.g. reopen-tabs-on-login
+        // is disabled), so drop back to a single view instead of an empty split.
+        setSplitMode("none");
+      }
+    } catch {
+      // silently fail
+    }
+  }, [tabsReady, tabs]);
+
   // Debounced tab-order sync: when tab order changes, patch each persistent tab's tabOrder in DB.
   const orderSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -1006,6 +1060,8 @@ export function AppShell({
       savedLabel?: string;
       initialFilePath?: string;
       serialConfig?: SerialConfig;
+      joinSharedSessionId?: string | null;
+      joinShareId?: string | null;
     },
   ) {
     const tabId = `${host.name}-${type}-${Date.now()}`;
@@ -1022,6 +1078,8 @@ export function AppShell({
     const savedLabel = restore?.savedLabel;
     const initialFilePath = restore?.initialFilePath;
     const serialConfig = restore?.serialConfig;
+    const joinSharedSessionId = restore?.joinSharedSessionId ?? null;
+    const joinShareId = restore?.joinShareId ?? null;
     // A saved label that doesn't match the bare host name or the auto-numbered pattern is a custom label
     const isCustomLabel =
       savedLabel != null &&
@@ -1043,6 +1101,8 @@ export function AppShell({
             openedAt,
             terminalRef: ref,
             restoredSessionId: restore?.restoredSessionId ?? null,
+            joinSharedSessionId,
+            joinShareId,
             initialFilePath,
             serialConfig,
           },
@@ -1075,6 +1135,8 @@ export function AppShell({
           openedAt,
           terminalRef: ref,
           restoredSessionId: restore?.restoredSessionId ?? null,
+          joinSharedSessionId,
+          joinShareId,
           initialFilePath,
           serialConfig,
         },
@@ -1327,6 +1389,17 @@ export function AppShell({
       window.dispatchEvent(
         new CustomEvent("termix:refresh-guacamole", { detail: { tabId: id } }),
       );
+    }
+  }
+
+  function openShareForTab(id: string) {
+    const tab = tabs.find((t) => t.id === id);
+    if (!tab) return;
+    const ref = tab.terminalRef?.current;
+    if (ref?.canShare?.()) {
+      ref.openShareModal?.();
+    } else {
+      toast.error(t("sessionSharing.notReadyToShare"));
     }
   }
 
@@ -1675,6 +1748,56 @@ export function AppShell({
               }}
               onRenameTab={renameTab}
               onReorderTabs={setTabs}
+              onJoinSharedSession={(session) => {
+                if (!session.shareId) return;
+                const existingHost = allHosts.find(
+                  (h) => h.id === String(session.hostId),
+                );
+                const host: Host = existingHost ?? {
+                  id: String(session.hostId),
+                  name: session.hostName,
+                  username: "",
+                  ip: "",
+                  port: 0,
+                  folder: "",
+                  online: false,
+                  cpu: null,
+                  ram: null,
+                  lastAccess: new Date().toISOString(),
+                  authType: "none",
+                  enableTerminal: false,
+                  enableCommandHistory: false,
+                  enableTunnel: false,
+                  enableFileManager: false,
+                  enableDocker: false,
+                  enableProxmox: false,
+                  enableTmuxMonitor: false,
+                  enableSsh: false,
+                  enableRdp: false,
+                  enableVnc: false,
+                  enableTelnet: false,
+                  sshPort: 22,
+                  rdpPort: 3389,
+                  vncPort: 5900,
+                  telnetPort: 23,
+                  serverTunnels: [],
+                  quickActions: [],
+                };
+                const instanceId =
+                  typeof crypto.randomUUID === "function"
+                    ? crypto.randomUUID()
+                    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+                openTab(host, "terminal", {
+                  instanceId,
+                  restoredSessionId: null,
+                  joinSharedSessionId: session.sessionId,
+                  joinShareId: session.shareId,
+                  savedLabel: t("connections.sharedSessionLabel", {
+                    hostName: session.hostName,
+                  }),
+                });
+                if (isMobile) setSidebarOpen(false);
+              }}
             />
           </div>
         )}
@@ -1690,7 +1813,6 @@ export function AppShell({
             <UserProfilePanel
               username={username}
               onLogout={onLogout}
-              onChangeServer={onChangeServer}
               userPrefs={userPrefs}
               onPrefsChange={(updates) =>
                 setUserPrefs((current) => ({ ...current, ...updates }))
@@ -1699,7 +1821,7 @@ export function AppShell({
           </div>
         )}
 
-        {railView === "admin-settings" && isAdmin && (
+        {railView === "admin-settings" && showMultiUserUI && (
           <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
             <AdminSettingsPanel
               onEditingChange={setSidebarEditing}
@@ -1754,180 +1876,194 @@ export function AppShell({
 
   return (
     <ServerStatusProvider isAuthenticated={!!username}>
-      <div className="flex w-screen bg-background" style={{ height: "100dvh" }}>
-        {/* Skinny icon rail — desktop only, hidden on mobile */}
-        <AppRail
-          railView={railView}
-          sidebarOpen={sidebarOpen}
-          splitMode={splitMode}
-          username={username}
-          isAdmin={isAdmin}
-          onRailClick={handleRailClick}
-          onOpenTab={openSingletonTab}
-          onLogout={onLogout}
-        />
-
-        {/* Desktop: inline resizable sidebar */}
-        {!isMobile && (
-          <div
-            className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
-            style={{
-              width: sidebarOpen ? (sidebarEditing ? 560 : sidebarWidth) : 0,
-              transition: sidebarDragging ? "none" : "width 0.2s",
+      <div
+        className="flex flex-col w-screen bg-background"
+        style={{ height: "100dvh" }}
+      >
+        {isElectron() && (
+          <RemoteSyncBanner
+            onReconnect={() => {
+              setRailView("user-profile");
+              if (!sidebarOpen) setSidebarOpen(true);
             }}
-          >
-            {sidebarHeader}
-            {sidebarPanelContent}
-
-            {sidebarOpen && !sidebarEditing && (
-              <div
-                onMouseDown={onSidebarMouseDown}
-                className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${sidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
-              />
-            )}
-          </div>
+          />
         )}
-
-        {/* Mobile: sidebar as overlay sheet */}
-        {isMobile && (
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetContent
-              side="left"
-              showCloseButton={false}
-              className="p-0 flex flex-col min-h-0 w-[min(85vw,360px)] max-w-full bg-sidebar border-r border-border gap-0"
-              style={{ height: "100dvh" }}
-            >
-              {sidebarHeader}
-              {sidebarPanelContent}
-            </SheetContent>
-          </Sheet>
-        )}
-
-        {/* Main content area */}
-        <div
-          className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
-        >
-          {!isMobile && !sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              title="Open Sidebar"
-              className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-sidebar border-r border-border text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/5 transition-colors"
-            >
-              <ChevronRight className="size-3.5" />
-            </button>
-          )}
-          <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
-            <TabBar
-              tabs={tabs}
-              activeTabId={activeTabId}
-              splitMode={splitMode}
-              paneTabIds={paneTabIds}
-              focusedPaneIndex={focusedPaneIndex}
-              onSetActiveTab={setActiveTabId}
-              onCloseTab={closeTab}
-              onRefreshTab={refreshTab}
-              onReorderTabs={setTabs}
-              onSplitTab={splitTabQuick}
-              onAddToSplit={addTabToSplit}
-              onRemoveFromSplit={removeTabFromSplit}
-              onRenameTab={renameTab}
-              onOpenFileManager={(tabId) => {
-                const targetTab = tabs.find((t) => t.id === tabId);
-                if (targetTab?.host) openTab(targetTab.host, "files");
-              }}
-              isAppFullscreen={isAppFullscreen}
-              onToggleAppFullscreen={toggleAppFullscreen}
-            />
-            <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-              {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
-              {!isMobile && (
-                <div
-                  className="absolute inset-0"
-                  style={{
-                    display: isSplit ? "flex" : "none",
-                    flexDirection: "column",
-                  }}
-                >
-                  <SplitView
-                    tabs={tabs}
-                    paneTabIds={paneTabIds}
-                    splitMode={splitMode}
-                    focusedPaneIndex={focusedPaneIndex}
-                    onTerminalResize={resizeAllTerminals}
-                    onPaneContentRef={onPaneContentRef}
-                    onPaneClick={setFocusedPaneIndex}
-                    onAssignPane={assignPane}
-                  />
-                </div>
-              )}
-
-              {/* Normal-view container. Tab nodes are appended here (or to pane elements)
-                  by the DOM-placement effect above. React portals each tab's content
-                  into its stable per-tab node so the component is never remounted.
-                  When split is active, shown on top only if the active tab is not in a pane. */}
-              <div
-                ref={normalViewRef}
-                className="absolute inset-0"
-                style={{
-                  display:
-                    isSplit && !isMobile && paneTabIds.includes(activeTabId)
-                      ? "none"
-                      : undefined,
-                  zIndex:
-                    isSplit && !paneTabIds.includes(activeTabId)
-                      ? 10
-                      : undefined,
-                }}
-              >
-                {tabs.map((tab) => {
-                  const tabNode = getTabNode(tab.id, tab.type === "terminal");
-                  const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
-                  const inPane = paneIdx !== -1;
-                  const activeInline = !inPane && tab.id === activeTabId;
-                  return createPortal(
-                    renderTabContent(
-                      tab,
-                      openSingletonTab,
-                      openTab,
-                      closeTab,
-                      inPane || activeInline,
-                      (host, filePath) =>
-                        openTab(host, "files", {
-                          instanceId:
-                            typeof crypto.randomUUID === "function"
-                              ? crypto.randomUUID()
-                              : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-                          restoredSessionId: null,
-                          initialFilePath: filePath,
-                        }),
-                      (host, _path) => openTab(host, "files"),
-                      (host, path) =>
-                        openTab(host, "terminal", {
-                          instanceId:
-                            typeof crypto.randomUUID === "function"
-                              ? crypto.randomUUID()
-                              : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-                          restoredSessionId: null,
-                          initialFilePath: path,
-                        }),
-                      renameTab,
-                      saveQuickConnectHost,
-                    ),
-                    tabNode,
-                    tab.id,
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom nav bar — mobile only */}
-          <MobileBottomBar
+        <div className="flex flex-1 min-h-0">
+          {/* Skinny icon rail — desktop only, hidden on mobile */}
+          <AppRail
             railView={railView}
             sidebarOpen={sidebarOpen}
             splitMode={splitMode}
+            username={username}
+            isAdmin={showMultiUserUI}
             onRailClick={handleRailClick}
+            onOpenTab={openSingletonTab}
+            onLogout={onLogout}
           />
+
+          {/* Desktop: inline resizable sidebar */}
+          {!isMobile && (
+            <div
+              className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
+              style={{
+                width: sidebarOpen ? (sidebarEditing ? 560 : sidebarWidth) : 0,
+                transition: sidebarDragging ? "none" : "width 0.2s",
+              }}
+            >
+              {sidebarHeader}
+              {sidebarPanelContent}
+
+              {sidebarOpen && !sidebarEditing && (
+                <div
+                  onMouseDown={onSidebarMouseDown}
+                  className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${sidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
+                />
+              )}
+            </div>
+          )}
+
+          {/* Mobile: sidebar as overlay sheet */}
+          {isMobile && (
+            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <SheetContent
+                side="left"
+                showCloseButton={false}
+                className="p-0 flex flex-col min-h-0 w-[min(85vw,360px)] max-w-full bg-sidebar border-r border-border gap-0"
+                style={{ height: "100dvh" }}
+              >
+                {sidebarHeader}
+                {sidebarPanelContent}
+              </SheetContent>
+            </Sheet>
+          )}
+
+          {/* Main content area */}
+          <div
+            className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
+          >
+            {!isMobile && !sidebarOpen && (
+              <button
+                onClick={() => setSidebarOpen(true)}
+                title="Open Sidebar"
+                className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-6 bg-sidebar border-r border-border text-muted-foreground hover:text-accent-brand hover:bg-accent-brand/5 transition-colors"
+              >
+                <ChevronRight className="size-3.5" />
+              </button>
+            )}
+            <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+              <TabBar
+                tabs={tabs}
+                activeTabId={activeTabId}
+                splitMode={splitMode}
+                paneTabIds={paneTabIds}
+                focusedPaneIndex={focusedPaneIndex}
+                onSetActiveTab={setActiveTabId}
+                onCloseTab={closeTab}
+                onRefreshTab={refreshTab}
+                onReorderTabs={setTabs}
+                onSplitTab={splitTabQuick}
+                onAddToSplit={addTabToSplit}
+                onRemoveFromSplit={removeTabFromSplit}
+                onRenameTab={renameTab}
+                onOpenFileManager={(tabId) => {
+                  const targetTab = tabs.find((t) => t.id === tabId);
+                  if (targetTab?.host) openTab(targetTab.host, "files");
+                }}
+                onOpenShare={openShareForTab}
+                isAppFullscreen={isAppFullscreen}
+                onToggleAppFullscreen={toggleAppFullscreen}
+              />
+              <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
+                {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
+                {!isMobile && (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      display: isSplit ? "flex" : "none",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <SplitView
+                      tabs={tabs}
+                      paneTabIds={paneTabIds}
+                      splitMode={splitMode}
+                      focusedPaneIndex={focusedPaneIndex}
+                      onTerminalResize={resizeAllTerminals}
+                      onPaneContentRef={onPaneContentRef}
+                      onPaneClick={setFocusedPaneIndex}
+                      onAssignPane={assignPane}
+                    />
+                  </div>
+                )}
+
+                {/* Normal-view container. Tab nodes are appended here (or to pane elements)
+                  by the DOM-placement effect above. React portals each tab's content
+                  into its stable per-tab node so the component is never remounted.
+                  When split is active, shown on top only if the active tab is not in a pane. */}
+                <div
+                  ref={normalViewRef}
+                  className="absolute inset-0"
+                  style={{
+                    display:
+                      isSplit && !isMobile && paneTabIds.includes(activeTabId)
+                        ? "none"
+                        : undefined,
+                    zIndex:
+                      isSplit && !paneTabIds.includes(activeTabId)
+                        ? 10
+                        : undefined,
+                  }}
+                >
+                  {tabs.map((tab) => {
+                    const tabNode = getTabNode(tab.id, tab.type === "terminal");
+                    const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
+                    const inPane = paneIdx !== -1;
+                    const activeInline = !inPane && tab.id === activeTabId;
+                    return createPortal(
+                      renderTabContent(
+                        tab,
+                        openSingletonTab,
+                        openTab,
+                        closeTab,
+                        inPane || activeInline,
+                        (host, filePath) =>
+                          openTab(host, "files", {
+                            instanceId:
+                              typeof crypto.randomUUID === "function"
+                                ? crypto.randomUUID()
+                                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                            restoredSessionId: null,
+                            initialFilePath: filePath,
+                          }),
+                        (host, _path) => openTab(host, "files"),
+                        (host, path) =>
+                          openTab(host, "terminal", {
+                            instanceId:
+                              typeof crypto.randomUUID === "function"
+                                ? crypto.randomUUID()
+                                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                            restoredSessionId: null,
+                            initialFilePath: path,
+                          }),
+                        renameTab,
+                        saveQuickConnectHost,
+                      ),
+                      tabNode,
+                      tab.id,
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom nav bar — mobile only */}
+            <MobileBottomBar
+              railView={railView}
+              sidebarOpen={sidebarOpen}
+              splitMode={splitMode}
+              onRailClick={handleRailClick}
+            />
+          </div>
         </div>
       </div>
 

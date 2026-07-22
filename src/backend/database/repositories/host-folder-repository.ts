@@ -1,4 +1,5 @@
 import { and, eq, like, or, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
@@ -72,13 +73,20 @@ export class HostFolderRepository {
     name: string,
     color: string | null | undefined,
     icon: string | null | undefined,
+    credentialId?: number | null,
     now = new Date().toISOString(),
   ): Promise<{ folder: HostFolderRecord; created: boolean }> {
     const existing = await this.findFolder(userId, name);
     if (existing) {
       const [updated] = await this.context.drizzle
         .update(sshFolders)
-        .set({ color, icon, updatedAt: now })
+        .set({
+          color,
+          icon,
+          credentialId:
+            credentialId === undefined ? existing.credentialId : credentialId,
+          updatedAt: now,
+        })
         .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)))
         .returning();
 
@@ -89,10 +97,12 @@ export class HostFolderRepository {
     const [created] = await this.context.drizzle
       .insert(sshFolders)
       .values({
+        syncId: randomUUID(),
         userId,
         name,
         color,
         icon,
+        credentialId: credentialId ?? null,
         createdAt: now,
         updatedAt: now,
       })
@@ -118,7 +128,7 @@ export class HostFolderRepository {
   async deleteHostsAndFolderRecords(
     userId: string,
     folderName: string,
-  ): Promise<void> {
+  ): Promise<{ hostSyncIds: string[]; folderSyncIds: string[] }> {
     const folderMatch = (col: SQLiteColumn) =>
       or(eq(col, folderName), like(col, `${folderName} / %`));
 
@@ -129,11 +139,21 @@ export class HostFolderRepository {
         .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
     }
 
-    await this.context.drizzle
+    const deletedFolders = await this.context.drizzle
       .delete(sshFolders)
-      .where(and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)));
+      .where(and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)))
+      .returning({ syncId: sshFolders.syncId });
 
     await this.afterWrite();
+
+    return {
+      hostSyncIds: hostsToDelete
+        .map((h) => h.syncId)
+        .filter((id): id is string => !!id),
+      folderSyncIds: deletedFolders
+        .map((f) => f.syncId)
+        .filter((id): id is string => !!id),
+    };
   }
 
   async deleteByUserId(userId: string): Promise<number> {

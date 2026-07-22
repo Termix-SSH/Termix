@@ -1,4 +1,5 @@
 import { desc, eq, or } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import { vaultProfiles } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 
@@ -47,6 +48,7 @@ export class VaultProfileRepository {
     const [created] = await this.context.drizzle
       .insert(vaultProfiles)
       .values({
+        syncId: randomUUID(),
         userId: input.userId,
         name: input.name,
         description: input.description,
@@ -98,17 +100,15 @@ export class VaultProfileRepository {
     return updated ?? null;
   }
 
-  async deleteById(id: number): Promise<boolean> {
+  async deleteById(id: number): Promise<{ syncId: string | null } | null> {
     const rows = await this.context.drizzle
       .delete(vaultProfiles)
       .where(eq(vaultProfiles.id, id))
-      .returning({ id: vaultProfiles.id });
+      .returning({ syncId: vaultProfiles.syncId });
 
-    if (rows.length > 0) {
-      await this.afterWrite();
-    }
-
-    return rows.length > 0;
+    if (rows.length === 0) return null;
+    await this.afterWrite();
+    return rows[0];
   }
 
   async deleteByUserId(userId: string): Promise<number> {

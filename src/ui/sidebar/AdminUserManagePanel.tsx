@@ -446,6 +446,13 @@ export function AdminUserManagePanel({
               key={editor.credential ? editor.credential.id : "new-cred"}
               credential={editor.credential}
               activeTab={editorTab}
+              existingFolders={Array.from(
+                new Set(
+                  credentials
+                    .map((c) => c.folder)
+                    .filter((f): f is string => !!f),
+                ),
+              ).sort()}
               onBack={() => {
                 setEditor(null);
                 setEditorTab("general");

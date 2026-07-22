@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import { homepageItems } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 
@@ -37,6 +38,7 @@ export class HomepageItemRepository {
     const [created] = await this.context.drizzle
       .insert(homepageItems)
       .values({
+        syncId: randomUUID(),
         userId,
         typeId: input.typeId,
         title: input.title,
@@ -82,17 +84,18 @@ export class HomepageItemRepository {
     return updated ?? null;
   }
 
-  async deleteForUser(userId: string, id: number): Promise<boolean> {
+  async deleteForUser(
+    userId: string,
+    id: number,
+  ): Promise<{ syncId: string | null } | null> {
     const rows = await this.context.drizzle
       .delete(homepageItems)
       .where(and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)))
-      .returning({ id: homepageItems.id });
+      .returning({ syncId: homepageItems.syncId });
 
-    if (rows.length > 0) {
-      await this.afterWrite();
-    }
-
-    return rows.length > 0;
+    if (rows.length === 0) return null;
+    await this.afterWrite();
+    return rows[0];
   }
 
   async deleteByUserId(userId: string): Promise<number> {

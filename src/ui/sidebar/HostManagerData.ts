@@ -81,15 +81,28 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     rdpPort: h.rdpPort ?? (h.connectionType === "rdp" ? h.port : 3389),
     vncPort: h.vncPort ?? (h.connectionType === "vnc" ? h.port : 5900),
     telnetPort: h.telnetPort ?? (h.connectionType === "telnet" ? h.port : 23),
+    rdpAuthType:
+      (h.rdpAuthType as "direct" | "credential") ??
+      (h.rdpCredentialId ? "credential" : "direct"),
+    rdpCredentialId:
+      h.rdpCredentialId != null ? String(h.rdpCredentialId) : undefined,
     rdpUser: h.rdpUser,
     rdpPassword: h.rdpPassword ?? "",
     domain: h.rdpDomain,
     security: h.rdpSecurity,
     ignoreCert: h.rdpIgnoreCert ?? false,
-    vncAuthType: h.vncAuthType ?? (h.vncCredentialId ? "credential" : "direct"),
-    vncCredentialId: h.vncCredentialId ?? null,
+    vncAuthType:
+      (h.vncAuthType as "direct" | "credential") ??
+      (h.vncCredentialId ? "credential" : "direct"),
+    vncCredentialId:
+      h.vncCredentialId != null ? String(h.vncCredentialId) : undefined,
     vncPassword: h.vncPassword ?? "",
     vncUser: h.vncUser,
+    telnetAuthType:
+      (h.telnetAuthType as "direct" | "credential") ??
+      (h.telnetCredentialId ? "credential" : "direct"),
+    telnetCredentialId:
+      h.telnetCredentialId != null ? String(h.telnetCredentialId) : undefined,
     telnetUser: h.telnetUser,
     telnetPassword: h.telnetPassword ?? "",
     quickActions: (h.quickActions ?? []).map((a: HostQuickAction) => ({

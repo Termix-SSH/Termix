@@ -55,6 +55,7 @@ describe("HostRepository and CredentialRepository", () => {
         cert_public_key TEXT,
         usage_count INTEGER NOT NULL DEFAULT 0,
         last_used TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -87,6 +88,7 @@ describe("HostRepository and CredentialRepository", () => {
         vault_profile_id INTEGER,
         enable_terminal INTEGER NOT NULL DEFAULT 1,
         enable_session_logging INTEGER NOT NULL DEFAULT 1,
+        allow_session_sharing INTEGER NOT NULL DEFAULT 1,
         enable_command_history INTEGER NOT NULL DEFAULT 1,
         enable_tunnel INTEGER NOT NULL DEFAULT 1,
         tunnel_connections TEXT,
@@ -150,6 +152,8 @@ describe("HostRepository and CredentialRepository", () => {
         host_key_first_seen TEXT,
         host_key_last_verified TEXT,
         host_key_changed_count INTEGER DEFAULT 0,
+        connection_origin TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -225,9 +229,9 @@ describe("HostRepository and CredentialRepository", () => {
     expect(
       await repo.credentials.findByIdForUser("user-2", created.id),
     ).toBeNull();
-    expect(await repo.credentials.deleteForUser("user-1", created.id)).toBe(
-      true,
-    );
+    expect(await repo.credentials.deleteForUser("user-1", created.id)).toEqual({
+      syncId: expect.any(String),
+    });
     expect(
       await repo.credentials.findByIdForUser("user-1", created.id),
     ).toBeNull();
@@ -448,7 +452,9 @@ describe("HostRepository and CredentialRepository", () => {
     expect(updated?.name).toBe("web-1-renamed");
     expect(await repo.hosts.findByIdForUser("user-2", host.id)).toBeNull();
 
-    expect(await repo.hosts.deleteForUser("user-1", host.id)).toBe(true);
+    expect(await repo.hosts.deleteForUser("user-1", host.id)).toEqual({
+      syncId: expect.any(String),
+    });
     expect(await repo.hosts.findById(host.id)).toBeNull();
   });
 
@@ -686,6 +692,8 @@ describe("HostRepository and CredentialRepository", () => {
       .run(host.id, "user-2", "user-1");
 
     expect(await repo.hosts.deleteAccessForHost(host.id)).toBe(1);
-    expect(await repo.hosts.deleteForUser("user-1", host.id)).toBe(true);
+    expect(await repo.hosts.deleteForUser("user-1", host.id)).toEqual({
+      syncId: expect.any(String),
+    });
   });
 });

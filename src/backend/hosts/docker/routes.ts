@@ -280,6 +280,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
 
       if (userProvidedPassword) {
         resolvedCredentials.password = userProvidedPassword;
+        resolvedCredentials.authType = "password";
       }
       if (userProvidedSshKey) {
         resolvedCredentials.sshKey = userProvidedSshKey;

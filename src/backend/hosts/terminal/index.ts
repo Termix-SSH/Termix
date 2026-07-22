@@ -20,7 +20,14 @@ import { SSHAuthManager } from "../auth-manager.js";
 import type { ProxyNode } from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
-import { sessionManager } from "./session-manager.js";
+import {
+  sessionManager,
+  isMessageAllowedForParticipant,
+} from "./session-manager.js";
+import {
+  createCurrentSessionShareRepository,
+  createCurrentSettingsRepository,
+} from "../../database/repositories/factory.js";
 import {
   detectTmux,
   attachOrCreateTmuxSession,
@@ -105,9 +112,158 @@ const wss = new WebSocketServer({
   port: 30002,
 });
 
+/**
+ * Auth path for anonymous share-link guests (?shareToken=<linkToken>).
+ * Never touches DataCrypto/user credentials - guests join an already-live
+ * stream and never decrypt stored secrets.
+ */
+async function handleShareTokenConnection(
+  ws: WebSocket,
+  req: import("http").IncomingMessage,
+  shareToken: string,
+): Promise<void> {
+  const shareRepo = createCurrentSessionShareRepository();
+  const share = await shareRepo.findByLinkToken(shareToken);
+  if (!share) {
+    ws.close(1008, "Invalid or expired share link");
+    return;
+  }
+  if (share.protocol !== "ssh") {
+    ws.close(1008, "Unsupported share protocol");
+    return;
+  }
+
+  const globallyEnabled = await createCurrentSettingsRepository().getBoolean(
+    "session_sharing_globally_enabled",
+    true,
+  );
+  if (!globallyEnabled) {
+    ws.close(1008, "Session sharing is disabled");
+    return;
+  }
+
+  const host = await createCurrentHostResolutionRepository().findHostById(
+    share.hostId,
+    share.ownerUserId,
+  );
+  if (!host || host.allowSessionSharing === false) {
+    ws.close(1008, "Session sharing is disabled for this host");
+    return;
+  }
+
+  const session = sessionManager.getSession(share.sessionId);
+  if (!session || !session.isConnected) {
+    ws.close(1008, "Session has ended");
+    return;
+  }
+
+  const permissionLevel = share.permissionLevel as "read-write" | "read-only";
+  const joined = sessionManager.joinAsParticipant(share.sessionId, ws, {
+    userId: null,
+    permissionLevel,
+    guestLabel: "Guest",
+    shareId: share.id,
+  });
+  if (!joined) {
+    ws.close(1008, "Session is no longer active");
+    return;
+  }
+
+  shareRepo.touchShareUsage(share.id).catch(() => {});
+  shareRepo.recordParticipantJoin(share.id, null, "Guest").catch(() => {});
+
+  const buffered = sessionManager.getBuffer(joined);
+  if (buffered) {
+    ws.send(JSON.stringify({ type: "data", data: buffered }));
+  }
+  ws.send(
+    JSON.stringify({ type: "sessionAttached", sessionId: share.sessionId }),
+  );
+  ws.send(JSON.stringify({ type: "connected", message: "Joined session" }));
+
+  const currentSessionId: string = share.sessionId;
+
+  let wsAlive = true;
+  ws.on("pong", () => {
+    wsAlive = true;
+  });
+  const wsPingInterval = setInterval(() => {
+    if (ws.readyState === WebSocket.OPEN) {
+      if (!wsAlive) {
+        ws.terminate();
+        return;
+      }
+      wsAlive = false;
+      ws.ping();
+    } else {
+      clearInterval(wsPingInterval);
+    }
+  }, 30000);
+
+  ws.on("close", () => {
+    clearInterval(wsPingInterval);
+    sessionManager.removeParticipant(currentSessionId, ws);
+    sshLogger.info("Guest left shared terminal session", {
+      operation: "terminal_guest_disconnect",
+      sessionId: currentSessionId,
+      shareId: share.id,
+    });
+  });
+
+  ws.on("message", (msg: RawData) => {
+    let parsed: WebSocketMessage;
+    try {
+      parsed = JSON.parse(msg.toString()) as WebSocketMessage;
+    } catch {
+      return;
+    }
+    const { type, data } = parsed;
+
+    const liveSession = sessionManager.getSession(currentSessionId);
+    const participant = liveSession
+      ? sessionManager.getParticipantForWs(liveSession, ws)
+      : null;
+    if (!isMessageAllowedForParticipant(participant, type)) {
+      return;
+    }
+
+    switch (type) {
+      case "input": {
+        const inputData = data as string;
+        sessionManager.bufferInput(currentSessionId, inputData);
+        const inputStream = liveSession?.sshStream;
+        if (inputStream) {
+          try {
+            inputStream.write(Buffer.from(inputData, "utf8"));
+          } catch {
+            inputStream.write(Buffer.from(inputData, "latin1"));
+          }
+        }
+        break;
+      }
+      case "ping":
+        ws.send(JSON.stringify({ type: "pong" }));
+        break;
+      case "disconnect":
+        sessionManager.removeParticipant(currentSessionId, ws);
+        break;
+      default:
+        break;
+    }
+  });
+}
+
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
   let sessionId: string | undefined;
+
+  const urlObj = new URL(req.url || "", "http://localhost");
+  const shareToken = urlObj.searchParams.get("shareToken");
+
+  if (shareToken) {
+    await handleShareTokenConnection(ws, req, shareToken);
+    return;
+  }
 
   try {
     let token: string | undefined;
@@ -126,7 +282,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     if (!token) {
-      const urlObj = new URL(req.url || "", "http://localhost");
       const qp = urlObj.searchParams.get("token");
       if (qp) token = qp;
     }
@@ -242,11 +397,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
     if (currentSessionId) {
       const session = sessionManager.getSession(currentSessionId);
       if (session?.isConnected) {
-        // Only detach if this WS is still the one attached to the session.
-        // If a refresh reconnected and reattached a new WS before this close
-        // event fired, we must not clobber that new attachment.
-        if (session.attachedWs === ws || session.attachedWs === null) {
-          sessionManager.detachWs(currentSessionId);
+        const participant = sessionManager.getParticipantForWs(session, ws);
+        if (participant && !participant.isOwner) {
+          sessionManager.removeParticipant(currentSessionId, ws);
+        } else {
+          // Only detach if this WS is still the owner's attached socket, or
+          // no owner is currently attached. If a refresh reconnected and
+          // reattached a new WS before this close event fired, we must not
+          // clobber that new attachment.
+          const ownerStillAttached = Array.from(
+            session.participants.values(),
+          ).some((p) => p.isOwner && p.ws !== ws);
+          if (!ownerStillAttached) {
+            sessionManager.detachWs(currentSessionId);
+          }
         }
       } else {
         sessionManager.destroySession(currentSessionId);
@@ -294,6 +458,21 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
 
     const { type, data } = parsed;
+
+    // Server-side gate: non-owner participants (read-only or read-write
+    // guests/joiners) may only send input/ping/disconnect - everything else
+    // (auth flows, tmux, resize, etc.) is owner-only and silently ignored.
+    if (type !== "joinSharedSession") {
+      const gateSession = currentSessionId
+        ? sessionManager.getSession(currentSessionId)
+        : null;
+      const gateParticipant = gateSession
+        ? sessionManager.getParticipantForWs(gateSession, ws)
+        : null;
+      if (!isMessageAllowedForParticipant(gateParticipant, type)) {
+        return;
+      }
+    }
 
     switch (type) {
       case "connectToHost": {
@@ -445,7 +624,20 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
-      case "disconnect":
+      case "disconnect": {
+        const disconnectSession = currentSessionId
+          ? sessionManager.getSession(currentSessionId)
+          : null;
+        const disconnectParticipant = disconnectSession
+          ? sessionManager.getParticipantForWs(disconnectSession, ws)
+          : null;
+        if (disconnectParticipant && !disconnectParticipant.isOwner) {
+          if (currentSessionId) {
+            sessionManager.removeParticipant(currentSessionId, ws);
+            currentSessionId = null;
+          }
+          break;
+        }
         if (currentSessionId) {
           sessionManager.destroySession(currentSessionId);
           currentSessionId = null;
@@ -454,6 +646,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshConn = null;
         sshStream = null;
         break;
+      }
 
       case "get_cwd": {
         const activeConn =
@@ -474,10 +667,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
           execStream.stderr.on("data", () => {});
           execStream.on("close", () => {
             const cwd = stdout.trim() || "/";
-            const attachedWs =
-              sessionManager.getSession(currentSessionId)?.attachedWs ?? ws;
-            if (attachedWs.readyState === WebSocket.OPEN) {
-              attachedWs.send(JSON.stringify({ type: "cwd", path: cwd }));
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "cwd", path: cwd }));
             }
           });
         });
@@ -517,10 +708,8 @@ wss.on("connection", async (ws: WebSocket, req) => {
             execStream.stderr.on("data", () => {});
             execStream.on("close", () => {
               const resolvedPath = stdout.trim() || requestedPath;
-              const attachedWs =
-                sessionManager.getSession(currentSessionId)?.attachedWs ?? ws;
-              if (attachedWs.readyState === WebSocket.OPEN) {
-                attachedWs.send(
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(
                   JSON.stringify({
                     type: "open_file_in_editor",
                     path: resolvedPath,
@@ -1001,6 +1190,105 @@ wss.on("connection", async (ws: WebSocket, req) => {
         break;
       }
 
+      case "joinSharedSession": {
+        const joinData = data as { shareId: string; tabInstanceId?: string };
+        try {
+          const shareRepo = createCurrentSessionShareRepository();
+          const share = await shareRepo.findActiveById(joinData.shareId);
+          if (
+            !share ||
+            share.shareType !== "user" ||
+            share.targetUserId !== userId ||
+            share.protocol !== "ssh"
+          ) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Share not found or not accessible",
+              }),
+            );
+            break;
+          }
+
+          const { PermissionManager } =
+            await import("../../utils/permission-manager.js");
+          const access = await PermissionManager.getInstance().canAccessHost(
+            userId,
+            share.hostId,
+            "connect",
+          );
+          if (!access.hasAccess) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Share not found or not accessible",
+              }),
+            );
+            break;
+          }
+
+          const joinedSession = sessionManager.joinAsParticipant(
+            share.sessionId,
+            ws,
+            {
+              userId,
+              permissionLevel: share.permissionLevel as
+                | "read-write"
+                | "read-only",
+              tabInstanceId: joinData.tabInstanceId,
+              shareId: share.id,
+            },
+          );
+          if (!joinedSession) {
+            ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Shared session is no longer active",
+              }),
+            );
+            break;
+          }
+
+          currentSessionId = share.sessionId;
+          sshStream = joinedSession.sshStream;
+          sshConn = joinedSession.sshConn;
+          isConnecting = false;
+          isConnected = true;
+
+          shareRepo.touchShareUsage(share.id).catch(() => {});
+          shareRepo
+            .recordParticipantJoin(share.id, userId, null)
+            .catch(() => {});
+
+          const buffered = sessionManager.getBuffer(joinedSession);
+          if (buffered) {
+            ws.send(JSON.stringify({ type: "data", data: buffered }));
+          }
+          ws.send(
+            JSON.stringify({
+              type: "sessionAttached",
+              sessionId: share.sessionId,
+            }),
+          );
+          ws.send(
+            JSON.stringify({ type: "connected", message: "Joined session" }),
+          );
+        } catch (error) {
+          sshLogger.error("Failed to join shared session", error, {
+            operation: "terminal_join_shared_session_error",
+            userId,
+            shareId: joinData.shareId,
+          });
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: "Failed to join shared session",
+            }),
+          );
+        }
+        break;
+      }
+
       default:
         sshLogger.warn("Unknown message type received", {
           operation: "websocket_message_unknown_type",
@@ -1288,39 +1576,56 @@ wss.on("connection", async (ws: WebSocket, req) => {
       };
     }
 
-    sendLog("dns", "info", `Starting address resolution of ${ip}`);
+    const connectsViaJumpHosts = !!(
+      hostConfig.jumpHosts &&
+      hostConfig.jumpHosts.length > 0 &&
+      hostConfig.userId
+    );
+
     let connectHost = ip;
-    try {
-      const resolution = await resolveHostForSshConnect(ip);
-      connectHost = resolution.host;
-      if (resolution.resolvedAddress && resolution.resolvedAddress !== ip) {
-        sendLog(
-          "dns",
-          "success",
-          `Resolved ${ip} to ${resolution.resolvedAddress}`,
-          { attempts: resolution.attempts },
-        );
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      sshLogger.error("SSH hostname resolution failed", error, {
-        operation: "terminal_dns_resolve",
-        hostId: id,
-        ip,
-        port,
-        transient: isRetriableDnsError(error),
-      });
-      sendLog("dns", "error", `DNS resolution failed for ${ip}: ${message}`);
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: isRetriableDnsError(error)
-            ? "SSH error: DNS lookup temporarily failed. Check the Docker/container DNS configuration or try again."
-            : "SSH error: Could not resolve hostname from the Termix server container.",
-        }),
+    if (connectsViaJumpHosts) {
+      // The target is only reachable through the jump host's network (e.g. a
+      // VPN-only address), so DNS must be resolved there, not on this host.
+      sendLog(
+        "dns",
+        "info",
+        `Skipping local address resolution of ${ip} (resolved by jump host)`,
       );
-      cleanupAuthState(connectionTimeout);
-      return;
+    } else {
+      sendLog("dns", "info", `Starting address resolution of ${ip}`);
+      try {
+        const resolution = await resolveHostForSshConnect(ip);
+        connectHost = resolution.host;
+        if (resolution.resolvedAddress && resolution.resolvedAddress !== ip) {
+          sendLog(
+            "dns",
+            "success",
+            `Resolved ${ip} to ${resolution.resolvedAddress}`,
+            { attempts: resolution.attempts },
+          );
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        sshLogger.error("SSH hostname resolution failed", error, {
+          operation: "terminal_dns_resolve",
+          hostId: id,
+          ip,
+          port,
+          transient: isRetriableDnsError(error),
+        });
+        sendLog("dns", "error", `DNS resolution failed for ${ip}: ${message}`);
+        ws.send(
+          JSON.stringify({
+            type: "error",
+            message: isRetriableDnsError(error)
+              ? "SSH error: DNS lookup temporarily failed. Check the Docker/container DNS configuration or try again."
+              : "SSH error: Could not resolve hostname from the Termix server container.",
+          }),
+        );
+        cleanupAuthState(connectionTimeout);
+        return;
+      }
     }
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
@@ -1619,12 +1924,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
               const session = sessionManager.getSession(boundSessionId);
               if (session) {
                 sessionManager.bufferOutput(boundSessionId!, utf8String);
-
-                if (session.attachedWs?.readyState === WebSocket.OPEN) {
-                  session.attachedWs.send(
-                    JSON.stringify({ type: "data", data: utf8String }),
-                  );
-                }
+                sessionManager.broadcast(boundSessionId!, {
+                  type: "data",
+                  data: utf8String,
+                });
               }
             } catch (error) {
               sshLogger.error("Error encoding terminal data", error, {
@@ -1636,34 +1939,28 @@ wss.on("connection", async (ws: WebSocket, req) => {
               const session = sessionManager.getSession(boundSessionId);
               if (session) {
                 sessionManager.bufferOutput(boundSessionId!, fallback);
-
-                if (session.attachedWs?.readyState === WebSocket.OPEN) {
-                  session.attachedWs.send(
-                    JSON.stringify({ type: "data", data: fallback }),
-                  );
-                }
+                sessionManager.broadcast(boundSessionId!, {
+                  type: "data",
+                  data: fallback,
+                });
               }
             }
           });
 
           stream.on("close", (code: number | null) => {
             const session = sessionManager.getSession(boundSessionId);
-            if (session?.attachedWs?.readyState === WebSocket.OPEN) {
+            if (session) {
               if (code != null) {
-                session.attachedWs.send(
-                  JSON.stringify({
-                    type: "session_ended",
-                    code,
-                  }),
-                );
+                sessionManager.broadcast(boundSessionId!, {
+                  type: "session_ended",
+                  code,
+                });
               } else {
-                session.attachedWs.send(
-                  JSON.stringify({
-                    type: "disconnected",
-                    message: "Connection lost",
-                    graceful: true,
-                  }),
-                );
+                sessionManager.broadcast(boundSessionId!, {
+                  type: "disconnected",
+                  message: "Connection lost",
+                  graceful: true,
+                });
               }
             }
             if (boundSessionId) {
@@ -1683,13 +1980,11 @@ wss.on("connection", async (ws: WebSocket, req) => {
               username,
             });
             const session = sessionManager.getSession(boundSessionId);
-            if (session?.attachedWs?.readyState === WebSocket.OPEN) {
-              session.attachedWs.send(
-                JSON.stringify({
-                  type: "error",
-                  message: "SSH stream error: " + err.message,
-                }),
-              );
+            if (session) {
+              sessionManager.broadcast(boundSessionId!, {
+                type: "error",
+                message: "SSH stream error: " + err.message,
+              });
             }
           });
 
@@ -2014,7 +2309,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sendLog(
           "auth",
           "error",
-          "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
+          `Tailscale SSH authentication failed for user "${username}". Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy grants the "${username}" user to your identity (check tailscale.com/s/ssh for the check/action ACL syntax). If your Tailscale identity maps to a different Unix user, update the username on this host.`,
         );
         if (currentSessionId) {
           sessionManager.destroySession(currentSessionId);
@@ -2024,8 +2319,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message:
-              "Tailscale SSH authentication failed. Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy permits this connection.",
+            message: `Tailscale SSH authentication failed for user "${username}". Ensure Tailscale is running on the server, SSH is advertised (tailscale set --ssh), and your ACL policy grants the "${username}" user to your identity. If your Tailscale identity maps to a different Unix user, update the username on this host.`,
           }),
         );
         return;

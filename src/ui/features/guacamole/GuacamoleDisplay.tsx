@@ -8,10 +8,14 @@ import {
 } from "react";
 import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
-import { getGuacamoleToken, isElectron, isEmbeddedMode } from "@/main-axios.ts";
+import { getGuacamoleToken, isElectron } from "@/main-axios.ts";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { getBasePath } from "@/lib/base-path.ts";
 import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
+import {
+  resolveConnectionOrigin,
+  buildOriginWsUrl,
+} from "@/lib/connection-origin.ts";
 import {
   isFirefoxBrowser,
   isPasteShortcut,
@@ -44,9 +48,12 @@ export interface GuacamoleDisplayHandle {
   setClipboard: (data: string) => void;
 }
 
+export type GuacamoleTouchMode = "touchscreen" | "touchpad";
+
 interface GuacamoleDisplayProps {
   connectionConfig: GuacamoleConnectionConfig;
   isVisible: boolean;
+  touchMode?: GuacamoleTouchMode | null;
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: string) => void;
@@ -58,7 +65,7 @@ export const GuacamoleDisplay = forwardRef<
   GuacamoleDisplayHandle,
   GuacamoleDisplayProps
 >(function GuacamoleDisplay(
-  { connectionConfig, isVisible, onConnect, onDisconnect, onError },
+  { connectionConfig, isVisible, touchMode, onConnect, onDisconnect, onError },
   ref,
 ) {
   const { t } = useTranslation();
@@ -166,15 +173,31 @@ export const GuacamoleDisplay = forwardRef<
           connectionConfig.dpi,
         );
 
-        const wsBase = buildGuacamoleWebSocketBaseUrl({
-          isDev,
-          isElectronApp: isElectron(),
-          isEmbeddedApp: isEmbeddedMode(),
-          configuredServerUrl: (window as { configuredServerUrl?: string })
-            .configuredServerUrl,
-          basePath: getBasePath(),
-          location: window.location,
-        });
+        let wsBase: string | null;
+        if (isElectron()) {
+          const origin = await resolveConnectionOrigin({
+            connectionType: connectionProtocol,
+          });
+          wsBase = await buildOriginWsUrl({
+            origin,
+            localPort: 30008,
+            localPath: "/guacamole/websocket/",
+            remotePath: "/guacamole/websocket/",
+            includeLocalJwt: false,
+          });
+          if (!wsBase) {
+            onError?.(t("errors.remoteServerRequired"));
+            return null;
+          }
+        } else {
+          wsBase = buildGuacamoleWebSocketBaseUrl({
+            isDev,
+            isElectronApp: false,
+            isEmbeddedApp: false,
+            basePath: getBasePath(),
+            location: window.location,
+          });
+        }
 
         const params = new URLSearchParams({
           token,
@@ -190,7 +213,7 @@ export const GuacamoleDisplay = forwardRef<
         return null;
       }
     },
-    [connectionConfig, onError],
+    [connectionConfig, onError, t],
   );
 
   const refreshKeyboardHandlers = useCallback(() => {
@@ -394,26 +417,46 @@ export const GuacamoleDisplay = forwardRef<
       setIsReady(true);
     }
 
-    const mouse = new Guacamole.Mouse(displayElement);
-    const sendMouseState = (state: Guacamole.Mouse.State) => {
+    const sendMouseEvent = (event: Guacamole.Mouse.MouseEvent) => {
       displayElement.focus({ preventScroll: true });
       const scale = scaleRef.current;
-      const adjustedX = Math.round(state.x / scale);
-      const adjustedY = Math.round(state.y / scale);
-
+      const state = event.state;
       const adjustedState = new Guacamole.Mouse.State(
-        adjustedX,
-        adjustedY,
+        Math.round(state.x / scale),
+        Math.round(state.y / scale),
         state.left,
         state.middle,
         state.right,
         state.up,
         state.down,
       ) as Guacamole.Mouse.State;
-
       client.sendMouseState(adjustedState);
     };
-    mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
+
+    if (touchMode === "touchscreen") {
+      const touchscreen = new Guacamole.Mouse.Touchscreen(displayElement);
+      touchscreen.onEach(["mousedown", "mousemove", "mouseup"], sendMouseEvent);
+    } else if (touchMode === "touchpad") {
+      const touchpad = new Guacamole.Mouse.Touchpad(displayElement);
+      touchpad.onEach(["mousedown", "mousemove", "mouseup"], sendMouseEvent);
+    } else {
+      const mouse = new Guacamole.Mouse(displayElement);
+      const sendMouseState = (state: Guacamole.Mouse.State) => {
+        displayElement.focus({ preventScroll: true });
+        const scale = scaleRef.current;
+        const adjustedState = new Guacamole.Mouse.State(
+          Math.round(state.x / scale),
+          Math.round(state.y / scale),
+          state.left,
+          state.middle,
+          state.right,
+          state.up,
+          state.down,
+        ) as Guacamole.Mouse.State;
+        client.sendMouseState(adjustedState);
+      };
+      mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
+    }
 
     const keyboard = new Guacamole.Keyboard(displayElement);
     keyboardRef.current = keyboard;
@@ -431,6 +474,9 @@ export const GuacamoleDisplay = forwardRef<
     displayElement.addEventListener("focus", handleDisplayFocus);
     displayElement.addEventListener("blur", handleDisplayBlur);
     displayElement.addEventListener("mousedown", handleDisplayFocus);
+    displayElement.addEventListener("touchstart", handleDisplayFocus, {
+      passive: true,
+    });
     refreshKeyboardHandlers();
 
     client.onstatechange = (state: number) => {
@@ -555,6 +601,7 @@ export const GuacamoleDisplay = forwardRef<
     connectionConfig.protocol,
     connectionConfig.type,
     connectionConfig.dpi,
+    touchMode,
     t,
   ]);
 

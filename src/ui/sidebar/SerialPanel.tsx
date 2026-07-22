@@ -32,30 +32,10 @@ export function SerialPanel({ onConnect }: SerialPanelProps) {
   const [loadingPorts, setLoadingPorts] = useState(false);
 
   const buildWsUrl = () => {
-    const isDev =
-      process.env.NODE_ENV === "development" &&
-      (window.location.port === "3000" ||
-        window.location.port === "5173" ||
-        window.location.port === "");
-
-    if (
-      isDev ||
-      (isElectron() &&
-        !(window as { configuredServerUrl?: string }).configuredServerUrl)
-    ) {
-      const token = localStorage.getItem("jwt");
-      const base = "ws://127.0.0.1:30011";
-      return token ? `${base}?token=${encodeURIComponent(token)}` : base;
-    }
-    const configuredUrl = (window as { configuredServerUrl?: string })
-      .configuredServerUrl;
-    if (!configuredUrl) return null;
-    const wsProtocol = configuredUrl.startsWith("https://")
-      ? "wss://"
-      : "ws://";
-    const wsHost = configuredUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    // Serial is always local -- the device is physically attached to this
+    // desktop machine, so it never routes through a remote server.
     const token = localStorage.getItem("jwt");
-    const base = `${wsProtocol}${wsHost}/serial/websocket/`;
+    const base = "ws://127.0.0.1:30011";
     return token ? `${base}?token=${encodeURIComponent(token)}` : base;
   };
 

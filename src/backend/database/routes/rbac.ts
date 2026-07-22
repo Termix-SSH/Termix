@@ -14,6 +14,7 @@ import {
 } from "../../utils/permission-catalog.js";
 import {
   createCurrentCredentialRepository,
+  createCurrentHostFolderRepository,
   createCurrentHostResolutionRepository,
   createCurrentRbacAccessRepository,
   createCurrentRoleRepository,
@@ -307,6 +308,225 @@ router.post(
         userId,
       });
       res.status(500).json({ error: "Failed to share host" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /rbac/folder/share:
+ *   post:
+ *     summary: Share all hosts in a folder
+ *     description: Shares every host within a folder (and its subfolders) with one or more users and/or roles at a permission level. Only hosts owned by the caller are shared; skips hosts the caller may not share.
+ *     tags:
+ *       - RBAC
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [folder, targets]
+ *             properties:
+ *               folder:
+ *                 type: string
+ *               targets:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       enum: [user, role]
+ *                     id:
+ *                       oneOf:
+ *                         - type: string
+ *                         - type: integer
+ *               permissionLevel:
+ *                 type: string
+ *                 enum: [connect, view, edit, manage]
+ *               durationHours:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Folder shared successfully.
+ *       400:
+ *         description: Invalid request body.
+ *       404:
+ *         description: Folder has no hosts.
+ *       500:
+ *         description: Failed to share folder.
+ */
+router.post(
+  "/folder/share",
+  authenticateJWT,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const userId = req.userId!;
+    const { folder } = req.body ?? {};
+
+    if (!isNonEmptyString(folder)) {
+      return res.status(400).json({ error: "Folder name is required" });
+    }
+
+    try {
+      const targets = parseShareTargets(req.body ?? {});
+      if (!targets) {
+        return res.status(400).json({
+          error:
+            "targets must be a non-empty array of { type: 'user'|'role', id } entries",
+        });
+      }
+
+      const { durationHours, permissionLevel = "connect" } = req.body;
+
+      if (!isSharePermissionLevel(permissionLevel)) {
+        return res.status(400).json({
+          error: "Invalid permission level",
+          validLevels: SHARE_PERMISSION_LEVELS,
+        });
+      }
+
+      const userRepository = createCurrentUserRepository();
+      const roleRepository = createCurrentRoleRepository();
+      for (const target of targets) {
+        if (target.type === "user") {
+          const targetUser = await userRepository.findById(target.id as string);
+          if (!targetUser) {
+            return res.status(404).json({
+              error: "Target user not found",
+              targetId: target.id,
+            });
+          }
+        } else {
+          const targetRole = await roleRepository.findRoleById(
+            target.id as number,
+          );
+          if (!targetRole) {
+            return res.status(404).json({
+              error: "Target role not found",
+              targetId: target.id,
+            });
+          }
+        }
+      }
+
+      const hostsInFolder =
+        await createCurrentHostFolderRepository().listHostsInFolder(
+          userId,
+          folder,
+        );
+      if (hostsInFolder.length === 0) {
+        return res.status(404).json({ error: "Folder has no hosts" });
+      }
+
+      const expiresAt = expiryFromDuration(durationHours);
+      const rbacAccessRepository = createCurrentRbacAccessRepository();
+      const { SharedHostSecretsManager } =
+        await import("../../utils/shared-host-secrets-manager.js");
+      const secretsManager = SharedHostSecretsManager.getInstance();
+
+      const hostResults: Array<{
+        hostId: number;
+        shared: boolean;
+        reason?: string;
+      }> = [];
+
+      for (const host of hostsInFolder) {
+        if (targets.some((t) => t.type === "user" && t.id === host.userId)) {
+          hostResults.push({
+            hostId: host.id,
+            shared: false,
+            reason: "owner",
+          });
+          continue;
+        }
+
+        const sharing = await canManageHostSharing(userId, host.id);
+        if (!sharing.allowed) {
+          hostResults.push({
+            hostId: host.id,
+            shared: false,
+            reason: "forbidden",
+          });
+          continue;
+        }
+
+        for (const target of targets) {
+          const accessGrant = await rbacAccessRepository.upsertHostAccess({
+            hostId: host.id,
+            grantedBy: userId,
+            permissionLevel,
+            expiresAt,
+            ...(target.type === "user"
+              ? {
+                  targetType: "user" as const,
+                  targetUserId: target.id as string,
+                }
+              : {
+                  targetType: "role" as const,
+                  targetRoleId: target.id as number,
+                }),
+          });
+
+          try {
+            if (target.type === "user") {
+              await secretsManager.snapshotForUser(
+                accessGrant.id,
+                host.id,
+                target.id as string,
+                host.userId,
+              );
+            } else {
+              await secretsManager.snapshotForRole(
+                accessGrant.id,
+                host.id,
+                target.id as number,
+                host.userId,
+              );
+            }
+          } catch (snapshotError) {
+            databaseLogger.warn("Share created but secret snapshot failed", {
+              operation: "rbac_folder_share_snapshot_failed",
+              hostId: host.id,
+              accessId: accessGrant.id,
+              error:
+                snapshotError instanceof Error
+                  ? snapshotError.message
+                  : "Unknown error",
+            });
+          }
+        }
+
+        hostResults.push({ hostId: host.id, shared: true });
+      }
+
+      const sharedCount = hostResults.filter((r) => r.shared).length;
+
+      databaseLogger.success("Folder shared successfully", {
+        operation: "rbac_folder_share_success",
+        userId,
+        folder,
+        hostsShared: sharedCount,
+        targets: targets.length,
+        permissionLevel,
+      });
+
+      res.json({
+        success: true,
+        message: "Folder shared successfully",
+        permissionLevel,
+        expiresAt,
+        hostsShared: sharedCount,
+        hostsTotal: hostsInFolder.length,
+        hostResults,
+      });
+    } catch (error) {
+      databaseLogger.error("Failed to share folder", error, {
+        operation: "share_folder",
+        folder,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to share folder" });
     }
   },
 );

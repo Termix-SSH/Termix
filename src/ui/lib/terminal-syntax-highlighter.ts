@@ -256,11 +256,11 @@ function highlightPlainText(
   text: string,
   activePatterns: HighlightPattern[],
   activeSgr: string,
+  protectedRanges: ProtectedRange[],
 ): string {
   if (text.length > MAX_LINE_LENGTH || !text.trim()) return text;
 
   const matches: MatchResult[] = [];
-  const protectedRanges = getProtectedRanges(text);
 
   for (const pattern of activePatterns) {
     pattern.regex.lastIndex = 0;
@@ -381,13 +381,34 @@ function highlightLine(
   if (bare.length > MAX_LINE_LENGTH) return line;
   if (isShellPromptLine(bare)) return line;
 
+  // Compute protected ranges (e.g. SSH bracket headings) against the fully
+  // stripped line rather than per-ANSI-segment text. A colored prompt theme
+  // (e.g. "[<color>user<reset>@<color>host<reset>]") splits the heading across
+  // multiple plain-text segments, so matching per-segment would miss it and
+  // let a username like "warning" get wrongly highlighted as a log level.
+  const plainLine = bare.replace(STRIP_ANSI_RE, "");
+  const lineProtectedRanges = getProtectedRanges(plainLine);
+
   const segments = parseAnsiSegments(bare);
+  let plainOffset = 0;
   const result = segments
-    .map((s) =>
-      s.isAnsi
-        ? s.content
-        : highlightPlainText(s.content, activePatterns, s.activeSgr ?? ""),
-    )
+    .map((s) => {
+      if (s.isAnsi) return s.content;
+      const segmentStart = plainOffset;
+      plainOffset += s.content.length;
+      const localRanges = lineProtectedRanges
+        .map((r) => ({
+          start: r.start - segmentStart,
+          end: r.end - segmentStart,
+        }))
+        .filter((r) => r.start < s.content.length && r.end > 0);
+      return highlightPlainText(
+        s.content,
+        activePatterns,
+        s.activeSgr ?? "",
+        localRanges,
+      );
+    })
     .join("");
 
   return cr ? result + "\r" : result;

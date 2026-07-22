@@ -153,6 +153,9 @@ export const hosts = sqliteTable("ssh_data", {
   enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
     .notNull()
     .default(true),
+  allowSessionSharing: integer("allow_session_sharing", { mode: "boolean" })
+    .notNull()
+    .default(true),
   enableCommandHistory: integer("enable_command_history", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -237,6 +240,12 @@ export const hosts = sqliteTable("ssh_data", {
   socks5Password: text("socks5_password"),
   socks5ProxyChain: text("socks5_proxy_chain"),
 
+  // null = use the desktop app's global default; "local" | "remote" pins
+  // this specific host's SSH/Docker-console/Serial connections to originate
+  // from the embedded local backend or a connected remote sync server.
+  // Ignored for rdp/vnc/telnet, which always require the remote server.
+  connectionOrigin: text("connection_origin"),
+
   macAddress: text("mac_address"),
   wolBroadcastAddress: text("wol_broadcast_address"),
   portKnockSequence: text("port_knock_sequence"),
@@ -247,6 +256,11 @@ export const hosts = sqliteTable("ssh_data", {
   hostKeyFirstSeen: text("host_key_first_seen"),
   hostKeyLastVerified: text("host_key_last_verified"),
   hostKeyChangedCount: integer("host_key_changed_count").default(0),
+
+  // Stable identity used to match this row across two independently-seeded
+  // databases (the embedded backend and a connected remote server) during
+  // sync -- local autoincrement ids collide across instances.
+  syncId: text("sync_id").unique(),
 
   createdAt: text("created_at")
     .notNull()
@@ -354,6 +368,7 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
 
   usageCount: integer("usage_count").notNull().default(0),
   lastUsed: text("last_used"),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -388,6 +403,7 @@ export const snippets = sqliteTable("snippets", {
   description: text("description"),
   folder: text("folder"),
   order: integer("order").notNull().default(0),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -405,6 +421,7 @@ export const snippetFolders = sqliteTable("snippet_folders", {
   name: text("name").notNull(),
   color: text("color"),
   icon: text("icon"),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -462,6 +479,10 @@ export const sshFolders = sqliteTable("ssh_folders", {
   name: text("name").notNull(),
   color: text("color"),
   icon: text("icon"),
+  credentialId: integer("credential_id").references(() => sshCredentials.id, {
+    onDelete: "set null",
+  }),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -673,6 +694,62 @@ export const sessionRecordings = sqliteTable("session_recordings", {
   terminationReason: text("termination_reason"),
 });
 
+export const sessionShares = sqliteTable("session_shares", {
+  id: text("id").primaryKey(),
+
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  ownerUserId: text("owner_user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+
+  protocol: text("protocol").notNull(),
+
+  // Live-session binding: TerminalSessionManager's session.id for SSH, or
+  // guacd's own guacamoleConnectionId for rdp/vnc/telnet. Neither is a DB
+  // row (process-local, in-memory) so this intentionally has no FK.
+  sessionId: text("session_id").notNull(),
+  tabInstanceId: text("tab_instance_id"),
+
+  shareType: text("share_type").notNull(), // "link" | "user"
+  targetUserId: text("target_user_id").references(() => users.id, {
+    onDelete: "cascade",
+  }),
+  linkToken: text("link_token").unique(),
+
+  permissionLevel: text("permission_level").notNull().default("read-only"),
+
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  expiresAt: text("expires_at").notNull(),
+  revokedAt: text("revoked_at"),
+
+  lastJoinedAt: text("last_joined_at"),
+  joinCount: integer("join_count").notNull().default(0),
+});
+
+export const sessionShareParticipants = sqliteTable(
+  "session_share_participants",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    shareId: text("share_id")
+      .notNull()
+      .references(() => sessionShares.id, { onDelete: "cascade" }),
+
+    userId: text("user_id").references(() => users.id, {
+      onDelete: "cascade",
+    }),
+    guestLabel: text("guest_label"),
+
+    joinedAt: text("joined_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    leftAt: text("left_at"),
+  },
+);
+
 export const opksshTokens = sqliteTable("opkssh_tokens", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
@@ -724,6 +801,7 @@ export const vaultProfiles = sqliteTable("vault_profiles", {
   keyType: text("key_type"),
   // When true the profile is visible/usable by all users on the server
   shared: integer("shared", { mode: "boolean" }).notNull().default(false),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -813,6 +891,7 @@ export const userPreferences = sqliteTable("user_preferences", {
   hiddenRailTabs: text("hidden_rail_tabs"),
   compactHostView: integer("compact_host_view", { mode: "boolean" }),
   statusColorScheme: text("status_color_scheme"),
+  customThemes: text("custom_themes"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -879,7 +958,11 @@ export const dashboardServiceLinks = sqliteTable("dashboard_service_links", {
   label: text("label").notNull(),
   url: text("url").notNull(),
   order: integer("order").notNull().default(0),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
 });
@@ -1067,6 +1150,7 @@ export const homepageItems = sqliteTable("homepage_items", {
   title: text("title"),
   config: text("config").notNull().default("{}"),
   folderId: integer("folder_id"),
+  syncId: text("sync_id").unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -1088,3 +1172,20 @@ export const homepageLayouts = sqliteTable("homepage_layouts", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- homepage end ---
+
+// --- sync begin ---
+// Records a delete for a synced entity type so the other side of a sync
+// pair (embedded desktop backend <-> connected remote server) learns about
+// the deletion instead of re-creating the row on its next pull.
+export const syncTombstones = sqliteTable("sync_tombstones", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  entityType: text("entity_type").notNull(),
+  syncId: text("sync_id").notNull(),
+  deletedAt: text("deleted_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+// --- sync end ---

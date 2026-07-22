@@ -15,6 +15,10 @@ import {
 } from "@/components/select.tsx";
 import { Card, CardContent } from "@/components/card.tsx";
 import { getBasePath } from "@/lib/base-path";
+import {
+  resolveConnectionOrigin,
+  buildOriginWsUrl,
+} from "@/lib/connection-origin.ts";
 import { Terminal as TerminalIcon, Power, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import type { SSHHost } from "@/types";
@@ -23,6 +27,7 @@ import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useTranslation } from "react-i18next";
 import { resolveTermixThemeColors } from "@/features/terminal/terminal-theme";
 import { DEFAULT_TERMINAL_CONFIG, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import { ensureTerminalFontsLoaded } from "@/features/terminal/terminal-global-styles";
 import { useTheme } from "@/components/theme-provider";
 
 interface ConsoleTerminalProps {
@@ -77,6 +82,7 @@ export function ConsoleTerminal({
       (f) => f.value === terminalConfig.fontFamily,
     );
     const fontFamily = fontConfig?.fallback ?? TERMINAL_FONTS[0].fallback;
+    ensureTerminalFontsLoaded(fontConfig?.value ?? TERMINAL_FONTS[0].value);
 
     terminal.options.cursorBlink = terminalConfig.cursorBlink;
     terminal.options.cursorStyle = terminalConfig.cursorStyle;
@@ -263,7 +269,7 @@ export function ConsoleTerminal({
     }
   }, [terminal]);
 
-  const connect = React.useCallback(() => {
+  const connect = React.useCallback(async () => {
     if (!terminal || containerState !== "running") {
       toast.error(t("docker.containerMustBeRunning"));
       return;
@@ -285,20 +291,30 @@ export function ConsoleTerminal({
           window.location.port === "5173" ||
           window.location.port === "");
 
-      const baseWsUrl = isDev
-        ? `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30009`
-        : isElectronApp
-          ? (() => {
-              const baseUrl =
-                (window as { configuredServerUrl?: string })
-                  .configuredServerUrl || "http://127.0.0.1:30001";
-              const wsProtocol = baseUrl.startsWith("https://")
-                ? "wss://"
-                : "ws://";
-              const wsHost = baseUrl.replace(/^https?:\/\//, "");
-              return `${wsProtocol}${wsHost}/docker/console/`;
-            })()
-          : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/docker/console/`;
+      let baseWsUrl: string;
+      if (isDev) {
+        baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30009`;
+      } else if (isElectronApp) {
+        const origin = await resolveConnectionOrigin({
+          connectionType: "ssh",
+          connectionOrigin: hostConfig.connectionOrigin,
+        });
+        const resolvedUrl = await buildOriginWsUrl({
+          origin,
+          localPort: 30009,
+          localPath: "/docker/console/",
+          remotePath: "/docker/console/",
+          includeLocalJwt: false,
+        });
+        if (!resolvedUrl) {
+          setIsConnecting(false);
+          toast.error(t("errors.remoteServerRequired"));
+          return;
+        }
+        baseWsUrl = resolvedUrl;
+      } else {
+        baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${getBasePath()}/docker/console/`;
+      }
 
       const ws = new WebSocket(baseWsUrl);
 

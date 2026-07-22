@@ -24,10 +24,8 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  getServerConfig,
   saveServerConfig,
   isElectron,
-  getEmbeddedServerStatus,
   getCurrentToken,
   getOidcSilentLoginDefault,
 } from "@/main-axios";
@@ -1019,41 +1017,14 @@ export function Auth({
   }, [dbConnectionFailed, t]);
 
   useEffect(() => {
-    const checkServerConfig = async () => {
-      if (isInElectronWebView()) {
-        setShowServerConfig(false);
-        return;
-      }
-
-      if (isElectron()) {
-        try {
-          const [config, status] = await Promise.all([
-            getServerConfig(),
-            getEmbeddedServerStatus(),
-          ]);
-
-          if (
-            status?.embedded &&
-            status?.running &&
-            config &&
-            !config.serverUrl
-          ) {
-            setCurrentServerUrl("");
-            setShowServerConfig(false);
-            return;
-          }
-
-          setCurrentServerUrl(config?.serverUrl || "");
-          setShowServerConfig(!config || !config.serverUrl);
-        } catch {
-          setShowServerConfig(true);
-        }
-      } else {
-        setShowServerConfig(false);
-      }
-    };
-
-    checkServerConfig();
+    // The desktop app always runs its embedded local backend as the source
+    // of truth now -- there is no more server-config startup gate here or
+    // in the top-level Auth.tsx. This component only still renders (a) when
+    // iframed by ElectronLoginForm as a *remote* server's own web root, in
+    // which case isInElectronWebView() is true and this branch is skipped
+    // anyway, or (b) as a re-auth fallback for popped-out fullscreen
+    // sub-app windows, which should also never show a server picker.
+    setShowServerConfig(false);
   }, []);
 
   if (showServerConfig === null && !isInElectronWebView()) {

@@ -29,17 +29,13 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  getServerConfig,
-  saveServerConfig,
   isElectron,
-  getEmbeddedServerStatus,
   getCurrentToken,
   getOidcSilentLoginDefault,
+  requestDesktopAutoSession,
 } from "@/main-axios";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
-import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig";
-import { ElectronLoginForm } from "@/auth/ElectronLoginForm";
 import { Checkbox } from "@/components/checkbox";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import {
@@ -263,12 +259,21 @@ export function Auth({ onLogin }: AuthProps) {
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(true);
-
-  const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
-    null,
-  );
-  const [currentServerUrl, setCurrentServerUrl] = useState("");
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
+
+  // Electron, non-iframed only: the desktop app never shows a login form
+  // when running standalone -- the embedded backend auto-provisions a
+  // single local user on first boot, and this component silently exchanges
+  // that for a session instead of rendering login/register.
+  // null = probe still in flight (Electron only, blocks rendering below).
+  // true = probe settled with no auto-login (not applicable outside
+  // Electron, multiple users exist, or setup is genuinely required) --
+  // safe to fall through to the normal form/health-check flow.
+  // Auto-login success never sets this; it calls onLogin directly and this
+  // component unmounts.
+  const [desktopAutoSessionDone, setDesktopAutoSessionDone] = useState<
+    boolean | null
+  >(!isElectron() || isInElectronWebView() ? true : null);
 
   useEffect(() => {
     try {
@@ -320,7 +325,11 @@ export function Auth({ onLogin }: AuthProps) {
   }, []);
 
   useEffect(() => {
-    if (showServerConfig) return;
+    // Runs once the auto-session probe has settled (immediately outside
+    // Electron, since it starts at true there; after the probe resolves in
+    // Electron). Waiting avoids flashing a login screen the user is about
+    // to skip past via auto-login.
+    if (desktopAutoSessionDone !== true) return;
     setDbHealthChecking(true);
     getSetupRequired()
       .then((res) => {
@@ -332,53 +341,28 @@ export function Auth({ onLogin }: AuthProps) {
       })
       .catch(() => setDbConnectionFailed(true))
       .finally(() => setDbHealthChecking(false));
-  }, [showServerConfig]);
+  }, [desktopAutoSessionDone]);
 
   useEffect(() => {
-    const checkElectron = async () => {
-      if (isInElectronWebView()) {
-        setShowServerConfig(false);
-        return;
-      }
-      if (isElectron()) {
-        const forceShow = localStorage.getItem("termix_show_server_config");
-        if (forceShow === "true") {
-          localStorage.removeItem("termix_show_server_config");
-          try {
-            const config = await getServerConfig();
-            setCurrentServerUrl(config?.serverUrl || "");
-          } catch {
-            // ignore
-          }
-          setShowServerConfig(true);
+    if (desktopAutoSessionDone !== null) return;
+    let cancelled = false;
+    requestDesktopAutoSession()
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.success) {
+          storeAuth(res.username || "");
+          onLogin(res.username || "", res.userId || undefined, !!res.is_admin);
           return;
         }
-        try {
-          const [config, status] = await Promise.all([
-            getServerConfig(),
-            getEmbeddedServerStatus(),
-          ]);
-          if (
-            status?.embedded &&
-            status?.running &&
-            config &&
-            !config.serverUrl
-          ) {
-            setShowServerConfig(false);
-            setCurrentServerUrl("");
-            return;
-          }
-          setCurrentServerUrl(config?.serverUrl || "");
-          setShowServerConfig(!config || !config.serverUrl);
-        } catch {
-          setShowServerConfig(true);
-        }
-      } else {
-        setShowServerConfig(false);
-      }
+        setDesktopAutoSessionDone(true);
+      })
+      .catch(() => {
+        if (!cancelled) setDesktopAutoSessionDone(true);
+      });
+    return () => {
+      cancelled = true;
     };
-    checkElectron();
-  }, []);
+  }, [desktopAutoSessionDone, onLogin]);
 
   useEffect(() => {
     if (view === "totp" && totpInputRef.current) totpInputRef.current.focus();
@@ -473,36 +457,6 @@ export function Auth({ onLogin }: AuthProps) {
         });
     }
   }, [onLogin, t]);
-
-  const handleElectronAuthSuccess = useCallback(
-    async (token: string | null) => {
-      try {
-        if (!token) {
-          // No token in postMessage — fall back to waiting for the HttpOnly cookie
-          const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
-            "jwt",
-            currentServerUrl,
-            null,
-            5000,
-          );
-          if (cookieReady && !cookieReady.success)
-            throw new Error(cookieReady.error || "Auth cookie not ready");
-        }
-        const meRes = await getUserInfo();
-        if (!meRes) throw new Error("Failed to get user info");
-        storeAuth(meRes.username || "");
-        onLogin(
-          meRes.username || "",
-          meRes.userId || undefined,
-          !!meRes.is_admin,
-        );
-        toast.success(t("messages.loginSuccess"));
-      } catch {
-        toast.error(t("errors.failedUserInfo"));
-      }
-    },
-    [onLogin, currentServerUrl, t],
-  );
 
   function resetAll() {
     setUsername("");
@@ -935,46 +889,19 @@ export function Auth({ onLogin }: AuthProps) {
     oidcSilentLoginDefaultLoaded,
   ]);
 
-  // Electron server config / webview auth success screens
-  if (isElectron() && !isInElectronWebView()) {
-    if (showServerConfig === null)
-      return (
-        <div className="fixed inset-0 flex items-center justify-center bg-background">
-          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    if (showServerConfig)
-      return (
-        <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
-          <div className="w-full max-w-md">
-            <ServerConfigComponent
-              onServerConfigured={() => window.location.reload()}
-              onUseEmbedded={async () => {
-                await saveServerConfig({
-                  serverUrl: "",
-                  lastUpdated: new Date().toISOString(),
-                });
-                setShowServerConfig(false);
-                setCurrentServerUrl("");
-              }}
-              onCancel={() => setShowServerConfig(false)}
-              isFirstTime={!currentServerUrl}
-            />
-          </div>
-        </div>
-      );
-    if (!webviewAuthSuccess && showServerConfig === false && currentServerUrl)
-      return (
-        <div className="w-full h-screen flex items-center justify-center p-4 bg-background">
-          <div className="w-full max-w-4xl h-[90vh]">
-            <ElectronLoginForm
-              serverUrl={currentServerUrl}
-              onAuthSuccess={handleElectronAuthSuccess}
-              onChangeServer={() => setShowServerConfig(true)}
-            />
-          </div>
-        </div>
-      );
+  // Electron, non-iframed: wait for the auto-session probe before rendering
+  // anything, so a standalone desktop install never flashes a login form
+  // it's about to skip past.
+  if (
+    isElectron() &&
+    !isInElectronWebView() &&
+    desktopAutoSessionDone === null
+  ) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (webviewAuthSuccess || (isInElectronWebView() && webviewAuthSuccess))
@@ -1018,30 +945,11 @@ export function Auth({ onLogin }: AuthProps) {
               ))}
             </select>
           </div>
-          {isElectron() && currentServerUrl && (
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground">
-                  {t("serverConfig.serverUrl")}
-                </span>
-                <span className="text-xs text-muted-foreground font-mono truncate max-w-[180px]">
-                  {currentServerUrl}
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowServerConfig(true)}
-              >
-                {t("common.edit")}
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     );
 
-  if (dbHealthChecking && showServerConfig === false)
+  if (dbHealthChecking)
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -1068,21 +976,6 @@ export function Auth({ onLogin }: AuthProps) {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
-      {isElectron() && !isInElectronWebView() && showServerConfig === false && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <button
-            onClick={() => setShowServerConfig(true)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="size-4" />
-            {t("serverConfig.changeServer")}
-          </button>
-          <span className="text-xs text-muted-foreground">
-            {t("serverConfig.localServer")}
-          </span>
-          <div className="w-20" />
-        </div>
-      )}
       <div className="flex flex-1 overflow-hidden">
         {/* Left decorative panel */}
         <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">

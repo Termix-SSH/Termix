@@ -20,6 +20,7 @@ const net = require("net");
 const { URL } = require("url");
 const { fork, spawn } = require("child_process");
 const WebSocket = require("ws");
+const remoteSync = require("./remote-sync.cjs");
 
 // Portable mode: if a `.portable` marker exists next to the executable,
 // store all data in a `data` folder beside the exe instead of %APPDATA%.
@@ -852,6 +853,7 @@ function startBackendServer() {
         NODE_ENV: "production",
         ELECTRON_EMBEDDED: "true",
         PORT: "30001",
+        VERSION: app.getVersion(),
       },
       stdio: ["pipe", "pipe", "pipe", "ipc"],
     });
@@ -1335,7 +1337,6 @@ ipcMain.handle("get-embedded-server-status", () => {
   return {
     running:
       backendProcess !== null && !backendProcess.killed && !backendStartFailed,
-    embedded: !isDev,
     dataDir: isDev ? null : getBackendDataDir(),
   };
 });
@@ -1440,6 +1441,70 @@ ipcMain.handle("save-server-config", (event, config) => {
     console.error("Error saving server config:", error);
     return { success: false, error: error.message };
   }
+});
+
+// --- Remote sync (optional desktop <-> self-hosted server sync) ---
+
+ipcMain.handle("get-desktop-settings", () => {
+  return remoteSync.getDesktopSettings();
+});
+
+ipcMain.handle("save-desktop-settings", (_event, settings) => {
+  return remoteSync.saveDesktopSettings(settings);
+});
+
+ipcMain.handle("get-remote-sync-config", () => {
+  return remoteSync.getRemoteSyncConfig();
+});
+
+ipcMain.handle("save-remote-sync-config", (_event, config) => {
+  return remoteSync.saveRemoteSyncConfig(config);
+});
+
+ipcMain.handle("clear-remote-sync-config", async () => {
+  const result = remoteSync.clearRemoteSyncConfig();
+  remoteSync.clearRemoteSyncJwt();
+  remoteSync.getRemoteSyncEngine()?.updateStatus({
+    connected: false,
+    syncing: false,
+    needsReauth: false,
+    lastError: null,
+  });
+  return result;
+});
+
+ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
+  const result = remoteSync.saveRemoteSyncJwt(token);
+  if (result.success) {
+    remoteSync.getRemoteSyncEngine()?.updateStatus({
+      connected: true,
+      needsReauth: false,
+      lastError: null,
+    });
+    remoteSync.getRemoteSyncEngine()?.syncNow();
+  }
+  return result;
+});
+
+ipcMain.handle("get-remote-sync-jwt", () => {
+  return remoteSync.getRemoteSyncJwt();
+});
+
+ipcMain.handle("clear-remote-sync-jwt", () => {
+  return remoteSync.clearRemoteSyncJwt();
+});
+
+ipcMain.handle("get-remote-sync-status", () => {
+  return remoteSync.getRemoteSyncEngine()?.status || null;
+});
+
+ipcMain.handle("remote-sync-now", async () => {
+  return (await remoteSync.getRemoteSyncEngine()?.syncNow()) || null;
+});
+
+ipcMain.handle("notify-local-login", (_event, token) => {
+  remoteSync.getRemoteSyncEngine()?.setLocalJwt(token);
+  return { success: true };
 });
 
 function getC2STunnelConfigPath() {
@@ -1593,16 +1658,23 @@ function getC2SRelayUrl() {
 }
 
 async function getC2SRelayHeaders(relayUrl) {
-  if (!mainWindow?.webContents?.session) return {};
-
   const cookieUrl = relayUrl
     .replace(/^ws:/, "http:")
     .replace(/^wss:/, "https:");
-  const cookies = await mainWindow.webContents.session.cookies.get({
-    url: cookieUrl,
-    name: "jwt",
-  });
-  const jwt = cookies[0]?.value;
+
+  let jwt;
+  if (mainWindow?.webContents?.session) {
+    const cookies = await mainWindow.webContents.session.cookies.get({
+      url: cookieUrl,
+      name: "jwt",
+    });
+    jwt = cookies[0]?.value;
+  }
+
+  if (!jwt) {
+    jwt = getRememberedElectronAuthCookie("jwt", cookieUrl)?.value;
+  }
+
   if (!jwt) return {};
 
   return {
@@ -2967,6 +3039,7 @@ app.whenReady().then(async () => {
 
   createTray();
   createWindow();
+  remoteSync.initRemoteSync(() => mainWindow);
   logToFile("=== Startup complete ===");
 });
 

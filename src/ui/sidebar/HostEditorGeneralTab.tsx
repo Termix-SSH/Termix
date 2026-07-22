@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { FolderPathPicker } from "./FolderPathPicker";
-import { getSSHFolders } from "@/main-axios";
+import { getSSHFolders, isElectron } from "@/main-axios";
 import type { HostEditorForm, HostProtocols } from "./HostEditorData";
 
 type HostEditorSetField = <K extends keyof HostEditorForm>(
@@ -716,6 +716,31 @@ export function HostEditorGeneralTab({
                 </div>
               ) : null}
             </div>
+          )}
+          {isElectron() && protocols.enableSsh && (
+            <SettingRow
+              label={t("hosts.connectionOrigin")}
+              description={t("hosts.connectionOriginDesc")}
+            >
+              <select
+                className="flex h-7 border border-border bg-background px-2 py-0 text-xs outline-none focus:ring-1 focus:ring-ring"
+                value={form.connectionOrigin ?? ""}
+                onChange={(e) =>
+                  setField(
+                    "connectionOrigin",
+                    (e.target.value || null) as "local" | "remote" | null,
+                  )
+                }
+              >
+                <option value="">{t("hosts.connectionOriginDefault")}</option>
+                <option value="local">
+                  {t("hosts.connectionOriginLocal")}
+                </option>
+                <option value="remote">
+                  {t("hosts.connectionOriginRemote")}
+                </option>
+              </select>
+            </SettingRow>
           )}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">

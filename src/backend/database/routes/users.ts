@@ -1880,6 +1880,102 @@ router.get("/setup-required", async (req, res) => {
   }
 });
 
+function isLoopbackRequest(req: Request): boolean {
+  const ip = req.ip || req.socket?.remoteAddress || "";
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip.endsWith(":127.0.0.1")
+  );
+}
+
+/**
+ * @openapi
+ * /users/internal/auto-session:
+ *   post:
+ *     summary: Mint a session for the auto-provisioned local desktop user
+ *     description: Used by the Electron desktop app to skip the login form when running standalone with a single auto-provisioned local user. Only available over loopback and only when exactly one user exists -- a real multi-user or synced install never satisfies this, so no further secret is required.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Session created.
+ *       403:
+ *         description: Forbidden, or more than one user exists.
+ *       500:
+ *         description: Failed to create session.
+ */
+router.post("/internal/auto-session", async (req, res) => {
+  try {
+    if (!isLoopbackRequest(req)) {
+      authLogger.warn(
+        "Rejected non-loopback attempt to access auto-session endpoint",
+        { source: req.ip },
+      );
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const userRepository = createCurrentUserRepository();
+    const allUsers = await userRepository.listAll();
+    if (allUsers.length !== 1) {
+      return res.status(403).json({
+        error: "Auto-session is only available for a single local user",
+      });
+    }
+
+    const userRecord = allUsers[0];
+
+    // If the caller already holds a still-valid session for this same
+    // user (e.g. a duplicate call racing the first one, such as React
+    // StrictMode's double-invoke of effects in dev), reuse it instead of
+    // minting a fresh one. Minting unconditionally here would set a new
+    // `jwt` cookie on every call; since the auth middleware prefers the
+    // cookie over the Authorization header, a second mint silently
+    // invalidates whatever token the app already started using.
+    const existingToken =
+      (req as Request & { cookies?: Record<string, string> }).cookies?.jwt ||
+      (req.headers["authorization"]?.startsWith("Bearer ")
+        ? req.headers["authorization"].slice("Bearer ".length)
+        : undefined);
+    if (existingToken) {
+      const existingPayload = await authManager.verifyJWTToken(existingToken);
+      if (existingPayload?.userId === userRecord.id) {
+        return res.json({
+          success: true,
+          is_admin: !!userRecord.isAdmin,
+          username: userRecord.username,
+          token: existingToken,
+        });
+      }
+    }
+
+    const token = await authManager.generateJWTToken(userRecord.id, {
+      deviceType: "desktop",
+      deviceInfo: "Termix Desktop (local)",
+      rememberMe: true,
+    });
+
+    const response = {
+      success: true,
+      is_admin: !!userRecord.isAdmin,
+      username: userRecord.username,
+      token,
+    };
+
+    return res
+      .cookie(
+        "jwt",
+        token,
+        authManager.getSecureCookieOptions(req, 30 * 24 * 60 * 60 * 1000),
+      )
+      .json(response);
+  } catch (err) {
+    authLogger.error("Failed to create auto-session", err);
+    res.status(500).json({ error: "Failed to create auto-session" });
+  }
+});
+
 /**
  * @openapi
  * /users/count:

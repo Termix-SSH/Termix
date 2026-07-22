@@ -3,16 +3,18 @@ import { GuacamoleTokenService } from "./token-service.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
-import { Client } from "ssh2";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import type { AuthenticatedRequest, ProxyNode } from "../../../types/index.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,
 } from "../../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
+import { createJumpHostChain } from "../jump-host-chain.js";
+import type { SOCKS5Config } from "../../utils/socks5-helper.js";
+import { waitForGuacdOpen } from "./guacamole-server.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -165,6 +167,12 @@ router.post("/token", async (req, res) => {
  *                 type: string
  *                 enum: [rdp, vnc, telnet]
  *                 description: Override the host's default connection type
+ *               promptedUsername:
+ *                 type: string
+ *                 description: Username for this connection only, used when the host's RDP auth type is "none". Not persisted.
+ *               promptedPassword:
+ *                 type: string
+ *                 description: Password for this connection only, used when the host's RDP auth type is "none". Not persisted.
  *     responses:
  *       200:
  *         description: Connection token generated successfully
@@ -176,6 +184,10 @@ router.post("/token", async (req, res) => {
  *                 token:
  *                   type: string
  *                   description: Encrypted connection token
+ *                 guacamoleConnectionId:
+ *                   type: string
+ *                   nullable: true
+ *                   description: guacd's own connection id for this session, once the handshake completes. Used to mint session-share join tokens.
  *       400:
  *         description: Invalid request or unsupported connection type
  *       403:
@@ -421,12 +433,22 @@ router.post(
       let username: string;
       let password: string;
 
+      const rdpAuthTypeForConnect = isSharedConnection
+        ? null
+        : (host.rdpAuthType as string) ||
+          (host.rdpCredentialId ? "credential" : "direct");
+
       switch (connectionType) {
         case "rdp":
-          username =
-            (host.rdpUser as string) || (host.username as string) || "";
-          password =
-            (host.rdpPassword as string) || (host.password as string) || "";
+          if (rdpAuthTypeForConnect === "none") {
+            username = String(req.body?.promptedUsername || "");
+            password = String(req.body?.promptedPassword || "");
+          } else {
+            username =
+              (host.rdpUser as string) || (host.username as string) || "";
+            password =
+              (host.rdpPassword as string) || (host.password as string) || "";
+          }
           port = (host.rdpPort as number) || port || 3389;
           break;
         case "vnc":
@@ -463,65 +485,91 @@ router.post(
 
       if (jumpHosts.length > 0) {
         try {
-          const { resolveHostById } = await import("../host-resolver.js");
-          const jumpHost = await resolveHostById(jumpHosts[0].hostId, userId);
-          if (jumpHost) {
-            const tunnelPort = await new Promise<number>((resolve, reject) => {
-              const sshClient = new Client();
-              sshClient.on("ready", () => {
-                const server = net.createServer((sock) => {
-                  sshClient.forwardOut(
-                    "127.0.0.1",
-                    0,
-                    hostname,
-                    port,
-                    (err, stream) => {
-                      if (err) {
-                        sock.destroy();
-                        return;
-                      }
-                      sock.pipe(stream).pipe(sock);
-                    },
-                  );
-                });
-                server.listen(0, "127.0.0.1", () => {
-                  const addr = server.address() as net.AddressInfo;
-                  // Auto-cleanup after 1 hour
-                  setTimeout(
-                    () => {
-                      server.close();
-                      sshClient.end();
-                    },
-                    60 * 60 * 1000,
-                  );
-                  resolve(addr.port);
-                });
-              });
-              sshClient.on("error", reject);
+          let socks5ProxyChain: ProxyNode[] = [];
+          if (hostRecord.socks5ProxyChain) {
+            try {
+              socks5ProxyChain =
+                typeof hostRecord.socks5ProxyChain === "string"
+                  ? JSON.parse(hostRecord.socks5ProxyChain as string)
+                  : (hostRecord.socks5ProxyChain as ProxyNode[]);
+            } catch {
+              socks5ProxyChain = [];
+            }
+          }
 
-              const connectOpts: Record<string, unknown> = {
-                host: jumpHost.ip,
-                port: jumpHost.port || 22,
-                username: jumpHost.username,
-                readyTimeout: 30000,
-              };
-              if (jumpHost.key) {
-                connectOpts.privateKey = jumpHost.key;
-                if (jumpHost.keyPassword)
-                  connectOpts.passphrase = jumpHost.keyPassword;
-              } else if (jumpHost.password) {
-                connectOpts.password = jumpHost.password;
-              }
-              sshClient.connect(connectOpts);
-            });
-            hostname = "127.0.0.1";
-            port = tunnelPort;
-            guacLogger.info("SSH tunnel established for guacamole", {
-              operation: "guac_ssh_tunnel",
-              hostId,
-              tunnelPort,
+          const proxyConfig: SOCKS5Config | null =
+            hostRecord.useSocks5 &&
+            (hostRecord.socks5Host || socks5ProxyChain.length > 0)
+              ? {
+                  useSocks5: hostRecord.useSocks5 as boolean,
+                  socks5Host: hostRecord.socks5Host as string | undefined,
+                  socks5Port: hostRecord.socks5Port as number | undefined,
+                  socks5Username: hostRecord.socks5Username as
+                    | string
+                    | undefined,
+                  socks5Password: hostRecord.socks5Password as
+                    | string
+                    | undefined,
+                  socks5ProxyChain,
+                }
+              : null;
+
+          const jumpClient = await createJumpHostChain(
+            jumpHosts,
+            userId,
+            proxyConfig,
+          );
+
+          if (!jumpClient) {
+            guacLogger.error(
+              "Failed to establish jump host chain for guacamole",
+              undefined,
+              { operation: "guac_ssh_tunnel_error", hostId },
+            );
+            return res.status(500).json({
+              error: "Failed to establish SSH tunnel to remote host",
             });
           }
+
+          const targetHostname = hostname;
+          const targetPort = port;
+          const tunnelPort = await new Promise<number>((resolve, reject) => {
+            const server = net.createServer((sock) => {
+              jumpClient.forwardOut(
+                "127.0.0.1",
+                0,
+                targetHostname,
+                targetPort,
+                (err, stream) => {
+                  if (err) {
+                    sock.destroy();
+                    return;
+                  }
+                  sock.pipe(stream).pipe(sock);
+                },
+              );
+            });
+            server.on("error", reject);
+            server.listen(0, "127.0.0.1", () => {
+              const addr = server.address() as net.AddressInfo;
+              // Auto-cleanup after 1 hour
+              setTimeout(
+                () => {
+                  server.close();
+                  jumpClient.end();
+                },
+                60 * 60 * 1000,
+              );
+              resolve(addr.port);
+            });
+          });
+          hostname = "127.0.0.1";
+          port = tunnelPort;
+          guacLogger.info("SSH tunnel established for guacamole", {
+            operation: "guac_ssh_tunnel",
+            hostId,
+            tunnelPort,
+          });
         } catch (tunnelError) {
           guacLogger.error("Failed to establish SSH tunnel", tunnelError, {
             operation: "guac_ssh_tunnel_error",
@@ -565,6 +613,14 @@ router.post(
         guacConfig["recording-include-keys"] = true;
       }
 
+      const termixConnectId = crypto.randomUUID();
+      const termixMeta = {
+        termixConnectId,
+        hostId,
+        ownerUserId: userId,
+        protocol: connectionType as "rdp" | "vnc" | "telnet",
+      };
+
       switch (connectionType) {
         case "rdp":
           if (guacConfig["enable-drive"] && !guacConfig["drive-path"]) {
@@ -592,6 +648,7 @@ router.post(
               ...guacdOverrides,
             },
             recordingMetadata,
+            termixMeta,
           );
           break;
         case "vnc":
@@ -605,6 +662,7 @@ router.post(
               ...guacdOverrides,
             },
             recordingMetadata,
+            termixMeta,
           );
           break;
         case "telnet":
@@ -618,13 +676,19 @@ router.post(
               ...guacdOverrides,
             },
             recordingMetadata,
+            termixMeta,
           );
           break;
         default:
           return res.status(400).json({ error: "Invalid connection type" });
       }
 
-      res.json({ token });
+      const sessionInfo = await waitForGuacdOpen(termixConnectId, 10000);
+
+      res.json({
+        token,
+        guacamoleConnectionId: sessionInfo?.guacamoleConnectionId ?? null,
+      });
     } catch (error) {
       guacLogger.error("Failed to generate guacamole token for host", error, {
         operation: "guac_host_token_error",

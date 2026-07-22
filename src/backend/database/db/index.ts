@@ -390,9 +390,11 @@ async function initializeCompleteDatabase(): Promise<void> {
         name TEXT NOT NULL,
         color TEXT,
         icon TEXT,
+        credential_id INTEGER,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (credential_id) REFERENCES ssh_credentials (id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS recent_activity (
@@ -491,6 +493,38 @@ async function initializeCompleteDatabase(): Promise<void> {
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
         FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS session_shares (
+        id TEXT PRIMARY KEY,
+        host_id INTEGER NOT NULL,
+        owner_user_id TEXT NOT NULL,
+        protocol TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        tab_instance_id TEXT,
+        share_type TEXT NOT NULL,
+        target_user_id TEXT,
+        link_token TEXT UNIQUE,
+        permission_level TEXT NOT NULL DEFAULT 'read-only',
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TEXT NOT NULL,
+        revoked_at TEXT,
+        last_joined_at TEXT,
+        join_count INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+        FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS session_share_participants (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        share_id TEXT NOT NULL,
+        user_id TEXT,
+        guest_label TEXT,
+        joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        left_at TEXT,
+        FOREIGN KEY (share_id) REFERENCES session_shares (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS api_keys (
@@ -692,12 +726,16 @@ const addColumnIfNotExists = (
       sqlite.exec(`ALTER TABLE ${table}
                 ADD COLUMN "${column}" ${definition};`);
     } catch (alterError) {
-      databaseLogger.warn(`Failed to add column ${column} to ${table}`, {
-        operation: "schema_migration",
-        table,
-        column,
-        error: alterError,
-      });
+      const message =
+        alterError instanceof Error ? alterError.message : String(alterError);
+      databaseLogger.warn(
+        `Failed to add column ${column} to ${table}: ${message}`,
+        {
+          operation: "schema_migration",
+          table,
+          column,
+        },
+      );
     }
   }
 };
@@ -736,6 +774,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
   addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
+  addColumnIfNotExists("user_preferences", "custom_themes", "TEXT");
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS dashboard_service_links (
@@ -1379,6 +1418,19 @@ const migrateSchema = () => {
   }
 
   try {
+    sqlite.prepare("SELECT credential_id FROM ssh_folders LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec("ALTER TABLE ssh_folders ADD COLUMN credential_id INTEGER REFERENCES ssh_credentials(id) ON DELETE SET NULL");
+    } catch (alterError) {
+      databaseLogger.warn("Failed to add credential_id column to ssh_folders", {
+        operation: "schema_migration",
+        error: alterError,
+      });
+    }
+  }
+
+  try {
     sqlite.prepare("SELECT sudo_password FROM ssh_data LIMIT 1").get();
   } catch {
     try {
@@ -1440,6 +1492,8 @@ const migrateSchema = () => {
     { column: "rdp_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN rdp_auth_type TEXT" },
     { column: "vnc_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN vnc_auth_type TEXT" },
     { column: "telnet_auth_type", sql: "ALTER TABLE ssh_data ADD COLUMN telnet_auth_type TEXT" },
+    { column: "allow_session_sharing", sql: "ALTER TABLE ssh_data ADD COLUMN allow_session_sharing INTEGER NOT NULL DEFAULT 1" },
+    { column: "connection_origin", sql: "ALTER TABLE ssh_data ADD COLUMN connection_origin TEXT" },
   ];
 
   for (const migration of sshDataMigrations) {
@@ -1985,6 +2039,74 @@ const migrateSchema = () => {
 
   addColumnIfNotExists("users", "sso_provider_id", "INTEGER");
 
+  try {
+    const usersTableInfo = sqlite.prepare("PRAGMA table_info(users)").all() as Array<{
+      cid: number;
+      name: string;
+      type: string;
+      notnull: number;
+      dflt_value: string | null;
+      pk: number;
+    }>;
+    const legacyNotNullColumns = new Set([
+      "client_id",
+      "client_secret",
+      "issuer_url",
+      "authorization_url",
+      "token_url",
+      "identifier_path",
+      "name_path",
+      "scopes",
+    ]);
+    const hasStaleNotNull = usersTableInfo.some(
+      (col) => legacyNotNullColumns.has(col.name) && col.notnull === 1,
+    );
+
+    if (hasStaleNotNull) {
+      const tempTableName = "users_temp_migration";
+      const columnDefs = usersTableInfo
+        .map((col) => {
+          const parts = [`"${col.name}"`, col.type || "TEXT"];
+          if (col.pk === 1) parts.push("PRIMARY KEY");
+          if (col.notnull === 1 && !legacyNotNullColumns.has(col.name)) {
+            parts.push("NOT NULL");
+          }
+          if (col.dflt_value !== null) {
+            parts.push(`DEFAULT ${col.dflt_value}`);
+          }
+          return parts.join(" ");
+        })
+        .join(",\n          ");
+      const allColumns = usersTableInfo.map((col) => `"${col.name}"`).join(", ");
+
+      sqlite.exec(`PRAGMA foreign_keys = OFF`);
+      sqlite.exec(`
+        CREATE TABLE ${tempTableName} (
+          ${columnDefs}
+        );
+
+        INSERT INTO ${tempTableName} SELECT ${allColumns} FROM users;
+
+        DROP TABLE users;
+
+        ALTER TABLE ${tempTableName} RENAME TO users;
+      `);
+      sqlite.exec(`PRAGMA foreign_keys = ON`);
+
+      databaseLogger.info(
+        "Successfully migrated users table to remove legacy OIDC NOT NULL constraints",
+        {
+          operation: "schema_migration_users_oidc_nullable",
+        },
+      );
+    }
+  } catch (migrationError) {
+    databaseLogger.warn("Failed to migrate users table legacy OIDC columns", {
+      operation: "schema_migration",
+      error: migrationError,
+    });
+  }
+
   // Migrate legacy single oidc_config settings blob into sso_providers table
   try {
     const migrationDone = getRawSettingValue("sso_migration_v1");
@@ -2205,6 +2327,174 @@ const migrateSchema = () => {
     }
   }
   // --- homepage end ---
+
+  try {
+    sqlite.prepare("SELECT id FROM session_shares LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS session_shares (
+          id TEXT PRIMARY KEY,
+          host_id INTEGER NOT NULL,
+          owner_user_id TEXT NOT NULL,
+          protocol TEXT NOT NULL,
+          session_id TEXT NOT NULL,
+          tab_instance_id TEXT,
+          share_type TEXT NOT NULL,
+          target_user_id TEXT,
+          link_token TEXT UNIQUE,
+          permission_level TEXT NOT NULL DEFAULT 'read-only',
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          expires_at TEXT NOT NULL,
+          revoked_at TEXT,
+          last_joined_at TEXT,
+          join_count INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
+          FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE,
+          FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_shares_link_token ON session_shares(link_token)",
+      );
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_shares_target_user ON session_shares(target_user_id)",
+      );
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_shares_host ON session_shares(host_id)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create session_shares table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM session_share_participants LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS session_share_participants (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          share_id TEXT NOT NULL,
+          user_id TEXT,
+          guest_label TEXT,
+          joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          left_at TEXT,
+          FOREIGN KEY (share_id) REFERENCES session_shares (id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+      `);
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_session_share_participants_share ON session_share_participants(share_id)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create session_share_participants table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  // --- sync begin ---
+  // Stable per-row identity used to match rows across two independently-
+  // seeded databases (the embedded desktop backend and a connected remote
+  // server) during sync. Local autoincrement ids collide across instances,
+  // so a randomly-generated id is the join key instead. SQLite refuses a
+  // non-constant DEFAULT (e.g. randomblob()) on ALTER TABLE ADD COLUMN for
+  // tables with existing constraints ("Cannot add a column with
+  // non-constant default"), so the column is added as plain nullable TEXT;
+  // repositories set syncId explicitly on insert going forward, and
+  // existing rows are backfilled by the UPDATE loop below.
+  addColumnIfNotExists("ssh_data", "sync_id", "TEXT");
+  addColumnIfNotExists("ssh_credentials", "sync_id", "TEXT");
+  addColumnIfNotExists("ssh_folders", "sync_id", "TEXT");
+  addColumnIfNotExists("snippets", "sync_id", "TEXT");
+  addColumnIfNotExists("snippet_folders", "sync_id", "TEXT");
+  addColumnIfNotExists("vault_profiles", "sync_id", "TEXT");
+  addColumnIfNotExists("dashboard_service_links", "sync_id", "TEXT");
+  // SQLite also rejects NOT NULL DEFAULT CURRENT_TIMESTAMP here for the same
+  // "non-constant default" reason -- add nullable, then backfill from
+  // created_at below and rely on the repository layer to keep it current.
+  addColumnIfNotExists("dashboard_service_links", "updated_at", "TEXT");
+  try {
+    sqlite.exec(
+      "UPDATE dashboard_service_links SET updated_at = created_at WHERE updated_at IS NULL",
+    );
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    databaseLogger.warn(
+      `Failed to backfill dashboard_service_links.updated_at: ${message}`,
+      { operation: "schema_migration", table: "dashboard_service_links" },
+    );
+  }
+  addColumnIfNotExists("homepage_items", "sync_id", "TEXT");
+
+  const syncIdTables = [
+    "ssh_data",
+    "ssh_credentials",
+    "ssh_folders",
+    "snippets",
+    "snippet_folders",
+    "vault_profiles",
+    "dashboard_service_links",
+    "homepage_items",
+  ];
+
+  for (const table of syncIdTables) {
+    try {
+      const result = sqlite
+        .prepare(
+          `UPDATE ${table} SET sync_id = lower(hex(randomblob(16))) WHERE sync_id IS NULL`,
+        )
+        .run();
+      if (result.changes > 0) {
+        databaseLogger.info(
+          `Backfilled sync_id for ${result.changes} row(s) in ${table}`,
+          { operation: "sync_id_backfill", table },
+        );
+      }
+      sqlite.exec(
+        `CREATE UNIQUE INDEX IF NOT EXISTS idx_${table}_sync_id ON ${table}(sync_id)`,
+      );
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      databaseLogger.warn(
+        `Failed to backfill sync_id for ${table}: ${message}`,
+        {
+          operation: "sync_id_backfill",
+          table,
+        },
+      );
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM sync_tombstones LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS sync_tombstones (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          entity_type TEXT NOT NULL,
+          sync_id TEXT NOT NULL,
+          deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      sqlite.exec(
+        "CREATE INDEX IF NOT EXISTS idx_sync_tombstones_user_entity ON sync_tombstones(user_id, entity_type)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create sync_tombstones table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- sync end ---
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",

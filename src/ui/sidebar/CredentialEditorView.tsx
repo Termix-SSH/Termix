@@ -17,6 +17,7 @@ import {
   adminUpdateUserCredential,
 } from "@/main-axios";
 import type { Credential } from "@/types/ui-types";
+import { FolderPathPicker } from "./FolderPathPicker";
 
 type CredentialWithCertificate = Credential & { certPublicKey?: string };
 
@@ -26,14 +27,14 @@ export function CredentialEditorView({
   onBack,
   onSave,
   adminTargetUserId,
+  existingFolders = [],
 }: {
   credential: Credential | null;
   activeTab: string;
   onBack: () => void;
   onSave: (saved: Record<string, unknown>) => void;
-  // When set, saves go to another user's credentials via the admin
-  // impersonation endpoints.
   adminTargetUserId?: string;
+  existingFolders?: string[];
 }) {
   const [credForm, setCredForm] = useState(() => ({
     name: credential?.name ?? "",
@@ -151,10 +152,10 @@ export function CredentialEditorView({
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 {t("hosts.folder")}
               </label>
-              <Input
-                placeholder="e.g. Server Keys"
+              <FolderPathPicker
                 value={credForm.folder}
-                onChange={(e) => setCredField("folder", e.target.value)}
+                onChange={(path) => setCredField("folder", path)}
+                folderPaths={existingFolders}
               />
             </div>
             <div className="flex flex-col gap-1.5 col-span-2">

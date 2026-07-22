@@ -97,6 +97,10 @@ export function createHostEditorForm(
       ? "chain"
       : "single") as "single" | "chain",
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
+    connectionOrigin: (host?.connectionOrigin ?? null) as
+      | "local"
+      | "remote"
+      | null,
     enableTerminal: host?.enableTerminal ?? true,
     enableSessionLogging:
       host?.enableSessionLogging ?? d?.enableSessionLogging ?? true,
@@ -107,6 +111,7 @@ export function createHostEditorForm(
     enableDocker: host?.enableDocker ?? false,
     dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
+    allowSessionSharing: host?.allowSessionSharing ?? true,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
       defaultCredentialId: null as number | null,
@@ -205,7 +210,8 @@ export function createHostEditorForm(
     rdpAuthType: (host?.rdpAuthType ??
       (host?.rdpCredentialId ? "credential" : "direct")) as
       | "direct"
-      | "credential",
+      | "credential"
+      | "none",
     vncAuthType: (host?.vncAuthType ??
       (host?.vncCredentialId ? "credential" : "direct")) as
       | "direct"
@@ -305,6 +311,7 @@ export function buildHostEditorPayload(
     enableDocker: form.enableDocker,
     dockerConfig: form.enableDocker ? form.dockerConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
+    allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
     proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
     defaultPath: form.defaultPath || "/",
@@ -319,6 +326,7 @@ export function buildHostEditorPayload(
       form.socks5ProxyMode === "single" ? form.socks5Password || null : null,
     socks5ProxyChain:
       form.socks5ProxyMode === "chain" ? form.socks5ProxyChain : null,
+    connectionOrigin: form.connectionOrigin,
     enableSsh: protocols.enableSsh,
     enableRdp: protocols.enableRdp,
     enableVnc: protocols.enableVnc,

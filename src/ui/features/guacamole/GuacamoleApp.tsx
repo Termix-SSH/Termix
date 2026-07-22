@@ -8,18 +8,31 @@ import React, {
 import {
   GuacamoleDisplay,
   type GuacamoleDisplayHandle,
+  type GuacamoleTouchMode,
 } from "@/features/guacamole/GuacamoleDisplay.tsx";
 import {
   getGuacamoleTokenFromHost,
   getGuacdStatus,
   getSSHHosts,
   logActivity,
+  isElectron,
 } from "@/main-axios.ts";
+import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
 import { Button } from "@/components/button.tsx";
+import { Input } from "@/components/input.tsx";
+import { PasswordInput } from "@/components/password-input.tsx";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/dialog.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { SSHHost } from "@/types";
 
 interface GuacamoleAppProps {
@@ -32,6 +45,8 @@ interface GuacamoleAppProps {
 export interface GuacamoleAppHandle {
   disconnect: () => void;
   isConnected: () => boolean;
+  openShareModal: () => void;
+  canShare: () => boolean;
 }
 
 const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
@@ -98,7 +113,10 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
 
 interface GuacamoleAppInnerProps {
   hostId: number;
-  hostConfig: Pick<SSHHost, "connectionType" | "guacamoleConfig">;
+  hostConfig: Pick<
+    SSHHost,
+    "connectionType" | "guacamoleConfig" | "rdpAuthType"
+  >;
   hostName: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
@@ -114,45 +132,115 @@ const GuacamoleAppInner = React.forwardRef<
 ) {
   const { t } = useTranslation();
   const [token, setToken] = useState<string | null>(null);
+  const [guacamoleConnectionId, setGuacamoleConnectionId] = useState<
+    string | null
+  >(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [touchMode, setTouchMode] = useState<GuacamoleTouchMode | null>(() =>
+    typeof window !== "undefined" &&
+    (navigator.maxTouchPoints > 0 || "ontouchstart" in window)
+      ? "touchscreen"
+      : null,
+  );
   const displayRef = useRef<GuacamoleDisplayHandle>(null);
+
+  const resolvedProtocolForConnect = (protocol ??
+    hostConfig.connectionType ??
+    "rdp") as "rdp" | "vnc" | "telnet";
+  const needsCredentialPrompt =
+    resolvedProtocolForConnect === "rdp" && hostConfig.rdpAuthType === "none";
+
+  const [promptedCredentials, setPromptedCredentials] = useState<{
+    username: string;
+    password: string;
+  } | null>(null);
+  const [promptOpen, setPromptOpen] = useState(needsCredentialPrompt);
+  const [promptUsername, setPromptUsername] = useState("");
+  const [promptPassword, setPromptPassword] = useState("");
 
   useImperativeHandle(ref, () => ({
     disconnect: () => displayRef.current?.disconnect(),
     isConnected: () => displayRef.current?.isConnected() === true,
+    openShareModal: () => setShareModalOpen(true),
+    canShare: () => guacamoleConnectionId !== null,
   }));
 
   useEffect(() => {
+    if (needsCredentialPrompt && !promptedCredentials) {
+      setPromptOpen(true);
+      return;
+    }
+
     setToken(null);
+    setGuacamoleConnectionId(null);
     setError(null);
-    getGuacdStatus()
-      .then((status) => {
+
+    (async () => {
+      if (isElectron()) {
+        const origin = await resolveConnectionOrigin({
+          connectionType: resolvedProtocolForConnect,
+        });
+        if (origin === "remote") {
+          const remoteConfig = (await window.electronAPI?.invoke?.(
+            "get-remote-sync-config",
+          )) as { serverUrl?: string } | null;
+          if (!remoteConfig?.serverUrl) {
+            setError(t("errors.remoteServerRequired"));
+            return;
+          }
+        }
+      }
+
+      try {
+        const status = await getGuacdStatus();
         if (status.guacd.status !== "connected") {
           setError(t("guacamole.guacdUnavailable"));
           return;
         }
-        return getGuacamoleTokenFromHost(hostId, protocol);
-      })
-      .then((result) => {
+        const result = await getGuacamoleTokenFromHost(
+          hostId,
+          protocol,
+          promptedCredentials ?? undefined,
+        );
         if (result) {
           setToken(result.token);
-          const resolvedProtocol = (protocol ??
-            hostConfig.connectionType ??
-            "rdp") as "rdp" | "vnc" | "telnet";
-          logActivity(resolvedProtocol, hostId, hostName).catch(() => {});
+          setGuacamoleConnectionId(result.guacamoleConnectionId ?? null);
+          logActivity(resolvedProtocolForConnect, hostId, hostName).catch(
+            () => {},
+          );
         }
-      })
-      .catch((err) => setError(err?.message || t("guacamole.failedToConnect")));
-  }, [hostConfig.connectionType, hostId, hostName, protocol, retryCount, t]);
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : t("guacamole.failedToConnect");
+        setError(message || t("guacamole.failedToConnect"));
+      }
+    })();
+  }, [
+    hostId,
+    hostName,
+    protocol,
+    retryCount,
+    t,
+    needsCredentialPrompt,
+    promptedCredentials,
+    resolvedProtocolForConnect,
+  ]);
 
   const handleReconnect = useCallback(() => {
     setConnectionError(null);
     setError(null);
     setToken(null);
+    if (needsCredentialPrompt) {
+      setPromptedCredentials(null);
+      setPromptUsername("");
+      setPromptPassword("");
+      setPromptOpen(true);
+    }
     setRetryCount((c) => c + 1);
-  }, []);
+  }, [needsCredentialPrompt]);
 
   useEffect(() => {
     if (!tabId) return;
@@ -164,6 +252,67 @@ const GuacamoleAppInner = React.forwardRef<
     return () =>
       window.removeEventListener("termix:refresh-guacamole", handler);
   }, [tabId, handleReconnect]);
+
+  if (promptOpen) {
+    return (
+      <Dialog
+        open={promptOpen}
+        onOpenChange={(open) => {
+          if (!open) setPromptOpen(false);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">
+              {t("guacamole.credentialPromptTitle")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {t("guacamole.credentialPromptDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="flex flex-col gap-4 mt-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setPromptedCredentials({
+                username: promptUsername,
+                password: promptPassword,
+              });
+              setPromptOpen(false);
+            }}
+          >
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold">
+                {t("hosts.guac.username")}
+              </label>
+              <Input
+                autoFocus
+                placeholder="Administrator"
+                value={promptUsername}
+                onChange={(e) => setPromptUsername(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold">
+                {t("hosts.guac.password")}
+              </label>
+              <PasswordInput
+                className="h-8 text-xs pr-8"
+                placeholder="••••••••"
+                value={promptPassword}
+                onChange={(e) => setPromptPassword(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-2">
+              <Button type="submit" variant="outline">
+                {t("guacamole.connect")}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (error) {
     return (
@@ -212,10 +361,7 @@ const GuacamoleAppInner = React.forwardRef<
     );
   }
 
-  const resolvedProtocol = (protocol ?? hostConfig.connectionType) as
-    | "rdp"
-    | "vnc"
-    | "telnet";
+  const resolvedProtocol = resolvedProtocolForConnect;
   const configuredDpi = Number(hostConfig.guacamoleConfig?.dpi);
 
   return (
@@ -248,7 +394,7 @@ const GuacamoleAppInner = React.forwardRef<
         </div>
       )}
       <GuacamoleDisplay
-        key={token}
+        key={`${token}-${touchMode}`}
         ref={displayRef}
         connectionConfig={{
           token,
@@ -260,9 +406,25 @@ const GuacamoleAppInner = React.forwardRef<
               : undefined,
         }}
         isVisible={isVisible}
+        touchMode={touchMode}
         onError={(err) => setConnectionError(err)}
       />
-      <GuacamoleToolbar displayRef={displayRef} protocol={resolvedProtocol} />
+      <GuacamoleToolbar
+        displayRef={displayRef}
+        protocol={resolvedProtocol}
+        touchMode={touchMode}
+        onTouchModeChange={setTouchMode}
+      />
+      {shareModalOpen && guacamoleConnectionId && (
+        <ShareSessionModal
+          open={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          hostId={hostId}
+          sessionId={guacamoleConnectionId}
+          protocol={resolvedProtocol}
+          tabInstanceId={tabId}
+        />
+      )}
     </div>
   );
 });
