@@ -39,6 +39,7 @@ interface GuacamoleAppProps {
   hostId?: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
+  isVisible?: boolean;
 }
 
 export interface GuacamoleAppHandle {
@@ -49,7 +50,7 @@ export interface GuacamoleAppHandle {
 }
 
 const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
-  function GuacamoleApp({ hostId, tabId, protocol }, ref) {
+  function GuacamoleApp({ hostId, tabId, protocol, isVisible = true }, ref) {
     const { t } = useTranslation();
     const [hostConfig, setHostConfig] = useState<SSHHost | null>(null);
     const [loading, setLoading] = useState(true);
@@ -103,6 +104,7 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
         hostName={hostConfig.name || hostConfig.ip || String(hostId)}
         tabId={tabId}
         protocol={protocol}
+        isVisible={isVisible}
         ref={ref}
       />
     );
@@ -118,13 +120,14 @@ interface GuacamoleAppInnerProps {
   hostName: string;
   tabId?: string;
   protocol?: "rdp" | "vnc" | "telnet";
+  isVisible: boolean;
 }
 
 const GuacamoleAppInner = React.forwardRef<
   GuacamoleAppHandle,
   GuacamoleAppInnerProps
 >(function GuacamoleAppInner(
-  { hostId, hostConfig, hostName, tabId, protocol },
+  { hostId, hostConfig, hostName, tabId, protocol, isVisible },
   ref,
 ) {
   const { t } = useTranslation();
@@ -402,7 +405,7 @@ const GuacamoleAppInner = React.forwardRef<
               ? configuredDpi
               : undefined,
         }}
-        isVisible={true}
+        isVisible={isVisible}
         touchMode={touchMode}
         onError={(err) => setConnectionError(err)}
       />

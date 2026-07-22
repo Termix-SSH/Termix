@@ -14,7 +14,7 @@
     "format:check": "prettier --check .",
     "biome:check": "biome check biome.json package.json",
     "biome:fix": "biome check --write biome.json package.json",
-    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-xterm-android-ime.cjs",
+    "postinstall": "node scripts/patch-app-builder-lib.cjs && node scripts/patch-guacamole-lite.cjs && node scripts/patch-guacamole-common-js.cjs && node scripts/patch-better-sqlite3.cjs && node scripts/patch-nan.cjs && node scripts/patch-xterm-android-ime.cjs",
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
