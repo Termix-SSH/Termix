@@ -91,9 +91,11 @@ export function PanePreview({
       instanceId: instanceIdRef.current,
     } as TerminalHostConfig;
   } else {
+    const resolvedPort = host.sshPort ?? host.port;
     terminalHostConfig = {
       ...host,
-      sshPort: host.port,
+      port: resolvedPort,
+      sshPort: resolvedPort,
       instanceId: instanceIdRef.current,
     } as TerminalHostConfig;
   }
