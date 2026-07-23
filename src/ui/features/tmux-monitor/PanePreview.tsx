@@ -70,6 +70,36 @@ export function PanePreview({
     setAttachNonce((n) => n + 1);
   }
 
+  // For Tailscale-auth hosts the generic pane-preview attach path can fail
+  // host-reachability checks because the connection is initiated as a plain
+  // TCP/SSH dial rather than through the Tailscale transport that was used for
+  // the interactive terminal.  Building the hostConfig with an explicit
+  // authType and a defensively derived SSH port ensures the backend selects
+  // the correct Tailscale-aware PTY path for both initial attach and reattach.
+  let terminalHostConfig: TerminalHostConfig;
+  if (host.authType === "tailscale") {
+    // Prefer host.sshPort when set (Tailscale SSH can be on a non-standard
+    // port); fall back to the general host.port.
+    const resolvedPort = host.sshPort ?? host.port;
+    terminalHostConfig = {
+      ...host,
+      port: resolvedPort,
+      sshPort: resolvedPort,
+      // Carry authType explicitly to guard against accidental omission
+      // in the spread (e.g. if host object shape changes upstream).
+      authType: "tailscale",
+      instanceId: instanceIdRef.current,
+    } as TerminalHostConfig;
+  } else {
+    const resolvedPort = host.sshPort ?? host.port;
+    terminalHostConfig = {
+      ...host,
+      port: resolvedPort,
+      sshPort: resolvedPort,
+      instanceId: instanceIdRef.current,
+    } as TerminalHostConfig;
+  }
+
   return (
     <>
       <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
@@ -147,13 +177,7 @@ export function PanePreview({
         <CommandHistoryProvider key={attachNonce}>
           <Terminal
             ref={terminalRef}
-            hostConfig={
-              {
-                ...host,
-                sshPort: host.port,
-                instanceId: instanceIdRef.current,
-              } as TerminalHostConfig
-            }
+            hostConfig={terminalHostConfig}
             isVisible={true}
             title={pane.sessionName}
             showTitle={false}
