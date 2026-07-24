@@ -31,7 +31,9 @@ let foundBundle = false;
 
 for (const bundlePath of bundlePaths) {
   if (!fs.existsSync(bundlePath)) {
-    console.log(`[patch-guacamole-common-js] ${bundlePath} not found, skipping`);
+    console.log(
+      `[patch-guacamole-common-js] ${bundlePath} not found, skipping`,
+    );
     continue;
   }
 
