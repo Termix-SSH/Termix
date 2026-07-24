@@ -121,7 +121,7 @@ jobs:
             CHANGES=$(git log --oneline --no-merges "${{ steps.prev.outputs.sha }}..${{ needs.prep.outputs.sha }}" -- . ':!package-lock.json' | sed 's/^/- /')
           fi
           if [ -z "$CHANGES" ]; then
-            CHANGES="- No new commits since the last beta (or this is the first beta build)."
+            CHANGES="- No new commits since the last beta."
           fi
 
           cat > BETA_RELEASE_BODY.md << EOF
