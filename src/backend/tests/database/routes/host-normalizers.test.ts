@@ -160,6 +160,28 @@ describe("stripSensitiveFields", () => {
     expect(result.hasPassword).toBe(false);
     expect(result.hasKey).toBe(false);
   });
+
+  it("strips rdp/vnc/telnet passwords and adds their presence flags", () => {
+    const result = stripSensitiveFields({
+      name: "rdp-box",
+      rdpPassword: "rdp-secret",
+      vncPassword: "vnc-secret",
+      telnetPassword: "telnet-secret",
+    });
+    expect(result.rdpPassword).toBeUndefined();
+    expect(result.vncPassword).toBeUndefined();
+    expect(result.telnetPassword).toBeUndefined();
+    expect(result.hasRdpPassword).toBe(true);
+    expect(result.hasVncPassword).toBe(true);
+    expect(result.hasTelnetPassword).toBe(true);
+  });
+
+  it("marks rdp/vnc/telnet presence flags false when absent", () => {
+    const result = stripSensitiveFields({ name: "rdp-box" });
+    expect(result.hasRdpPassword).toBe(false);
+    expect(result.hasVncPassword).toBe(false);
+    expect(result.hasTelnetPassword).toBe(false);
+  });
 });
 
 describe("transformHostResponse", () => {

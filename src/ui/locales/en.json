@@ -1320,6 +1320,7 @@
       "rdpPort": "RDP Port",
       "username": "Username",
       "password": "Password",
+      "passwordSaved": "Password saved, type to change",
       "domain": "Domain",
       "securityMode": "Security Mode",
       "colorDepth": "Color Depth",

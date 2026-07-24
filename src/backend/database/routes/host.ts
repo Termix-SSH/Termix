@@ -1498,7 +1498,7 @@ router.get(
  *         name: field
  *         schema:
  *           type: string
- *           enum: [password, sudoPassword, vncPassword, key, keyPassword]
+ *           enum: [password, sudoPassword, rdpPassword, vncPassword, telnetPassword, key, keyPassword]
  *     responses:
  *       200:
  *         description: The requested password value.
@@ -1518,7 +1518,9 @@ router.get(
       ![
         "password",
         "sudoPassword",
+        "rdpPassword",
         "vncPassword",
+        "telnetPassword",
         "key",
         "keyPassword",
       ].includes(field)

@@ -251,8 +251,20 @@ export function HostEditorRdpTab({
                     </label>
                     <PasswordInput
                       className="h-8 text-xs pr-8"
-                      placeholder="••••••••"
-                      value={form.rdpPassword}
+                      placeholder={
+                        form.rdpPassword === "existing_rdp_password"
+                          ? t("hosts.guac.passwordSaved")
+                          : "••••••••"
+                      }
+                      value={
+                        form.rdpPassword === "existing_rdp_password"
+                          ? ""
+                          : form.rdpPassword
+                      }
+                      onFocus={() => {
+                        if (form.rdpPassword === "existing_rdp_password")
+                          setField("rdpPassword", "");
+                      }}
                       onChange={(e) => setField("rdpPassword", e.target.value)}
                     />
                   </div>
@@ -1168,8 +1180,20 @@ export function HostEditorVncTab({
                 </label>
                 <PasswordInput
                   className="h-8 text-xs pr-8"
-                  placeholder="••••••••"
-                  value={form.vncPassword}
+                  placeholder={
+                    form.vncPassword === "existing_vnc_password"
+                      ? t("hosts.guac.passwordSaved")
+                      : "••••••••"
+                  }
+                  value={
+                    form.vncPassword === "existing_vnc_password"
+                      ? ""
+                      : form.vncPassword
+                  }
+                  onFocus={() => {
+                    if (form.vncPassword === "existing_vnc_password")
+                      setField("vncPassword", "");
+                  }}
                   onChange={(e) => setField("vncPassword", e.target.value)}
                 />
               </div>
@@ -1722,8 +1746,20 @@ export function HostEditorTelnetTab({
                 </label>
                 <PasswordInput
                   className="h-8 text-xs pr-8"
-                  placeholder="••••••••"
-                  value={form.telnetPassword}
+                  placeholder={
+                    form.telnetPassword === "existing_telnet_password"
+                      ? t("hosts.guac.passwordSaved")
+                      : "••••••••"
+                  }
+                  value={
+                    form.telnetPassword === "existing_telnet_password"
+                      ? ""
+                      : form.telnetPassword
+                  }
+                  onFocus={() => {
+                    if (form.telnetPassword === "existing_telnet_password")
+                      setField("telnetPassword", "");
+                  }}
                   onChange={(e) => setField("telnetPassword", e.target.value)}
                 />
               </div>

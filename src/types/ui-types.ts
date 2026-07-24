@@ -157,6 +157,7 @@ export type Host = {
   rdpCredentialId?: string;
   rdpUser?: string;
   rdpPassword?: string;
+  hasRdpPassword?: boolean;
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
@@ -164,12 +165,14 @@ export type Host = {
   vncAuthType?: "direct" | "credential";
   vncCredentialId?: string;
   vncPassword?: string;
+  hasVncPassword?: boolean;
   vncUser?: string;
 
   telnetAuthType?: "direct" | "credential";
   telnetCredentialId?: string;
   telnetUser?: string;
   telnetPassword?: string;
+  hasTelnetPassword?: boolean;
 
   guacamoleConfig?: Record<string, unknown>;
   forceKeyboardInteractive?: boolean;

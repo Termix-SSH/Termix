@@ -4,12 +4,34 @@ import {
   buildHostEditorPayload,
   type HostProtocols,
 } from "../../sidebar/HostEditorData";
+import type { Host } from "@/types/ui-types";
 
 const sshOnly: HostProtocols = {
   enableSsh: true,
   enableRdp: false,
   enableVnc: false,
   enableTelnet: false,
+};
+
+const rdpOnly: HostProtocols = {
+  enableSsh: false,
+  enableRdp: true,
+  enableVnc: false,
+  enableTelnet: false,
+};
+
+const vncOnly: HostProtocols = {
+  enableSsh: false,
+  enableRdp: false,
+  enableVnc: true,
+  enableTelnet: false,
+};
+
+const telnetOnly: HostProtocols = {
+  enableSsh: false,
+  enableRdp: false,
+  enableVnc: false,
+  enableTelnet: true,
 };
 
 describe("buildHostEditorPayload auth field isolation", () => {
@@ -133,5 +155,77 @@ describe("buildHostEditorPayload auth field isolation", () => {
 
     expect(tc?.sudoPasswordAutoFill).toBe(true);
     expect(tc?.sudoPassword).toBe("sudo-secret");
+  });
+});
+
+describe("RDP/VNC/Telnet password persistence indicator", () => {
+  it("seeds a sentinel value when the host reports a saved rdp password", () => {
+    const host = {
+      hasRdpPassword: true,
+      rdpAuthType: "direct",
+    } as Host;
+
+    const form = createHostEditorForm(host);
+
+    expect(form.rdpPassword).toBe("existing_rdp_password");
+  });
+
+  it("does not send the rdp sentinel back to the backend unchanged", () => {
+    const host = { hasRdpPassword: true, rdpAuthType: "direct" } as Host;
+    const form = { ...createHostEditorForm(host) };
+
+    const payload = buildHostEditorPayload(form, rdpOnly);
+
+    expect(payload.rdpPassword).toBeNull();
+  });
+
+  it("sends a newly typed rdp password", () => {
+    const host = { hasRdpPassword: true, rdpAuthType: "direct" } as Host;
+    const form = {
+      ...createHostEditorForm(host),
+      rdpPassword: "new-rdp-pass",
+    };
+
+    const payload = buildHostEditorPayload(form, rdpOnly);
+
+    expect(payload.rdpPassword).toBe("new-rdp-pass");
+  });
+
+  it("seeds a sentinel value when the host reports a saved vnc password", () => {
+    const host = { hasVncPassword: true, vncAuthType: "direct" } as Host;
+    const form = createHostEditorForm(host);
+
+    expect(form.vncPassword).toBe("existing_vnc_password");
+  });
+
+  it("does not send the vnc sentinel back to the backend unchanged", () => {
+    const host = { hasVncPassword: true, vncAuthType: "direct" } as Host;
+    const form = { ...createHostEditorForm(host) };
+
+    const payload = buildHostEditorPayload(form, vncOnly);
+
+    expect(payload.vncPassword).toBeNull();
+  });
+
+  it("seeds a sentinel value when the host reports a saved telnet password", () => {
+    const host = {
+      hasTelnetPassword: true,
+      telnetAuthType: "direct",
+    } as Host;
+    const form = createHostEditorForm(host);
+
+    expect(form.telnetPassword).toBe("existing_telnet_password");
+  });
+
+  it("does not send the telnet sentinel back to the backend unchanged", () => {
+    const host = {
+      hasTelnetPassword: true,
+      telnetAuthType: "direct",
+    } as Host;
+    const form = { ...createHostEditorForm(host) };
+
+    const payload = buildHostEditorPayload(form, telnetOnly);
+
+    expect(payload.telnetPassword).toBeNull();
   });
 });

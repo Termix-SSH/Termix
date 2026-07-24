@@ -196,15 +196,21 @@ export function createHostEditorForm(
       host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
     rdpCredentialId: host?.rdpCredentialId ?? "",
     rdpUser: host?.rdpUser ?? "",
-    rdpPassword: host?.rdpPassword ?? "",
+    rdpPassword: host?.hasRdpPassword
+      ? "existing_rdp_password"
+      : (host?.rdpPassword ?? ""),
     domain: host?.domain ?? "",
     security: host?.security ?? "",
     ignoreCert: host?.ignoreCert ?? false,
     vncCredentialId: host?.vncCredentialId ?? "",
-    vncPassword: host?.vncPassword ?? "",
+    vncPassword: host?.hasVncPassword
+      ? "existing_vnc_password"
+      : (host?.vncPassword ?? ""),
     vncUser: host?.vncUser ?? "",
     telnetUser: host?.telnetUser ?? "",
-    telnetPassword: host?.telnetPassword ?? "",
+    telnetPassword: host?.hasTelnetPassword
+      ? "existing_telnet_password"
+      : (host?.telnetPassword ?? ""),
     telnetCredentialId:
       host?.telnetCredentialId != null ? String(host.telnetCredentialId) : "",
     rdpAuthType: (host?.rdpAuthType ??
@@ -348,7 +354,9 @@ export function buildHostEditorPayload(
         ? form.rdpUser || null
         : null,
     rdpPassword:
-      protocols.enableRdp && form.rdpAuthType === "direct"
+      protocols.enableRdp &&
+      form.rdpAuthType === "direct" &&
+      form.rdpPassword !== "existing_rdp_password"
         ? form.rdpPassword || null
         : null,
     rdpDomain: form.domain || null,
@@ -362,7 +370,9 @@ export function buildHostEditorPayload(
         ? Number(form.vncCredentialId)
         : null,
     vncPassword:
-      protocols.enableVnc && form.vncAuthType === "direct"
+      protocols.enableVnc &&
+      form.vncAuthType === "direct" &&
+      form.vncPassword !== "existing_vnc_password"
         ? form.vncPassword || null
         : null,
     vncUser:
@@ -381,7 +391,9 @@ export function buildHostEditorPayload(
         ? form.telnetUser || null
         : null,
     telnetPassword:
-      protocols.enableTelnet && form.telnetAuthType === "direct"
+      protocols.enableTelnet &&
+      form.telnetAuthType === "direct" &&
+      form.telnetPassword !== "existing_telnet_password"
         ? form.telnetPassword || null
         : null,
     jumpHosts: form.jumpHosts,

@@ -99,7 +99,9 @@ export async function getHostPassword(
   field:
     | "password"
     | "sudoPassword"
+    | "rdpPassword"
     | "vncPassword"
+    | "telnetPassword"
     | "key"
     | "keyPassword" = "password",
 ): Promise<string | null> {

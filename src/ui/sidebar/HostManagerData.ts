@@ -4,6 +4,9 @@ import type { Host, Credential } from "@/types/ui-types";
 type RawSSHHost = SSHHostWithStatus & {
   hasKey?: boolean;
   hasKeyPassword?: boolean;
+  hasRdpPassword?: boolean;
+  hasVncPassword?: boolean;
+  hasTelnetPassword?: boolean;
 };
 type HostQuickAction = Host["quickActions"][number];
 type HostJumpHost = NonNullable<Host["jumpHosts"]>[number];
@@ -88,6 +91,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       h.rdpCredentialId != null ? String(h.rdpCredentialId) : undefined,
     rdpUser: h.rdpUser,
     rdpPassword: h.rdpPassword ?? "",
+    hasRdpPassword: !!host.hasRdpPassword || !!h.rdpPassword,
     domain: h.rdpDomain,
     security: h.rdpSecurity,
     ignoreCert: h.rdpIgnoreCert ?? false,
@@ -97,6 +101,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     vncCredentialId:
       h.vncCredentialId != null ? String(h.vncCredentialId) : undefined,
     vncPassword: h.vncPassword ?? "",
+    hasVncPassword: !!host.hasVncPassword || !!h.vncPassword,
     vncUser: h.vncUser,
     telnetAuthType:
       (h.telnetAuthType as "direct" | "credential") ??
@@ -105,6 +110,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
       h.telnetCredentialId != null ? String(h.telnetCredentialId) : undefined,
     telnetUser: h.telnetUser,
     telnetPassword: h.telnetPassword ?? "",
+    hasTelnetPassword: !!host.hasTelnetPassword || !!h.telnetPassword,
     quickActions: (h.quickActions ?? []).map((a: HostQuickAction) => ({
       name: a.name,
       snippetId: String(a.snippetId),
