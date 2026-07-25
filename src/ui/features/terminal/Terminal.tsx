@@ -197,6 +197,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
     const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
+    const [mfaPromptMode, setMfaPromptMode] = useState<
+      "totp" | "password" | "menu" | "push"
+    >("totp");
+    const [mfaWaiting, setMfaWaiting] = useState(false);
     const [showAuthDialog, setShowAuthDialog] = useState(false);
     const [authDialogReason, setAuthDialogReason] = useState<
       "no_keyboard" | "auth_failed" | "timeout"
@@ -527,17 +531,25 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function handleTotpSubmit(code: string) {
-      if (webSocketRef.current && code) {
-        if (totpTimeoutRef.current) {
-          clearTimeout(totpTimeoutRef.current);
-          totpTimeoutRef.current = null;
-        }
+      const isPushMode = mfaPromptMode === "push";
+      if (webSocketRef.current && (code || isPushMode)) {
         webSocketRef.current.send(
           JSON.stringify({
             type: isPasswordPrompt ? "password_response" : "totp_response",
             data: { code },
           }),
         );
+        if (isPushMode) {
+          // Server blocks until the phone approval completes; keep the dialog
+          // open in a waiting state rather than closing it immediately. The
+          // existing timeout continues running until "connected" or "error".
+          setMfaWaiting(true);
+          return;
+        }
+        if (totpTimeoutRef.current) {
+          clearTimeout(totpTimeoutRef.current);
+          totpTimeoutRef.current = null;
+        }
         setTotpRequired(false);
         setTotpPrompt("");
         setIsPasswordPrompt(false);
@@ -551,6 +563,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
       setTotpRequired(false);
       setTotpPrompt("");
+      setIsPasswordPrompt(false);
+      setMfaPromptMode("totp");
+      setMfaWaiting(false);
       if (onClose) onClose();
     }
 
@@ -1345,6 +1360,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("terminal.totpCodeLabel"));
             setIsPasswordPrompt(false);
+            setMfaPromptMode("totp");
+            setMfaWaiting(false);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
@@ -1360,10 +1377,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }, 180000);
           } else if (msg.type === "totp_retry") {
             // Existing prompt remains visible while the backend asks for another code.
+            setMfaWaiting(false);
           } else if (msg.type === "password_required") {
+            const promptText: string = msg.prompt || "";
+            const pushPromptPattern =
+              /choose.*push.*totp|press enter.*(push|send)|push notification|authentication by phone/i;
+            const isPush = pushPromptPattern.test(promptText);
+            const isMenu = !isPush && msg.echo === true;
+            const mode: "menu" | "push" | "password" = isPush
+              ? "push"
+              : isMenu
+                ? "menu"
+                : "password";
+
             setTotpRequired(true);
-            setTotpPrompt(msg.prompt || t("common.password"));
+            setTotpPrompt(promptText || t("common.password"));
             setIsPasswordPrompt(true);
+            setMfaPromptMode(mode);
+            setMfaWaiting(false);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
@@ -1371,12 +1402,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             if (totpTimeoutRef.current) {
               clearTimeout(totpTimeoutRef.current);
             }
-            totpTimeoutRef.current = setTimeout(() => {
-              setTotpRequired(false);
-              if (webSocketRef.current) {
-                webSocketRef.current.close();
-              }
-            }, 180000);
+            totpTimeoutRef.current = setTimeout(
+              () => {
+                setTotpRequired(false);
+                if (webSocketRef.current) {
+                  webSocketRef.current.close();
+                }
+              },
+              isPush ? 300000 : 180000,
+            );
           } else if (msg.type === "warpgate_auth_required") {
             setWarpgateAuthRequired(true);
             setWarpgateAuthUrl(msg.url || "");
@@ -2978,6 +3012,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         <TOTPDialog
           isOpen={totpRequired}
           prompt={totpPrompt}
+          mode={mfaPromptMode}
+          waiting={mfaWaiting}
           onSubmit={handleTotpSubmit}
           onCancel={handleTotpCancel}
           backgroundColor={backgroundColor}
