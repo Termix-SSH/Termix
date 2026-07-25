@@ -22,21 +22,27 @@ for (const [network, prefix] of [
 for (const [network, prefix] of [
   ["::", 128],
   ["::1", 128],
-  // IPv4-mapped equivalents of the blocked IPv4 ranges above, expressed
-  // individually rather than as a blanket "::ffff:0:0/96": Node's BlockList
-  // compares IPv4 addresses against their mapped-IPv6 form internally, so a
-  // full "::ffff:0:0/96" entry matches every IPv4 address, not just spoofed
-  // ones passed as literal IPv6 strings.
-  ["::ffff:0.0.0.0", 104],
-  ["::ffff:10.0.0.0", 104],
-  ["::ffff:100.64.0.0", 106],
-  ["::ffff:127.0.0.0", 104],
-  ["::ffff:169.254.0.0", 112],
-  ["::ffff:172.16.0.0", 108],
-  ["::ffff:192.168.0.0", 112],
-  ["::ffff:198.18.0.0", 111],
-  ["::ffff:224.0.0.0", 100],
-  ["::ffff:240.0.0.0", 100],
+  // These mirror the IPv4 ranges above, just written as their
+  // IPv4-mapped-IPv6 form (prefix = 96 + the IPv4 prefix), so that a
+  // spoofed literal like "::ffff:127.0.0.1" gets caught too. We list
+  // them individually instead of one "::ffff:0:0/96" catch-all because
+  // Node's BlockList matches across families through this mapped form
+  // regardless of which `type` you pass to check() — see the
+  // addAddress('123.123.123.123') / check('::ffff:123.123.123.123')
+  // example on https://nodejs.org/api/net.html#class-netblocklist for
+  // the same thing from the other direction. A blanket ::ffff:0:0/96
+  // covers the entire IPv4 space in mapped form, so it silently blocks
+  // every plain IPv4 address too, not just spoofed ones.
+  ["::ffff:0.0.0.0", 104], // 0.0.0.0/8
+  ["::ffff:10.0.0.0", 104], // 10.0.0.0/8
+  ["::ffff:100.64.0.0", 106], // 100.64.0.0/10 (CGNAT)
+  ["::ffff:127.0.0.0", 104], // 127.0.0.0/8
+  ["::ffff:169.254.0.0", 112], // 169.254.0.0/16 (link-local)
+  ["::ffff:172.16.0.0", 108], // 172.16.0.0/12
+  ["::ffff:192.168.0.0", 112], // 192.168.0.0/16
+  ["::ffff:198.18.0.0", 111], // 198.18.0.0/15 (benchmarking)
+  ["::ffff:224.0.0.0", 100], // 224.0.0.0/4 (multicast)
+  ["::ffff:240.0.0.0", 100], // 240.0.0.0/4 (reserved)
   ["fc00::", 7],
   ["fe80::", 10],
   ["ff00::", 8],
@@ -44,7 +50,7 @@ for (const [network, prefix] of [
   blockedAddresses.addSubnet(network, prefix, "ipv6");
 }
 
-function isBlockedAddress(address: string): boolean {
+export function isBlockedAddress(address: string): boolean {
   const family = isIP(address);
   return (
     family === 0 ||
