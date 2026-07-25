@@ -96,7 +96,8 @@ export function AlertsPanel() {
 
   useEffect(() => {
     loadFirings();
-  }, [loadFirings]);
+    loadChannels();
+  }, [loadFirings, loadChannels]);
 
   useEffect(() => {
     if (tab === "rules") loadRules();
