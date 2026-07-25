@@ -65,6 +65,13 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
+import {
+  getUserPreferences,
+  parseCustomKeybindings,
+} from "@/api/open-tabs-api";
+import { findMatchingKeybinding } from "@/lib/keybinding-match";
+import { dispatchKeybindingAction } from "@/lib/keybinding-dispatch";
+import type { CustomKeybinding } from "@/types/keybindings";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
 type HostKeyVerificationData = Omit<
@@ -161,6 +168,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       : themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
+    const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
+    const cachedSnippetsRef = useRef<{ id: number; content: string }[] | null>(
+      null,
+    );
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -2364,11 +2375,73 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [hostConfig.id, hostConfig.instanceId]);
 
     useEffect(() => {
+      let cancelled = false;
+      const loadKeybindings = () => {
+        cachedSnippetsRef.current = null;
+        getUserPreferences()
+          .then((prefs) => {
+            if (!cancelled) {
+              customKeybindingsRef.current = parseCustomKeybindings(
+                prefs.customKeybindings,
+              ).filter((kb) => kb.enabled);
+            }
+          })
+          .catch(() => {
+            // keep previous/empty bindings on failure, non-fatal
+          });
+      };
+      loadKeybindings();
+      window.addEventListener("customKeybindingsChanged", loadKeybindings);
+      return () => {
+        cancelled = true;
+        window.removeEventListener("customKeybindingsChanged", loadKeybindings);
+      };
+    }, []);
+
+    useEffect(() => {
       if (!terminal) return;
+
+      const getSnippetById = async (
+        id: string,
+      ): Promise<{ content: string } | undefined> => {
+        try {
+          if (!cachedSnippetsRef.current) {
+            cachedSnippetsRef.current = (await getSnippets()) as unknown as {
+              id: number;
+              content: string;
+            }[];
+          }
+          const numericId = Number(id);
+          return cachedSnippetsRef.current?.find((s) => s.id === numericId);
+        } catch {
+          return undefined;
+        }
+      };
 
       const handleCustomKey = (e: KeyboardEvent): boolean => {
         if (e.type !== "keydown") {
           return true;
+        }
+
+        // Custom user keybindings take priority over built-in defaults, but
+        // never override autocomplete popup navigation while it is open.
+        if (!showAutocompleteRef.current) {
+          const matched = findMatchingKeybinding(
+            e,
+            customKeybindingsRef.current,
+          );
+          if (matched) {
+            e.preventDefault();
+            e.stopPropagation();
+            dispatchKeybindingAction(matched.action, {
+              terminal,
+              webSocketRef,
+              writeTextToClipboard,
+              readTextFromClipboard,
+              getSnippetById,
+            });
+            return false;
+          }
         }
 
         // Forward global app shortcuts to AppShell directly — xterm swallows

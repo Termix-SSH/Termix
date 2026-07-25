@@ -72,6 +72,7 @@ import {
   Zap,
 } from "lucide-react";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
+import { KeybindingsDialog } from "./KeybindingsDialog";
 import {
   ACCENT_PRESET_COLORS,
   applyAccentColor,
@@ -590,6 +591,7 @@ export function UserProfilePanel({
     const v = localStorage.getItem("commandPaletteShortcutEnabled");
     return v !== null ? v === "true" : true;
   });
+  const [keybindingsDialogOpen, setKeybindingsDialogOpen] = useState(false);
   const [showHostTags, setShowHostTags] = useState(() => {
     const v = localStorage.getItem("showHostTags");
     return v !== null ? v === "true" : true;
@@ -1674,6 +1676,20 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
+            <SettingRow
+              label={t("newUi.sidebar.userProfile.keyboardShortcuts")}
+              description={t(
+                "newUi.sidebar.userProfile.keyboardShortcutsDescription",
+              )}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setKeybindingsDialogOpen(true)}
+              >
+                {t("newUi.sidebar.userProfile.manageShortcuts")}
+              </Button>
+            </SettingRow>
             <div className="flex flex-col gap-1.5 py-3 border-b border-border">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm font-medium leading-snug">
@@ -2600,6 +2616,10 @@ export function UserProfilePanel({
           </div>
         </DialogContent>
       </Dialog>
+      <KeybindingsDialog
+        open={keybindingsDialogOpen}
+        onOpenChange={setKeybindingsDialogOpen}
+      />
     </div>
   );
 }

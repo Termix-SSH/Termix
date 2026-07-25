@@ -1,6 +1,7 @@
 import { authApi } from "@/main-axios";
 import { createTtlRequestCache } from "@/lib/ttl-request-cache";
 import type { TerminalTheme } from "@/lib/terminal-themes";
+import type { CustomKeybinding } from "@/types/keybindings";
 
 // OPEN TABS API
 // ============================================================================
@@ -114,9 +115,22 @@ export interface UserPreferences {
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
   customThemes?: string | null;
+  customKeybindings?: string | null;
 }
 
 export function parseCustomThemes(raw?: string | null): SavedCustomTheme[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function parseCustomKeybindings(
+  raw?: string | null,
+): CustomKeybinding[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);

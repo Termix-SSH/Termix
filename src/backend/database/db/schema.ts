@@ -892,6 +892,7 @@ export const userPreferences = sqliteTable("user_preferences", {
   compactHostView: integer("compact_host_view", { mode: "boolean" }),
   statusColorScheme: text("status_color_scheme"),
   customThemes: text("custom_themes"),
+  customKeybindings: text("custom_keybindings"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
