@@ -32,6 +32,12 @@ const wss = new WebSocketServer({
   port: 30009,
 });
 
+wss.on("error", (error) => {
+  sshLogger.error("Docker console WebSocket server error", error, {
+    operation: "wss_error",
+  });
+});
+
 async function detectShell(
   session: SSHSession,
   containerId: string,

@@ -112,6 +112,12 @@ const wss = new WebSocketServer({
   port: 30002,
 });
 
+wss.on("error", (error) => {
+  sshLogger.error("WebSocket server error", error, {
+    operation: "wss_error",
+  });
+});
+
 /**
  * Auth path for anonymous share-link guests (?shareToken=<linkToken>).
  * Never touches DataCrypto/user credentials - guests join an already-live
@@ -256,6 +262,13 @@ async function handleShareTokenConnection(
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
   let sessionId: string | undefined;
+
+  ws.on("error", (error) => {
+    sshLogger.error("WebSocket connection error", error, {
+      operation: "ws_error",
+      sessionId,
+    });
+  });
 
   const urlObj = new URL(req.url || "", "http://localhost");
   const shareToken = urlObj.searchParams.get("shareToken");

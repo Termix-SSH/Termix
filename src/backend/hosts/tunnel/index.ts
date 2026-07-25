@@ -42,8 +42,20 @@ const c2sRelayWss = new WebSocketServer({
   path: "/ssh/tunnel/c2s/stream",
 });
 
+c2sRelayWss.on("error", (error) => {
+  tunnelLogger.error("C2S relay WebSocket server error", error, {
+    operation: "c2s_relay_wss_error",
+  });
+});
+
 c2sRelayWss.on("connection", (ws, req) => {
   let opened = false;
+
+  ws.on("error", (error) => {
+    tunnelLogger.error("C2S relay WebSocket connection error", error, {
+      operation: "c2s_relay_ws_error",
+    });
+  });
 
   ws.once("message", async (raw) => {
     try {
