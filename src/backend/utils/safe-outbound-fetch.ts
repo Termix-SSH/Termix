@@ -1,48 +1,51 @@
-import { lookup } from "dns";
+import { lookup, type LookupAddress, type LookupAllOptions } from "dns";
 import { BlockList, isIP } from "net";
 import { Agent } from "undici";
 
+type DnsLookupFn = (
+  hostname: string,
+  options: LookupAllOptions,
+  callback: (err: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
+) => void;
+
+type LookupHookCallback = (
+  error: NodeJS.ErrnoException | Error | null,
+  address: string,
+  family: number,
+) => void;
+
 const blockedAddresses = new BlockList();
 
-for (const [network, prefix] of [
+// Derived, not hand-duplicated: Node's BlockList matches addresses across
+// families through their IPv4-mapped-IPv6 form regardless of which `type`
+// you pass to check()/addSubnet() (see the addAddress('123.123.123.123') /
+// check('::ffff:123.123.123.123') example on
+// https://nodejs.org/api/net.html#class-netblocklist). So every IPv4 range
+// below needs an "::ffff:<net>" mirror in the IPv6 list, or a spoofed
+// literal like "::ffff:127.0.0.1" slips through unblocked. Generating the
+// mirror from this list instead of maintaining two lists by hand means the
+// two can't drift out of sync the way they did before.
+const blockedIpv4Ranges = [
   ["0.0.0.0", 8],
   ["10.0.0.0", 8],
-  ["100.64.0.0", 10],
+  ["100.64.0.0", 10], // CGNAT
   ["127.0.0.0", 8],
-  ["169.254.0.0", 16],
+  ["169.254.0.0", 16], // link-local
   ["172.16.0.0", 12],
   ["192.168.0.0", 16],
-  ["198.18.0.0", 15],
-  ["224.0.0.0", 4],
-  ["240.0.0.0", 4],
-] as const) {
+  ["198.18.0.0", 15], // benchmarking
+  ["224.0.0.0", 4], // multicast
+  ["240.0.0.0", 4], // reserved
+] as const;
+
+for (const [network, prefix] of blockedIpv4Ranges) {
   blockedAddresses.addSubnet(network, prefix, "ipv4");
+  blockedAddresses.addSubnet(`::ffff:${network}`, prefix + 96, "ipv6");
 }
 
 for (const [network, prefix] of [
   ["::", 128],
   ["::1", 128],
-  // These mirror the IPv4 ranges above, just written as their
-  // IPv4-mapped-IPv6 form (prefix = 96 + the IPv4 prefix), so that a
-  // spoofed literal like "::ffff:127.0.0.1" gets caught too. We list
-  // them individually instead of one "::ffff:0:0/96" catch-all because
-  // Node's BlockList matches across families through this mapped form
-  // regardless of which `type` you pass to check() — see the
-  // addAddress('123.123.123.123') / check('::ffff:123.123.123.123')
-  // example on https://nodejs.org/api/net.html#class-netblocklist for
-  // the same thing from the other direction. A blanket ::ffff:0:0/96
-  // covers the entire IPv4 space in mapped form, so it silently blocks
-  // every plain IPv4 address too, not just spoofed ones.
-  ["::ffff:0.0.0.0", 104], // 0.0.0.0/8
-  ["::ffff:10.0.0.0", 104], // 10.0.0.0/8
-  ["::ffff:100.64.0.0", 106], // 100.64.0.0/10 (CGNAT)
-  ["::ffff:127.0.0.0", 104], // 127.0.0.0/8
-  ["::ffff:169.254.0.0", 112], // 169.254.0.0/16 (link-local)
-  ["::ffff:172.16.0.0", 108], // 172.16.0.0/12
-  ["::ffff:192.168.0.0", 112], // 192.168.0.0/16
-  ["::ffff:198.18.0.0", 111], // 198.18.0.0/15 (benchmarking)
-  ["::ffff:224.0.0.0", 100], // 224.0.0.0/4 (multicast)
-  ["::ffff:240.0.0.0", 100], // 240.0.0.0/4 (reserved)
   ["fc00::", 7],
   ["fe80::", 10],
   ["ff00::", 8],
@@ -56,6 +59,42 @@ export function isBlockedAddress(address: string): boolean {
     family === 0 ||
     blockedAddresses.check(address, family === 4 ? "ipv4" : "ipv6")
   );
+}
+
+// Extracted so the blocklist decision can be tested directly against a
+// fake DNS resolver, instead of only through a real fetch()/Agent call —
+// the actual bug here lived entirely in this callback, several layers
+// below where undici's own "fetch failed" wrapping would otherwise hide it.
+export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
+  return function lookupHook(
+    host: string,
+    lookupOptions: LookupAllOptions,
+    callback: LookupHookCallback,
+  ): void {
+    dnsLookup(
+      host,
+      { ...lookupOptions, all: true, verbatim: true },
+      (error, addresses) => {
+        if (error) return callback(error, "", 0);
+        if (!addresses.length) {
+          return callback(
+            new Error("DNS resolution returned no addresses"),
+            "",
+            0,
+          );
+        }
+        if (addresses.some(({ address }) => isBlockedAddress(address))) {
+          return callback(
+            new Error("Private destinations are not allowed"),
+            "",
+            0,
+          );
+        }
+        const selected = addresses[0];
+        callback(null, selected.address, selected.family);
+      },
+    );
+  };
 }
 
 export async function safeOutboundFetch(
@@ -78,27 +117,7 @@ export async function safeOutboundFetch(
 
   const dispatcher = new Agent({
     connect: {
-      lookup(host, lookupOptions, callback) {
-        lookup(
-          host,
-          { ...lookupOptions, all: true, verbatim: true },
-          (error, addresses) => {
-            if (error) return callback(error, "", 0);
-            if (
-              !addresses.length ||
-              addresses.some(({ address }) => isBlockedAddress(address))
-            ) {
-              return callback(
-                new Error("Private destinations are not allowed"),
-                "",
-                0,
-              );
-            }
-            const selected = addresses[0];
-            callback(null, selected.address, selected.family);
-          },
-        );
-      },
+      lookup: createDnsLookupHook(),
     },
   });
 
