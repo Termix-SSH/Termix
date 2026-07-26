@@ -842,7 +842,9 @@ app.use((_req, res, next) => {
   next();
 });
 
-// Internal endpoint — only accepts calls from localhost.
+// Internal endpoint — only accepts calls from localhost. Registered before
+// the auth middleware since it's a service-to-service call authenticated by
+// IP + shared secret, not a user JWT.
 // Used by the main backend to notify the metrics service of SSH login events.
 app.post("/internal/login-alert", async (req, res) => {
   const remoteIp = req.socket.remoteAddress;
