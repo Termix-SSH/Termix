@@ -69,4 +69,6 @@ https://youtu.be/c3UD4q2jW_8
 - Guacamole tab showing "connecting" instead of rendering the desktop
 - Fixed tmux not using Tailscale when starting connections
 - Fixed an invalid websocket frame from causing code 10006 crash triggering restart loop
+- Remove chacha20-poly1305 without native ssh2 binding
+- Corrected SSRF blocklist from false-positive on all IPv4
 <!-- /BUG_FIXES -->
