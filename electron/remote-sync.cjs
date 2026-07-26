@@ -230,8 +230,18 @@ class RemoteSyncEngine {
       return this.status;
     }
     if (!this.localJwt) {
-      // Local login hasn't handed us a token yet (e.g. very early after
-      // boot) -- skip this tick rather than fail loudly.
+      // Local login hasn't handed us a token yet -- this is expected for the
+      // first tick or two right after a cold boot (renderer hasn't finished
+      // its own session check yet), but if it never arrives (e.g. a gap in
+      // whichever code path establishes the local session), sync would
+      // otherwise silently no-op forever with no visible error. Surface it
+      // as a normal, non-alarming "not synced yet" status rather than
+      // leaving lastSyncedAt/lastError untouched.
+      this.updateStatus({
+        connected: true,
+        syncing: false,
+        lastError: "Waiting for local session",
+      });
       return this.status;
     }
 

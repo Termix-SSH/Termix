@@ -214,7 +214,18 @@ function App() {
         if (isElectron()) {
           try {
             const token = await getCurrentToken();
-            if (token) localStorage.setItem("jwt", token);
+            if (token) {
+              localStorage.setItem("jwt", token);
+              // Remote Sync's engine (main process) needs this local JWT to
+              // authenticate against the embedded backend during sync, same
+              // as a fresh login provides via handleLogin below -- a session
+              // restore (the common case on every normal launch) must hand
+              // it over too, or sync silently never runs after the first
+              // app restart.
+              window.electronAPI
+                ?.invoke?.("notify-local-login", token)
+                .catch(() => {});
+            }
           } catch {
             // Non-fatal: WebSocket connections will fall back to cookie auth
           }

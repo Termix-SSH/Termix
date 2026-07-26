@@ -1853,9 +1853,13 @@ router.post(
  *         description: Not authenticated.
  */
 router.get("/me/token", authenticateJWT, (req: Request, res: Response) => {
-  const token = (req as Request & { cookies: Record<string, string> }).cookies
-    ?.jwt;
-  res.json({ token: token || null });
+  // authenticateJWT accepts either the jwt cookie or an Authorization:
+  // Bearer header (see auth-manager.ts's createAuthMiddleware) -- this must
+  // check both too, or a request that only carried the header (e.g. the
+  // Electron renderer's own axios interceptor, which always attaches a
+  // stored localStorage JWT as a Bearer header) would pass authentication
+  // here but still get back a null token.
+  res.json({ token: extractBearerOrCookieToken(req) ?? null });
 });
 
 /**
