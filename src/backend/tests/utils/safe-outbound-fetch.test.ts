@@ -78,7 +78,9 @@ describe("createDnsLookupHook", () => {
   it("rejects a private address with the private-destination error", () => {
     const callback = runHook([{ address: "192.168.1.1", family: 4 }]);
     expect(callback).toHaveBeenCalledWith(
-      expect.objectContaining({ message: "Private destinations are not allowed" }),
+      expect.objectContaining({
+        message: "Private destinations are not allowed",
+      }),
       "",
       0,
     );

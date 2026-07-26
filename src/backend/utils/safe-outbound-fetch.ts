@@ -5,7 +5,10 @@ import { Agent } from "undici";
 type DnsLookupFn = (
   hostname: string,
   options: LookupAllOptions,
-  callback: (err: NodeJS.ErrnoException | null, addresses: LookupAddress[]) => void,
+  callback: (
+    err: NodeJS.ErrnoException | null,
+    addresses: LookupAddress[],
+  ) => void,
 ) => void;
 
 type LookupHookCallback = (
