@@ -191,6 +191,20 @@ Built-in support ~30 languages (managed by [Crowdin](https://docs.termix.site/tr
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**Session Sharing:**
+Share a live terminal, RDP, VNC, or Telnet session with others in real time. Share via a link (joined anonymously, no account needed) or with a specific Termix user, and choose read-only or read-write access. Shares can expire automatically or be revoked at any time, and session sharing can be toggled globally or per-host.
+
+</td>
+<td width="50%" valign="top">
+
+**Desktop Standalone + 2-Way Sync:**
+The Electron desktop app runs fully standalone with its own local backend and database, no server required. Optionally connect it to a remote Termix server for automatic two-way sync of hosts, credentials, snippets, and more, and choose whether SSH connections are started locally or through the remote server.
+
+</td>
+</tr>
 </table>
 
 <br />

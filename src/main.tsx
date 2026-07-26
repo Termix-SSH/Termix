@@ -186,6 +186,9 @@ function App() {
   // When session-verified, Auth must not mount during the transition — it would trigger
   // silent OIDC redirect and cause an infinite refresh loop.
   const fadingInFromLoginRef = useRef(false);
+  // Dedupes concurrent handleLogout() calls within the same tick -- see
+  // handleLogout for why phase state alone isn't sufficient for this.
+  const loggingOutRef = useRef(false);
 
   useEffect(() => {
     const savedAccent = localStorage.getItem("termix-accent");
@@ -259,6 +262,7 @@ function App() {
   }, [phase, verifyRetryCount]);
 
   function handleLogin(u: string) {
+    loggingOutRef.current = false;
     setAuthUsername(u);
     fadingInFromLoginRef.current = true;
     setPhase("fading-in");
@@ -275,11 +279,24 @@ function App() {
   }
 
   function handleLogout() {
+    // A single background hiccup can trigger several independent 401s at
+    // once (e.g. a burst of unrelated polls all failing together in the
+    // same tick), each calling this. React batches the resulting setPhase
+    // calls, so checking `phase` here can't distinguish the first call in
+    // a batch from the second -- both would see the same pre-update value
+    // and both would proceed, each overwriting timerRef with a fresh
+    // 450ms timer. A steady trickle of these could keep resetting the
+    // countdown so the transition never actually completes, which looks
+    // exactly like "nothing happens." loggingOutRef is synchronous and
+    // isn't subject to batching, so it correctly dedupes within one tick.
+    if (loggingOutRef.current) return;
+    loggingOutRef.current = true;
     clearStoredAuth();
     setPhase("fading-out");
     timerRef.current = setTimeout(() => {
       setAuthUsername("");
       setPhase("idle-auth");
+      loggingOutRef.current = false;
     }, 450);
   }
 

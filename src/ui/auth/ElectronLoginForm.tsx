@@ -215,7 +215,7 @@ export function ElectronLoginForm({
   const isEmbeddedServer = serverUrl.includes("localhost:30001");
 
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-background flex flex-col">
+    <div className="relative w-full h-full bg-background flex flex-col">
       {isAuthenticating && (
         <div className="absolute inset-0 flex items-center justify-center bg-background z-50">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -223,7 +223,7 @@ export function ElectronLoginForm({
       )}
 
       {!isAuthenticating && (
-        <div className="flex items-center justify-between p-4 bg-background border-b border-border">
+        <div className="flex items-center justify-between p-4 pr-12 bg-background border-b border-border">
           <button
             onClick={onChangeServer}
             className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"

@@ -1890,14 +1890,14 @@ router.get("/setup-required", async (req, res) => {
  * /users/internal/auto-session:
  *   post:
  *     summary: Mint a session for the sole local desktop user
- *     description: Used by the Electron desktop app to skip the login form entirely when running standalone against the embedded local backend. Only available over loopback and only when exactly one user exists locally -- a synced or otherwise multi-user install never satisfies this and falls through to a normal login screen instead. The sole local user is logged in regardless of whether it has a password, OIDC identity, or TOTP configured, since machine access is this endpoint's actual trust boundary.
+ *     description: Used by the Electron desktop app to skip the login form entirely when running standalone against the embedded local backend. Only available over loopback. Logs in as the sole local user regardless of its credentials; if the local database has more than one user (e.g. repeated manual registration), deterministically logs in as the admin account, or the earliest-registered account if none is admin -- a login form must never appear for the local backend under any circumstance. Only declines if zero local users exist at all, which normal desktop provisioning never produces. Provisions the resolved user's data-encryption key if missing before minting the session, matching every other login path -- self-heals an account that previously ended up with a valid session but no usable encryption key.
  *     tags:
  *       - Users
  *     responses:
  *       200:
  *         description: Session created.
  *       403:
- *         description: Forbidden, or more than one user exists.
+ *         description: Forbidden, or no local users exist.
  *       500:
  *         description: Failed to create session.
  */
@@ -1916,17 +1916,10 @@ router.post("/internal/auto-session", async (req, res) => {
     const userRecord = resolveDesktopAutoSessionUser(allUsers);
     if (!userRecord) {
       return res.status(403).json({
-        error: "Auto-session is only available for a single local user",
+        error: "No local users exist",
       });
     }
-
-    // If the caller already holds a still-valid session for this same
-    // user (e.g. a duplicate call racing the first one, such as React
-    // StrictMode's double-invoke of effects in dev), reuse it instead of
-    // minting a fresh one. Minting unconditionally here would set a new
-    // `jwt` cookie on every call; since the auth middleware prefers the
-    // cookie over the Authorization header, a second mint silently
-    // invalidates whatever token the app already started using.
+    await authManager.registerUser(userRecord.id);
     const existingToken = extractBearerOrCookieToken(req);
     if (existingToken) {
       const existingPayload = await authManager.verifyJWTToken(existingToken);

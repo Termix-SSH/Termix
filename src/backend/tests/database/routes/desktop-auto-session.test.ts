@@ -15,6 +15,7 @@ function makeUser(overrides: Partial<UserRecord> = {}): UserRecord {
     isOidc: false,
     totpEnabled: false,
     isAdmin: false,
+    registeredAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   } as UserRecord;
 }
@@ -113,12 +114,33 @@ describe("resolveDesktopAutoSessionUser", () => {
     expect(resolveDesktopAutoSessionUser([])).toBeNull();
   });
 
-  it("declines when more than one user exists", () => {
-    expect(
-      resolveDesktopAutoSessionUser([
-        makeUser({ id: "user-1" }),
-        makeUser({ id: "user-2" }),
-      ]),
-    ).toBeNull();
+  it("never declines for a multi-user local database -- prefers the admin account", () => {
+    const admin = makeUser({
+      id: "user-2",
+      isAdmin: true,
+      registeredAt: "2026-02-01T00:00:00.000Z",
+    });
+    const result = resolveDesktopAutoSessionUser([
+      makeUser({
+        id: "user-1",
+        isAdmin: false,
+        registeredAt: "2026-01-01T00:00:00.000Z",
+      }),
+      admin,
+    ]);
+    expect(result).toBe(admin);
+  });
+
+  it("falls back to the earliest-registered account when no admin exists", () => {
+    const earliest = makeUser({
+      id: "user-1",
+      registeredAt: "2026-01-01T00:00:00.000Z",
+    });
+    const result = resolveDesktopAutoSessionUser([
+      makeUser({ id: "user-2", registeredAt: "2026-03-01T00:00:00.000Z" }),
+      earliest,
+      makeUser({ id: "user-3", registeredAt: "2026-02-01T00:00:00.000Z" }),
+    ]);
+    expect(result).toBe(earliest);
   });
 });

@@ -23,7 +23,21 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
 
   const userRepository = createCurrentUserRepository();
   const existingCount = await userRepository.countAll();
-  if (existingCount > 0) return;
+  if (existingCount > 0) {
+    const allUsers = await userRepository.listAll();
+    for (const user of allUsers) {
+      try {
+        await AuthManager.getInstance().registerUser(user.id);
+      } catch (dekError) {
+        systemLogger.error(
+          "Failed to verify/provision data-encryption key for existing user",
+          dekError,
+          { operation: "desktop_dek_healing", userId: user.id },
+        );
+      }
+    }
+    return;
+  }
 
   const id = crypto.randomUUID();
   const { isFirstUser } = await userRepository.createFirstLocalUser({

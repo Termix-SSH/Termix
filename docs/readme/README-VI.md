@@ -191,6 +191,20 @@ Ho tro tich hop khoang 30 ngon ngu (duoc quan ly boi [Crowdin](https://docs.term
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**Chia Se Phien:**
+Chia se mot phien terminal, RDP, VNC, hoac Telnet truc tiep voi nguoi khac theo thoi gian thuc. Chia se qua lien ket (tham gia an danh, khong can tai khoan) hoac voi mot nguoi dung Termix cu the, va chon quyen truy cap chi doc hoac doc/ghi. Cac lien ket chia se co the tu dong het han hoac bi thu hoi bat cu luc nao, va tinh nang chia se phien co the duoc bat/tat toan cuc hoac theo tung host.
+
+</td>
+<td width="50%" valign="top">
+
+**Ung Dung Desktop Doc Lap + Dong Bo 2 Chieu:**
+Ung dung desktop Electron chay hoan toan doc lap voi backend va co so du lieu cuc bo rieng, khong can may chu. Tuy chon ket noi voi may chu Termix tu xa de tu dong dong bo 2 chieu cac host, thong tin dang nhap, doan ma va nhieu hon nua, va chon xem cac ket noi SSH duoc khoi tao cuc bo hay thong qua may chu tu xa.
+
+</td>
+</tr>
 </table>
 
 <br />

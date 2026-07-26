@@ -191,6 +191,20 @@ Integrierte Unterstutzung fur ca. 30 Sprachen (verwaltet uber [Crowdin](https://
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**Sitzungsfreigabe:**
+Teilen Sie eine Live-Terminal-, RDP-, VNC- oder Telnet-Sitzung in Echtzeit mit anderen. Freigabe uber einen Link (anonymer Beitritt, kein Konto erforderlich) oder mit einem bestimmten Termix-Benutzer, mit Wahl zwischen Nur-Lese- oder Lese-/Schreibzugriff. Freigaben konnen automatisch ablaufen oder jederzeit widerrufen werden, und die Sitzungsfreigabe kann global oder pro Host umgeschaltet werden.
+
+</td>
+<td width="50%" valign="top">
+
+**Eigenstandiger Desktop + bidirektionale Synchronisierung:**
+Die Electron-Desktop-App lauft vollstandig eigenstandig mit eigenem lokalem Backend und eigener Datenbank, kein Server erforderlich. Optional mit einem entfernten Termix-Server verbinden fur automatische bidirektionale Synchronisierung von Hosts, Zugangsdaten, Snippets und mehr, mit der Wahl, ob SSH-Verbindungen lokal oder uber den entfernten Server gestartet werden.
+
+</td>
+</tr>
 </table>
 
 <br />

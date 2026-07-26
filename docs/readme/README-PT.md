@@ -191,6 +191,20 @@ Suporte integrado para aproximadamente 30 idiomas (gerenciado pelo [Crowdin](htt
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**Compartilhamento de sessao:**
+Compartilhe uma sessao de terminal, RDP, VNC ou Telnet ao vivo com outras pessoas em tempo real. Compartilhe por meio de um link (entrada anonima, sem necessidade de conta) ou com um usuario especifico do Termix, e escolha acesso somente leitura ou leitura/gravacao. Os compartilhamentos podem expirar automaticamente ou ser revogados a qualquer momento, e o compartilhamento de sessao pode ser ativado globalmente ou por host.
+
+</td>
+<td width="50%" valign="top">
+
+**Aplicativo de desktop autonomo + sincronizacao bidirecional:**
+O aplicativo de desktop Electron funciona de forma totalmente autonoma com seu proprio backend e banco de dados locais, sem necessidade de servidor. Opcionalmente, conecte-o a um servidor Termix remoto para sincronizacao bidirecional automatica de hosts, credenciais, snippets e muito mais, e escolha se as conexoes SSH sao iniciadas localmente ou por meio do servidor remoto.
+
+</td>
+</tr>
 </table>
 
 <br />

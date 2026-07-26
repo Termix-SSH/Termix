@@ -112,6 +112,18 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
   };
 
   const isConnected = !!config?.serverUrl;
+  const connectedToText = config?.serverUrl
+    ? t("remoteSync.connectedTo", { url: config.serverUrl })
+    : "";
+  const connectionSubtitleText = status?.needsReauth
+    ? t("remoteSync.needsReauth")
+    : status?.lastError
+      ? t("remoteSync.syncError", { message: status.lastError })
+      : status?.lastSyncedAt
+        ? t("remoteSync.lastSynced", {
+            time: new Date(status.lastSyncedAt).toLocaleString(),
+          })
+        : t("remoteSync.neverSynced");
 
   return (
     <div className="flex flex-col gap-4">
@@ -124,27 +136,21 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
           {t("remoteSync.description")}
         </p>
 
-        <div className="flex items-center justify-between border-t border-border pt-3">
-          <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <div className="flex flex-col gap-0.5 min-w-0">
             {isConnected ? (
               <>
-                <span className="text-xs font-medium">
-                  {t("remoteSync.connectedTo", { url: config.serverUrl })}
+                <span
+                  className="text-xs font-medium break-all"
+                  title={connectedToText}
+                >
+                  {connectedToText}
                 </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {status?.needsReauth
-                    ? t("remoteSync.needsReauth")
-                    : status?.lastError
-                      ? t("remoteSync.syncError", {
-                          message: status.lastError,
-                        })
-                      : status?.lastSyncedAt
-                        ? t("remoteSync.lastSynced", {
-                            time: new Date(
-                              status.lastSyncedAt,
-                            ).toLocaleString(),
-                          })
-                        : t("remoteSync.neverSynced")}
+                <span
+                  className="text-[10px] text-muted-foreground break-words"
+                  title={connectionSubtitleText}
+                >
+                  {connectionSubtitleText}
                 </span>
               </>
             ) : (
@@ -154,7 +160,7 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
             {isConnected ? (
               <>
                 {status?.needsReauth && (
@@ -244,7 +250,7 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
         open={step === "picker"}
         onOpenChange={(open) => !open && setStep("idle")}
       >
-        <DialogContent className="bg-card border border-border max-w-md">
+        <DialogContent className="bg-card border border-border sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="sr-only">
               {t("remoteSync.title")}
@@ -262,8 +268,20 @@ export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
         open={step === "login"}
         onOpenChange={(open) => !open && setStep("idle")}
       >
-        <DialogContent className="bg-card border border-border max-w-4xl h-[80vh] flex flex-col p-0">
-          <DialogHeader className="p-4 pb-0">
+        <DialogContent
+          className="bg-card border border-border sm:max-w-4xl h-[80vh] flex flex-col p-0 gap-0"
+          // The entire dialog body is a cross-document iframe (the remote
+          // server's own login page). Radix's default "outside interaction"
+          // dismiss can't attribute clicks inside a different document to
+          // this dialog's content tree, so without this it treats a click
+          // on the iframe's own login button as an outside click and closes
+          // the dialog instantly, before any auth round-trip even starts --
+          // this is what looked like the login button silently doing
+          // nothing. Escape and the explicit X button still close it.
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="sr-only">
             <DialogTitle>
               {t("remoteSync.signInTitle", { url: pendingServerUrl })}
             </DialogTitle>
