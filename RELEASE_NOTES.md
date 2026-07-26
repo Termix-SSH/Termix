@@ -1,12 +1,12 @@
 <!-- SUMMARY -->
 
-Standalone-first Electron desktop app with optional remote sync, shared/multiplayer terminal and remote desktop sessions, SSH MFA support, custom key shortcuts, expanded host and credential sharing, plus 20+ bug fixes across terminal, RDP/VNC, mobile, and auth.
+Standalone-first Electron desktop app with optional remote sync, shared/multiplayer terminal and remote desktop sessions, improved SSH MFA support, custom key shortcuts, bug fixes across terminal, RDP/VNC, mobile, and auth.
 
 <!-- /SUMMARY -->
 
 <!-- YOUTUBE -->
 
-https://youtu.be/c3UD4q2jW_8
+https://youtu.be/g0QjNdV3YYY
 
 <!-- /YOUTUBE -->
 
