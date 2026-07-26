@@ -1079,7 +1079,7 @@ export function HostItem({
 
         {/* Connection buttons — always visible in click-tray mode, inside hover tray otherwise */}
         {shouldUseClickTray && !selectionMode && (
-          <div className="flex items-center flex-wrap gap-1 pl-2 pb-1">
+          <div className="flex items-center flex-wrap gap-1 pl-2">
             {getSshActions(host).map(({ type, icon: Icon, label }) => (
               <button
                 key={type}
@@ -1195,7 +1195,7 @@ export function HostItem({
               </div>
             )}
 
-          <div className="flex flex-col gap-0.5 pt-1.5 pl-2 pb-1">
+          <div className="flex flex-col gap-0.5 pl-2">
             {/* Connection buttons — only shown here in hover mode */}
             {!shouldUseClickTray && (
               <div className="flex items-center flex-wrap gap-1">
