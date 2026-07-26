@@ -820,7 +820,62 @@ function getBackendDataDir() {
   return dataDir;
 }
 
+function getBackendPidFilePath() {
+  return path.join(app.getPath("userData"), "backend.pid");
+}
+
+// If the app was previously killed abnormally (crash, force-quit, Task
+// Manager) rather than through the normal quit flow, will-quit never fires
+// and stopBackendServer() never runs -- the forked backend child is a
+// genuinely separate OS process on Windows/mac/Linux, so it keeps running
+// and holding every port the backend binds (30001, 30003-30008, 30010,
+// 30012...). Every subsequent launch's own backend then fails outright
+// with EADDRINUSE and the app is stuck until something manually kills the
+// orphan. Reap any such leftover process, identified by PID file, before
+// spawning a new one.
+function reapOrphanedBackendProcess() {
+  const pidFilePath = getBackendPidFilePath();
+  let recordedPid;
+  try {
+    recordedPid = parseInt(fs.readFileSync(pidFilePath, "utf8").trim(), 10);
+  } catch {
+    return;
+  }
+  if (!Number.isInteger(recordedPid) || recordedPid <= 0) return;
+
+  try {
+    // Signal 0 does not kill the process -- it only checks whether a
+    // process with this PID exists and is signalable, throwing ESRCH if
+    // not. This avoids killing an unrelated process that happens to have
+    // reused the same PID since the last run.
+    process.kill(recordedPid, 0);
+  } catch {
+    // No live process at that PID; nothing to reap.
+    try {
+      fs.unlinkSync(pidFilePath);
+    } catch {
+      // already absent
+    }
+    return;
+  }
+
+  logToFile(
+    `Found orphaned backend process from a previous session (pid ${recordedPid}), terminating it before starting a new one`,
+  );
+  try {
+    process.kill(recordedPid, "SIGKILL");
+  } catch {
+    // already gone
+  }
+  try {
+    fs.unlinkSync(pidFilePath);
+  } catch {
+    // already absent
+  }
+}
+
 function startBackendServer() {
+  reapOrphanedBackendProcess();
   return new Promise((resolve) => {
     const { entryPath, backendCwd } = getBackendPaths();
 
@@ -862,6 +917,11 @@ function startBackendServer() {
     });
 
     logToFile("Backend process spawned, pid:", backendProcess.pid);
+    try {
+      fs.writeFileSync(getBackendPidFilePath(), String(backendProcess.pid));
+    } catch {
+      // Non-fatal: only means a future crash won't self-heal via reap.
+    }
 
     let resolved = false;
     const readyTimeout = setTimeout(() => {
@@ -893,6 +953,7 @@ function startBackendServer() {
         backendStartFailed = true;
       }
       backendProcess = null;
+      clearBackendPidFile();
       if (!resolved) {
         resolved = true;
         clearTimeout(readyTimeout);
@@ -910,6 +971,14 @@ function startBackendServer() {
       }
     });
   });
+}
+
+function clearBackendPidFile() {
+  try {
+    fs.unlinkSync(getBackendPidFilePath());
+  } catch {
+    // already absent
+  }
 }
 
 function stopBackendServer() {
@@ -934,6 +1003,7 @@ function stopBackendServer() {
   backendProcess.on("exit", () => {
     clearTimeout(forceKillTimeout);
     backendProcess = null;
+    clearBackendPidFile();
   });
 }
 

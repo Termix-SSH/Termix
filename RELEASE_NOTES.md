@@ -12,12 +12,12 @@ https://youtu.be/c3UD4q2jW_8
 
 <!-- UPDATE_LOG -->
 
-- Added simple telemetrics to PostHog (user count, total hosts across users, and version metrics)
-- Reworked Electron desktop app to run standalone-first with a now optional sync to a remote Termix server
-- Added support for starting connections locally or from the remote server on desktop app
-- Added support for custom key shortcuts
-- Added support for more MFA types (SSH-only)
-- Added multiplayer/shared sessions for terminals and remote desktop (share via link or user)
+- Added simple telemetrics to PostHog (user count, total hosts across users, and version metrics).
+- Reworked Electron desktop app to run standalone-first with a now optional sync to a remote Termix server.
+- Added support for starting connections locally or from the remote server on desktop app.
+- Added support for custom key shortcuts.
+- Added support for more MFA types (SSH-only).
+- Added multiplayer/shared sessions for terminals and remote desktop (share via link or user).
 - Added support for logging into SSH hosts that require multi-factor authentication (like Duo or JumpCloud push/TOTP prompts).
 - Added the option to convert a Quick Connect session into a saved host after connecting.
 - Added an export option for sharing host entries without credentials, so a host list can be shared without leaking passwords or keys.
@@ -36,7 +36,6 @@ https://youtu.be/c3UD4q2jW_8
 - Added the ability to share entire folders of hosts with other users instead of sharing hosts one by one.
 - Added the ability to make folders of hosts available to specific users instead of everyone recreating them.
 - Reworked SSH credentials to support both a password and an SSH key on the same credential, with an option to auto fill the password when prompted.
-- Added an option to add a custom background image to the terminal window.
 - Added a custom group claim option for OIDC login, useful for identity providers like Zitadel that don't use a plain "groups" claim.
 <!-- /UPDATE_LOG -->
 
@@ -65,9 +64,10 @@ https://youtu.be/c3UD4q2jW_8
 - Fixed SSH lines like "[username@host]" being wrongly highlighted as a log level and breaking output formatting.
 - Fixed RDP touch mode on Android not registering taps as clicks.
 - Fixed VNC connections still failing due to a guacd protocol version mismatch.
-- Guacamole tab showing "connecting" instead of rendering the desktop
-- Fixed tmux not using Tailscale when starting connections
-- Fixed an invalid websocket frame from causing code 10006 crash triggering restart loop
-- Remove chacha20-poly1305 without native ssh2 binding
-- Corrected SSRF blocklist from false-positive on all IPv4
+- Guacamole tab showing "connecting" instead of rendering the desktop.
+- Fixed tmux not using Tailscale when starting connections.
+- Fixed an invalid websocket frame from causing code 10006 crash triggering restart loop.
+- Remove chacha20-poly1305 without native ssh2 binding.
+- Corrected SSRF blocklist from false-positive on all IPv4.
+- Fixed terminal background image incorrectly displaying.
 <!-- /BUG_FIXES -->
