@@ -332,7 +332,39 @@ class RemoteSyncEngine {
     if (!res.ok) {
       throw new Error(`Request failed (${res.status}): ${url}`);
     }
-    return res.json();
+
+    const text = await res.text();
+    // A reverse-proxy SSO in front of the remote server (Pangolin, Authelia,
+    // etc.) can intercept even an authenticated, Bearer-token'd request and
+    // serve its own login page instead of forwarding to Termix -- that comes
+    // back as a normal 200 OK, so the status checks above don't catch it.
+    // This is NOT the same as needsReauth/a bad Termix JWT: sync runs as a
+    // plain server-to-server fetch() in this main process, with no browser
+    // cookie jar at all, so re-authenticating through the login iframe (which
+    // only affects the renderer's browser session) can never fix this --
+    // reconnecting would tell the user to do something that doesn't help.
+    // The proxy has to allow this traffic through some other way (an API
+    // bypass rule, a separate hostname/port that isn't proxy-gated, etc.),
+    // so this gets its own distinct, honest error rather than piggybacking
+    // on needsReauth or a raw JSON.parse crash.
+    const looksLikeHtml =
+      text.includes("<html") ||
+      text.includes("<!DOCTYPE") ||
+      text.includes("<head>") ||
+      text.includes("<body>");
+    if (looksLikeHtml) {
+      const err = new Error(
+        "The reverse proxy in front of this server is blocking sync traffic with its own login page. Reconnecting won't fix this -- the proxy needs to let Termix's API requests through (e.g. an SSO bypass rule for the sync API, or a non-proxied hostname/port for it).",
+      );
+      err.proxyBlocked = true;
+      throw err;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`Server returned invalid JSON: ${url}`);
+    }
   }
 
   async pullSide(baseUrl, token, entityType, since) {
