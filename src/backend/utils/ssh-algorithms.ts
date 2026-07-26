@@ -31,13 +31,13 @@ try {
   nativeRequire("ssh2/lib/protocol/crypto/build/Release/sshcrypto.node");
   ssh2BindingAvailable = true;
 } catch {
-  try {
-    // ESM fallback: check if chacha20 works via OpenSSL createCipheriv
-    crypto.createCipheriv("chacha20", Buffer.alloc(32), Buffer.alloc(16));
-    ssh2BindingAvailable = true;
-  } catch {
-    ssh2BindingAvailable = false;
-  }
+  // The pure-JS fallback in ssh2 for chacha20-poly1305@openssh.com is broken and
+  // corrupts the transport: the target sshd aborts the KEX with
+  // "ssh_dispatch_run_fatal: ... incomplete message [preauth]" and the client times out.
+  // A working OpenSSL "chacha20" cipher is NOT sufficient here — only the native
+  // binding (sshcrypto.node) makes chacha20-poly1305 usable. Keep it disabled otherwise
+  // so filterCiphers() drops it and the connection negotiates AES-GCM instead.
+  ssh2BindingAvailable = false;
 }
 
 function filterCiphers(list: CipherAlgorithm[]): CipherAlgorithm[] {
