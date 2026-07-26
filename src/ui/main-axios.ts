@@ -1886,7 +1886,18 @@ export async function getSetupRequired(): Promise<{ setup_required: boolean }> {
 // second mint silently invalidates whichever token the app already started
 // using, surfacing as a spurious "session expired/revoked" on the very
 // next request.
-let desktopAutoSessionRequest: Promise<AuthResponse | null> | null = null;
+let desktopAutoSessionRequest: Promise<DesktopAutoSessionOutcome> | null = null;
+
+// A 403 from the auto-session endpoint means the backend positively
+// evaluated the request and declined (not loopback, or not exactly one
+// local user) -- that verdict won't change by retrying. Any other failure
+// (connection refused, timeout, 5xx) most likely means the embedded
+// backend process hasn't finished booting yet, which is routine on a cold
+// first launch, so it's worth retrying rather than treated as final.
+export type DesktopAutoSessionOutcome =
+  | { kind: "success"; data: AuthResponse }
+  | { kind: "declined" }
+  | { kind: "retry" };
 
 /**
  * Electron-only, non-iframed local login: exchanges the embedded backend's
@@ -1895,7 +1906,7 @@ let desktopAutoSessionRequest: Promise<AuthResponse | null> | null = null;
  * or otherwise multi-user install never satisfies this, and falls through
  * to a normal login screen instead).
  */
-export async function requestDesktopAutoSession(): Promise<AuthResponse | null> {
+export async function requestDesktopAutoSession(): Promise<DesktopAutoSessionOutcome> {
   if (desktopAutoSessionRequest) return desktopAutoSessionRequest;
 
   desktopAutoSessionRequest = (async () => {
@@ -1906,10 +1917,17 @@ export async function requestDesktopAutoSession(): Promise<AuthResponse | null> 
       }
       if (response.data?.success) {
         markUserAuthenticated();
+        return { kind: "success" as const, data: response.data };
       }
-      return response.data;
-    } catch {
-      return null;
+      return { kind: "declined" as const };
+    } catch (err) {
+      const status =
+        (err as { status?: number; response?: { status?: number } })?.status ??
+        (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403) {
+        return { kind: "declined" as const };
+      }
+      return { kind: "retry" as const };
     }
   })();
 

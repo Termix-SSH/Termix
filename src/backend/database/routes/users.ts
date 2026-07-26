@@ -1895,14 +1895,14 @@ function isLoopbackRequest(req: Request): boolean {
  * /users/internal/auto-session:
  *   post:
  *     summary: Mint a session for the auto-provisioned local desktop user
- *     description: Used by the Electron desktop app to skip the login form when running standalone with a single auto-provisioned local user. Only available over loopback and only when exactly one user exists -- a real multi-user or synced install never satisfies this, so no further secret is required.
+ *     description: Used by the Electron desktop app to skip the login form when running standalone with a single auto-provisioned local user. Only available over loopback, only when exactly one user exists, and only when that user has no password, is not an OIDC identity, and does not have TOTP enabled -- any real credential on the sole local account opts it out of this endpoint entirely.
  *     tags:
  *       - Users
  *     responses:
  *       200:
  *         description: Session created.
  *       403:
- *         description: Forbidden, or more than one user exists.
+ *         description: Forbidden, more than one user exists, or the sole local user has a real credential configured.
  *       500:
  *         description: Failed to create session.
  */
@@ -1925,6 +1925,22 @@ router.post("/internal/auto-session", async (req, res) => {
     }
 
     const userRecord = allUsers[0];
+
+    // Only the auto-provisioned desktop placeholder (created with no
+    // password, no OIDC identity, no TOTP) may be silently logged in this
+    // way. A real account someone has actually secured -- even if it's
+    // the only user in this local database, e.g. after registering by
+    // hand instead of relying on the placeholder -- must never bypass its
+    // own credential check just because the request came from loopback.
+    const hasCredential =
+      (userRecord.passwordHash && userRecord.passwordHash.trim() !== "") ||
+      userRecord.isOidc ||
+      userRecord.totpEnabled;
+    if (hasCredential) {
+      return res.status(403).json({
+        error: "Auto-session is only available for the local placeholder user",
+      });
+    }
 
     // If the caller already holds a still-valid session for this same
     // user (e.g. a duplicate call racing the first one, such as React

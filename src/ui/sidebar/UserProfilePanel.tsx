@@ -429,9 +429,11 @@ export function UserProfilePanel({
   onLogout,
   userPrefs,
   onPrefsChange,
+  remoteSyncInitialServerUrl,
 }: {
   username?: string;
   onLogout?: () => void;
+  remoteSyncInitialServerUrl?: string;
   userPrefs?: {
     reopenTabsOnLogin: boolean;
     storageMode?: string | null;
@@ -1483,7 +1485,7 @@ export function UserProfilePanel({
 
           {isElectron() && (
             <div className="border-t border-border pt-3 mt-3">
-              <RemoteSyncPanel />
+              <RemoteSyncPanel initialServerUrl={remoteSyncInitialServerUrl} />
             </div>
           )}
 

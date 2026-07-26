@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { hostAccess, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
@@ -152,7 +152,7 @@ export class HostRepository {
   ): Promise<HostRecord | null> {
     const rows = await this.context.drizzle
       .update(hosts)
-      .set(update)
+      .set({ ...update, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
       .returning();
 
@@ -175,7 +175,7 @@ export class HostRepository {
 
     const rows = await this.context.drizzle
       .update(hosts)
-      .set(encryptedUpdate)
+      .set({ ...encryptedUpdate, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
       .returning();
 
@@ -215,7 +215,7 @@ export class HostRepository {
 
     const rows = await this.context.drizzle
       .update(hosts)
-      .set(update)
+      .set({ ...update, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)))
       .returning({ id: hosts.id });
 

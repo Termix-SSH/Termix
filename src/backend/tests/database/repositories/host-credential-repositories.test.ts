@@ -225,6 +225,7 @@ describe("HostRepository and CredentialRepository", () => {
       tags: "linux,admin",
     });
     expect(updated?.folder).toBe("ops");
+    expect(updated?.updatedAt >= created.updatedAt).toBe(true);
 
     expect(
       await repo.credentials.findByIdForUser("user-2", created.id),

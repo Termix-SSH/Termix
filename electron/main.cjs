@@ -1445,6 +1445,16 @@ ipcMain.handle("save-server-config", (event, config) => {
 
 // --- Remote sync (optional desktop <-> self-hosted server sync) ---
 
+// Surfaces the pre-standalone-rework server-config.json (if a serverUrl was
+// ever set in it) so the renderer can prompt upgraded installs to set up
+// Remote Sync -- their hosts live on that old server and won't appear
+// locally until sync is enabled. A fresh install never had this file, so
+// this is naturally false for anyone who never used the old architecture.
+ipcMain.handle("get-legacy-server-config", () => {
+  const config = getServerConfigSync();
+  return { serverUrl: config?.serverUrl || null };
+});
+
 ipcMain.handle("get-desktop-settings", () => {
   return remoteSync.getDesktopSettings();
 });

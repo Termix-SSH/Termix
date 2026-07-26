@@ -145,7 +145,7 @@ export class CredentialRepository {
   ): Promise<number> {
     const rows = await this.context.drizzle
       .update(sshCredentials)
-      .set({ folder: newName })
+      .set({ folder: newName, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(
         and(
           eq(sshCredentials.userId, userId),
@@ -168,7 +168,7 @@ export class CredentialRepository {
   ): Promise<CredentialRecord | null> {
     const rows = await this.context.drizzle
       .update(sshCredentials)
-      .set(update)
+      .set({ ...update, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(
         and(
           eq(sshCredentials.id, credentialId),
@@ -195,7 +195,7 @@ export class CredentialRepository {
 
     const rows = await this.context.drizzle
       .update(sshCredentials)
-      .set(encryptedUpdate)
+      .set({ ...encryptedUpdate, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(
         and(
           eq(sshCredentials.id, credentialId),

@@ -69,6 +69,7 @@ function getRemoteSyncStatePath() {
 function getDesktopSettings() {
   return readJson(getDesktopSettingsPath(), {
     defaultConnectionOrigin: "local",
+    migrationNoticeAcknowledged: false,
   });
 }
 

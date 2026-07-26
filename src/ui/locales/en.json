@@ -389,6 +389,13 @@
     "noSavedServers": "No saved servers",
     "removeServer": "Remove"
   },
+  "migrationNotice": {
+    "title": "Termix Desktop now runs standalone",
+    "body1": "This app used to connect straight to your Termix server. It's been reworked to run fully on its own, storing hosts and credentials locally so it keeps working offline. Two-way sync with a self-hosted Termix server is now optional.",
+    "body2": "Your existing hosts and credentials are still on {{url}}. Turn on Remote Sync and reconnect to that server to bring them back and keep both in sync going forward.",
+    "dismiss": "Not now",
+    "setUpSync": "Set Up Remote Sync"
+  },
   "remoteSync": {
     "title": "Remote Sync",
     "description": "Optionally connect this desktop app to a self-hosted Termix server to sync your hosts, credentials, and snippets across devices. The app always works fully offline whether or not you connect.",
@@ -406,6 +413,7 @@
     "serverUrl": "Server URL",
     "enterServerUrl": "Please enter a server URL",
     "mustIncludeProtocol": "Server URL must start with http:// or https://",
+    "connectionTestFailed": "Could not reach a Termix server at that URL",
     "allowInvalidCertificate": "Allow invalid certificate",
     "allowInvalidCertificateDesc": "Use only for trusted self-hosted servers with self-signed or IP-address certificates.",
     "savedServers": "Saved Servers",

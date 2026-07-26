@@ -132,6 +132,7 @@ import {
 } from "@/main-axios";
 import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
+import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
@@ -253,6 +254,9 @@ export function AppShell({
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
+  const [remoteSyncInitialServerUrl, setRemoteSyncInitialServerUrl] = useState<
+    string | undefined
+  >(undefined);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem("termix_sidebarWidth");
     return saved ? parseInt(saved, 10) : 291;
@@ -1817,6 +1821,7 @@ export function AppShell({
               onPrefsChange={(updates) =>
                 setUserPrefs((current) => ({ ...current, ...updates }))
               }
+              remoteSyncInitialServerUrl={remoteSyncInitialServerUrl}
             />
           </div>
         )}
@@ -1881,12 +1886,21 @@ export function AppShell({
         style={{ height: "100dvh" }}
       >
         {isElectron() && (
-          <RemoteSyncBanner
-            onReconnect={() => {
-              setRailView("user-profile");
-              if (!sidebarOpen) setSidebarOpen(true);
-            }}
-          />
+          <>
+            <RemoteSyncBanner
+              onReconnect={() => {
+                setRailView("user-profile");
+                if (!sidebarOpen) setSidebarOpen(true);
+              }}
+            />
+            <MigrationNoticeDialog
+              onOpenRemoteSync={(url) => {
+                setRemoteSyncInitialServerUrl(url);
+                setRailView("user-profile");
+                if (!sidebarOpen) setSidebarOpen(true);
+              }}
+            />
+          </>
         )}
         <div className="flex flex-1 min-h-0">
           {/* Skinny icon rail — desktop only, hidden on mobile */}

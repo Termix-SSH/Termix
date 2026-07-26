@@ -274,6 +274,7 @@ export function Auth({ onLogin }: AuthProps) {
   const [desktopAutoSessionDone, setDesktopAutoSessionDone] = useState<
     boolean | null
   >(!isElectron() || isInElectronWebView() ? true : null);
+  const [desktopAutoSessionRetries, setDesktopAutoSessionRetries] = useState(0);
 
   useEffect(() => {
     try {
@@ -343,15 +344,37 @@ export function Auth({ onLogin }: AuthProps) {
       .finally(() => setDbHealthChecking(false));
   }, [desktopAutoSessionDone]);
 
+  // A cold first launch spawns the embedded backend as a separate process
+  // that can take a few seconds to finish booting (DB init, SSL, etc.) --
+  // well after the renderer has already mounted. A probe that fires too
+  // early gets a connection error, not a real "no auto-login" verdict, so
+  // it's retried with backoff instead of falling through to the login form
+  // permanently. Only a definitive "declined" (backend reachable, verdict
+  // is no) stops retrying immediately.
+  const DESKTOP_AUTO_SESSION_MAX_RETRIES = 10;
   useEffect(() => {
     if (desktopAutoSessionDone !== null) return;
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     requestDesktopAutoSession()
-      .then((res) => {
+      .then((outcome) => {
         if (cancelled) return;
-        if (res?.success) {
-          storeAuth(res.username || "");
-          onLogin(res.username || "", res.userId || undefined, !!res.is_admin);
+        if (outcome.kind === "success") {
+          storeAuth(outcome.data.username || "");
+          onLogin(
+            outcome.data.username || "",
+            outcome.data.userId || undefined,
+            !!outcome.data.is_admin,
+          );
+          return;
+        }
+        if (
+          outcome.kind === "retry" &&
+          desktopAutoSessionRetries < DESKTOP_AUTO_SESSION_MAX_RETRIES
+        ) {
+          retryTimer = setTimeout(() => {
+            if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
+          }, 1000);
           return;
         }
         setDesktopAutoSessionDone(true);
@@ -361,8 +384,9 @@ export function Auth({ onLogin }: AuthProps) {
       });
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [desktopAutoSessionDone, onLogin]);
+  }, [desktopAutoSessionDone, desktopAutoSessionRetries, onLogin]);
 
   useEffect(() => {
     if (view === "totp" && totpInputRef.current) totpInputRef.current.focus();

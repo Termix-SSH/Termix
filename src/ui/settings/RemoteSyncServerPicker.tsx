@@ -37,14 +37,16 @@ function removeSavedUrl(url: string) {
 interface RemoteSyncServerPickerProps {
   onServerConfigured: (serverUrl: string) => void;
   onCancel: () => void;
+  initialServerUrl?: string;
 }
 
 export function RemoteSyncServerPicker({
   onServerConfigured,
   onCancel,
+  initialServerUrl,
 }: RemoteSyncServerPickerProps) {
   const { t } = useTranslation();
-  const [serverUrl, setServerUrl] = useState("");
+  const [serverUrl, setServerUrl] = useState(initialServerUrl ?? "");
   const [allowInvalidCertificate, setAllowInvalidCertificate] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +90,17 @@ export function RemoteSyncServerPicker({
         !normalizedUrl.startsWith("https://")
       ) {
         setError(t("remoteSync.mustIncludeProtocol"));
+        setLoading(false);
+        return;
+      }
+
+      const testResult = (await window.electronAPI?.invoke?.(
+        "test-server-connection",
+        normalizedUrl,
+      )) as { success?: boolean; error?: string } | undefined;
+
+      if (!testResult?.success) {
+        setError(testResult?.error || t("remoteSync.connectionTestFailed"));
         setLoading(false);
         return;
       }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Server, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/button.tsx";
@@ -29,7 +29,11 @@ interface RemoteSyncStatus {
 
 type DesktopSettings = { defaultConnectionOrigin: "local" | "remote" };
 
-export function RemoteSyncPanel() {
+interface RemoteSyncPanelProps {
+  initialServerUrl?: string;
+}
+
+export function RemoteSyncPanel({ initialServerUrl }: RemoteSyncPanelProps) {
   const { t } = useTranslation();
   const [config, setConfig] = useState<RemoteSyncConfig | null>(null);
   const [status, setStatus] = useState<RemoteSyncStatus | null>(null);
@@ -39,6 +43,7 @@ export function RemoteSyncPanel() {
   const [step, setStep] = useState<"idle" | "picker" | "login">("idle");
   const [pendingServerUrl, setPendingServerUrl] = useState("");
   const [syncingNow, setSyncingNow] = useState(false);
+  const consumedInitialServerUrl = useRef(false);
 
   const refresh = useCallback(async () => {
     const [cfg, st, settings] = await Promise.all([
@@ -64,6 +69,14 @@ export function RemoteSyncPanel() {
     );
     return () => unsubscribe?.();
   }, [refresh]);
+
+  useEffect(() => {
+    if (consumedInitialServerUrl.current) return;
+    if (!initialServerUrl || config?.serverUrl) return;
+    consumedInitialServerUrl.current = true;
+    setPendingServerUrl(initialServerUrl);
+    setStep("picker");
+  }, [initialServerUrl, config]);
 
   const handleConnectClick = () => setStep("picker");
 
@@ -240,6 +253,7 @@ export function RemoteSyncPanel() {
           <RemoteSyncServerPicker
             onServerConfigured={handleServerConfigured}
             onCancel={() => setStep("idle")}
+            initialServerUrl={initialServerUrl}
           />
         </DialogContent>
       </Dialog>

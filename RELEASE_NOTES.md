@@ -19,7 +19,6 @@ https://youtu.be/c3UD4q2jW_8
 - Added support for more MFA types (SSH-only)
 - Added multiplayer/shared sessions for terminals and remote desktop (share via link or user)
 - Added support for logging into SSH hosts that require multi-factor authentication (like Duo or JumpCloud push/TOTP prompts).
-- Added custom keyboard shortcuts, so you can set your own key combos instead of being stuck with the defaults.
 - Added the option to convert a Quick Connect session into a saved host after connecting.
 - Added an export option for sharing host entries without credentials, so a host list can be shared without leaking passwords or keys.
 - Unified the folder picker across hosts, credentials, and snippets so they all use the same searchable, create-in-place selector.
