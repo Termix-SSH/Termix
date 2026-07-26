@@ -53,83 +53,133 @@ describe("isBlockedAddress", () => {
 // private — and testing it through a real Agent/fetch call would only
 // add flakiness (real TCP connects, undici's own quirks) without adding
 // coverage of the logic that actually broke.
+//
+// `lookupOptions.all` controls the *caller's* expected callback shape
+// (single address vs. full array) — this is the flag Node's happy-eyeballs
+// autoSelectFamily sets to `true`. It's independent of the internal call to
+// the underlying resolver, which the hook always forces to `all: true` so it
+// has every candidate address available to run the blocklist check against.
 function runHook(
   addresses: LookupAddress[],
   error: NodeJS.ErrnoException | null = null,
-  options: LookupOptions = { all: true },
+  lookupOptions: LookupOptions = { all: true },
 ) {
-  const fakeLookup = (
-    _host: string,
-    _opts: LookupAllOptions,
-    cb: (err: NodeJS.ErrnoException | null, addrs: LookupAddress[]) => void,
-  ) => cb(error, addresses);
+  const fakeLookup = vi.fn(
+    (
+      _host: string,
+      _opts: LookupAllOptions,
+      cb: (err: NodeJS.ErrnoException | null, addrs: LookupAddress[]) => void,
+    ) => cb(error, addresses),
+  );
 
   const hook = createDnsLookupHook(fakeLookup);
   const callback = vi.fn();
-  hook("example.invalid", options, callback);
-  return callback;
+  hook("example.invalid", lookupOptions, callback);
+  return { callback, fakeLookup };
 }
 
-describe("createDnsLookupHook", () => {
-  it("returns every public address when all addresses are requested", () => {
-    const addresses = [
-      { address: "104.21.52.150", family: 4 },
-      { address: "2606:4700:3034::ac43:c88d", family: 6 },
-    ];
-    const callback = runHook(addresses);
-    expect(callback).toHaveBeenCalledWith(null, addresses);
-  });
+// The three lookupOptions shapes a real caller can pass, and the tail args
+// (everything after the leading null/error arg) the hook must answer with
+// for each — [] for the array form Node's autoSelectFamily expects, ["", 0]
+// for the legacy single-address form. Reused as plain data across the
+// it.each tables below, matching the flat tuple style used elsewhere in
+// this test suite (see termix-id-keys.test.ts, oidc-desktop-callback.test.ts)
+// rather than nesting a parameterized describe block.
+const lookupOptionsCases: Array<[string, LookupOptions, unknown[]]> = [
+  ["all:true (Node's autoSelectFamily/happy-eyeballs)", { all: true }, [[]]],
+  ["all:false (legacy)", { all: false } as LookupOptions, ["", 0]],
+  ["all omitted (legacy)", {} as LookupOptions, ["", 0]],
+];
 
-  it.each<LookupOptions>([{ all: false }, {}])(
-    "returns one public address for single-address lookup options %j",
-    (options) => {
-      const callback = runHook(
-        [{ address: "104.21.52.150", family: 4 }],
-        null,
-        options,
-      );
-      expect(callback).toHaveBeenCalledWith(null, "104.21.52.150", 4);
+// Fixed answer used by the success table below — kept separate from
+// lookupOptionsCases because the expected tail args here are the resolved
+// address(es) themselves, not a fixed "", 0 vs [] shape.
+const publicAddresses = [
+  { address: "104.21.52.150", family: 4 },
+  { address: "2606:4700:3034::ac43:c88d", family: 6 },
+];
+const successCases: Array<[string, LookupOptions, unknown[]]> = [
+  [
+    "all:true (Node's autoSelectFamily/happy-eyeballs)",
+    { all: true },
+    [publicAddresses],
+  ],
+  [
+    "all:false (legacy)",
+    { all: false } as LookupOptions,
+    [publicAddresses[0].address, publicAddresses[0].family],
+  ],
+  [
+    "all omitted (legacy)",
+    {} as LookupOptions,
+    [publicAddresses[0].address, publicAddresses[0].family],
+  ],
+];
+
+describe("createDnsLookupHook", () => {
+  it.each(successCases)(
+    "returns the resolved address(es) on a fully public answer (%s)",
+    (_label, lookupOptions, tailArgs) => {
+      const { callback } = runHook(publicAddresses, null, lookupOptions);
+      expect(callback).toHaveBeenCalledWith(null, ...tailArgs);
     },
   );
 
-  it("rejects a mixed result containing a mapped private address", () => {
-    const callback = runHook([
-      { address: "104.21.52.150", family: 4 },
-      { address: "::ffff:127.0.0.1", family: 6 },
-    ]);
-    expect(callback).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: "Private destinations are not allowed",
-      }),
-      [],
-    );
-  });
+  it.each(lookupOptionsCases)(
+    "rejects if any address is private, including an IPv4-mapped IPv6 spoof not in first position (%s)",
+    (_label, lookupOptions, tailArgs) => {
+      const { callback } = runHook(
+        [
+          { address: "104.21.52.150", family: 4 },
+          { address: "::ffff:192.168.1.1", family: 6 },
+          { address: "2606:4700:3034::ac43:c88d", family: 6 },
+        ],
+        null,
+        lookupOptions,
+      );
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Private destinations are not allowed",
+        }),
+        ...tailArgs,
+      );
+    },
+  );
 
-  it("rejects a private address with the private-destination error", () => {
-    const callback = runHook([{ address: "192.168.1.1", family: 4 }]);
-    expect(callback).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: "Private destinations are not allowed",
-      }),
-      [],
-    );
-  });
+  it.each(lookupOptionsCases)(
+    "rejects with a distinct error when DNS returns no addresses (%s)",
+    (_label, lookupOptions, tailArgs) => {
+      const { callback } = runHook([], null, lookupOptions);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "DNS resolution returned no addresses",
+        }),
+        ...tailArgs,
+      );
+    },
+  );
 
-  it("rejects with a distinct error when DNS returns no addresses", () => {
-    const callback = runHook([]);
-    expect(callback).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: "DNS resolution returned no addresses",
-      }),
-      [],
-    );
-  });
+  it.each(lookupOptionsCases)(
+    "propagates a real DNS lookup error untouched (%s)",
+    (_label, lookupOptions, tailArgs) => {
+      const dnsError = Object.assign(new Error("getaddrinfo ENOTFOUND"), {
+        code: "ENOTFOUND",
+      });
+      const { callback } = runHook([], dnsError, lookupOptions);
+      expect(callback).toHaveBeenCalledWith(dnsError, ...tailArgs);
+    },
+  );
 
-  it("propagates a real DNS lookup error untouched", () => {
-    const dnsError = Object.assign(new Error("getaddrinfo ENOTFOUND"), {
-      code: "ENOTFOUND",
-    });
-    const callback = runHook([], dnsError);
-    expect(callback).toHaveBeenCalledWith(dnsError, []);
+  it("always asks the underlying resolver for all:true regardless of the caller's option", () => {
+    const { fakeLookup } = runHook(
+      [{ address: "104.21.52.150", family: 4 }],
+      null,
+      { all: false },
+    );
+    expect(fakeLookup).toHaveBeenCalledWith(
+      "example.invalid",
+      expect.objectContaining({ all: true, verbatim: true }),
+      expect.any(Function),
+    );
   });
 });
