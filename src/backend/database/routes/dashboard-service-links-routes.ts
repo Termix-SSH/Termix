@@ -4,7 +4,10 @@ import { dashboardLogger } from "../../utils/logger.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { isNonEmptyString } from "./host-normalizers.js";
 import express from "express";
-import { createCurrentDashboardServiceLinkRepository } from "../repositories/factory.js";
+import {
+  createCurrentDashboardServiceLinkRepository,
+  createCurrentSyncTombstoneRepository,
+} from "../repositories/factory.js";
 
 export const dashboardServiceLinksRouter = express.Router();
 
@@ -152,10 +155,18 @@ dashboardServiceLinksRouter.delete(
         return res.status(404).json({ error: "Not found" });
       }
 
-      await createCurrentDashboardServiceLinkRepository().deleteForUser(
-        userId,
-        id,
-      );
+      const deleted =
+        await createCurrentDashboardServiceLinkRepository().deleteForUser(
+          userId,
+          id,
+        );
+      if (deleted?.syncId) {
+        await createCurrentSyncTombstoneRepository().record(
+          userId,
+          "dashboardServiceLinks",
+          deleted.syncId,
+        );
+      }
 
       DatabaseSaveTrigger.triggerSave("dashboard_service_link_deleted");
       res.json({ message: "Service link deleted" });

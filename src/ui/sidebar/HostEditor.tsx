@@ -12,6 +12,10 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
+  TERMINAL_FONT_ZOOM_MIN,
+  TERMINAL_FONT_ZOOM_MAX,
+} from "@/features/terminal/terminal-font-zoom";
+import {
   Globe,
   Layers, // --- tmux-monitor ---
   Network,
@@ -39,8 +43,16 @@ import {
   adminUpdateUserHost,
   adminGetHostPassword,
   adminGetUserSnippets,
+  createCredential,
+  adminCreateUserCredential,
 } from "@/main-axios";
 import { getTailscaleDevices, getHostDefaults } from "@/api/settings-api";
+import {
+  getUserPreferences,
+  saveUserPreferences,
+  parseCustomThemes,
+  type SavedCustomTheme,
+} from "@/api/open-tabs-api";
 import type { Host, VaultProfile } from "@/types/ui-types";
 import type { SSHHost, TunnelStatus } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
@@ -127,6 +139,65 @@ export function HostEditor({
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
   const [showVaultManager, setShowVaultManager] = useState(false);
+  const [quickCredentialName, setQuickCredentialName] = useState("");
+  const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
+  const [showQuickCredentialDialog, setShowQuickCredentialDialog] =
+    useState(false);
+  const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>([]);
+  const [savingTheme, setSavingTheme] = useState(false);
+
+  const reloadSavedThemes = () => {
+    getUserPreferences()
+      .then((prefs) => setSavedThemes(parseCustomThemes(prefs.customThemes)))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    reloadSavedThemes();
+  }, []);
+
+  const handleSaveAsGlobalTheme = async () => {
+    const colors = form.customThemeColors;
+    if (!colors) return;
+    const name = window.prompt(t("hosts.saveGlobalThemeNamePrompt"));
+    if (!name || !name.trim()) return;
+    setSavingTheme(true);
+    try {
+      const newTheme: SavedCustomTheme = {
+        id: `theme-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: name.trim(),
+        colors,
+      };
+      const updated = [...savedThemes, newTheme];
+      await saveUserPreferences({
+        customThemes: JSON.stringify(updated),
+      });
+      setSavedThemes(updated);
+      toast.success(t("hosts.saveGlobalThemeSuccess"));
+    } catch {
+      toast.error(t("hosts.saveGlobalThemeError"));
+    } finally {
+      setSavingTheme(false);
+    }
+  };
+
+  const handleDeleteGlobalTheme = async (id: string) => {
+    const updated = savedThemes.filter((theme) => theme.id !== id);
+    try {
+      await saveUserPreferences({
+        customThemes: JSON.stringify(updated),
+      });
+      setSavedThemes(updated);
+    } catch {
+      toast.error(t("hosts.saveGlobalThemeError"));
+    }
+  };
+
+  const handleApplyGlobalTheme = (id: string) => {
+    const theme = savedThemes.find((entry) => entry.id === id);
+    if (!theme) return;
+    setField("customThemeColors", { ...theme.colors });
+  };
 
   const reloadVaultProfiles = () => {
     getVaultProfiles()
@@ -223,6 +294,77 @@ export function HostEditor({
     (c) => c.id === form.credentialId,
   );
 
+  const canQuickCreateCredential =
+    (authMethod === "password" || authMethod === "key") &&
+    (authMethod === "password"
+      ? !!form.password || !!host?.hasPassword
+      : (!!form.key && form.key !== "existing_key") || !!host?.hasKey);
+
+  const openQuickCredentialDialog = () => {
+    setQuickCredentialName(form.name || form.username || "");
+    setShowQuickCredentialDialog(true);
+  };
+
+  const handleQuickCreateCredential = async () => {
+    if (!quickCredentialName.trim()) {
+      toast.error(t("hosts.credentialNameRequired"));
+      return;
+    }
+    setCreatingQuickCredential(true);
+    try {
+      const fetchField = (field: "password" | "key" | "keyPassword") =>
+        adminTargetUserId
+          ? adminGetHostPassword(adminTargetUserId, Number(host?.id), field)
+          : getHostPassword(Number(host?.id), field);
+
+      const data: Record<string, unknown> = {
+        name: quickCredentialName,
+        username: form.username || null,
+        folder: form.folder || null,
+      };
+
+      if (authMethod === "password") {
+        data.authType = "password";
+        data.password =
+          form.password ||
+          (host?.hasPassword ? await fetchField("password") : null);
+      } else {
+        const key =
+          form.key && form.key !== "existing_key"
+            ? form.key
+            : host?.hasKey
+              ? await fetchField("key")
+              : null;
+        const keyPassword =
+          form.keyPassword && form.keyPassword !== "existing_key_password"
+            ? form.keyPassword
+            : host?.hasKeyPassword
+              ? await fetchField("keyPassword")
+              : null;
+        data.authType = "key";
+        data.key = key;
+        data.keyPassword = keyPassword;
+        data.password = form.password || null;
+      }
+
+      if (adminTargetUserId) {
+        await adminCreateUserCredential(adminTargetUserId, data);
+      } else {
+        await createCredential(data);
+      }
+      toast.success(t("hosts.credentialCreated"));
+      if (!adminTargetUserId) {
+        window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
+      }
+      setShowQuickCredentialDialog(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : null;
+      toast.error(msg || t("hosts.failedToSaveCredential"));
+    } finally {
+      setCreatingQuickCredential(false);
+    }
+  };
+
   // Shared hosts: view-level recipients see a read-only editor; edit-level
   // recipients may change the host but never its credential/vault references
   // or auth type (owner-only, enforced server-side too).
@@ -317,6 +459,20 @@ export function HostEditor({
               <SectionCard
                 title={t("hosts.authenticationLabel")}
                 icon={<Shield className="size-3.5" />}
+                action={
+                  canQuickCreateCredential && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
+                      onClick={openQuickCredentialDialog}
+                    >
+                      <Plus className="size-3 mr-1" />
+                      {t("hosts.createCredentialFromHostBtn")}
+                    </Button>
+                  )
+                }
               >
                 <div className="flex flex-col gap-4 py-3">
                   <div className="flex flex-col gap-1.5">
@@ -383,6 +539,11 @@ export function HostEditor({
                       {isOidcUser && (
                         <p className="text-[10px] text-muted-foreground/60">
                           {t("hosts.oidcUsernameHint")}
+                        </p>
+                      )}
+                      {authMethod === "tailscale" && (
+                        <p className="text-[10px] text-muted-foreground/60">
+                          {t("hosts.tailscaleUsernameHint")}
                         </p>
                       )}
                     </div>
@@ -950,8 +1111,8 @@ export function HostEditor({
                         </span>
                       </div>
                       <Slider
-                        min={8}
-                        max={24}
+                        min={TERMINAL_FONT_ZOOM_MIN}
+                        max={TERMINAL_FONT_ZOOM_MAX}
                         step={1}
                         value={[form.fontSize]}
                         onValueChange={([v]) => setField("fontSize", v)}
@@ -1051,6 +1212,64 @@ export function HostEditor({
                   </div>
                   {form.theme === "custom" && (
                     <div className="flex flex-col gap-3">
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {t("hosts.savedThemesLabel")}
+                          </label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-[10px]"
+                            disabled={savingTheme || !form.customThemeColors}
+                            onClick={handleSaveAsGlobalTheme}
+                          >
+                            {t("hosts.saveAsGlobalTheme")}
+                          </Button>
+                        </div>
+                        {savedThemes.length === 0 ? (
+                          <p className="text-[10px] text-muted-foreground">
+                            {t("hosts.noSavedThemes")}
+                          </p>
+                        ) : (
+                          <div className="flex flex-col gap-1">
+                            {savedThemes.map((theme) => (
+                              <div
+                                key={theme.id}
+                                className="flex items-center justify-between gap-2 border border-border px-2 py-1"
+                              >
+                                <button
+                                  type="button"
+                                  title={t("hosts.applyGlobalThemeTooltip")}
+                                  onClick={() =>
+                                    handleApplyGlobalTheme(theme.id)
+                                  }
+                                  className="flex items-center gap-2 text-xs text-left flex-1 min-w-0 hover:text-foreground transition-colors"
+                                >
+                                  <span
+                                    className="size-3.5 shrink-0 border border-border"
+                                    style={{
+                                      background: theme.colors.background,
+                                    }}
+                                  />
+                                  <span className="truncate">{theme.name}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  title={t("hosts.deleteGlobalThemeTooltip")}
+                                  onClick={() =>
+                                    handleDeleteGlobalTheme(theme.id)
+                                  }
+                                  className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                                >
+                                  <X className="size-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-center justify-between">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                           {t("hosts.customThemeColors")}
@@ -1378,6 +1597,15 @@ export function HostEditor({
                     <FakeSwitch
                       checked={form.enableSessionLogging}
                       onChange={(v) => setField("enableSessionLogging", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
+                    label={t("hosts.allowSessionSharing")}
+                    description={t("hosts.allowSessionSharingDesc")}
+                  >
+                    <FakeSwitch
+                      checked={form.allowSessionSharing}
+                      onChange={(v) => setField("allowSessionSharing", v)}
                     />
                   </SettingRow>
                   <SettingRow
@@ -2103,6 +2331,58 @@ export function HostEditor({
           </Button>
         )}
       </div>
+
+      {showQuickCredentialDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-popover border border-border shadow-xl w-full max-w-sm flex flex-col gap-4 p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold">
+                {t("hosts.createCredentialFromHostTitle")}
+              </span>
+              <button
+                onClick={() => setShowQuickCredentialDialog(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("hosts.createCredentialFromHostDesc")}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                {t("hosts.friendlyNameLabel")}
+              </label>
+              <Input
+                placeholder="e.g. Production SSH Key"
+                value={quickCredentialName}
+                onChange={(e) => setQuickCredentialName(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowQuickCredentialDialog(false)}
+                disabled={creatingQuickCredential}
+              >
+                {t("hosts.cancelBtn")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+                onClick={handleQuickCreateCredential}
+                disabled={creatingQuickCredential}
+              >
+                {creatingQuickCredential
+                  ? t("hosts.savingBtn")
+                  : t("hosts.addCredentialBtn")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

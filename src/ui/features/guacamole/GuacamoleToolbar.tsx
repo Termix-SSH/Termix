@@ -13,6 +13,8 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsLeftRight,
+  Touchpad,
+  MousePointer,
 } from "lucide-react";
 import {
   Tooltip,
@@ -20,13 +22,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/tooltip.tsx";
-import type { GuacamoleDisplayHandle } from "@/features/guacamole/GuacamoleDisplay.tsx";
+import type {
+  GuacamoleDisplayHandle,
+  GuacamoleTouchMode,
+} from "@/features/guacamole/GuacamoleDisplay.tsx";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 interface GuacamoleToolbarProps {
   displayRef: React.RefObject<GuacamoleDisplayHandle>;
   protocol: "rdp" | "vnc" | "telnet";
+  touchMode?: GuacamoleTouchMode | null;
+  onTouchModeChange?: (mode: GuacamoleTouchMode) => void;
 }
 
 const MODIFIER_KEYSYMS = {
@@ -107,6 +114,8 @@ function TipIconBtn({
 export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
   displayRef,
   protocol,
+  touchMode,
+  onTouchModeChange,
 }) => {
   const { t } = useTranslation();
   const [position, setPosition] = useState({ x: 0, y: 12 });
@@ -286,6 +295,39 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                 {t("guacamole.toolbar.dragHandle")}
               </TooltipContent>
             </Tooltip>
+
+            {/* Touch mode toggle — touch devices only */}
+            {touchMode != null && onTouchModeChange && (
+              <>
+                <div className={SEP} />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onTouchModeChange(
+                          touchMode === "touchscreen"
+                            ? "touchpad"
+                            : "touchscreen",
+                        )
+                      }
+                      className={cn(BTN_ICON)}
+                    >
+                      {touchMode === "touchscreen" ? (
+                        <MousePointer className="size-3.5" />
+                      ) : (
+                        <Touchpad className="size-3.5" />
+                      )}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={6}>
+                    {touchMode === "touchscreen"
+                      ? t("guacamole.toolbar.switchToTrackpad")
+                      : t("guacamole.toolbar.switchToTouch")}
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
 
             {/* System combos — RDP/VNC only */}
             {isRdpVnc && (

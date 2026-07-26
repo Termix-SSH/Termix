@@ -18,6 +18,11 @@ import {
   isOidcTokenCallback,
 } from "../../utils/oidc-desktop-callback.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
+import {
+  isLoopbackRequest,
+  extractBearerOrCookieToken,
+  resolveDesktopAutoSessionUser,
+} from "./desktop-auto-session.js";
 import { shouldShowDonationModal } from "./donation-modal-utils.js";
 import {
   getOIDCConfigFromEnv,
@@ -1848,9 +1853,13 @@ router.post(
  *         description: Not authenticated.
  */
 router.get("/me/token", authenticateJWT, (req: Request, res: Response) => {
-  const token = (req as Request & { cookies: Record<string, string> }).cookies
-    ?.jwt;
-  res.json({ token: token || null });
+  // authenticateJWT accepts either the jwt cookie or an Authorization:
+  // Bearer header (see auth-manager.ts's createAuthMiddleware) -- this must
+  // check both too, or a request that only carried the header (e.g. the
+  // Electron renderer's own axios interceptor, which always attaches a
+  // stored localStorage JWT as a Bearer header) would pass authentication
+  // here but still get back a null token.
+  res.json({ token: extractBearerOrCookieToken(req) ?? null });
 });
 
 /**
@@ -1877,6 +1886,80 @@ router.get("/setup-required", async (req, res) => {
   } catch (err) {
     authLogger.error("Failed to check setup status", err);
     res.status(500).json({ error: "Failed to check setup status" });
+  }
+});
+
+/**
+ * @openapi
+ * /users/internal/auto-session:
+ *   post:
+ *     summary: Mint a session for the sole local desktop user
+ *     description: Used by the Electron desktop app to skip the login form entirely when running standalone against the embedded local backend. Only available over loopback. Logs in as the sole local user regardless of its credentials; if the local database has more than one user (e.g. repeated manual registration), deterministically logs in as the admin account, or the earliest-registered account if none is admin -- a login form must never appear for the local backend under any circumstance. Only declines if zero local users exist at all, which normal desktop provisioning never produces. Provisions the resolved user's data-encryption key if missing before minting the session, matching every other login path -- self-heals an account that previously ended up with a valid session but no usable encryption key.
+ *     tags:
+ *       - Users
+ *     responses:
+ *       200:
+ *         description: Session created.
+ *       403:
+ *         description: Forbidden, or no local users exist.
+ *       500:
+ *         description: Failed to create session.
+ */
+router.post("/internal/auto-session", async (req, res) => {
+  try {
+    if (!isLoopbackRequest(req)) {
+      authLogger.warn(
+        "Rejected non-loopback attempt to access auto-session endpoint",
+        { source: req.ip },
+      );
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const userRepository = createCurrentUserRepository();
+    const allUsers = await userRepository.listAll();
+    const userRecord = resolveDesktopAutoSessionUser(allUsers);
+    if (!userRecord) {
+      return res.status(403).json({
+        error: "No local users exist",
+      });
+    }
+    await authManager.registerUser(userRecord.id);
+    const existingToken = extractBearerOrCookieToken(req);
+    if (existingToken) {
+      const existingPayload = await authManager.verifyJWTToken(existingToken);
+      if (existingPayload?.userId === userRecord.id) {
+        return res.json({
+          success: true,
+          is_admin: !!userRecord.isAdmin,
+          username: userRecord.username,
+          token: existingToken,
+        });
+      }
+    }
+
+    const token = await authManager.generateJWTToken(userRecord.id, {
+      deviceType: "desktop",
+      deviceInfo: "Termix Desktop (local)",
+      rememberMe: true,
+    });
+
+    const response = {
+      success: true,
+      is_admin: !!userRecord.isAdmin,
+      username: userRecord.username,
+      token,
+    };
+
+    return res
+      .cookie(
+        "jwt",
+        token,
+        authManager.getSecureCookieOptions(req, 30 * 24 * 60 * 60 * 1000),
+      )
+      .json(response);
+  } catch (err) {
+    authLogger.error("Failed to create auto-session", err);
+    res.status(500).json({ error: "Failed to create auto-session" });
   }
 });
 

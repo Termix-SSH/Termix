@@ -31,6 +31,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startC2SAutoStartTunnels: () =>
     ipcRenderer.invoke("start-c2s-autostart-tunnels"),
 
+  onRemoteSyncStatusChanged: (callback) => {
+    const listener = (_event, status) => callback(status);
+    ipcRenderer.on("remote-sync-status-changed", listener);
+    return () =>
+      ipcRenderer.removeListener("remote-sync-status-changed", listener);
+  },
+
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
   getSessionCookie: (name, targetUrl) =>
     ipcRenderer.invoke("get-session-cookie", name, targetUrl),

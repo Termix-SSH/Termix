@@ -12,6 +12,7 @@ import {
   createCurrentRoleRepository,
   createCurrentSnippetRepository,
   createCurrentUserRepository,
+  createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 
 const router = express.Router();
@@ -400,7 +401,17 @@ router.delete(
     try {
       const folderName = decodeURIComponent(name);
 
-      await createCurrentSnippetRepository().deleteFolder(userId, folderName);
+      const deletedFolder = await createCurrentSnippetRepository().deleteFolder(
+        userId,
+        folderName,
+      );
+      if (deletedFolder?.syncId) {
+        await createCurrentSyncTombstoneRepository().record(
+          userId,
+          "snippetFolders",
+          deletedFolder.syncId,
+        );
+      }
 
       authLogger.success(
         `Snippet folder deleted: ${folderName} by user ${userId}`,
@@ -1239,6 +1250,14 @@ router.delete(
 
       if (!existing) {
         return res.status(404).json({ error: "Snippet not found" });
+      }
+
+      if (existing.syncId) {
+        await createCurrentSyncTombstoneRepository().record(
+          userId,
+          "snippets",
+          existing.syncId,
+        );
       }
 
       databaseLogger.info("Command snippet deleted", {

@@ -21,6 +21,12 @@ const authManager = AuthManager.getInstance();
 
 const wss = new WebSocketServer({ port: 30011 });
 
+wss.on("error", (error) => {
+  sshLogger.error("Serial WebSocket server error", error, {
+    operation: "wss_error",
+  });
+});
+
 wss.on("connection", async (ws: WebSocket, req) => {
   let userId: string | undefined;
 

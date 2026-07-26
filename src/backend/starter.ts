@@ -15,6 +15,74 @@ import {
   setGlobalLogLevel,
 } from "./utils/logger.js";
 
+async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
+  const { createCurrentUserRepository, createCurrentRoleRepository } =
+    await import("./database/repositories/factory.js");
+  const { AuthManager } = await import("./utils/auth-manager.js");
+  const crypto = await import("crypto");
+
+  const userRepository = createCurrentUserRepository();
+  const existingCount = await userRepository.countAll();
+  if (existingCount > 0) {
+    const allUsers = await userRepository.listAll();
+    for (const user of allUsers) {
+      try {
+        await AuthManager.getInstance().registerUser(user.id);
+      } catch (dekError) {
+        systemLogger.error(
+          "Failed to verify/provision data-encryption key for existing user",
+          dekError,
+          { operation: "desktop_dek_healing", userId: user.id },
+        );
+      }
+    }
+    return;
+  }
+
+  const id = crypto.randomUUID();
+  const { isFirstUser } = await userRepository.createFirstLocalUser({
+    id,
+    username: "local",
+    passwordHash: "",
+    isOidc: false,
+    clientId: "",
+    clientSecret: "",
+    issuerUrl: "",
+    authorizationUrl: "",
+    tokenUrl: "",
+    identifierPath: "",
+    namePath: "",
+    scopes: "openid email profile",
+    totpSecret: null,
+    totpEnabled: false,
+    totpBackupCodes: null,
+  });
+
+  try {
+    await createCurrentRoleRepository().assignRoleNameToUser({
+      userId: id,
+      roleName: isFirstUser ? "admin" : "user",
+      grantedBy: id,
+    });
+  } catch (roleError) {
+    systemLogger.error(
+      "Failed to assign default role to auto-provisioned local user",
+      roleError,
+      { operation: "desktop_auto_provision_role" },
+    );
+  }
+
+  await AuthManager.getInstance().registerUser(
+    id,
+    crypto.randomBytes(32).toString("hex"),
+  );
+
+  systemLogger.success("Auto-provisioned local desktop user", {
+    operation: "desktop_auto_provision",
+    userId: id,
+  });
+}
+
 (async () => {
   const initStartTime = Date.now();
   try {
@@ -61,6 +129,8 @@ import {
         }
       }
     }
+    process.env.VERSION = version;
+
     versionLogger.info(`Termix Backend starting - Version: ${version}`, {
       operation: "startup",
       version: version,
@@ -104,6 +174,10 @@ import {
     const { runSharedHostSecretsMigration } =
       await import("./utils/crypto-migration/shared-host-secrets-migration.js");
     await runSharedHostSecretsMigration();
+
+    if (process.env.ELECTRON_EMBEDDED === "true") {
+      await provisionLocalDesktopUserIfNeeded();
+    }
 
     import("./utils/opkssh-binary-manager.js").then(
       ({ OPKSSHBinaryManager }) => {
@@ -169,6 +243,9 @@ import {
           );
         });
     }
+
+    const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
+    startAnalyticsHeartbeat();
 
     systemLogger.success("Termix backend started successfully", {
       operation: "backend_init_complete",

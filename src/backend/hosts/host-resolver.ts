@@ -122,35 +122,61 @@ export async function resolveHostById(
       repository,
     );
     if (!resolved) return null;
-  } else if (host.credentialId) {
-    try {
-      const cred = (await repository.findCredentialByIdForUser(
-        host.credentialId as number,
-        ownerId,
-      )) as Record<string, unknown> | null;
-
-      if (cred) {
-        host.password = pickResolvedPassword(host.password, cred.password);
-        // Prefer the normalised private key; fall back to raw key field
-        host.key = (cred.privateKey || cred.key) as string | null;
-        host.keyPassword = cred.keyPassword;
-        host.keyType = cred.keyType;
-        // CA-signed certificate for cert-based auth
-        (host as Record<string, unknown>).certPublicKey =
-          cred.certPublicKey || null;
-        host.username = pickResolvedUsername(
-          host.username,
-          cred.username,
-          host.overrideCredentialUsername,
+  } else {
+    let effectiveCredentialId = host.credentialId as number | null | undefined;
+    if (
+      !effectiveCredentialId &&
+      host.authType === "credential" &&
+      host.folder
+    ) {
+      try {
+        effectiveCredentialId = await repository.findFolderCredentialId(
+          ownerId,
+          host.folder as string,
         );
-        host.authType = host.key ? "key" : host.password ? "password" : "none";
+      } catch (e) {
+        sshLogger.warn("Failed to resolve folder credential for host", {
+          operation: "host_resolver_folder_credential",
+          hostId,
+          error: e instanceof Error ? e.message : "Unknown",
+        });
       }
-    } catch (e) {
-      sshLogger.warn("Failed to resolve credential for host", {
-        operation: "host_resolver_credential",
-        hostId,
-        error: e instanceof Error ? e.message : "Unknown",
-      });
+    }
+
+    if (effectiveCredentialId) {
+      try {
+        const cred = (await repository.findCredentialByIdForUser(
+          effectiveCredentialId,
+          ownerId,
+        )) as Record<string, unknown> | null;
+
+        if (cred) {
+          host.password = pickResolvedPassword(host.password, cred.password);
+          // Prefer the normalised private key; fall back to raw key field
+          host.key = (cred.privateKey || cred.key) as string | null;
+          host.keyPassword = cred.keyPassword;
+          host.keyType = cred.keyType;
+          // CA-signed certificate for cert-based auth
+          (host as Record<string, unknown>).certPublicKey =
+            cred.certPublicKey || null;
+          host.username = pickResolvedUsername(
+            host.username,
+            cred.username,
+            host.overrideCredentialUsername,
+          );
+          host.authType = host.key
+            ? "key"
+            : host.password
+              ? "password"
+              : "none";
+        }
+      } catch (e) {
+        sshLogger.warn("Failed to resolve credential for host", {
+          operation: "host_resolver_credential",
+          hostId,
+          error: e instanceof Error ? e.message : "Unknown",
+        });
+      }
     }
   }
 

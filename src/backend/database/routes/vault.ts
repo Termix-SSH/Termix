@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import {
   createCurrentVaultProfileRepository,
   createCurrentUserRepository,
+  createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import type { VaultProfileUpdateInput } from "../repositories/vault-profile-repository.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
@@ -421,7 +422,14 @@ router.delete(
           .status(403)
           .json({ error: "Only the owner can delete this profile" });
       }
-      await repository.deleteById(id);
+      const deleted = await repository.deleteById(id);
+      if (deleted?.syncId) {
+        await createCurrentSyncTombstoneRepository().record(
+          userId,
+          "vaultProfiles",
+          deleted.syncId,
+        );
+      }
       res.json({ success: true });
     } catch (err) {
       authLogger.error("Failed to delete vault profile", err);

@@ -97,6 +97,39 @@ declare module "guacamole-common-js" {
         up: boolean;
         down: boolean;
       }
+
+      interface MouseEvent {
+        state: Mouse.State;
+        preventDefault(): void;
+        stopPropagation(): void;
+      }
+
+      class Touchpad {
+        constructor(element: HTMLElement);
+        currentState: Mouse.State;
+        clickTimingThreshold: number;
+        clickMoveThreshold: number;
+        scrollThreshold: number;
+        onEach(
+          types: string[],
+          listener: (event: Mouse.MouseEvent) => void,
+        ): void;
+        on(type: string, listener: (event: Mouse.MouseEvent) => void): void;
+      }
+
+      class Touchscreen {
+        constructor(element: HTMLElement);
+        currentState: Mouse.State;
+        clickTimingThreshold: number;
+        clickMoveThreshold: number;
+        scrollThreshold: number;
+        longPressThreshold: number;
+        onEach(
+          types: string[],
+          listener: (event: Mouse.MouseEvent) => void,
+        ): void;
+        on(type: string, listener: (event: Mouse.MouseEvent) => void): void;
+      }
     }
 
     class Keyboard {

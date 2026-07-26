@@ -58,7 +58,8 @@ WORKDIR /app
 
 ENV DATA_DIR=/app/data \
     PORT=8080 \
-    NODE_ENV=production
+    NODE_ENV=production \
+    POSTHOG_API_KEY=phc_xM8UznirsFxUkGE68gH4jzeqevf4kh76wGw7Ci7hH2dd
 
 RUN apt-get update && apt-get install -y nginx gettext-base openssl ca-certificates gosu wget certbot python3-certbot-dns-cloudflare && \
     update-ca-certificates && \

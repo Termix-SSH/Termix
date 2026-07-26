@@ -43,6 +43,7 @@ import {
   getServiceLinks,
   createServiceLink,
   deleteServiceLink,
+  isElectron,
 } from "@/main-axios";
 import type { RecentActivityItem, ServiceLink } from "@/main-axios";
 import { useTranslation } from "react-i18next";
@@ -1365,7 +1366,13 @@ export function DashboardTab({
     load();
 
     getUserInfo()
-      .then((info) => setIsAdmin(!!info.is_admin))
+      .then((info) => {
+        // Remote sync is not yet configurable (added in a later phase), so
+        // a standalone desktop install never shows admin/user-management
+        // UI -- it has exactly one implicit user and nothing to administer.
+        const isRemoteSyncConnected = false;
+        setIsAdmin(!!info.is_admin && (!isElectron() || isRemoteSyncConnected));
+      })
       .catch(() => {});
     getUptime()
       .then((u) => setUptimeFormatted(u.formatted))

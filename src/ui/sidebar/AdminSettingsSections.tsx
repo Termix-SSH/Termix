@@ -30,6 +30,10 @@ import type { AcmeSettings, AcmeChallengeType } from "@/api/acme-ssl-api";
 type GeneralSettingsSectionProps = {
   open: boolean;
   onToggle: () => void;
+  analyticsEnabled: boolean;
+  handleToggleAnalytics: () => void;
+  sessionSharingGloballyEnabled: boolean;
+  handleToggleSessionSharingGloballyEnabled: () => void;
   allowRegistration: boolean;
   handleToggleRegistration: () => void;
   allowPasswordLogin: boolean;
@@ -67,6 +71,10 @@ type GeneralSettingsSectionProps = {
 export function AdminGeneralSettingsSection({
   open,
   onToggle,
+  analyticsEnabled,
+  handleToggleAnalytics,
+  sessionSharingGloballyEnabled,
+  handleToggleSessionSharingGloballyEnabled,
   allowRegistration,
   handleToggleRegistration,
   allowPasswordLogin,
@@ -110,6 +118,21 @@ export function AdminGeneralSettingsSection({
       onToggle={onToggle}
     >
       <div className="flex flex-col gap-0 pt-2">
+        <SettingRow
+          label={t("admin.analyticsEnabled")}
+          description={t("admin.analyticsEnabledDesc")}
+        >
+          <AdminToggle on={analyticsEnabled} onToggle={handleToggleAnalytics} />
+        </SettingRow>
+        <SettingRow
+          label={t("admin.sessionSharingGloballyEnabled")}
+          description={t("admin.sessionSharingGloballyEnabledDesc")}
+        >
+          <AdminToggle
+            on={sessionSharingGloballyEnabled}
+            onToggle={handleToggleSessionSharingGloballyEnabled}
+          />
+        </SettingRow>
         <SettingRow
           label={t("admin.allowRegistration")}
           description={t("admin.allowRegistrationDesc")}
@@ -1038,6 +1061,12 @@ type AdminSSLSectionProps = {
   requesting: boolean;
   handleSave: () => void;
   handleRequest: () => void;
+  manualCertDraft: string;
+  setManualCertDraft: Dispatch<SetStateAction<string>>;
+  manualKeyDraft: string;
+  setManualKeyDraft: Dispatch<SetStateAction<string>>;
+  manualUploading: boolean;
+  handleManualUpload: () => void;
 };
 
 export function AdminSSLSection({
@@ -1050,6 +1079,12 @@ export function AdminSSLSection({
   requesting,
   handleSave,
   handleRequest,
+  manualCertDraft,
+  setManualCertDraft,
+  manualKeyDraft,
+  setManualKeyDraft,
+  manualUploading,
+  handleManualUpload,
 }: AdminSSLSectionProps) {
   const { t } = useTranslation();
 
@@ -1109,34 +1144,6 @@ export function AdminSSLSection({
 
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-            {t("admin.sslDomain")}
-          </label>
-          <Input
-            value={settings.domain}
-            onChange={(e) =>
-              setSettings((p) => ({ ...p, domain: e.target.value }))
-            }
-            placeholder={t("admin.sslDomainPlaceholder")}
-            className="text-xs"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-            {t("admin.sslEmail")}
-          </label>
-          <Input
-            value={settings.email}
-            onChange={(e) =>
-              setSettings((p) => ({ ...p, email: e.target.value }))
-            }
-            placeholder={t("admin.sslEmailPlaceholder")}
-            className="text-xs"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             {t("admin.sslChallengeType")}
           </label>
           <Select
@@ -1158,12 +1165,47 @@ export function AdminSSLSection({
               <SelectItem value="dns-cloudflare" className="text-xs">
                 DNS (Cloudflare)
               </SelectItem>
+              <SelectItem value="manual" className="text-xs">
+                {t("admin.sslManualOption")}
+              </SelectItem>
             </SelectContent>
           </Select>
           <span className="text-[10px] text-muted-foreground">
             {t("admin.sslChallengeTypeDesc")}
           </span>
         </div>
+
+        {settings.challengeType !== "manual" && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                {t("admin.sslDomain")}
+              </label>
+              <Input
+                value={settings.domain}
+                onChange={(e) =>
+                  setSettings((p) => ({ ...p, domain: e.target.value }))
+                }
+                placeholder={t("admin.sslDomainPlaceholder")}
+                className="text-xs"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                {t("admin.sslEmail")}
+              </label>
+              <Input
+                value={settings.email}
+                onChange={(e) =>
+                  setSettings((p) => ({ ...p, email: e.target.value }))
+                }
+                placeholder={t("admin.sslEmailPlaceholder")}
+                className="text-xs"
+              />
+            </div>
+          </>
+        )}
 
         {settings.challengeType === "dns-cloudflare" && (
           <div className="flex flex-col gap-1">
@@ -1185,34 +1227,86 @@ export function AdminSSLSection({
           </div>
         )}
 
+        {settings.challengeType === "manual" && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                {t("admin.sslManualCert")}
+              </label>
+              <textarea
+                rows={5}
+                value={manualCertDraft}
+                onChange={(e) => setManualCertDraft(e.target.value)}
+                placeholder={t("admin.sslManualCertPlaceholder")}
+                spellCheck={false}
+                className="w-full px-2 py-1.5 text-[10px] font-mono bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+                {t("admin.sslManualKey")}
+              </label>
+              <textarea
+                rows={5}
+                value={manualKeyDraft}
+                onChange={(e) => setManualKeyDraft(e.target.value)}
+                placeholder={t("admin.sslManualKeyPlaceholder")}
+                spellCheck={false}
+                className="w-full px-2 py-1.5 text-[10px] font-mono bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring"
+              />
+              <span className="text-[10px] text-muted-foreground">
+                {t("admin.sslManualDesc")}
+              </span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+              onClick={handleManualUpload}
+              disabled={manualUploading}
+            >
+              <RefreshCw
+                className={`size-3 ${manualUploading ? "animate-spin" : ""}`}
+              />
+              {manualUploading
+                ? t("admin.sslManualUploadLoading")
+                : t("admin.sslManualUpload")}
+            </Button>
+          </>
+        )}
+
         <span className="text-[10px] text-muted-foreground border-t border-border pt-2">
           {t("admin.sslInfoNote")}
         </span>
 
-        <div className="flex flex-col gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
-            onClick={handleSave}
-          >
-            {t("admin.sslSave")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
-            onClick={handleRequest}
-            disabled={requesting}
-          >
-            <RefreshCw
-              className={`size-3 ${requesting ? "animate-spin" : ""}`}
-            />
-            {requesting
-              ? t("admin.sslRequestCertLoading")
-              : t("admin.sslRequestCert")}
-          </Button>
-        </div>
+        {settings.challengeType !== "manual" && (
+          <div className="flex flex-col gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+              onClick={handleSave}
+            >
+              {t("admin.sslSave")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand h-7"
+              onClick={handleRequest}
+              disabled={requesting}
+            >
+              <RefreshCw
+                className={`size-3 ${requesting ? "animate-spin" : ""}`}
+              />
+              {requesting
+                ? t("admin.sslRequestCertLoading")
+                : t("admin.sslRequestCert")}
+            </Button>
+          </div>
+        )}
       </div>
     </AccordionSection>
   );

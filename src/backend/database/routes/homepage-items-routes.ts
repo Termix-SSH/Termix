@@ -1,7 +1,10 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, Response } from "express";
 import { homepageLogger } from "../../utils/logger.js";
-import { createCurrentHomepageItemRepository } from "../repositories/factory.js";
+import {
+  createCurrentHomepageItemRepository,
+  createCurrentSyncTombstoneRepository,
+} from "../repositories/factory.js";
 import express from "express";
 
 export const homepageItemsRouter = express.Router();
@@ -184,7 +187,14 @@ homepageItemsRouter.delete("/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Not found" });
     }
 
-    await itemRepository.deleteForUser(userId, id);
+    const deleted = await itemRepository.deleteForUser(userId, id);
+    if (deleted?.syncId) {
+      await createCurrentSyncTombstoneRepository().record(
+        userId,
+        "homepageItems",
+        deleted.syncId,
+      );
+    }
     res.json({ message: "Homepage item deleted" });
   } catch (err) {
     homepageLogger.error("Failed to delete homepage item", err);

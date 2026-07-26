@@ -97,6 +97,10 @@ export function createHostEditorForm(
       ? "chain"
       : "single") as "single" | "chain",
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
+    connectionOrigin: (host?.connectionOrigin ?? null) as
+      | "local"
+      | "remote"
+      | null,
     enableTerminal: host?.enableTerminal ?? true,
     enableSessionLogging:
       host?.enableSessionLogging ?? d?.enableSessionLogging ?? true,
@@ -107,6 +111,7 @@ export function createHostEditorForm(
     enableDocker: host?.enableDocker ?? false,
     dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
+    allowSessionSharing: host?.allowSessionSharing ?? true,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
       defaultCredentialId: null as number | null,
@@ -191,21 +196,28 @@ export function createHostEditorForm(
       host?.quickActions ?? ([] as { name: string; snippetId: string }[]),
     rdpCredentialId: host?.rdpCredentialId ?? "",
     rdpUser: host?.rdpUser ?? "",
-    rdpPassword: host?.rdpPassword ?? "",
+    rdpPassword: host?.hasRdpPassword
+      ? "existing_rdp_password"
+      : (host?.rdpPassword ?? ""),
     domain: host?.domain ?? "",
     security: host?.security ?? "",
     ignoreCert: host?.ignoreCert ?? false,
     vncCredentialId: host?.vncCredentialId ?? "",
-    vncPassword: host?.vncPassword ?? "",
+    vncPassword: host?.hasVncPassword
+      ? "existing_vnc_password"
+      : (host?.vncPassword ?? ""),
     vncUser: host?.vncUser ?? "",
     telnetUser: host?.telnetUser ?? "",
-    telnetPassword: host?.telnetPassword ?? "",
+    telnetPassword: host?.hasTelnetPassword
+      ? "existing_telnet_password"
+      : (host?.telnetPassword ?? ""),
     telnetCredentialId:
       host?.telnetCredentialId != null ? String(host.telnetCredentialId) : "",
     rdpAuthType: (host?.rdpAuthType ??
       (host?.rdpCredentialId ? "credential" : "direct")) as
       | "direct"
-      | "credential",
+      | "credential"
+      | "none",
     vncAuthType: (host?.vncAuthType ??
       (host?.vncCredentialId ? "credential" : "direct")) as
       | "direct"
@@ -305,6 +317,7 @@ export function buildHostEditorPayload(
     enableDocker: form.enableDocker,
     dockerConfig: form.enableDocker ? form.dockerConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
+    allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
     proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
     defaultPath: form.defaultPath || "/",
@@ -319,6 +332,7 @@ export function buildHostEditorPayload(
       form.socks5ProxyMode === "single" ? form.socks5Password || null : null,
     socks5ProxyChain:
       form.socks5ProxyMode === "chain" ? form.socks5ProxyChain : null,
+    connectionOrigin: form.connectionOrigin,
     enableSsh: protocols.enableSsh,
     enableRdp: protocols.enableRdp,
     enableVnc: protocols.enableVnc,
@@ -340,7 +354,9 @@ export function buildHostEditorPayload(
         ? form.rdpUser || null
         : null,
     rdpPassword:
-      protocols.enableRdp && form.rdpAuthType === "direct"
+      protocols.enableRdp &&
+      form.rdpAuthType === "direct" &&
+      form.rdpPassword !== "existing_rdp_password"
         ? form.rdpPassword || null
         : null,
     rdpDomain: form.domain || null,
@@ -354,7 +370,9 @@ export function buildHostEditorPayload(
         ? Number(form.vncCredentialId)
         : null,
     vncPassword:
-      protocols.enableVnc && form.vncAuthType === "direct"
+      protocols.enableVnc &&
+      form.vncAuthType === "direct" &&
+      form.vncPassword !== "existing_vnc_password"
         ? form.vncPassword || null
         : null,
     vncUser:
@@ -373,7 +391,9 @@ export function buildHostEditorPayload(
         ? form.telnetUser || null
         : null,
     telnetPassword:
-      protocols.enableTelnet && form.telnetAuthType === "direct"
+      protocols.enableTelnet &&
+      form.telnetAuthType === "direct" &&
+      form.telnetPassword !== "existing_telnet_password"
         ? form.telnetPassword || null
         : null,
     jumpHosts: form.jumpHosts,

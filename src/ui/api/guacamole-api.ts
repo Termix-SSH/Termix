@@ -72,6 +72,7 @@ export interface GuacamoleTokenRequest {
 
 export interface GuacamoleTokenResponse {
   token: string;
+  guacamoleConnectionId?: string | null;
 }
 
 type GuacamoleConfigSource = {
@@ -208,12 +209,18 @@ export async function getGuacamoleToken(
 export async function getGuacamoleTokenFromHost(
   hostId: number,
   protocol?: "rdp" | "vnc" | "telnet",
+  promptedCredentials?: { username?: string; password?: string },
 ): Promise<GuacamoleTokenResponse> {
   try {
-    const response = await authApi.post(
-      `/guacamole/connect-host/${hostId}`,
-      protocol ? { protocol } : {},
-    );
+    const response = await authApi.post(`/guacamole/connect-host/${hostId}`, {
+      ...(protocol ? { protocol } : {}),
+      ...(promptedCredentials?.username
+        ? { promptedUsername: promptedCredentials.username }
+        : {}),
+      ...(promptedCredentials?.password
+        ? { promptedPassword: promptedCredentials.password }
+        : {}),
+    });
     return response.data;
   } catch (error) {
     throw handleApiError(error, "get guacamole token from host");

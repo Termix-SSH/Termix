@@ -12,6 +12,7 @@ import {
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
   createCurrentUserRepository,
+  createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 
 const router = express.Router();
@@ -642,6 +643,13 @@ router.delete(
         userId,
         credentialId,
       );
+      if (credentialToDelete.syncId) {
+        await createCurrentSyncTombstoneRepository().record(
+          userId,
+          "sshCredentials",
+          credentialToDelete.syncId,
+        );
+      }
 
       // Shares stay in place; re-snapshot so recipients fall back to whatever
       // auth the host still has (or lose the stale credential copy).

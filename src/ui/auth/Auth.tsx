@@ -29,17 +29,13 @@ import {
   completePasswordReset,
   getOIDCAuthorizeUrl,
   verifyTOTPLogin,
-  getServerConfig,
-  saveServerConfig,
   isElectron,
-  getEmbeddedServerStatus,
   getCurrentToken,
   getOidcSilentLoginDefault,
+  requestDesktopAutoSession,
 } from "@/main-axios";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
-import { ElectronServerConfig as ServerConfigComponent } from "@/auth/ElectronServerConfig";
-import { ElectronLoginForm } from "@/auth/ElectronLoginForm";
 import { Checkbox } from "@/components/checkbox";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import {
@@ -263,12 +259,22 @@ export function Auth({ onLogin }: AuthProps) {
   const [firstUser, setFirstUser] = useState(false);
   const [dbConnectionFailed, setDbConnectionFailed] = useState(false);
   const [dbHealthChecking, setDbHealthChecking] = useState(true);
-
-  const [showServerConfig, setShowServerConfig] = useState<boolean | null>(
-    null,
-  );
-  const [currentServerUrl, setCurrentServerUrl] = useState("");
   const [webviewAuthSuccess, setWebviewAuthSuccess] = useState(false);
+
+  // Electron, non-iframed only: the desktop app never shows a login form
+  // when running standalone -- the embedded backend auto-provisions a
+  // single local user on first boot, and this component silently exchanges
+  // that for a session instead of rendering login/register.
+  // null = probe still in flight (Electron only, blocks rendering below).
+  // true = probe settled with no auto-login (not applicable outside
+  // Electron, multiple users exist, or setup is genuinely required) --
+  // safe to fall through to the normal form/health-check flow.
+  // Auto-login success never sets this; it calls onLogin directly and this
+  // component unmounts.
+  const [desktopAutoSessionDone, setDesktopAutoSessionDone] = useState<
+    boolean | null
+  >(!isElectron() || isInElectronWebView() ? true : null);
+  const [desktopAutoSessionRetries, setDesktopAutoSessionRetries] = useState(0);
 
   useEffect(() => {
     try {
@@ -320,7 +326,11 @@ export function Auth({ onLogin }: AuthProps) {
   }, []);
 
   useEffect(() => {
-    if (showServerConfig) return;
+    // Runs once the auto-session probe has settled (immediately outside
+    // Electron, since it starts at true there; after the probe resolves in
+    // Electron). Waiting avoids flashing a login screen the user is about
+    // to skip past via auto-login.
+    if (desktopAutoSessionDone !== true) return;
     setDbHealthChecking(true);
     getSetupRequired()
       .then((res) => {
@@ -332,53 +342,59 @@ export function Auth({ onLogin }: AuthProps) {
       })
       .catch(() => setDbConnectionFailed(true))
       .finally(() => setDbHealthChecking(false));
-  }, [showServerConfig]);
+  }, [desktopAutoSessionDone]);
 
+  // A cold first launch spawns the embedded backend as a separate process
+  // that can take anywhere from a couple seconds to much longer to finish
+  // booting (DB init, SSL, antivirus scanning a freshly-unpacked binary,
+  // slow disks, etc.) -- well after the renderer has already mounted. The
+  // embedded backend is bundled, always-on infrastructure, not something
+  // that can be "not there" -- it always eventually comes up. So a
+  // "retry" outcome (connection error, not a real verdict) is retried
+  // forever with capped backoff rather than ever giving up and falling
+  // through to the login form: that form is not a valid destination for a
+  // standalone install with no remote sync configured, since the only
+  // local account has no password to log in with. Only a definitive
+  // "declined" (backend reachable and says no -- multiple users, or the
+  // sole local user has a real credential) stops retrying and shows the
+  // real form.
   useEffect(() => {
-    const checkElectron = async () => {
-      if (isInElectronWebView()) {
-        setShowServerConfig(false);
-        return;
-      }
-      if (isElectron()) {
-        const forceShow = localStorage.getItem("termix_show_server_config");
-        if (forceShow === "true") {
-          localStorage.removeItem("termix_show_server_config");
-          try {
-            const config = await getServerConfig();
-            setCurrentServerUrl(config?.serverUrl || "");
-          } catch {
-            // ignore
-          }
-          setShowServerConfig(true);
+    if (desktopAutoSessionDone !== null) return;
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    requestDesktopAutoSession()
+      .then((outcome) => {
+        if (cancelled) return;
+        if (outcome.kind === "success") {
+          storeAuth(outcome.data.username || "");
+          onLogin(
+            outcome.data.username || "",
+            outcome.data.userId || undefined,
+            !!outcome.data.is_admin,
+          );
           return;
         }
-        try {
-          const [config, status] = await Promise.all([
-            getServerConfig(),
-            getEmbeddedServerStatus(),
-          ]);
-          if (
-            status?.embedded &&
-            status?.running &&
-            config &&
-            !config.serverUrl
-          ) {
-            setShowServerConfig(false);
-            setCurrentServerUrl("");
-            return;
-          }
-          setCurrentServerUrl(config?.serverUrl || "");
-          setShowServerConfig(!config || !config.serverUrl);
-        } catch {
-          setShowServerConfig(true);
+        if (outcome.kind === "retry") {
+          const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
+          retryTimer = setTimeout(() => {
+            if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
+          }, delay);
+          return;
         }
-      } else {
-        setShowServerConfig(false);
-      }
+        setDesktopAutoSessionDone(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
+        retryTimer = setTimeout(() => {
+          if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
+        }, delay);
+      });
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
-    checkElectron();
-  }, []);
+  }, [desktopAutoSessionDone, desktopAutoSessionRetries, onLogin]);
 
   useEffect(() => {
     if (view === "totp" && totpInputRef.current) totpInputRef.current.focus();
@@ -474,36 +490,6 @@ export function Auth({ onLogin }: AuthProps) {
     }
   }, [onLogin, t]);
 
-  const handleElectronAuthSuccess = useCallback(
-    async (token: string | null) => {
-      try {
-        if (!token) {
-          // No token in postMessage — fall back to waiting for the HttpOnly cookie
-          const cookieReady = await window.electronAPI?.waitForSessionCookie?.(
-            "jwt",
-            currentServerUrl,
-            null,
-            5000,
-          );
-          if (cookieReady && !cookieReady.success)
-            throw new Error(cookieReady.error || "Auth cookie not ready");
-        }
-        const meRes = await getUserInfo();
-        if (!meRes) throw new Error("Failed to get user info");
-        storeAuth(meRes.username || "");
-        onLogin(
-          meRes.username || "",
-          meRes.userId || undefined,
-          !!meRes.is_admin,
-        );
-        toast.success(t("messages.loginSuccess"));
-      } catch {
-        toast.error(t("errors.failedUserInfo"));
-      }
-    },
-    [onLogin, currentServerUrl, t],
-  );
-
   function resetAll() {
     setUsername("");
     setPassword("");
@@ -549,11 +535,19 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       if (isInElectronWebView()) {
+        // The iframe's login request never carries the X-Electron-App header
+        // (only the top-level Electron renderer's axios instances do), so the
+        // backend never includes the JWT in the login response body -- it
+        // only lands in an HttpOnly cookie scoped to this iframe's origin.
+        // Read it back via /users/me/token, same as the mobile-webview OIDC
+        // callback below does, so the parent window can persist it.
+        const token = res?.token ?? (await getCurrentToken());
         window.parent.postMessage(
           {
             type: "AUTH_SUCCESS",
             source: "auth_component",
             platform: "desktop",
+            token: token ?? null,
             timestamp: Date.now(),
           },
           "*",
@@ -607,6 +601,35 @@ export function Auth({ onLogin }: AuthProps) {
         setView("totp");
         return;
       }
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the login response body.
+        const token = res?.token ?? "";
+        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: "AUTH_SUCCESS", token }),
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
+      if (isInElectronWebView()) {
+        // Registration inside the Remote Sync iframe must hand off to the
+        // parent window the same way handleLogin does -- otherwise this
+        // component's own onLogin() below fires on the iframe's own,
+        // independent copy of the app, rendering the full remote AppShell
+        // inside the small login dialog instead of closing it.
+        const token = res?.token ?? (await getCurrentToken());
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            source: "auth_component",
+            platform: "desktop",
+            token: token ?? null,
+            timestamp: Date.now(),
+          },
+          "*",
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
       const meRes = await getUserInfo();
       storeAuth(meRes.username || username.trim());
       toast.success(t("messages.registrationSuccess"));
@@ -650,11 +673,16 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       if (isInElectronWebView()) {
+        // See the equivalent branch in handleLogin: the iframe never sends
+        // X-Electron-App, so the JWT never lands in the response body here
+        // either -- read it back from the HttpOnly cookie that was just set.
+        const token = res?.token ?? (await getCurrentToken());
         window.parent.postMessage(
           {
             type: "AUTH_SUCCESS",
             source: "totp_auth_component",
             platform: "desktop",
+            token: token ?? null,
             timestamp: Date.now(),
           },
           "*",
@@ -935,46 +963,19 @@ export function Auth({ onLogin }: AuthProps) {
     oidcSilentLoginDefaultLoaded,
   ]);
 
-  // Electron server config / webview auth success screens
-  if (isElectron() && !isInElectronWebView()) {
-    if (showServerConfig === null)
-      return (
-        <div className="fixed inset-0 flex items-center justify-center bg-background">
-          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      );
-    if (showServerConfig)
-      return (
-        <div className="fixed inset-0 flex items-center justify-center bg-background p-6">
-          <div className="w-full max-w-md">
-            <ServerConfigComponent
-              onServerConfigured={() => window.location.reload()}
-              onUseEmbedded={async () => {
-                await saveServerConfig({
-                  serverUrl: "",
-                  lastUpdated: new Date().toISOString(),
-                });
-                setShowServerConfig(false);
-                setCurrentServerUrl("");
-              }}
-              onCancel={() => setShowServerConfig(false)}
-              isFirstTime={!currentServerUrl}
-            />
-          </div>
-        </div>
-      );
-    if (!webviewAuthSuccess && showServerConfig === false && currentServerUrl)
-      return (
-        <div className="w-full h-screen flex items-center justify-center p-4 bg-background">
-          <div className="w-full max-w-4xl h-[90vh]">
-            <ElectronLoginForm
-              serverUrl={currentServerUrl}
-              onAuthSuccess={handleElectronAuthSuccess}
-              onChangeServer={() => setShowServerConfig(true)}
-            />
-          </div>
-        </div>
-      );
+  // Electron, non-iframed: wait for the auto-session probe before rendering
+  // anything, so a standalone desktop install never flashes a login form
+  // it's about to skip past.
+  if (
+    isElectron() &&
+    !isInElectronWebView() &&
+    desktopAutoSessionDone === null
+  ) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (webviewAuthSuccess || (isInElectronWebView() && webviewAuthSuccess))
@@ -1018,30 +1019,11 @@ export function Auth({ onLogin }: AuthProps) {
               ))}
             </select>
           </div>
-          {isElectron() && currentServerUrl && (
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-muted-foreground">
-                  {t("serverConfig.serverUrl")}
-                </span>
-                <span className="text-xs text-muted-foreground font-mono truncate max-w-[180px]">
-                  {currentServerUrl}
-                </span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowServerConfig(true)}
-              >
-                {t("common.edit")}
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     );
 
-  if (dbHealthChecking && showServerConfig === false)
+  if (dbHealthChecking)
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -1068,21 +1050,6 @@ export function Auth({ onLogin }: AuthProps) {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
-      {isElectron() && !isInElectronWebView() && showServerConfig === false && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-          <button
-            onClick={() => setShowServerConfig(true)}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="size-4" />
-            {t("serverConfig.changeServer")}
-          </button>
-          <span className="text-xs text-muted-foreground">
-            {t("serverConfig.localServer")}
-          </span>
-          <div className="w-20" />
-        </div>
-      )}
       <div className="flex flex-1 overflow-hidden">
         {/* Left decorative panel */}
         <div className="hidden lg:flex flex-col w-[420px] shrink-0 bg-sidebar border-r border-border relative overflow-hidden select-none">

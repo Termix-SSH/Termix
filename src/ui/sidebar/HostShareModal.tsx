@@ -23,6 +23,7 @@ import {
 import {
   getHostAccess,
   shareHost,
+  shareFolder,
   updateHostAccess,
   revokeHostAccess,
   getUserList,
@@ -55,12 +56,15 @@ export function HostShareModal({
   open,
   onClose,
   host,
+  folder,
 }: {
   open: boolean;
   onClose: () => void;
   host: Host | null;
+  folder?: string | null;
 }) {
   const { t } = useTranslation();
+  const isFolderShare = !host && !!folder;
   const [targetTab, setTargetTab] = useState<"user" | "role">("user");
   const [search, setSearch] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
@@ -83,13 +87,19 @@ export function HostShareModal({
   const [sharingLoaded, setSharingLoaded] = useState(false);
   const [sharingLoadError, setSharingLoadError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [folderShareSummary, setFolderShareSummary] = useState<{
+    hostsShared: number;
+    hostsTotal: number;
+  } | null>(null);
 
   useEffect(() => {
-    if (!open || !host) return;
+    if (!open || (!host && !folder)) return;
     if (sharingLoaded) return;
     setSharingLoaded(true);
     Promise.all([
-      getHostAccess(Number(host.id)).catch(() => ({ accessList: [] })),
+      host
+        ? getHostAccess(Number(host.id)).catch(() => ({ accessList: [] }))
+        : Promise.resolve({ accessList: [] }),
       getUserList().catch(() => ({ users: [] })),
       getRoles().catch(() => ({ roles: [] })),
     ])
@@ -112,7 +122,7 @@ export function HostShareModal({
         );
       })
       .catch(() => setSharingLoadError(true));
-  }, [open, host, sharingLoaded]);
+  }, [open, host, folder, sharingLoaded]);
 
   useEffect(() => {
     setSharingLoaded(false);
@@ -125,7 +135,8 @@ export function HostShareModal({
     setExpiryPreset("never");
     setCustomHours("");
     setTargetTab("user");
-  }, [host?.id]);
+    setFolderShareSummary(null);
+  }, [host?.id, folder]);
 
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -165,7 +176,7 @@ export function HostShareModal({
   }
 
   async function handleShare() {
-    if (!host || selectedCount === 0) return;
+    if ((!host && !folder) || selectedCount === 0) return;
     const targets: ShareTarget[] = [
       ...[...selectedUserIds].map(
         (id) => ({ type: "user", id }) as ShareTarget,
@@ -177,17 +188,40 @@ export function HostShareModal({
 
     setSubmitting(true);
     try {
-      await shareHost(Number(host.id), {
-        targets,
-        permissionLevel,
-        ...(durationHours ? { durationHours } : {}),
-      });
-      await refreshAccessList();
-      setSelectedUserIds(new Set());
-      setSelectedRoleIds(new Set());
-      toast.success(t("hosts.hostSharedSuccessfully"));
+      if (isFolderShare && folder) {
+        const result = await shareFolder(folder, {
+          targets,
+          permissionLevel,
+          ...(durationHours ? { durationHours } : {}),
+        });
+        setFolderShareSummary({
+          hostsShared: result.hostsShared,
+          hostsTotal: result.hostsTotal,
+        });
+        setSelectedUserIds(new Set());
+        setSelectedRoleIds(new Set());
+        toast.success(
+          t("hosts.folderSharedSuccessfully", {
+            count: result.hostsShared,
+          }),
+        );
+      } else if (host) {
+        await shareHost(Number(host.id), {
+          targets,
+          permissionLevel,
+          ...(durationHours ? { durationHours } : {}),
+        });
+        await refreshAccessList();
+        setSelectedUserIds(new Set());
+        setSelectedRoleIds(new Set());
+        toast.success(t("hosts.hostSharedSuccessfully"));
+      }
     } catch {
-      toast.error(t("hosts.failedToShareHost"));
+      toast.error(
+        isFolderShare
+          ? t("hosts.failedToShareFolder")
+          : t("hosts.failedToShareHost"),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -224,7 +258,9 @@ export function HostShareModal({
       >
         <ArrowLeft className="size-3.5 shrink-0" />
         <span className="truncate">
-          {t("hosts.shareHostTitle", { name: host?.name ?? "" })}
+          {isFolderShare
+            ? t("hosts.shareFolderTitle", { name: folder ?? "" })
+            : t("hosts.shareHostTitle", { name: host?.name ?? "" })}
         </span>
       </button>
 
@@ -441,121 +477,134 @@ export function HostShareModal({
         )}
       </div>
 
-      {/* Current access: takes remaining space, scrolls independently */}
-      <div className="flex flex-col flex-1 min-h-0">
-        <div className="flex items-center gap-1.5 px-3 py-2 shrink-0 border-b border-border text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          <ListChecks className="size-3.5" />
-          {t("hosts.sharing.currentAccess")}
-          {accessList.length > 0 && (
-            <span className="text-muted-foreground/40">
-              ({accessList.length})
-            </span>
-          )}
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {accessList.length === 0 && (
-            <div className="px-3 py-6 text-xs text-muted-foreground/50 text-center">
-              {t("hosts.sharing.noAccessEntries")}
-            </div>
-          )}
-          {accessList.map((record) => {
-            const expired =
-              record.expiresAt && new Date(record.expiresAt) < new Date();
-            return (
-              <div
-                key={record.id}
-                className="flex flex-col gap-1 px-3 py-2 border-b border-border/60 last:border-0 text-xs"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {record.targetType === "user" ? (
-                      <User className="size-3 text-muted-foreground shrink-0" />
-                    ) : (
-                      <Shield className="size-3 text-muted-foreground shrink-0" />
-                    )}
-                    <span className="font-semibold truncate">
-                      {record.username ??
-                        record.roleDisplayName ??
-                        record.roleName ??
-                        record.userId ??
-                        record.roleId}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-accent-brand/30 bg-accent-brand/10 text-accent-brand transition-colors hover:bg-accent-brand/20">
-                          {t(
-                            `hosts.sharing.levels.${record.permissionLevel ?? "connect"}.label`,
-                          )}
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="text-xs">
-                        {PERMISSION_LEVELS.map((level) => (
-                          <DropdownMenuItem
-                            key={level}
-                            onClick={() => handleLevelChange(record, level)}
-                          >
-                            {record.permissionLevel === level ? (
-                              <Check className="size-3 mr-1.5" />
-                            ) : (
-                              <span className="size-3 mr-1.5" />
-                            )}
-                            {t(`hosts.sharing.levels.${level}.label`)}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
-                      onClick={async () => {
-                        try {
-                          await revokeHostAccess(Number(host!.id), record.id);
-                          setAccessList((prev) =>
-                            prev.filter((entry) => entry.id !== record.id),
-                          );
-                          toast.success(t("hosts.accessRevoked"));
-                        } catch {
-                          toast.error(t("hosts.failedToRevokeAccess"));
-                        }
-                      }}
-                    >
-                      {t("hosts.sharing.revoke")}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-4">
-                  <span>
-                    {t("hosts.sharing.grantedBy")}:{" "}
-                    <span className="text-foreground/70">
-                      {record.grantedByUsername ?? "?"}
-                    </span>
-                  </span>
-                  <span className={expired ? "text-destructive" : ""}>
-                    {t("hosts.sharing.expires")}:{" "}
-                    {expired ? (
-                      <span className="inline-flex items-center gap-0.5 text-destructive">
-                        <X className="size-3" />
-                        {t("hosts.sharing.expired")}
-                      </span>
-                    ) : record.expiresAt ? (
-                      <span className="text-foreground/70">
-                        {new Date(record.expiresAt).toLocaleString()}
-                      </span>
-                    ) : (
-                      <span className="text-foreground/70">
-                        {t("hosts.sharing.never")}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </div>
-            );
+      {/* Folder share summary */}
+      {isFolderShare && folderShareSummary && (
+        <div className="flex items-center gap-1.5 px-3 py-2 shrink-0 text-xs text-muted-foreground">
+          <ListChecks className="size-3.5 shrink-0" />
+          {t("hosts.sharing.folderShareSummary", {
+            shared: folderShareSummary.hostsShared,
+            total: folderShareSummary.hostsTotal,
           })}
         </div>
-      </div>
+      )}
+
+      {/* Current access: takes remaining space, scrolls independently */}
+      {!isFolderShare && (
+        <div className="flex flex-col flex-1 min-h-0">
+          <div className="flex items-center gap-1.5 px-3 py-2 shrink-0 border-b border-border text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <ListChecks className="size-3.5" />
+            {t("hosts.sharing.currentAccess")}
+            {accessList.length > 0 && (
+              <span className="text-muted-foreground/40">
+                ({accessList.length})
+              </span>
+            )}
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {accessList.length === 0 && (
+              <div className="px-3 py-6 text-xs text-muted-foreground/50 text-center">
+                {t("hosts.sharing.noAccessEntries")}
+              </div>
+            )}
+            {accessList.map((record) => {
+              const expired =
+                record.expiresAt && new Date(record.expiresAt) < new Date();
+              return (
+                <div
+                  key={record.id}
+                  className="flex flex-col gap-1 px-3 py-2 border-b border-border/60 last:border-0 text-xs"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {record.targetType === "user" ? (
+                        <User className="size-3 text-muted-foreground shrink-0" />
+                      ) : (
+                        <Shield className="size-3 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="font-semibold truncate">
+                        {record.username ??
+                          record.roleDisplayName ??
+                          record.roleName ??
+                          record.userId ??
+                          record.roleId}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest border border-accent-brand/30 bg-accent-brand/10 text-accent-brand transition-colors hover:bg-accent-brand/20">
+                            {t(
+                              `hosts.sharing.levels.${record.permissionLevel ?? "connect"}.label`,
+                            )}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="text-xs">
+                          {PERMISSION_LEVELS.map((level) => (
+                            <DropdownMenuItem
+                              key={level}
+                              onClick={() => handleLevelChange(record, level)}
+                            >
+                              {record.permissionLevel === level ? (
+                                <Check className="size-3 mr-1.5" />
+                              ) : (
+                                <span className="size-3 mr-1.5" />
+                              )}
+                              {t(`hosts.sharing.levels.${level}.label`)}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 text-[10px] px-2 text-destructive hover:bg-destructive/10"
+                        onClick={async () => {
+                          try {
+                            await revokeHostAccess(Number(host!.id), record.id);
+                            setAccessList((prev) =>
+                              prev.filter((entry) => entry.id !== record.id),
+                            );
+                            toast.success(t("hosts.accessRevoked"));
+                          } catch {
+                            toast.error(t("hosts.failedToRevokeAccess"));
+                          }
+                        }}
+                      >
+                        {t("hosts.sharing.revoke")}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-[10px] text-muted-foreground pl-4">
+                    <span>
+                      {t("hosts.sharing.grantedBy")}:{" "}
+                      <span className="text-foreground/70">
+                        {record.grantedByUsername ?? "?"}
+                      </span>
+                    </span>
+                    <span className={expired ? "text-destructive" : ""}>
+                      {t("hosts.sharing.expires")}:{" "}
+                      {expired ? (
+                        <span className="inline-flex items-center gap-0.5 text-destructive">
+                          <X className="size-3" />
+                          {t("hosts.sharing.expired")}
+                        </span>
+                      ) : record.expiresAt ? (
+                        <span className="text-foreground/70">
+                          {new Date(record.expiresAt).toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-foreground/70">
+                          {t("hosts.sharing.never")}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

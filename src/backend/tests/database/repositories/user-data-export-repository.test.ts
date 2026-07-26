@@ -49,6 +49,7 @@ describe("UserDataExportRepository", () => {
         vault_profile_id INTEGER,
         enable_terminal INTEGER NOT NULL DEFAULT 1,
         enable_session_logging INTEGER NOT NULL DEFAULT 1,
+        allow_session_sharing INTEGER NOT NULL DEFAULT 1,
         enable_command_history INTEGER NOT NULL DEFAULT 1,
         enable_tunnel INTEGER NOT NULL DEFAULT 1,
         tunnel_connections TEXT,
@@ -112,6 +113,8 @@ describe("UserDataExportRepository", () => {
         host_key_first_seen TEXT,
         host_key_last_verified TEXT,
         host_key_changed_count INTEGER DEFAULT 0,
+        connection_origin TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -135,6 +138,7 @@ describe("UserDataExportRepository", () => {
         cert_public_key TEXT,
         usage_count INTEGER NOT NULL DEFAULT 0,
         last_used TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );

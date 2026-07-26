@@ -47,6 +47,8 @@ describe("UserPreferenceRepository", () => {
         hidden_rail_tabs TEXT,
         compact_host_view INTEGER,
         status_color_scheme TEXT,
+        custom_themes TEXT,
+        custom_keybindings TEXT,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 

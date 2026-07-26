@@ -151,6 +151,7 @@ export interface Host {
   enableDocker: boolean;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
+  allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | null;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
@@ -207,7 +208,7 @@ export interface Host {
   telnetUser?: string;
   telnetPassword?: string;
   telnetCredentialId?: number | null;
-  rdpAuthType?: "direct" | "credential" | null;
+  rdpAuthType?: "direct" | "credential" | "none" | null;
   vncAuthType?: "direct" | "credential" | null;
   telnetAuthType?: "direct" | "credential" | null;
   createdAt: string;
@@ -272,6 +273,7 @@ export interface HostData {
   enableDocker?: boolean;
   enableProxmox?: boolean;
   enableTmuxMonitor?: boolean;
+  allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
   showTerminalInSidebar?: boolean;
   showFileManagerInSidebar?: boolean;
@@ -329,7 +331,7 @@ export interface HostData {
   telnetUser?: string;
   telnetPassword?: string;
   telnetCredentialId?: number | null;
-  rdpAuthType?: "direct" | "credential" | null;
+  rdpAuthType?: "direct" | "credential" | "none" | null;
   vncAuthType?: "direct" | "credential" | null;
   telnetAuthType?: "direct" | "credential" | null;
 }
@@ -343,6 +345,7 @@ export interface SSHFolder {
   name: string;
   color?: string;
   icon?: string;
+  credentialId?: number | null;
   createdAt: string;
   updatedAt: string;
 }

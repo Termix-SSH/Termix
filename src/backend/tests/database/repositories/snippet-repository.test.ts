@@ -29,6 +29,7 @@ describe("SnippetRepository", () => {
         description TEXT,
         folder TEXT,
         "order" INTEGER NOT NULL DEFAULT 0,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         host_filter TEXT
@@ -40,6 +41,7 @@ describe("SnippetRepository", () => {
         name TEXT NOT NULL,
         color TEXT,
         icon TEXT,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );

@@ -121,11 +121,14 @@ export function ProxmoxDiscoverDialog({
       const credId = defaultCredentialId ?? discoveredCredentialId;
       const importAuth = resolveProxmoxImportAuth(defaultAuthType, credId);
 
-      const toImport = guests
-        .filter((g) => selected.has(g.vmid))
+      const selectedGuests = guests.filter((g) => selected.has(g.vmid));
+      const skippedNoIp = selectedGuests.filter((g) => !g.ip).length;
+
+      const toImport = selectedGuests
+        .filter((g) => !!g.ip)
         .map((g) => ({
           name: g.name,
-          ip: g.ip ?? "0.0.0.0",
+          ip: g.ip as string,
           port: g.connectionType === "rdp" ? 3389 : 22,
           username: defaultUsername ?? "root",
           folder: importFolder,
@@ -152,10 +155,15 @@ export function ProxmoxDiscoverDialog({
           },
         }));
 
-      const result = await bulkImportSSHHosts(toImport, false);
-      const updated = await getSSHHosts();
-      onHostsChanged(updated);
-      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      const result = toImport.length
+        ? await bulkImportSSHHosts(toImport, false)
+        : { success: 0, updated: 0, skipped: 0, failed: 0 };
+
+      if (toImport.length) {
+        const updated = await getSSHHosts();
+        onHostsChanged(updated);
+        window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      }
 
       const msg = [
         result.success
@@ -166,6 +174,9 @@ export function ProxmoxDiscoverDialog({
           : null,
         result.failed
           ? t("hosts.proxmoxResultFailed", { count: result.failed })
+          : null,
+        skippedNoIp
+          ? t("hosts.proxmoxResultSkippedNoIp", { count: skippedNoIp })
           : null,
       ]
         .filter(Boolean)

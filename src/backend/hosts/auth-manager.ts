@@ -117,6 +117,24 @@ export class SSHAuthManager {
       return;
     }
 
+    // JumpCloud Protect / DUO-style push MFA: a menu choice ("Choose [1] Push,
+    // or [2] TOTP:") followed by an empty-answerable confirm ("Press enter to
+    // send Push request:"). Checked before the TOTP regex because the menu
+    // prompt's own text ("...or [2] TOTP:") would otherwise match it and get
+    // misrouted into the numeric-code flow.
+    const pushPromptPattern =
+      /choose.*push.*totp|press enter.*(push|send)|push notification|authentication by phone/i;
+    const isPushPrompt = promptTexts.some((p) => pushPromptPattern.test(p));
+
+    if (isPushPrompt) {
+      sshLogger.info("Push/menu MFA prompt detected", {
+        operation: "ssh_keyboard_interactive_push",
+        hostId: this.context.hostId,
+      });
+      this.handlePasswordAuth(prompts, finish, resolvedCredentials, hostConfig);
+      return;
+    }
+
     const totpPromptIndex = prompts.findIndex((p) =>
       /verification code|verification_code|token|otp|2fa|authenticator|google.*auth/i.test(
         p.prompt,
@@ -313,6 +331,10 @@ export class SSHAuthManager {
           ? passwordPromptIndex
           : firstUnansweredIndex;
 
+      const pushPromptPattern =
+        /choose.*push.*totp|press enter.*(push|send)|push notification|authentication by phone/i;
+      const isPushPrompt = pushPromptPattern.test(prompts[promptIndex].prompt);
+
       this.context.keyboardInteractiveFinish = (userResponses: string[]) => {
         const userInput = (userResponses[0] || "").trim();
 
@@ -333,22 +355,25 @@ export class SSHAuthManager {
         clearTimeout(this.context.totpTimeout);
       }
 
-      this.context.totpTimeout = setTimeout(() => {
-        if (this.context.keyboardInteractiveFinish) {
-          this.context.keyboardInteractiveFinish = null;
-          this.context.keyboardInteractiveResponded = false;
-          sshLogger.warn("Password prompt timeout", {
-            operation: "password_timeout",
-            hostId: this.context.hostId,
-          });
-          this.context.ws.send(
-            JSON.stringify({
-              type: "error",
-              message: "Password verification timeout. Please reconnect.",
-            }),
-          );
-        }
-      }, 180000);
+      this.context.totpTimeout = setTimeout(
+        () => {
+          if (this.context.keyboardInteractiveFinish) {
+            this.context.keyboardInteractiveFinish = null;
+            this.context.keyboardInteractiveResponded = false;
+            sshLogger.warn("Password prompt timeout", {
+              operation: "password_timeout",
+              hostId: this.context.hostId,
+            });
+            this.context.ws.send(
+              JSON.stringify({
+                type: "error",
+                message: "Password verification timeout. Please reconnect.",
+              }),
+            );
+          }
+        },
+        isPushPrompt ? 300000 : 180000,
+      );
 
       this.sendLog("auth", "info", "Password authentication required");
 
@@ -356,6 +381,7 @@ export class SSHAuthManager {
         JSON.stringify({
           type: "password_required",
           prompt: prompts[promptIndex].prompt,
+          echo: prompts[promptIndex].echo,
         }),
       );
       return;

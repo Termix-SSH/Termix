@@ -58,7 +58,12 @@ export class SessionRecordingRepository {
 
   async updateEnded(
     id: number,
-    input: { endedAt: string; duration: number | null },
+    input: {
+      endedAt: string;
+      duration: number | null;
+      terminatedByOwner?: boolean;
+      terminationReason?: string;
+    },
   ): Promise<void> {
     await this.context.drizzle
       .update(sessionRecordings)

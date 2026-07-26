@@ -8,6 +8,7 @@ import type {
   UserPreferenceRecord,
   UserPreferenceUpdate,
 } from "../repositories/user-preference-repository.js";
+import { isValidKeybinding } from "./keybinding-validation.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -33,6 +34,8 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   hiddenRailTabs: row?.hiddenRailTabs ?? null,
   compactHostView: row?.compactHostView ?? null,
   statusColorScheme: row?.statusColorScheme ?? null,
+  customThemes: row?.customThemes ?? null,
+  customKeybindings: row?.customKeybindings ?? null,
 });
 
 /**
@@ -106,6 +109,14 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
  *                 statusColorScheme:
  *                   type: string
  *                   nullable: true
+ *                 customThemes:
+ *                   type: string
+ *                   nullable: true
+ *                   description: JSON-encoded array of the user's saved global custom terminal themes.
+ *                 customKeybindings:
+ *                   type: string
+ *                   nullable: true
+ *                   description: JSON-encoded array of the user's custom terminal keybindings.
  */
 router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
@@ -175,6 +186,12 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 type: boolean
  *               statusColorScheme:
  *                 type: string
+ *               customThemes:
+ *                 type: string
+ *                 description: JSON-encoded array of the user's saved global custom terminal themes.
+ *               customKeybindings:
+ *                 type: string
+ *                 description: JSON-encoded array of the user's custom terminal keybindings.
  *     responses:
  *       200:
  *         description: Preferences updated successfully.
@@ -201,6 +218,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     hiddenRailTabs,
     compactHostView,
     statusColorScheme,
+    customThemes,
+    customKeybindings,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
     theme?: string | null;
@@ -221,6 +240,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     hiddenRailTabs?: string | null;
     compactHostView?: boolean | null;
     statusColorScheme?: string | null;
+    customThemes?: string | null;
+    customKeybindings?: string | null;
   };
 
   const updates: UserPreferenceUpdate = {
@@ -244,9 +265,61 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     storageMode,
     hiddenRailTabs,
     statusColorScheme,
+    customThemes,
+    customKeybindings,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
       return res.status(400).json({ error: `${key} must be a string` });
+    }
+  }
+
+  if (customThemes !== undefined && customThemes !== null) {
+    let parsedThemes: unknown;
+    try {
+      parsedThemes = JSON.parse(customThemes);
+    } catch {
+      return res
+        .status(400)
+        .json({ error: "customThemes must be a JSON-encoded array" });
+    }
+    if (!Array.isArray(parsedThemes) || parsedThemes.length > 100) {
+      return res.status(400).json({
+        error: "customThemes must be a JSON array of at most 100 themes",
+      });
+    }
+    const isValidTheme = (entry: unknown): boolean =>
+      !!entry &&
+      typeof entry === "object" &&
+      typeof (entry as { id?: unknown }).id === "string" &&
+      typeof (entry as { name?: unknown }).name === "string" &&
+      !!(entry as { colors?: unknown }).colors &&
+      typeof (entry as { colors?: unknown }).colors === "object";
+    if (!parsedThemes.every(isValidTheme)) {
+      return res.status(400).json({
+        error: "Each custom theme must have an id, name, and colors object",
+      });
+    }
+  }
+
+  if (customKeybindings !== undefined && customKeybindings !== null) {
+    let parsedKeybindings: unknown;
+    try {
+      parsedKeybindings = JSON.parse(customKeybindings);
+    } catch {
+      return res
+        .status(400)
+        .json({ error: "customKeybindings must be a JSON-encoded array" });
+    }
+    if (!Array.isArray(parsedKeybindings) || parsedKeybindings.length > 200) {
+      return res.status(400).json({
+        error: "customKeybindings must be a JSON array of at most 200 bindings",
+      });
+    }
+    if (!parsedKeybindings.every(isValidKeybinding)) {
+      return res.status(400).json({
+        error:
+          "Each custom keybinding must have an id, enabled flag, valid combo, and valid action",
+      });
     }
   }
 
@@ -294,6 +367,9 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (compactHostView !== undefined) updates.compactHostView = compactHostView;
   if (statusColorScheme !== undefined)
     updates.statusColorScheme = statusColorScheme;
+  if (customThemes !== undefined) updates.customThemes = customThemes;
+  if (customKeybindings !== undefined)
+    updates.customKeybindings = customKeybindings;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

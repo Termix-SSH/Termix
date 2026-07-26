@@ -488,16 +488,51 @@ async function discoverProxmoxGuestsForHost(
 
     async function resolveIp(g: GuestBase): Promise<string | null> {
       if (g.type === "lxc") {
+        let configIp: string | null = null;
         try {
           const cfgJson = await execCommand(
             client,
             `pvesh get /nodes/${g.node}/lxc/${g.vmid}/config --output-format json 2>/dev/null`,
             8000,
           );
-          return parseLxcIp(JSON.parse(cfgJson), config.preferredPrefixes);
+          configIp = parseLxcIp(JSON.parse(cfgJson), config.preferredPrefixes);
         } catch {
-          return null;
+          configIp = null;
         }
+        if (configIp) return configIp;
+        // Static config parsing found nothing (e.g. net0 uses ip=dhcp).
+        // Fall back to the live interface list for running containers.
+        if (g.status === "running") {
+          try {
+            const ifRaw = await execCommand(
+              client,
+              `pvesh get /nodes/${g.node}/lxc/${g.vmid}/interfaces --output-format json 2>/dev/null`,
+              5000,
+            );
+            const data = JSON.parse(ifRaw);
+            const entries: Array<Record<string, unknown>> = Array.isArray(data)
+              ? data
+              : [];
+            const allIps: string[] = [];
+            for (const entry of entries) {
+              if (entry.name === "lo") continue;
+              const inet = entry.inet;
+              if (typeof inet !== "string") continue;
+              const m = inet.match(/^(\d{1,3}(?:\.\d{1,3}){3})\/\d+$/);
+              if (m && !m[1].startsWith("127.")) allIps.push(m[1]);
+            }
+            if (allIps.length) {
+              for (const prefix of config.preferredPrefixes) {
+                const match = allIps.find((ip) => ip.startsWith(prefix));
+                if (match) return match;
+              }
+              return allIps[0];
+            }
+          } catch {
+            // Guest not running or interfaces unavailable
+          }
+        }
+        return null;
       }
       if (g.type === "qemu" && g.status === "running") {
         try {

@@ -18,12 +18,16 @@ import {
   IconPicker,
 } from "@/components/folder-style";
 import { normalizePath, splitPath } from "./FolderPathPicker";
+import { getCredentials } from "@/main-axios";
 
 export type FolderMetadataValue = {
   name: string;
   color: string;
   icon: string;
+  credentialId: number | null;
 };
+
+type CredentialOption = { id: string; name: string; username?: string };
 
 export function FolderMetadataDialog({
   open,
@@ -34,7 +38,12 @@ export function FolderMetadataDialog({
 }: {
   open: boolean;
   mode: "create" | "edit";
-  initial?: { name: string; color?: string; icon?: string };
+  initial?: {
+    name: string;
+    color?: string;
+    icon?: string;
+    credentialId?: number | null;
+  };
   onOpenChange: (v: boolean) => void;
   onSubmit: (value: FolderMetadataValue) => void;
 }) {
@@ -42,19 +51,45 @@ export function FolderMetadataDialog({
   const [name, setName] = useState("");
   const [color, setColor] = useState(DEFAULT_FOLDER_COLOR);
   const [icon, setIcon] = useState(DEFAULT_FOLDER_ICON);
+  const [credentialId, setCredentialId] = useState<string>("");
+  const [credentials, setCredentials] = useState<CredentialOption[]>([]);
 
   useEffect(() => {
     if (open) {
       setName(initial?.name ?? "");
       setColor(initial?.color ?? DEFAULT_FOLDER_COLOR);
       setIcon(initial?.icon ?? DEFAULT_FOLDER_ICON);
+      setCredentialId(
+        initial?.credentialId ? String(initial.credentialId) : "",
+      );
     }
   }, [open, initial]);
+
+  useEffect(() => {
+    if (!open) return;
+    getCredentials()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setCredentials(
+          list.map((c) => ({
+            id: String(c.id),
+            name: String(c.name ?? ""),
+            username: c.username ? String(c.username) : undefined,
+          })),
+        );
+      })
+      .catch(() => setCredentials([]));
+  }, [open]);
 
   function handleSubmit() {
     const normalized = normalizePath(name);
     if (!normalized) return;
-    onSubmit({ name: normalized, color, icon });
+    onSubmit({
+      name: normalized,
+      color,
+      icon,
+      credentialId: credentialId ? Number(credentialId) : null,
+    });
     onOpenChange(false);
   }
 
@@ -100,6 +135,26 @@ export function FolderMetadataDialog({
               {t("hosts.folderIcon")}
             </label>
             <IconPicker value={icon} color={color} onChange={setIcon} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold">
+              {t("hosts.folderCredential")}
+            </label>
+            <select
+              value={credentialId}
+              onChange={(e) => setCredentialId(e.target.value)}
+              className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="">{t("hosts.folderCredentialNone")}</option>
+              {credentials.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.username ? `${c.name} (${c.username})` : c.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground">
+              {t("hosts.folderCredentialHint")}
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold">

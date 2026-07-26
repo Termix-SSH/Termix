@@ -18,15 +18,17 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useTranslation } from "react-i18next";
 import { getBasePath } from "@/lib/base-path";
 import {
+  resolveConnectionOrigin,
+  buildOriginWsUrl,
+} from "@/lib/connection-origin.ts";
+import {
   getCookie,
   isElectron,
-  isEmbeddedMode,
   logActivity,
   getSnippets,
   deleteCommandFromHistory,
   getCommandHistory,
   getHostPassword,
-  getServerConfig,
 } from "@/main-axios.ts";
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
@@ -39,7 +41,7 @@ import {
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
 } from "@/lib/terminal-themes.ts";
-import "./terminal-global-styles.ts";
+import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
@@ -57,11 +59,19 @@ import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { Save } from "lucide-react";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
+import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
+import {
+  getUserPreferences,
+  parseCustomKeybindings,
+} from "@/api/open-tabs-api";
+import { findMatchingKeybinding } from "@/lib/keybinding-match";
+import { dispatchKeybindingAction } from "@/lib/keybinding-dispatch";
+import type { CustomKeybinding } from "@/types/keybindings";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
 type HostKeyVerificationData = Omit<
@@ -158,12 +168,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       : themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
+    const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
+    const cachedSnippetsRef = useRef<{ id: number; content: string }[] | null>(
+      null,
+    );
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const pongReceivedRef = useRef(true);
     const pongTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const [shareModalOpen, setShareModalOpen] = useState(false);
     const [isSavingQuickConnect, setIsSavingQuickConnect] = useState(false);
     const [isQuickConnectSaved, setIsQuickConnectSaved] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
@@ -182,6 +197,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [totpRequired, setTotpRequired] = useState(false);
     const [totpPrompt, setTotpPrompt] = useState<string>("");
     const [isPasswordPrompt, setIsPasswordPrompt] = useState(false);
+    const [mfaPromptMode, setMfaPromptMode] = useState<
+      "totp" | "password" | "menu" | "push"
+    >("totp");
+    const [mfaWaiting, setMfaWaiting] = useState(false);
     const [showAuthDialog, setShowAuthDialog] = useState(false);
     const [authDialogReason, setAuthDialogReason] = useState<
       "no_keyboard" | "auth_failed" | "timeout"
@@ -512,17 +531,25 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function handleTotpSubmit(code: string) {
-      if (webSocketRef.current && code) {
-        if (totpTimeoutRef.current) {
-          clearTimeout(totpTimeoutRef.current);
-          totpTimeoutRef.current = null;
-        }
+      const isPushMode = mfaPromptMode === "push";
+      if (webSocketRef.current && (code || isPushMode)) {
         webSocketRef.current.send(
           JSON.stringify({
             type: isPasswordPrompt ? "password_response" : "totp_response",
             data: { code },
           }),
         );
+        if (isPushMode) {
+          // Server blocks until the phone approval completes; keep the dialog
+          // open in a waiting state rather than closing it immediately. The
+          // existing timeout continues running until "connected" or "error".
+          setMfaWaiting(true);
+          return;
+        }
+        if (totpTimeoutRef.current) {
+          clearTimeout(totpTimeoutRef.current);
+          totpTimeoutRef.current = null;
+        }
         setTotpRequired(false);
         setTotpPrompt("");
         setIsPasswordPrompt(false);
@@ -536,6 +563,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       }
       setTotpRequired(false);
       setTotpPrompt("");
+      setIsPasswordPrompt(false);
+      setMfaPromptMode("totp");
+      setMfaWaiting(false);
       if (onClose) onClose();
     }
 
@@ -824,6 +854,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             webSocketRef.current.send(JSON.stringify({ type: "input", data }));
           }
         },
+        paste: (text: string) => {
+          terminal?.paste(text);
+        },
         notifyResize: () => {
           try {
             const cols = terminal?.cols ?? undefined;
@@ -846,8 +879,20 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             onOpenFileManager?.("/");
           }
         },
+        openShareModal: () => setShareModalOpen(true),
+        canShare: () =>
+          isConnected &&
+          !isQuickConnect &&
+          !hostConfig.joinShareId &&
+          typeof hostConfig.id === "number",
       }),
-      [isConnected, terminal],
+      [
+        isConnected,
+        terminal,
+        isQuickConnect,
+        hostConfig.joinShareId,
+        hostConfig.id,
+      ],
     );
 
     function getUseRightClickCopyPaste() {
@@ -956,52 +1001,28 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (isDev) {
         baseWsUrl = `${window.location.protocol === "https:" ? "wss" : "ws"}://localhost:30002`;
       } else if (isElectron()) {
-        let configuredUrl = (window as { configuredServerUrl?: string | null })
-          .configuredServerUrl;
-
-        if (!configuredUrl && !isEmbeddedMode()) {
-          try {
-            const serverConfig = await getServerConfig();
-            configuredUrl = serverConfig?.serverUrl || null;
-            if (configuredUrl) {
-              (
-                window as Window &
-                  typeof globalThis & {
-                    configuredServerUrl?: string | null;
-                  }
-              ).configuredServerUrl = configuredUrl;
-            }
-          } catch (error) {
-            console.error("Failed to resolve Electron server URL:", error);
-          }
-        }
-
-        if (isEmbeddedMode()) {
-          baseWsUrl = "ws://127.0.0.1:30002";
-          const storedJwt = localStorage.getItem("jwt");
-          if (storedJwt) {
-            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
-          }
-        } else if (!configuredUrl) {
-          console.error("No configured server URL available for Electron SSH");
+        const origin = await resolveConnectionOrigin({
+          connectionType: "ssh",
+          connectionOrigin: hostConfig.connectionOrigin as
+            | "local"
+            | "remote"
+            | null
+            | undefined,
+        });
+        const resolvedUrl = await buildOriginWsUrl({
+          origin,
+          localPort: 30002,
+          localPath: "",
+          remotePath: "/ssh/websocket/",
+        });
+        if (!resolvedUrl) {
           setIsConnected(false);
           setIsConnecting(false);
-          updateConnectionError(t("errors.failedToLoadServer"));
+          updateConnectionError(t("errors.remoteServerRequired"));
           isConnectingRef.current = false;
           return;
-        } else {
-          const wsProtocol = configuredUrl.startsWith("https://")
-            ? "wss://"
-            : "ws://";
-          const wsHost = configuredUrl
-            .replace(/^https?:\/\//, "")
-            .replace(/\/$/, "");
-          baseWsUrl = `${wsProtocol}${wsHost}/ssh/websocket/`;
-          const storedJwt = localStorage.getItem("jwt");
-          if (storedJwt) {
-            baseWsUrl += `?token=${encodeURIComponent(storedJwt)}`;
-          }
         }
+        baseWsUrl = resolvedUrl;
       } else {
         baseWsUrl = `${getBasePath()}/ssh/websocket/`;
       }
@@ -1076,7 +1097,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         const restoredSessionId = pendingRestoredSessionIdRef.current;
         pendingRestoredSessionIdRef.current = null;
 
-        if (restoredSessionId) {
+        if (hostConfig.joinShareId) {
+          isAttachingSessionRef.current = true;
+
+          ws.send(
+            JSON.stringify({
+              type: "joinSharedSession",
+              data: {
+                shareId: hostConfig.joinShareId,
+                tabInstanceId: hostConfig.instanceId,
+              },
+            }),
+          );
+        } else if (restoredSessionId) {
           sessionIdRef.current = restoredSessionId;
           isAttachingSessionRef.current = true;
 
@@ -1327,6 +1360,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             setTotpRequired(true);
             setTotpPrompt(msg.prompt || t("terminal.totpCodeLabel"));
             setIsPasswordPrompt(false);
+            setMfaPromptMode("totp");
+            setMfaWaiting(false);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
@@ -1342,10 +1377,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }, 180000);
           } else if (msg.type === "totp_retry") {
             // Existing prompt remains visible while the backend asks for another code.
+            setMfaWaiting(false);
           } else if (msg.type === "password_required") {
+            const promptText: string = msg.prompt || "";
+            const pushPromptPattern =
+              /choose.*push.*totp|press enter.*(push|send)|push notification|authentication by phone/i;
+            const isPush = pushPromptPattern.test(promptText);
+            const isMenu = !isPush && msg.echo === true;
+            const mode: "menu" | "push" | "password" = isPush
+              ? "push"
+              : isMenu
+                ? "menu"
+                : "password";
+
             setTotpRequired(true);
-            setTotpPrompt(msg.prompt || t("common.password"));
+            setTotpPrompt(promptText || t("common.password"));
             setIsPasswordPrompt(true);
+            setMfaPromptMode(mode);
+            setMfaWaiting(false);
             if (connectionTimeoutRef.current) {
               clearTimeout(connectionTimeoutRef.current);
               connectionTimeoutRef.current = null;
@@ -1353,12 +1402,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             if (totpTimeoutRef.current) {
               clearTimeout(totpTimeoutRef.current);
             }
-            totpTimeoutRef.current = setTimeout(() => {
-              setTotpRequired(false);
-              if (webSocketRef.current) {
-                webSocketRef.current.close();
-              }
-            }, 180000);
+            totpTimeoutRef.current = setTimeout(
+              () => {
+                setTotpRequired(false);
+                if (webSocketRef.current) {
+                  webSocketRef.current.close();
+                }
+              },
+              isPush ? 300000 : 180000,
+            );
           } else if (msg.type === "warpgate_auth_required") {
             setWarpgateAuthRequired(true);
             setWarpgateAuthUrl(msg.url || "");
@@ -1986,6 +2038,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         (f) => f.value === config.fontFamily,
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
+      ensureTerminalFontsLoaded(fontConfig?.value || TERMINAL_FONTS[0].value);
 
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
@@ -2053,6 +2106,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         (f) => f.value === config.fontFamily,
       );
       const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
+      ensureTerminalFontsLoaded(fontConfig?.value || TERMINAL_FONTS[0].value);
 
       const activeTheme = previewTheme || config.theme;
       const themeColors = resolveTermixThemeColors(
@@ -2355,11 +2409,73 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [hostConfig.id, hostConfig.instanceId]);
 
     useEffect(() => {
+      let cancelled = false;
+      const loadKeybindings = () => {
+        cachedSnippetsRef.current = null;
+        getUserPreferences()
+          .then((prefs) => {
+            if (!cancelled) {
+              customKeybindingsRef.current = parseCustomKeybindings(
+                prefs.customKeybindings,
+              ).filter((kb) => kb.enabled);
+            }
+          })
+          .catch(() => {
+            // keep previous/empty bindings on failure, non-fatal
+          });
+      };
+      loadKeybindings();
+      window.addEventListener("customKeybindingsChanged", loadKeybindings);
+      return () => {
+        cancelled = true;
+        window.removeEventListener("customKeybindingsChanged", loadKeybindings);
+      };
+    }, []);
+
+    useEffect(() => {
       if (!terminal) return;
+
+      const getSnippetById = async (
+        id: string,
+      ): Promise<{ content: string } | undefined> => {
+        try {
+          if (!cachedSnippetsRef.current) {
+            cachedSnippetsRef.current = (await getSnippets()) as unknown as {
+              id: number;
+              content: string;
+            }[];
+          }
+          const numericId = Number(id);
+          return cachedSnippetsRef.current?.find((s) => s.id === numericId);
+        } catch {
+          return undefined;
+        }
+      };
 
       const handleCustomKey = (e: KeyboardEvent): boolean => {
         if (e.type !== "keydown") {
           return true;
+        }
+
+        // Custom user keybindings take priority over built-in defaults, but
+        // never override autocomplete popup navigation while it is open.
+        if (!showAutocompleteRef.current) {
+          const matched = findMatchingKeybinding(
+            e,
+            customKeybindingsRef.current,
+          );
+          if (matched) {
+            e.preventDefault();
+            e.stopPropagation();
+            dispatchKeybindingAction(matched.action, {
+              terminal,
+              webSocketRef,
+              writeTextToClipboard,
+              readTextFromClipboard,
+              getSnippetById,
+            });
+            return false;
+          }
         }
 
         // Forward global app shortcuts to AppShell directly — xterm swallows
@@ -2896,6 +3012,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         <TOTPDialog
           isOpen={totpRequired}
           prompt={totpPrompt}
+          mode={mfaPromptMode}
+          waiting={mfaWaiting}
           onSubmit={handleTotpSubmit}
           onCancel={handleTotpCancel}
           backgroundColor={backgroundColor}
@@ -3184,6 +3302,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             </div>,
             document.body,
           )}
+
+        {shareModalOpen && typeof hostConfig.id === "number" && (
+          <ShareSessionModal
+            open={shareModalOpen}
+            onClose={() => setShareModalOpen(false)}
+            hostId={hostConfig.id}
+            sessionId={sessionIdRef.current}
+            protocol="ssh"
+            tabInstanceId={hostConfig.instanceId}
+          />
+        )}
       </div>
     );
   },

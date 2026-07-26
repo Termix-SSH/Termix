@@ -20,6 +20,7 @@ const net = require("net");
 const { URL } = require("url");
 const { fork, spawn } = require("child_process");
 const WebSocket = require("ws");
+const remoteSync = require("./remote-sync.cjs");
 
 // Portable mode: if a `.portable` marker exists next to the executable,
 // store all data in a `data` folder beside the exe instead of %APPDATA%.
@@ -441,7 +442,10 @@ function isInvalidCertificateAllowedForUrl(url) {
     // fall through
   }
 
-  const config = getServerConfigSync();
+  // The only remaining "connected remote server" a self-signed/invalid
+  // certificate could legitimately apply to is the Remote Sync server
+  // (also used for C2S tunnel relaying, see getC2SRelayUrl).
+  const config = remoteSync.getRemoteSyncConfig();
   if (!config?.allowInvalidCertificate || !config?.serverUrl) return false;
 
   return getOrigin(url) === getOrigin(config.serverUrl);
@@ -816,7 +820,62 @@ function getBackendDataDir() {
   return dataDir;
 }
 
+function getBackendPidFilePath() {
+  return path.join(app.getPath("userData"), "backend.pid");
+}
+
+// If the app was previously killed abnormally (crash, force-quit, Task
+// Manager) rather than through the normal quit flow, will-quit never fires
+// and stopBackendServer() never runs -- the forked backend child is a
+// genuinely separate OS process on Windows/mac/Linux, so it keeps running
+// and holding every port the backend binds (30001, 30003-30008, 30010,
+// 30012...). Every subsequent launch's own backend then fails outright
+// with EADDRINUSE and the app is stuck until something manually kills the
+// orphan. Reap any such leftover process, identified by PID file, before
+// spawning a new one.
+function reapOrphanedBackendProcess() {
+  const pidFilePath = getBackendPidFilePath();
+  let recordedPid;
+  try {
+    recordedPid = parseInt(fs.readFileSync(pidFilePath, "utf8").trim(), 10);
+  } catch {
+    return;
+  }
+  if (!Number.isInteger(recordedPid) || recordedPid <= 0) return;
+
+  try {
+    // Signal 0 does not kill the process -- it only checks whether a
+    // process with this PID exists and is signalable, throwing ESRCH if
+    // not. This avoids killing an unrelated process that happens to have
+    // reused the same PID since the last run.
+    process.kill(recordedPid, 0);
+  } catch {
+    // No live process at that PID; nothing to reap.
+    try {
+      fs.unlinkSync(pidFilePath);
+    } catch {
+      // already absent
+    }
+    return;
+  }
+
+  logToFile(
+    `Found orphaned backend process from a previous session (pid ${recordedPid}), terminating it before starting a new one`,
+  );
+  try {
+    process.kill(recordedPid, "SIGKILL");
+  } catch {
+    // already gone
+  }
+  try {
+    fs.unlinkSync(pidFilePath);
+  } catch {
+    // already absent
+  }
+}
+
 function startBackendServer() {
+  reapOrphanedBackendProcess();
   return new Promise((resolve) => {
     const { entryPath, backendCwd } = getBackendPaths();
 
@@ -852,11 +911,17 @@ function startBackendServer() {
         NODE_ENV: "production",
         ELECTRON_EMBEDDED: "true",
         PORT: "30001",
+        VERSION: app.getVersion(),
       },
       stdio: ["pipe", "pipe", "pipe", "ipc"],
     });
 
     logToFile("Backend process spawned, pid:", backendProcess.pid);
+    try {
+      fs.writeFileSync(getBackendPidFilePath(), String(backendProcess.pid));
+    } catch {
+      // Non-fatal: only means a future crash won't self-heal via reap.
+    }
 
     let resolved = false;
     const readyTimeout = setTimeout(() => {
@@ -888,6 +953,7 @@ function startBackendServer() {
         backendStartFailed = true;
       }
       backendProcess = null;
+      clearBackendPidFile();
       if (!resolved) {
         resolved = true;
         clearTimeout(readyTimeout);
@@ -905,6 +971,14 @@ function startBackendServer() {
       }
     });
   });
+}
+
+function clearBackendPidFile() {
+  try {
+    fs.unlinkSync(getBackendPidFilePath());
+  } catch {
+    // already absent
+  }
 }
 
 function stopBackendServer() {
@@ -929,6 +1003,7 @@ function stopBackendServer() {
   backendProcess.on("exit", () => {
     clearTimeout(forceKillTimeout);
     backendProcess = null;
+    clearBackendPidFile();
   });
 }
 
@@ -1335,7 +1410,6 @@ ipcMain.handle("get-embedded-server-status", () => {
   return {
     running:
       backendProcess !== null && !backendProcess.killed && !backendStartFailed,
-    embedded: !isDev,
     dataDir: isDev ? null : getBackendDataDir(),
   };
 });
@@ -1440,6 +1514,80 @@ ipcMain.handle("save-server-config", (event, config) => {
     console.error("Error saving server config:", error);
     return { success: false, error: error.message };
   }
+});
+
+// --- Remote sync (optional desktop <-> self-hosted server sync) ---
+
+// Surfaces the pre-standalone-rework server-config.json (if a serverUrl was
+// ever set in it) so the renderer can prompt upgraded installs to set up
+// Remote Sync -- their hosts live on that old server and won't appear
+// locally until sync is enabled. A fresh install never had this file, so
+// this is naturally false for anyone who never used the old architecture.
+ipcMain.handle("get-legacy-server-config", () => {
+  const config = getServerConfigSync();
+  return { serverUrl: config?.serverUrl || null };
+});
+
+ipcMain.handle("get-desktop-settings", () => {
+  return remoteSync.getDesktopSettings();
+});
+
+ipcMain.handle("save-desktop-settings", (_event, settings) => {
+  return remoteSync.saveDesktopSettings(settings);
+});
+
+ipcMain.handle("get-remote-sync-config", () => {
+  return remoteSync.getRemoteSyncConfig();
+});
+
+ipcMain.handle("save-remote-sync-config", (_event, config) => {
+  return remoteSync.saveRemoteSyncConfig(config);
+});
+
+ipcMain.handle("clear-remote-sync-config", async () => {
+  const result = remoteSync.clearRemoteSyncConfig();
+  remoteSync.clearRemoteSyncJwt();
+  remoteSync.getRemoteSyncEngine()?.updateStatus({
+    connected: false,
+    syncing: false,
+    needsReauth: false,
+    lastError: null,
+  });
+  return result;
+});
+
+ipcMain.handle("save-remote-sync-jwt", (_event, token) => {
+  const result = remoteSync.saveRemoteSyncJwt(token);
+  if (result.success) {
+    remoteSync.getRemoteSyncEngine()?.updateStatus({
+      connected: true,
+      needsReauth: false,
+      lastError: null,
+    });
+    remoteSync.getRemoteSyncEngine()?.syncNow();
+  }
+  return result;
+});
+
+ipcMain.handle("get-remote-sync-jwt", () => {
+  return remoteSync.getRemoteSyncJwt();
+});
+
+ipcMain.handle("clear-remote-sync-jwt", () => {
+  return remoteSync.clearRemoteSyncJwt();
+});
+
+ipcMain.handle("get-remote-sync-status", () => {
+  return remoteSync.getRemoteSyncEngine()?.status || null;
+});
+
+ipcMain.handle("remote-sync-now", async () => {
+  return (await remoteSync.getRemoteSyncEngine()?.syncNow()) || null;
+});
+
+ipcMain.handle("notify-local-login", (_event, token) => {
+  remoteSync.getRemoteSyncEngine()?.setLocalJwt(token);
+  return { success: true };
 });
 
 function getC2STunnelConfigPath() {
@@ -1577,36 +1725,33 @@ const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
 const C2S_WS_LOW_WATERMARK = 256 * 1024;
 const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
 
+// C2S (client-to-server) tunnels relay through a connected, self-hosted
+// Termix server -- the same "remote server" concept Remote Sync connects
+// to, not the always-local embedded backend. There's no separate C2S
+// server-URL setting in the UI; it has always shared whatever remote
+// server the rest of the app was pointed at. Before the standalone-first
+// rework that was server-config.json; now it's remote-sync-config.json,
+// since that's the only remaining notion of "a connected remote server."
 function getC2SRelayUrl() {
-  const config = getServerConfigSync();
-  const serverUrl =
-    config?.serverUrl || (!isDev ? "http://127.0.0.1:30003" : null);
+  const config = remoteSync.getRemoteSyncConfig();
+  const serverUrl = config?.serverUrl;
   if (!serverUrl) {
-    throw new Error("No Termix server configured");
+    throw new Error(
+      "No remote Termix server connected -- enable Remote Sync first",
+    );
   }
 
   const base = serverUrl.replace(/\/$/, "");
-  const relayHttpUrl = base.endsWith(":30003")
-    ? `${base}/ssh/tunnel/c2s/stream`
-    : `${base}/ssh/tunnel/c2s/stream`;
+  const relayHttpUrl = `${base}/ssh/tunnel/c2s/stream`;
   return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
-async function getC2SRelayHeaders(relayUrl) {
-  if (!mainWindow?.webContents?.session) return {};
-
-  const cookieUrl = relayUrl
-    .replace(/^ws:/, "http:")
-    .replace(/^wss:/, "https:");
-  const cookies = await mainWindow.webContents.session.cookies.get({
-    url: cookieUrl,
-    name: "jwt",
-  });
-  const jwt = cookies[0]?.value;
+async function getC2SRelayHeaders() {
+  const jwt = remoteSync.getRemoteSyncJwt();
   if (!jwt) return {};
 
   return {
-    Cookie: `jwt=${encodeURIComponent(jwt)}`,
+    Authorization: `Bearer ${jwt}`,
   };
 }
 
@@ -1706,7 +1851,7 @@ async function openC2SRelay(
 ) {
   const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders(relayUrl);
+  const headers = await getC2SRelayHeaders();
   logToFile(`[c2s] opening relay for ${tunnelName}`, {
     relayUrl,
     targetHost,
@@ -1811,7 +1956,7 @@ async function openC2SRelay(
 
 async function testC2SRelay(tunnel, targetHost, targetPort) {
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders(relayUrl);
+  const headers = await getC2SRelayHeaders();
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
@@ -2090,7 +2235,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
   }
 
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders(relayUrl);
+  const headers = await getC2SRelayHeaders();
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
@@ -2772,31 +2917,33 @@ ipcMain.handle("close-external-editor", (_event, editId) => {
 ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
     const normalizedServerUrl = serverUrl.replace(/\/$/, "");
-
     const healthUrl = `${normalizedServerUrl}/health`;
 
+    // This is a best-effort reachability probe, not a hard gate: a reverse
+    // proxy doing SSO in front of the real server (Pangolin, Authelia,
+    // Cloudflare Access, etc.) intercepts this unauthenticated request
+    // before it ever reaches Termix's own /health route, and returns its
+    // own login page (HTML, or a redirect) instead of {"status":"ok"}.
+    // That's a legitimate, working setup -- the login iframe shown right
+    // after this check is what actually proves the server is real, by
+    // completing an authenticated round-trip. So any response at all here
+    // (any status code, any body) means "something is there, let the user
+    // proceed"; only a network-level failure (nothing answered at all)
+    // blocks continuing.
     try {
       const response = await httpFetch(healthUrl, {
         method: "GET",
         timeout: 10000,
       });
 
-      if (response.ok) {
-        const data = await response.text();
+      const data = await response.text();
+      const looksLikeHtml =
+        data.includes("<html") ||
+        data.includes("<!DOCTYPE") ||
+        data.includes("<head>") ||
+        data.includes("<body>");
 
-        if (
-          data.includes("<html") ||
-          data.includes("<!DOCTYPE") ||
-          data.includes("<head>") ||
-          data.includes("<body>")
-        ) {
-          return {
-            success: false,
-            error:
-              "Server returned HTML instead of JSON. This does not appear to be a Termix server.",
-          };
-        }
-
+      if (response.ok && !looksLikeHtml) {
         try {
           const healthData = JSON.parse(data);
           if (
@@ -2816,64 +2963,27 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
           console.log("Health endpoint did not return valid JSON");
         }
       }
+
+      // Reachable, but not a recognized Termix health response -- likely a
+      // proxy/SSO login page in front of the real server. Let the user
+      // proceed; the login step next will fail clearly if this really
+      // isn't a Termix server.
+      return {
+        success: true,
+        status: response.status,
+        testedUrl: healthUrl,
+        warning: looksLikeHtml
+          ? "Could not confirm this is a Termix server (the response looked like an HTML page, which can happen behind a login-protected reverse proxy). You can continue, and the next step will fail clearly if this isn't actually a Termix server."
+          : "Server responded, but not with the expected health check format. Continuing anyway.",
+      };
     } catch (urlError) {
       console.error("Health check failed:", urlError);
+      return {
+        success: false,
+        error:
+          "Server is not responding. Please ensure the server is running and accessible.",
+      };
     }
-
-    try {
-      const versionUrl = `${normalizedServerUrl}/version`;
-      const response = await httpFetch(versionUrl, {
-        method: "GET",
-        timeout: 10000,
-      });
-
-      if (response.ok) {
-        const data = await response.text();
-
-        if (
-          data.includes("<html") ||
-          data.includes("<!DOCTYPE") ||
-          data.includes("<head>") ||
-          data.includes("<body>")
-        ) {
-          return {
-            success: false,
-            error:
-              "Server returned HTML instead of JSON. This does not appear to be a Termix server.",
-          };
-        }
-
-        try {
-          const versionData = JSON.parse(data);
-          if (
-            versionData &&
-            (versionData.status === "up_to_date" ||
-              versionData.status === "requires_update" ||
-              (versionData.localVersion &&
-                versionData.version &&
-                versionData.latest_release))
-          ) {
-            return {
-              success: true,
-              status: response.status,
-              testedUrl: versionUrl,
-              warning:
-                "Health endpoint not available, but server appears to be running",
-            };
-          }
-        } catch (parseError) {
-          console.log("Version endpoint did not return valid JSON");
-        }
-      }
-    } catch (versionError) {
-      console.error("Version check failed:", versionError);
-    }
-
-    return {
-      success: false,
-      error:
-        "Server is not responding or does not appear to be a valid Termix server. Please ensure the server is running and accessible.",
-    };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -2967,6 +3077,7 @@ app.whenReady().then(async () => {
 
   createTray();
   createWindow();
+  remoteSync.initRemoteSync(() => mainWindow);
   logToFile("=== Startup complete ===");
 });
 

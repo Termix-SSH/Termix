@@ -19,6 +19,7 @@ import {
   Maximize2,
   Minimize2,
   FolderOpen,
+  Share2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
 import { isElectron } from "@/lib/electron";
@@ -42,6 +43,7 @@ export function TabBar({
   onRemoveFromSplit,
   onRenameTab,
   onOpenFileManager,
+  onOpenShare,
   isAppFullscreen,
   onToggleAppFullscreen,
 }: {
@@ -59,6 +61,7 @@ export function TabBar({
   onRemoveFromSplit: (tabId: string) => void;
   onRenameTab?: (tabId: string, newLabel: string) => void;
   onOpenFileManager?: (tabId: string) => void;
+  onOpenShare?: (tabId: string) => void;
   isAppFullscreen: boolean;
   onToggleAppFullscreen: () => void;
 }) {
@@ -350,6 +353,19 @@ export function TabBar({
                         className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
                       >
                         <RefreshCw className="size-3" />
+                      </button>
+                    )}
+                    {CONNECTION_TAB_TYPES.includes(tab.type) && onOpenShare && (
+                      <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenShare(tab.id);
+                        }}
+                        title={t("sessionSharing.shareButton")}
+                        className="flex items-center justify-center size-5 md:size-4 rounded-sm transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+                      >
+                        <Share2 className="size-3" />
                       </button>
                     )}
                     <button

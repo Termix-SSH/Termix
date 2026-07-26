@@ -124,6 +124,31 @@ export async function shareHost(
   }
 }
 
+export async function shareFolder(
+  folder: string,
+  shareData: {
+    targets: ShareTarget[];
+    permissionLevel: SharePermissionLevel;
+    durationHours?: number;
+  },
+): Promise<{
+  success: boolean;
+  expiresAt: string | null;
+  hostsShared: number;
+  hostsTotal: number;
+  hostResults: Array<{ hostId: number; shared: boolean; reason?: string }>;
+}> {
+  try {
+    const response = await rbacApi.post("/rbac/folder/share", {
+      folder,
+      ...shareData,
+    });
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "share folder");
+  }
+}
+
 export async function updateHostAccess(
   hostId: number,
   accessId: number,

@@ -1,4 +1,5 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import { hostAccess, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -22,7 +23,7 @@ export class HostRepository {
   async create(host: NewHostRecord): Promise<HostRecord> {
     const rows = await this.context.drizzle
       .insert(hosts)
-      .values(host)
+      .values({ syncId: randomUUID(), ...host })
       .returning();
     await this.afterWrite();
     return rows[0];
@@ -34,7 +35,11 @@ export class HostRepository {
   ): Promise<HostRecord> {
     const userDataKey = DataCrypto.validateUserAccess(userId);
     const tempId = host.id ?? Date.now();
-    const dataWithTempId = { ...host, id: tempId };
+    const dataWithTempId = {
+      syncId: randomUUID(),
+      ...host,
+      id: tempId,
+    };
     const encryptedHost = DataCrypto.encryptRecord(
       "ssh_data",
       dataWithTempId,
@@ -147,7 +152,7 @@ export class HostRepository {
   ): Promise<HostRecord | null> {
     const rows = await this.context.drizzle
       .update(hosts)
-      .set(update)
+      .set({ ...update, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
       .returning();
 
@@ -170,7 +175,7 @@ export class HostRepository {
 
     const rows = await this.context.drizzle
       .update(hosts)
-      .set(encryptedUpdate)
+      .set({ ...encryptedUpdate, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
       .returning();
 
@@ -210,7 +215,7 @@ export class HostRepository {
 
     const rows = await this.context.drizzle
       .update(hosts)
-      .set(update)
+      .set({ ...update, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(and(inArray(hosts.id, hostIds), eq(hosts.userId, userId)))
       .returning({ id: hosts.id });
 
@@ -221,16 +226,19 @@ export class HostRepository {
     return rows.length;
   }
 
-  async deleteForUser(userId: string, hostId: number): Promise<boolean> {
+  async deleteForUser(
+    userId: string,
+    hostId: number,
+  ): Promise<{ syncId: string | null } | null> {
     await this.deleteAccessForHost(hostId);
 
     const rows = await this.context.drizzle
       .delete(hosts)
       .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-      .returning({ id: hosts.id });
+      .returning({ syncId: hosts.syncId });
 
     await this.afterWrite();
-    return rows.length > 0;
+    return rows[0] ?? null;
   }
 
   async deleteByUserId(userId: string): Promise<number> {

@@ -191,6 +191,20 @@ Support integre d'environ 30 langues (gere par [Crowdin](https://docs.termix.sit
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**Partage de session:**
+Partagez une session de terminal, RDP, VNC ou Telnet en direct avec d'autres personnes en temps reel. Partagez via un lien (rejoint anonymement, sans compte necessaire) ou avec un utilisateur Termix specifique, et choisissez un acces en lecture seule ou en lecture-ecriture. Les partages peuvent expirer automatiquement ou etre revoques a tout moment, et le partage de session peut etre active globalement ou par hote.
+
+</td>
+<td width="50%" valign="top">
+
+**Application de bureau autonome + synchronisation bidirectionnelle:**
+L'application de bureau Electron fonctionne de maniere totalement autonome avec son propre backend et sa propre base de donnees locale, sans serveur requis. Connectez-la eventuellement a un serveur Termix distant pour une synchronisation bidirectionnelle automatique des hotes, des identifiants, des extraits de code et plus encore, et choisissez si les connexions SSH sont demarrees localement ou via le serveur distant.
+
+</td>
+</tr>
 </table>
 
 <br />

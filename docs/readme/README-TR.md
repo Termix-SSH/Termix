@@ -191,6 +191,20 @@ Yaklasik 30 dil icin yerlesik destek ([Crowdin](https://docs.termix.site/transla
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**Oturum Paylasimi:**
+Canli bir terminal, RDP, VNC veya Telnet oturumunu baskalariyla gercek zamanli olarak paylasin. Bir baglanti uzerinden (anonim olarak katilir, hesap gerekmez) veya belirli bir Termix kullanicisiyla paylasin ve salt okunur veya okuma/yazma erisimi secin. Paylasimlar otomatik olarak sona erebilir veya istediginiz zaman iptal edilebilir; oturum paylasimi genel olarak veya sunucu bazinda acilip kapatilabilir.
+
+</td>
+<td width="50%" valign="top">
+
+**Bagimsiz Masaustu + Cift Yonlu Senkronizasyon:**
+Electron masaustu uygulamasi, kendi yerel arka ucu ve veritabaniyla tamamen bagimsiz calisir, sunucu gerekmez. Istege bagli olarak sunucular, kimlik bilgileri, kod parcaciklari ve daha fazlasinin otomatik cift yonlu senkronizasyonu icin uzak bir Termix sunucusuna baglayin ve SSH baglantilarinin yerel olarak mi yoksa uzak sunucu uzerinden mi baslatilacagini secin.
+
+</td>
+</tr>
 </table>
 
 <br />

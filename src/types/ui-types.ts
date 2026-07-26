@@ -71,6 +71,7 @@ export type Host = {
   useSocks5?: boolean;
   socks5Host?: string;
   socks5Port?: number;
+  connectionOrigin?: "local" | "remote" | null;
   socks5Username?: string;
   socks5Password?: string;
   socks5ProxyChain?: {
@@ -152,19 +153,26 @@ export type Host = {
   vncPort: number;
   telnetPort: number;
 
+  rdpAuthType?: "direct" | "credential" | "none";
   rdpCredentialId?: string;
   rdpUser?: string;
   rdpPassword?: string;
+  hasRdpPassword?: boolean;
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
 
+  vncAuthType?: "direct" | "credential";
   vncCredentialId?: string;
   vncPassword?: string;
+  hasVncPassword?: boolean;
   vncUser?: string;
 
+  telnetAuthType?: "direct" | "credential";
+  telnetCredentialId?: string;
   telnetUser?: string;
   telnetPassword?: string;
+  hasTelnetPassword?: boolean;
 
   guacamoleConfig?: Record<string, unknown>;
   forceKeyboardInteractive?: boolean;
@@ -217,6 +225,7 @@ export type HostFolder = {
   path?: string;
   color?: string;
   icon?: string;
+  credentialId?: number | null;
 };
 
 export type TabType =
@@ -276,6 +285,9 @@ export type Tab = {
   host?: Host;
   openedAt: number;
   restoredSessionId?: string | null;
+  /** Set when this tab joins someone else's live shared session instead of connecting/attaching its own. */
+  joinSharedSessionId?: string | null;
+  joinShareId?: string | null;
   initialFilePath?: string;
   serialConfig?: SerialConfig;
   terminalRef?: import("react").RefObject<{
@@ -286,6 +298,8 @@ export type Tab = {
     fit?: () => void;
     notifyResize?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
+    openShareModal?: () => void;
+    canShare?: () => boolean;
   } | null>;
 };
 

@@ -84,15 +84,15 @@ export function NotificationChannelDialog({
       toast.error(t("alerts.channelNameRequired", "Name is required"));
       return;
     }
-    let config: string;
+    let config: WebhookConfig | NtfyConfig;
     if (type === "webhook") {
       if (!webhookUrl.trim()) {
         toast.error(t("alerts.webhookUrlRequired", "Webhook URL is required"));
         return;
       }
-      config = JSON.stringify({
+      config = {
         url: webhookUrl.trim(),
-      } satisfies WebhookConfig);
+      } satisfies WebhookConfig;
     } else {
       if (!ntfyTopic.trim()) {
         toast.error(t("alerts.ntfyTopicRequired", "Topic is required"));
@@ -100,7 +100,7 @@ export function NotificationChannelDialog({
       }
       const cfg: NtfyConfig = { url: ntfyUrl.trim(), topic: ntfyTopic.trim() };
       if (ntfyToken.trim()) cfg.token = ntfyToken.trim();
-      config = JSON.stringify(cfg);
+      config = cfg;
     }
 
     setSaving(true);
@@ -154,7 +154,7 @@ export function NotificationChannelDialog({
                 <button
                   key={ct}
                   onClick={() => setType(ct)}
-                  className={`px-3 py-1 text-xs font-semibold border transition-colors ${type === ct ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                  className={`px-3 py-1 text-xs font-semibold border transition-colors ${type === ct ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:border-accent-brand/30"}`}
                 >
                   {ct === "webhook" ? "Webhook" : "ntfy"}
                 </button>

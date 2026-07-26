@@ -46,6 +46,7 @@ style.innerHTML = `
 .xterm .xterm-viewport {
   scrollbar-width: thin;
   scrollbar-color: rgba(0,0,0,0.3) transparent;
+  background-color: transparent !important;
 }
 
 .dark .xterm .xterm-viewport::-webkit-scrollbar-thumb {
@@ -74,3 +75,22 @@ style.innerHTML = `
 }
 `;
 document.head.appendChild(style);
+
+// Canvas fillText() does not reliably trigger @font-face fetches on every
+// browser engine (notably Android WebView) the way rendering real DOM text
+// does. xterm.js draws glyphs to a <canvas>, so without an explicit load the
+// terminal can keep painting the fallback font's tofu boxes even after
+// document.fonts.ready resolves. Forcing the load here ensures the glyph
+// data is actually fetched before the terminal renders with it.
+export function ensureTerminalFontsLoaded(fontFamily: string): void {
+  if (typeof document === "undefined" || !document.fonts) return;
+  const specs = [
+    `400 16px "${fontFamily}"`,
+    `700 16px "${fontFamily}"`,
+    `italic 400 16px "${fontFamily}"`,
+    `italic 700 16px "${fontFamily}"`,
+  ];
+  for (const spec of specs) {
+    document.fonts.load(spec).catch(() => {});
+  }
+}

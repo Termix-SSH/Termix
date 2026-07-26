@@ -2,11 +2,13 @@ import crypto from "crypto";
 import { guacLogger } from "../../utils/logger.js";
 
 export interface GuacamoleConnectionSettings {
-  type: "rdp" | "vnc" | "telnet";
+  type?: "rdp" | "vnc" | "telnet";
+  join?: string;
+  readOnly?: boolean;
   guacdHost?: string;
   guacdPort?: number;
   settings: {
-    hostname: string;
+    hostname?: string;
     port?: number;
     username?: string;
     password?: string;
@@ -28,9 +30,17 @@ export interface GuacamoleConnectionSettings {
   };
 }
 
+export interface TermixGuacMeta {
+  termixConnectId: string;
+  hostId: number;
+  ownerUserId: string;
+  protocol: "rdp" | "vnc" | "telnet";
+}
+
 export interface GuacamoleToken {
   connection: GuacamoleConnectionSettings;
   recording?: GuacamoleRecordingMetadata;
+  termixMeta?: TermixGuacMeta;
 }
 
 export interface GuacamoleRecordingMetadata {
@@ -137,6 +147,7 @@ export class GuacamoleTokenService {
       guacdPort?: number;
     } = {},
     recording?: GuacamoleRecordingMetadata,
+    termixMeta?: TermixGuacMeta,
   ): string {
     const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
@@ -155,6 +166,7 @@ export class GuacamoleTokenService {
         },
       },
       recording,
+      termixMeta,
     };
     return this.encryptToken(token);
   }
@@ -168,6 +180,7 @@ export class GuacamoleTokenService {
       guacdPort?: number;
     } = {},
     recording?: GuacamoleRecordingMetadata,
+    termixMeta?: TermixGuacMeta,
   ): string {
     const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
@@ -184,6 +197,7 @@ export class GuacamoleTokenService {
         },
       },
       recording,
+      termixMeta,
     };
     return this.encryptToken(token);
   }
@@ -197,6 +211,7 @@ export class GuacamoleTokenService {
       guacdPort?: number;
     } = {},
     recording?: GuacamoleRecordingMetadata,
+    termixMeta?: TermixGuacMeta,
   ): string {
     const { guacdHost, guacdPort, ...settingsOptions } = options;
     const token: GuacamoleToken = {
@@ -213,6 +228,20 @@ export class GuacamoleTokenService {
         },
       },
       recording,
+      termixMeta,
+    };
+    return this.encryptToken(token);
+  }
+
+  // join tokens never carry recording params - only the primary connection's
+  // token should write recording-path/recording-name to guacd.
+  createJoinToken(guacamoleConnectionId: string, readOnly: boolean): string {
+    const token: GuacamoleToken = {
+      connection: {
+        join: guacamoleConnectionId,
+        readOnly,
+        settings: {},
+      },
     };
     return this.encryptToken(token);
   }

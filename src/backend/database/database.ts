@@ -12,6 +12,7 @@ import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
 import terminalRoutes from "./routes/terminal.js";
 import sessionLogRoutes from "./routes/session-log-routes.js";
 import guacamoleRoutes from "../hosts/guacamole/routes.js";
+import sessionSharingRoutes from "../hosts/session-sharing/routes.js";
 import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
@@ -22,6 +23,7 @@ import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
 import alertRulesRoutes from "./routes/alert-rules-routes.js";
+import syncRoutes from "./routes/sync.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import fs from "fs";
 import path from "path";
@@ -1737,6 +1739,7 @@ app.use("/c2s-tunnel-presets", c2sTunnelPresetRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/session_logs", sessionLogRoutes);
 app.use("/guacamole", guacamoleRoutes);
+app.use("/session-sharing", sessionSharingRoutes);
 app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
@@ -1747,6 +1750,7 @@ registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
 app.use("/vault", vaultRoutes);
 app.use("/", alertRulesRoutes);
+app.use("/sync", syncRoutes);
 
 const frontendDistPaths = [
   path.join(__dirname, "../../../dist"),

@@ -43,6 +43,7 @@ on:
 jobs:
   build:
     runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7

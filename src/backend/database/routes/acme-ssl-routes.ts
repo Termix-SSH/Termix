@@ -28,7 +28,7 @@ export type AcmeSettings = {
   enabled: boolean;
   domain: string;
   email: string;
-  challengeType: "http-webroot" | "dns-cloudflare";
+  challengeType: "http-webroot" | "dns-cloudflare" | "manual";
   cloudflareToken: string;
   lastIssuedAt: string | null;
   certStatus: "none" | "valid" | "expiring" | "expired";
@@ -166,7 +166,7 @@ export function registerAcmeSSLRoutes(
    *                 type: string
    *               challengeType:
    *                 type: string
-   *                 enum: [http-webroot, dns-cloudflare]
+   *                 enum: [http-webroot, dns-cloudflare, manual]
    *               cloudflareToken:
    *                 type: string
    *     responses:
@@ -412,6 +412,161 @@ export function registerAcmeSSLRoutes(
       });
 
       res.status(500).json({ error: `Certificate request failed: ${message}` });
+    }
+  });
+
+  /**
+   * @openapi
+   * /users/manual-ssl-upload:
+   *   post:
+   *     summary: Upload a manual/custom SSL certificate and key (admin only)
+   *     description: Validates and installs a user-supplied PEM certificate and private key as the active Termix SSL certificate.
+   *     tags:
+   *       - Users
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               certificate:
+   *                 type: string
+   *               privateKey:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Certificate uploaded and installed successfully.
+   *       400:
+   *         description: Invalid or missing certificate/key.
+   *       403:
+   *         description: Not authorized.
+   *       500:
+   *         description: Certificate installation failed.
+   */
+  router.post("/manual-ssl-upload", authenticateJWT, async (req, res) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const actor = await getAdminActor(userId);
+    try {
+      if (!actor) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const { certificate, privateKey } = req.body;
+
+      if (
+        typeof certificate !== "string" ||
+        typeof privateKey !== "string" ||
+        !certificate.includes("BEGIN CERTIFICATE") ||
+        !privateKey.includes("PRIVATE KEY")
+      ) {
+        return res.status(400).json({
+          error: "A valid PEM certificate and private key are required",
+        });
+      }
+
+      await fs.mkdir(SSL_DIR, { recursive: true });
+
+      const tmpCertFile = path.join(SSL_DIR, ".manual-upload.crt.tmp");
+      const tmpKeyFile = path.join(SSL_DIR, ".manual-upload.key.tmp");
+
+      try {
+        await fs.writeFile(tmpCertFile, certificate, { mode: 0o644 });
+        await fs.writeFile(tmpKeyFile, privateKey, { mode: 0o600 });
+
+        try {
+          execFileSync("openssl", ["x509", "-in", tmpCertFile, "-noout"], {
+            stdio: "pipe",
+          });
+          execFileSync(
+            "openssl",
+            ["pkey", "-in", tmpKeyFile, "-noout", "-check"],
+            { stdio: "pipe" },
+          );
+        } catch {
+          return res.status(400).json({
+            error:
+              "The provided certificate or private key is not valid PEM data",
+          });
+        }
+
+        const certPubkey = execFileSync(
+          "openssl",
+          ["x509", "-in", tmpCertFile, "-noout", "-pubkey"],
+          { stdio: "pipe" },
+        );
+        const keyPubkey = execFileSync(
+          "openssl",
+          ["pkey", "-in", tmpKeyFile, "-pubout"],
+          { stdio: "pipe" },
+        );
+
+        if (!certPubkey.equals(keyPubkey)) {
+          return res
+            .status(400)
+            .json({ error: "The certificate and private key do not match" });
+        }
+
+        const certDest = path.join(SSL_DIR, "termix.crt");
+        const keyDest = path.join(SSL_DIR, "termix.key");
+        await fs.rename(tmpCertFile, certDest);
+        await fs.rename(tmpKeyFile, keyDest);
+        await fs.chmod(keyDest, 0o600);
+        await fs.chmod(certDest, 0o644);
+      } finally {
+        await fs.rm(tmpCertFile, { force: true });
+        await fs.rm(tmpKeyFile, { force: true });
+      }
+
+      const settingsRepository = createCurrentSettingsRepository();
+      const existing = await settingsRepository.get("acme_ssl_settings");
+      const current = existing ? JSON.parse(existing) : {};
+      const updated = {
+        ...current,
+        challengeType: "manual",
+        lastIssuedAt: new Date().toISOString(),
+      };
+      await settingsRepository.set(
+        "acme_ssl_settings",
+        JSON.stringify(updated),
+      );
+
+      authLogger.info("Manual SSL certificate installed", {
+        operation: "manual_ssl_installed",
+      });
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: actor.username ?? userId,
+        action: "manual_ssl_upload",
+        resourceType: "setting",
+        details: JSON.stringify({ success: true }),
+        ipAddress,
+        userAgent,
+        success: true,
+      });
+
+      res.json({ success: true, ...(await getAcmeSettings()) });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      authLogger.error("Manual SSL certificate upload failed", err);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: actor?.username ?? userId,
+        action: "manual_ssl_upload",
+        resourceType: "setting",
+        details: JSON.stringify({ error: message }),
+        ipAddress,
+        userAgent,
+        success: false,
+      });
+
+      res
+        .status(500)
+        .json({ error: `Certificate installation failed: ${message}` });
     }
   });
 }

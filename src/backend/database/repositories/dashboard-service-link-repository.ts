@@ -1,4 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
+import { randomUUID } from "crypto";
 import { dashboardServiceLinks } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 
@@ -40,11 +41,13 @@ export class DashboardServiceLinkRepository {
     const [created] = await this.context.drizzle
       .insert(dashboardServiceLinks)
       .values({
+        syncId: randomUUID(),
         userId,
         label: input.label,
         url: input.url,
         order: nextOrder,
         createdAt,
+        updatedAt: createdAt,
       })
       .returning();
     await this.afterWrite();
@@ -76,7 +79,7 @@ export class DashboardServiceLinkRepository {
   ): Promise<DashboardServiceLinkRecord | null> {
     const [updated] = await this.context.drizzle
       .update(dashboardServiceLinks)
-      .set(updates)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
       .where(
         and(
           eq(dashboardServiceLinks.id, id),
@@ -92,7 +95,10 @@ export class DashboardServiceLinkRepository {
     return updated ?? null;
   }
 
-  async deleteForUser(userId: string, id: number): Promise<boolean> {
+  async deleteForUser(
+    userId: string,
+    id: number,
+  ): Promise<{ syncId: string | null } | null> {
     const rows = await this.context.drizzle
       .delete(dashboardServiceLinks)
       .where(
@@ -101,13 +107,11 @@ export class DashboardServiceLinkRepository {
           eq(dashboardServiceLinks.userId, userId),
         ),
       )
-      .returning({ id: dashboardServiceLinks.id });
+      .returning({ syncId: dashboardServiceLinks.syncId });
 
-    if (rows.length > 0) {
-      await this.afterWrite();
-    }
-
-    return rows.length > 0;
+    if (rows.length === 0) return null;
+    await this.afterWrite();
+    return rows[0];
   }
 
   async deleteByUserId(userId: string): Promise<number> {

@@ -31,6 +31,7 @@ describe("HomepageItemRepository", () => {
         title TEXT,
         config TEXT NOT NULL DEFAULT '{}',
         folder_id INTEGER,
+        sync_id TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
@@ -107,8 +108,10 @@ describe("HomepageItemRepository", () => {
     ).toBeNull();
     expect(writeCount).toBe(2);
 
-    expect(await repo.deleteForUser("user-2", item.id)).toBe(false);
-    expect(await repo.deleteForUser("user-1", item.id)).toBe(true);
+    expect(await repo.deleteForUser("user-2", item.id)).toBeNull();
+    expect(await repo.deleteForUser("user-1", item.id)).toEqual({
+      syncId: expect.any(String),
+    });
     expect(writeCount).toBe(3);
   });
 
