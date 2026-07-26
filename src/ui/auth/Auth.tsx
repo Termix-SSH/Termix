@@ -345,13 +345,19 @@ export function Auth({ onLogin }: AuthProps) {
   }, [desktopAutoSessionDone]);
 
   // A cold first launch spawns the embedded backend as a separate process
-  // that can take a few seconds to finish booting (DB init, SSL, etc.) --
-  // well after the renderer has already mounted. A probe that fires too
-  // early gets a connection error, not a real "no auto-login" verdict, so
-  // it's retried with backoff instead of falling through to the login form
-  // permanently. Only a definitive "declined" (backend reachable, verdict
-  // is no) stops retrying immediately.
-  const DESKTOP_AUTO_SESSION_MAX_RETRIES = 10;
+  // that can take anywhere from a couple seconds to much longer to finish
+  // booting (DB init, SSL, antivirus scanning a freshly-unpacked binary,
+  // slow disks, etc.) -- well after the renderer has already mounted. The
+  // embedded backend is bundled, always-on infrastructure, not something
+  // that can be "not there" -- it always eventually comes up. So a
+  // "retry" outcome (connection error, not a real verdict) is retried
+  // forever with capped backoff rather than ever giving up and falling
+  // through to the login form: that form is not a valid destination for a
+  // standalone install with no remote sync configured, since the only
+  // local account has no password to log in with. Only a definitive
+  // "declined" (backend reachable and says no -- multiple users, or the
+  // sole local user has a real credential) stops retrying and shows the
+  // real form.
   useEffect(() => {
     if (desktopAutoSessionDone !== null) return;
     let cancelled = false;
@@ -368,19 +374,21 @@ export function Auth({ onLogin }: AuthProps) {
           );
           return;
         }
-        if (
-          outcome.kind === "retry" &&
-          desktopAutoSessionRetries < DESKTOP_AUTO_SESSION_MAX_RETRIES
-        ) {
+        if (outcome.kind === "retry") {
+          const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
           retryTimer = setTimeout(() => {
             if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
-          }, 1000);
+          }, delay);
           return;
         }
         setDesktopAutoSessionDone(true);
       })
       .catch(() => {
-        if (!cancelled) setDesktopAutoSessionDone(true);
+        if (cancelled) return;
+        const delay = Math.min(1000 * 2 ** desktopAutoSessionRetries, 10000);
+        retryTimer = setTimeout(() => {
+          if (!cancelled) setDesktopAutoSessionRetries((c) => c + 1);
+        }, delay);
       });
     return () => {
       cancelled = true;
