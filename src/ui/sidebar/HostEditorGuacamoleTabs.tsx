@@ -676,6 +676,7 @@ export function HostEditorRdpTab({
               <option>en-us-qwerty</option>
               <option>en-gb-qwerty</option>
               <option>de-de-qwertz</option>
+              <option>de-ch-qwertz</option>
               <option>fr-fr-azerty</option>
               <option>it-it-qwerty</option>
               <option>sv-se-qwerty</option>
@@ -1332,6 +1333,7 @@ export function HostEditorVncTab({
               <option>en-us-qwerty</option>
               <option>en-gb-qwerty</option>
               <option>de-de-qwertz</option>
+              <option>de-ch-qwertz</option>
               <option>fr-fr-azerty</option>
               <option>it-it-qwerty</option>
               <option>sv-se-qwerty</option>
