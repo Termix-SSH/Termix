@@ -18,6 +18,11 @@ import {
   isOidcTokenCallback,
 } from "../../utils/oidc-desktop-callback.js";
 import { deleteUserAndRelatedData } from "./delete-user-data.js";
+import {
+  isLoopbackRequest,
+  extractBearerOrCookieToken,
+  resolveDesktopAutoSessionUser,
+} from "./desktop-auto-session.js";
 import { shouldShowDonationModal } from "./donation-modal-utils.js";
 import {
   getOIDCConfigFromEnv,
@@ -1880,29 +1885,19 @@ router.get("/setup-required", async (req, res) => {
   }
 });
 
-function isLoopbackRequest(req: Request): boolean {
-  const ip = req.ip || req.socket?.remoteAddress || "";
-  return (
-    ip === "127.0.0.1" ||
-    ip === "::1" ||
-    ip === "::ffff:127.0.0.1" ||
-    ip.endsWith(":127.0.0.1")
-  );
-}
-
 /**
  * @openapi
  * /users/internal/auto-session:
  *   post:
- *     summary: Mint a session for the auto-provisioned local desktop user
- *     description: Used by the Electron desktop app to skip the login form when running standalone with a single auto-provisioned local user. Only available over loopback, only when exactly one user exists, and only when that user has no password, is not an OIDC identity, and does not have TOTP enabled -- any real credential on the sole local account opts it out of this endpoint entirely.
+ *     summary: Mint a session for the sole local desktop user
+ *     description: Used by the Electron desktop app to skip the login form entirely when running standalone against the embedded local backend. Only available over loopback and only when exactly one user exists locally -- a synced or otherwise multi-user install never satisfies this and falls through to a normal login screen instead. The sole local user is logged in regardless of whether it has a password, OIDC identity, or TOTP configured, since machine access is this endpoint's actual trust boundary.
  *     tags:
  *       - Users
  *     responses:
  *       200:
  *         description: Session created.
  *       403:
- *         description: Forbidden, more than one user exists, or the sole local user has a real credential configured.
+ *         description: Forbidden, or more than one user exists.
  *       500:
  *         description: Failed to create session.
  */
@@ -1918,27 +1913,10 @@ router.post("/internal/auto-session", async (req, res) => {
 
     const userRepository = createCurrentUserRepository();
     const allUsers = await userRepository.listAll();
-    if (allUsers.length !== 1) {
+    const userRecord = resolveDesktopAutoSessionUser(allUsers);
+    if (!userRecord) {
       return res.status(403).json({
         error: "Auto-session is only available for a single local user",
-      });
-    }
-
-    const userRecord = allUsers[0];
-
-    // Only the auto-provisioned desktop placeholder (created with no
-    // password, no OIDC identity, no TOTP) may be silently logged in this
-    // way. A real account someone has actually secured -- even if it's
-    // the only user in this local database, e.g. after registering by
-    // hand instead of relying on the placeholder -- must never bypass its
-    // own credential check just because the request came from loopback.
-    const hasCredential =
-      (userRecord.passwordHash && userRecord.passwordHash.trim() !== "") ||
-      userRecord.isOidc ||
-      userRecord.totpEnabled;
-    if (hasCredential) {
-      return res.status(403).json({
-        error: "Auto-session is only available for the local placeholder user",
       });
     }
 
@@ -1949,11 +1927,7 @@ router.post("/internal/auto-session", async (req, res) => {
     // `jwt` cookie on every call; since the auth middleware prefers the
     // cookie over the Authorization header, a second mint silently
     // invalidates whatever token the app already started using.
-    const existingToken =
-      (req as Request & { cookies?: Record<string, string> }).cookies?.jwt ||
-      (req.headers["authorization"]?.startsWith("Bearer ")
-        ? req.headers["authorization"].slice("Bearer ".length)
-        : undefined);
+    const existingToken = extractBearerOrCookieToken(req);
     if (existingToken) {
       const existingPayload = await authManager.verifyJWTToken(existingToken);
       if (existingPayload?.userId === userRecord.id) {

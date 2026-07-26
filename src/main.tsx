@@ -237,17 +237,24 @@ function App() {
           setPhase("idle-auth");
           return;
         }
-        // Transient failure: retry shortly rather than logging out. Cap
-        // retries so a genuinely broken backend still surfaces the login
-        // screen eventually instead of spinning forever.
-        if (verifyRetryCount >= 5) {
+        // Transient failure: retry rather than logging out. In Electron the
+        // embedded local backend is bundled, always-on infrastructure that
+        // always eventually comes up (a slow cold boot just takes longer),
+        // and Auth.tsx never shows a login form for it anyway -- so there's
+        // no reason to ever give up and manufacture a logout here. Outside
+        // Electron a genuinely broken backend still needs to surface the
+        // login screen eventually, so that case keeps a retry cap.
+        if (!isElectron() && verifyRetryCount >= 5) {
           clearStoredAuth();
           setPhase("idle-auth");
           return;
         }
+        const delay = isElectron()
+          ? Math.min(1000 * 2 ** verifyRetryCount, 10000)
+          : 3000;
         timerRef.current = setTimeout(() => {
           setVerifyRetryCount((c) => c + 1);
-        }, 3000);
+        }, delay);
       });
   }, [phase, verifyRetryCount]);
 

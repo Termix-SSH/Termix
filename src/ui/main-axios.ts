@@ -646,12 +646,6 @@ function isDev(): boolean {
 
 const apiHost = import.meta.env.VITE_API_HOST || "localhost";
 
-export interface ServerConfig {
-  serverUrl: string;
-  lastUpdated: string;
-  allowInvalidCertificate?: boolean;
-}
-
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   startTime?: number;
   requestId?: string;
@@ -660,49 +654,6 @@ interface AxiosRequestConfigExtended extends AxiosRequestConfig {
 
 interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
-}
-
-/**
- * Reads the remote-sync connection record (repurposed from the old
- * server-config.json startup-gate file). Not used to route the app's own
- * API instances anymore -- see getApiUrl, which always targets the
- * embedded backend in Electron. This is only consumed by the Remote Sync
- * settings panel (Phase 3).
- */
-export async function getServerConfig(): Promise<ServerConfig | null> {
-  if (!isElectron()) return null;
-
-  try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-        }
-    ).electronAPI?.invoke("get-server-config");
-    return result;
-  } catch (error) {
-    console.error("Failed to get server config:", error);
-    return null;
-  }
-}
-
-export async function saveServerConfig(config: ServerConfig): Promise<boolean> {
-  if (!isElectron()) return false;
-
-  try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-        }
-    ).electronAPI?.invoke("save-server-config", config);
-    return !!result?.success;
-  } catch (error) {
-    console.error("Failed to save server config:", error);
-    return false;
-  }
 }
 
 export async function testServerConnection(
@@ -757,36 +708,6 @@ export async function checkElectronUpdate(): Promise<{
   } catch (error) {
     console.error("Failed to check Electron update:", error);
     return { success: false, error: "Update check failed" };
-  }
-}
-
-/**
- * Reports whether the local embedded backend process is alive. The desktop
- * app always runs the embedded backend now, so this is purely a liveness
- * check -- it no longer reflects a "mode" the app could be in.
- */
-export async function getEmbeddedServerStatus(): Promise<{
-  running: boolean;
-  dataDir: string | null;
-} | null> {
-  if (!isElectron()) return null;
-
-  try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: {
-            invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
-          };
-        }
-    ).electronAPI?.invoke("get-embedded-server-status");
-    return result as {
-      running: boolean;
-      dataDir: string | null;
-    } | null;
-  } catch {
-    return null;
   }
 }
 

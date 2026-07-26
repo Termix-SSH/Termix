@@ -220,12 +220,20 @@ describe("HostRepository and CredentialRepository", () => {
     ).toBe("primary");
     expect((await repo.credentials.findById(created.id))?.name).toBe("primary");
 
+    // Backdate updated_at so the update's CURRENT_TIMESTAMP bump is
+    // deterministically observable regardless of clock resolution --
+    // the sync engine's last-write-wins conflict resolution depends on
+    // every mutating update actually advancing this column.
+    repo.sqlite
+      .prepare("UPDATE ssh_credentials SET updated_at = ? WHERE id = ?")
+      .run("2000-01-01 00:00:00", created.id);
+
     const updated = await repo.credentials.updateForUser("user-1", created.id, {
       folder: "ops",
       tags: "linux,admin",
     });
     expect(updated?.folder).toBe("ops");
-    expect(updated?.updatedAt >= created.updatedAt).toBe(true);
+    expect(updated?.updatedAt).not.toBe("2000-01-01 00:00:00");
 
     expect(
       await repo.credentials.findByIdForUser("user-2", created.id),
@@ -340,15 +348,20 @@ describe("HostRepository and CredentialRepository", () => {
 
     expect(raw.password).toBe("user-encrypted-password");
 
+    repo.sqlite
+      .prepare("UPDATE ssh_credentials SET updated_at = ? WHERE id = ?")
+      .run("2000-01-01 00:00:00", created.id);
+
     await repo.credentials.updateEncryptedForUser("user-1", created.id, {
       password: "updated-secret",
     });
 
     const updatedRaw = repo.sqlite
-      .prepare("SELECT password FROM ssh_credentials WHERE id = ?")
-      .get(created.id) as { password: string };
+      .prepare("SELECT password, updated_at FROM ssh_credentials WHERE id = ?")
+      .get(created.id) as { password: string; updated_at: string };
 
     expect(updatedRaw.password).toBe("user-encrypted-password");
+    expect(updatedRaw.updated_at).not.toBe("2000-01-01 00:00:00");
     expect(DataCrypto.encryptRecord).toHaveBeenCalledWith(
       "ssh_credentials",
       expect.objectContaining({ password: "updated-secret" }),
@@ -379,7 +392,7 @@ describe("HostRepository and CredentialRepository", () => {
     const onWrite = vi.fn();
     const repo = await createRepositories(onWrite);
 
-    await repo.credentials.create({
+    const primary = await repo.credentials.create({
       userId: "user-1",
       name: "primary",
       authType: "password",
@@ -397,6 +410,9 @@ describe("HostRepository and CredentialRepository", () => {
       authType: "password",
       folder: "prod",
     });
+    repo.sqlite
+      .prepare("UPDATE ssh_credentials SET updated_at = ? WHERE id = ?")
+      .run("2000-01-01 00:00:00", primary.id);
     onWrite.mockClear();
 
     await expect(
@@ -406,6 +422,11 @@ describe("HostRepository and CredentialRepository", () => {
     expect(await repo.credentials.listFolders("user-1")).toEqual(["ops"]);
     expect(await repo.credentials.listFolders("user-2")).toEqual(["prod"]);
     expect(onWrite).toHaveBeenCalledTimes(1);
+
+    const renamedRow = repo.sqlite
+      .prepare("SELECT updated_at FROM ssh_credentials WHERE id = ?")
+      .get(primary.id) as { updated_at: string };
+    expect(renamedRow.updated_at).not.toBe("2000-01-01 00:00:00");
   });
 
   it("returns empty credential reads when user data is locked", async () => {
@@ -446,11 +467,16 @@ describe("HostRepository and CredentialRepository", () => {
       (await repo.hosts.listByUserId("user-1")).map((item) => item.id),
     ).toEqual([host.id]);
 
+    repo.sqlite
+      .prepare("UPDATE ssh_data SET updated_at = ? WHERE id = ?")
+      .run("2000-01-01 00:00:00", host.id);
+
     const updated = await repo.hosts.updateForUser("user-1", host.id, {
       name: "web-1-renamed",
       folder: "prod",
     });
     expect(updated?.name).toBe("web-1-renamed");
+    expect(updated?.updatedAt).not.toBe("2000-01-01 00:00:00");
     expect(await repo.hosts.findByIdForUser("user-2", host.id)).toBeNull();
 
     expect(await repo.hosts.deleteForUser("user-1", host.id)).toEqual({
@@ -491,15 +517,20 @@ describe("HostRepository and CredentialRepository", () => {
 
     expect(raw.password).toBe("encrypted-host-password");
 
+    repo.sqlite
+      .prepare("UPDATE ssh_data SET updated_at = ? WHERE id = ?")
+      .run("2000-01-01 00:00:00", created.id);
+
     await repo.hosts.updateEncryptedForUser("user-1", created.id, {
       password: "updated-secret",
     });
 
     const updatedRaw = repo.sqlite
-      .prepare("SELECT password FROM ssh_data WHERE id = ?")
-      .get(created.id) as { password: string };
+      .prepare("SELECT password, updated_at FROM ssh_data WHERE id = ?")
+      .get(created.id) as { password: string; updated_at: string };
 
     expect(updatedRaw.password).toBe("encrypted-host-password");
+    expect(updatedRaw.updated_at).not.toBe("2000-01-01 00:00:00");
     expect(DataCrypto.encryptRecord).toHaveBeenCalledWith(
       "ssh_data",
       expect.objectContaining({ password: "updated-secret" }),
@@ -624,6 +655,9 @@ describe("HostRepository and CredentialRepository", () => {
       username: "root",
       authType: "password",
     });
+    repo.sqlite
+      .prepare("UPDATE ssh_data SET updated_at = ? WHERE id IN (?, ?)")
+      .run("2000-01-01 00:00:00", first.id, second.id);
     onWrite.mockClear();
 
     const states = await repo.hosts.listBulkUpdateState("user-1", [
@@ -641,6 +675,12 @@ describe("HostRepository and CredentialRepository", () => {
     expect((await repo.hosts.findById(first.id))?.folder).toBe("ops");
     expect((await repo.hosts.findById(other.id))?.folder).toBeNull();
     expect(onWrite).toHaveBeenCalledTimes(1);
+    expect((await repo.hosts.findById(first.id))?.updatedAt).not.toBe(
+      "2000-01-01 00:00:00",
+    );
+    expect((await repo.hosts.findById(second.id))?.updatedAt).not.toBe(
+      "2000-01-01 00:00:00",
+    );
   });
 
   it("records credential usage and increments usage counters", async () => {

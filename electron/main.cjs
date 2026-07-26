@@ -442,7 +442,10 @@ function isInvalidCertificateAllowedForUrl(url) {
     // fall through
   }
 
-  const config = getServerConfigSync();
+  // The only remaining "connected remote server" a self-signed/invalid
+  // certificate could legitimately apply to is the Remote Sync server
+  // (also used for C2S tunnel relaying, see getC2SRelayUrl).
+  const config = remoteSync.getRemoteSyncConfig();
   if (!config?.allowInvalidCertificate || !config?.serverUrl) return false;
 
   return getOrigin(url) === getOrigin(config.serverUrl);
@@ -1652,43 +1655,33 @@ const C2S_WS_HIGH_WATERMARK = 1024 * 1024;
 const C2S_WS_LOW_WATERMARK = 256 * 1024;
 const C2S_STREAM_WRITE_LIMIT = 8 * 1024 * 1024;
 
+// C2S (client-to-server) tunnels relay through a connected, self-hosted
+// Termix server -- the same "remote server" concept Remote Sync connects
+// to, not the always-local embedded backend. There's no separate C2S
+// server-URL setting in the UI; it has always shared whatever remote
+// server the rest of the app was pointed at. Before the standalone-first
+// rework that was server-config.json; now it's remote-sync-config.json,
+// since that's the only remaining notion of "a connected remote server."
 function getC2SRelayUrl() {
-  const config = getServerConfigSync();
-  const serverUrl =
-    config?.serverUrl || (!isDev ? "http://127.0.0.1:30003" : null);
+  const config = remoteSync.getRemoteSyncConfig();
+  const serverUrl = config?.serverUrl;
   if (!serverUrl) {
-    throw new Error("No Termix server configured");
+    throw new Error(
+      "No remote Termix server connected -- enable Remote Sync first",
+    );
   }
 
   const base = serverUrl.replace(/\/$/, "");
-  const relayHttpUrl = base.endsWith(":30003")
-    ? `${base}/ssh/tunnel/c2s/stream`
-    : `${base}/ssh/tunnel/c2s/stream`;
+  const relayHttpUrl = `${base}/ssh/tunnel/c2s/stream`;
   return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
-async function getC2SRelayHeaders(relayUrl) {
-  const cookieUrl = relayUrl
-    .replace(/^ws:/, "http:")
-    .replace(/^wss:/, "https:");
-
-  let jwt;
-  if (mainWindow?.webContents?.session) {
-    const cookies = await mainWindow.webContents.session.cookies.get({
-      url: cookieUrl,
-      name: "jwt",
-    });
-    jwt = cookies[0]?.value;
-  }
-
-  if (!jwt) {
-    jwt = getRememberedElectronAuthCookie("jwt", cookieUrl)?.value;
-  }
-
+async function getC2SRelayHeaders() {
+  const jwt = remoteSync.getRemoteSyncJwt();
   if (!jwt) return {};
 
   return {
-    Cookie: `jwt=${encodeURIComponent(jwt)}`,
+    Authorization: `Bearer ${jwt}`,
   };
 }
 
@@ -1788,7 +1781,7 @@ async function openC2SRelay(
 ) {
   const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders(relayUrl);
+  const headers = await getC2SRelayHeaders();
   logToFile(`[c2s] opening relay for ${tunnelName}`, {
     relayUrl,
     targetHost,
@@ -1893,7 +1886,7 @@ async function openC2SRelay(
 
 async function testC2SRelay(tunnel, targetHost, targetPort) {
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders(relayUrl);
+  const headers = await getC2SRelayHeaders();
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),
@@ -2172,7 +2165,7 @@ async function startC2SRemoteTunnel(tunnel, index = 0) {
   }
 
   const relayUrl = getC2SRelayUrl();
-  const headers = await getC2SRelayHeaders(relayUrl);
+  const headers = await getC2SRelayHeaders();
   const ws = new WebSocket(
     relayUrl,
     getWebSocketOptions(relayUrl, { headers }),

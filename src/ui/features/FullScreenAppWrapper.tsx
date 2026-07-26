@@ -47,9 +47,12 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
     // window's session rather than owning their own login -- there's no
     // login form to fall back to here. On a cold Electron launch this
     // window's renderer can start before the embedded backend has finished
-    // booting, so a bare failure isn't proof of "logged out"; it's retried
-    // with backoff, and in Electron falls back to the same auto-session
-    // exchange the main window uses before giving up.
+    // booting, so a bare failure isn't proof of "logged out"; in Electron
+    // it's retried forever (the embedded backend is bundled, always-on
+    // infrastructure that always eventually comes up) with a fallback to
+    // the same auto-session exchange the main window uses, since a login
+    // form must never appear for the local backend. Outside Electron a
+    // capped retry still applies, matching the web app's normal behavior.
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     const maxAttempts = 10;
@@ -81,6 +84,12 @@ export const FullScreenAppWrapper: React.FC<FullScreenAppWrapperProps> = ({
           setAuthLoading(false);
           return;
         }
+        // "retry": keep retrying indefinitely with capped backoff.
+        const delay = Math.min(1000 * 2 ** attempt, 10000);
+        retryTimer = setTimeout(() => {
+          if (!cancelled) checkAuth(attempt + 1);
+        }, delay);
+        return;
       }
 
       if (attempt >= maxAttempts) {
