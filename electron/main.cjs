@@ -2917,31 +2917,33 @@ ipcMain.handle("close-external-editor", (_event, editId) => {
 ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   try {
     const normalizedServerUrl = serverUrl.replace(/\/$/, "");
-
     const healthUrl = `${normalizedServerUrl}/health`;
 
+    // This is a best-effort reachability probe, not a hard gate: a reverse
+    // proxy doing SSO in front of the real server (Pangolin, Authelia,
+    // Cloudflare Access, etc.) intercepts this unauthenticated request
+    // before it ever reaches Termix's own /health route, and returns its
+    // own login page (HTML, or a redirect) instead of {"status":"ok"}.
+    // That's a legitimate, working setup -- the login iframe shown right
+    // after this check is what actually proves the server is real, by
+    // completing an authenticated round-trip. So any response at all here
+    // (any status code, any body) means "something is there, let the user
+    // proceed"; only a network-level failure (nothing answered at all)
+    // blocks continuing.
     try {
       const response = await httpFetch(healthUrl, {
         method: "GET",
         timeout: 10000,
       });
 
-      if (response.ok) {
-        const data = await response.text();
+      const data = await response.text();
+      const looksLikeHtml =
+        data.includes("<html") ||
+        data.includes("<!DOCTYPE") ||
+        data.includes("<head>") ||
+        data.includes("<body>");
 
-        if (
-          data.includes("<html") ||
-          data.includes("<!DOCTYPE") ||
-          data.includes("<head>") ||
-          data.includes("<body>")
-        ) {
-          return {
-            success: false,
-            error:
-              "Server returned HTML instead of JSON. This does not appear to be a Termix server.",
-          };
-        }
-
+      if (response.ok && !looksLikeHtml) {
         try {
           const healthData = JSON.parse(data);
           if (
@@ -2961,64 +2963,27 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
           console.log("Health endpoint did not return valid JSON");
         }
       }
+
+      // Reachable, but not a recognized Termix health response -- likely a
+      // proxy/SSO login page in front of the real server. Let the user
+      // proceed; the login step next will fail clearly if this really
+      // isn't a Termix server.
+      return {
+        success: true,
+        status: response.status,
+        testedUrl: healthUrl,
+        warning: looksLikeHtml
+          ? "Could not confirm this is a Termix server (the response looked like an HTML page, which can happen behind a login-protected reverse proxy). You can continue, and the next step will fail clearly if this isn't actually a Termix server."
+          : "Server responded, but not with the expected health check format. Continuing anyway.",
+      };
     } catch (urlError) {
       console.error("Health check failed:", urlError);
+      return {
+        success: false,
+        error:
+          "Server is not responding. Please ensure the server is running and accessible.",
+      };
     }
-
-    try {
-      const versionUrl = `${normalizedServerUrl}/version`;
-      const response = await httpFetch(versionUrl, {
-        method: "GET",
-        timeout: 10000,
-      });
-
-      if (response.ok) {
-        const data = await response.text();
-
-        if (
-          data.includes("<html") ||
-          data.includes("<!DOCTYPE") ||
-          data.includes("<head>") ||
-          data.includes("<body>")
-        ) {
-          return {
-            success: false,
-            error:
-              "Server returned HTML instead of JSON. This does not appear to be a Termix server.",
-          };
-        }
-
-        try {
-          const versionData = JSON.parse(data);
-          if (
-            versionData &&
-            (versionData.status === "up_to_date" ||
-              versionData.status === "requires_update" ||
-              (versionData.localVersion &&
-                versionData.version &&
-                versionData.latest_release))
-          ) {
-            return {
-              success: true,
-              status: response.status,
-              testedUrl: versionUrl,
-              warning:
-                "Health endpoint not available, but server appears to be running",
-            };
-          }
-        } catch (parseError) {
-          console.log("Version endpoint did not return valid JSON");
-        }
-      }
-    } catch (versionError) {
-      console.error("Version check failed:", versionError);
-    }
-
-    return {
-      success: false,
-      error:
-        "Server is not responding or does not appear to be a valid Termix server. Please ensure the server is running and accessible.",
-    };
   } catch (error) {
     return { success: false, error: error.message };
   }

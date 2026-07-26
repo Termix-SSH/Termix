@@ -656,27 +656,6 @@ interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
 }
 
-export async function testServerConnection(
-  serverUrl: string,
-): Promise<{ success: boolean; error?: string }> {
-  if (!isElectron())
-    return { success: false, error: "Not in Electron environment" };
-
-  try {
-    const result = await (
-      window as Window &
-        typeof globalThis & {
-          IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
-        }
-    ).electronAPI?.invoke("test-server-connection", serverUrl);
-    return result;
-  } catch (error) {
-    console.error("Failed to test server connection:", error);
-    return { success: false, error: "Connection test failed" };
-  }
-}
-
 export async function checkElectronUpdate(): Promise<{
   success: boolean;
   status?: "up_to_date" | "requires_update" | "beta";
@@ -1621,25 +1600,6 @@ export async function loginUser(
       password,
       rememberMe,
     });
-
-    const isInIframe =
-      typeof window !== "undefined" && window.self !== window.top;
-
-    if (isInIframe && isElectron() && response.data.success) {
-      try {
-        window.parent.postMessage(
-          {
-            type: "AUTH_SUCCESS",
-            source: "login_api",
-            platform: "desktop",
-            timestamp: Date.now(),
-          },
-          window.location.origin,
-        );
-      } catch (e) {
-        console.error("[main-axios] Error posting message to parent:", e);
-      }
-    }
 
     if (response.data.token) {
       localStorage.setItem("jwt", response.data.token);

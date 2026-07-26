@@ -535,11 +535,19 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       if (isInElectronWebView()) {
+        // The iframe's login request never carries the X-Electron-App header
+        // (only the top-level Electron renderer's axios instances do), so the
+        // backend never includes the JWT in the login response body -- it
+        // only lands in an HttpOnly cookie scoped to this iframe's origin.
+        // Read it back via /users/me/token, same as the mobile-webview OIDC
+        // callback below does, so the parent window can persist it.
+        const token = res?.token ?? (await getCurrentToken());
         window.parent.postMessage(
           {
             type: "AUTH_SUCCESS",
             source: "auth_component",
             platform: "desktop",
+            token: token ?? null,
             timestamp: Date.now(),
           },
           "*",
@@ -593,6 +601,35 @@ export function Auth({ onLogin }: AuthProps) {
         setView("totp");
         return;
       }
+      if (isInMobileWebView()) {
+        // Native-app requests get the JWT in the login response body.
+        const token = res?.token ?? "";
+        (window as ExtendedWindow).ReactNativeWebView?.postMessage(
+          JSON.stringify({ type: "AUTH_SUCCESS", token }),
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
+      if (isInElectronWebView()) {
+        // Registration inside the Remote Sync iframe must hand off to the
+        // parent window the same way handleLogin does -- otherwise this
+        // component's own onLogin() below fires on the iframe's own,
+        // independent copy of the app, rendering the full remote AppShell
+        // inside the small login dialog instead of closing it.
+        const token = res?.token ?? (await getCurrentToken());
+        window.parent.postMessage(
+          {
+            type: "AUTH_SUCCESS",
+            source: "auth_component",
+            platform: "desktop",
+            token: token ?? null,
+            timestamp: Date.now(),
+          },
+          "*",
+        );
+        setWebviewAuthSuccess(true);
+        return;
+      }
       const meRes = await getUserInfo();
       storeAuth(meRes.username || username.trim());
       toast.success(t("messages.registrationSuccess"));
@@ -636,11 +673,16 @@ export function Auth({ onLogin }: AuthProps) {
         return;
       }
       if (isInElectronWebView()) {
+        // See the equivalent branch in handleLogin: the iframe never sends
+        // X-Electron-App, so the JWT never lands in the response body here
+        // either -- read it back from the HttpOnly cookie that was just set.
+        const token = res?.token ?? (await getCurrentToken());
         window.parent.postMessage(
           {
             type: "AUTH_SUCCESS",
             source: "totp_auth_component",
             platform: "desktop",
+            token: token ?? null,
             timestamp: Date.now(),
           },
           "*",

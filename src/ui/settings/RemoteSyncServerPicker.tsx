@@ -6,6 +6,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/alert.tsx";
 import { Switch } from "@/components/switch.tsx";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, X } from "lucide-react";
+import { toast } from "sonner";
 
 const SAVED_URLS_KEY = "termix_saved_server_urls";
 const MAX_SAVED_URLS = 5;
@@ -97,12 +98,16 @@ export function RemoteSyncServerPicker({
       const testResult = (await window.electronAPI?.invoke?.(
         "test-server-connection",
         normalizedUrl,
-      )) as { success?: boolean; error?: string } | undefined;
+      )) as { success?: boolean; error?: string; warning?: string } | undefined;
 
       if (!testResult?.success) {
         setError(testResult?.error || t("remoteSync.connectionTestFailed"));
         setLoading(false);
         return;
+      }
+
+      if (testResult.warning) {
+        toast.warning(testResult.warning);
       }
 
       const result = await window.electronAPI?.invoke?.(
