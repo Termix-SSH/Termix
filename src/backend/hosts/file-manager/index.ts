@@ -1,4 +1,9 @@
 import express from "express";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
@@ -1165,6 +1170,24 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       scpLegacy: resolvedScpLegacy,
     };
     scheduleSessionCleanup(sessionId);
+
+    if (userId) {
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      void (async () => {
+        await logAudit({
+          userId,
+          username: await getAuditUsername(userId),
+          action: "file_manager_connect",
+          resourceType: "host",
+          resourceId: hostId ? String(hostId) : undefined,
+          resourceName: `${username}@${ip}:${port}`,
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+      })();
+    }
+
     res.json({
       status: "success",
       message: "SSH connection established",
