@@ -17,6 +17,7 @@ import {
   Copy,
   CopyPlus,
   Cpu,
+  Download,
   FolderOpen,
   FolderSearch,
   Key,
@@ -1794,6 +1795,7 @@ export function SidebarTree({
   selectionMode,
   onToggleSelectionMode,
   loading = false,
+  onExportSelected,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (host: Host, type: TabType) => void;
@@ -1804,6 +1806,7 @@ export function SidebarTree({
   selectionMode: boolean;
   onToggleSelectionMode: () => void;
   loading?: boolean;
+  onExportSelected?: (hostIds: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => {
@@ -2467,6 +2470,18 @@ export function SidebarTree({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <button
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+              disabled={selectedHostIds.size === 0}
+              onClick={() => {
+                onExportSelected?.(Array.from(selectedHostIds));
+                setSelectedHostIds(new Set());
+                onToggleSelectionMode();
+              }}
+            >
+              <Download className="size-3" />
+              {t("hosts.export.bulkButton")}
+            </button>
             <button
               className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
               disabled={selectedHostIds.size === 0}
