@@ -199,9 +199,14 @@ export interface UserInfo {
   username: string;
   is_admin: boolean;
   is_oidc: boolean;
+  is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
   show_donation_modal?: boolean;
+}
+
+export interface RemoteSyncUserInfo extends UserInfo {
+  roles: UserRole[];
 }
 
 interface UserCount {
@@ -1686,6 +1691,18 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
+  }
+}
+
+export async function getRemoteSyncUserInfo(): Promise<RemoteSyncUserInfo | null> {
+  if (!isElectron()) return null;
+  try {
+    // ?? null so a missing preload bridge matches the declared return type
+    // rather than resolving to undefined.
+    return ((await window.electronAPI?.invoke?.("get-remote-sync-user-info")) ??
+      null) as RemoteSyncUserInfo | null;
+  } catch {
+    return null;
   }
 }
 
