@@ -70,14 +70,20 @@ export function PanePreview({
     setAttachNonce((n) => n + 1);
   }
 
-  const resolvedPort = host.sshPort ?? host.port;
-  const terminalHostConfig = {
-    ...host,
-    port: resolvedPort,
-    sshPort: resolvedPort,
-    authType: host.authType,
-    instanceId: instanceIdRef.current,
-  } as TerminalHostConfig;
+  const terminalHostConfig =
+    host.authType === "tailscale"
+      ? ({
+          ...host,
+          authType: "tailscale",
+          instanceId: instanceIdRef.current,
+        } as TerminalHostConfig)
+      : ({
+          ...host,
+          port: host.sshPort ?? host.port,
+          sshPort: host.sshPort ?? host.port,
+          authType: host.authType,
+          instanceId: instanceIdRef.current,
+        } as TerminalHostConfig);
 
   return (
     <>
