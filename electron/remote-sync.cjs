@@ -14,17 +14,7 @@
 const { app, safeStorage } = require("electron");
 const fs = require("fs");
 const path = require("path");
-
-const SYNCED_ENTITY_TYPES = [
-  "hosts",
-  "sshCredentials",
-  "sshFolders",
-  "snippets",
-  "snippetFolders",
-  "vaultProfiles",
-  "dashboardServiceLinks",
-  "homepageItems",
-];
+const { SYNCED_ENTITY_TYPES } = require("./remote-sync-entities.cjs");
 
 const SYNC_INTERVAL_MS = 90 * 1000;
 const EMBEDDED_BASE_URL = "http://127.0.0.1:30001";
