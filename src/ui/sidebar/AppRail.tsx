@@ -9,6 +9,8 @@ import {
   LayoutPanelLeft,
   LogOut,
   Network,
+  Pin,
+  PinOff,
   Play,
   Plug,
   ScrollText,
@@ -20,6 +22,7 @@ import {
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { getAlertFirings } from "@/api/alerts-api";
+import { getUserPreferences, saveUserPreferences } from "@/api/open-tabs-api";
 import { isElectron } from "@/lib/electron";
 
 export type RailView =
@@ -287,6 +290,20 @@ export function AppRail({
     : new Set([...hiddenTabs, "termix-id"]);
   const railButtons = buildRailButtons(splitMode, t, effectiveHiddenTabs);
 
+  const togglePinned = () => {
+    const next = !pinned;
+    setPinned(next);
+    localStorage.setItem("pinAppRail", String(next));
+    window.dispatchEvent(new Event("pinAppRailChanged"));
+    void getUserPreferences()
+      .then((preferences) => {
+        if (preferences.storageMode === "cloud") {
+          return saveUserPreferences({ pinAppRail: next });
+        }
+      })
+      .catch(() => {});
+  };
+
   return (
     <div
       className="hidden md:flex flex-col items-stretch bg-sidebar border-r border-border shrink-0 overflow-hidden pt-2 gap-1 transition-[width] duration-200 min-h-0"
@@ -356,6 +373,35 @@ export function AppRail({
       </div>
 
       <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
+        <button
+          onClick={togglePinned}
+          style={btnStyle}
+          className={`${btnBase} ${
+            pinned
+              ? "text-accent-brand bg-accent-brand/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+          }`}
+          title={
+            pinned
+              ? t("newUi.sidebar.userProfile.unpinAppRail")
+              : t("newUi.sidebar.userProfile.pinAppRail")
+          }
+          aria-pressed={pinned}
+        >
+          <span
+            className="shrink-0 flex items-center justify-center"
+            style={{ width: 16, height: 16 }}
+          >
+            {pinned ? <PinOff size={16} /> : <Pin size={16} />}
+          </span>
+          <span
+            className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"}`}
+          >
+            {pinned
+              ? t("newUi.sidebar.userProfile.unpinAppRail")
+              : t("newUi.sidebar.userProfile.pinAppRail")}
+          </span>
+        </button>
         {[
           {
             view: "alerts" as RailView,

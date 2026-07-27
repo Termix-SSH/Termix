@@ -37,11 +37,16 @@ import {
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
 import { Checkbox } from "@/components/checkbox";
-import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
+import {
+  changeAppLanguage,
+  normalizeLanguageCode,
+  rememberLoginLanguage,
+} from "@/i18n/i18n";
 import {
   removeSilentSigninFromSearch,
   shouldTriggerSilentSignin,
 } from "./silent-signin";
+import { LegalDisclosureDialog } from "@/legal/LegalDisclosure";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -237,9 +242,11 @@ export function Auth({ onLogin }: AuthProps) {
   const [language, setLanguage] = useState(() =>
     normalizeLanguageCode(localStorage.getItem("i18nextLng")),
   );
+  const [legalOpen, setLegalOpen] = useState(false);
 
   function handleLanguageChange(code: string) {
-    void changeAppLanguage(code)
+    const language = rememberLoginLanguage(code);
+    void changeAppLanguage(language)
       .then((language) => setLanguage(language))
       .catch(() => {});
   }
@@ -1583,6 +1590,17 @@ export function Auth({ onLogin }: AuthProps) {
                     ))}
                   </select>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setLegalOpen(true)}
+                  className="self-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  {t("newUi.sidebar.userProfile.sectionLegal")}
+                </button>
+                <LegalDisclosureDialog
+                  open={legalOpen}
+                  onOpenChange={setLegalOpen}
+                />
               </div>
             )}
           </div>
