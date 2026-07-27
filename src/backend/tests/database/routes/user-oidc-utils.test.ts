@@ -16,10 +16,49 @@ const {
   getOIDCConfigFromEnv,
   extractOidcGroups,
   validateLogoutTokenClaims,
+  verifyOIDCToken,
 } = await import("../../../database/routes/user-oidc-utils.js");
 
 const BACKCHANNEL_LOGOUT_EVENT =
   "http://schemas.openid.net/event/backchannel-logout";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("verifyOIDCToken", () => {
+  it("uses the protected-header algorithm when the provider JWK omits alg", async () => {
+    const { exportJWK, generateKeyPair, SignJWT } = await import("jose");
+    const { publicKey, privateKey } = await generateKeyPair("RS256");
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = "entra-key";
+
+    const issuer = "https://login.microsoftonline.com/example/v2.0";
+    const clientId = "termix-client";
+    const token = await new SignJWT({ sub: "user-1" })
+      .setProtectedHeader({ alg: "RS256", kid: jwk.kid })
+      .setIssuer(issuer)
+      .setAudience(clientId)
+      .setExpirationTime("5m")
+      .sign(privateKey);
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ jwks_uri: "https://idp.example/keys" }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }),
+      );
+
+    const payload = await verifyOIDCToken(token, issuer, clientId);
+
+    expect(payload.sub).toBe("user-1");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe("isOIDCUserAllowed", () => {
   it("allows everyone when the allow-list is empty", () => {
