@@ -47,6 +47,7 @@ import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
 import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
+import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -2475,6 +2476,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               readTextFromClipboard,
               getSnippetById,
             });
+            return false;
+          }
+        }
+
+        if (navigator.userAgent.includes("Android")) {
+          const sequence = getAndroidHardwareKeySequence(
+            e,
+            terminal.modes.applicationCursorKeysMode,
+            hostConfig.terminalConfig?.backspaceMode,
+          );
+          if (sequence) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+              webSocketRef.current.send(
+                JSON.stringify({ type: "input", data: sequence }),
+              );
+            }
             return false;
           }
         }
