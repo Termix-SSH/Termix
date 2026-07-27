@@ -215,9 +215,8 @@ export async function verifyOIDCToken(
     );
   }
 
-  const header = JSON.parse(
-    Buffer.from(idToken.split(".")[0], "base64").toString(),
-  );
+  const { decodeProtectedHeader, importJWK, jwtVerify } = await import("jose");
+  const header = decodeProtectedHeader(idToken);
   const keyId = header.kid;
 
   const publicKey = jwks.keys.find(
@@ -229,8 +228,9 @@ export async function verifyOIDCToken(
     );
   }
 
-  const { importJWK, jwtVerify } = await import("jose");
-  const key = await importJWK(publicKey);
+  const algorithm =
+    typeof publicKey.alg === "string" ? publicKey.alg : header.alg;
+  const key = await importJWK(publicKey, algorithm);
 
   const { payload } = await jwtVerify(idToken, key, {
     issuer: possibleIssuers,
