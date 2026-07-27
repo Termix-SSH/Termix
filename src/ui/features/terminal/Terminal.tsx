@@ -65,6 +65,7 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
+import { isTabKeyEvent } from "./terminal-key-event.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -2328,7 +2329,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       // the capture phase blocks that traversal while still allowing the event to
       // reach xterm.js's internal handler (which fires our attachCustomKeyEventHandler).
       const handleTabCapture = (e: KeyboardEvent) => {
-        if (e.key === "Tab") {
+        if (isTabKeyEvent(e)) {
           e.preventDefault();
         }
       };
@@ -2678,7 +2679,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
 
           if (
-            e.key === "Tab" &&
+            isTabKeyEvent(e) &&
             !e.ctrlKey &&
             !e.altKey &&
             !e.metaKey &&
@@ -2701,7 +2702,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.key === "Tab" &&
+          isTabKeyEvent(e) &&
           e.shiftKey &&
           !e.ctrlKey &&
           !e.altKey &&
@@ -2718,7 +2719,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.key === "Tab" &&
+          isTabKeyEvent(e) &&
           !e.ctrlKey &&
           !e.altKey &&
           !e.metaKey &&
