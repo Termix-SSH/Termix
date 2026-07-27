@@ -221,6 +221,55 @@ function hasIncompleteAnsiSequence(text: string): boolean {
   return /\x1b\[[0-9;?>=!]*$/.test(text);
 }
 
+/**
+ * Tracks whether the stream is inside a control string (OSC/DCS/APC/PM) across
+ * chunk boundaries.
+ *
+ * A control string carries text that must never reach the screen — an OSC 0
+ * title, for instance, contains the user, host and path. Its opening `ESC ]`
+ * and its terminator often land in different websocket frames, and the
+ * continuation frame contains no escape byte at all, so every single-chunk
+ * guard here misses it. Highlighting that continuation injects an SGR sequence
+ * into the middle of the string, which aborts it early in xterm.js and dumps
+ * the rest of the payload on screen as ordinary text.
+ *
+ * A trailing lone ESC counts as active for the same reason: its intent is only
+ * knowable from the next chunk.
+ */
+export function updateControlStringMode(
+  output: string,
+  currentMode: boolean,
+): { isActive: boolean; wasActive: boolean } {
+  const wasActive = currentMode;
+  let isActive = currentMode;
+
+  for (let i = 0; i < output.length; i++) {
+    const char = output[i];
+
+    if (isActive) {
+      if (char === "\x07") {
+        isActive = false;
+      } else if (char === "\x1b") {
+        // ST (ESC \) closes it; any other ESC aborts it.
+        isActive = false;
+        if (output[i + 1] === "\\") i++;
+      }
+      continue;
+    }
+
+    if (char !== "\x1b") continue;
+
+    const next = output[i + 1];
+    if (next === undefined) return { isActive: true, wasActive };
+    if (next === "]" || next === "P" || next === "^" || next === "_") {
+      isActive = true;
+      i++;
+    }
+  }
+
+  return { isActive, wasActive };
+}
+
 function parseAnsiSegments(text: string): TextSegment[] {
   const segments: TextSegment[] = [];
   ANSI_REGEX.lastIndex = 0;

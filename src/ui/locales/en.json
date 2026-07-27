@@ -3323,6 +3323,8 @@
         "resetToDefaultsSuccess": "Settings reset to defaults.",
         "storageModeSwitch": "Preference Storage",
         "sectionAccount": "Account",
+        "desktopProfileTitle": "Automatic local desktop profile",
+        "desktopProfileDescription": "This profile is restricted to the embedded backend and signs in automatically. It has no login password; Remote Sync below uses a separate server account.",
         "sectionAppearance": "Appearance",
         "sectionSecurity": "Security",
         "sectionApiKeys": "API Keys",

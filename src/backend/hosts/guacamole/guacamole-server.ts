@@ -104,10 +104,16 @@ async function persistGuacamoleRecording(
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   if (!fs.existsSync(resolvedPath)) {
+    const guacdPath = recording.guacdPath ?? GUACAMOLE_RECORDINGS_DIR;
     guacLogger.warn("Guacamole recording file was not found", {
       operation: "guac_recording_missing",
       hostId: recording.hostId,
       path: resolvedPath,
+      guacdPath,
+      hint:
+        "guacd writes the recording to guacdPath, the backend reads it from path. " +
+        "When guacd runs in its own container these must be the same volume — set " +
+        "GUACD_RECORDING_PATH to guacd's mount point and GUACD_RECORDING_BACKEND_PATH to this one.",
     });
     return;
   }

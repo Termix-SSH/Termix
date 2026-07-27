@@ -48,6 +48,9 @@ export interface GuacamoleRecordingMetadata {
   userId: string;
   protocol: "rdp" | "vnc" | "telnet";
   path: string;
+  /** Directory guacd was told to write into; differs from the backend's view
+   * when guacd runs in its own container. */
+  guacdPath?: string;
   startedAt: string;
 }
 
