@@ -251,3 +251,53 @@ describe("validateLogoutTokenClaims", () => {
     ).toThrow("must contain sub and/or sid");
   });
 });
+
+// Imported as a namespace rather than destructured into the shared block at the
+// top of the file, so this suite stays independent of what that block binds.
+const oidcUtils = await import("../../../database/routes/user-oidc-utils.js");
+
+describe("verifyOIDCToken token shape", () => {
+  const issuer = "https://idp.example.com/application/o/termix";
+
+  // The shape check runs before any network call, so no fetch stub is needed.
+  const fetchSpy = vi.fn();
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchSpy.mockReset();
+  });
+
+  it("reports an encrypted (JWE) token as a format error", async () => {
+    const jwe = ["header", "key", "iv", "ciphertext", "tag"].join(".");
+
+    await expect(
+      oidcUtils.verifyOIDCToken(jwe, issuer, "client"),
+    ).rejects.toThrow(oidcUtils.OIDCTokenFormatError);
+    await expect(
+      oidcUtils.verifyOIDCToken(jwe, issuer, "client"),
+    ).rejects.toThrow(/JWE \(encrypted\)/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("reports any other non-JWS segment count as a format error", async () => {
+    await expect(
+      oidcUtils.verifyOIDCToken("header.payload", issuer, "client"),
+    ).rejects.toThrow(/expected 3 segments, got 2/);
+    await expect(
+      oidcUtils.verifyOIDCToken("opaque", issuer, "client"),
+    ).rejects.toThrow(/expected 3 segments, got 1/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("lets a three-segment token through to key resolution", async () => {
+    fetchSpy.mockResolvedValue({ ok: false });
+
+    // Reaches JWKS fetching, so it fails on the key lookup rather than the shape.
+    await expect(
+      oidcUtils.verifyOIDCToken("header.payload.signature", issuer, "client"),
+    ).rejects.not.toThrow(oidcUtils.OIDCTokenFormatError);
+    expect(fetchSpy).toHaveBeenCalled();
+  });
+});
