@@ -763,6 +763,7 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
 let remoteFileManagerApi: AxiosInstance | null = null;
 let remoteTunnelApi: AxiosInstance | null = null;
 let remoteStatsApi: AxiosInstance | null = null;
+let remoteGuacamoleApi: AxiosInstance | null = null;
 
 export function getRemoteFileManagerApi(): AxiosInstance {
   if (!remoteFileManagerApi) {
@@ -783,6 +784,13 @@ export function getRemoteStatsApi(): AxiosInstance {
     remoteStatsApi = createRemoteOriginApiInstance("");
   }
   return remoteStatsApi;
+}
+
+export function getRemoteGuacamoleApi(): AxiosInstance {
+  if (!remoteGuacamoleApi) {
+    remoteGuacamoleApi = createRemoteOriginApiInstance("");
+  }
+  return remoteGuacamoleApi;
 }
 
 // Maps a live SSH session (keyed by sessionId, which today is the host's

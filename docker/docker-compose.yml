@@ -10,6 +10,7 @@ services:
     environment:
       PORT: "8080"
       GUACD_HOST: "guacd"
+      GUACD_TUNNEL_HOST: "termix"
       GUACD_RECORDING_PATH: "/termix-data/session_recordings/guacamole"
     depends_on:
       - guacd

@@ -857,6 +857,36 @@ app.use((_req, res, next) => {
   next();
 });
 
+// Internal endpoint — only accepts calls from localhost.
+// Used by the main backend to notify the metrics service of SSH login events.
+app.post("/internal/login-alert", async (req, res) => {
+  const remoteIp = req.socket.remoteAddress;
+  if (
+    remoteIp !== "127.0.0.1" &&
+    remoteIp !== "::1" &&
+    remoteIp !== "::ffff:127.0.0.1"
+  ) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const systemCrypto = (await import("../../utils/system-crypto.js"))
+    .SystemCrypto;
+  const expectedToken = await systemCrypto.getInstance().getInternalAuthToken();
+  const token = req.headers["x-internal-auth"];
+  if (!token || token !== expectedToken) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const { hostId, userId, sshUser, fromIp } = req.body as {
+    hostId: number;
+    userId: string;
+    sshUser: string;
+    fromIp: string;
+  };
+  AlertEngine.getInstance()
+    .evaluateUserLogin(hostId, userId, sshUser, fromIp)
+    .catch(() => {});
+  res.json({ ok: true });
+});
+
 app.use(authManager.createAuthMiddleware());
 const requireAdmin = authManager.createAdminMiddleware();
 
@@ -2801,36 +2831,6 @@ registerManagerRoutes(app, {
     };
     return withSshConnection(host, (client) => fn(client, managerHost));
   },
-});
-
-// Internal endpoint — only accepts calls from localhost.
-// Used by the main backend to notify the metrics service of SSH login events.
-app.post("/internal/login-alert", async (req, res) => {
-  const remoteIp = req.socket.remoteAddress;
-  if (
-    remoteIp !== "127.0.0.1" &&
-    remoteIp !== "::1" &&
-    remoteIp !== "::ffff:127.0.0.1"
-  ) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  const systemCrypto = (await import("../../utils/system-crypto.js"))
-    .SystemCrypto;
-  const expectedToken = await systemCrypto.getInstance().getInternalAuthToken();
-  const token = req.headers["x-internal-auth"];
-  if (!token || token !== expectedToken) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  const { hostId, userId, sshUser, fromIp } = req.body as {
-    hostId: number;
-    userId: string;
-    sshUser: string;
-    fromIp: string;
-  };
-  AlertEngine.getInstance()
-    .evaluateUserLogin(hostId, userId, sshUser, fromIp)
-    .catch(() => {});
-  res.json({ ok: true });
 });
 
 process.on("SIGINT", () => {

@@ -10,6 +10,17 @@ import {
 const BACKCHANNEL_LOGOUT_EVENT =
   "http://schemas.openid.net/event/backchannel-logout";
 
+/**
+ * Raised when a token cannot be verified because it is not a compact JWS,
+ * as opposed to a signature or claim check that actually failed.
+ */
+export class OIDCTokenFormatError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OIDCTokenFormatError";
+  }
+}
+
 function normalizeIssuer(url: string): string {
   return url.trim().replace(/\/+$/, "");
 }
@@ -149,6 +160,15 @@ export async function verifyOIDCToken(
   clientId: string,
   caCert?: string,
 ): Promise<Record<string, unknown>> {
+  const segments = idToken.split(".");
+  if (segments.length !== 3) {
+    throw new OIDCTokenFormatError(
+      segments.length === 5
+        ? "Token is a JWE (encrypted). Termix cannot verify encrypted tokens; disable token encryption for this client in your OIDC provider."
+        : `Token is not a compact JWS: expected 3 segments, got ${segments.length}.`,
+    );
+  }
+
   const fetchOptions = buildFetchOptions(caCert);
   const normalizedIssuerUrl = issuerUrl.endsWith("/")
     ? issuerUrl.slice(0, -1)
@@ -215,9 +235,8 @@ export async function verifyOIDCToken(
     );
   }
 
-  const header = JSON.parse(
-    Buffer.from(idToken.split(".")[0], "base64").toString(),
-  );
+  const { decodeProtectedHeader, importJWK, jwtVerify } = await import("jose");
+  const header = decodeProtectedHeader(idToken);
   const keyId = header.kid;
 
   const publicKey = jwks.keys.find(
@@ -229,8 +248,9 @@ export async function verifyOIDCToken(
     );
   }
 
-  const { importJWK, jwtVerify } = await import("jose");
-  const key = await importJWK(publicKey);
+  const algorithm =
+    typeof publicKey.alg === "string" ? publicKey.alg : header.alg;
+  const key = await importJWK(publicKey, algorithm);
 
   const { payload } = await jwtVerify(idToken, key, {
     issuer: possibleIssuers,

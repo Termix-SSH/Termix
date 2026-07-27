@@ -1,4 +1,9 @@
-import { lookup, type LookupAddress, type LookupAllOptions } from "dns";
+import {
+  lookup,
+  type LookupAddress,
+  type LookupAllOptions,
+  type LookupOptions,
+} from "dns";
 import { BlockList, isIP } from "net";
 import { Agent } from "undici";
 
@@ -13,8 +18,8 @@ type DnsLookupFn = (
 
 type LookupHookCallback = (
   error: NodeJS.ErrnoException | Error | null,
-  address: string,
-  family: number,
+  address: string | LookupAddress[],
+  family?: number,
 ) => void;
 
 const blockedAddresses = new BlockList();
@@ -71,28 +76,27 @@ export function isBlockedAddress(address: string): boolean {
 export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
   return function lookupHook(
     host: string,
-    lookupOptions: LookupAllOptions,
+    lookupOptions: LookupOptions,
     callback: LookupHookCallback,
   ): void {
+    const fail = (error: NodeJS.ErrnoException | Error) => {
+      if (lookupOptions.all) return callback(error, []);
+      callback(error, "", 0);
+    };
+
     dnsLookup(
       host,
       { ...lookupOptions, all: true, verbatim: true },
       (error, addresses) => {
-        if (error) return callback(error, "", 0);
+        if (error) return fail(error);
         if (!addresses.length) {
-          return callback(
-            new Error("DNS resolution returned no addresses"),
-            "",
-            0,
-          );
+          return fail(new Error("DNS resolution returned no addresses"));
         }
         if (addresses.some(({ address }) => isBlockedAddress(address))) {
-          return callback(
-            new Error("Private destinations are not allowed"),
-            "",
-            0,
-          );
+          return fail(new Error("Private destinations are not allowed"));
         }
+        if (lookupOptions.all) return callback(null, addresses);
+
         const selected = addresses[0];
         callback(null, selected.address, selected.family);
       },

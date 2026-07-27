@@ -21,6 +21,11 @@ import {
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import type { SyncEntityType } from "../repositories/sync-tombstone-repository.js";
+import {
+  deserializeSyncReferences,
+  serializeSyncReferences,
+  type SyncReferenceEntity,
+} from "./sync-references.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -65,9 +70,63 @@ const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
 };
 
 const VALID_ENTITY_TYPES = new Set(Object.keys(ENTITY_CONFIG));
+type RepositoryContext = ReturnType<typeof createCurrentRepositoryContext>;
 
 export function isValidEntityType(value: unknown): value is SyncEntityType {
   return typeof value === "string" && VALID_ENTITY_TYPES.has(value);
+}
+
+async function findReferenceSyncId(
+  context: RepositoryContext,
+  entityType: SyncReferenceEntity,
+  id: number,
+  userId: string,
+): Promise<string | null> {
+  if (entityType === "sshCredentials") {
+    const [row] = await context.drizzle
+      .select({ syncId: sshCredentials.syncId })
+      .from(sshCredentials)
+      .where(and(eq(sshCredentials.id, id), eq(sshCredentials.userId, userId)))
+      .limit(1);
+    return row?.syncId ?? null;
+  }
+
+  const [row] = await context.drizzle
+    .select({ syncId: vaultProfiles.syncId })
+    .from(vaultProfiles)
+    .where(and(eq(vaultProfiles.id, id), eq(vaultProfiles.userId, userId)))
+    .limit(1);
+  return row?.syncId ?? null;
+}
+
+async function findReferenceId(
+  context: RepositoryContext,
+  entityType: SyncReferenceEntity,
+  syncId: string,
+  userId: string,
+): Promise<number | null> {
+  if (entityType === "sshCredentials") {
+    const [row] = await context.drizzle
+      .select({ id: sshCredentials.id })
+      .from(sshCredentials)
+      .where(
+        and(
+          eq(sshCredentials.syncId, syncId),
+          eq(sshCredentials.userId, userId),
+        ),
+      )
+      .limit(1);
+    return row?.id ?? null;
+  }
+
+  const [row] = await context.drizzle
+    .select({ id: vaultProfiles.id })
+    .from(vaultProfiles)
+    .where(
+      and(eq(vaultProfiles.syncId, syncId), eq(vaultProfiles.userId, userId)),
+    )
+    .limit(1);
+  return row?.id ?? null;
 }
 
 function requireUserDataKey(userId: string): Buffer {
@@ -173,8 +232,15 @@ router.get(
         .from(table as typeof hosts)
         .where(and(...conditions));
 
-      const decrypted = rows.map((row) =>
-        decryptIfNeeded(entityType, row as Record<string, unknown>, userId),
+      const decrypted = await Promise.all(
+        rows.map((row) =>
+          serializeSyncReferences(
+            entityType,
+            decryptIfNeeded(entityType, row as Record<string, unknown>, userId),
+            (referenceType, id) =>
+              findReferenceSyncId(context, referenceType, id, userId),
+          ),
+        ),
       );
 
       res.json({ rows: decrypted });
@@ -242,7 +308,13 @@ router.post(
         .limit(1);
       const existing = existingRows[0] as Record<string, unknown> | undefined;
 
-      const writePayload = stripWritePayload(entityType, payload);
+      const resolvedPayload = await deserializeSyncReferences(
+        entityType,
+        payload,
+        (referenceType, referenceSyncId) =>
+          findReferenceId(context, referenceType, referenceSyncId, userId),
+      );
+      const writePayload = stripWritePayload(entityType, resolvedPayload);
       const encryptedPayload = encryptIfNeeded(
         entityType,
         writePayload,
