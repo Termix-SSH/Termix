@@ -8,6 +8,10 @@ import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js"
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseMigration } from "../../utils/database-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import {
+  assertDataDirIsNotMisconfigured,
+  DataDirMisconfiguredError,
+} from "../../utils/data-dir-guard.js";
 import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
@@ -104,11 +108,16 @@ async function initializeDatabaseAsync(): Promise<void> {
             );
           }
         } else {
+          assertDataDirIsNotMisconfigured(dataDir);
           memoryDatabase = new Database(":memory:");
           isNewDatabase = true;
         }
       }
     } catch (error) {
+      // Not a decryption problem: the database is fine, we are pointed at the
+      // wrong directory. Surface that message as-is.
+      if (error instanceof DataDirMisconfiguredError) throw error;
+
       databaseLogger.error("Failed to initialize memory database", error, {
         operation: "db_memory_init_failed",
         errorMessage: error instanceof Error ? error.message : "Unknown error",
@@ -145,6 +154,7 @@ async function initializeDatabaseAsync(): Promise<void> {
       );
     }
   } else {
+    assertDataDirIsNotMisconfigured(dataDir);
     memoryDatabase = new Database(":memory:");
     isNewDatabase = true;
   }
