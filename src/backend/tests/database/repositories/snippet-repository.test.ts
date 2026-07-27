@@ -20,7 +20,7 @@ describe("SnippetRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE snippets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -63,7 +63,7 @@ describe("SnippetRepository", () => {
 
     return {
       repository: new SnippetRepository(context, onWrite),
-      sqlite: context.sqlite!,
+      sqlite: adapter.raw,
     };
   }
 

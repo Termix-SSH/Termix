@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, notInArray } from "drizzle-orm";
 import { hostHealthChecks, hostHealthHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 
@@ -94,7 +94,7 @@ export class HostHealthRepository {
       })),
     );
 
-    this.pruneHistory(userId, hostId, keep);
+    await this.pruneHistory(userId, hostId, keep);
     await this.afterWrite();
     return results.length;
   }
@@ -141,21 +141,37 @@ export class HostHealthRepository {
     };
   }
 
-  private pruneHistory(userId: string, hostId: number, keep: number): void {
-    this.context.sqlite
-      ?.prepare(
-        `DELETE FROM host_health_history
-         WHERE id IN (
-           SELECT id FROM host_health_history
-           WHERE user_id = ? AND host_id = ?
-           AND id NOT IN (
-             SELECT id FROM host_health_history
-             WHERE user_id = ? AND host_id = ?
-             ORDER BY ts DESC LIMIT ?
-           )
-         )`,
-      )
-      .run(userId, hostId, userId, hostId, keep);
+  /** Keeps the newest `keep` rows for the host and drops the rest. */
+  private async pruneHistory(
+    userId: string,
+    hostId: number,
+    keep: number,
+  ): Promise<void> {
+    const scope = and(
+      eq(hostHealthHistory.userId, userId),
+      eq(hostHealthHistory.hostId, hostId),
+    );
+
+    const retained = await this.context.drizzle
+      .select({ id: hostHealthHistory.id })
+      .from(hostHealthHistory)
+      .where(scope)
+      .orderBy(desc(hostHealthHistory.ts))
+      .limit(keep);
+
+    // Nothing retained means nothing to keep back, so the scope alone is the
+    // delete condition.
+    await this.context.drizzle.delete(hostHealthHistory).where(
+      retained.length
+        ? and(
+            scope,
+            notInArray(
+              hostHealthHistory.id,
+              retained.map((row) => row.id),
+            ),
+          )
+        : scope,
+    );
   }
 
   private async afterWrite(): Promise<void> {

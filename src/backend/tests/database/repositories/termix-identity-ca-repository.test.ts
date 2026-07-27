@@ -23,7 +23,7 @@ describe("TermixIdentityCaRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -63,7 +63,7 @@ describe("TermixIdentityCaRepository", () => {
 
     return {
       repo: new TermixIdentityCaRepository(context, onWrite),
-      sqlite: context.sqlite!,
+      sqlite: adapter.raw,
       onWrite,
     };
   }

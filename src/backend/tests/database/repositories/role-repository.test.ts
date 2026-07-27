@@ -17,7 +17,7 @@ describe("RoleRepository", () => {
   ): Promise<RoleRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,

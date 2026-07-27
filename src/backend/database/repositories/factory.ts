@@ -49,7 +49,6 @@ export function createCurrentRepositoryContext(): DatabaseContext {
   return {
     dialect: "sqlite",
     drizzle: getDb(),
-    sqlite: getSqlite(),
   };
 }
 
@@ -59,6 +58,12 @@ export function createCurrentRepositoryWriteHook(
   return () => DatabaseSaveTrigger.forceSave(reason);
 }
 
+/**
+ * Raw driver handle for the few synchronous call sites that cannot await —
+ * getCurrentSettingValue below, and settings reads during startup. Repositories
+ * must not use this: they take a DatabaseContext, which is drizzle-only.
+ * Porting to another engine means giving these callers an async path first.
+ */
 export function getCurrentRepositorySqlite() {
   return getSqlite();
 }

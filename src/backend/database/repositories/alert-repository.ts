@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import {
   alertFirings,
   alertRuleChannels,
@@ -7,6 +7,7 @@ import {
   notificationChannels,
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
 
 type AlertRuleRecord = typeof alertRules.$inferSelect;
 type NotificationChannelRecord = typeof notificationChannels.$inferSelect;
@@ -411,12 +412,15 @@ export class AlertRepository {
     await this.afterWrite();
   }
 
-  pruneFiringsOlderThan(userId: string, days: number): void {
-    this.context.sqlite
-      ?.prepare(
-        "DELETE FROM alert_firings WHERE user_id = ? AND fired_at < datetime('now', ?)",
-      )
-      .run(userId, `-${days} days`);
+  async pruneFiringsOlderThan(userId: string, days: number): Promise<void> {
+    await this.context.drizzle
+      .delete(alertFirings)
+      .where(
+        and(
+          eq(alertFirings.userId, userId),
+          lt(alertFirings.firedAt, sqlTimestampDaysAgo(days)),
+        ),
+      );
   }
 
   async deleteByUserId(userId: string): Promise<{
