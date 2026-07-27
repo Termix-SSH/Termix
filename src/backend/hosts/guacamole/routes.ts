@@ -1,5 +1,6 @@
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
+import { withRecordingSettings } from "./recording-settings.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -615,15 +616,16 @@ router.post(
             userId,
             protocol: connectionType as "rdp" | "vnc" | "telnet",
             path: recordingName,
+            guacdPath: recordingPath,
             startedAt: new Date().toISOString(),
           }
         : undefined;
       if (recordingEnabled) {
-        guacConfig["recording-path"] = recordingPath;
-        guacConfig["recording-name"] = recordingName;
-        guacConfig["create-recording-path"] = true;
-        guacConfig["recording-exclude-output"] = false;
-        guacConfig["recording-include-keys"] = true;
+        guacConfig = withRecordingSettings(
+          guacConfig,
+          recordingPath,
+          recordingName,
+        );
       }
 
       const termixConnectId = crypto.randomUUID();
