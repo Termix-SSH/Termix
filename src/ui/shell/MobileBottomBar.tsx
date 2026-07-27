@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   Clock,
+  ArrowLeftRight,
   Hammer,
   KeyRound,
   LayoutPanelLeft,
@@ -41,6 +42,11 @@ const MORE_ITEMS: { view: RailView; icon: React.ReactNode; title: string }[] = [
     view: "credentials",
     icon: <KeyRound className="size-4" />,
     title: "Credentials",
+  },
+  {
+    view: "sftp",
+    icon: <ArrowLeftRight className="size-4" />,
+    title: "SFTP",
   },
   { view: "history", icon: <Clock className="size-4" />, title: "History" },
   {

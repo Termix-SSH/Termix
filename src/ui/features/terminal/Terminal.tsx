@@ -53,8 +53,11 @@ import {
 } from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
-import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
+import {
+  CommandAutocomplete,
+  CommandAutosuggestion,
+} from "./command-history/CommandAutocomplete.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
@@ -64,10 +67,28 @@ import {
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-import { Save } from "lucide-react";
+import {
+  Bot,
+  Check,
+  Copy,
+  Pencil,
+  Play,
+  RefreshCw,
+  Save,
+  Send,
+  Sparkles,
+  Square,
+  X,
+  Zap,
+} from "lucide-react";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
+import type {
+  ElectronAiCommandResult,
+  ElectronTerminalAgentAction,
+  ElectronTerminalAgentMode,
+} from "@/types/electron";
 import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
@@ -86,6 +107,19 @@ type HostKeyVerificationData = Omit<
   React.ComponentProps<typeof HostKeyVerificationDialog>,
   "isOpen" | "scenario" | "onAccept" | "onReject" | "backgroundColor"
 >;
+
+type AgentTranscriptEntry = {
+  id: string;
+  role: "user" | "agent" | "terminal" | "system";
+  text: string;
+};
+
+type AgentCaptureState = {
+  active: boolean;
+  buffer: string;
+  silenceTimer: number | null;
+  maxTimer: number | null;
+};
 
 interface SSHTerminalProps {
   hostConfig: TerminalHostConfig;
@@ -357,12 +391,55 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       top: 0,
       left: 0,
     });
+    const [autosuggestion, setAutosuggestion] = useState("");
+    const [autosuggestionPosition, setAutosuggestionPosition] = useState({
+      top: 0,
+      left: 0,
+    });
+    const [autosuggestionStyle, setAutosuggestionStyle] =
+      useState<React.CSSProperties>({});
+    const [aiDialogOpen, setAiDialogOpen] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState("");
+    const [aiIncludeContext, setAiIncludeContext] = useState(true);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState<string | null>(null);
+    const [aiResult, setAiResult] = useState<ElectronAiCommandResult | null>(
+      null,
+    );
+    const aiPromptRef = useRef<HTMLTextAreaElement | null>(null);
+    const [agentPanelOpen, setAgentPanelOpen] = useState(false);
+    const [agentPrompt, setAgentPrompt] = useState("");
+    const [agentMode, setAgentMode] =
+      useState<ElectronTerminalAgentMode>("safe");
+    const [agentSessionId, setAgentSessionId] = useState<string | null>(null);
+    const [agentAction, setAgentAction] =
+      useState<ElectronTerminalAgentAction | null>(null);
+    const [agentEditedCommand, setAgentEditedCommand] = useState("");
+    const [agentLoading, setAgentLoading] = useState(false);
+    const [agentRunningCommand, setAgentRunningCommand] = useState(false);
+    const [agentError, setAgentError] = useState<string | null>(null);
+    const [agentTranscript, setAgentTranscript] = useState<
+      AgentTranscriptEntry[]
+    >([]);
+    const agentCaptureRef = useRef<AgentCaptureState>({
+      active: false,
+      buffer: "",
+      silenceTimer: null,
+      maxTimer: null,
+    });
+    const finishAgentObservationRef = useRef<(reason?: string) => void>(
+      () => {},
+    );
+    const appendAgentOutputRef = useRef<(data: string) => void>(() => {});
     const autocompleteHistory = useRef<string[]>([]);
     const currentAutocompleteCommand = useRef<string>("");
+    const currentAutosuggestionCommand = useRef<string>("");
 
     const showAutocompleteRef = useRef(false);
     const autocompleteSuggestionsRef = useRef<string[]>([]);
     const autocompleteSelectedIndexRef = useRef(0);
+    const autosuggestionRef = useRef("");
+    const autosuggestionSuppressedRef = useRef(false);
 
     const searchAddonRef = useRef<SearchAddon | null>(null);
     const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -475,6 +552,619 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         searchInputRef.current?.select();
       }
     }, [showSearch]);
+
+    useEffect(() => {
+      autosuggestionRef.current = autosuggestion;
+    }, [autosuggestion]);
+
+    const isAutocompleteEnabled = useCallback(
+      () => localStorage.getItem("commandAutocomplete") === "true",
+      [],
+    );
+
+    const getCursorScreenPosition = useCallback(() => {
+      if (!terminal || !xtermRef.current) return null;
+
+      const screen =
+        xtermRef.current.querySelector<HTMLElement>(".xterm-screen") ??
+        xtermRef.current;
+      const rows =
+        xtermRef.current.querySelector<HTMLElement>(".xterm-rows") ?? screen;
+      const screenRect = screen.getBoundingClientRect();
+      const rowsRect = rows.getBoundingClientRect();
+      const computedStyle = window.getComputedStyle(rows);
+      const terminalWithCore = terminal as typeof terminal & {
+        _core?: {
+          _renderService?: {
+            dimensions?: {
+              css?: {
+                cell?: {
+                  width?: number;
+                  height?: number;
+                };
+              };
+            };
+          };
+        };
+      };
+      const measuredCell =
+        terminalWithCore._core?._renderService?.dimensions?.css?.cell;
+      const fallbackCellWidth =
+        terminal.cols > 0 ? rowsRect.width / terminal.cols : 10;
+      const fallbackCellHeight =
+        terminal.rows > 0 ? rowsRect.height / terminal.rows : 20;
+      const cellWidth = measuredCell?.width || fallbackCellWidth;
+      const cellHeight = measuredCell?.height || fallbackCellHeight;
+      const fontSize =
+        typeof terminal.options.fontSize === "number"
+          ? `${terminal.options.fontSize}px`
+          : computedStyle.fontSize;
+      const lineHeight =
+        typeof terminal.options.lineHeight === "number"
+          ? `${cellHeight}px`
+          : computedStyle.lineHeight;
+      const fontFamily =
+        typeof terminal.options.fontFamily === "string"
+          ? terminal.options.fontFamily
+          : computedStyle.fontFamily;
+
+      return {
+        top: Math.max(
+          0,
+          screenRect.top + terminal.buffer.active.cursorY * cellHeight,
+        ),
+        left: Math.max(
+          0,
+          screenRect.left + terminal.buffer.active.cursorX * cellWidth,
+        ),
+        style: {
+          fontFamily,
+          fontSize,
+          lineHeight,
+          letterSpacing: `${terminal.options.letterSpacing ?? 0}px`,
+        },
+      };
+    }, [terminal, xtermRef]);
+
+    const clearAutosuggestion = useCallback(() => {
+      autosuggestionRef.current = "";
+      currentAutosuggestionCommand.current = "";
+      setAutosuggestion("");
+    }, []);
+
+    const updateAutosuggestion = useCallback(() => {
+      if (!isAutocompleteEnabled() || autosuggestionSuppressedRef.current) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const currentCommand = getCurrentCommandRef.current().trim();
+      if (!currentCommand || showAutocompleteRef.current) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const suggestion = autocompleteHistory.current.find(
+        (command) =>
+          command.startsWith(currentCommand) &&
+          command !== currentCommand &&
+          command.length > currentCommand.length,
+      );
+
+      if (!suggestion) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const position = getCursorScreenPosition();
+      if (!position) {
+        clearAutosuggestion();
+        return;
+      }
+
+      const suffix = suggestion.substring(currentCommand.length);
+      currentAutosuggestionCommand.current = currentCommand;
+      autosuggestionRef.current = suffix;
+      setAutosuggestion(suffix);
+      setAutosuggestionPosition({ top: position.top, left: position.left });
+      setAutosuggestionStyle(position.style);
+    }, [clearAutosuggestion, getCursorScreenPosition, isAutocompleteEnabled]);
+
+    const scheduleAutosuggestionUpdate = useCallback(() => {
+      window.requestAnimationFrame(() => {
+        updateAutosuggestion();
+      });
+    }, [updateAutosuggestion]);
+
+    const acceptAutosuggestion = useCallback(() => {
+      const suffix = autosuggestionRef.current;
+      if (!suffix || webSocketRef.current?.readyState !== 1) return false;
+
+      for (const char of suffix) {
+        webSocketRef.current.send(
+          JSON.stringify({ type: "input", data: char }),
+        );
+      }
+
+      updateCurrentCommandRef.current(
+        `${currentAutosuggestionCommand.current}${suffix}`,
+      );
+      autosuggestionSuppressedRef.current = false;
+      clearAutosuggestion();
+      return true;
+    }, [clearAutosuggestion]);
+
+    const buildAiTerminalContext = useCallback(() => {
+      const visibleLines: string[] = [];
+      if (terminal) {
+        const buffer = terminal.buffer.active;
+        const start = Math.max(0, buffer.viewportY);
+        const end = Math.min(buffer.length, start + terminal.rows);
+        for (let lineIndex = start; lineIndex < end; lineIndex += 1) {
+          visibleLines.push(
+            buffer.getLine(lineIndex)?.translateToString(true) ?? "",
+          );
+        }
+      }
+
+      const lastLine =
+        [...visibleLines].reverse().find((line) => line.trim()) ?? "";
+      const promptPathMatch = lastLine.match(/(?:^|\s)(~?\/[^\s$#>]*)/);
+
+      return {
+        hostName: hostConfig.name || hostConfig.ip || "",
+        username: hostConfig.username || "",
+        currentCommand: getCurrentCommandRef.current(),
+        promptPath: promptPathMatch?.[1] || "",
+        visibleOutput: visibleLines.join("\n"),
+      };
+    }, [hostConfig.ip, hostConfig.name, hostConfig.username, terminal]);
+
+    const closeAiCommandDialog = useCallback(() => {
+      setAiDialogOpen(false);
+      setTimeout(() => terminal?.focus(), 50);
+    }, [terminal]);
+
+    const openAiCommandDialog = useCallback(async () => {
+      setAiDialogOpen(true);
+      setAiError(null);
+      setAiResult(null);
+
+      if (!isElectron() || !window.electronAPI?.generateTerminalCommand) {
+        setAiError("AI command helper is available in the Electron app only.");
+        return;
+      }
+
+      try {
+        const settings = await window.electronAPI.getAiSettings?.();
+        if (settings?.success && settings.settings) {
+          setAiIncludeContext(settings.settings.includeContext);
+          if (!settings.settings.enabled || !settings.settings.hasApiKey) {
+            setAiError(
+              "Enable AI and save an API key in User Profile before generating commands.",
+            );
+          }
+        }
+      } catch {
+        // Generation still reports a detailed error if settings cannot load.
+      }
+    }, []);
+
+    useEffect(() => {
+      if (!aiDialogOpen) return;
+
+      const frame = window.requestAnimationFrame(() => {
+        aiPromptRef.current?.focus();
+      });
+
+      return () => window.cancelAnimationFrame(frame);
+    }, [aiDialogOpen]);
+
+    const handleGenerateAiCommand = useCallback(async () => {
+      if (!window.electronAPI?.generateTerminalCommand) {
+        setAiError("AI command helper is available in the Electron app only.");
+        return;
+      }
+      if (aiLoading) {
+        return;
+      }
+      if (!aiPrompt.trim()) {
+        setAiError("Describe the command you want to run.");
+        return;
+      }
+
+      setAiLoading(true);
+      setAiError(null);
+      try {
+        const result = await window.electronAPI.generateTerminalCommand({
+          prompt: aiPrompt,
+          context: aiIncludeContext ? buildAiTerminalContext() : {},
+        });
+        if (!result.success || !result.result) {
+          throw new Error(result.error || "Failed to generate command");
+        }
+        setAiResult(result.result);
+      } catch (error) {
+        setAiResult(null);
+        setAiError(
+          error instanceof Error ? error.message : "Failed to generate command",
+        );
+      } finally {
+        setAiLoading(false);
+        window.requestAnimationFrame(() => {
+          aiPromptRef.current?.focus();
+        });
+      }
+    }, [aiIncludeContext, aiLoading, aiPrompt, buildAiTerminalContext]);
+
+    const handleInsertAiCommand = useCallback(() => {
+      const command = aiResult?.command;
+      if (!command || webSocketRef.current?.readyState !== WebSocket.OPEN) {
+        return;
+      }
+
+      clearAutosuggestion();
+      trackInput(command);
+      webSocketRef.current.send(
+        JSON.stringify({ type: "input", data: command }),
+      );
+      closeAiCommandDialog();
+    }, [
+      aiResult?.command,
+      clearAutosuggestion,
+      closeAiCommandDialog,
+      trackInput,
+    ]);
+
+    const handleAiDialogKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
+        event.stopPropagation();
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeAiCommandDialog();
+          return;
+        }
+
+        if (event.key !== "Enter") {
+          return;
+        }
+
+        if (event.target !== aiPromptRef.current) {
+          return;
+        }
+
+        if (event.shiftKey && !event.ctrlKey && !event.metaKey) {
+          return;
+        }
+
+        event.preventDefault();
+
+        if ((event.ctrlKey || event.metaKey) && aiResult && !aiLoading) {
+          handleInsertAiCommand();
+          return;
+        }
+
+        if (!event.ctrlKey && !event.metaKey && !event.altKey && !aiLoading) {
+          void handleGenerateAiCommand();
+        }
+      },
+      [
+        aiLoading,
+        aiResult,
+        closeAiCommandDialog,
+        handleGenerateAiCommand,
+        handleInsertAiCommand,
+      ],
+    );
+
+    useEffect(() => {
+      if (!aiDialogOpen) return;
+
+      const handleWindowKeyDown = (event: KeyboardEvent) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          closeAiCommandDialog();
+          return;
+        }
+
+        if (event.key !== "Enter") {
+          return;
+        }
+
+        if (event.shiftKey && !event.ctrlKey && !event.metaKey) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if ((event.ctrlKey || event.metaKey) && aiResult && !aiLoading) {
+          handleInsertAiCommand();
+          return;
+        }
+
+        if (!event.ctrlKey && !event.metaKey && !event.altKey && !aiLoading) {
+          void handleGenerateAiCommand();
+        }
+      };
+
+      window.addEventListener("keydown", handleWindowKeyDown, true);
+
+      return () => {
+        window.removeEventListener("keydown", handleWindowKeyDown, true);
+      };
+    }, [
+      aiDialogOpen,
+      aiLoading,
+      aiResult,
+      closeAiCommandDialog,
+      handleGenerateAiCommand,
+      handleInsertAiCommand,
+    ]);
+
+    const appendAgentTranscript = useCallback(
+      (role: AgentTranscriptEntry["role"], text: string) => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        setAgentTranscript((current) => [
+          ...current,
+          {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            role,
+            text: trimmed,
+          },
+        ]);
+      },
+      [],
+    );
+
+    const clearAgentCapture = useCallback(() => {
+      const capture = agentCaptureRef.current;
+      capture.active = false;
+      capture.buffer = "";
+      if (capture.silenceTimer !== null) {
+        window.clearTimeout(capture.silenceTimer);
+        capture.silenceTimer = null;
+      }
+      if (capture.maxTimer !== null) {
+        window.clearTimeout(capture.maxTimer);
+        capture.maxTimer = null;
+      }
+    }, []);
+
+    const applyAgentResult = useCallback(
+      (action: ElectronTerminalAgentAction) => {
+        setAgentAction(action);
+        if (action.type === "run_command") {
+          setAgentEditedCommand(action.command);
+          appendAgentTranscript(
+            "agent",
+            `${action.message || "Proposed command"}\n$ ${action.command}`,
+          );
+        } else {
+          appendAgentTranscript("agent", action.message);
+        }
+      },
+      [appendAgentTranscript],
+    );
+
+    const continueAgentSession = useCallback(
+      async (observation: string) => {
+        if (!agentSessionId || !window.electronAPI?.continueTerminalAgentSession) {
+          return;
+        }
+
+        setAgentLoading(true);
+        setAgentError(null);
+        try {
+          appendAgentTranscript("terminal", observation || "No output captured");
+          const result = await window.electronAPI.continueTerminalAgentSession({
+            sessionId: agentSessionId,
+            observation,
+            context: buildAiTerminalContext(),
+          });
+          if (!result.success || !result.action) {
+            throw new Error(result.error || "Agent failed to continue");
+          }
+          applyAgentResult(result.action);
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Agent failed to continue";
+          setAgentError(message);
+          appendAgentTranscript("system", message);
+        } finally {
+          setAgentLoading(false);
+          setAgentRunningCommand(false);
+        }
+      },
+      [
+        agentSessionId,
+        appendAgentTranscript,
+        applyAgentResult,
+        buildAiTerminalContext,
+      ],
+    );
+
+    useEffect(() => {
+      finishAgentObservationRef.current = () => {
+        const observation = agentCaptureRef.current.buffer.trim();
+        clearAgentCapture();
+        void continueAgentSession(observation);
+      };
+    }, [clearAgentCapture, continueAgentSession]);
+
+    useEffect(() => {
+      appendAgentOutputRef.current = (data: string) => {
+        const capture = agentCaptureRef.current;
+        if (!capture.active) return;
+
+        capture.buffer = `${capture.buffer}${data}`.slice(-12000);
+        if (capture.silenceTimer !== null) {
+          window.clearTimeout(capture.silenceTimer);
+        }
+        capture.silenceTimer = window.setTimeout(() => {
+          finishAgentObservationRef.current("quiet");
+        }, 2500);
+      };
+    }, []);
+
+    const runAgentCommand = useCallback(
+      (command: string) => {
+        const trimmedCommand = command.trim();
+        if (
+          !trimmedCommand ||
+          webSocketRef.current?.readyState !== WebSocket.OPEN
+        ) {
+          setAgentError("Terminal is not connected.");
+          return;
+        }
+
+        clearAutosuggestion();
+        clearAgentCapture();
+        setAgentAction(null);
+        setAgentRunningCommand(true);
+        appendAgentTranscript("system", `Running: ${trimmedCommand}`);
+        const capture = agentCaptureRef.current;
+        capture.active = true;
+        capture.buffer = "";
+        capture.maxTimer = window.setTimeout(() => {
+          finishAgentObservationRef.current("timeout");
+        }, 20000);
+        trackInput(trimmedCommand);
+        webSocketRef.current.send(
+          JSON.stringify({ type: "input", data: `${trimmedCommand}\r` }),
+        );
+        setTimeout(() => terminal?.focus(), 50);
+      },
+      [
+        appendAgentTranscript,
+        clearAgentCapture,
+        clearAutosuggestion,
+        terminal,
+        trackInput,
+      ],
+    );
+
+    useEffect(() => {
+      if (
+        agentMode !== "yolo" ||
+        agentLoading ||
+        agentRunningCommand ||
+        agentAction?.type !== "run_command" ||
+        agentAction.risky
+      ) {
+        return;
+      }
+
+      runAgentCommand(agentAction.command);
+    }, [
+      agentAction,
+      agentLoading,
+      agentMode,
+      agentRunningCommand,
+      runAgentCommand,
+    ]);
+
+    const handleStartAgent = useCallback(async () => {
+      if (!window.electronAPI?.startTerminalAgentSession) {
+        setAgentError("Agent Mode is available in the Electron app only.");
+        return;
+      }
+      if (!agentPrompt.trim()) {
+        setAgentError("Describe what you want the agent to do.");
+        return;
+      }
+
+      setAgentPanelOpen(true);
+      setAgentLoading(true);
+      setAgentError(null);
+      setAgentAction(null);
+      setAgentTranscript([]);
+      clearAgentCapture();
+      appendAgentTranscript("user", agentPrompt);
+
+      try {
+        const result = await window.electronAPI.startTerminalAgentSession({
+          prompt: agentPrompt,
+          mode: agentMode,
+          context: buildAiTerminalContext(),
+        });
+        if (!result.success || !result.sessionId || !result.action) {
+          throw new Error(result.error || "Agent failed to start");
+        }
+        setAgentSessionId(result.sessionId);
+        setAgentPrompt("");
+        applyAgentResult(result.action);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Agent failed to start";
+        setAgentError(message);
+        appendAgentTranscript("system", message);
+      } finally {
+        setAgentLoading(false);
+      }
+    }, [
+      agentMode,
+      agentPrompt,
+      appendAgentTranscript,
+      applyAgentResult,
+      buildAiTerminalContext,
+      clearAgentCapture,
+    ]);
+
+    const handleAgentUserReply = useCallback(async () => {
+      if (
+        !agentPrompt.trim() ||
+        !agentSessionId ||
+        !window.electronAPI?.continueTerminalAgentSession
+      ) {
+        return;
+      }
+
+      setAgentLoading(true);
+      setAgentError(null);
+      appendAgentTranscript("user", agentPrompt);
+      try {
+        const result = await window.electronAPI.continueTerminalAgentSession({
+          sessionId: agentSessionId,
+          message: agentPrompt,
+          context: buildAiTerminalContext(),
+        });
+        if (!result.success || !result.action) {
+          throw new Error(result.error || "Agent failed to continue");
+        }
+        setAgentPrompt("");
+        applyAgentResult(result.action);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Agent failed to continue";
+        setAgentError(message);
+        appendAgentTranscript("system", message);
+      } finally {
+        setAgentLoading(false);
+      }
+    }, [
+      agentPrompt,
+      agentSessionId,
+      appendAgentTranscript,
+      applyAgentResult,
+      buildAiTerminalContext,
+    ]);
+
+    const handleStopAgent = useCallback(() => {
+      clearAgentCapture();
+      if (agentSessionId && window.electronAPI?.cancelTerminalAgentSession) {
+        void window.electronAPI.cancelTerminalAgentSession(agentSessionId);
+      }
+      setAgentSessionId(null);
+      setAgentAction(null);
+      setAgentLoading(false);
+      setAgentRunningCommand(false);
+      appendAgentTranscript("system", "Agent stopped");
+      setTimeout(() => terminal?.focus(), 50);
+    }, [agentSessionId, appendAgentTranscript, clearAgentCapture, terminal]);
 
     const activityLoggingRef = useRef(false);
     const passwordPromptShownRef = useRef(false);
@@ -1296,6 +1986,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             if (termixMatch && onOpenFileInEditor) {
               const filePath = termixMatch[1].trim();
               trackInput(data);
+              clearAutosuggestion();
               terminal.write("\r\n");
               if (ws.readyState === WebSocket.OPEN) {
                 ws.send(
@@ -1309,6 +2000,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           }
           trackInput(data);
+
+          const resetsCurrentCommand =
+            data === "\r" ||
+            data === "\n" ||
+            data.includes("\x03") ||
+            data.includes("\x04") ||
+            data.includes("\x15");
+          const isCursorNavigation = data.includes("\x1b");
+          const isCommandEdit =
+            data.includes("\x08") ||
+            data.includes("\x7f") ||
+            Array.from(data).some((char) => {
+              const charCode = char.charCodeAt(0);
+              return charCode >= 32 && charCode <= 126;
+            });
+
+          if (resetsCurrentCommand) {
+            autosuggestionSuppressedRef.current = false;
+            clearAutosuggestion();
+          } else if (isCursorNavigation) {
+            autosuggestionSuppressedRef.current = true;
+            clearAutosuggestion();
+          } else if (isCommandEdit) {
+            scheduleAutosuggestionUpdate();
+          }
+
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -1345,6 +2062,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
 
               terminal.write(formatTerminalOutput(msg.data));
+              appendAgentOutputRef.current(strippedData);
+              scheduleAutosuggestionUpdate();
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
               const strippedData = msg.data.replace(
@@ -1355,6 +2074,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             } else {
               const stringData = String(msg.data);
               terminal.write(formatTerminalOutput(stringData));
+              appendAgentOutputRef.current(stringData);
+              scheduleAutosuggestionUpdate();
             }
           } else if (msg.type === "error") {
             const errorMessage = msg.message || t("terminal.unknownError");
@@ -2175,12 +2896,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         setShowAutocomplete(false);
         setAutocompleteSuggestions([]);
         currentAutocompleteCommand.current = "";
+        clearAutosuggestion();
 
         setTimeout(() => {
           terminal?.focus();
         }, 50);
       },
-      [terminal, updateCurrentCommand],
+      [clearAutosuggestion, terminal, updateCurrentCommand],
     );
 
     const handleDeleteCommand = useCallback(
@@ -2719,6 +3441,18 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
         }
 
+        if (
+          e.ctrlKey &&
+          e.shiftKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          e.key.toLowerCase() === "a"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          void openAiCommandDialog();
+          return false;
+        }
         // Forward global app shortcuts to AppShell directly — xterm swallows
         // all keydown events and synthetic re-dispatch is unreliable.
         // stopPropagation prevents the same event from also firing the window listener.
@@ -2941,6 +3675,31 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return true;
         }
 
+        const shouldAcceptAutosuggestion =
+          autosuggestionRef.current &&
+          ((e.key === "ArrowRight" &&
+            !e.ctrlKey &&
+            !e.altKey &&
+            !e.metaKey &&
+            !e.shiftKey) ||
+            (e.key === "End" &&
+              !e.ctrlKey &&
+              !e.altKey &&
+              !e.metaKey &&
+              !e.shiftKey) ||
+            (e.ctrlKey &&
+              !e.altKey &&
+              !e.metaKey &&
+              !e.shiftKey &&
+              e.key.toLowerCase() === "f"));
+
+        if (shouldAcceptAutosuggestion) {
+          e.preventDefault();
+          e.stopPropagation();
+          acceptAutosuggestion();
+          return false;
+        }
+
         if (
           isTabKeyEvent(e) &&
           e.shiftKey &&
@@ -2980,12 +3739,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             localStorage.getItem("commandAutocomplete") === "true";
 
           if (!autocompleteEnabled) {
+            clearAutosuggestion();
             sendTabToShell();
             return false;
           }
 
           const currentCmd = getCurrentCommandRef.current().trim();
           if (currentCmd.length === 0) {
+            clearAutosuggestion();
             sendTabToShell();
             return false;
           }
@@ -3011,10 +3772,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
 
               updateCurrentCommandRef.current(completedCommand);
+              clearAutosuggestion();
             } else if (matches.length > 1) {
               currentAutocompleteCommand.current = currentCmd;
               setAutocompleteSuggestions(matches);
               setAutocompleteSelectedIndex(0);
+              clearAutosuggestion();
 
               const cursorY = terminal.buffer.active.cursorY;
               const cursorX = terminal.buffer.active.cursorX;
@@ -3051,6 +3814,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
               setShowAutocomplete(true);
             } else {
+              clearAutosuggestion();
               sendTabToShell();
             }
           }
@@ -3061,7 +3825,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       };
 
       terminal.attachCustomKeyEventHandler(handleCustomKey);
-    }, [terminal]);
+    }, [openAiCommandDialog, terminal]);
 
     useEffect(() => {
       if (!terminal || !hostConfig || !isVisible) return;
@@ -3158,6 +3922,31 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }}
         />
 
+        {isConnected && (
+          <>
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              onClick={() => setAgentPanelOpen((open) => !open)}
+              title="Agent Mode"
+              className="absolute top-2 right-12 z-[110] size-8 bg-black/60 text-white/75 hover:bg-black/80 hover:text-white"
+            >
+              <Bot className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              onClick={() => void openAiCommandDialog()}
+              title="AI command helper (Ctrl+Shift+A)"
+              className="absolute top-2 right-2 z-[110] size-8 bg-black/60 text-white/75 hover:bg-black/80 hover:text-white"
+            >
+              <Sparkles className="size-4" />
+            </Button>
+          </>
+        )}
+
         {isTmuxAttached && isConnected && (
           <button
             onClick={() => {
@@ -3168,10 +3957,220 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }}
             title={t("terminal.tmuxDetach")}
-            className="absolute top-2 right-2 z-[110] px-2 py-1 text-xs rounded bg-black/60 text-white/70 hover:text-white hover:bg-black/80 transition-colors"
+            className="absolute top-2 right-[5.5rem] z-[110] px-2 py-1 text-xs rounded bg-black/60 text-white/70 hover:text-white hover:bg-black/80 transition-colors"
           >
             tmux:detach
           </button>
+        )}
+
+        {agentPanelOpen && (
+          <div
+            className="absolute right-2 top-12 z-[120] flex max-h-[calc(100%-4rem)] w-[min(420px,calc(100vw-1rem))] flex-col border border-border bg-background shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <Bot className="size-4 text-accent-brand" />
+                <div className="min-w-0">
+                  <div className="truncate text-xs font-bold text-foreground">
+                    Agent Mode
+                  </div>
+                  <div className="truncate text-[10px] text-muted-foreground">
+                    {hostConfig.username}@{hostConfig.name || hostConfig.ip}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  onClick={handleStopAgent}
+                  disabled={!agentSessionId && !agentRunningCommand}
+                  title="Stop agent"
+                >
+                  <Square className="size-3.5" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-7"
+                  onClick={() => {
+                    setAgentPanelOpen(false);
+                    setTimeout(() => terminal?.focus(), 50);
+                  }}
+                  title="Close"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 border-b border-border p-3">
+              <div className="grid grid-cols-2 gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={agentMode === "safe" ? "default" : "outline"}
+                  onClick={() => setAgentMode("safe")}
+                  className="h-7 gap-1.5 text-xs"
+                  disabled={agentLoading || agentRunningCommand}
+                >
+                  <Check className="size-3.5" />
+                  Safe
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={agentMode === "yolo" ? "default" : "outline"}
+                  onClick={() => setAgentMode("yolo")}
+                  className="h-7 gap-1.5 text-xs"
+                  disabled={agentLoading || agentRunningCommand}
+                >
+                  <Play className="size-3.5" />
+                  YOLO
+                </Button>
+              </div>
+              <textarea
+                value={agentPrompt}
+                onChange={(event) => {
+                  setAgentPrompt(event.target.value);
+                  setAgentError(null);
+                }}
+                placeholder={
+                  agentSessionId
+                    ? "Reply to the agent..."
+                    : "Ask the agent what to do in this SSH session..."
+                }
+                rows={3}
+                className="min-h-20 resize-none border border-input bg-background px-2 py-1.5 text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                disabled={agentLoading || agentRunningCommand}
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="h-8 gap-1.5"
+                disabled={
+                  agentLoading || agentRunningCommand || !agentPrompt.trim()
+                }
+                onClick={() =>
+                  agentSessionId
+                    ? void handleAgentUserReply()
+                    : void handleStartAgent()
+                }
+              >
+                <Send className="size-3.5" />
+                {agentSessionId ? "Send Reply" : "Start Agent"}
+              </Button>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+              {agentError && (
+                <div className="border border-destructive/30 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+                  {agentError}
+                </div>
+              )}
+              {agentLoading && (
+                <div className="text-xs text-muted-foreground">
+                  Agent is thinking...
+                </div>
+              )}
+              {agentRunningCommand && (
+                <div className="text-xs text-muted-foreground">
+                  Running command and observing output...
+                </div>
+              )}
+
+              {agentAction?.type === "run_command" && (
+                <div className="flex flex-col gap-2 border border-border bg-muted/30 p-2">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    <Pencil className="size-3" />
+                    Proposed Command
+                  </div>
+                  <textarea
+                    value={agentEditedCommand}
+                    onChange={(event) =>
+                      setAgentEditedCommand(event.target.value)
+                    }
+                    rows={2}
+                    className="min-h-14 resize-none border border-input bg-background px-2 py-1.5 font-mono text-xs text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    disabled={agentLoading || agentRunningCommand}
+                  />
+                  {agentAction.warnings.length > 0 && (
+                    <div className="flex flex-col gap-1 border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-500">
+                      {agentAction.warnings.map((warning) => (
+                        <span key={warning}>{warning}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        appendAgentTranscript("system", "Command rejected");
+                        setAgentAction(null);
+                      }}
+                      disabled={agentLoading || agentRunningCommand}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => runAgentCommand(agentEditedCommand)}
+                      disabled={
+                        agentLoading ||
+                        agentRunningCommand ||
+                        !agentEditedCommand.trim()
+                      }
+                    >
+                      <Play className="size-3.5" />
+                      Run
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {agentAction?.type === "ask_user" && (
+                <div className="border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground">
+                  {agentAction.message}
+                </div>
+              )}
+
+              {agentAction?.type === "final_answer" && (
+                <div className="border border-emerald-500/30 bg-emerald-500/10 px-2 py-1.5 text-xs text-emerald-500">
+                  {agentAction.message}
+                </div>
+              )}
+
+              {agentTranscript.length === 0 ? (
+                <div className="text-xs text-muted-foreground">
+                  Start with a task. The agent will use this active SSH session.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  {agentTranscript.slice(-10).map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="border border-border/70 px-2 py-1.5"
+                    >
+                      <div className="mb-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {entry.role}
+                      </div>
+                      <pre className="max-h-32 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-foreground">
+                        {entry.text}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {isQuickConnect &&
@@ -3515,6 +4514,166 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
         />
+        <CommandAutosuggestion
+          visible={!showAutocomplete && Boolean(autosuggestion)}
+          suggestion={autosuggestion}
+          position={autosuggestionPosition}
+          style={autosuggestionStyle}
+        />
+
+        {aiDialogOpen &&
+          createPortal(
+            <div
+              className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/55 px-4"
+              onClick={closeAiCommandDialog}
+            >
+              <div
+                className="w-full max-w-xl border border-border bg-background shadow-xl"
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={handleAiDialogKeyDown}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="ai-command-helper-title"
+              >
+                <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+                  <Zap className="size-4 text-accent-brand" />
+                  <div className="min-w-0">
+                    <h3
+                      id="ai-command-helper-title"
+                      className="text-sm font-bold text-foreground"
+                    >
+                      AI Command Helper
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground">
+                      Generate a shell command, review it, then insert it
+                      without pressing Enter.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 p-4">
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      Request
+                    </span>
+                    <textarea
+                      ref={aiPromptRef}
+                      value={aiPrompt}
+                      onChange={(event) => {
+                        setAiPrompt(event.target.value);
+                        setAiError(null);
+                      }}
+                      placeholder="e.g. show the top 10 largest files in this folder"
+                      rows={3}
+                      className="min-h-20 resize-none border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      disabled={aiLoading}
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={aiIncludeContext}
+                      onChange={(event) =>
+                        setAiIncludeContext(event.target.checked)
+                      }
+                      disabled={aiLoading}
+                      className="size-3.5"
+                    />
+                    Include current terminal context
+                  </label>
+
+                  {aiError && (
+                    <div className="border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                      {aiError}
+                    </div>
+                  )}
+
+                  {aiResult && (
+                    <div className="flex flex-col gap-2 border border-border bg-muted/30 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <code className="min-w-0 flex-1 whitespace-pre-wrap break-all font-mono text-sm text-foreground">
+                          {aiResult.command}
+                        </code>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 shrink-0"
+                          onClick={() => void copyToClipboard(aiResult.command)}
+                          title="Copy command"
+                        >
+                          <Copy className="size-3.5" />
+                        </Button>
+                      </div>
+                      {aiResult.explanation && (
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {aiResult.explanation}
+                        </p>
+                      )}
+                      {aiResult.warnings.length > 0 && (
+                        <div className="flex flex-col gap-1 border-t border-border pt-2">
+                          {aiResult.warnings.map((warning) => (
+                            <span
+                              key={warning}
+                              className="text-xs text-amber-500"
+                            >
+                              {warning}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-2 border-t border-border px-4 py-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={closeAiCommandDialog}
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  {aiResult && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void handleGenerateAiCommand()}
+                      disabled={aiLoading}
+                      className="gap-1.5"
+                    >
+                      <RefreshCw className="size-3.5" />
+                      Regenerate
+                    </Button>
+                  )}
+                  {!aiResult && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => void handleGenerateAiCommand()}
+                      disabled={aiLoading || !aiPrompt.trim()}
+                    >
+                      {aiLoading ? "Generating..." : "Generate"}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleInsertAiCommand}
+                    disabled={!aiResult || aiLoading || !isConnected}
+                    className="gap-1.5"
+                  >
+                    <Sparkles className="size-3.5" />
+                    Insert
+                  </Button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )}
 
         <TerminalSearchBar
           visible={showSearch}

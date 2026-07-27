@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import type { SSHHostWithStatus } from "@/main-axios";
+import { Select2 } from "@/components/select2";
 
 interface SingleHostEditFormProps {
   hostId: number;
@@ -28,7 +29,7 @@ export function SingleHostEditForm({
       <label className="text-xs font-medium text-muted-foreground">
         {t("homepage.host")}
       </label>
-      <select
+      <Select2
         value={hostId || ""}
         onChange={(e) => onChange(Number(e.target.value))}
         className="h-8 text-xs border border-border bg-background px-2"
@@ -39,7 +40,7 @@ export function SingleHostEditForm({
             {h.name || h.ip}
           </option>
         ))}
-      </select>
+      </Select2>
     </div>
   );
 }

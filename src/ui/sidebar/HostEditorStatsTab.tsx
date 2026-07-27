@@ -12,6 +12,7 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { SectionCard, SettingRow, FakeSwitch } from "@/components/section-card";
 import type { HostEditorForm } from "./HostEditorData";
+import { Select2 } from "@/components/select2";
 
 type SetHostField = <K extends keyof HostEditorForm>(
   key: K,
@@ -197,7 +198,7 @@ export function HostStatsTab({
                   setField("quickActions", updated);
                 }}
               />
-              <select
+              <Select2
                 className="h-7 text-xs flex-1 border border-border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
                 value={a.snippetId}
                 onChange={(e) => {
@@ -215,7 +216,7 @@ export function HostStatsTab({
                     {s.name}
                   </option>
                 ))}
-              </select>
+              </Select2>
               <button
                 className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() =>

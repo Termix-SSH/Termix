@@ -79,6 +79,7 @@ import type {
   FolderIconId,
   Tab,
 } from "@/types/ui-types";
+import { Select2 } from "@/components/select2";
 
 function FolderIconEl({
   icon,
@@ -735,7 +736,7 @@ function ShareSnippetDialog({
               </button>
             </div>
             <div className="flex gap-2 items-center">
-              <select
+              <Select2
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
                 className="flex-1 px-3 py-2 text-sm bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring h-9"
@@ -756,7 +757,7 @@ function ShareSnippetDialog({
                         {r.displayName || r.name}
                       </option>
                     ))}
-              </select>
+              </Select2>
               <Button
                 variant="outline"
                 size="lg"

@@ -46,6 +46,7 @@ import {
   removeSilentSigninFromSearch,
   shouldTriggerSilentSignin,
 } from "./silent-signin";
+import { Select2 } from "@/components/select2";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -1012,7 +1013,7 @@ export function Auth({ onLogin }: AuthProps) {
             <span className="text-xs text-muted-foreground">
               {t("common.language")}
             </span>
-            <select
+            <Select2
               value={language}
               onChange={(e) => handleLanguageChange(e.target.value)}
               className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
@@ -1022,7 +1023,7 @@ export function Auth({ onLogin }: AuthProps) {
                   {lang.label}
                 </option>
               ))}
-            </select>
+            </Select2>
           </div>
         </div>
       </div>
@@ -1576,7 +1577,7 @@ export function Auth({ onLogin }: AuthProps) {
                   <span className="text-xs text-muted-foreground">
                     {t("common.language")}
                   </span>
-                  <select
+                  <Select2
                     value={language}
                     onChange={(e) => handleLanguageChange(e.target.value)}
                     className="px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
@@ -1586,7 +1587,7 @@ export function Auth({ onLogin }: AuthProps) {
                         {lang.label}
                       </option>
                     ))}
-                  </select>
+                  </Select2>
                 </div>
               </div>
             )}

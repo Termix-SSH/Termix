@@ -7,6 +7,7 @@ import type {
   WidgetEditFormProps,
 } from "@/types/homepage-types";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
+import { Select2 } from "@/components/select2";
 
 const METRICS: { id: MetricsChartMetric; label: string }[] = [
   { id: "cpu", label: "CPU" },
@@ -42,7 +43,7 @@ export function MetricsChartEditForm({
         <label className="text-xs font-medium text-muted-foreground">
           {t("homepage.host")}
         </label>
-        <select
+        <Select2
           value={config.hostId}
           onChange={(e) =>
             onChange({ ...config, hostId: Number(e.target.value) })
@@ -55,7 +56,7 @@ export function MetricsChartEditForm({
               {h.name}
             </option>
           ))}
-        </select>
+        </Select2>
       </div>
 
       <div className="flex flex-col gap-1">

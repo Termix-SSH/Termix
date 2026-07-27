@@ -25,6 +25,14 @@ export type C2SOpenMessage = {
 const permissionManager = PermissionManager.getInstance();
 let c2sRemoteStreamCounter = 0;
 
+function normalizeAddress(
+  value: unknown,
+  fallback?: string,
+): string | undefined {
+  const address = typeof value === "string" ? value.trim() : "";
+  return address || fallback;
+}
+
 async function resolveC2STunnelSource(
   tunnelConfig: Partial<TunnelConfig>,
   userId: string,
@@ -48,6 +56,15 @@ async function resolveC2STunnelSource(
     throw new Error("Endpoint SSH host not found");
   }
 
+  const localAddress = normalizeAddress(
+    tunnelConfig.localAddress,
+    tunnelConfig.bindHost,
+  );
+  const remoteAddress = normalizeAddress(
+    tunnelConfig.remoteAddress,
+    tunnelConfig.targetHost || "127.0.0.1",
+  );
+
   return {
     name: tunnelConfig.name || `c2s:${tunnelConfig.sourceHostId}`,
     scope: "c2s",
@@ -55,8 +72,10 @@ async function resolveC2STunnelSource(
     tunnelType:
       tunnelConfig.tunnelType ||
       (tunnelConfig.mode === "remote" ? "remote" : "local"),
-    bindHost: tunnelConfig.bindHost,
-    targetHost: tunnelConfig.targetHost || "127.0.0.1",
+    localAddress,
+    remoteAddress,
+    bindHost: localAddress,
+    targetHost: remoteAddress,
     sourceHostId: resolvedHost.id || tunnelConfig.sourceHostId,
     tunnelIndex: tunnelConfig.tunnelIndex || 0,
     requestingUserId: userId,
@@ -163,7 +182,8 @@ async function handleC2SRemoteRelayOpen(
 ): Promise<void> {
   const tunnelName = tunnelConfig.name;
   const sourceClient = await connectC2SSourceClient(tunnelConfig);
-  const bindHost = tunnelConfig.targetHost || "127.0.0.1";
+  const bindHost =
+    tunnelConfig.remoteAddress || tunnelConfig.targetHost || "127.0.0.1";
   const bindPort = Number(tunnelConfig.sourcePort);
   let closed = false;
 
@@ -310,7 +330,7 @@ export async function handleC2SRelayOpen(
   const targetHost =
     mode === "dynamic"
       ? message.targetHost
-      : tunnelConfig.targetHost || "127.0.0.1";
+      : tunnelConfig.remoteAddress || tunnelConfig.targetHost || "127.0.0.1";
   const targetPort =
     mode === "dynamic"
       ? Number(message.targetPort)
@@ -376,7 +396,8 @@ export async function handleC2SRelayTest(
 
   try {
     if (mode === "remote") {
-      const bindHost = tunnelConfig.targetHost || "127.0.0.1";
+      const bindHost =
+        tunnelConfig.remoteAddress || tunnelConfig.targetHost || "127.0.0.1";
       const bindPort = Number(tunnelConfig.sourcePort);
       if (!Number.isInteger(bindPort) || bindPort < 1 || bindPort > 65535) {
         throw new Error("Invalid remote port");
@@ -385,7 +406,8 @@ export async function handleC2SRelayTest(
       const actualPort = await bindForwardIn(sourceClient, bindHost, bindPort);
       unbindForwardIn(sourceClient, bindHost, actualPort);
     } else if (mode === "local") {
-      const targetHost = tunnelConfig.targetHost || "127.0.0.1";
+      const targetHost =
+        tunnelConfig.remoteAddress || tunnelConfig.targetHost || "127.0.0.1";
       const targetPort = Number(tunnelConfig.endpointPort);
       if (!Number.isInteger(targetPort) || targetPort < 1) {
         throw new Error("Invalid remote target port");

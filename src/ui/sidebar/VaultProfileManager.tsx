@@ -12,6 +12,7 @@ import {
   type VaultProfilePayload,
 } from "@/main-axios";
 import type { VaultProfile } from "@/types/ui-types";
+import { Select2 } from "@/components/select2";
 
 type FormState = VaultProfilePayload & { id?: string };
 
@@ -228,7 +229,7 @@ export function VaultProfileManager({
             <label className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
               {t("hosts.vaultKeyTypeLabel")}
             </label>
-            <select
+            <Select2
               value={form.keyType ?? "ssh-ed25519"}
               onChange={(e) => setField("keyType", e.target.value)}
               className="flex h-8 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -236,7 +237,7 @@ export function VaultProfileManager({
               <option value="ssh-ed25519">Ed25519</option>
               <option value="ecdsa-sha2-nistp256">ECDSA (nistp256)</option>
               <option value="ssh-rsa">RSA (4096)</option>
-            </select>
+            </Select2>
           </div>
           <label className="flex items-center gap-2 text-xs text-foreground">
             <input

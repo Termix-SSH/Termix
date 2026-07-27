@@ -19,7 +19,9 @@ export function getTunnelPortLabels(
       sourcePortLabel:
         mode === "remote" ? t("tunnels.remotePort") : t("tunnels.localPort"),
       endpointPortLabel:
-        mode === "remote" ? t("tunnels.localPort") : t("tunnels.remotePort"),
+        mode === "remote"
+          ? t("tunnels.localPort")
+          : t("tunnels.destinationPort"),
     };
   }
 

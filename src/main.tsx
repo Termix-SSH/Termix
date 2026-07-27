@@ -299,6 +299,15 @@ function App() {
     if (loggingOutRef.current) return;
     loggingOutRef.current = true;
     clearStoredAuth();
+    localStorage.removeItem("jwt");
+    if (isElectron()) {
+      window.electronAPI?.clearSessionCookies?.().catch(() => {});
+    } else {
+      const isSecure = window.location.protocol === "https:";
+      document.cookie = isSecure
+        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
+        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
+    }
     setPhase("fading-out");
     timerRef.current = setTimeout(() => {
       setAuthUsername("");

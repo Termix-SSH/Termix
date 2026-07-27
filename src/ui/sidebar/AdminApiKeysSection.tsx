@@ -9,6 +9,7 @@ import { Copy, Network, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AccordionSection } from "./AdminSettingsShared";
 import type { AdminUser } from "./AdminManagementSections";
+import { Select2 } from "@/components/select2";
 
 type AdminApiKeysSectionProps = {
   open: boolean;
@@ -151,7 +152,7 @@ export function AdminApiKeysSection({
                     {t("admin.apiKeyUser")}{" "}
                     <span className="text-accent-brand">*</span>
                   </label>
-                  <select
+                  <Select2
                     className="px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none"
                     value={newKeyUserId}
                     onChange={(e) => setNewKeyUserId(e.target.value)}
@@ -162,7 +163,7 @@ export function AdminApiKeysSection({
                         {u.username}
                       </option>
                     ))}
-                  </select>
+                  </Select2>
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">

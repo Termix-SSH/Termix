@@ -433,6 +433,8 @@ export interface TunnelConnection {
   scope?: TunnelScope;
   mode?: TunnelMode;
   tunnelType?: "local" | "remote";
+  localAddress?: string;
+  remoteAddress?: string;
   bindHost?: string;
   sourceHostId?: number;
   sourceHostName?: string;
@@ -457,6 +459,8 @@ export interface TunnelConfig {
   scope?: TunnelScope;
   mode?: TunnelMode;
   tunnelType?: "local" | "remote";
+  localAddress?: string;
+  remoteAddress?: string;
   bindHost?: string;
   targetHost?: string;
 

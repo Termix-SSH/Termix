@@ -22,7 +22,7 @@ describe("getTunnelPortLabels", () => {
   it("labels client local mode source/endpoint ports", () => {
     const labels = getTunnelPortLabels("client", "local", t);
     expect(labels.sourcePortLabel).toBe("tunnels.localPort");
-    expect(labels.endpointPortLabel).toBe("tunnels.remotePort");
+    expect(labels.endpointPortLabel).toBe("tunnels.destinationPort");
   });
 
   it("swaps labels for client remote mode", () => {

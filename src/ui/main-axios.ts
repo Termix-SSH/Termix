@@ -365,11 +365,37 @@ export function getCookie(name: string): string | undefined {
 
 let userWasAuthenticated = false;
 let latestAuthSuccessAt = 0;
+let authInvalidationHandled = false;
 
 export function markUserAuthenticated(): void {
   userWasAuthenticated = true;
+  authInvalidationHandled = false;
   latestAuthSuccessAt =
     typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+function clearClientAuthState(): void {
+  clearTermixSessionStorage();
+  try {
+    localStorage.removeItem("jwt");
+    localStorage.removeItem("termix_auth");
+  } catch {
+    // localStorage may be unavailable in restricted contexts.
+  }
+
+  if (isElectron()) {
+    const electronAPI = (
+      window as unknown as {
+        electronAPI?: { clearSessionCookies?: () => Promise<void> };
+      }
+    ).electronAPI;
+    electronAPI?.clearSessionCookies?.().catch(() => {});
+  } else if (typeof window !== "undefined") {
+    const isSecure = window.location.protocol === "https:";
+    document.cookie = isSecure
+      ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
+      : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
+  }
 }
 
 export function isCurrentAuthInvalidationError(error: unknown): boolean {
@@ -608,26 +634,18 @@ function createApiInstance(
             return Promise.reject(error);
           }
 
-          if (isElectron()) {
-            const electronAPI = (
-              window as unknown as {
-                electronAPI?: { clearSessionCookies?: () => Promise<void> };
-              }
-            ).electronAPI;
-            electronAPI?.clearSessionCookies?.().catch(() => {});
-          }
+          if (!authInvalidationHandled) {
+            authInvalidationHandled = true;
+            clearClientAuthState();
 
-          if (typeof window !== "undefined") {
-            document.cookie =
-              "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-          }
+            if (typeof window !== "undefined") {
+              console.warn("Session expired - please log in again");
+              toast.warning("Session expired. Please log in again.");
+              window.dispatchEvent(new Event("termix:logout"));
+            }
 
-          if (isSessionExpired && typeof window !== "undefined") {
-            console.warn("Session expired - please log in again");
-            toast.warning("Session expired. Please log in again.");
+            dbHealthMonitor.reportSessionExpired();
           }
-
-          dbHealthMonitor.reportSessionExpired();
 
           userWasAuthenticated = false;
         }
@@ -1658,42 +1676,14 @@ export async function logoutUser(): Promise<{
 }> {
   try {
     const response = await authApi.post("/users/logout");
-
-    clearTermixSessionStorage();
-
-    if (isElectron()) {
-      const electronAPI = (
-        window as unknown as {
-          electronAPI?: { clearSessionCookies?: () => Promise<void> };
-        }
-      ).electronAPI;
-      electronAPI?.clearSessionCookies?.().catch(() => {});
-    } else {
-      const isSecure = window.location.protocol === "https:";
-      const cookieString = isSecure
-        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
-        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
-      document.cookie = cookieString;
-    }
-
+    clearClientAuthState();
+    userWasAuthenticated = false;
+    authInvalidationHandled = false;
     return response.data;
   } catch (error) {
-    clearTermixSessionStorage();
-
-    if (isElectron()) {
-      const electronAPI = (
-        window as unknown as {
-          electronAPI?: { clearSessionCookies?: () => Promise<void> };
-        }
-      ).electronAPI;
-      electronAPI?.clearSessionCookies?.().catch(() => {});
-    } else {
-      const isSecure = window.location.protocol === "https:";
-      const cookieString = isSecure
-        ? "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; Secure; SameSite=Lax"
-        : "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
-      document.cookie = cookieString;
-    }
+    clearClientAuthState();
+    userWasAuthenticated = false;
+    authInvalidationHandled = false;
     handleApiError(error, "logout user");
   }
 }

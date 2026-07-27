@@ -27,7 +27,7 @@ type ConfirmDialog = {
 
 function CredentialItem({
   cred,
-  usedByCount,
+  usedByHosts,
   stripeIndex,
   termixIdLinked,
   onDeploy,
@@ -35,7 +35,7 @@ function CredentialItem({
   onDelete,
 }: {
   cred: Credential;
-  usedByCount: number;
+  usedByHosts: Host[];
   stripeIndex: number;
   termixIdLinked?: boolean;
   onDeploy: () => void;
@@ -43,6 +43,11 @@ function CredentialItem({
   onDelete: () => void;
 }) {
   const isKey = cred.type === "key";
+  const visibleHosts = usedByHosts.slice(0, 2);
+  const remainingHosts = Math.max(0, usedByHosts.length - visibleHosts.length);
+  const usedByTitle = usedByHosts
+    .map((host) => host.name || host.ip)
+    .join(", ");
 
   return (
     <div
@@ -70,16 +75,39 @@ function CredentialItem({
         </div>
 
         {/* Username row */}
-        {(cred.username || usedByCount > 0) && (
+        {cred.username && (
           <span className="text-[11px] text-muted-foreground/45 truncate leading-none pl-3">
             {cred.username}
-            {usedByCount > 0 && (
-              <span className="text-muted-foreground/30">
-                {cred.username ? " · " : ""}
-                {usedByCount}h
+          </span>
+        )}
+
+        {usedByHosts.length > 0 && (
+          <div
+            className="flex min-w-0 items-center gap-1 overflow-hidden pl-3"
+            title={usedByTitle}
+            aria-label={`Used by ${usedByTitle}`}
+          >
+            {visibleHosts.map((host) => {
+              const label = host.name || host.ip;
+              return (
+                <span
+                  key={host.id}
+                  className="max-w-[92px] truncate border border-accent-brand/25 bg-accent-brand/10 px-1.5 py-px text-[9px] font-semibold leading-none text-accent-brand/80"
+                  title={label}
+                >
+                  {label}
+                </span>
+              );
+            })}
+            {remainingHosts > 0 && (
+              <span
+                className="shrink-0 border border-border/50 bg-muted/30 px-1.5 py-px text-[9px] font-semibold leading-none text-muted-foreground/70"
+                title={usedByTitle}
+              >
+                +{remainingHosts}
               </span>
             )}
-          </span>
+          </div>
         )}
 
         {/* Tag pills */}
@@ -252,14 +280,14 @@ function CredentialFolderItem({
       {open && (
         <div className="border-l border-border/40 ml-[30px]">
           {creds.map((cred, i) => {
-            const usedByCount = allHosts.filter(
+            const usedByHosts = allHosts.filter(
               (h) => h.credentialId === cred.id,
-            ).length;
+            );
             return (
               <CredentialItem
                 key={cred.id}
                 cred={cred}
-                usedByCount={usedByCount}
+                usedByHosts={usedByHosts}
                 stripeIndex={stripeOffset + 1 + i}
                 termixIdLinked={termixIdLinkedIds?.has(Number(cred.id))}
                 onDeploy={() => onDeploy(cred)}

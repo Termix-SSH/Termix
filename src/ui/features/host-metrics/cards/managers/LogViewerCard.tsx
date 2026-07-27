@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { managerGet, managerGetSub } from "@/main-axios";
 import { extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
+import { Select2 } from "@/components/select2";
 
 interface LogFiles {
   common: string[];
@@ -110,16 +111,16 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
       }
     >
       <div className="mb-2 flex items-center gap-1.5">
-        <select
+        <Select2
           value={mode}
           onChange={(e) => setMode(e.target.value as Mode)}
           className="h-7 border border-border bg-background px-1 text-[11px]"
         >
           <option value="file">{t("hostMetrics.managers.logFile")}</option>
           <option value="unit">{t("hostMetrics.managers.logUnit")}</option>
-        </select>
+        </Select2>
         {mode === "file" ? (
-          <select
+          <Select2
             value={customPath ? "" : path}
             onChange={(e) => {
               setCustomPath("");
@@ -132,7 +133,7 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
                 {f}
               </option>
             ))}
-          </select>
+          </Select2>
         ) : (
           <input
             value={unit}
@@ -142,7 +143,7 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
             className="h-7 flex-1 border border-border bg-background px-2 font-mono text-[11px] outline-none focus:ring-1 focus:ring-ring"
           />
         )}
-        <select
+        <Select2
           value={lines}
           onChange={(e) => setLines(Number(e.target.value))}
           className="h-7 border border-border bg-background px-1 text-[11px]"
@@ -152,7 +153,7 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
               {n}
             </option>
           ))}
-        </select>
+        </Select2>
       </div>
 
       {mode === "file" && (

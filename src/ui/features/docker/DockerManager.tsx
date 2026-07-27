@@ -39,6 +39,7 @@ import {
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import type { LogEntry } from "@/types/connection-log.ts";
+import { Select2 } from "@/components/select2";
 
 interface DockerManagerProps {
   hostConfig?: SSHHost;
@@ -716,7 +717,7 @@ function DockerManagerInner({
                     className="pl-8 h-8"
                   />
                 </div>
-                <select
+                <Select2
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="h-8 px-2 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
@@ -728,7 +729,7 @@ function DockerManagerInner({
                   <option value="restarting">
                     {t("docker.stateRestarting")}
                   </option>
-                </select>
+                </Select2>
                 <Separator orientation="vertical" className="h-8 mx-1" />
                 <Button
                   variant="ghost"

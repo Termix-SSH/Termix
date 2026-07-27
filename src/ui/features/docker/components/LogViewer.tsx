@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { DockerLogOptions } from "@/types";
 import { getContainerLogs, downloadContainerLogs } from "@/main-axios.ts";
+import { Select2 } from "@/components/select2";
 
 interface LogViewerProps {
   sessionId: string;
@@ -147,7 +148,7 @@ export function LogViewer({
             label={t("docker.timestamps")}
           />
           <Separator orientation="vertical" className="h-4" />
-          <select
+          <Select2
             value={tailLines}
             onChange={(e) => setTailLines(e.target.value)}
             className="h-7 px-2 text-[10px] bg-background border border-border text-foreground outline-none uppercase font-bold"
@@ -157,7 +158,7 @@ export function LogViewer({
             <option value="500">{t("docker.last500")}</option>
             <option value="1000">{t("docker.last1000")}</option>
             <option value="all">{t("docker.allLogs")}</option>
-          </select>
+          </Select2>
           <Separator orientation="vertical" className="h-4" />
           <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
             {filteredLogs.length}/{rawLogs.length} {t("docker.lines")}

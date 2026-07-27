@@ -85,6 +85,11 @@ const CredentialsPanel = lazy(() =>
     default: m.CredentialsPanel,
   })),
 );
+const PortForwardingPanel = lazy(() =>
+  import("@/sidebar/PortForwardingPanel").then((m) => ({
+    default: m.PortForwardingPanel,
+  })),
+);
 const TermixIdPanel = lazy(() =>
   import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
 );
@@ -428,6 +433,8 @@ export function AppShell({
   const sidebarTitle: Record<RailView, string> = {
     hosts: "Hosts",
     credentials: "Credentials",
+    "port-forwarding": t("nav.portForwarding"),
+    sftp: t("nav.sftp"),
     "termix-id": t("nav.termixId"),
     "quick-connect": "Quick Connect",
     serial: t("nav.serial"),
@@ -1294,6 +1301,7 @@ export function AppShell({
         "host-manager": t("nav.hostManager"),
         docker: t("nav.docker"),
         tunnel: t("nav.tunnels"),
+        sftp: t("nav.sftp"),
         network_graph: t("nav.networkGraph"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
         homepage: t("nav.homepage"),
@@ -1527,6 +1535,12 @@ export function AppShell({
   // ─── Rail / sidebar ──────────────────────────────────────────────────────
 
   function handleRailClick(view: RailView) {
+    if (view === "sftp") {
+      openSingletonTab("sftp");
+      if (isMobile) setSidebarOpen(false);
+      return;
+    }
+
     if (railView === view && sidebarOpen) {
       setSidebarOpen(false);
     } else {
@@ -1667,6 +1681,12 @@ export function AppShell({
             active={railView === "credentials"}
           />
         </div>
+
+        {railView === "port-forwarding" && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <PortForwardingPanel />
+          </div>
+        )}
 
         {railView === "termix-id" && (
           <div className="flex flex-col flex-1 min-h-0">
@@ -1921,6 +1941,7 @@ export function AppShell({
         variant="ghost"
         size="icon"
         className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+        title="Collapse sidebar"
         onClick={() => {
           setSettingsFullscreen(false);
           setSidebarOpen(false);

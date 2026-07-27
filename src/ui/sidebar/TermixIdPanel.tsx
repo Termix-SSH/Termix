@@ -38,6 +38,7 @@ import {
   type TermixIdentityKey,
   type TermixIdCa,
 } from "@/main-axios";
+import { Select2 } from "@/components/select2";
 
 const accentBtn =
   "border-accent-brand/40 text-accent-brand hover:bg-accent-brand/20 hover:text-accent-brand";
@@ -424,7 +425,7 @@ function CredentialImportRow({
 
   return (
     <div className="flex items-center gap-2">
-      <select
+      <Select2
         value={selected}
         onChange={(e) => setSelected(e.target.value)}
         disabled={submitting}
@@ -438,7 +439,7 @@ function CredentialImportRow({
             {linkedCredentialIds.has(c.id) ? `✓ ${c.name}` : c.name}
           </option>
         ))}
-      </select>
+      </Select2>
       <Button
         variant="outline"
         size="default"

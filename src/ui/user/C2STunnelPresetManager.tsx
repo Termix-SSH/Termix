@@ -8,6 +8,12 @@ import {
   getTunnelTypeForMode,
 } from "@/features/tunnel/tunnel-form-utils.ts";
 import {
+  getTunnelMode,
+  normalizeClientTunnel,
+  stripClientTunnelDiagnostics,
+  type ClientTunnel,
+} from "@/user/c2s-tunnel-config-utils.ts";
+import {
   createC2STunnelPreset,
   deleteC2STunnelPreset,
   getC2STunnelPresets,
@@ -35,16 +41,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-
-type ClientTunnel = TunnelConnection & {
-  bindHost: string;
-  sourceHostId?: number;
-  sourceHostName?: string;
-  displayName?: string;
-  lastStartedAt?: string;
-  lastTestedAt?: string;
-  lastError?: string;
-};
+import { Select2 } from "@/components/select2";
 
 function sortPresets(presets: C2STunnelPreset[]) {
   return [...presets].sort((a, b) => a.name.localeCompare(b.name));
@@ -71,13 +68,9 @@ function isValidPort(value: unknown) {
   return Number.isInteger(port) && port >= 1 && port <= 65535;
 }
 
-function getEffectiveBindHost(bindHost?: string) {
-  const trimmedBindHost = bindHost?.trim();
-  return trimmedBindHost || "127.0.0.1";
-}
-
-function getTunnelMode(tunnel: Partial<TunnelConnection>) {
-  return tunnel.mode || tunnel.tunnelType || "local";
+function getEffectiveAddress(address?: string) {
+  const trimmedAddress = address?.trim();
+  return trimmedAddress || "127.0.0.1";
 }
 
 function formatDateTime(value?: string) {
@@ -92,6 +85,8 @@ function createClientTunnel(): ClientTunnel {
     scope: "c2s",
     mode: "local",
     tunnelType: "local",
+    localAddress: "",
+    remoteAddress: "",
     bindHost: "",
     sourcePort: 8080,
     endpointPort: 22,
@@ -100,40 +95,6 @@ function createClientTunnel(): ClientTunnel {
     retryInterval: 10,
     autoStart: false,
   };
-}
-
-function normalizeClientTunnel(
-  tunnel: Partial<TunnelConnection>,
-): ClientTunnel {
-  const mode = getTunnelMode(tunnel);
-  const metadata = tunnel as Partial<ClientTunnel>;
-
-  return {
-    ...tunnel,
-    scope: "c2s",
-    mode,
-    tunnelType: mode === "dynamic" ? "local" : mode,
-    bindHost: tunnel.bindHost?.trim() || "",
-    sourcePort: Number(tunnel.sourcePort) || 8080,
-    endpointPort: Number(tunnel.endpointPort) || 22,
-    endpointHost: tunnel.endpointHost || tunnel.sourceHostName || "",
-    maxRetries: Number(tunnel.maxRetries) || 3,
-    retryInterval: Number(tunnel.retryInterval) || 10,
-    autoStart: Boolean(tunnel.autoStart),
-    displayName: metadata.displayName?.trim() || "",
-    lastStartedAt: metadata.lastStartedAt,
-    lastTestedAt: metadata.lastTestedAt,
-    lastError: metadata.lastError,
-  };
-}
-
-function stripClientTunnelDiagnostics(tunnel: ClientTunnel): TunnelConnection {
-  const presetTunnel = normalizeClientTunnel(tunnel);
-  delete presetTunnel.lastStartedAt;
-  delete presetTunnel.lastTestedAt;
-  delete presetTunnel.lastError;
-
-  return presetTunnel;
 }
 
 function getStatusKind(status?: TunnelStatus) {
@@ -199,6 +160,37 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const [openTunnels, setOpenTunnels] = React.useState<Set<number>>(new Set());
   const isElectron =
     typeof window !== "undefined" && window.electronAPI?.isElectron === true;
+  const getCurrentAuthToken = React.useCallback(() => {
+    try {
+      return localStorage.getItem("jwt") || "";
+    } catch {
+      return "";
+    }
+  }, []);
+  const handleC2SSessionExpired = React.useCallback(
+    (result: { code?: string; error?: string }) => {
+      const error = result.error || "";
+      const isExpired =
+        result.code === "SESSION_EXPIRED" ||
+        error === "Termix session expired. Please log in again." ||
+        error === "Authentication required";
+
+      if (!isExpired) return false;
+
+      try {
+        localStorage.removeItem("jwt");
+        localStorage.removeItem("termix_auth");
+      } catch {
+        // localStorage may be unavailable in restricted contexts.
+      }
+
+      window.electronAPI?.clearSessionCookies?.().catch(() => {});
+      toast.warning("Session expired. Please log in again.");
+      window.dispatchEvent(new Event("termix:logout"));
+      return true;
+    },
+    [],
+  );
 
   const sshHosts = React.useMemo(
     () =>
@@ -246,7 +238,8 @@ export function C2STunnelPresetManager(): React.ReactElement {
         index,
         tunnel.sourceHostId || 0,
         tunnel.mode || tunnel.tunnelType || "local",
-        getEffectiveBindHost(tunnel.bindHost),
+        getEffectiveAddress(tunnel.localAddress),
+        getEffectiveAddress(tunnel.remoteAddress),
         tunnel.sourcePort,
         tunnel.endpointPort || 0,
       ].join("::"),
@@ -294,7 +287,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
     [getEndpointName, t],
   );
 
-  const getBindPlaceholder = React.useCallback(
+  const getLocalAddressPlaceholder = React.useCallback(
     (mode: string) => {
       if (mode === "remote") return t("placeholders.localTargetHost");
       if (mode === "dynamic") return t("placeholders.socksListenerHost");
@@ -303,30 +296,49 @@ export function C2STunnelPresetManager(): React.ReactElement {
     [t],
   );
 
+  const getRemoteAddressPlaceholder = React.useCallback(
+    (mode: string) => {
+      if (mode === "remote") return t("placeholders.remoteBindHost");
+      return t("placeholders.remoteTargetHost");
+    },
+    [t],
+  );
+
+  const getRemoteAddressLabel = React.useCallback(
+    (mode: string) => {
+      if (mode === "remote") return t("tunnels.remoteBindAddress");
+      return t("tunnels.destinationAddress");
+    },
+    [t],
+  );
+
   const getTunnelSummary = React.useCallback(
     (tunnel: ClientTunnel) => {
       const mode = getTunnelMode(tunnel);
-      const bindHost = getEffectiveBindHost(tunnel.bindHost);
+      const localAddress = getEffectiveAddress(tunnel.localAddress);
+      const remoteAddress = getEffectiveAddress(tunnel.remoteAddress);
       const endpointName = getEndpointName(tunnel);
       if (mode === "remote") {
         return t("tunnels.summaryClientRemote", {
           endpoint: endpointName,
+          remoteHost: remoteAddress,
           remotePort: tunnel.sourcePort,
-          localHost: bindHost,
+          localHost: localAddress,
           localPort: tunnel.endpointPort,
         });
       }
       if (mode === "dynamic") {
         return t("tunnels.summaryClientDynamic", {
-          localHost: bindHost,
+          localHost: localAddress,
           localPort: tunnel.sourcePort,
           endpoint: endpointName,
         });
       }
       return t("tunnels.summaryClientLocal", {
-        localHost: bindHost,
+        localHost: localAddress,
         localPort: tunnel.sourcePort,
         endpoint: endpointName,
+        remoteHost: remoteAddress,
         remotePort: tunnel.endpointPort,
       });
     },
@@ -394,21 +406,28 @@ export function C2STunnelPresetManager(): React.ReactElement {
           previous?.reason !== status.reason);
       if (hasFailureDetail) {
         const message = status.reason || t("tunnels.manualControlError");
+        if (handleC2SSessionExpired({ error: message })) {
+          continue;
+        }
         toast.error(message, { id: `client-tunnel-error-${tunnelName}` });
       }
     }
     previousTunnelStatusesRef.current = tunnelStatuses;
-  }, [t, tunnelStatuses]);
+  }, [handleC2SSessionExpired, t, tunnelStatuses]);
 
   const validateLocalConfig = (config: ClientTunnel[]) => {
     const autoStartListeners = new Set<string>();
     for (const tunnel of config) {
-      const bindHost = getEffectiveBindHost(tunnel.bindHost);
+      const localAddress = getEffectiveAddress(tunnel.localAddress);
+      const remoteAddress = getEffectiveAddress(tunnel.remoteAddress);
       const mode = getTunnelMode(tunnel);
-      if (!isValidIPv4(bindHost)) {
+      if (!isValidIPv4(localAddress)) {
         return mode === "remote"
           ? t("tunnels.invalidLocalTargetIp")
           : t("tunnels.invalidBindIp");
+      }
+      if (mode !== "dynamic" && !remoteAddress) {
+        return t("tunnels.invalidRemoteAddress");
       }
       if (!isValidPort(tunnel.sourcePort)) {
         return mode === "remote"
@@ -426,13 +445,13 @@ export function C2STunnelPresetManager(): React.ReactElement {
       if (tunnel.autoStart) {
         const listenerKey =
           mode === "remote"
-            ? `${tunnel.sourceHostId}:${tunnel.sourcePort}`
-            : `${bindHost}:${tunnel.sourcePort}`;
+            ? `${tunnel.sourceHostId}:${remoteAddress}:${tunnel.sourcePort}`
+            : `${localAddress}:${tunnel.sourcePort}`;
         if (autoStartListeners.has(listenerKey)) {
           return t("tunnels.duplicateAutoStartBind", {
             bind:
               mode === "remote"
-                ? `${tunnel.sourceHostName || tunnel.sourceHostId}:${tunnel.sourcePort}`
+                ? `${tunnel.sourceHostName || tunnel.sourceHostId}:${remoteAddress}:${tunnel.sourcePort}`
                 : listenerKey,
           });
         }
@@ -519,7 +538,11 @@ export function C2STunnelPresetManager(): React.ReactElement {
       const result = await window.electronAPI.testC2STunnel(
         normalizedTunnel,
         index,
+        getCurrentAuthToken(),
       );
+      if (!result.success && handleC2SSessionExpired(result)) {
+        return;
+      }
       if (!result.success)
         throw new Error(result.error || t("tunnels.tunnelTestFailed"));
       setTunnelMetadata(index, {
@@ -554,7 +577,11 @@ export function C2STunnelPresetManager(): React.ReactElement {
       const result = await window.electronAPI.startC2STunnel(
         normalizedTunnel,
         index,
+        getCurrentAuthToken(),
       );
+      if (!result.success && handleC2SSessionExpired(result)) {
+        return;
+      }
       if (!result.success)
         throw new Error(result.error || t("tunnels.manualControlError"));
       const statuses = await window.electronAPI.getC2STunnelStatuses();
@@ -875,7 +902,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                       <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                         {t("tunnels.type")}
                       </label>
-                      <select
+                      <Select2
                         value={mode}
                         onChange={(e) =>
                           updateTunnel(index, {
@@ -894,38 +921,13 @@ export function C2STunnelPresetManager(): React.ReactElement {
                         <option value="dynamic">
                           {t("tunnels.typeDynamic")}
                         </option>
-                      </select>
+                      </Select2>
                       <span className="text-[10px] text-muted-foreground">
                         {modeDescription}
                       </span>
                     </div>
 
-                    {/* SSH host */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("tunnels.endpointSshConfig")}
-                      </label>
-                      <select
-                        value={
-                          tunnel.sourceHostId ? String(tunnel.sourceHostId) : ""
-                        }
-                        onChange={(e) =>
-                          handleEndpointChange(index, e.target.value)
-                        }
-                        className="px-2 py-1 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full h-7"
-                      >
-                        <option value="">
-                          {t("tunnels.endpointSshHostPlaceholder")}
-                        </option>
-                        {sshHosts.map((host) => (
-                          <option key={host.id} value={String(host.id)}>
-                            {host.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Ports */}
+                    {/* Local side */}
                     <div className="grid grid-cols-2 gap-2">
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -943,7 +945,68 @@ export function C2STunnelPresetManager(): React.ReactElement {
                           className="h-7 text-xs bg-muted/50 border-border rounded-none"
                         />
                       </div>
-                      {mode !== "dynamic" && (
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("tunnels.localAddress")}
+                        </label>
+                        <Input
+                          value={tunnel.localAddress}
+                          onChange={(e) =>
+                            updateTunnel(index, {
+                              localAddress: e.target.value.trim(),
+                              bindHost: e.target.value.trim(),
+                            })
+                          }
+                          placeholder={getLocalAddressPlaceholder(mode)}
+                          className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Intermediate host */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        {t("tunnels.intermediateHost")}
+                      </label>
+                      <Select2
+                        value={
+                          tunnel.sourceHostId ? String(tunnel.sourceHostId) : ""
+                        }
+                        onChange={(e) =>
+                          handleEndpointChange(index, e.target.value)
+                        }
+                        className="px-2 py-1 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring w-full h-7"
+                      >
+                        <option value="">
+                          {t("tunnels.endpointSshHostPlaceholder")}
+                        </option>
+                        {sshHosts.map((host) => (
+                          <option key={host.id} value={String(host.id)}>
+                            {host.name}
+                          </option>
+                        ))}
+                      </Select2>
+                    </div>
+
+                    {/* Destination side */}
+                    {mode !== "dynamic" && (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                            {getRemoteAddressLabel(mode)}
+                          </label>
+                          <Input
+                            value={tunnel.remoteAddress}
+                            onChange={(e) =>
+                              updateTunnel(index, {
+                                remoteAddress: e.target.value.trim(),
+                                targetHost: e.target.value.trim(),
+                              })
+                            }
+                            placeholder={getRemoteAddressPlaceholder(mode)}
+                            className="h-7 text-xs bg-muted/50 border-border rounded-none"
+                          />
+                        </div>
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                             {endpointPortLabel}
@@ -960,25 +1023,8 @@ export function C2STunnelPresetManager(): React.ReactElement {
                             className="h-7 text-xs bg-muted/50 border-border rounded-none"
                           />
                         </div>
-                      )}
-                    </div>
-
-                    {/* Bind IP */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("tunnels.bindIp")}
-                      </label>
-                      <Input
-                        value={tunnel.bindHost}
-                        onChange={(e) =>
-                          updateTunnel(index, {
-                            bindHost: e.target.value.trim(),
-                          })
-                        }
-                        placeholder={getBindPlaceholder(mode)}
-                        className="h-7 text-xs bg-muted/50 border-border rounded-none"
-                      />
-                    </div>
+                      </div>
+                    )}
 
                     {/* Route summary */}
                     <div
@@ -1138,7 +1184,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
           <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("profile.c2sPresetToLoad")}
           </label>
-          <select
+          <Select2
             value={selectedPresetId}
             disabled={!hasPresets}
             onChange={(e) => {
@@ -1160,7 +1206,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
                 {preset.name}
               </option>
             ))}
-          </select>
+          </Select2>
           <span className="text-[10px] text-muted-foreground">
             {t("profile.c2sPresetSyncNote")}
           </span>

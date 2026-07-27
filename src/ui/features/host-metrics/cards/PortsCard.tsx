@@ -3,6 +3,7 @@ import { Unplug, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ServerMetrics, ListeningPort } from "@/main-axios";
 import { MetricCard } from "./MetricCard";
+import { Select2 } from "@/components/select2";
 
 function formatAddress(addr: string) {
   return addr === "0.0.0.0" || addr === "*" || addr === "::" ? "*" : addr;
@@ -63,7 +64,7 @@ export function PortsCard({ metrics }: { metrics: ServerMetrics | null }) {
             className="h-7 w-full border border-border bg-background pl-7 pr-2 text-xs outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
-        <select
+        <Select2
           value={proto}
           onChange={(e) => setProto(e.target.value as "all" | "tcp" | "udp")}
           className="h-7 border border-border bg-background px-1 text-xs"
@@ -71,7 +72,7 @@ export function PortsCard({ metrics }: { metrics: ServerMetrics | null }) {
           <option value="all">{t("hostMetrics.ports.allProtocols")}</option>
           <option value="tcp">TCP</option>
           <option value="udp">UDP</option>
-        </select>
+        </Select2>
         <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
           {filtered.length}
         </span>

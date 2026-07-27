@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import type { SSOProvider, SSOProviderType } from "@/types/index";
 import type { OIDCProviderConfig, LDAPProviderConfig } from "@/types/index";
 import { createSSOProvider, updateSSOProvider } from "@/api/sso-provider-api";
+import { Select2 } from "@/components/select2";
 
 type ApiErrorLike = {
   response?: { data?: { error?: string } };
@@ -328,7 +329,7 @@ export function SSOProviderDialog({
               <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
                 {t("admin.ssoProviderType")}
               </label>
-              <select
+              <Select2
                 value={type}
                 onChange={(e) => setType(e.target.value as SSOProviderType)}
                 className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
@@ -338,7 +339,7 @@ export function SSOProviderDialog({
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select2>
             </div>
           )}
 

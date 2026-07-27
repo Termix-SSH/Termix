@@ -44,6 +44,7 @@ import {
   type TransferMethodPreview,
 } from "@/main-axios.ts";
 import type { SSHHost } from "@/types";
+import { Select2 } from "@/components/select2";
 
 interface FileItem {
   name: string;
@@ -713,7 +714,7 @@ export function TransferToHostDialog({
                   {t("transfer.selectDestinationHost")}
                 </Label>
                 <div className="relative">
-                  <select
+                  <Select2
                     value={selectedHostId}
                     onChange={(e) => handleHostChange(e.target.value)}
                     className="w-full appearance-none px-2.5 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring pr-7"
@@ -726,7 +727,7 @@ export function TransferToHostDialog({
                         {host.name || host.ip}
                       </option>
                     ))}
-                  </select>
+                  </Select2>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
                 </div>
                 {selectedHost && (
@@ -943,7 +944,7 @@ export function TransferToHostDialog({
                       {t("transfer.methodLabel")}
                     </Label>
                     <div className="relative">
-                      <select
+                      <Select2
                         value={methodPreference}
                         onChange={(e) =>
                           setMethodPreference(
@@ -957,7 +958,7 @@ export function TransferToHostDialog({
                         <option value="item_sftp">
                           {t("transfer.methodItemSftp")}
                         </option>
-                      </select>
+                      </Select2>
                       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
                     </div>
                     <p className="text-[10px] text-muted-foreground">
@@ -974,7 +975,7 @@ export function TransferToHostDialog({
                       {t("transfer.parallelSegmentsLabel")}
                     </Label>
                     <div className="relative">
-                      <select
+                      <Select2
                         value={parallelSegmentCount}
                         onChange={(e) =>
                           setParallelSegmentCount(e.target.value)
@@ -986,7 +987,7 @@ export function TransferToHostDialog({
                             {t("transfer.parallelSegmentsOption", { count: n })}
                           </option>
                         ))}
-                      </select>
+                      </Select2>
                       <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
                     </div>
                     <p className="text-[10px] text-muted-foreground">

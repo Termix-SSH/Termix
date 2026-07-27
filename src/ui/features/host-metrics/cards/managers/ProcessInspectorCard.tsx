@@ -6,6 +6,7 @@ import { managerPost } from "@/main-axios";
 import { useManagerData, extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
 import { ManagerSearch } from "./ManagerToolbar";
+import { Select2 } from "@/components/select2";
 
 interface ProcessRow {
   pid: number;
@@ -120,7 +121,7 @@ export function ProcessInspectorCard({ hostId }: { hostId: number | null }) {
             <ListTree className="size-3" />
             {t("hostMetrics.managers.tree")}
           </button>
-          <select
+          <Select2
             value={sort}
             onChange={(e) => setSort(e.target.value as SortKey)}
             disabled={tree}
@@ -129,7 +130,7 @@ export function ProcessInspectorCard({ hostId }: { hostId: number | null }) {
             <option value="cpu">CPU</option>
             <option value="mem">MEM</option>
             <option value="pid">PID</option>
-          </select>
+          </Select2>
         </>
       }
     >
