@@ -3328,6 +3328,8 @@
         "sectionApiKeys": "API Keys",
         "sectionData": "Data",
         "sectionC2sTunnels": "C2S Tunnels",
+        "sectionLegal": "Terms and Access",
+        "legalDescription": "Review the conditions for using Termix and the resources its features can access.",
         "usernameLabel": "Username",
         "roleLabel": "Role",
         "roleAdministrator": "Administrator",
@@ -3379,6 +3381,9 @@
         "statusColorsDesc": "Use green/red for online/offline status instead of the accent color",
         "pinAppRail": "Pin App Rail",
         "pinAppRailDesc": "Keep the left sidebar app rail always expanded instead of expanding on hover",
+        "unpinAppRail": "Unpin App Rail",
+        "openFullscreenSettings": "Open settings full screen",
+        "exitFullscreenSettings": "Exit full-screen settings",
         "expandAppRailOnHover": "Expand App Rail on Hover",
         "expandAppRailOnHoverDesc": "Allow the left sidebar app rail to expand when the pointer moves over it",
         "settingsNavigation": "Navigation",
@@ -3496,7 +3501,34 @@
         "themeSolarized": "Solarized",
         "themeTokyoNight": "Tokyo Night",
         "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeGruvbox": "Gruvbox",
+        "termsTitle": "Terms of Use",
+        "termsIntro": "By using Termix, you agree to use it only with systems, accounts, and data you are authorized to access.",
+        "termsAuthorization": "You are responsible for obtaining permission before connecting to a host or sharing a session.",
+        "termsSecurity": "You are responsible for protecting credentials, backups, API keys, and access to this Termix instance.",
+        "termsAcceptableUse": "Do not use Termix to disrupt services, bypass access controls, or perform unlawful activity.",
+        "termsAvailability": "Termix is provided without a service guarantee. Review backups and test recovery before relying on it for critical operations.",
+        "accessDisclosureTitle": "Access Disclosure",
+        "accessDisclosureIntro": "Termix accesses only the resources required by features you configure or actions you start.",
+        "access": {
+          "connections": {
+            "title": "Configured systems",
+            "description": "Connects to hosts and services you add, including SSH, Telnet, RDP, VNC, Docker, Proxmox, tunnels, and monitoring endpoints."
+          },
+          "credentials": {
+            "title": "Credentials and sessions",
+            "description": "Uses saved credentials, keys, tokens, and session data to authenticate and maintain the connections you request."
+          },
+          "storage": {
+            "title": "Files and local data",
+            "description": "Reads or writes remote files, clipboard data, imports, exports, and local preferences only when the related feature is used."
+          },
+          "services": {
+            "title": "Optional integrations",
+            "description": "Contacts SSO, ACME, Tailscale, webhook, update, and remote-sync services only when they are enabled or configured."
+          }
+        },
+        "telemetryDisclosure": "Optional analytics can be disabled in Admin Settings. Termix does not intentionally include credentials, terminal input, or file contents in analytics events."
       }
     }
   },

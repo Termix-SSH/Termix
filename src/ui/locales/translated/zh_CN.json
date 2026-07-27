@@ -3328,6 +3328,8 @@
         "sectionApiKeys": "API 密钥",
         "sectionData": "数据",
         "sectionC2sTunnels": "C2S 隧道",
+        "sectionLegal": "使用协议与访问清单",
+        "legalDescription": "查看 Termix 的使用条件，以及各项功能可能访问的资源。",
         "usernameLabel": "用户名",
         "roleLabel": "角色",
         "roleAdministrator": "管理员",
@@ -3379,6 +3381,9 @@
         "statusColorsDesc": "使用绿色/红色表示在线/离线状态，而非强调色",
         "pinAppRail": "固定应用边栏",
         "pinAppRailDesc": "保持左侧应用边栏始终展开，而非悬停展开",
+        "unpinAppRail": "取消固定应用边栏",
+        "openFullscreenSettings": "全屏打开设置",
+        "exitFullscreenSettings": "退出全屏设置",
         "expandAppRailOnHover": "悬停展开应用边栏",
         "expandAppRailOnHoverDesc": "允许鼠标悬停时展开左侧应用边栏",
         "settingsNavigation": "导航",
@@ -3496,7 +3501,34 @@
         "themeSolarized": "Solarized",
         "themeTokyoNight": "Tokyo Night",
         "themeOneDark": "One Dark",
-        "themeGruvbox": "Gruvbox"
+        "themeGruvbox": "Gruvbox",
+        "termsTitle": "使用协议",
+        "termsIntro": "使用 Termix 即表示您同意仅访问已获得授权的系统、账户和数据。",
+        "termsAuthorization": "连接主机或共享会话前，您有责任获得系统所有者的明确许可。",
+        "termsSecurity": "您有责任保护凭据、备份、API 密钥以及此 Termix 实例的访问权限。",
+        "termsAcceptableUse": "不得使用 Termix 干扰服务、绕过访问控制或从事违法活动。",
+        "termsAvailability": "Termix 不提供服务可用性保证。用于关键操作前，请建立备份并验证恢复流程。",
+        "accessDisclosureTitle": "访问清单",
+        "accessDisclosureIntro": "Termix 仅访问您已配置功能或主动发起操作所需的资源。",
+        "access": {
+          "connections": {
+            "title": "已配置的系统",
+            "description": "连接您添加的主机与服务，包括 SSH、Telnet、RDP、VNC、Docker、Proxmox、隧道和监控端点。"
+          },
+          "credentials": {
+            "title": "凭据与会话",
+            "description": "使用保存的凭据、密钥、令牌和会话数据，对您请求的连接进行认证并维持会话。"
+          },
+          "storage": {
+            "title": "文件与本地数据",
+            "description": "仅在使用对应功能时读取或写入远程文件、剪贴板数据、导入导出内容和本地偏好设置。"
+          },
+          "services": {
+            "title": "可选集成",
+            "description": "仅在启用或配置后访问 SSO、ACME、Tailscale、Webhook、更新检查和远程同步服务。"
+          }
+        },
+        "telemetryDisclosure": "可在管理员设置中关闭可选分析。Termix 不会有意在分析事件中包含凭据、终端输入或文件内容。"
       }
     }
   },

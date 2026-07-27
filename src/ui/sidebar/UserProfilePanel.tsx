@@ -84,6 +84,7 @@ import { useTheme } from "@/components/theme-provider";
 import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
+import { LegalDisclosure } from "@/legal/LegalDisclosure";
 
 type UserProfileSection =
   | "account"
@@ -91,7 +92,8 @@ type UserProfileSection =
   | "security"
   | "api-keys"
   | "data"
-  | "c2s-tunnels";
+  | "c2s-tunnels"
+  | "legal";
 
 const THEMES: { id: ThemeId; preview: string }[] = [
   { id: "system", preview: "auto" },
@@ -1291,7 +1293,7 @@ export function UserProfilePanel({
   const canChangePasword = !isOidc || isDualAuth;
 
   return (
-    <div className="flex flex-col gap-2 p-3">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-2 p-3">
       <NewApiKeyDialog
         open={newKeyOpen}
         onOpenChange={setNewKeyOpen}
@@ -2030,6 +2032,16 @@ export function UserProfilePanel({
             </SettingRow>
           </div>
         </div>
+      </AccordionSection>
+
+      <AccordionSection
+        id="legal"
+        label={t("newUi.sidebar.userProfile.sectionLegal")}
+        icon={<ScrollText className="size-3.5" />}
+        open={openSections.has("legal")}
+        onToggle={() => toggle("legal")}
+      >
+        <LegalDisclosure />
       </AccordionSection>
 
       {/* Security */}
