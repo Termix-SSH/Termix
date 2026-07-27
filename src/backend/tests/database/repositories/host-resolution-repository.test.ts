@@ -297,7 +297,12 @@ describe("HostResolutionRepository", () => {
     const repository = await createRepository();
 
     const rows = await repository.listHostRowsForAccessList("user-2", [
-      { hostId: 1, permissionLevel: "execute", expiresAt: null },
+      { hostId: 1, permissionLevel: "view", expiresAt: null },
+      {
+        hostId: 1,
+        permissionLevel: "manage",
+        expiresAt: "2026-07-01T00:00:00.000Z",
+      },
       { hostId: 3, permissionLevel: "view", expiresAt: null },
       { hostId: 999, permissionLevel: "view", expiresAt: null },
     ]);
@@ -316,8 +321,8 @@ describe("HostResolutionRepository", () => {
       userId: "user-1",
       ownerId: "user-1",
       isShared: true,
-      permissionLevel: "execute",
-      expiresAt: null,
+      permissionLevel: "manage",
+      expiresAt: "2026-07-01T00:00:00.000Z",
     });
     expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();
   });
