@@ -289,11 +289,7 @@ async function startDedicatedTransferConnect(
   const hasJumpHosts = jumpHosts && jumpHosts.length > 0;
 
   if (hasJumpHosts) {
-    const jumpClient = await createJumpHostChain(
-      jumpHosts,
-      userId,
-      proxyConfig,
-    );
+    const jumpClient = await createJumpHostChain(jumpHosts, userId);
     if (!jumpClient) {
       throw new Error("Failed to connect through jump hosts for transfer");
     }
@@ -1616,11 +1612,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           `Connecting via ${resolvedJumpHosts.length} jump host(s)`,
         ),
       );
-      const jumpClient = await createJumpHostChain(
-        resolvedJumpHosts,
-        userId,
-        proxyConfig,
-      );
+      const jumpClient = await createJumpHostChain(resolvedJumpHosts, userId);
 
       if (!jumpClient) {
         fileLogger.error("Failed to establish jump host chain", {

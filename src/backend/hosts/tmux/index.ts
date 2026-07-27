@@ -145,11 +145,7 @@ export function connectToHost(host: SSHHost): () => Promise<Client> {
 
     let jumpClient: Client | null = null;
     if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
-      jumpClient = await createJumpHostChain(
-        host.jumpHosts,
-        host.userId,
-        proxyConfig,
-      );
+      jumpClient = await createJumpHostChain(host.jumpHosts, host.userId);
       if (!jumpClient) {
         throw new Error("Failed to establish jump host chain");
       }

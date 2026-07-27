@@ -7,14 +7,13 @@ import { PermissionManager } from "../../utils/permission-manager.js";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
-import type { AuthenticatedRequest, ProxyNode } from "../../../types/index.js";
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,
 } from "../../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
-import type { SOCKS5Config } from "../../utils/socks5-helper.js";
 import { waitForGuacdOpen } from "./guacamole-server.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
 
@@ -499,40 +498,9 @@ router.post(
             perConnectionGuacdHost || resolveGuacdOptions(guacdUrl).host;
           const tunnelEndpoint = resolveJumpTunnelEndpoint(guacdHost);
 
-          let socks5ProxyChain: ProxyNode[] = [];
-          if (hostRecord.socks5ProxyChain) {
-            try {
-              socks5ProxyChain =
-                typeof hostRecord.socks5ProxyChain === "string"
-                  ? JSON.parse(hostRecord.socks5ProxyChain as string)
-                  : (hostRecord.socks5ProxyChain as ProxyNode[]);
-            } catch {
-              socks5ProxyChain = [];
-            }
-          }
-
-          const proxyConfig: SOCKS5Config | null =
-            hostRecord.useSocks5 &&
-            (hostRecord.socks5Host || socks5ProxyChain.length > 0)
-              ? {
-                  useSocks5: hostRecord.useSocks5 as boolean,
-                  socks5Host: hostRecord.socks5Host as string | undefined,
-                  socks5Port: hostRecord.socks5Port as number | undefined,
-                  socks5Username: hostRecord.socks5Username as
-                    | string
-                    | undefined,
-                  socks5Password: hostRecord.socks5Password as
-                    | string
-                    | undefined,
-                  socks5ProxyChain,
-                }
-              : null;
-
-          const jumpClient = await createJumpHostChain(
-            jumpHosts,
-            userId,
-            proxyConfig,
-          );
+          // The chain dials the first hop through that hop's own SOCKS5
+          // settings; the target host's proxy config does not apply to it.
+          const jumpClient = await createJumpHostChain(jumpHosts, userId);
 
           if (!jumpClient) {
             guacLogger.error(

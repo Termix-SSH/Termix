@@ -994,7 +994,6 @@ export function registerDockerSshRoutes(app: express.Express): void {
           const jumpClient = await createJumpHostChain(
             host.jumpHosts as Array<{ hostId: number }>,
             userId,
-            proxyConfig,
           );
 
           if (!jumpClient) {
