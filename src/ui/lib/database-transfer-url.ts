@@ -20,10 +20,7 @@ export function getDatabaseTransferUrl(
     return `${serverUrl.replace(/\/$/, "")}/database/${operation}`;
   }
 
-  const development =
-    location.port === "5173" ||
-    location.hostname === "localhost" ||
-    location.hostname === "127.0.0.1";
+  const development = location.port === "5173";
 
   if (development) {
     return `http://localhost:30001/database/${operation}`;
