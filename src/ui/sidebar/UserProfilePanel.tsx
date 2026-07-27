@@ -30,6 +30,7 @@ import type { UserRole } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
 import { RemoteSyncPanel } from "@/settings/RemoteSyncPanel.tsx";
+import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state";
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -555,9 +556,9 @@ export function UserProfilePanel({
   // opt-in feature configured from this same panel). "cloud" storage mode
   // and Termix ID both assume a real multi-device server account, so they
   // stay hidden/forced-off until the user actually connects one.
-  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState(
-    () => !isElectron(),
-  );
+  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState<
+    boolean | null
+  >(() => (isElectron() ? null : true));
 
   useEffect(() => {
     if (!isElectron()) return;
@@ -585,7 +586,13 @@ export function UserProfilePanel({
   }, []);
 
   useEffect(() => {
-    if (isElectron() && !isRemoteSyncConnected && storageMode === "cloud") {
+    if (
+      shouldForceLocalPreferenceStorage(
+        isElectron(),
+        isRemoteSyncConnected,
+        storageMode,
+      )
+    ) {
       setStorageMode("local");
       onPrefsChange?.({ storageMode: "local" });
     }
@@ -1342,7 +1349,7 @@ export function UserProfilePanel({
       {/* Storage mode toggle — only meaningful once a remote server is
           connected; with no sync there's nowhere for "cloud" to sync to,
           so this stays forced to local storage and hidden. */}
-      {(!isElectron() || isRemoteSyncConnected) && (
+      {(!isElectron() || isRemoteSyncConnected === true) && (
         <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("newUi.sidebar.userProfile.storageModeSwitch")}

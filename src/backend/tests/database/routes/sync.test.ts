@@ -15,6 +15,7 @@ describe("isValidEntityType", () => {
       "vaultProfiles",
       "dashboardServiceLinks",
       "homepageItems",
+      "userPreferences",
     ]) {
       expect(isValidEntityType(type)).toBe(true);
     }
@@ -50,6 +51,16 @@ describe("stripWritePayload", () => {
       connectionOrigin: "remote",
     };
     expect(stripWritePayload("hosts", payload)).toEqual({ name: "web" });
+  });
+
+  it("keeps preference storage mode local to each device", () => {
+    expect(
+      stripWritePayload("userPreferences", {
+        syncId: "userPreferences:singleton",
+        theme: "dark",
+        storageMode: "cloud",
+      }),
+    ).toEqual({ theme: "dark" });
   });
 
   it("does not mutate the original payload object", () => {

@@ -10,6 +10,7 @@ import {
   vaultProfiles,
   dashboardServiceLinks,
   homepageItems,
+  userPreferences,
 } from "../db/schema.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -48,11 +49,13 @@ interface EntityConfig {
     | typeof snippetFolders
     | typeof vaultProfiles
     | typeof dashboardServiceLinks
-    | typeof homepageItems;
+    | typeof homepageItems
+    | typeof userPreferences;
   // Fields that only make sense on the device that created the row, or
   // that are managed elsewhere and must never be overwritten by a sync
   // payload from the other side.
   readOnlyFields: string[];
+  singleton?: boolean;
 }
 
 const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
@@ -67,6 +70,11 @@ const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
   vaultProfiles: { table: vaultProfiles, readOnlyFields: [] },
   dashboardServiceLinks: { table: dashboardServiceLinks, readOnlyFields: [] },
   homepageItems: { table: homepageItems, readOnlyFields: [] },
+  userPreferences: {
+    table: userPreferences,
+    readOnlyFields: ["storageMode"],
+    singleton: true,
+  },
 };
 
 const VALID_ENTITY_TYPES = new Set(Object.keys(ENTITY_CONFIG));
@@ -220,7 +228,7 @@ router.get(
         : null;
 
     try {
-      const { table } = ENTITY_CONFIG[entityType];
+      const { table, singleton } = ENTITY_CONFIG[entityType];
       const context = createCurrentRepositoryContext();
       const conditions = [eq(table.userId, userId)];
       if (since && "updatedAt" in table) {
@@ -233,14 +241,17 @@ router.get(
         .where(and(...conditions));
 
       const decrypted = await Promise.all(
-        rows.map((row) =>
-          serializeSyncReferences(
+        rows.map(async (row) => {
+          const result = await serializeSyncReferences(
             entityType,
             decryptIfNeeded(entityType, row as Record<string, unknown>, userId),
             (referenceType, id) =>
               findReferenceSyncId(context, referenceType, id, userId),
-          ),
-        ),
+          );
+          return singleton
+            ? { ...result, syncId: `${entityType}:singleton` }
+            : result;
+        }),
       );
 
       res.json({ rows: decrypted });
@@ -293,17 +304,19 @@ router.post(
     }
 
     try {
-      const { table } = ENTITY_CONFIG[entityType];
+      const { table, singleton } = ENTITY_CONFIG[entityType];
       const context = createCurrentRepositoryContext();
 
       const existingRows = await context.drizzle
         .select()
         .from(table as typeof hosts)
         .where(
-          and(
-            eq((table as typeof hosts).syncId, syncId),
-            eq(table.userId, userId),
-          ),
+          singleton
+            ? eq(table.userId, userId)
+            : and(
+                eq((table as typeof hosts).syncId, syncId),
+                eq(table.userId, userId),
+              ),
         )
         .limit(1);
       const existing = existingRows[0] as Record<string, unknown> | undefined;
@@ -337,11 +350,15 @@ router.post(
       } else {
         const insertedRows = await context.drizzle
           .insert(table as typeof hosts)
-          .values({
-            ...encryptedPayload,
-            userId,
-            syncId,
-          } as typeof hosts.$inferInsert)
+          .values(
+            (singleton
+              ? { ...encryptedPayload, userId }
+              : {
+                  ...encryptedPayload,
+                  userId,
+                  syncId,
+                }) as typeof hosts.$inferInsert,
+          )
           .returning();
         resultRow = insertedRows[0] as Record<string, unknown>;
       }
@@ -453,16 +470,18 @@ router.post(
     }
 
     try {
-      const { table } = ENTITY_CONFIG[entityType];
+      const { table, singleton } = ENTITY_CONFIG[entityType];
       const context = createCurrentRepositoryContext();
 
       await context.drizzle
         .delete(table as typeof hosts)
         .where(
-          and(
-            eq((table as typeof hosts).syncId, syncId),
-            eq(table.userId, userId),
-          ),
+          singleton
+            ? eq(table.userId, userId)
+            : and(
+                eq((table as typeof hosts).syncId, syncId),
+                eq(table.userId, userId),
+              ),
         );
 
       await createCurrentSyncTombstoneRepository().record(
