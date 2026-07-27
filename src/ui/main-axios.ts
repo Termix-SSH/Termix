@@ -1697,9 +1697,10 @@ export async function getUserInfo(): Promise<UserInfo> {
 export async function getRemoteSyncUserInfo(): Promise<RemoteSyncUserInfo | null> {
   if (!isElectron()) return null;
   try {
-    return (await window.electronAPI?.invoke?.(
-      "get-remote-sync-user-info",
-    )) as RemoteSyncUserInfo | null;
+    // ?? null so a missing preload bridge matches the declared return type
+    // rather than resolving to undefined.
+    return ((await window.electronAPI?.invoke?.("get-remote-sync-user-info")) ??
+      null) as RemoteSyncUserInfo | null;
   } catch {
     return null;
   }
