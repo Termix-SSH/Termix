@@ -150,6 +150,7 @@ function AccordionSection({
   icon,
   open,
   onToggle,
+  hidden = false,
   children,
 }: {
   id: string;
@@ -157,8 +158,11 @@ function AccordionSection({
   icon: React.ReactNode;
   open: boolean;
   onToggle: () => void;
+  hidden?: boolean;
   children: React.ReactNode;
 }) {
+  if (hidden) return null;
+
   return (
     <div className="border border-border bg-card overflow-hidden">
       <button
@@ -1372,61 +1376,73 @@ export function UserProfilePanel({
         onToggle={() => toggle("account")}
       >
         <div className="flex flex-col gap-0 pt-2">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-0">
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.usernameLabel")}
-              </span>
-              <span className="text-sm font-semibold mt-0.5">
-                {username ?? "—"}
-              </span>
+          {isElectron() ? (
+            <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-accent-brand">
+                <ShieldCheck className="size-3.5" />
+                {t("newUi.sidebar.userProfile.desktopProfileTitle")}
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
+                {t("newUi.sidebar.userProfile.desktopProfileDescription")}
+              </p>
             </div>
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.roleLabel")}
-              </span>
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand w-fit">
-                  {userRole || "—"}
+          ) : (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0">
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.usernameLabel")}
                 </span>
-                {userRoles.map((r) => (
-                  <span
-                    key={r.roleId}
-                    className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground w-fit"
-                  >
-                    {r.roleDisplayName}
+                <span className="text-sm font-semibold mt-0.5">
+                  {username ?? "—"}
+                </span>
+              </div>
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.roleLabel")}
+                </span>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand w-fit">
+                    {userRole || "—"}
                   </span>
-                ))}
+                  {userRoles.map((r) => (
+                    <span
+                      key={r.roleId}
+                      className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground w-fit"
+                    >
+                      {r.roleDisplayName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.authMethodLabel")}
+                </span>
+                <span className="text-sm font-semibold mt-0.5">
+                  {authMethod || "—"}
+                </span>
+              </div>
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.twoFaLabel")}
+                </span>
+                <span className="flex items-center gap-1 mt-0.5">
+                  {totpEnabled ? (
+                    <>
+                      <ShieldCheck className="size-3.5 text-accent-brand" />
+                      <span className="text-sm font-semibold text-accent-brand">
+                        {t("newUi.sidebar.userProfile.twoFaOn")}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {t("newUi.sidebar.userProfile.twoFaOff")}
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.authMethodLabel")}
-              </span>
-              <span className="text-sm font-semibold mt-0.5">
-                {authMethod || "—"}
-              </span>
-            </div>
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.twoFaLabel")}
-              </span>
-              <span className="flex items-center gap-1 mt-0.5">
-                {totpEnabled ? (
-                  <>
-                    <ShieldCheck className="size-3.5 text-accent-brand" />
-                    <span className="text-sm font-semibold text-accent-brand">
-                      {t("newUi.sidebar.userProfile.twoFaOn")}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    {t("newUi.sidebar.userProfile.twoFaOff")}
-                  </span>
-                )}
-              </span>
-            </div>
-          </div>
+          )}
 
           <div className="border-t border-border pt-3 mt-1">
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
@@ -1489,26 +1505,28 @@ export function UserProfilePanel({
             </div>
           )}
 
-          <div className="border-t border-border pt-3 mt-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium text-destructive">
-                  {t("newUi.sidebar.userProfile.deleteAccount")}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.deleteAccountDescription")}
-                </span>
+          {!isElectron() && (
+            <div className="border-t border-border pt-3 mt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium text-destructive">
+                    {t("newUi.sidebar.userProfile.deleteAccount")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("newUi.sidebar.userProfile.deleteAccountDescription")}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 ml-3 text-[10px] h-7"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  {t("newUi.sidebar.userProfile.deleteButton")}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 ml-3 text-[10px] h-7"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                {t("newUi.sidebar.userProfile.deleteButton")}
-              </Button>
             </div>
-          </div>
+          )}
         </div>
       </AccordionSection>
 
@@ -2032,8 +2050,11 @@ export function UserProfilePanel({
         </div>
       </AccordionSection>
 
-      {/* Security */}
+      {/* The embedded desktop backend auto-authenticates its machine-local
+          profile, so server login controls would imply protection they do
+          not provide. Remote Sync owns its separate account UI above. */}
       <AccordionSection
+        hidden={isElectron()}
         id="security"
         label={t("newUi.sidebar.userProfile.sectionSecurity")}
         icon={<Shield className="size-3.5" />}
