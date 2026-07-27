@@ -1581,6 +1581,10 @@ ipcMain.handle("get-remote-sync-status", () => {
   return remoteSync.getRemoteSyncEngine()?.status || null;
 });
 
+ipcMain.handle("get-remote-sync-user-info", () => {
+  return remoteSync.getRemoteSyncUserInfo();
+});
+
 ipcMain.handle("remote-sync-now", async () => {
   return (await remoteSync.getRemoteSyncEngine()?.syncNow()) || null;
 });

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   getUserInfo,
+  getRemoteSyncUserInfo,
   getApiKeys,
   createApiKey,
   deleteApiKey,
@@ -475,6 +476,8 @@ export function UserProfilePanel({
 
   // User info
   const [userId, setUserId] = useState("");
+  const [accountUsername, setAccountUsername] = useState(username ?? "");
+  const [accountTotpEnabled, setAccountTotpEnabled] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [authMethod, setAuthMethod] = useState("");
   const [version, setVersion] = useState("");
@@ -642,11 +645,15 @@ export function UserProfilePanel({
 
   useEffect(() => {
     getUserInfo()
-      .then((info) => {
-        setUserId(info.userId);
-        setTotpEnabled(info.totp_enabled ?? false);
-        setIsOidc(info.is_oidc ?? false);
-        setIsDualAuth(info.is_dual_auth ?? false);
+      .then(async (localInfo) => {
+        setUserId(localInfo.userId);
+        setTotpEnabled(localInfo.totp_enabled ?? false);
+        setIsOidc(localInfo.is_oidc ?? false);
+        setIsDualAuth(localInfo.is_dual_auth ?? false);
+        const remoteInfo = await getRemoteSyncUserInfo();
+        const info = remoteInfo ?? localInfo;
+        setAccountUsername(info.username);
+        setAccountTotpEnabled(info.totp_enabled ?? false);
         setUserRole(
           info.is_admin
             ? t("newUi.sidebar.userProfile.roleAdministrator")
@@ -659,9 +666,13 @@ export function UserProfilePanel({
         } else {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodLocal"));
         }
-        getUserRoles(info.userId)
-          .then(({ roles }) => setUserRoles(roles ?? []))
-          .catch(() => {});
+        if (remoteInfo) {
+          setUserRoles(remoteInfo.roles ?? []);
+        } else {
+          getUserRoles(localInfo.userId)
+            .then(({ roles }) => setUserRoles(roles ?? []))
+            .catch(() => {});
+        }
       })
       .catch(() => {});
     getApiKeys()
@@ -1085,6 +1096,7 @@ export function UserProfilePanel({
       const result = await enableTOTP(totpCode);
       setTotpBackupCodes(result.backup_codes ?? []);
       setTotpEnabled(true);
+      if (!isRemoteSyncConnected) setAccountTotpEnabled(true);
       setTotpStep("backup");
       toast.success(t("newUi.sidebar.userProfile.totpEnabledSuccess"));
     } catch (e: unknown) {
@@ -1105,6 +1117,7 @@ export function UserProfilePanel({
     try {
       await disableTOTP(disableTotpInput);
       setTotpEnabled(false);
+      if (!isRemoteSyncConnected) setAccountTotpEnabled(false);
       setShowDisableTotp(false);
       setDisableTotpInput("");
       toast.success(t("newUi.sidebar.userProfile.totpDisabledSuccess"));
@@ -1378,7 +1391,7 @@ export function UserProfilePanel({
                 {t("newUi.sidebar.userProfile.usernameLabel")}
               </span>
               <span className="text-sm font-semibold mt-0.5">
-                {username ?? "—"}
+                {accountUsername || "—"}
               </span>
             </div>
             <div className="flex flex-col py-2">
@@ -1412,7 +1425,7 @@ export function UserProfilePanel({
                 {t("newUi.sidebar.userProfile.twoFaLabel")}
               </span>
               <span className="flex items-center gap-1 mt-0.5">
-                {totpEnabled ? (
+                {accountTotpEnabled ? (
                   <>
                     <ShieldCheck className="size-3.5 text-accent-brand" />
                     <span className="text-sm font-semibold text-accent-brand">

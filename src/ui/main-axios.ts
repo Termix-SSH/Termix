@@ -199,9 +199,14 @@ export interface UserInfo {
   username: string;
   is_admin: boolean;
   is_oidc: boolean;
+  is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
   show_donation_modal?: boolean;
+}
+
+export interface RemoteSyncUserInfo extends UserInfo {
+  roles: UserRole[];
 }
 
 interface UserCount {
@@ -1678,6 +1683,17 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
+  }
+}
+
+export async function getRemoteSyncUserInfo(): Promise<RemoteSyncUserInfo | null> {
+  if (!isElectron()) return null;
+  try {
+    return (await window.electronAPI?.invoke?.(
+      "get-remote-sync-user-info",
+    )) as RemoteSyncUserInfo | null;
+  } catch {
+    return null;
   }
 }
 

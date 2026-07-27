@@ -135,6 +135,41 @@ function clearRemoteSyncJwt() {
   return { success: true };
 }
 
+async function getRemoteSyncUserInfo() {
+  const config = getRemoteSyncConfig();
+  const token = getRemoteSyncJwt();
+  if (!config?.serverUrl || !token || isJwtExpiredOrExpiringSoon(token)) {
+    return null;
+  }
+
+  const baseUrl = config.serverUrl.replace(/\/$/, "");
+  const userResponse = await fetch(`${baseUrl}/users/me`, {
+    headers: { Authorization: `Bearer ${token}`, "X-Electron-App": "true" },
+  });
+  if (!userResponse.ok) return null;
+
+  const user = await userResponse.json();
+  const rolesResponse = await fetch(
+    `${baseUrl}/rbac/users/${encodeURIComponent(user.userId)}/roles`,
+    {
+      headers: { Authorization: `Bearer ${token}`, "X-Electron-App": "true" },
+    },
+  );
+  const roles = rolesResponse.ok
+    ? (await rolesResponse.json()).roles || []
+    : [];
+
+  return {
+    userId: user.userId,
+    username: user.username,
+    is_admin: !!user.is_admin,
+    is_oidc: !!user.is_oidc,
+    is_dual_auth: !!user.is_dual_auth,
+    totp_enabled: !!user.totp_enabled,
+    roles,
+  };
+}
+
 function decodeJwtExpiry(token) {
   try {
     const payloadB64 = token.split(".")[1];
@@ -511,6 +546,7 @@ module.exports = {
   saveRemoteSyncJwt,
   getRemoteSyncJwt,
   clearRemoteSyncJwt,
+  getRemoteSyncUserInfo,
   isJwtExpiredOrExpiringSoon,
   decodeJwtExpiry,
 };
