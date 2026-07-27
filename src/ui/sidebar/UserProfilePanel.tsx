@@ -144,7 +144,7 @@ const LANGUAGES = [
   { code: "vi", label: "Tiếng Việt" },
 ];
 
-function AccordionSection({
+export function AccordionSection({
   id,
   label,
   icon,
