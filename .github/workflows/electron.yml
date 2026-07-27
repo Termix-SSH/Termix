@@ -1075,14 +1075,21 @@ jobs:
           default_platform(:mac)
 
           lane :fetch_build_number do
-            number = app_store_build_number(
+            live_number = app_store_build_number(
+              live: true,
+              platform: "osx",
+              api_key_path: "/tmp/asc_keys/api_key.json",
+              app_identifier: "com.karmaa.termix",
+              initial_build_number: 0,
+            )
+            pending_number = app_store_build_number(
               live: false,
               platform: "osx",
               api_key_path: "/tmp/asc_keys/api_key.json",
               app_identifier: "com.karmaa.termix",
-              version: "$APP_VERSION",
               initial_build_number: 0,
             )
+            number = [live_number, pending_number].max
             File.write("$OUT_FILE", number.to_s)
           end
           EOF
