@@ -106,6 +106,9 @@ function FileManagerContent({
   const [currentPath, setCurrentPath] = useState(
     initialPath || initialHost?.defaultPath || "/",
   );
+  const lastSuccessfulPathRef = useRef(
+    initialPath || initialHost?.defaultPath || "/",
+  );
   const [navHistory, setNavHistory] = useState<string[]>([
     initialPath || initialHost?.defaultPath || "/",
   ]);
@@ -497,6 +500,7 @@ function FileManagerContent({
           ? response
           : response?.files || [];
         setFiles(files);
+        lastSuccessfulPathRef.current = currentPath;
         clearSelection();
         initialLoadDoneRef.current = true;
 
@@ -565,7 +569,7 @@ function FileManagerContent({
   }
 
   const loadDirectory = useCallback(
-    async (path: string): Promise<boolean> => {
+    async (path: string, conflictAttempt = 0): Promise<boolean> => {
       if (!sshSessionId) {
         console.error("Cannot load directory: no SSH session ID");
         return false;
@@ -595,6 +599,7 @@ function FileManagerContent({
           : response?.files || [];
 
         setFiles(files);
+        lastSuccessfulPathRef.current = resolvedPath;
         clearSelection();
         return true;
       } catch (error: unknown) {
@@ -617,12 +622,27 @@ function FileManagerContent({
 
           const httpStatus = apiError.status ?? apiError.response?.status;
 
-          // 409 = concurrent request already in flight — silently drop
+          // The sidebar may be listing the same path to populate its tree.
+          // Retry instead of leaving the breadcrumb and visible files out of sync.
           if (httpStatus === 409) {
+            if (conflictAttempt < 3) {
+              await new Promise((resolve) => setTimeout(resolve, 250));
+              return loadDirectory(resolvedPath, conflictAttempt + 1);
+            }
+            const previousPath = lastSuccessfulPathRef.current;
+            lastPathChangeRef.current = previousPath;
+            setCurrentPath((current) =>
+              current === resolvedPath ? previousPath : current,
+            );
             return false;
           }
 
           if (apiError.response?.data?.needsSudo) {
+            const previousPath = lastSuccessfulPathRef.current;
+            lastPathChangeRef.current = previousPath;
+            setCurrentPath((current) =>
+              current === resolvedPath ? previousPath : current,
+            );
             if (!sudoDialogOpen) {
               setPendingSudoOperation({ type: "navigate", path: resolvedPath });
               setSudoDialogOpen(true);
@@ -700,7 +720,7 @@ function FileManagerContent({
         }
       }
     },
-    [sshSessionId, isLoading, clearSelection, t, sudoDialogOpen, currentHost],
+    [sshSessionId, clearSelection, t, sudoDialogOpen, currentHost],
   );
 
   const debouncedLoadDirectory = useCallback(
