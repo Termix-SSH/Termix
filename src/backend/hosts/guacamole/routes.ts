@@ -1,5 +1,6 @@
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
+import { withRecordingSettings } from "./recording-settings.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
@@ -15,6 +16,7 @@ import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
 import type { SOCKS5Config } from "../../utils/socks5-helper.js";
 import { waitForGuacdOpen } from "./guacamole-server.js";
+import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -485,6 +487,18 @@ router.post(
 
       if (jumpHosts.length > 0) {
         try {
+          let guacdUrl: string | undefined;
+          try {
+            guacdUrl =
+              (await createCurrentSettingsRepository().get("guac_url")) ??
+              undefined;
+          } catch {
+            // Environment/default guacd configuration remains available.
+          }
+          const guacdHost =
+            perConnectionGuacdHost || resolveGuacdOptions(guacdUrl).host;
+          const tunnelEndpoint = resolveJumpTunnelEndpoint(guacdHost);
+
           let socks5ProxyChain: ProxyNode[] = [];
           if (hostRecord.socks5ProxyChain) {
             try {
@@ -550,7 +564,7 @@ router.post(
               );
             });
             server.on("error", reject);
-            server.listen(0, "127.0.0.1", () => {
+            server.listen(0, tunnelEndpoint.bindHost, () => {
               const addr = server.address() as net.AddressInfo;
               // Auto-cleanup after 1 hour
               setTimeout(
@@ -563,7 +577,7 @@ router.post(
               resolve(addr.port);
             });
           });
-          hostname = "127.0.0.1";
+          hostname = tunnelEndpoint.advertisedHost;
           port = tunnelPort;
           guacLogger.info("SSH tunnel established for guacamole", {
             operation: "guac_ssh_tunnel",
@@ -602,15 +616,16 @@ router.post(
             userId,
             protocol: connectionType as "rdp" | "vnc" | "telnet",
             path: recordingName,
+            guacdPath: recordingPath,
             startedAt: new Date().toISOString(),
           }
         : undefined;
       if (recordingEnabled) {
-        guacConfig["recording-path"] = recordingPath;
-        guacConfig["recording-name"] = recordingName;
-        guacConfig["create-recording-path"] = true;
-        guacConfig["recording-exclude-output"] = false;
-        guacConfig["recording-include-keys"] = true;
+        guacConfig = withRecordingSettings(
+          guacConfig,
+          recordingPath,
+          recordingName,
+        );
       }
 
       const termixConnectId = crypto.randomUUID();

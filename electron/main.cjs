@@ -12,6 +12,7 @@ const {
   nativeImage,
 } = require("electron");
 const path = require("path");
+const { getUnpackedAppRoot } = require("./backend-paths.cjs");
 const fs = require("fs");
 const os = require("os");
 const https = require("https");
@@ -800,10 +801,7 @@ function getBackendPaths() {
   // fork() does not go through Electron's asar redirector — use the unpacked path.
   // On macOS multi-arch builds (mergeASARs: false), electron-builder names the ASAR
   // app-arm64.asar / app-x64.asar instead of app.asar, so match all variants.
-  const unpackedRoot = appRoot.replace(
-    /app(-[a-z0-9]+)?\.asar(?!\.unpacked)/,
-    "app.asar.unpacked",
-  );
+  const unpackedRoot = getUnpackedAppRoot(appRoot);
   const backendDir = path.join(unpackedRoot, "dist", "backend", "backend");
   return {
     entryPath: path.join(backendDir, "starter.js"),

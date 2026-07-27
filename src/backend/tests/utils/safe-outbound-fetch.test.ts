@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { LookupAddress, LookupAllOptions } from "dns";
+import type { LookupAddress, LookupAllOptions, LookupOptions } from "dns";
 import {
   createDnsLookupHook,
   isBlockedAddress,
@@ -56,6 +56,7 @@ describe("isBlockedAddress", () => {
 function runHook(
   addresses: LookupAddress[],
   error: NodeJS.ErrnoException | null = null,
+  options: LookupOptions = { all: true },
 ) {
   const fakeLookup = (
     _host: string,
@@ -65,14 +66,43 @@ function runHook(
 
   const hook = createDnsLookupHook(fakeLookup);
   const callback = vi.fn();
-  hook("example.invalid", { all: true }, callback);
+  hook("example.invalid", options, callback);
   return callback;
 }
 
 describe("createDnsLookupHook", () => {
-  it("allows a public IPv4 address through", () => {
-    const callback = runHook([{ address: "104.21.52.150", family: 4 }]);
-    expect(callback).toHaveBeenCalledWith(null, "104.21.52.150", 4);
+  it("returns every public address when all addresses are requested", () => {
+    const addresses = [
+      { address: "104.21.52.150", family: 4 },
+      { address: "2606:4700:3034::ac43:c88d", family: 6 },
+    ];
+    const callback = runHook(addresses);
+    expect(callback).toHaveBeenCalledWith(null, addresses);
+  });
+
+  it.each<LookupOptions>([{ all: false }, {}])(
+    "returns one public address for single-address lookup options %j",
+    (options) => {
+      const callback = runHook(
+        [{ address: "104.21.52.150", family: 4 }],
+        null,
+        options,
+      );
+      expect(callback).toHaveBeenCalledWith(null, "104.21.52.150", 4);
+    },
+  );
+
+  it("rejects a mixed result containing a mapped private address", () => {
+    const callback = runHook([
+      { address: "104.21.52.150", family: 4 },
+      { address: "::ffff:127.0.0.1", family: 6 },
+    ]);
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Private destinations are not allowed",
+      }),
+      [],
+    );
   });
 
   it("rejects a private address with the private-destination error", () => {
@@ -81,8 +111,7 @@ describe("createDnsLookupHook", () => {
       expect.objectContaining({
         message: "Private destinations are not allowed",
       }),
-      "",
-      0,
+      [],
     );
   });
 
@@ -92,8 +121,7 @@ describe("createDnsLookupHook", () => {
       expect.objectContaining({
         message: "DNS resolution returned no addresses",
       }),
-      "",
-      0,
+      [],
     );
   });
 
@@ -102,6 +130,6 @@ describe("createDnsLookupHook", () => {
       code: "ENOTFOUND",
     });
     const callback = runHook([], dnsError);
-    expect(callback).toHaveBeenCalledWith(dnsError, "", 0);
+    expect(callback).toHaveBeenCalledWith(dnsError, []);
   });
 });

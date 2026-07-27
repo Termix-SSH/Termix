@@ -11,14 +11,23 @@ export async function triggerLoginAlert(
 ): Promise<void> {
   try {
     const token = await SystemCrypto.getInstance().getInternalAuthToken();
-    await fetch(`${METRICS_SERVICE_URL}/internal/login-alert`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-internal-auth": token,
+    const response = await fetch(
+      `${METRICS_SERVICE_URL}/internal/login-alert`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-auth": token,
+        },
+        body: JSON.stringify({ hostId, userId, sshUser, fromIp }),
       },
-      body: JSON.stringify({ hostId, userId, sshUser, fromIp }),
-    });
+    );
+    if (!response.ok) {
+      const details = await response.text();
+      throw new Error(
+        `Metrics service returned ${response.status}${details ? `: ${details}` : ""}`,
+      );
+    }
   } catch (err) {
     sshLogger.warn("Failed to trigger login alert", {
       operation: "login_alert_trigger_error",

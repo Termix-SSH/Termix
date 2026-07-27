@@ -170,6 +170,7 @@ router.post(
       sudoPassword,
       pin,
       enableTerminal,
+      enableCommandHistory,
       enableTunnel,
       enableFileManager,
       scpLegacy,
@@ -278,6 +279,7 @@ router.post(
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
+      enableCommandHistory: enableCommandHistory ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)
@@ -817,6 +819,7 @@ router.put(
       sudoPassword,
       pin,
       enableTerminal,
+      enableCommandHistory,
       enableTunnel,
       enableFileManager,
       scpLegacy,
@@ -922,6 +925,7 @@ router.put(
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
+      enableCommandHistory: enableCommandHistory ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)

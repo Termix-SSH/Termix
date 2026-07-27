@@ -16,12 +16,12 @@ const fs = require("fs");
 const path = require("path");
 
 const SYNCED_ENTITY_TYPES = [
-  "hosts",
   "sshCredentials",
-  "sshFolders",
-  "snippets",
-  "snippetFolders",
   "vaultProfiles",
+  "sshFolders",
+  "snippetFolders",
+  "hosts",
+  "snippets",
   "dashboardServiceLinks",
   "homepageItems",
 ];
