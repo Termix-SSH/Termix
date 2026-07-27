@@ -70,6 +70,15 @@ export function PanePreview({
     setAttachNonce((n) => n + 1);
   }
 
+  const resolvedPort = host.sshPort ?? host.port;
+  const terminalHostConfig = {
+    ...host,
+    port: resolvedPort,
+    sshPort: resolvedPort,
+    authType: host.authType,
+    instanceId: instanceIdRef.current,
+  } as TerminalHostConfig;
+
   return (
     <>
       <div className="flex items-center gap-3 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
@@ -147,13 +156,7 @@ export function PanePreview({
         <CommandHistoryProvider key={attachNonce}>
           <Terminal
             ref={terminalRef}
-            hostConfig={
-              {
-                ...host,
-                sshPort: host.port,
-                instanceId: instanceIdRef.current,
-              } as TerminalHostConfig
-            }
+            hostConfig={terminalHostConfig}
             isVisible={true}
             title={pane.sessionName}
             showTitle={false}
