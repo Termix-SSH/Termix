@@ -1077,6 +1077,7 @@ jobs:
           lane :fetch_build_number do
             number = app_store_build_number(
               live: false,
+              platform: "osx",
               api_key_path: "/tmp/asc_keys/api_key.json",
               app_identifier: "com.karmaa.termix",
               version: "$APP_VERSION",
