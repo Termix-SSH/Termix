@@ -464,24 +464,9 @@ class PollingManager {
 
       let isOnline: boolean;
       if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
-        const proxyConfig: SOCKS5Config | null =
-          refreshedHost.useSocks5 &&
-          (refreshedHost.socks5Host ||
-            (refreshedHost.socks5ProxyChain &&
-              refreshedHost.socks5ProxyChain.length > 0))
-            ? {
-                useSocks5: true,
-                socks5Host: refreshedHost.socks5Host,
-                socks5Port: refreshedHost.socks5Port,
-                socks5Username: refreshedHost.socks5Username,
-                socks5Password: refreshedHost.socks5Password,
-                socks5ProxyChain: refreshedHost.socks5ProxyChain,
-              }
-            : null;
         const jumpClient = await createJumpHostChain(
           refreshedHost.jumpHosts,
           userId,
-          proxyConfig,
         );
         isOnline = jumpClient
           ? await tcpPingThroughJumpHost(
@@ -1295,11 +1280,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
 
     let jumpClient: Client | null = null;
     if (hasJumpHosts) {
-      jumpClient = await createJumpHostChain(
-        host.jumpHosts!,
-        host.userId!,
-        proxyConfig,
-      );
+      jumpClient = await createJumpHostChain(host.jumpHosts!, host.userId!);
 
       if (!jumpClient) {
         throw new Error("Failed to establish jump host chain");
