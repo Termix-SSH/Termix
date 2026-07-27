@@ -28,6 +28,25 @@ vi.mock("../../../utils/auth-manager.js", () => ({
   },
 }));
 
+// The route module calls PermissionManager.getInstance() at import time and
+// pulls in the repository factory, which loads the drizzle schema and the
+// better-sqlite3 native binding. Importing that tree costs seconds under a
+// concurrent full run — enough to blow the 5s test timeout — and none of it is
+// under test here.
+vi.mock("../../../utils/permission-manager.js", () => ({
+  PermissionManager: {
+    getInstance: () => ({
+      canAccessHost: vi.fn(),
+    }),
+  },
+}));
+
+vi.mock("../../../database/repositories/factory.js", () => ({
+  createCurrentSessionRecordingRepository: vi.fn(),
+  createCurrentSettingsRepository: vi.fn(),
+  getCurrentSettingValue: vi.fn(),
+}));
+
 const mockReadFile = vi.fn();
 const mockStat = vi.fn();
 const mockUnlink = vi.fn();
