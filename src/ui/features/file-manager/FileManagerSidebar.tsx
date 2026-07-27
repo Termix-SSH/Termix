@@ -228,8 +228,8 @@ export function FileManagerSidebar({
    * Called the first time a folder is expanded via FolderTree's onSelect.
    */
   const loadSubdirectory = useCallback(
-    async (folderId: string, folderPath: string) => {
-      if (!sshSessionId) return;
+    async (folderId: string, folderPath: string): Promise<boolean> => {
+      if (!sshSessionId) return false;
 
       try {
         const subResponse = await listSSHFiles(sshSessionId, folderPath);
@@ -262,16 +262,20 @@ export function FileManagerSidebar({
             });
           return updateChildren(prevTree);
         });
+        loadedFoldersRef.current.add(folderPath);
+        return true;
       } catch (error: unknown) {
         const status =
           (error as { status?: number })?.status ||
           (error as { response?: { status?: number } })?.response?.status;
         if (status === 409) {
           // Another request was listing this path — retry after the lock clears
-          setTimeout(() => loadSubdirectory(folderId, folderPath), 600);
-          return;
+          setTimeout(() => void loadSubdirectory(folderId, folderPath), 600);
+          return false;
         }
+        loadedFoldersRef.current.delete(folderPath);
         console.error("Failed to load subdirectory:", error);
+        return false;
       }
     },
     [sshSessionId],
@@ -309,8 +313,7 @@ export function FileManagerSidebar({
 
     const parent = findByPath(directoryTree);
     if (parent && !loadedFoldersRef.current.has(parent.path)) {
-      loadedFoldersRef.current.add(parent.path);
-      loadSubdirectory(parent.id, parent.path);
+      void loadSubdirectory(parent.id, parent.path);
     }
   }, [currentPath, directoryTree, loadSubdirectory, sshSessionId]);
 
@@ -416,7 +419,6 @@ export function FileManagerSidebar({
         item.path !== "/" &&
         !loadedFoldersRef.current.has(item.path)
       ) {
-        loadedFoldersRef.current.add(item.path);
         await loadSubdirectory(id, item.path);
       }
     },
