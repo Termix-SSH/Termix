@@ -14,8 +14,8 @@ describe("isTabKeyEvent", () => {
   });
 
   it("does not treat another key as Tab", () => {
-    expect(
-      isTabKeyEvent(new KeyboardEvent("keydown", { key: "Enter" })),
-    ).toBe(false);
+    expect(isTabKeyEvent(new KeyboardEvent("keydown", { key: "Enter" }))).toBe(
+      false,
+    );
   });
 });
