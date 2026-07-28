@@ -17,7 +17,7 @@ describe("SessionRecordingRepository", () => {
   ): Promise<SessionRecordingRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -34,7 +34,8 @@ describe("SessionRecordingRepository", () => {
       CREATE TABLE session_recordings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
+        user_id TEXT,
+        username TEXT,
         access_id INTEGER,
         started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         ended_at TEXT,

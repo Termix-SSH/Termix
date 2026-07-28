@@ -17,7 +17,7 @@ describe("SyncTombstoneRepository", () => {
   ): Promise<SyncTombstoneRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -102,7 +102,7 @@ describe("SyncTombstoneRepository", () => {
     const adapterLocal = new TestSqliteDatabase();
     adapter = adapterLocal;
     const context = await adapterLocal.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,

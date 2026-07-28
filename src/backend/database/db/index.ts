@@ -8,6 +8,7 @@ import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js"
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseMigration } from "../../utils/database-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
 import {
   assertDataDirIsNotMisconfigured,
   DataDirMisconfiguredError,
@@ -482,13 +483,14 @@ async function initializeCompleteDatabase(): Promise<void> {
         success INTEGER NOT NULL,
         error_message TEXT,
         timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS session_recordings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
+        user_id TEXT,
+        username TEXT,
         access_id INTEGER,
         started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         ended_at TEXT,
@@ -501,7 +503,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         terminated_by_owner INTEGER DEFAULT 0,
         termination_reason TEXT,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
         FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
     );
 
@@ -1647,7 +1649,7 @@ const migrateSchema = () => {
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS audit_logs (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
+          user_id TEXT,
           username TEXT NOT NULL,
           action TEXT NOT NULL,
           resource_type TEXT NOT NULL,
@@ -1659,7 +1661,7 @@ const migrateSchema = () => {
           success INTEGER NOT NULL,
           error_message TEXT,
           timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
         );
       `);
     } catch (createError) {
@@ -2506,6 +2508,10 @@ const migrateSchema = () => {
     }
   }
   // --- sync end ---
+
+  // Audit trails and session recordings used to be deleted along with the user
+  // they referenced, which defeats the point of keeping them.
+  migrateAuditRetention(sqlite);
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",

@@ -37,6 +37,14 @@ updates:
       major-updates:
         update-types:
           - "major"
+    ignore:
+      # typescript-eslint declares `typescript: >=4.8.4 <6.1.0`, and TypeScript 7
+      # removed `ts.Extension`, which @typescript-eslint/typescript-estree reads
+      # at import time. Bumping to 7 makes `eslint .` fail to load its own config,
+      # so `npm run lint` cannot run at all. Drop this once typescript-eslint
+      # supports TypeScript 7.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
 
   # Docker base images (docker/Dockerfile + docker-compose / compose-dev)
   - package-ecosystem: "docker"
