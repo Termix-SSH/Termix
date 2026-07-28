@@ -60,17 +60,15 @@ export async function connectRemoteDatabase(
 
   assertUrlMatchesDialect(url, dialect);
 
+  // No `schema` option: it only feeds drizzle's relational query API
+  // (`db.query.*`), which nothing here uses. The query builder takes its table
+  // names and value encoders from the table objects the repositories import —
+  // see the note in schema.pg.ts on why the generated schemas are DDL-only.
   if (dialect === "postgres") {
-    const [{ drizzle }, schema] = await Promise.all([
-      import("drizzle-orm/node-postgres"),
-      import("./schema.pg.js"),
-    ]);
-    return drizzle(url, { schema }) as unknown as PortableDatabase;
+    const { drizzle } = await import("drizzle-orm/node-postgres");
+    return drizzle(url) as unknown as PortableDatabase;
   }
 
-  const [{ drizzle }, schema] = await Promise.all([
-    import("drizzle-orm/mysql2"),
-    import("./schema.mysql.js"),
-  ]);
-  return drizzle(url, { schema, mode: "default" }) as unknown as PortableDatabase;
+  const { drizzle } = await import("drizzle-orm/mysql2");
+  return drizzle(url) as unknown as PortableDatabase;
 }

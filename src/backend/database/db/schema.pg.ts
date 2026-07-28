@@ -3,6 +3,9 @@
 // Produced from schema.ts by scripts/generate-dialect-schema.cjs.
 // Edit the sqlite schema and re-run `node scripts/generate-dialect-schema.cjs`.
 // Target dialect: postgres.
+//
+// DDL source for drizzle-kit. NOT imported to run queries — repositories use
+// schema.ts on every dialect. See the generator header for why that is correct.
 
 import {
   pgTable,

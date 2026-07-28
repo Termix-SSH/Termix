@@ -1,6 +1,27 @@
 /**
  * Generates the Postgres and MySQL schema modules from the SQLite one.
  *
+ * ## These files produce DDL. They are not used at runtime.
+ *
+ * drizzle-kit reads them to emit the migrations in drizzle/postgres and
+ * drizzle/mysql. Nothing imports them to run a query.
+ *
+ * That is not an oversight. The query builder needs two things from a table
+ * object — the identifiers to interpolate, and the encoders that turn JS values
+ * into driver values — and the sqlite definitions supply both correctly for
+ * every engine, which is why all 44 repositories import schema.ts directly:
+ *
+ *   - text and integer encode as themselves everywhere
+ *   - integer({ mode: "boolean" }) writes 1/0, which Postgres and MySQL both
+ *     accept for a boolean column, and reads back through `Number(v) === 1`,
+ *     which is true for JS `true` as well as for 1
+ *   - real is a plain number on all three
+ *
+ * What genuinely differs between the dialects is DDL — column types, key
+ * lengths, autoincrement syntax — and DDL is exactly what these files exist to
+ * generate. See scripts/verify-dialects.mjs, which asserts the round-trips
+ * above against real servers rather than trusting this comment.
+ *
  * The schema is declared once, in sqlite-core, and the other two dialects are
  * derived. Hand-maintaining three copies of 52 tables would mean a renamed
  * table has to land in three places consistently or a foreign key silently
@@ -137,6 +158,9 @@ function header(dialect) {
 // Produced from schema.ts by scripts/generate-dialect-schema.cjs.
 // Edit the sqlite schema and re-run \`node scripts/generate-dialect-schema.cjs\`.
 // Target dialect: ${dialect}.
+//
+// DDL source for drizzle-kit. NOT imported to run queries — repositories use
+// schema.ts on every dialect. See the generator header for why that is correct.
 `;
 }
 

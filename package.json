@@ -20,6 +20,7 @@
     "lint:fix": "eslint --fix .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "verify:dialect": "tsx scripts/verify-dialects.mjs",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
