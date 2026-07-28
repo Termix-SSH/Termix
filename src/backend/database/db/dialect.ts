@@ -36,3 +36,15 @@ export function resolveDatabaseDialect(
   }
   return raw;
 }
+
+/**
+ * The schema module matching a dialect.
+ *
+ * schema.pg.ts and schema.mysql.ts are generated from schema.ts by
+ * scripts/generate-dialect-schema.cjs — edit the sqlite one and regenerate.
+ */
+export async function schemaFor(dialect: DatabaseDialect) {
+  if (dialect === "postgres") return import("./schema.pg.js");
+  if (dialect === "mysql") return import("./schema.mysql.js");
+  return import("./schema.js");
+}

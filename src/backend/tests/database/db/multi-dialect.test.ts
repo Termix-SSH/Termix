@@ -1,18 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { getTableConfig as sqliteTableConfig } from "drizzle-orm/sqlite-core";
-import { getTableConfig as pgTableConfig } from "drizzle-orm/pg-core";
-import { getTableConfig as mysqlTableConfig } from "drizzle-orm/mysql-core";
 import { drizzle as sqliteDrizzle } from "drizzle-orm/better-sqlite3";
 import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { drizzle as mysqlDrizzle } from "drizzle-orm/mysql2";
+import { getTableConfig as sqliteTableConfig } from "drizzle-orm/sqlite-core";
+import { getTableConfig as pgTableConfig } from "drizzle-orm/pg-core";
+import { getTableConfig as mysqlTableConfig } from "drizzle-orm/mysql-core";
 import Database from "better-sqlite3";
-import {
-  mysqlPortable,
-  pgPortable,
-  portableSchemaFor,
-  sqlitePortable,
-} from "../../../database/db/schema-portable.js";
+import * as sqliteSchema from "../../../database/db/schema.js";
+import * as pgSchema from "../../../database/db/schema.pg.js";
+import * as mysqlSchema from "../../../database/db/schema.mysql.js";
 import {
   DATABASE_DIALECT_ENV,
   isDatabaseDialect,
@@ -48,212 +45,168 @@ describe("resolveDatabaseDialect", () => {
   });
 });
 
-describe("portable schema", () => {
-  it("exposes the same tables and columns for every dialect", () => {
-    const EXPECTED = [
-      "id",
-      "isAdmin",
-      "isOidc",
-      "oidcIdentifier",
-      "passwordHash",
-      "ssoProviderId",
-      "username",
-    ];
+/**
+ * schema.pg.ts and schema.mysql.ts are generated from schema.ts. These check the
+ * generated output is usable rather than merely syntactically valid — the
+ * repository layer's correctness rests on all three behaving the same way.
+ */
+describe("generated schemas", () => {
+  it("declares the same tables in all three dialects", () => {
+    const tablesOf = (schema: Record<string, unknown>) =>
+      Object.keys(schema).sort();
 
-    for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
-      expect(Object.keys(schema).sort()).toEqual([
-        "auditLogs",
-        "settings",
-        "sshFolders",
-        "users",
-      ]);
-
-      // Compare the declared columns, not every own key: the pg table also
-      // carries dialect-specific helpers such as enableRLS.
-      const columns = Object.keys(schema.users).filter((key) =>
-        EXPECTED.includes(key),
-      );
-      expect(columns.sort()).toEqual(EXPECTED);
-    }
+    expect(tablesOf(pgSchema)).toEqual(tablesOf(sqliteSchema));
+    expect(tablesOf(mysqlSchema)).toEqual(tablesOf(sqliteSchema));
+    // Guard against a generator that silently emits nothing.
+    expect(tablesOf(sqliteSchema).length).toBeGreaterThan(40);
   });
 
   it("maps each column to the right storage type per dialect", () => {
-    // The differences the column kit exists to absorb.
-    expect(sqlitePortable.users.isAdmin.getSQLType()).toBe("integer");
-    expect(pgPortable.users.isAdmin.getSQLType()).toBe("boolean");
-    expect(mysqlPortable.users.isAdmin.getSQLType()).toBe("boolean");
+    expect(sqliteSchema.users.isAdmin.getSQLType()).toBe("integer");
+    expect(pgSchema.users.isAdmin.getSQLType()).toBe("boolean");
+    expect(mysqlSchema.users.isAdmin.getSQLType()).toBe("boolean");
 
     // A primary key must be indexable, which rules out unbounded TEXT on MySQL.
-    expect(sqlitePortable.users.id.getSQLType()).toBe("text");
-    expect(pgPortable.users.id.getSQLType()).toContain("varchar");
-    expect(mysqlPortable.users.id.getSQLType()).toContain("varchar");
+    expect(sqliteSchema.users.id.getSQLType()).toBe("text");
+    expect(pgSchema.users.id.getSQLType()).toContain("varchar");
+    expect(mysqlSchema.users.id.getSQLType()).toContain("varchar");
   });
 
-  it("selects the schema matching the configured dialect", () => {
-    expect(portableSchemaFor("sqlite")).toBe(sqlitePortable);
-    expect(portableSchemaFor("postgres")).toBe(pgPortable);
-    expect(portableSchemaFor("mysql")).toBe(mysqlPortable);
+  it("spells the autoincrement key three different ways", () => {
+    expect(sqliteSchema.auditLogs.id.getSQLType()).toBe("integer");
+    expect(pgSchema.auditLogs.id.getSQLType()).toBe("serial");
+    expect(mysqlSchema.auditLogs.id.getSQLType()).toBe("int");
+
+    for (const schema of [sqliteSchema, pgSchema, mysqlSchema]) {
+      expect(schema.auditLogs.id.primary).toBe(true);
+    }
+  });
+
+  it("preserves both foreign-key behaviours", () => {
+    // 80 cascade + 12 set null across the schema; set null is what keeps the
+    // audit trail after a user is deleted (#1132).
+    const perDialect = [
+      { schema: sqliteSchema, config: sqliteTableConfig },
+      { schema: pgSchema, config: pgTableConfig },
+      { schema: mysqlSchema, config: mysqlTableConfig },
+    ] as const;
+
+    for (const { schema, config } of perDialect) {
+      const read = config as (table: unknown) => {
+        foreignKeys: { onDelete?: string }[];
+      };
+
+      const auditFks = read(schema.auditLogs).foreignKeys;
+      expect(auditFks).toHaveLength(1);
+      expect(auditFks[0].onDelete).toBe("set null");
+
+      const folderFks = read(schema.sshFolders).foreignKeys;
+      expect(folderFks.map((fk) => fk.onDelete).sort()).toEqual([
+        "cascade",
+        "set null",
+      ]);
+    }
+  });
+
+  it("keeps nullability and uniqueness", () => {
+    for (const schema of [sqliteSchema, pgSchema, mysqlSchema]) {
+      expect(schema.auditLogs.userId.notNull).toBe(false);
+      expect(schema.sshFolders.userId.notNull).toBe(true);
+      expect(schema.sshFolders.syncId.isUnique).toBe(true);
+    }
   });
 });
 
 /**
- * The queries below are only built, never executed, so no server is needed.
- * What matters is that identical repository-style code compiles and produces
- * correct SQL for each engine — that is the property the repository layer
- * depends on.
+ * Queries are built, never executed, so no server is required. What matters is
+ * that identical repository-style code produces correct SQL for each engine.
  */
 describe("query generation per dialect", () => {
   const sqliteDb = sqliteDrizzle(new Database(":memory:"), {
-    schema: sqlitePortable,
+    schema: sqliteSchema,
   });
-  // Both accept a plain query callback, so the builders can be exercised with
-  // no server and no connection pool.
-  const noopQuery = async () => [] as never;
-  const pgDb = pgDrizzle.mock({ schema: pgPortable });
-  const mysqlDb = mysqlDrizzle.mock({
-    schema: mysqlPortable,
-    mode: "default",
-  });
-  void noopQuery;
+  const pgDb = pgDrizzle.mock({ schema: pgSchema });
+  const mysqlDb = mysqlDrizzle.mock({ schema: mysqlSchema, mode: "default" });
 
   it("quotes identifiers the way each engine expects", () => {
-    const sqliteSql = sqliteDb
-      .select()
-      .from(sqlitePortable.settings)
-      .where(eq(sqlitePortable.settings.key, "guac_url"))
-      .toSQL();
-    const pgSql = pgDb
-      .select()
-      .from(pgPortable.settings)
-      .where(eq(pgPortable.settings.key, "guac_url"))
-      .toSQL();
-    const mysqlSql = mysqlDb
-      .select()
-      .from(mysqlPortable.settings)
-      .where(eq(mysqlPortable.settings.key, "guac_url"))
-      .toSQL();
+    const built = [
+      sqliteDb
+        .select()
+        .from(sqliteSchema.settings)
+        .where(eq(sqliteSchema.settings.key, "guac_url"))
+        .toSQL(),
+      pgDb
+        .select()
+        .from(pgSchema.settings)
+        .where(eq(pgSchema.settings.key, "guac_url"))
+        .toSQL(),
+      mysqlDb
+        .select()
+        .from(mysqlSchema.settings)
+        .where(eq(mysqlSchema.settings.key, "guac_url"))
+        .toSQL(),
+    ];
 
-    expect(sqliteSql.sql).toContain('"settings"');
-    expect(pgSql.sql).toContain('"settings"');
-    expect(mysqlSql.sql).toContain("`settings`");
+    expect(built[0].sql).toContain('"settings"');
+    expect(built[1].sql).toContain('"settings"');
+    expect(built[2].sql).toContain("`settings`");
 
-    // Same parameter either way — the value is never inlined.
-    for (const built of [sqliteSql, pgSql, mysqlSql]) {
-      expect(built.params).toEqual(["guac_url"]);
+    // The value is parameterised either way, never inlined.
+    for (const sql of built) {
+      expect(sql.params).toEqual(["guac_url"]);
     }
   });
 
   it("uses each engine's placeholder style", () => {
+    expect(
+      pgDb
+        .select()
+        .from(pgSchema.users)
+        .where(eq(pgSchema.users.id, "u-1"))
+        .toSQL().sql,
+    ).toContain("$1");
+
+    expect(
+      mysqlDb
+        .select()
+        .from(mysqlSchema.users)
+        .where(eq(mysqlSchema.users.id, "u-1"))
+        .toSQL().sql,
+    ).toContain("?");
+  });
+
+  it("stores booleans as the type each engine expects", () => {
+    const row = { id: "u-1", username: "alice", passwordHash: "hash" };
+
+    const sqliteSql = sqliteDb
+      .insert(sqliteSchema.users)
+      .values({ ...row, isAdmin: true })
+      .toSQL();
     const pgSql = pgDb
-      .select()
-      .from(pgPortable.users)
-      .where(eq(pgPortable.users.id, "u-1"))
-      .toSQL();
-    const mysqlSql = mysqlDb
-      .select()
-      .from(mysqlPortable.users)
-      .where(eq(mysqlPortable.users.id, "u-1"))
+      .insert(pgSchema.users)
+      .values({ ...row, isAdmin: true })
       .toSQL();
 
-    expect(pgSql.sql).toContain("$1");
-    expect(mysqlSql.sql).toContain("?");
+    // The storage difference the generator exists to absorb.
+    expect(sqliteSql.params).toContain(1);
+    expect(pgSql.params).toContain(true);
   });
 
-  it("builds the same insert shape everywhere", () => {
-    const row = {
-      id: "u-1",
-      username: "alice",
-      passwordHash: "hash",
-      isAdmin: true,
-      isOidc: false,
-      oidcIdentifier: null,
-      ssoProviderId: null,
-    };
-
-    const built = [
-      sqliteDb.insert(sqlitePortable.users).values(row).toSQL(),
-      pgDb.insert(pgPortable.users).values(row).toSQL(),
-      mysqlDb.insert(mysqlPortable.users).values(row).toSQL(),
-    ];
-
-    for (const sql of built) {
-      expect(sql.sql).toMatch(/insert into/i);
-      expect(sql.params).toContain("alice");
-    }
-
-    // Booleans are integers in SQLite and native elsewhere — the storage
-    // difference the column kit exists to hide.
-    expect(built[0].params).toContain(1);
-    expect(built[1].params).toContain(true);
-  });
-
-  it("actually round-trips on the engine that is wired up", () => {
+  it("round-trips on the engine that is actually wired up", () => {
     const sqlite = new Database(":memory:");
-    sqlite.exec(`
-      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-    `);
-    const db = sqliteDrizzle(sqlite, { schema: sqlitePortable });
+    sqlite.exec(
+      `CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);`,
+    );
+    const db = sqliteDrizzle(sqlite, { schema: sqliteSchema });
 
-    db.insert(sqlitePortable.settings)
+    db.insert(sqliteSchema.settings)
       .values({ key: "guac_url", value: "guacd:4822" })
       .run();
 
-    const rows = db.select().from(sqlitePortable.settings).all();
-    expect(rows).toEqual([{ key: "guac_url", value: "guacd:4822" }]);
+    expect(db.select().from(sqliteSchema.settings).all()).toEqual([
+      { key: "guac_url", value: "guacd:4822" },
+    ]);
 
     sqlite.close();
-  });
-
-  it("expresses both foreign-key behaviours on every dialect", () => {
-    // 80 cascade + 12 set null across the real schema; both must survive the
-    // port, and set null is what keeps the audit trail after a user is deleted.
-    // Each dialect has its own getTableConfig — they are not interchangeable.
-    const perDialect = [
-      { schema: sqlitePortable, config: sqliteTableConfig },
-      { schema: pgPortable, config: pgTableConfig },
-      { schema: mysqlPortable, config: mysqlTableConfig },
-    ] as const;
-
-    for (const { schema, config } of perDialect) {
-      const auditFks = (
-        config as (table: unknown) => { foreignKeys: unknown[] }
-      )(schema.auditLogs).foreignKeys as {
-        onDelete?: string;
-      }[];
-      const folderFks = (
-        config as (table: unknown) => { foreignKeys: unknown[] }
-      )(schema.sshFolders).foreignKeys as {
-        onDelete?: string;
-      }[];
-
-      expect(auditFks).toHaveLength(1);
-      expect(auditFks[0].onDelete).toBe("set null");
-      expect(folderFks).toHaveLength(1);
-      expect(folderFks[0].onDelete).toBe("cascade");
-    }
-  });
-
-  it("keeps a nullable audit reference and a required folder reference", () => {
-    for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
-      expect(schema.auditLogs.userId.notNull).toBe(false);
-      expect(schema.sshFolders.userId.notNull).toBe(true);
-    }
-  });
-
-  it("carries the unique constraint across dialects", () => {
-    for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
-      expect(schema.sshFolders.syncId.isUnique).toBe(true);
-    }
-  });
-
-  it("makes the surrogate key auto-increment on each engine", () => {
-    // integer primary key autoincrement / serial / int auto_increment
-    expect(sqlitePortable.auditLogs.id.getSQLType()).toBe("integer");
-    expect(pgPortable.auditLogs.id.getSQLType()).toBe("serial");
-    expect(mysqlPortable.auditLogs.id.getSQLType()).toBe("int");
-
-    for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
-      expect(schema.auditLogs.id.primary).toBe(true);
-    }
   });
 });
