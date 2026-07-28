@@ -4,7 +4,7 @@ CREATE TABLE `alert_firings` (
 	`rule_id` int NOT NULL,
 	`host_id` int NOT NULL,
 	`host_name` text NOT NULL,
-	`fired_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`fired_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`resolved_at` text,
 	`value` double,
 	`message` text NOT NULL,
@@ -30,8 +30,8 @@ CREATE TABLE `alert_rules` (
 	`threshold_value` double,
 	`threshold_duration_seconds` int,
 	`cooldown_minutes` int NOT NULL DEFAULT 15,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `alert_rules_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -41,7 +41,7 @@ CREATE TABLE `api_keys` (
 	`name` varchar(255) NOT NULL,
 	`token_hash` text NOT NULL,
 	`token_prefix` text NOT NULL,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text,
 	`last_used_at` text,
 	`is_active` boolean NOT NULL DEFAULT true,
@@ -61,7 +61,7 @@ CREATE TABLE `audit_logs` (
 	`user_agent` text,
 	`success` boolean NOT NULL,
 	`error_message` text,
-	`timestamp` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`timestamp` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `audit_logs_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -72,8 +72,8 @@ CREATE TABLE `c2s_tunnel_presets` (
 	`config` text NOT NULL,
 	`platform` text,
 	`computer_name` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `c2s_tunnel_presets_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -82,7 +82,7 @@ CREATE TABLE `command_history` (
 	`user_id` varchar(255) NOT NULL,
 	`host_id` int NOT NULL,
 	`command` text NOT NULL,
-	`executed_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`executed_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `command_history_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -93,8 +93,8 @@ CREATE TABLE `dashboard_service_links` (
 	`url` text NOT NULL,
 	`order` int NOT NULL DEFAULT 0,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `dashboard_service_links_id` PRIMARY KEY(`id`),
 	CONSTRAINT `dashboard_service_links_sync_id_unique` UNIQUE(`sync_id`)
 );
@@ -103,7 +103,7 @@ CREATE TABLE `dismissed_alerts` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`user_id` varchar(255) NOT NULL,
 	`alert_id` text NOT NULL,
-	`dismissed_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`dismissed_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `dismissed_alerts_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -113,7 +113,7 @@ CREATE TABLE `file_manager_pinned` (
 	`host_id` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`path` text NOT NULL,
-	`pinned_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`pinned_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `file_manager_pinned_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -123,7 +123,7 @@ CREATE TABLE `file_manager_recent` (
 	`host_id` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`path` text NOT NULL,
-	`last_opened` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`last_opened` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `file_manager_recent_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -133,7 +133,7 @@ CREATE TABLE `file_manager_shortcuts` (
 	`host_id` int NOT NULL,
 	`name` varchar(255) NOT NULL,
 	`path` text NOT NULL,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `file_manager_shortcuts_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -145,8 +145,8 @@ CREATE TABLE `homepage_items` (
 	`config` text NOT NULL DEFAULT ('{}'),
 	`folder_id` int,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `homepage_items_id` PRIMARY KEY(`id`),
 	CONSTRAINT `homepage_items_sync_id_unique` UNIQUE(`sync_id`)
 );
@@ -155,7 +155,7 @@ CREATE TABLE `homepage_layouts` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`user_id` varchar(255) NOT NULL,
 	`layout` text NOT NULL DEFAULT ('{}'),
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `homepage_layouts_id` PRIMARY KEY(`id`),
 	CONSTRAINT `homepage_layouts_user_id_unique` UNIQUE(`user_id`)
 );
@@ -168,7 +168,7 @@ CREATE TABLE `host_access` (
 	`granted_by` varchar(255) NOT NULL,
 	`permission_level` text NOT NULL DEFAULT ('connect'),
 	`expires_at` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`last_accessed_at` text,
 	`access_count` int NOT NULL DEFAULT 0,
 	`override_credential_id` int,
@@ -181,8 +181,8 @@ CREATE TABLE `host_health_checks` (
 	`host_id` int NOT NULL,
 	`checks` text NOT NULL,
 	`interval_seconds` int NOT NULL DEFAULT 300,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `host_health_checks_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -191,7 +191,7 @@ CREATE TABLE `host_health_history` (
 	`user_id` varchar(255) NOT NULL,
 	`host_id` int NOT NULL,
 	`check_id` text NOT NULL,
-	`ts` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`ts` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`ok` boolean NOT NULL,
 	`latency_ms` int,
 	`detail` text,
@@ -201,7 +201,7 @@ CREATE TABLE `host_health_history` (
 CREATE TABLE `host_metrics_history` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`host_id` int NOT NULL,
-	`ts` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`ts` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`cpu_percent` double,
 	`mem_percent` double,
 	`disk_percent` double,
@@ -215,8 +215,8 @@ CREATE TABLE `host_metrics_preferences` (
 	`user_id` varchar(255) NOT NULL,
 	`host_id` int NOT NULL,
 	`layout` text NOT NULL,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `host_metrics_preferences_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -313,8 +313,8 @@ CREATE TABLE `ssh_data` (
 	`host_key_last_verified` text,
 	`host_key_changed_count` int DEFAULT 0,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `ssh_data_id` PRIMARY KEY(`id`),
 	CONSTRAINT `ssh_data_sync_id_unique` UNIQUE(`sync_id`)
 );
@@ -323,8 +323,8 @@ CREATE TABLE `network_topology` (
 	`id` int AUTO_INCREMENT NOT NULL,
 	`user_id` varchar(255) NOT NULL,
 	`topology` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `network_topology_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -335,7 +335,7 @@ CREATE TABLE `notification_channels` (
 	`type` text NOT NULL,
 	`config` text NOT NULL,
 	`enabled` boolean NOT NULL DEFAULT true,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `notification_channels_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -349,7 +349,7 @@ CREATE TABLE `opkssh_tokens` (
 	`sub` text,
 	`issuer` text,
 	`audience` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text NOT NULL,
 	`last_used` text,
 	CONSTRAINT `opkssh_tokens_id` PRIMARY KEY(`id`)
@@ -361,7 +361,7 @@ CREATE TABLE `recent_activity` (
 	`type` text NOT NULL,
 	`host_id` int NOT NULL,
 	`host_name` text,
-	`timestamp` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`timestamp` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `recent_activity_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -372,8 +372,8 @@ CREATE TABLE `roles` (
 	`description` text,
 	`is_system` boolean NOT NULL DEFAULT false,
 	`permissions` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `roles_id` PRIMARY KEY(`id`),
 	CONSTRAINT `roles_name_unique` UNIQUE(`name`)
 );
@@ -384,7 +384,7 @@ CREATE TABLE `session_recordings` (
 	`user_id` varchar(255),
 	`username` text,
 	`access_id` int,
-	`started_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`started_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`ended_at` text,
 	`duration` int,
 	`commands` text,
@@ -402,7 +402,7 @@ CREATE TABLE `session_share_participants` (
 	`share_id` varchar(255) NOT NULL,
 	`user_id` varchar(255),
 	`guest_label` text,
-	`joined_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`joined_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`left_at` text,
 	CONSTRAINT `session_share_participants_id` PRIMARY KEY(`id`)
 );
@@ -418,7 +418,7 @@ CREATE TABLE `session_shares` (
 	`target_user_id` varchar(255),
 	`link_token` varchar(255),
 	`permission_level` text NOT NULL DEFAULT ('read-only'),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text NOT NULL,
 	`revoked_at` text,
 	`last_joined_at` text,
@@ -436,9 +436,9 @@ CREATE TABLE `sessions` (
 	`oidc_sub` text,
 	`oidc_sid` text,
 	`sso_provider_id` int,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text NOT NULL,
-	`last_active_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`last_active_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `sessions_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -462,8 +462,8 @@ CREATE TABLE `shared_host_secrets` (
 	`encrypted_key_password` text,
 	`encrypted_key_type` text,
 	`encrypted_domain` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `shared_host_secrets_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -475,7 +475,7 @@ CREATE TABLE `snippet_access` (
 	`granted_by` varchar(255) NOT NULL,
 	`permission_level` text NOT NULL DEFAULT ('view'),
 	`expires_at` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `snippet_access_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -486,8 +486,8 @@ CREATE TABLE `snippet_folders` (
 	`color` text,
 	`icon` text,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `snippet_folders_id` PRIMARY KEY(`id`),
 	CONSTRAINT `snippet_folders_sync_id_unique` UNIQUE(`sync_id`)
 );
@@ -501,8 +501,8 @@ CREATE TABLE `snippets` (
 	`folder` text,
 	`order` int NOT NULL DEFAULT 0,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`host_filter` text,
 	CONSTRAINT `snippets_id` PRIMARY KEY(`id`),
 	CONSTRAINT `snippets_sync_id_unique` UNIQUE(`sync_id`)
@@ -513,7 +513,7 @@ CREATE TABLE `ssh_credential_usage` (
 	`credential_id` int NOT NULL,
 	`host_id` int NOT NULL,
 	`user_id` varchar(255) NOT NULL,
-	`used_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`used_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `ssh_credential_usage_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -537,8 +537,8 @@ CREATE TABLE `ssh_credentials` (
 	`usage_count` int NOT NULL DEFAULT 0,
 	`last_used` text,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `ssh_credentials_id` PRIMARY KEY(`id`),
 	CONSTRAINT `ssh_credentials_sync_id_unique` UNIQUE(`sync_id`)
 );
@@ -551,8 +551,8 @@ CREATE TABLE `ssh_folders` (
 	`icon` text,
 	`credential_id` int,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `ssh_folders_id` PRIMARY KEY(`id`),
 	CONSTRAINT `ssh_folders_sync_id_unique` UNIQUE(`sync_id`)
 );
@@ -564,8 +564,8 @@ CREATE TABLE `sso_providers` (
 	`enabled` boolean NOT NULL DEFAULT true,
 	`display_order` int NOT NULL DEFAULT 0,
 	`config` text NOT NULL,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `sso_providers_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -574,7 +574,7 @@ CREATE TABLE `sync_tombstones` (
 	`user_id` varchar(255) NOT NULL,
 	`entity_type` text NOT NULL,
 	`sync_id` varchar(255) NOT NULL,
-	`deleted_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`deleted_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `sync_tombstones_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -583,8 +583,8 @@ CREATE TABLE `termix_identities` (
 	`user_id` varchar(255) NOT NULL,
 	`handle` varchar(255) NOT NULL,
 	`description` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `termix_identities_id` PRIMARY KEY(`id`),
 	CONSTRAINT `termix_identities_user_id_unique` UNIQUE(`user_id`),
 	CONSTRAINT `termix_identities_handle_unique` UNIQUE(`handle`)
@@ -597,8 +597,8 @@ CREATE TABLE `termix_identity_ca` (
 	`public_key` text NOT NULL,
 	`private_key` text NOT NULL,
 	`validity_days` int NOT NULL DEFAULT 90,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `termix_identity_ca_id` PRIMARY KEY(`id`),
 	CONSTRAINT `termix_identity_ca_identity_id_unique` UNIQUE(`identity_id`)
 );
@@ -615,7 +615,7 @@ CREATE TABLE `termix_identity_keys` (
 	`source` text NOT NULL DEFAULT ('manual'),
 	`credential_id` int,
 	`enabled` boolean NOT NULL DEFAULT true,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `termix_identity_keys_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -625,7 +625,7 @@ CREATE TABLE `tmux_session_tags` (
 	`host_id` int NOT NULL,
 	`session_name` text NOT NULL,
 	`tag` text NOT NULL,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `tmux_session_tags_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -636,7 +636,7 @@ CREATE TABLE `transfer_recent` (
 	`dest_host_id` int NOT NULL,
 	`dest_path` text NOT NULL,
 	`dest_path_label` text NOT NULL,
-	`last_used` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`last_used` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `transfer_recent_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -646,9 +646,9 @@ CREATE TABLE `trusted_devices` (
 	`device_fingerprint` text NOT NULL,
 	`device_type` text NOT NULL,
 	`device_info` text NOT NULL,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text NOT NULL,
-	`last_used_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`last_used_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `trusted_devices_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -660,8 +660,8 @@ CREATE TABLE `user_open_tabs` (
 	`label` text NOT NULL,
 	`tab_order` int NOT NULL DEFAULT 0,
 	`backend_session_id` text,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `user_open_tabs_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -688,7 +688,7 @@ CREATE TABLE `user_preferences` (
 	`status_color_scheme` text,
 	`custom_themes` text,
 	`custom_keybindings` text,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `user_preferences_user_id` PRIMARY KEY(`user_id`)
 );
 --> statement-breakpoint
@@ -697,7 +697,7 @@ CREATE TABLE `user_roles` (
 	`user_id` varchar(255) NOT NULL,
 	`role_id` int NOT NULL,
 	`granted_by` varchar(255),
-	`granted_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`granted_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `user_roles_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -720,7 +720,7 @@ CREATE TABLE `users` (
 	`totp_secret` text,
 	`totp_enabled` boolean NOT NULL DEFAULT false,
 	`totp_backup_codes` text,
-	`registered_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`registered_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`donation_modal_dismissed` boolean NOT NULL DEFAULT false,
 	CONSTRAINT `users_id` PRIMARY KEY(`id`)
 );
@@ -742,8 +742,8 @@ CREATE TABLE `vault_profiles` (
 	`key_type` text,
 	`shared` boolean NOT NULL DEFAULT false,
 	`sync_id` varchar(255),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	`updated_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	CONSTRAINT `vault_profiles_id` PRIMARY KEY(`id`),
 	CONSTRAINT `vault_profiles_sync_id_unique` UNIQUE(`sync_id`)
 );
@@ -754,7 +754,7 @@ CREATE TABLE `vault_tokens` (
 	`profile_id` int NOT NULL,
 	`ssh_cert` text NOT NULL,
 	`private_key` text NOT NULL,
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text NOT NULL,
 	`last_used` text,
 	CONSTRAINT `vault_tokens_id` PRIMARY KEY(`id`)
@@ -771,7 +771,7 @@ CREATE TABLE `webauthn_credentials` (
 	`backed_up` boolean NOT NULL DEFAULT false,
 	`transports` text,
 	`user_verification` text NOT NULL DEFAULT ('preferred'),
-	`created_at` text NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`last_used_at` text,
 	CONSTRAINT `webauthn_credentials_id` PRIMARY KEY(`id`)
 );

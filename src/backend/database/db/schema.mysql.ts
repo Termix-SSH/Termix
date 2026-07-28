@@ -41,7 +41,7 @@ export const users = mysqlTable("users", {
     .default(false),
   totpBackupCodes: text("totp_backup_codes"),
 
-  registeredAt: text("registered_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  registeredAt: text("registered_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   donationModalDismissed: boolean("donation_modal_dismissed")
     .notNull()
     .default(false),
@@ -61,10 +61,10 @@ export const ssoProviders = mysqlTable("sso_providers", {
   config: text("config").notNull(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const sessions = mysqlTable("sessions", {
@@ -80,11 +80,11 @@ export const sessions = mysqlTable("sessions", {
   ssoProviderId: int("sso_provider_id"),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   expiresAt: text("expires_at").notNull(),
   lastActiveAt: text("last_active_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const trustedDevices = mysqlTable("trusted_devices", {
@@ -97,11 +97,11 @@ export const trustedDevices = mysqlTable("trusted_devices", {
   deviceInfo: text("device_info").notNull(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   expiresAt: text("expires_at").notNull(),
   lastUsedAt: text("last_used_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const webauthnCredentials = mysqlTable("webauthn_credentials", {
@@ -119,7 +119,7 @@ export const webauthnCredentials = mysqlTable("webauthn_credentials", {
   userVerification: text("user_verification").notNull().default("preferred"),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   lastUsedAt: text("last_used_at"),
 });
 
@@ -276,10 +276,10 @@ export const hosts = mysqlTable("ssh_data", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const fileManagerRecent = mysqlTable("file_manager_recent", {
@@ -294,7 +294,7 @@ export const fileManagerRecent = mysqlTable("file_manager_recent", {
   path: text("path").notNull(),
   lastOpened: text("last_opened")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const fileManagerPinned = mysqlTable("file_manager_pinned", {
@@ -309,7 +309,7 @@ export const fileManagerPinned = mysqlTable("file_manager_pinned", {
   path: text("path").notNull(),
   pinnedAt: text("pinned_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const fileManagerShortcuts = mysqlTable("file_manager_shortcuts", {
@@ -324,7 +324,7 @@ export const fileManagerShortcuts = mysqlTable("file_manager_shortcuts", {
   path: text("path").notNull(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const transferRecent = mysqlTable("transfer_recent", {
@@ -342,7 +342,7 @@ export const transferRecent = mysqlTable("transfer_recent", {
   destPathLabel: text("dest_path_label").notNull(),
   lastUsed: text("last_used")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const dismissedAlerts = mysqlTable("dismissed_alerts", {
@@ -353,7 +353,7 @@ export const dismissedAlerts = mysqlTable("dismissed_alerts", {
   alertId: text("alert_id").notNull(),
   dismissedAt: text("dismissed_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const sshCredentials = mysqlTable("ssh_credentials", {
@@ -383,10 +383,10 @@ export const sshCredentials = mysqlTable("ssh_credentials", {
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const sshCredentialUsage = mysqlTable("ssh_credential_usage", {
@@ -402,7 +402,7 @@ export const sshCredentialUsage = mysqlTable("ssh_credential_usage", {
     .references(() => users.id, { onDelete: "cascade" }),
   usedAt: text("used_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const snippets = mysqlTable("snippets", {
@@ -418,10 +418,10 @@ export const snippets = mysqlTable("snippets", {
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   hostFilter: text("host_filter"),
 });
 
@@ -436,10 +436,10 @@ export const snippetFolders = mysqlTable("snippet_folders", {
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const c2sTunnelPresets = mysqlTable("c2s_tunnel_presets", {
@@ -453,10 +453,10 @@ export const c2sTunnelPresets = mysqlTable("c2s_tunnel_presets", {
   computerName: text("computer_name"),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const snippetAccess = mysqlTable("snippet_access", {
@@ -480,7 +480,7 @@ export const snippetAccess = mysqlTable("snippet_access", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const sshFolders = mysqlTable("ssh_folders", {
@@ -497,10 +497,10 @@ export const sshFolders = mysqlTable("ssh_folders", {
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const recentActivity = mysqlTable("recent_activity", {
@@ -515,7 +515,7 @@ export const recentActivity = mysqlTable("recent_activity", {
   hostName: text("host_name"),
   timestamp: text("timestamp")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const commandHistory = mysqlTable("command_history", {
@@ -529,7 +529,7 @@ export const commandHistory = mysqlTable("command_history", {
   command: text("command").notNull(),
   executedAt: text("executed_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const networkTopology = mysqlTable("network_topology", {
@@ -540,10 +540,10 @@ export const networkTopology = mysqlTable("network_topology", {
   topology: text("topology"),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const hostAccess = mysqlTable("host_access", {
@@ -569,7 +569,7 @@ export const hostAccess = mysqlTable("host_access", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: int("access_count").notNull().default(0),
   overrideCredentialId: int("override_credential_id").references(
@@ -607,10 +607,10 @@ export const sharedHostSecrets = mysqlTable("shared_host_secrets", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const roles = mysqlTable("roles", {
@@ -627,10 +627,10 @@ export const roles = mysqlTable("roles", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const userRoles = mysqlTable("user_roles", {
@@ -647,7 +647,7 @@ export const userRoles = mysqlTable("user_roles", {
   }),
   grantedAt: text("granted_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const auditLogs = mysqlTable("audit_logs", {
@@ -672,7 +672,7 @@ export const auditLogs = mysqlTable("audit_logs", {
 
   timestamp: text("timestamp")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const sessionRecordings = mysqlTable("session_recordings", {
@@ -691,7 +691,7 @@ export const sessionRecordings = mysqlTable("session_recordings", {
 
   startedAt: text("started_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   endedAt: text("ended_at"),
   duration: int("duration"),
 
@@ -735,7 +735,7 @@ export const sessionShares = mysqlTable("session_shares", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   expiresAt: text("expires_at").notNull(),
   revokedAt: text("revoked_at"),
 
@@ -758,7 +758,7 @@ export const sessionShareParticipants = mysqlTable(
 
     joinedAt: text("joined_at")
       .notNull()
-      .default(sql`CURRENT_TIMESTAMP`),
+      .default(sql`(CURRENT_TIMESTAMP)`),
     leftAt: text("left_at"),
   },
 );
@@ -782,7 +782,7 @@ export const opksshTokens = mysqlTable("opkssh_tokens", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   expiresAt: text("expires_at").notNull(),
   lastUsed: text("last_used"),
 });
@@ -817,10 +817,10 @@ export const vaultProfiles = mysqlTable("vault_profiles", {
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 // Per-user cache of the ephemeral SSH private key + Vault-signed certificate.
@@ -840,7 +840,7 @@ export const vaultTokens = mysqlTable("vault_tokens", {
 
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   expiresAt: text("expires_at").notNull(),
   lastUsed: text("last_used"),
 });
@@ -853,7 +853,7 @@ export const apiKeys = mysqlTable("api_keys", {
   name: varchar("name", { length: 255 }).notNull(),
   tokenHash: text("token_hash").notNull(),
   tokenPrefix: text("token_prefix").notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   expiresAt: text("expires_at"),
   lastUsedAt: text("last_used_at"),
   isActive: boolean("is_active").notNull().default(true),
@@ -871,10 +871,10 @@ export const userOpenTabs = mysqlTable("user_open_tabs", {
   backendSessionId: text("backend_session_id"),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const userPreferences = mysqlTable("user_preferences", {
@@ -906,7 +906,7 @@ export const userPreferences = mysqlTable("user_preferences", {
   customKeybindings: text("custom_keybindings"),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const hostMetricsPreferences = mysqlTable("host_metrics_preferences", {
@@ -922,10 +922,10 @@ export const hostMetricsPreferences = mysqlTable("host_metrics_preferences", {
   layout: text("layout").notNull(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const hostHealthChecks = mysqlTable("host_health_checks", {
@@ -941,10 +941,10 @@ export const hostHealthChecks = mysqlTable("host_health_checks", {
   intervalSeconds: int("interval_seconds").notNull().default(300),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const hostHealthHistory = mysqlTable("host_health_history", {
@@ -956,7 +956,7 @@ export const hostHealthHistory = mysqlTable("host_health_history", {
     .notNull()
     .references(() => hosts.id, { onDelete: "cascade" }),
   checkId: text("check_id").notNull(),
-  ts: text("ts").notNull().default(sql`CURRENT_TIMESTAMP`),
+  ts: text("ts").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   ok: boolean("ok").notNull(),
   latencyMs: int("latency_ms"),
   detail: text("detail"),
@@ -973,10 +973,10 @@ export const dashboardServiceLinks = mysqlTable("dashboard_service_links", {
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 // --- termix-id begin ---
@@ -994,10 +994,10 @@ export const termixIdentities = mysqlTable("termix_identities", {
   description: text("description"),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const termixIdentityKeys = mysqlTable("termix_identity_keys", {
@@ -1025,7 +1025,7 @@ export const termixIdentityKeys = mysqlTable("termix_identity_keys", {
   enabled: boolean("enabled").notNull().default(true),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 // Per-identity certificate authority. Servers that trust this CA (via
 // TrustedUserCAKeys / @cert-authority) accept any user certificate it signs,
@@ -1045,10 +1045,10 @@ export const termixIdentityCa = mysqlTable("termix_identity_ca", {
   validityDays: int("validity_days").notNull().default(90),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 // --- termix-id end ---
 
@@ -1065,7 +1065,7 @@ export const tmuxSessionTags = mysqlTable("tmux_session_tags", {
   tag: text("tag").notNull(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 // --- tmux-monitor end ---
 
@@ -1077,7 +1077,7 @@ export const hostMetricsHistory = mysqlTable("host_metrics_history", {
     .references(() => hosts.id, { onDelete: "cascade" }),
   ts: text("ts")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   cpuPercent: double("cpu_percent"),
   memPercent: double("mem_percent"),
   diskPercent: double("disk_percent"),
@@ -1101,10 +1101,10 @@ export const alertRules = mysqlTable("alert_rules", {
   cooldownMinutes: int("cooldown_minutes").notNull().default(15),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const notificationChannels = mysqlTable("notification_channels", {
@@ -1118,7 +1118,7 @@ export const notificationChannels = mysqlTable("notification_channels", {
   enabled: boolean("enabled").notNull().default(true),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const alertRuleChannels = mysqlTable("alert_rule_channels", {
@@ -1143,7 +1143,7 @@ export const alertFirings = mysqlTable("alert_firings", {
   hostName: text("host_name").notNull(),
   firedAt: text("fired_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   resolvedAt: text("resolved_at"),
   value: double("value"),
   message: text("message").notNull(),
@@ -1165,10 +1165,10 @@ export const homepageItems = mysqlTable("homepage_items", {
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const homepageLayouts = mysqlTable("homepage_layouts", {
@@ -1181,7 +1181,7 @@ export const homepageLayouts = mysqlTable("homepage_layouts", {
   layout: text("layout").notNull().default("{}"),
   updatedAt: text("updated_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 // --- homepage end ---
 
@@ -1198,6 +1198,6 @@ export const syncTombstones = mysqlTable("sync_tombstones", {
   syncId: varchar("sync_id", { length: 255 }).notNull(),
   deletedAt: text("deleted_at")
     .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
+    .default(sql`(CURRENT_TIMESTAMP)`),
 });
 // --- sync end ---

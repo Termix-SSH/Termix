@@ -34,6 +34,8 @@
  *     and `int auto_increment`
  *   - MySQL cannot index unbounded TEXT, so any column that is a primary key,
  *     is unique, or participates in a foreign key must be varchar
+ *   - MySQL rejects a bare DEFAULT CURRENT_TIMESTAMP on a text column, so it is
+ *     written as a parenthesised expression default
  *
  * Usage: node scripts/generate-dialect-schema.cjs [--check]
  *   --check verifies the committed files match what would be generated,
@@ -120,6 +122,14 @@ function transform(source, dialect) {
       /\binteger\("([a-z0-9_]+)"\)/g,
       (_, col) => `int("${col}")`,
     );
+
+    // Timestamps are stored as text (see sql-timestamp.ts). MySQL only accepts
+    // DEFAULT CURRENT_TIMESTAMP on a DATETIME or TIMESTAMP column — on a TEXT
+    // one it is ER_INVALID_DEFAULT, "Invalid default value". Since 8.0.13 an
+    // expression default works on any type, and an expression is written
+    // parenthesised. MariaDB accepts the bare form, which is why this only
+    // surfaces against real MySQL.
+    out = out.replace(/sql`CURRENT_TIMESTAMP`/g, "sql`(CURRENT_TIMESTAMP)`");
   }
 
   // Floating point.
