@@ -27,7 +27,7 @@ describe("HostRepository and CredentialRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -197,7 +197,7 @@ describe("HostRepository and CredentialRepository", () => {
     return {
       credentials: new CredentialRepository(context, onCredentialWrite),
       hosts: new HostRepository(context, onHostWrite),
-      sqlite: context.sqlite!,
+      sqlite: adapter.raw,
     };
   }
 

@@ -17,7 +17,7 @@ describe("HostMetricsHistoryRepository", () => {
   ): Promise<HostMetricsHistoryRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE hosts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id TEXT NOT NULL,
@@ -78,7 +78,7 @@ describe("HostMetricsHistoryRepository", () => {
   it("prunes old history for a host only", async () => {
     const repo = await createRepository();
 
-    repo.pruneOlderThan(1, 1);
+    await repo.pruneOlderThan(1, 1);
 
     const rows = await repo.listRange(
       1,
