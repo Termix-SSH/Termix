@@ -8,11 +8,12 @@
  * rather than a test.
  *
  * Usage:
- *   node scripts/verify-dialects.mjs postgres://user:pass@host:5432/db
- *   node scripts/verify-dialects.mjs mysql://user:pass@host:3306/db
+ *   npm run verify:dialect -- postgres://user:pass@host:5432/db
+ *   npm run verify:dialect -- mysql://user:pass@host:3306/db
  *
- * Apply the migrations first (drizzle/postgres or drizzle/mysql); this script
- * assumes the schema exists and writes into it. Point it at a scratch database.
+ * Applies the migrations first, through the same runRemoteMigrations() the
+ * application uses at startup — so a broken migration fails here rather than in
+ * production. Writes real rows: point it at a scratch database.
  */
 
 import { randomUUID } from "crypto";
@@ -40,7 +41,12 @@ const { drizzle } = await import(
 );
 
 // No schema option on purpose — see connect.ts.
-const context = { dialect, drizzle: drizzle(url) };
+const db = drizzle(url);
+const context = { dialect, drizzle: db };
+
+const { runRemoteMigrations } =
+  await import("../src/backend/database/db/migrate.js");
+await runRemoteMigrations(dialect, db);
 
 const { UserRepository } =
   await import("../src/backend/database/repositories/user-repository.js");

@@ -24,8 +24,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npx eslint .
+      - name: Lint
+        # npm run lint, not npx eslint — the script also checks that the
+        # generated dialect schemas match schema.ts, which eslint cannot see.
+        run: npm run lint
 
       - name: Run Prettier check
         run: npx prettier --check .
@@ -35,3 +37,61 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  database-dialects:
+    name: Postgres and MySQL
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+
+    # The test suite only ever sees SQLite. Everything that differs per engine —
+    # the RETURNING replacements, the read-then-write transactions, the
+    # migrations themselves — is only covered here, against real servers.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: termix
+          POSTGRES_PASSWORD: termix
+          POSTGRES_DB: termix_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: termix
+          MYSQL_DATABASE: termix_test
+          MYSQL_USER: termix
+          MYSQL_PASSWORD: termix
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -ptermix"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Each run applies the migrations to an empty database first, so a
+      # migration that does not apply cleanly fails the build.
+      - name: Verify Postgres
+        run: npm run verify:dialect -- postgres://termix:termix@127.0.0.1:5432/termix_test
+
+      - name: Verify MySQL
+        run: npm run verify:dialect -- mysql://termix:termix@127.0.0.1:3306/termix_test
