@@ -133,9 +133,13 @@ export class TestSqliteDatabase {
     if (!context) throw new Error("connect() must be called before exec()");
 
     return (async () => {
+      const touched = new Set<string>();
       for (const statement of splitStatements(statements)) {
         await runSql(context, sql.raw(portableSql(statement, context.dialect)));
+        const table = /INSERT INTO\s+([a-z_]+)/i.exec(statement)?.[1];
+        if (table) touched.add(table);
       }
+      await resyncAutoIncrement(context, touched);
     })();
   }
 
@@ -337,6 +341,62 @@ function splitValues(row: string): string[] {
   }
   parts.push(current);
   return parts;
+}
+
+/**
+ * Moves each table's id generator past the ids the seed inserted by hand.
+ *
+ * SQLite picks `max(id) + 1` when a row omits the key, so a fixture that writes
+ * `id = 1, 2, 3` and then lets the repository insert one more just works. A
+ * Postgres sequence or a MySQL auto_increment counter does not know about rows
+ * inserted with an explicit id, so it hands out 1 again and the insert collides
+ * with the fixture's own data.
+ */
+async function resyncAutoIncrement(
+  context: DatabaseContext,
+  tables: Set<string>,
+): Promise<void> {
+  for (const table of tables) {
+    // Only tables whose id is generated. A text primary key, like users.id,
+    // has no sequence and no counter to move.
+    if (context.dialect === "postgres") {
+      const [seq] = await runSql<{ name: string | null }>(
+        context,
+        sql.raw(`SELECT pg_get_serial_sequence('${table}', 'id') AS name`),
+      );
+      if (!seq?.name) continue;
+
+      await runSql(
+        context,
+        sql.raw(
+          `SELECT setval('${seq.name}', ` +
+            `COALESCE((SELECT MAX(id) FROM "${table}"), 0) + 1, false)`,
+        ),
+      );
+      continue;
+    }
+
+    const [column] = await runSql<{ extra: string }>(
+      context,
+      sql.raw(
+        `SELECT EXTRA AS extra FROM information_schema.columns ` +
+          `WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '${table}' ` +
+          `AND COLUMN_NAME = 'id'`,
+      ),
+    );
+    if (!column?.extra?.includes("auto_increment")) continue;
+
+    const [row] = await runSql<{ next: number | null }>(
+      context,
+      sql.raw(`SELECT MAX(id) + 1 AS next FROM \`${table}\``),
+    );
+    if (row?.next) {
+      await runSql(
+        context,
+        sql.raw(`ALTER TABLE \`${table}\` AUTO_INCREMENT = ${row.next}`),
+      );
+    }
+  }
 }
 
 let cachedSqliteSchema: string | null = null;
