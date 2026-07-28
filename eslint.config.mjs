@@ -55,7 +55,11 @@ export default tseslint.config([
     // Writes that need rows back go through repositories/returning.ts, which
     // picks one statement or a read-then-write transaction per dialect.
     files: ["src/backend/database/repositories/**/*.ts"],
-    ignores: ["src/backend/database/repositories/returning.ts"],
+    ignores: [
+      // The two files whose job is to absorb these differences.
+      "src/backend/database/repositories/returning.ts",
+      "src/backend/database/repositories/mutation-result.ts",
+    ],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -63,6 +67,17 @@ export default tseslint.config([
           selector: "CallExpression[callee.property.name='returning']",
           message:
             "MySQL has no RETURNING. Use insertReturning/updateReturning/deleteReturning from ./returning.js, or rowsAffected() if you only need a count. Inside a proven sqlite-only branch, disable this rule with a comment saying so.",
+        },
+        {
+          // better-sqlite3 puts these on a write result; node-postgres and
+          // mysql2 do not, so reading them directly yields undefined — and
+          // Number(undefined) is NaN, which reaches the database as the string
+          // "NaN" and fails an integer column. Three call sites did exactly
+          // this and only broke on Postgres.
+          selector:
+            "MemberExpression[property.name=/^(lastInsertRowid|changes)$/]",
+          message:
+            "lastInsertRowid and changes are better-sqlite3 only. Use insertedId() or rowsAffected() from ./mutation-result.js.",
         },
       ],
     },

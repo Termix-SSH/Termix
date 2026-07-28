@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { hostAccess, roles, userRoles } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning } from "./returning.js";
+import { deleteReturning, insertReturning } from "./returning.js";
 
 export type RoleRecord = typeof roles.$inferSelect;
 export type NewRoleRecord = typeof roles.$inferInsert;
@@ -64,9 +64,9 @@ export class RoleRepository {
   }
 
   async createRole(role: NewRoleRecord): Promise<number> {
-    const result = await this.context.drizzle.insert(roles).values(role);
+    const [created] = await insertReturning(this.context, roles, role);
     await this.afterWrite();
-    return Number(result.lastInsertRowid);
+    return created.id;
   }
 
   async updateRole(id: number, update: RoleUpdate): Promise<boolean> {

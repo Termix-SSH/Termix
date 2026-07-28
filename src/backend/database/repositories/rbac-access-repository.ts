@@ -10,6 +10,7 @@ import {
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type RbacAccessTargetType = "user" | "role";
 
@@ -157,7 +158,7 @@ export class RbacAccessRepository {
       return { id: existing.id, created: false };
     }
 
-    const result = await this.context.drizzle.insert(hostAccess).values({
+    const [created] = await insertReturning(this.context, hostAccess, {
       hostId: input.hostId,
       userId: input.targetType === "user" ? input.targetUserId : null,
       roleId: input.targetType === "role" ? input.targetRoleId : null,
@@ -167,7 +168,7 @@ export class RbacAccessRepository {
     });
 
     await this.afterWrite();
-    return { id: Number(result.lastInsertRowid), created: true };
+    return { id: created.id, created: true };
   }
 
   async revokeHostAccess(accessId: number, hostId: number): Promise<void> {
@@ -288,7 +289,7 @@ export class RbacAccessRepository {
       return { id: existing.id, created: false };
     }
 
-    const result = await this.context.drizzle.insert(snippetAccess).values({
+    const [created] = await insertReturning(this.context, snippetAccess, {
       snippetId: input.snippetId,
       userId: input.targetType === "user" ? input.targetUserId : null,
       roleId: input.targetType === "role" ? input.targetRoleId : null,
@@ -298,7 +299,7 @@ export class RbacAccessRepository {
     });
 
     await this.afterWrite();
-    return { id: Number(result.lastInsertRowid), created: true };
+    return { id: created.id, created: true };
   }
 
   async revokeSnippetAccess(
