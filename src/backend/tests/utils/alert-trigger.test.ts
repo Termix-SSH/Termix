@@ -45,4 +45,50 @@ describe("triggerLoginAlert", () => {
 
     expect(warn).not.toHaveBeenCalled();
   });
+
+  it("sends the internal auth token and login details the metrics service expects", async () => {
+    vi.spyOn(SystemCrypto, "getInstance").mockReturnValue({
+      getInternalAuthToken: vi.fn().mockResolvedValue("internal-token"),
+    } as never);
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response('{"ok":true}', { status: 200 }));
+
+    await triggerLoginAlert(42, "user-1", "root", "10.0.0.5");
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      "http://localhost:30005/internal/login-alert",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          "x-internal-auth": "internal-token",
+        }),
+        body: JSON.stringify({
+          hostId: 42,
+          userId: "user-1",
+          sshUser: "root",
+          fromIp: "10.0.0.5",
+        }),
+      }),
+    );
+  });
+
+  it("logs a warning if the fetch itself throws, instead of propagating", async () => {
+    vi.spyOn(SystemCrypto, "getInstance").mockReturnValue({
+      getInternalAuthToken: vi.fn().mockResolvedValue("internal-token"),
+    } as never);
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new Error("connect ECONNREFUSED"),
+    );
+    const warn = vi.spyOn(sshLogger, "warn").mockImplementation(() => {});
+
+    await expect(
+      triggerLoginAlert(1, "user-1", "root", "127.0.0.1"),
+    ).resolves.toBeUndefined();
+
+    expect(warn).toHaveBeenCalledWith(
+      "Failed to trigger login alert",
+      expect.objectContaining({ hostId: 1 }),
+    );
+  });
 });
