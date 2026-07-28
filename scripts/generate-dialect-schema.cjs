@@ -88,6 +88,18 @@ function collectKeyColumns(source) {
     keyed.add(camelToSnake(match[1]));
   }
 
+  // Table-level indexes: `(table) => [uniqueIndex("x").on(table.a, table.b)]`.
+  // These were invisible here at first, and MySQL rejected the migration with
+  // "BLOB/TEXT column used in key specification without a key length" — but
+  // only on MySQL 8; MariaDB took it.
+  const tableIndex = /uniqueIndex\("[a-z0-9_]+"\)\.on\(([^)]*)\)/g;
+  while ((match = tableIndex.exec(source)) !== null) {
+    for (const column of match[1].split(",")) {
+      const name = column.trim().replace(/^\w+\./, "");
+      if (name) keyed.add(camelToSnake(name));
+    }
+  }
+
   return keyed;
 }
 

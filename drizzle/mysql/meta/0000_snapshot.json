@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "58669111-973f-4b5a-af0b-02c306a7c63e",
+  "id": "4d859368-b714-4d2c-aa81-109dd9569380",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "alert_firings": {
@@ -3184,11 +3184,11 @@
         },
         "protocol": {
           "name": "protocol",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('ssh')"
+          "default": "'ssh'"
         },
         "format": {
           "name": "format",
@@ -3380,7 +3380,7 @@
         },
         "protocol": {
           "name": "protocol",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -3693,11 +3693,11 @@
         },
         "protocol": {
           "name": "protocol",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('ssh')"
+          "default": "'ssh'"
         },
         "source_type": {
           "name": "source_type",

@@ -1,5 +1,5 @@
 {
-  "id": "f4108106-1478-406d-8dea-8620f648f478",
+  "id": "2919cc9b-a491-4161-a03f-1ee4846be915",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2843,7 +2843,7 @@
         },
         "protocol": {
           "name": "protocol",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "default": "'ssh'"
@@ -3018,7 +3018,7 @@
         },
         "protocol": {
           "name": "protocol",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
@@ -3292,7 +3292,7 @@
         },
         "protocol": {
           "name": "protocol",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true,
           "default": "'ssh'"

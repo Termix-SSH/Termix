@@ -592,7 +592,7 @@ export const sharedHostSecrets = mysqlTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
   
-    protocol: text("protocol").notNull().default("ssh"),
+    protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
     sourceType: text("source_type").notNull().default("credential"),
   
     originalCredentialId: int("original_credential_id").references(
@@ -714,7 +714,7 @@ export const sessionRecordings = mysqlTable("session_recordings", {
   dangerousActions: text("dangerous_actions"),
 
   recordingPath: text("recording_path"),
-  protocol: text("protocol").notNull().default("ssh"),
+  protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
   format: text("format").notNull().default("text"),
 
   terminatedByOwner: boolean("terminated_by_owner")
@@ -732,7 +732,7 @@ export const sessionShares = mysqlTable("session_shares", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
 
-  protocol: text("protocol").notNull(),
+  protocol: varchar("protocol", { length: 255 }).notNull(),
 
   // Live-session binding: TerminalSessionManager's session.id for SSH, or
   // guacd's own guacamoleConnectionId for rdp/vnc/telnet. Neither is a DB
