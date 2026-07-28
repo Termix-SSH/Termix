@@ -51,7 +51,9 @@ vi.mock("../../sidebar/NotificationChannelDialog", () => ({
 
 import { AlertsPanel } from "../../sidebar/AlertsPanel";
 
-function channel(overrides: Partial<NotificationChannel> = {}): NotificationChannel {
+function channel(
+  overrides: Partial<NotificationChannel> = {},
+): NotificationChannel {
   return {
     id: 1,
     userId: "user-1",
