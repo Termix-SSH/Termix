@@ -42,7 +42,8 @@
     "build:mac": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac --universal",
     "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never",
     "schema:generate": "node scripts/generate-dialect-schema.cjs",
-    "schema:check": "node scripts/generate-dialect-schema.cjs --check"
+    "schema:check": "node scripts/generate-dialect-schema.cjs --check",
+    "schema:migrations": "drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
@@ -149,6 +150,7 @@
     "cmdk": "^1.1.1",
     "concurrently": "^10.0.4",
     "cytoscape": "^3.34.0",
+    "drizzle-kit": "^0.31.10",
     "electron": "^43.0.0",
     "electron-builder": "^26.15.3",
     "eslint": "^10.5.0",

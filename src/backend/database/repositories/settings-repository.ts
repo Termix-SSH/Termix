@@ -1,6 +1,7 @@
 import { eq, like } from "drizzle-orm";
 import { settings } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { forgetCachedSetting, updateCachedSetting } from "./settings-cache.js";
 
 export class SettingsRepository {
   constructor(
@@ -34,6 +35,9 @@ export class SettingsRepository {
     const existing = await this.get(key);
     if (existing === null) {
       await this.context.drizzle.insert(settings).values({ key, value });
+      // Kept in step here so the synchronous readers cannot observe a stale
+      // value after a write in the same process.
+      updateCachedSetting(key, value);
       await this.afterWrite();
       return;
     }
@@ -42,6 +46,7 @@ export class SettingsRepository {
       .update(settings)
       .set({ value })
       .where(eq(settings.key, key));
+    updateCachedSetting(key, value);
     await this.afterWrite();
   }
 
@@ -51,6 +56,7 @@ export class SettingsRepository {
 
   async delete(key: string): Promise<void> {
     await this.context.drizzle.delete(settings).where(eq(settings.key, key));
+    forgetCachedSetting(key);
     await this.afterWrite();
   }
 
@@ -59,6 +65,7 @@ export class SettingsRepository {
       .delete(settings)
       .where(like(settings.key, pattern))
       .returning({ key: settings.key });
+    for (const row of rows) forgetCachedSetting(row.key);
     await this.afterWrite();
     return rows.length;
   }

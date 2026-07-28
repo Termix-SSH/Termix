@@ -1,6 +1,7 @@
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { getDb, getSqlite } from "../db/index.js";
 import { needsExplicitPersist, resolveDatabaseDialect } from "../db/dialect.js";
+import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
 import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
 import { AlertRepository } from "./alert-repository.js";
@@ -78,7 +79,18 @@ export function getCurrentRepositorySqlite() {
   return getSqlite();
 }
 
+/**
+ * Synchronous settings read.
+ *
+ * SQLite can be queried synchronously, so it is read directly and stays
+ * authoritative. Other engines have no synchronous query, so the value comes
+ * from the cache primed at startup and kept current by SettingsRepository.
+ */
 export function getCurrentSettingValue(key: string): string | null {
+  if (!needsExplicitPersist(resolveDatabaseDialect())) {
+    return readCachedSetting(key);
+  }
+
   const row = getCurrentRepositorySqlite()
     .prepare("SELECT value FROM settings WHERE key = ?")
     .get(key) as { value?: string } | undefined;
@@ -384,4 +396,13 @@ export function createCurrentVaultTokenRepository(): VaultTokenRepository {
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("vault_token_repository_write"),
   );
+}
+
+/**
+ * Loads the settings cache. Must run during startup on engines without a
+ * synchronous read, before anything calls getCurrentSettingValue.
+ */
+export async function primeCurrentSettingsCache(): Promise<void> {
+  const rows = await createCurrentSettingsRepository().listAll();
+  primeSettingsCache(rows);
 }
