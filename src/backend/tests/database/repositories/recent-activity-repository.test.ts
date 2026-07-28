@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { TestSqliteDatabase } from "./test-support.js";
+import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
 import { RecentActivityRepository } from "../../../database/repositories/recent-activity-repository.js";
 
 describe("RecentActivityRepository", () => {
@@ -42,7 +42,7 @@ describe("RecentActivityRepository", () => {
     };
   }
 
-  it("lists, creates, and trims recent activity", async () => {
+  itSqliteOnly("lists, creates, and trims recent activity", async () => {
     let writeCount = 0;
     const { repository, sqlite } = await createRepository(() => {
       writeCount += 1;

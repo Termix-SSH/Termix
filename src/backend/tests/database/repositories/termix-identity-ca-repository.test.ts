@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TestSqliteDatabase } from "./test-support.js";
+import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
 import { DataCrypto } from "../../../utils/data-crypto.js";
 import { TermixIdentityCaRepository } from "../../../database/repositories/termix-identity-ca-repository.js";
 
@@ -65,84 +65,93 @@ describe("TermixIdentityCaRepository", () => {
     );
   }
 
-  it("creates CA private keys with the real row id before encryption", async () => {
-    const { repo, sqlite, onWrite } = await createRepository();
-    mockCrypto();
+  itSqliteOnly(
+    "creates CA private keys with the real row id before encryption",
+    async () => {
+      const { repo, sqlite, onWrite } = await createRepository();
+      mockCrypto();
 
-    const created = await repo.createEncryptedForUser("user-1", {
-      identityId: 7,
-      userId: "user-1",
-      publicKey: "ssh-ed25519 public",
-      privateKey: "plain-ca-private",
-      validityDays: 120,
-    });
+      const created = await repo.createEncryptedForUser("user-1", {
+        identityId: 7,
+        userId: "user-1",
+        publicKey: "ssh-ed25519 public",
+        privateKey: "plain-ca-private",
+        validityDays: 120,
+      });
 
-    const raw = sqlite
-      .prepare(
-        "SELECT id, public_key, private_key, validity_days FROM termix_identity_ca WHERE identity_id = ?",
-      )
-      .get(7) as {
-      id: number;
-      public_key: string;
-      private_key: string;
-      validity_days: number;
-    };
+      const raw = sqlite
+        .prepare(
+          "SELECT id, public_key, private_key, validity_days FROM termix_identity_ca WHERE identity_id = ?",
+        )
+        .get(7) as {
+        id: number;
+        public_key: string;
+        private_key: string;
+        validity_days: number;
+      };
 
-    expect(created.privateKey).toBe("decrypted-ca-private");
-    expect(raw.private_key).toBe("encrypted-ca-private");
-    expect(raw.public_key).toBe("ssh-ed25519 public");
-    expect(raw.validity_days).toBe(120);
-    expect(DataCrypto.encryptRecord).toHaveBeenCalledWith(
-      "termix_identity_ca",
-      { id: raw.id, privateKey: "plain-ca-private" },
-      "user-1",
-      Buffer.from("user-key"),
-    );
-    expect(onWrite).toHaveBeenCalledTimes(1);
-  });
+      expect(created.privateKey).toBe("decrypted-ca-private");
+      expect(raw.private_key).toBe("encrypted-ca-private");
+      expect(raw.public_key).toBe("ssh-ed25519 public");
+      expect(raw.validity_days).toBe(120);
+      expect(DataCrypto.encryptRecord).toHaveBeenCalledWith(
+        "termix_identity_ca",
+        { id: raw.id, privateKey: "plain-ca-private" },
+        "user-1",
+        Buffer.from("user-key"),
+      );
+      expect(onWrite).toHaveBeenCalledTimes(1);
+    },
+  );
 
-  it("reads public CA metadata without decrypting private key material", async () => {
-    const { repo, sqlite } = await createRepository();
-    const decryptSpy = vi.spyOn(DataCrypto, "decryptRecord");
-    sqlite
-      .prepare(
-        "INSERT INTO termix_identity_ca (identity_id, user_id, public_key, private_key, validity_days) VALUES (?, ?, ?, ?, ?)",
-      )
-      .run(7, "user-1", "ssh-ed25519 public", "encrypted-ca-private", 45);
+  itSqliteOnly(
+    "reads public CA metadata without decrypting private key material",
+    async () => {
+      const { repo, sqlite } = await createRepository();
+      const decryptSpy = vi.spyOn(DataCrypto, "decryptRecord");
+      sqlite
+        .prepare(
+          "INSERT INTO termix_identity_ca (identity_id, user_id, public_key, private_key, validity_days) VALUES (?, ?, ?, ?, ?)",
+        )
+        .run(7, "user-1", "ssh-ed25519 public", "encrypted-ca-private", 45);
 
-    await expect(repo.findPublicByIdentityId(7)).resolves.toEqual({
-      publicKey: "ssh-ed25519 public",
-      validityDays: 45,
-    });
-    expect(decryptSpy).not.toHaveBeenCalled();
-  });
+      await expect(repo.findPublicByIdentityId(7)).resolves.toEqual({
+        publicKey: "ssh-ed25519 public",
+        validityDays: 45,
+      });
+      expect(decryptSpy).not.toHaveBeenCalled();
+    },
+  );
 
-  it("decrypts CA private keys through the user data boundary", async () => {
-    const { repo, sqlite } = await createRepository();
-    mockCrypto();
-    sqlite
-      .prepare(
-        "INSERT INTO termix_identity_ca (identity_id, user_id, public_key, private_key, validity_days) VALUES (?, ?, ?, ?, ?)",
-      )
-      .run(7, "user-1", "ssh-ed25519 public", "encrypted-ca-private", 45);
+  itSqliteOnly(
+    "decrypts CA private keys through the user data boundary",
+    async () => {
+      const { repo, sqlite } = await createRepository();
+      mockCrypto();
+      sqlite
+        .prepare(
+          "INSERT INTO termix_identity_ca (identity_id, user_id, public_key, private_key, validity_days) VALUES (?, ?, ?, ?, ?)",
+        )
+        .run(7, "user-1", "ssh-ed25519 public", "encrypted-ca-private", 45);
 
-    const ca = await repo.findDecryptedByIdentityId("user-1", 7);
+      const ca = await repo.findDecryptedByIdentityId("user-1", 7);
 
-    expect(ca).toMatchObject({
-      identityId: 7,
-      publicKey: "ssh-ed25519 public",
-      privateKey: "decrypted-ca-private",
-      validityDays: 45,
-    });
-    expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
-      "termix_identity_ca",
-      expect.objectContaining({ identityId: 7 }),
-      "user-1",
-      Buffer.from("user-key"),
-    );
-  });
+      expect(ca).toMatchObject({
+        identityId: 7,
+        publicKey: "ssh-ed25519 public",
+        privateKey: "decrypted-ca-private",
+        validityDays: 45,
+      });
+      expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+        "termix_identity_ca",
+        expect.objectContaining({ identityId: 7 }),
+        "user-1",
+        Buffer.from("user-key"),
+      );
+    },
+  );
 
-  it("updates CA private keys through encrypted writes", async () => {
+  itSqliteOnly("updates CA private keys through encrypted writes", async () => {
     const { repo, sqlite, onWrite } = await createRepository();
     mockCrypto();
     sqlite
@@ -189,7 +198,7 @@ describe("TermixIdentityCaRepository", () => {
     expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
-  it("deletes CA rows through the write boundary", async () => {
+  itSqliteOnly("deletes CA rows through the write boundary", async () => {
     const { repo, sqlite, onWrite } = await createRepository();
     sqlite
       .prepare(
@@ -206,7 +215,7 @@ describe("TermixIdentityCaRepository", () => {
     expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
-  it("deletes CA rows for a user", async () => {
+  itSqliteOnly("deletes CA rows for a user", async () => {
     const { repo, sqlite, onWrite } = await createRepository();
     sqlite
       .prepare(

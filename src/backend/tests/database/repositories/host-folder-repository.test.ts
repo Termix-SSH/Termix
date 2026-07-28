@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { TestSqliteDatabase } from "./test-support.js";
+import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
 import { HostFolderRepository } from "../../../database/repositories/host-folder-repository.js";
 
 describe("HostFolderRepository", () => {
@@ -49,40 +49,43 @@ describe("HostFolderRepository", () => {
     };
   }
 
-  it("renames folders across hosts, credentials, and folder records", async () => {
-    let writes = 0;
-    const { repository, sqlite } = await createRepository(() => {
-      writes += 1;
-    });
+  itSqliteOnly(
+    "renames folders across hosts, credentials, and folder records",
+    async () => {
+      let writes = 0;
+      const { repository, sqlite } = await createRepository(() => {
+        writes += 1;
+      });
 
-    await expect(
-      repository.renameFolder(
-        "user-1",
-        "prod",
-        "ops",
-        "2026-01-01T00:00:00.000Z",
-      ),
-    ).resolves.toEqual({ updatedHosts: 2, updatedCredentials: 2 });
+      await expect(
+        repository.renameFolder(
+          "user-1",
+          "prod",
+          "ops",
+          "2026-01-01T00:00:00.000Z",
+        ),
+      ).resolves.toEqual({ updatedHosts: 2, updatedCredentials: 2 });
 
-    expect(
-      sqlite
-        .prepare("SELECT folder FROM ssh_data WHERE user_id = ? ORDER BY id")
-        .all("user-1"),
-    ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
-    expect(
-      sqlite
-        .prepare(
-          "SELECT folder FROM ssh_credentials WHERE user_id = ? ORDER BY id",
-        )
-        .all("user-1"),
-    ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
-    expect(
-      sqlite
-        .prepare("SELECT name FROM ssh_folders WHERE user_id = ? ORDER BY id")
-        .all("user-1"),
-    ).toEqual([{ name: "ops" }, { name: "ops / api" }]);
-    expect(writes).toBe(1);
-  });
+      expect(
+        sqlite
+          .prepare("SELECT folder FROM ssh_data WHERE user_id = ? ORDER BY id")
+          .all("user-1"),
+      ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
+      expect(
+        sqlite
+          .prepare(
+            "SELECT folder FROM ssh_credentials WHERE user_id = ? ORDER BY id",
+          )
+          .all("user-1"),
+      ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
+      expect(
+        sqlite
+          .prepare("SELECT name FROM ssh_folders WHERE user_id = ? ORDER BY id")
+          .all("user-1"),
+      ).toEqual([{ name: "ops" }, { name: "ops / api" }]);
+      expect(writes).toBe(1);
+    },
+  );
 
   it("lists folders and upserts metadata", async () => {
     let writes = 0;
@@ -142,27 +145,33 @@ describe("HostFolderRepository", () => {
     expect(prodFolder?.credentialId).toBe(1);
   });
 
-  it("lists and deletes hosts and folder records in a folder tree", async () => {
-    let writes = 0;
-    const { repository, sqlite } = await createRepository(() => {
-      writes += 1;
-    });
+  itSqliteOnly(
+    "lists and deletes hosts and folder records in a folder tree",
+    async () => {
+      let writes = 0;
+      const { repository, sqlite } = await createRepository(() => {
+        writes += 1;
+      });
 
-    const hostsToDelete = await repository.listHostsInFolder("user-1", "prod");
-    expect(hostsToDelete.map((host) => host.id)).toEqual([1, 2]);
+      const hostsToDelete = await repository.listHostsInFolder(
+        "user-1",
+        "prod",
+      );
+      expect(hostsToDelete.map((host) => host.id)).toEqual([1, 2]);
 
-    await repository.deleteHostsAndFolderRecords("user-1", "prod");
+      await repository.deleteHostsAndFolderRecords("user-1", "prod");
 
-    expect(sqlite.prepare("SELECT id FROM ssh_data ORDER BY id").all()).toEqual(
-      [{ id: 3 }],
-    );
-    expect(
-      sqlite.prepare("SELECT id FROM ssh_folders ORDER BY id").all(),
-    ).toEqual([{ id: 3 }]);
-    expect(writes).toBe(1);
-  });
+      expect(
+        sqlite.prepare("SELECT id FROM ssh_data ORDER BY id").all(),
+      ).toEqual([{ id: 3 }]);
+      expect(
+        sqlite.prepare("SELECT id FROM ssh_folders ORDER BY id").all(),
+      ).toEqual([{ id: 3 }]);
+      expect(writes).toBe(1);
+    },
+  );
 
-  it("deletes folder records for a user", async () => {
+  itSqliteOnly("deletes folder records for a user", async () => {
     let writes = 0;
     const { repository, sqlite } = await createRepository(() => {
       writes += 1;

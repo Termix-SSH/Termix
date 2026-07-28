@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TestSqliteDatabase } from "./test-support.js";
+import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
 import { SnippetRepository } from "../../../database/repositories/snippet-repository.js";
 
 describe("SnippetRepository", () => {
@@ -167,7 +167,7 @@ describe("SnippetRepository", () => {
     expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
-  it("deletes all snippets and folders for a user", async () => {
+  itSqliteOnly("deletes all snippets and folders for a user", async () => {
     const onWrite = vi.fn();
     const { repository, sqlite } = await createRepository(onWrite);
 
