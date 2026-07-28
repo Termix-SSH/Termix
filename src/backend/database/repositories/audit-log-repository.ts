@@ -86,6 +86,27 @@ export class AuditLogRepository {
     };
   }
 
+  /**
+   * Reads matching entries in ascending time order for export.
+   *
+   * Paged rather than fetched whole so an export cannot pull an unbounded
+   * result set into memory, and ascending so a resumed or appended export
+   * continues where the previous one stopped.
+   */
+  async listForExport(input: {
+    filters: AuditLogFilters;
+    limit: number;
+    offset: number;
+  }): Promise<AuditLogRecord[]> {
+    return this.context.drizzle
+      .select()
+      .from(auditLogs)
+      .where(this.buildWhere(input.filters))
+      .orderBy(asc(auditLogs.timestamp), asc(auditLogs.id))
+      .limit(input.limit)
+      .offset(input.offset);
+  }
+
   async listDistinctActions(): Promise<string[]> {
     const rows = await this.context.drizzle
       .selectDistinct({ action: auditLogs.action })

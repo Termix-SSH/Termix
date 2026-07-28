@@ -1,4 +1,5 @@
 import type { Request } from "express";
+import { forwardAuditEntry } from "./audit-forwarder.js";
 import {
   createCurrentAuditLogRepository,
   createCurrentUserRepository,
@@ -32,6 +33,10 @@ export interface AuditLogParams {
 }
 
 export async function logAudit(params: AuditLogParams): Promise<void> {
+  // Local storage is the source of truth and runs first; forwarding is a copy
+  // and must never delay or fail the audited operation.
+  void forwardAuditEntry(params).catch(() => {});
+
   try {
     await createCurrentAuditLogRepository().create({
       userId: params.userId,
