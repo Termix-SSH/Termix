@@ -44,7 +44,9 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
       userId,
     );
 
-    await createCurrentSessionRecordingRepository().deleteByUserId(userId);
+    // Retained rather than deleted: these outlive the account by design.
+    // See anonymizeByUserId on each repository.
+    await createCurrentSessionRecordingRepository().anonymizeByUserId(userId);
 
     await createCurrentRbacAccessRepository().deleteHostAccessForUserReferences(
       userId,
@@ -56,7 +58,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
 
     await createCurrentRoleRepository().removeAllRolesFromUser(userId);
     await createCurrentAlertRepository().deleteByUserId(userId);
-    await createCurrentAuditLogRepository().deleteByUserId(userId);
+    await createCurrentAuditLogRepository().anonymizeByUserId(userId);
 
     await createCurrentSshCredentialUsageRepository().deleteByUserId(userId);
 
