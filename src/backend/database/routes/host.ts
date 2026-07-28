@@ -47,18 +47,17 @@ import {
   applyHostEnrollmentDefaults,
   requireHostEnrollmentAccessForPath,
 } from "./host-enrollment-auth.js";
-import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 
 const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 const STATS_SERVER_URL = "http://localhost:30005";
-
-async function getAuditUsername(userId: string): Promise<string> {
-  const actor = await createCurrentUserRepository().findById(userId);
-  return actor?.username ?? userId;
-}
 
 function notifyStatsHostUpdated(
   hostId: number,

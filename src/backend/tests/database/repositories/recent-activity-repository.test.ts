@@ -22,7 +22,7 @@ describe("RecentActivityRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -59,7 +59,7 @@ describe("RecentActivityRepository", () => {
 
     return {
       repository: new RecentActivityRepository(context, onWrite),
-      sqlite: context.sqlite!,
+      sqlite: adapter.raw,
     };
   }
 

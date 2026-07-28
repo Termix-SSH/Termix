@@ -19,8 +19,8 @@ describe("SsoProviderRepository", () => {
   ): Promise<SsoProviderRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    sqlite = context.sqlite;
-    context.sqlite?.exec(`
+    sqlite = adapter.raw;
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,

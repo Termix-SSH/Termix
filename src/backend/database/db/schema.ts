@@ -641,9 +641,9 @@ export const userRoles = sqliteTable("user_roles", {
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
 
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  // Nullable on purpose: the trail outlives the account, and username keeps the
+  // entry attributable once the reference is gone.
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   username: text("username").notNull(),
 
   action: text("action").notNull(),
@@ -669,9 +669,10 @@ export const sessionRecordings = sqliteTable("session_recordings", {
   hostId: integer("host_id")
     .notNull()
     .references(() => hosts.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  // Nullable on purpose: a recording is evidence about the host as much as the
+  // person, so it outlives the account. username keeps it attributable.
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  username: text("username"),
   accessId: integer("access_id").references(() => hostAccess.id, {
     onDelete: "set null",
   }),

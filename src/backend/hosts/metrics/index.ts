@@ -616,7 +616,7 @@ class PollingManager {
       });
 
       const retentionDays = this.getRetentionDays();
-      repository.pruneOlderThan(hostId, retentionDays);
+      await repository.pruneOlderThan(hostId, retentionDays);
     } catch (err) {
       statsLogger.warn("Failed to write metrics history", {
         operation: "insert_metrics_history",

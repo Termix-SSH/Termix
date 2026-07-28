@@ -15,10 +15,29 @@ export class TestSqliteDatabase {
     this.context = {
       dialect: "sqlite",
       drizzle: drizzle(this.sqlite, { schema }),
-      sqlite: this.sqlite,
     };
 
     return this.context;
+  }
+
+  /**
+   * Schema setup for tests. Lives on the fixture rather than on
+   * DatabaseContext, which is drizzle-only so that no repository can reach for
+   * engine-specific SQL.
+   */
+  /** Raw handle for assertions that read the database directly. Tests only. */
+  get raw(): Database.Database {
+    if (!this.sqlite) {
+      throw new Error("connect() must be called before raw access");
+    }
+    return this.sqlite;
+  }
+
+  exec(sql: string): void {
+    if (!this.sqlite) {
+      throw new Error("connect() must be called before exec()");
+    }
+    this.sqlite.exec(sql);
   }
 
   async close(): Promise<void> {

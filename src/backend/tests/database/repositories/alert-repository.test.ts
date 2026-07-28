@@ -17,7 +17,7 @@ describe("AlertRepository", () => {
   ): Promise<AlertRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
+    adapter.exec(`
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         username TEXT NOT NULL,
@@ -229,7 +229,7 @@ describe("AlertRepository", () => {
     expect(unacknowledged.total).toBe(0);
 
     await repo.acknowledgeAllFirings("user-1");
-    repo.pruneFiringsOlderThan("user-1", 0);
+    await repo.pruneFiringsOlderThan("user-1", 0);
   });
 
   it("loads enabled rules and notification channels for the alert engine", async () => {

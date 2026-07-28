@@ -22,7 +22,7 @@ describe("SharedHostSecretsRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite!.exec(`
+    adapter.exec(`
       CREATE TABLE host_access (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host_id INTEGER NOT NULL,
@@ -84,7 +84,7 @@ describe("SharedHostSecretsRepository", () => {
 
     return {
       repository: new SharedHostSecretsRepository(context, onWrite),
-      sqlite: context.sqlite!,
+      sqlite: adapter.raw,
     };
   }
 

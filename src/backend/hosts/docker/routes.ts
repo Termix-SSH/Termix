@@ -3,6 +3,11 @@ import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../utils/logger.js";
 import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
+import {
   createCurrentCredentialRepository,
   createCurrentHostRepository,
   createCurrentHostResolutionRepository,
@@ -590,6 +595,20 @@ export function registerDockerSshRoutes(app: express.Express): void {
             stream.stderr.on("data", () => {});
           }
         });
+
+        void (async () => {
+          const { ipAddress, userAgent } = getRequestMeta(req);
+          await logAudit({
+            userId,
+            username: await getAuditUsername(userId),
+            action: "docker_connect",
+            resourceType: "host",
+            resourceId: hostId ? String(hostId) : undefined,
+            ipAddress,
+            userAgent,
+            success: true,
+          });
+        })();
 
         res.json({
           success: true,

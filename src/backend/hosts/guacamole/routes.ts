@@ -15,6 +15,11 @@ import {
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
 import { waitForGuacdOpen } from "./guacamole-server.js";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
 
 const router = express.Router();
@@ -667,6 +672,19 @@ router.post(
       }
 
       const sessionInfo = await waitForGuacdOpen(termixConnectId, 10000);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: `${connectionType}_connect`,
+        resourceType: "host",
+        resourceId: String(hostId),
+        resourceName: `${hostname}:${port}`,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       res.json({
         token,
