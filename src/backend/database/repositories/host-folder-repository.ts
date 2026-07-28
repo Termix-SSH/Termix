@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type HostFolderRecord = typeof sshFolders.$inferSelect;
 export type HostFolderHostRecord = typeof hosts.$inferSelect;
@@ -157,16 +158,15 @@ export class HostFolderRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sshFolders)
-      .where(eq(sshFolders.userId, userId))
-      .returning({ id: sshFolders.id });
+      .where(eq(sshFolders.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async findFolder(

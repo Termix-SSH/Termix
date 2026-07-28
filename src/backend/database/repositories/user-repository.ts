@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type UserRecord = typeof users.$inferSelect;
 export type NewUserRecord = typeof users.$inferInsert;
@@ -120,13 +121,12 @@ export class UserRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(users)
-      .where(eq(users.id, id))
-      .returning({ id: users.id });
+      .where(eq(users.id, id));
 
     await this.afterWrite();
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async countAdmins(): Promise<number> {

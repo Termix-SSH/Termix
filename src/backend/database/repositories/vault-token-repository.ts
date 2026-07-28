@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { vaultTokens } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type VaultTokenRecord = typeof vaultTokens.$inferSelect;
 
@@ -67,7 +68,7 @@ export class VaultTokenRepository {
     profileId: number,
     lastUsed = new Date().toISOString(),
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(vaultTokens)
       .set({ lastUsed })
       .where(
@@ -75,48 +76,45 @@ export class VaultTokenRepository {
           eq(vaultTokens.userId, userId),
           eq(vaultTokens.profileId, profileId),
         ),
-      )
-      .returning({ id: vaultTokens.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserAndProfile(
     userId: string,
     profileId: number,
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(vaultTokens)
       .where(
         and(
           eq(vaultTokens.userId, userId),
           eq(vaultTokens.profileId, profileId),
         ),
-      )
-      .returning({ id: vaultTokens.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(vaultTokens)
-      .where(eq(vaultTokens.userId, userId))
-      .returning({ id: vaultTokens.id });
+      .where(eq(vaultTokens.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

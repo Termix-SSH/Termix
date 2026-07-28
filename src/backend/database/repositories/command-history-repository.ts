@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { commandHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type CommandHistoryRecord = typeof commandHistory.$inferSelect;
 
@@ -76,7 +77,7 @@ export class CommandHistoryRepository {
     hostId: number,
     command: string,
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(commandHistory)
       .where(
         and(
@@ -84,45 +85,42 @@ export class CommandHistoryRepository {
           eq(commandHistory.hostId, hostId),
           eq(commandHistory.command, command),
         ),
-      )
-      .returning({ id: commandHistory.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByUserAndHost(userId: string, hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(commandHistory)
       .where(
         and(
           eq(commandHistory.userId, userId),
           eq(commandHistory.hostId, hostId),
         ),
-      )
-      .returning({ id: commandHistory.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(commandHistory)
-      .where(eq(commandHistory.hostId, hostId))
-      .returning({ id: commandHistory.id });
+      .where(eq(commandHistory.hostId, hostId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostIds(hostIds: number[]): Promise<number> {
@@ -130,29 +128,27 @@ export class CommandHistoryRepository {
       return 0;
     }
 
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(commandHistory)
-      .where(inArray(commandHistory.hostId, hostIds))
-      .returning({ id: commandHistory.id });
+      .where(inArray(commandHistory.hostId, hostIds));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(commandHistory)
-      .where(eq(commandHistory.userId, userId))
-      .returning({ id: commandHistory.id });
+      .where(eq(commandHistory.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

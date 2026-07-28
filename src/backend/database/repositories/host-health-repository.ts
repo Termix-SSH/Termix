@@ -1,6 +1,7 @@
 import { and, desc, eq, notInArray } from "drizzle-orm";
 import { hostHealthChecks, hostHealthHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type HostHealthCheckRecord = typeof hostHealthChecks.$inferSelect;
 export type HostHealthHistoryRecord = typeof hostHealthHistory.$inferSelect;
@@ -121,23 +122,21 @@ export class HostHealthRepository {
     checksDeleted: number;
     historyDeleted: number;
   }> {
-    const historyRows = await this.context.drizzle
+    const historyResult = await this.context.drizzle
       .delete(hostHealthHistory)
-      .where(eq(hostHealthHistory.userId, userId))
-      .returning({ id: hostHealthHistory.id });
+      .where(eq(hostHealthHistory.userId, userId));
 
-    const checkRows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(hostHealthChecks)
-      .where(eq(hostHealthChecks.userId, userId))
-      .returning({ id: hostHealthChecks.id });
+      .where(eq(hostHealthChecks.userId, userId));
 
-    if (historyRows.length > 0 || checkRows.length > 0) {
+    if (rowsAffected(historyResult) > 0 || rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
     return {
-      checksDeleted: checkRows.length,
-      historyDeleted: historyRows.length,
+      checksDeleted: rowsAffected(result),
+      historyDeleted: rowsAffected(historyResult),
     };
   }
 

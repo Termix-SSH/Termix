@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { hostAccess, roles, userRoles } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type RoleRecord = typeof roles.$inferSelect;
 export type NewRoleRecord = typeof roles.$inferInsert;
@@ -68,14 +69,13 @@ export class RoleRepository {
   }
 
   async updateRole(id: number, update: RoleUpdate): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(roles)
       .set(update)
-      .where(eq(roles.id, id))
-      .returning({ id: roles.id });
+      .where(eq(roles.id, id));
 
     await this.afterWrite();
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteRole(id: number): Promise<{ deletedUserIds: string[] }> {
@@ -169,16 +169,15 @@ export class RoleRepository {
     }
 
     if (removeRole) {
-      const rows = await this.context.drizzle
+      const result = await this.context.drizzle
         .delete(userRoles)
         .where(
           and(
             eq(userRoles.userId, input.userId),
             eq(userRoles.roleId, removeRole.id),
           ),
-        )
-        .returning({ id: userRoles.id });
-      removed = rows.length > 0;
+        );
+      removed = rowsAffected(result) > 0;
     }
 
     if (added || removed) {
@@ -196,16 +195,15 @@ export class RoleRepository {
   }
 
   async removeAllRolesFromUser(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(userRoles)
-      .where(eq(userRoles.userId, userId))
-      .returning({ id: userRoles.id });
+      .where(eq(userRoles.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async listUserRoleIds(userId: string): Promise<number[]> {

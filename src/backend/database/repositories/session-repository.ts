@@ -1,6 +1,7 @@
 import { and, eq, lte, ne } from "drizzle-orm";
 import { sessions } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;
@@ -72,13 +73,12 @@ export class SessionRepository {
   }
 
   async revoke(id: string): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessions)
-      .where(eq(sessions.id, id))
-      .returning({ id: sessions.id });
+      .where(eq(sessions.id, id));
 
     await this.afterWrite();
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async revokeAllForUser(
@@ -89,23 +89,19 @@ export class SessionRepository {
       ? and(eq(sessions.userId, userId), ne(sessions.id, exceptSessionId))
       : eq(sessions.userId, userId);
 
-    const rows = await this.context.drizzle
-      .delete(sessions)
-      .where(where)
-      .returning({ id: sessions.id });
+    const result = await this.context.drizzle.delete(sessions).where(where);
 
     await this.afterWrite();
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteExpired(now = new Date()): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessions)
-      .where(lte(sessions.expiresAt, now.toISOString()))
-      .returning({ id: sessions.id });
+      .where(lte(sessions.expiresAt, now.toISOString()));
 
     await this.afterWrite();
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

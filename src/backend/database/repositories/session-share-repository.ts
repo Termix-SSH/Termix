@@ -6,6 +6,7 @@ import {
   users,
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type SessionShareRecord = typeof sessionShares.$inferSelect;
 export type SessionShareParticipantRecord =
@@ -151,7 +152,7 @@ export class SessionShareRepository {
   }
 
   async revoke(shareId: string, requestingUserId: string): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(sessionShares)
       .set({ revokedAt: new Date().toISOString() })
       .where(
@@ -159,38 +160,35 @@ export class SessionShareRepository {
           eq(sessionShares.id, shareId),
           eq(sessionShares.ownerUserId, requestingUserId),
         ),
-      )
-      .returning({ id: sessionShares.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async revokeAsAdmin(shareId: string): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(sessionShares)
       .set({ revokedAt: new Date().toISOString() })
-      .where(eq(sessionShares.id, shareId))
-      .returning({ id: sessionShares.id });
+      .where(eq(sessionShares.id, shareId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteExpiredShares(now = new Date().toISOString()): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessionShares)
-      .where(lt(sessionShares.expiresAt, now))
-      .returning({ id: sessionShares.id });
+      .where(lt(sessionShares.expiresAt, now));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async touchShareUsage(
@@ -230,15 +228,14 @@ export class SessionShareRepository {
   }
 
   async deleteSharesForHost(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessionShares)
-      .where(eq(sessionShares.hostId, hostId))
-      .returning({ id: sessionShares.id });
+      .where(eq(sessionShares.hostId, hostId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

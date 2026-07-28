@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type SshCredentialUsageRecord = typeof sshCredentialUsage.$inferSelect;
 
@@ -31,29 +32,27 @@ export class SshCredentialUsageRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sshCredentialUsage)
-      .where(eq(sshCredentialUsage.userId, userId))
-      .returning({ id: sshCredentialUsage.id });
+      .where(eq(sshCredentialUsage.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sshCredentialUsage)
-      .where(eq(sshCredentialUsage.hostId, hostId))
-      .returning({ id: sshCredentialUsage.id });
+      .where(eq(sshCredentialUsage.hostId, hostId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostIds(hostIds: number[]): Promise<number> {
@@ -61,16 +60,15 @@ export class SshCredentialUsageRepository {
       return 0;
     }
 
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sshCredentialUsage)
-      .where(inArray(sshCredentialUsage.hostId, hostIds))
-      .returning({ id: sshCredentialUsage.id });
+      .where(inArray(sshCredentialUsage.hostId, hostIds));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

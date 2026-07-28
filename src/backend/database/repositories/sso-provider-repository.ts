@@ -1,6 +1,7 @@
 import { asc, eq } from "drizzle-orm";
 import { ssoProviders, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type SsoProviderRecord = typeof ssoProviders.$inferSelect;
 export type NewSsoProviderRecord = typeof ssoProviders.$inferInsert;
@@ -100,16 +101,15 @@ export class SsoProviderRepository {
   }
 
   async delete(id: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(ssoProviders)
-      .where(eq(ssoProviders.id, id))
-      .returning({ id: ssoProviders.id });
+      .where(eq(ssoProviders.id, id));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async countUsersByProviderId(providerId: number): Promise<number> {

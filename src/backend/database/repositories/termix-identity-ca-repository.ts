@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { termixIdentityCa } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type TermixIdentityCaRecord = typeof termixIdentityCa.$inferSelect;
 export type NewTermixIdentityCaRecord = typeof termixIdentityCa.$inferInsert;
@@ -117,29 +118,27 @@ export class TermixIdentityCaRepository {
   }
 
   async deleteByIdentityId(identityId: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(termixIdentityCa)
-      .where(eq(termixIdentityCa.identityId, identityId))
-      .returning({ id: termixIdentityCa.id });
+      .where(eq(termixIdentityCa.identityId, identityId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(termixIdentityCa)
-      .where(eq(termixIdentityCa.userId, userId))
-      .returning({ id: termixIdentityCa.id });
+      .where(eq(termixIdentityCa.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private decryptOne<T extends Record<string, unknown>>(

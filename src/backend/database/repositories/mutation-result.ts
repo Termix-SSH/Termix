@@ -5,54 +5,87 @@ import type { DatabaseDialect } from "../db/dialect.js";
  *
  * SQLite and Postgres can attach `.returning()` to a delete or update and get
  * the affected rows back. **MySQL cannot** — it has no RETURNING clause, and
- * drizzle's mysql-core does not expose the method. 156 call sites here read a
- * write's result, so the difference has to be absorbed somewhere.
+ * drizzle's mysql-core does not expose the method at all, so the call is a
+ * TypeError rather than a bad query. 175 call sites here read a write's result,
+ * so the difference has to be absorbed somewhere.
  *
  * The split that matters is what the caller actually needs:
  *
- * - **How many rows changed** — the majority. Every engine reports this, just
- *   differently: a returned array on sqlite/pg, `affectedRows` on MySQL.
- *   `rowsAffected` covers these with no query shape change.
+ * - **How many rows changed** — the majority, and none of them need the rows.
+ *   They used to ask for them anyway, via `.returning().length`. Dropping the
+ *   `.returning()` and reading the driver's own count is both portable and one
+ *   less thing for the database to send back.
  * - **The rows themselves** — cannot be emulated on MySQL without reading
  *   first, which needs a transaction to stay correct under concurrency. Those
  *   call sites are handled individually rather than behind a helper that hides
  *   an extra round trip.
  */
 
-/** What MySQL's driver returns for a write. */
-interface MySqlWriteResult {
+/**
+ * The count each driver reports for a write, under its own name.
+ *
+ * Every engine says how many rows a write touched. None of them agree on what
+ * to call it:
+ *
+ * | driver         | shape                                  |
+ * |----------------|----------------------------------------|
+ * | better-sqlite3 | `{ changes, lastInsertRowid }`         |
+ * | node-postgres  | `{ rowCount, rows, command }`          |
+ * | mysql2         | `[{ affectedRows, insertId }, fields]` |
+ *
+ * These are the shapes returned when NO `.returning()` is attached — which is
+ * the portable way to write, since MySQL has no RETURNING clause at all.
+ */
+interface WriteHeader {
+  changes?: number;
+  rowCount?: number;
   affectedRows?: number;
+  lastInsertRowid?: number | bigint;
   insertId?: number;
 }
 
+const COUNT_FIELDS = ["changes", "rowCount", "affectedRows"] as const;
+
 /**
- * mysql2 hands back `[ResultSetHeader, fields]`, which is an array — so array
- * shape alone cannot distinguish it from a returning() result. The header is
- * identified by its own fields instead.
+ * mysql2 hands back `[ResultSetHeader, fields]`, which is itself an array — so
+ * "is it an array" cannot distinguish a write header from a returning() result.
+ * The header is identified by carrying one of the fields above instead.
  */
-function asMySqlHeader(result: unknown): MySqlWriteResult | null {
+function asWriteHeader(result: unknown): WriteHeader | null {
   const candidate =
     Array.isArray(result) && result.length > 0 ? result[0] : result;
 
   if (!candidate || typeof candidate !== "object") return null;
-  const header = candidate as MySqlWriteResult;
+  const header = candidate as WriteHeader;
 
-  return typeof header.affectedRows === "number" ||
-    typeof header.insertId === "number"
-    ? header
-    : null;
+  const known =
+    COUNT_FIELDS.some((field) => typeof header[field] === "number") ||
+    typeof header.insertId === "number" ||
+    typeof header.lastInsertRowid === "number" ||
+    typeof header.lastInsertRowid === "bigint";
+
+  return known ? header : null;
 }
 
 /**
  * Number of rows a write touched.
  *
- * Pass the result of a `.returning()` call on sqlite/pg, or the raw write
- * result on MySQL — both shapes are understood, so the caller does not branch.
+ * Pass the result of the write itself — every driver's header is understood, so
+ * the caller neither branches on the dialect nor attaches `.returning()` just to
+ * count what came back.
+ *
+ * A `.returning()` array is still accepted, for the call sites that need the
+ * rows for their own reasons and would rather not count them twice.
  */
 export function rowsAffected(result: unknown): number {
-  const header = asMySqlHeader(result);
-  if (header && typeof header.affectedRows === "number") {
-    return header.affectedRows;
+  const header = asWriteHeader(result);
+  if (header) {
+    for (const field of COUNT_FIELDS) {
+      const count = header[field];
+      if (typeof count === "number") return count;
+    }
+    // A header with only insertId: one row went in.
+    return 0;
   }
 
   if (Array.isArray(result)) return result.length;
@@ -62,16 +95,29 @@ export function rowsAffected(result: unknown): number {
 /**
  * Id assigned by an insert.
  *
- * sqlite and pg surface it through `.returning({ id })`; MySQL reports it as
- * `insertId` on the write result. Returns null when the table has no
- * autoincrement key, or the insert matched nothing.
+ * **Only meaningful on the result of an insert.** SQLite's `lastInsertRowid` and
+ * MySQL's `insertId` are connection-level values that survive the statement that
+ * set them — after a delete, SQLite still reports whatever the last insert
+ * produced. Passing an update or delete result here gets a stale id, not null.
+ *
+ * Returns null when the table has no autoincrement key.
  */
 export function insertedId(result: unknown): number | null {
-  const header = asMySqlHeader(result);
+  const header = asWriteHeader(result);
   if (header) {
-    return typeof header.insertId === "number" && header.insertId > 0
-      ? header.insertId
-      : null;
+    // MySQL and SQLite both use 0 for "no autoincrement column".
+    if (typeof header.insertId === "number") {
+      return header.insertId > 0 ? header.insertId : null;
+    }
+    if (typeof header.lastInsertRowid === "bigint") {
+      return header.lastInsertRowid > 0n
+        ? Number(header.lastInsertRowid)
+        : null;
+    }
+    if (typeof header.lastInsertRowid === "number") {
+      return header.lastInsertRowid > 0 ? header.lastInsertRowid : null;
+    }
+    return null;
   }
 
   if (Array.isArray(result)) {

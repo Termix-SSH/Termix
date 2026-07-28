@@ -16,6 +16,17 @@ describe("rowsAffected", () => {
     expect(rowsAffected({ affectedRows: 0 })).toBe(0);
   });
 
+  it("reads changes from a better-sqlite3 write result", () => {
+    // The shape of a write with no .returning() attached — verified against
+    // the driver, not assumed.
+    expect(rowsAffected({ changes: 1, lastInsertRowid: 7 })).toBe(1);
+    expect(rowsAffected({ changes: 0, lastInsertRowid: 7 })).toBe(0);
+  });
+
+  it("reads rowCount from a node-postgres write result", () => {
+    expect(rowsAffected({ rowCount: 3, rows: [], command: "DELETE" })).toBe(3);
+  });
+
   it("unwraps the [header, fields] tuple mysql2 returns", () => {
     expect(rowsAffected([{ affectedRows: 2 }, []])).toBe(2);
   });
@@ -45,6 +56,12 @@ describe("insertedId", () => {
   it("treats mysql's zero insertId as absent", () => {
     // MySQL reports 0 when the table has no autoincrement column.
     expect(insertedId({ affectedRows: 1, insertId: 0 })).toBeNull();
+  });
+
+  it("reads lastInsertRowid from better-sqlite3, as number or bigint", () => {
+    expect(insertedId({ changes: 1, lastInsertRowid: 9 })).toBe(9);
+    expect(insertedId({ changes: 1, lastInsertRowid: 9n })).toBe(9);
+    expect(insertedId({ changes: 1, lastInsertRowid: 0 })).toBeNull();
   });
 
   it("returns null when nothing was inserted", () => {

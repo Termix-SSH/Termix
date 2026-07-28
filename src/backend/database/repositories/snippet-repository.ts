@@ -2,6 +2,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { snippetFolders, snippets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type SnippetRecord = typeof snippets.$inferSelect;
 export type SnippetFolderRecord = typeof snippetFolders.$inferSelect;
@@ -229,23 +230,21 @@ export class SnippetRepository {
     snippetsDeleted: number;
     foldersDeleted: number;
   }> {
-    const deletedSnippets = await this.context.drizzle
+    const snippetResult = await this.context.drizzle
       .delete(snippets)
-      .where(eq(snippets.userId, userId))
-      .returning({ id: snippets.id });
+      .where(eq(snippets.userId, userId));
 
-    const deletedFolders = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(snippetFolders)
-      .where(eq(snippetFolders.userId, userId))
-      .returning({ id: snippetFolders.id });
+      .where(eq(snippetFolders.userId, userId));
 
-    if (deletedSnippets.length > 0 || deletedFolders.length > 0) {
+    if (rowsAffected(snippetResult) > 0 || rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
     return {
-      snippetsDeleted: deletedSnippets.length,
-      foldersDeleted: deletedFolders.length,
+      snippetsDeleted: rowsAffected(snippetResult),
+      foldersDeleted: rowsAffected(result),
     };
   }
 

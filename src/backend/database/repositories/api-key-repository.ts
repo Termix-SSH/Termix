@@ -1,6 +1,7 @@
 import { eq, and } from "drizzle-orm";
 import { apiKeys, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type ApiKeyRecord = typeof apiKeys.$inferSelect;
 export type NewApiKeyRecord = typeof apiKeys.$inferInsert;
@@ -88,13 +89,12 @@ export class ApiKeyRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(apiKeys)
-      .where(eq(apiKeys.userId, userId))
-      .returning({ id: apiKeys.id });
+      .where(eq(apiKeys.userId, userId));
 
     await this.afterWrite();
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

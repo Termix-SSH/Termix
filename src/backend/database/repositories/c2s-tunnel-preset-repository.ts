@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { c2sTunnelPresets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type C2sTunnelPresetRecord = typeof c2sTunnelPresets.$inferSelect;
 
@@ -103,31 +104,29 @@ export class C2sTunnelPresetRepository {
   }
 
   async deleteForUser(userId: string, id: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(c2sTunnelPresets)
       .where(
         and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
-      )
-      .returning({ id: c2sTunnelPresets.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(c2sTunnelPresets)
-      .where(eq(c2sTunnelPresets.userId, userId))
-      .returning({ id: c2sTunnelPresets.id });
+      .where(eq(c2sTunnelPresets.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

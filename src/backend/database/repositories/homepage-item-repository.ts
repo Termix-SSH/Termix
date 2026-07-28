@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { homepageItems } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type HomepageItemRecord = typeof homepageItems.$inferSelect;
 
@@ -99,16 +100,15 @@ export class HomepageItemRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(homepageItems)
-      .where(eq(homepageItems.userId, userId))
-      .returning({ id: homepageItems.id });
+      .where(eq(homepageItems.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

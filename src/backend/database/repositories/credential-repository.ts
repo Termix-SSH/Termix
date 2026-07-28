@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type CredentialRecord = typeof sshCredentials.$inferSelect;
 export type NewCredentialRecord = typeof sshCredentials.$inferInsert;
@@ -143,7 +144,7 @@ export class CredentialRepository {
     oldName: string,
     newName: string,
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(sshCredentials)
       .set({ folder: newName, updatedAt: sql`CURRENT_TIMESTAMP` })
       .where(
@@ -151,14 +152,13 @@ export class CredentialRepository {
           eq(sshCredentials.userId, userId),
           eq(sshCredentials.folder, oldName),
         ),
-      )
-      .returning({ id: sshCredentials.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async updateForUser(
@@ -227,16 +227,15 @@ export class CredentialRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sshCredentials)
-      .where(eq(sshCredentials.userId, userId))
-      .returning({ id: sshCredentials.id });
+      .where(eq(sshCredentials.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async recordUsage(

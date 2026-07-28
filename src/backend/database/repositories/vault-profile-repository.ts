@@ -2,6 +2,7 @@ import { desc, eq, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { vaultProfiles } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type VaultProfileRecord = typeof vaultProfiles.$inferSelect;
 
@@ -112,16 +113,15 @@ export class VaultProfileRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(vaultProfiles)
-      .where(eq(vaultProfiles.userId, userId))
-      .returning({ id: vaultProfiles.id });
+      .where(eq(vaultProfiles.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

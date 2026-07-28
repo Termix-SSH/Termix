@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { termixIdentities, termixIdentityKeys } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type TermixIdentityRecord = typeof termixIdentities.$inferSelect;
 export type NewTermixIdentityRecord = typeof termixIdentities.$inferInsert;
@@ -84,39 +85,36 @@ export class TermixIdentityRepository {
   }
 
   async deleteIdentityForUser(userId: string): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(termixIdentities)
-      .where(eq(termixIdentities.userId, userId))
-      .returning({ id: termixIdentities.id });
+      .where(eq(termixIdentities.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<{
     identitiesDeleted: number;
     keysDeleted: number;
   }> {
-    const keyRows = await this.context.drizzle
+    const keyResult = await this.context.drizzle
       .delete(termixIdentityKeys)
-      .where(eq(termixIdentityKeys.userId, userId))
-      .returning({ id: termixIdentityKeys.id });
+      .where(eq(termixIdentityKeys.userId, userId));
 
-    const identityRows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(termixIdentities)
-      .where(eq(termixIdentities.userId, userId))
-      .returning({ id: termixIdentities.id });
+      .where(eq(termixIdentities.userId, userId));
 
-    if (keyRows.length > 0 || identityRows.length > 0) {
+    if (rowsAffected(keyResult) > 0 || rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
     return {
-      identitiesDeleted: identityRows.length,
-      keysDeleted: keyRows.length,
+      identitiesDeleted: rowsAffected(result),
+      keysDeleted: rowsAffected(keyResult),
     };
   }
 
@@ -203,21 +201,20 @@ export class TermixIdentityRepository {
   }
 
   async deleteKeyForUser(userId: string, id: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(termixIdentityKeys)
       .where(
         and(
           eq(termixIdentityKeys.id, id),
           eq(termixIdentityKeys.userId, userId),
         ),
-      )
-      .returning({ id: termixIdentityKeys.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async findKeyForUser(

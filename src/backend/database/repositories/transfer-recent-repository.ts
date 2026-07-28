@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { transferRecent } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type TransferRecentRecord = typeof transferRecent.$inferSelect;
 
@@ -100,47 +101,44 @@ export class TransferRecentRepository {
       return 0;
     }
 
-    const deleted = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(transferRecent)
-      .where(inArray(transferRecent.id, idsToDelete))
-      .returning({ id: transferRecent.id });
+      .where(inArray(transferRecent.id, idsToDelete));
 
-    if (deleted.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return deleted.length;
+    return rowsAffected(result);
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(transferRecent)
-      .where(eq(transferRecent.userId, userId))
-      .returning({ id: transferRecent.id });
+      .where(eq(transferRecent.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(transferRecent)
       .where(
         or(
           eq(transferRecent.sourceHostId, hostId),
           eq(transferRecent.destHostId, hostId),
         ),
-      )
-      .returning({ id: transferRecent.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostIds(hostIds: number[]): Promise<number> {
@@ -148,21 +146,20 @@ export class TransferRecentRepository {
       return 0;
     }
 
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(transferRecent)
       .where(
         or(
           inArray(transferRecent.sourceHostId, hostIds),
           inArray(transferRecent.destHostId, hostIds),
         ),
-      )
-      .returning({ id: transferRecent.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

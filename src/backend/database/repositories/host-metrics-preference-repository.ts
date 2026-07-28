@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { hostMetricsPreferences, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type HostMetricsPreferenceRecord =
   typeof hostMetricsPreferences.$inferSelect;
@@ -67,28 +68,26 @@ export class HostMetricsPreferenceRepository {
     hostId: number,
     statsConfig: string,
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(hosts)
       .set({ statsConfig })
-      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-      .returning({ id: hosts.id });
+      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)));
 
-    if (rows.length === 0) return false;
+    if (rowsAffected(result) === 0) return false;
     await this.afterWrite();
     return true;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(hostMetricsPreferences)
-      .where(eq(hostMetricsPreferences.userId, userId))
-      .returning({ id: hostMetricsPreferences.id });
+      .where(eq(hostMetricsPreferences.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {
