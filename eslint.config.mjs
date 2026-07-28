@@ -69,6 +69,14 @@ export default tseslint.config([
             "MySQL has no RETURNING. Use insertReturning/updateReturning/deleteReturning from ./returning.js, or rowsAffected() if you only need a count. Inside a proven sqlite-only branch, disable this rule with a comment saying so.",
         },
         {
+          // Postgres and SQLite spell it ON CONFLICT; MySQL spells it ON
+          // DUPLICATE KEY and names no columns, so drizzle's mysql-core has no
+          // onConflictDoUpdate at all — another TypeError, not a bad query.
+          selector: "CallExpression[callee.property.name='onConflictDoUpdate']",
+          message:
+            "MySQL has no ON CONFLICT. Use upsert() from ./returning.js.",
+        },
+        {
           // better-sqlite3 puts these on a write result; node-postgres and
           // mysql2 do not, so reading them directly yields undefined — and
           // Number(undefined) is NaN, which reaches the database as the string

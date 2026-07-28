@@ -189,3 +189,39 @@ export async function insertReturningWhere<T extends SQLiteTable>(
     return rows;
   });
 }
+
+/**
+ * Insert, or update the row that collides with it.
+ *
+ * The clause has three spellings. SQLite and Postgres take
+ * `ON CONFLICT (cols) DO UPDATE`; **MySQL takes `ON DUPLICATE KEY UPDATE` and
+ * names no columns** — it uses whichever unique key was violated. drizzle
+ * follows suit, so `onConflictDoUpdate` does not exist on mysql-core at all and
+ * calling it is a TypeError rather than a rejected query.
+ *
+ * The conflict target still has to be passed: it is what SQLite and Postgres
+ * need, and stating it keeps the caller honest about which unique constraint it
+ * is relying on — four of those were missing from the schema entirely until the
+ * cross-dialect tests went looking.
+ */
+export async function upsert<T extends SQLiteTable>(
+  context: DatabaseContext,
+  table: T,
+  values: T["$inferInsert"],
+  conflict: { target: SQLiteColumn[]; set: UpdateValues<T> },
+): Promise<void> {
+  const db = context.drizzle;
+
+  if (context.dialect === "mysql") {
+    const insert = db.insert(table).values(values) as unknown as {
+      onDuplicateKeyUpdate: (config: { set: UpdateValues<T> }) => Promise<void>;
+    };
+    await insert.onDuplicateKeyUpdate({ set: conflict.set });
+    return;
+  }
+
+  await db
+    .insert(table)
+    .values(values)
+    .onConflictDoUpdate({ target: conflict.target, set: conflict.set });
+}

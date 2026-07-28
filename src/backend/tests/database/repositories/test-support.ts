@@ -289,9 +289,15 @@ function booleanColumns(): Set<string> {
  *   keywords, so boolean columns are rewritten to those.
  */
 function portableSql(statement: string, dialect: DatabaseDialect): string {
-  let out = rewriteBooleanLiterals(statement);
-  if (dialect === "mysql") out = out.replace(/"([a-z_]+)"/g, "`$1`");
-  return out;
+  const out = rewriteBooleanLiterals(statement);
+  if (dialect !== "mysql") return out;
+
+  // Only the column list, before VALUES. A blanket replace also mangles the
+  // double quotes inside JSON payloads in the values — '{"slots":[]}' became
+  // '{`slots`:[]}', which is valid SQL and silently wrong data.
+  const split = /^(.*?\bVALUES\b)(.*)$/is.exec(out);
+  if (!split) return out.replace(/"([a-z_]+)"/g, "`$1`");
+  return split[1].replace(/"([a-z_]+)"/g, "`$1`") + split[2];
 }
 
 /** Rewrites 0/1 to FALSE/TRUE in the value positions of boolean columns. */

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, vi } from "vitest";
 import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
 import { DataCrypto } from "../../../utils/data-crypto.js";
 import { TermixIdentityCaRepository } from "../../../database/repositories/termix-identity-ca-repository.js";

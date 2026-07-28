@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { vaultTokens } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { upsert } from "./returning.js";
 
 export type VaultTokenRecord = typeof vaultTokens.$inferSelect;
 
@@ -23,16 +24,17 @@ export class VaultTokenRepository {
   async upsert(input: VaultTokenUpsertInput): Promise<void> {
     const createdAt = input.createdAt ?? new Date().toISOString();
 
-    await this.context.drizzle
-      .insert(vaultTokens)
-      .values({
+    await upsert(
+      this.context,
+      vaultTokens,
+      {
         userId: input.userId,
         profileId: input.profileId,
         sshCert: input.sshCert,
         privateKey: input.privateKey,
         expiresAt: input.expiresAt,
-      })
-      .onConflictDoUpdate({
+      },
+      {
         target: [vaultTokens.userId, vaultTokens.profileId],
         set: {
           sshCert: input.sshCert,
@@ -40,7 +42,8 @@ export class VaultTokenRepository {
           expiresAt: input.expiresAt,
           createdAt,
         },
-      });
+      },
+    );
 
     await this.afterWrite();
   }

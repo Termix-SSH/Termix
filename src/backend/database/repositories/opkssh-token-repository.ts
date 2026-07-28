@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { opksshTokens } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { upsert } from "./returning.js";
 
 export type OpksshTokenRecord = typeof opksshTokens.$inferSelect;
 
@@ -27,9 +28,10 @@ export class OpksshTokenRepository {
   async upsert(input: OpksshTokenUpsertInput): Promise<void> {
     const createdAt = input.createdAt ?? new Date().toISOString();
 
-    await this.context.drizzle
-      .insert(opksshTokens)
-      .values({
+    await upsert(
+      this.context,
+      opksshTokens,
+      {
         userId: input.userId,
         hostId: input.hostId,
         sshCert: input.sshCert,
@@ -39,8 +41,8 @@ export class OpksshTokenRepository {
         issuer: input.issuer,
         audience: input.audience,
         expiresAt: input.expiresAt,
-      })
-      .onConflictDoUpdate({
+      },
+      {
         target: [opksshTokens.userId, opksshTokens.hostId],
         set: {
           sshCert: input.sshCert,
@@ -52,7 +54,8 @@ export class OpksshTokenRepository {
           expiresAt: input.expiresAt,
           createdAt,
         },
-      });
+      },
+    );
 
     await this.afterWrite();
   }
