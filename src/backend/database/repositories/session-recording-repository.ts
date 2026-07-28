@@ -197,6 +197,25 @@ export class SessionRecordingRepository {
     return rows.length > 0;
   }
 
+  /**
+   * Detaches recordings from a user being deleted instead of removing them.
+   * A recording is evidence about the host as much as about the person, and the
+   * file stays on disk regardless — deleting only the row would orphan it.
+   */
+  async anonymizeByUserId(userId: string): Promise<number> {
+    const rows = await this.context.drizzle
+      .update(sessionRecordings)
+      .set({ userId: null })
+      .where(eq(sessionRecordings.userId, userId))
+      .returning({ id: sessionRecordings.id });
+
+    if (rows.length > 0) {
+      await this.afterWrite();
+    }
+
+    return rows.length;
+  }
+
   async deleteByUserId(userId: string): Promise<number> {
     const rows = await this.context.drizzle
       .delete(sessionRecordings)
