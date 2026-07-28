@@ -1,5 +1,6 @@
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { getDb, getSqlite } from "../db/index.js";
+import { needsExplicitPersist, resolveDatabaseDialect } from "../db/dialect.js";
 import type { DatabaseContext } from "./database-context.js";
 import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
 import { AlertRepository } from "./alert-repository.js";
@@ -52,9 +53,18 @@ export function createCurrentRepositoryContext(): DatabaseContext {
   };
 }
 
+/**
+ * Post-write hook handed to every repository.
+ *
+ * Only meaningful for SQLite, where the database lives in memory and has to be
+ * serialised back to its encrypted file. On Postgres and MySQL the write is
+ * already durable, so no hook is installed at all rather than one that does
+ * nothing — repositories call it as `this.onWrite?.()`.
+ */
 export function createCurrentRepositoryWriteHook(
   reason: string,
-): () => Promise<void> {
+): (() => Promise<void>) | undefined {
+  if (!needsExplicitPersist(resolveDatabaseDialect())) return undefined;
   return () => DatabaseSaveTrigger.forceSave(reason);
 }
 

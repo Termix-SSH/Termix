@@ -13,6 +13,7 @@ import * as mysqlSchema from "../../../database/db/schema.mysql.js";
 import {
   DATABASE_DIALECT_ENV,
   isDatabaseDialect,
+  needsExplicitPersist,
   resolveDatabaseDialect,
 } from "../../../database/db/dialect.js";
 
@@ -42,6 +43,16 @@ describe("resolveDatabaseDialect", () => {
   it("narrows correctly", () => {
     expect(isDatabaseDialect("mysql")).toBe(true);
     expect(isDatabaseDialect("mongo")).toBe(false);
+  });
+});
+
+describe("needsExplicitPersist", () => {
+  it("is true only for sqlite", () => {
+    // SQLite runs in memory and is serialised back to an encrypted file, so
+    // every write needs a flush. The others have already committed durably.
+    expect(needsExplicitPersist("sqlite")).toBe(true);
+    expect(needsExplicitPersist("postgres")).toBe(false);
+    expect(needsExplicitPersist("mysql")).toBe(false);
   });
 });
 
