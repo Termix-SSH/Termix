@@ -95,3 +95,18 @@ jobs:
 
       - name: Verify MySQL
         run: npm run verify:dialect -- mysql://termix:termix@127.0.0.1:3306/termix_test
+
+      # The same repository suite the SQLite run executes, pointed at each
+      # engine. This is where a dialect difference in a query shows up as a
+      # failing assertion rather than as a bug report.
+      - name: Repository tests on Postgres
+        env:
+          TEST_DIALECT: postgres
+          TEST_DATABASE_URL: postgres://termix:termix@127.0.0.1:5432/termix_test
+        run: npx vitest run src/backend/tests/database/repositories --no-file-parallelism
+
+      - name: Repository tests on MySQL
+        env:
+          TEST_DIALECT: mysql
+          TEST_DATABASE_URL: mysql://termix:termix@127.0.0.1:3306/termix_test
+        run: npx vitest run src/backend/tests/database/repositories --no-file-parallelism
