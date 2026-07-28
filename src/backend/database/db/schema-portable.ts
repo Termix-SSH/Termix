@@ -35,6 +35,25 @@ export const sqlitePortable = {
     oidcIdentifier: sqliteKit.text("oidc_identifier"),
     ssoProviderId: sqliteKit.int("sso_provider_id"),
   }),
+  auditLogs: sqliteKit.table("audit_logs", {
+    id: sqliteKit.serial("id"),
+    // Nullable with ON DELETE SET NULL: the trail outlives the account (#1132).
+    userId: sqliteKit
+      .shortText("user_id")
+      .references(() => sqlitePortable.users.id, { onDelete: "set null" }),
+    username: sqliteKit.text("username").notNull(),
+    action: sqliteKit.text("action").notNull(),
+    success: sqliteKit.bool("success").notNull(),
+  }),
+  sshFolders: sqliteKit.table("ssh_folders", {
+    id: sqliteKit.serial("id"),
+    userId: sqliteKit
+      .shortText("user_id")
+      .notNull()
+      .references(() => sqlitePortable.users.id, { onDelete: "cascade" }),
+    name: sqliteKit.text("name").notNull(),
+    syncId: sqliteKit.shortText("sync_id").unique(),
+  }),
 };
 
 export const pgPortable = {
@@ -51,6 +70,25 @@ export const pgPortable = {
     oidcIdentifier: pgKit.text("oidc_identifier"),
     ssoProviderId: pgKit.int("sso_provider_id"),
   }),
+  auditLogs: pgKit.table("audit_logs", {
+    id: pgKit.serial("id"),
+    // Nullable with ON DELETE SET NULL: the trail outlives the account (#1132).
+    userId: pgKit
+      .shortText("user_id")
+      .references(() => pgPortable.users.id, { onDelete: "set null" }),
+    username: pgKit.text("username").notNull(),
+    action: pgKit.text("action").notNull(),
+    success: pgKit.bool("success").notNull(),
+  }),
+  sshFolders: pgKit.table("ssh_folders", {
+    id: pgKit.serial("id"),
+    userId: pgKit
+      .shortText("user_id")
+      .notNull()
+      .references(() => pgPortable.users.id, { onDelete: "cascade" }),
+    name: pgKit.text("name").notNull(),
+    syncId: pgKit.shortText("sync_id").unique(),
+  }),
 };
 
 export const mysqlPortable = {
@@ -66,6 +104,25 @@ export const mysqlPortable = {
     isOidc: mysqlKit.bool("is_oidc").notNull().default(false),
     oidcIdentifier: mysqlKit.text("oidc_identifier"),
     ssoProviderId: mysqlKit.int("sso_provider_id"),
+  }),
+  auditLogs: mysqlKit.table("audit_logs", {
+    id: mysqlKit.serial("id"),
+    // Nullable with ON DELETE SET NULL: the trail outlives the account (#1132).
+    userId: mysqlKit
+      .shortText("user_id")
+      .references(() => mysqlPortable.users.id, { onDelete: "set null" }),
+    username: mysqlKit.text("username").notNull(),
+    action: mysqlKit.text("action").notNull(),
+    success: mysqlKit.bool("success").notNull(),
+  }),
+  sshFolders: mysqlKit.table("ssh_folders", {
+    id: mysqlKit.serial("id"),
+    userId: mysqlKit
+      .shortText("user_id")
+      .notNull()
+      .references(() => mysqlPortable.users.id, { onDelete: "cascade" }),
+    name: mysqlKit.text("name").notNull(),
+    syncId: mysqlKit.shortText("sync_id").unique(),
   }),
 };
 

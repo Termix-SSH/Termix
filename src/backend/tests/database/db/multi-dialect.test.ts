@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { getTableConfig as sqliteTableConfig } from "drizzle-orm/sqlite-core";
+import { getTableConfig as pgTableConfig } from "drizzle-orm/pg-core";
+import { getTableConfig as mysqlTableConfig } from "drizzle-orm/mysql-core";
 import { drizzle as sqliteDrizzle } from "drizzle-orm/better-sqlite3";
 import { drizzle as pgDrizzle } from "drizzle-orm/node-postgres";
 import { drizzle as mysqlDrizzle } from "drizzle-orm/mysql2";
@@ -58,7 +61,12 @@ describe("portable schema", () => {
     ];
 
     for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
-      expect(Object.keys(schema).sort()).toEqual(["settings", "users"]);
+      expect(Object.keys(schema).sort()).toEqual([
+        "auditLogs",
+        "settings",
+        "sshFolders",
+        "users",
+      ]);
 
       // Compare the declared columns, not every own key: the pg table also
       // carries dialect-specific helpers such as enableRLS.
@@ -194,5 +202,58 @@ describe("query generation per dialect", () => {
     expect(rows).toEqual([{ key: "guac_url", value: "guacd:4822" }]);
 
     sqlite.close();
+  });
+
+  it("expresses both foreign-key behaviours on every dialect", () => {
+    // 80 cascade + 12 set null across the real schema; both must survive the
+    // port, and set null is what keeps the audit trail after a user is deleted.
+    // Each dialect has its own getTableConfig — they are not interchangeable.
+    const perDialect = [
+      { schema: sqlitePortable, config: sqliteTableConfig },
+      { schema: pgPortable, config: pgTableConfig },
+      { schema: mysqlPortable, config: mysqlTableConfig },
+    ] as const;
+
+    for (const { schema, config } of perDialect) {
+      const auditFks = (
+        config as (table: unknown) => { foreignKeys: unknown[] }
+      )(schema.auditLogs).foreignKeys as {
+        onDelete?: string;
+      }[];
+      const folderFks = (
+        config as (table: unknown) => { foreignKeys: unknown[] }
+      )(schema.sshFolders).foreignKeys as {
+        onDelete?: string;
+      }[];
+
+      expect(auditFks).toHaveLength(1);
+      expect(auditFks[0].onDelete).toBe("set null");
+      expect(folderFks).toHaveLength(1);
+      expect(folderFks[0].onDelete).toBe("cascade");
+    }
+  });
+
+  it("keeps a nullable audit reference and a required folder reference", () => {
+    for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
+      expect(schema.auditLogs.userId.notNull).toBe(false);
+      expect(schema.sshFolders.userId.notNull).toBe(true);
+    }
+  });
+
+  it("carries the unique constraint across dialects", () => {
+    for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
+      expect(schema.sshFolders.syncId.isUnique).toBe(true);
+    }
+  });
+
+  it("makes the surrogate key auto-increment on each engine", () => {
+    // integer primary key autoincrement / serial / int auto_increment
+    expect(sqlitePortable.auditLogs.id.getSQLType()).toBe("integer");
+    expect(pgPortable.auditLogs.id.getSQLType()).toBe("serial");
+    expect(mysqlPortable.auditLogs.id.getSQLType()).toBe("int");
+
+    for (const schema of [sqlitePortable, pgPortable, mysqlPortable]) {
+      expect(schema.auditLogs.id.primary).toBe(true);
+    }
   });
 });
