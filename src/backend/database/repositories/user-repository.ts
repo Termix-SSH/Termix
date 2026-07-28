@@ -108,6 +108,9 @@ export class UserRepository {
     build: (isFirstUser: boolean) => NewUserRecord,
   ): Promise<{ user: UserRecord; isFirstUser: boolean }> {
     if (this.context.dialect === "sqlite") {
+      /* eslint-disable no-restricted-syntax -- sqlite-only branch: the dialect
+         is checked directly above, and better-sqlite3 rejects an async
+         transaction callback, so this cannot use the shared helpers. */
       return this.context.drizzle.transaction((tx) => {
         const isFirstUser =
           tx.select({ id: users.id }).from(users).all().length === 0;
@@ -118,6 +121,7 @@ export class UserRepository {
           .all();
         return { user: rows[0], isFirstUser };
       });
+      /* eslint-enable no-restricted-syntax */
     }
 
     return this.context.drizzle.transaction(async (tx) => {
@@ -126,6 +130,7 @@ export class UserRepository {
       const values = build(isFirstUser);
 
       if (supportsReturning(this.context.dialect)) {
+        // eslint-disable-next-line no-restricted-syntax -- guarded by the check on this line
         const rows = await tx.insert(users).values(values).returning();
         return { user: rows[0], isFirstUser };
       }

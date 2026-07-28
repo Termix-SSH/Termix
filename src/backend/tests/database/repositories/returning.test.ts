@@ -72,6 +72,82 @@ describe("updateReturning", () => {
   });
 });
 
+describe("updateReturning, when the read-back cannot find the rows", () => {
+  /**
+   * The failure mode: an update that changes a column its own `where` filters
+   * on. MySQL writes the rows, then the re-read matches nothing. Returning []
+   * would be indistinguishable from "matched nothing" and silently wrong.
+   */
+  function contextThatWritesButCannotReadBack() {
+    const chain = (result: unknown) => {
+      const thenable: Record<string, unknown> = {
+        set: () => thenable,
+        from: () => thenable,
+        where: () => thenable,
+        then: (resolve: (v: unknown) => void) =>
+          Promise.resolve(result).then(resolve),
+      };
+      return thenable;
+    };
+    const db = {
+      update: () => chain({ affectedRows: 3 }),
+      select: () => chain([]),
+      transaction: (fn: (tx: unknown) => Promise<unknown>) => fn(db),
+    };
+    return { dialect: "mysql", drizzle: db } as unknown as DatabaseContext;
+  }
+
+  it("throws instead of returning an empty array", async () => {
+    await expect(
+      updateReturning(
+        contextThatWritesButCannotReadBack(),
+        {} as never,
+        {},
+        where,
+      ),
+    ).rejects.toThrow(/wrote 3 row\(s\) but could not read them back/);
+  });
+
+  it("says how to fix it", async () => {
+    await expect(
+      updateReturning(
+        contextThatWritesButCannotReadBack(),
+        {} as never,
+        {},
+        where,
+      ),
+    ).rejects.toThrow(/filter on a column the update leaves alone/);
+  });
+
+  it("still returns [] when the update genuinely matched nothing", async () => {
+    const { context } = recordingContext("mysql");
+    // recordingContext reports rows for select, so use a zero-write stub.
+    const chain = (result: unknown) => {
+      const t: Record<string, unknown> = {
+        set: () => t,
+        from: () => t,
+        where: () => t,
+        then: (r: (v: unknown) => void) => Promise.resolve(result).then(r),
+      };
+      return t;
+    };
+    const db = {
+      update: () => chain({ affectedRows: 0 }),
+      select: () => chain([]),
+      transaction: (fn: (tx: unknown) => Promise<unknown>) => fn(db),
+    };
+    void context;
+    await expect(
+      updateReturning(
+        { dialect: "mysql", drizzle: db } as unknown as DatabaseContext,
+        {} as never,
+        {},
+        where,
+      ),
+    ).resolves.toEqual([]);
+  });
+});
+
 describe("deleteReturning", () => {
   it("uses a single statement where RETURNING exists", async () => {
     const { context, calls } = recordingContext("postgres");

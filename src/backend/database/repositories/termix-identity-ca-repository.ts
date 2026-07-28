@@ -97,6 +97,9 @@ export class TermixIdentityCaRepository {
       ).privateKey;
 
     if (this.context.dialect === "sqlite") {
+      /* eslint-disable no-restricted-syntax -- sqlite-only branch: the dialect
+         is checked directly above, and better-sqlite3 needs the synchronous
+         .all() form, which has no async equivalent. */
       return this.context.drizzle.transaction((tx) => {
         const row = tx
           .insert(termixIdentityCa)
@@ -110,6 +113,7 @@ export class TermixIdentityCaRepository {
           .returning()
           .all()[0];
       });
+      /* eslint-enable no-restricted-syntax */
     }
 
     return this.context.drizzle.transaction(async (tx) => {

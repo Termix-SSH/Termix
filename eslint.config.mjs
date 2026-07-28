@@ -46,4 +46,25 @@ export default tseslint.config([
       "react-refresh/only-export-components": "warn",
     },
   },
+  {
+    // MySQL has no RETURNING clause, and drizzle's mysql-core does not expose
+    // the method at all — a bare .returning() is a TypeError there, not a bad
+    // query, and it only fails on the engine no test in this repo runs against.
+    //
+    // 175 call sites were migrated off it. This is what stops number 176.
+    // Writes that need rows back go through repositories/returning.ts, which
+    // picks one statement or a read-then-write transaction per dialect.
+    files: ["src/backend/database/repositories/**/*.ts"],
+    ignores: ["src/backend/database/repositories/returning.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.property.name='returning']",
+          message:
+            "MySQL has no RETURNING. Use insertReturning/updateReturning/deleteReturning from ./returning.js, or rowsAffected() if you only need a count. Inside a proven sqlite-only branch, disable this rule with a comment saying so.",
+        },
+      ],
+    },
+  },
 ]);

@@ -1,7 +1,11 @@
 import { eq, type SQL } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { DatabaseContext } from "./database-context.js";
-import { insertedId, supportsReturning } from "./mutation-result.js";
+import {
+  insertedId,
+  rowsAffected,
+  supportsReturning,
+} from "./mutation-result.js";
 
 /**
  * Writes that need the affected rows back.
@@ -22,18 +26,19 @@ import { insertedId, supportsReturning } from "./mutation-result.js";
  * with a connection pool the second statement might not even reach the same
  * connection.
  *
- * ## The one thing that will bite you
+ * ## The trap, and why it cannot bite silently
  *
  * On MySQL the update path re-reads using the same `where`. If the update
- * changes a column that `where` tests, the read finds nothing and you get `[]`
- * where SQLite would have given you the row. Every current caller filters on an
- * id it does not modify. **Check that before adding one that does.**
- */
-
-/**
+ * changes a column that `where` tests, the read finds nothing — SQLite would
+ * have returned the row. Every current caller filters on an id it does not
+ * modify, but that is a convention, not a guarantee, so the mismatch is
+ * detected and thrown rather than returned as an empty array. Same for an
+ * insert whose row cannot be read back.
+ *
  * Row types come from the table, so call sites keep the typing they had with
  * `.returning()` and nothing has to be annotated by hand.
  */
+
 /**
  * What `.set()` accepts: a column's own type, or a SQL expression in its place —
  * `updatedAt: sql`CURRENT_TIMESTAMP`` is the common one here.
@@ -59,8 +64,22 @@ export async function updateReturning<T extends SQLiteTable>(
   }
 
   return db.transaction(async (tx) => {
-    await tx.update(table).set(values).where(where);
-    return tx.select().from(table).where(where);
+    const written = await tx.update(table).set(values).where(where);
+    const rows = await tx.select().from(table).where(where);
+
+    // The trap this catches: if the update changed a column that `where` tests,
+    // the read finds nothing and the caller gets [] — on MySQL only, with no
+    // error, where SQLite would have returned the row. Rows changed but none
+    // readable back is exactly that case, so make it loud instead.
+    if (rows.length === 0 && rowsAffected(written) > 0) {
+      throw new Error(
+        `updateReturning wrote ${rowsAffected(written)} row(s) but could not read ` +
+          `them back: the update changed a column the where clause filters on. ` +
+          `Read the rows first, or filter on a column the update leaves alone.`,
+      );
+    }
+
+    return rows;
   });
 }
 
@@ -127,7 +146,13 @@ export async function insertReturning<T extends Keyed>(
       );
     }
 
-    return tx.select().from(table).where(eq(table.id, key));
+    const rows = await tx.select().from(table).where(eq(table.id, key));
+    if (rows.length === 0) {
+      throw new Error(
+        `Inserted into ${String(table)} but could not read the row back by id ${key}.`,
+      );
+    }
+    return rows;
   });
 }
 
@@ -155,6 +180,12 @@ export async function insertReturningWhere<T extends SQLiteTable>(
 
   return db.transaction(async (tx) => {
     await tx.insert(table).values(values);
-    return tx.select().from(table).where(where);
+    const rows = await tx.select().from(table).where(where);
+    if (rows.length === 0) {
+      throw new Error(
+        `Inserted into ${String(table)} but the read-back condition matched nothing.`,
+      );
+    }
+    return rows;
   });
 }
