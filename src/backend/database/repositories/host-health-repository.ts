@@ -2,7 +2,7 @@ import { and, desc, eq, notInArray } from "drizzle-orm";
 import { hostHealthChecks, hostHealthHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { updateReturning } from "./returning.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type HostHealthCheckRecord = typeof hostHealthChecks.$inferSelect;
 export type HostHealthHistoryRecord = typeof hostHealthHistory.$inferSelect;
@@ -58,17 +58,14 @@ export class HostHealthRepository {
       return updated;
     }
 
-    const [created] = await this.context.drizzle
-      .insert(hostHealthChecks)
-      .values({
-        userId,
-        hostId,
-        checks,
-        intervalSeconds,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, hostHealthChecks, {
+      userId,
+      hostId,
+      checks,
+      intervalSeconds,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     await this.afterWrite();
     return created;

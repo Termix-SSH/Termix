@@ -2,6 +2,7 @@ import { desc, eq, inArray } from "drizzle-orm";
 import { recentActivity } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type RecentActivityRecord = typeof recentActivity.$inferSelect;
 export type NewRecentActivityRecord = typeof recentActivity.$inferInsert;
@@ -27,10 +28,7 @@ export class RecentActivityRepository {
   async create(
     activity: NewRecentActivityRecord,
   ): Promise<RecentActivityRecord> {
-    const rows = await this.context.drizzle
-      .insert(recentActivity)
-      .values(activity)
-      .returning();
+    const rows = await insertReturning(this.context, recentActivity, activity);
 
     await this.afterWrite();
     return rows[0];

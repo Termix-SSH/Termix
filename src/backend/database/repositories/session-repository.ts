@@ -2,6 +2,7 @@ import { and, eq, lte, ne } from "drizzle-orm";
 import { sessions } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type SessionRecord = typeof sessions.$inferSelect;
 export type NewSessionRecord = typeof sessions.$inferInsert;
@@ -13,10 +14,7 @@ export class SessionRepository {
   ) {}
 
   async create(session: NewSessionRecord): Promise<SessionRecord> {
-    const rows = await this.context.drizzle
-      .insert(sessions)
-      .values(session)
-      .returning();
+    const rows = await insertReturning(this.context, sessions, session);
     await this.afterWrite();
     return rows[0];
   }

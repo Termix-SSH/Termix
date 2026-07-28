@@ -2,7 +2,7 @@ import { eq, and } from "drizzle-orm";
 import { apiKeys, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning } from "./returning.js";
+import { deleteReturning, insertReturning } from "./returning.js";
 
 export type ApiKeyRecord = typeof apiKeys.$inferSelect;
 export type NewApiKeyRecord = typeof apiKeys.$inferInsert;
@@ -26,10 +26,7 @@ export class ApiKeyRepository {
   ) {}
 
   async create(apiKey: NewApiKeyRecord): Promise<ApiKeyRecord> {
-    const rows = await this.context.drizzle
-      .insert(apiKeys)
-      .values(apiKey)
-      .returning();
+    const rows = await insertReturning(this.context, apiKeys, apiKey);
     await this.afterWrite();
     return rows[0];
   }

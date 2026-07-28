@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { hostMetricsPreferences, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { updateReturning } from "./returning.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type HostMetricsPreferenceRecord =
   typeof hostMetricsPreferences.$inferSelect;
@@ -50,16 +50,17 @@ export class HostMetricsPreferenceRepository {
       return updated;
     }
 
-    const [created] = await this.context.drizzle
-      .insert(hostMetricsPreferences)
-      .values({
+    const [created] = await insertReturning(
+      this.context,
+      hostMetricsPreferences,
+      {
         userId,
         hostId,
         layout,
         createdAt: now,
         updatedAt: now,
-      })
-      .returning();
+      },
+    );
 
     await this.afterWrite();
     return created;

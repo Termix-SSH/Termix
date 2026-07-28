@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { webauthnCredentials } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type WebauthnCredentialRecord = typeof webauthnCredentials.$inferSelect;
 export type NewWebauthnCredentialRecord =
@@ -42,10 +43,11 @@ export class WebauthnCredentialRepository {
   async create(
     record: NewWebauthnCredentialRecord,
   ): Promise<WebauthnCredentialRecord> {
-    const rows = await this.context.drizzle
-      .insert(webauthnCredentials)
-      .values(record)
-      .returning();
+    const rows = await insertReturning(
+      this.context,
+      webauthnCredentials,
+      record,
+    );
 
     await this.afterWrite();
     return rows[0];

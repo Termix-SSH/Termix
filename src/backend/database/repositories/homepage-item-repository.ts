@@ -3,7 +3,11 @@ import { randomUUID } from "crypto";
 import { homepageItems } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning, updateReturning } from "./returning.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type HomepageItemRecord = typeof homepageItems.$inferSelect;
 
@@ -37,18 +41,15 @@ export class HomepageItemRepository {
     input: HomepageItemCreateInput,
     now = new Date().toISOString(),
   ): Promise<HomepageItemRecord> {
-    const [created] = await this.context.drizzle
-      .insert(homepageItems)
-      .values({
-        syncId: randomUUID(),
-        userId,
-        typeId: input.typeId,
-        title: input.title,
-        config: input.config,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, homepageItems, {
+      syncId: randomUUID(),
+      userId,
+      typeId: input.typeId,
+      title: input.title,
+      config: input.config,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     await this.afterWrite();
     return created;

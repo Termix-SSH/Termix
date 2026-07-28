@@ -4,7 +4,11 @@ import { hostAccess, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning, updateReturning } from "./returning.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type HostRecord = typeof hosts.$inferSelect;
 export type NewHostRecord = typeof hosts.$inferInsert;
@@ -23,10 +27,10 @@ export class HostRepository {
   ) {}
 
   async create(host: NewHostRecord): Promise<HostRecord> {
-    const rows = await this.context.drizzle
-      .insert(hosts)
-      .values({ syncId: randomUUID(), ...host })
-      .returning();
+    const rows = await insertReturning(this.context, hosts, {
+      syncId: randomUUID(),
+      ...host,
+    });
     await this.afterWrite();
     return rows[0];
   }
@@ -53,10 +57,11 @@ export class HostRepository {
       delete (encryptedHost as Partial<NewHostRecord>).id;
     }
 
-    const rows = await this.context.drizzle
-      .insert(hosts)
-      .values(encryptedHost as NewHostRecord)
-      .returning();
+    const rows = await insertReturning(
+      this.context,
+      hosts,
+      encryptedHost as NewHostRecord,
+    );
 
     await this.afterWrite();
     return DataCrypto.decryptRecord("ssh_data", rows[0], userId, userDataKey);

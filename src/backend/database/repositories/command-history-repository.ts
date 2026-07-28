@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { commandHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type CommandHistoryRecord = typeof commandHistory.$inferSelect;
 
@@ -17,10 +18,12 @@ export class CommandHistoryRepository {
     command: string,
     executedAt = new Date().toISOString(),
   ): Promise<CommandHistoryRecord> {
-    const [created] = await this.context.drizzle
-      .insert(commandHistory)
-      .values({ userId, hostId, command, executedAt })
-      .returning();
+    const [created] = await insertReturning(this.context, commandHistory, {
+      userId,
+      hostId,
+      command,
+      executedAt,
+    });
     await this.afterWrite();
     return created;
   }

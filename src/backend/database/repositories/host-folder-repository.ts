@@ -4,7 +4,11 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning, updateReturning } from "./returning.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type HostFolderRecord = typeof sshFolders.$inferSelect;
 export type HostFolderHostRecord = typeof hosts.$inferSelect;
@@ -95,19 +99,16 @@ export class HostFolderRepository {
       return { folder: updated, created: false };
     }
 
-    const [created] = await this.context.drizzle
-      .insert(sshFolders)
-      .values({
-        syncId: randomUUID(),
-        userId,
-        name,
-        color,
-        icon,
-        credentialId: credentialId ?? null,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, sshFolders, {
+      syncId: randomUUID(),
+      userId,
+      name,
+      color,
+      icon,
+      credentialId: credentialId ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     await this.afterWrite();
     return { folder: created, created: true };

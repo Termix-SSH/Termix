@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { userPreferences } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { updateReturning } from "./returning.js";
+import { insertReturningWhere, updateReturning } from "./returning.js";
 
 export type UserPreferenceRecord = typeof userPreferences.$inferSelect;
 export type NewUserPreferenceRecord = typeof userPreferences.$inferInsert;
@@ -33,10 +33,12 @@ export class UserPreferenceRepository {
     const existing = await this.findByUserId(userId);
 
     if (!existing) {
-      const rows = await this.context.drizzle
-        .insert(userPreferences)
-        .values({ userId, ...update })
-        .returning();
+      const rows = await insertReturningWhere(
+        this.context,
+        userPreferences,
+        { userId, ...update },
+        eq(userPreferences.userId, userId),
+      );
       await this.afterWrite();
       return rows[0];
     }

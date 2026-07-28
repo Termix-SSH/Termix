@@ -2,6 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import { sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type SshCredentialUsageRecord = typeof sshCredentialUsage.$inferSelect;
 
@@ -23,10 +24,11 @@ export class SshCredentialUsageRepository {
     hostId: number,
     userId: string,
   ): Promise<SshCredentialUsageRecord> {
-    const [created] = await this.context.drizzle
-      .insert(sshCredentialUsage)
-      .values({ credentialId, hostId, userId })
-      .returning();
+    const [created] = await insertReturning(this.context, sshCredentialUsage, {
+      credentialId,
+      hostId,
+      userId,
+    });
     await this.afterWrite();
     return created;
   }

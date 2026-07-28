@@ -2,7 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { termixIdentities, termixIdentityKeys } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { updateReturning } from "./returning.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type TermixIdentityRecord = typeof termixIdentities.$inferSelect;
 export type NewTermixIdentityRecord = typeof termixIdentities.$inferInsert;
@@ -59,10 +59,11 @@ export class TermixIdentityRepository {
   async createIdentity(
     identity: NewTermixIdentityRecord,
   ): Promise<TermixIdentityRecord> {
-    const rows = await this.context.drizzle
-      .insert(termixIdentities)
-      .values(identity)
-      .returning();
+    const rows = await insertReturning(
+      this.context,
+      termixIdentities,
+      identity,
+    );
 
     await this.afterWrite();
     return rows[0];
@@ -170,10 +171,7 @@ export class TermixIdentityRepository {
   async createKey(
     key: NewTermixIdentityKeyRecord,
   ): Promise<TermixIdentityKeyRecord> {
-    const rows = await this.context.drizzle
-      .insert(termixIdentityKeys)
-      .values(key)
-      .returning();
+    const rows = await insertReturning(this.context, termixIdentityKeys, key);
 
     await this.afterWrite();
     return rows[0];

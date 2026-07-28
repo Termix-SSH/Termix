@@ -9,7 +9,7 @@ import {
 import type { DatabaseContext } from "./database-context.js";
 import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
 import { rowsAffected } from "./mutation-result.js";
-import { updateReturning } from "./returning.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 type AlertRuleRecord = typeof alertRules.$inferSelect;
 type NotificationChannelRecord = typeof notificationChannels.$inferSelect;
@@ -120,16 +120,17 @@ export class AlertRepository {
     config: string;
     enabled: boolean;
   }): Promise<NotificationChannelRow> {
-    const [created] = await this.context.drizzle
-      .insert(notificationChannels)
-      .values({
+    const [created] = await insertReturning(
+      this.context,
+      notificationChannels,
+      {
         userId: input.userId,
         name: input.name,
         type: input.type,
         config: input.config,
         enabled: input.enabled,
-      })
-      .returning();
+      },
+    );
 
     await this.afterWrite();
     return mapChannelRow(created);
@@ -211,21 +212,18 @@ export class AlertRepository {
     channels: number[];
     now: string;
   }): Promise<AlertRuleWithChannelsRow> {
-    const [created] = await this.context.drizzle
-      .insert(alertRules)
-      .values({
-        userId: input.userId,
-        hostId: input.hostId,
-        name: input.name,
-        enabled: input.enabled,
-        triggerType: input.triggerType,
-        thresholdValue: input.thresholdValue,
-        thresholdDurationSeconds: input.thresholdDurationSeconds,
-        cooldownMinutes: input.cooldownMinutes,
-        createdAt: input.now,
-        updatedAt: input.now,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, alertRules, {
+      userId: input.userId,
+      hostId: input.hostId,
+      name: input.name,
+      enabled: input.enabled,
+      triggerType: input.triggerType,
+      thresholdValue: input.thresholdValue,
+      thresholdDurationSeconds: input.thresholdDurationSeconds,
+      cooldownMinutes: input.cooldownMinutes,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
 
     const channels = await this.replaceRuleChannels(
       created.id,
@@ -264,9 +262,10 @@ export class AlertRepository {
       now: string;
     },
   ): Promise<AlertRuleWithChannelsRow | null> {
-    const [updated] = await this.context.drizzle
-      .update(alertRules)
-      .set({
+    const [updated] = await updateReturning(
+      this.context,
+      alertRules,
+      {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.hostId !== undefined ? { hostId: input.hostId } : {}),
         ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
@@ -283,9 +282,9 @@ export class AlertRepository {
           ? { cooldownMinutes: input.cooldownMinutes }
           : {}),
         updatedAt: input.now,
-      })
-      .where(and(eq(alertRules.id, id), eq(alertRules.userId, userId)))
-      .returning();
+      },
+      and(eq(alertRules.id, id), eq(alertRules.userId, userId)),
+    );
 
     if (!updated) return null;
 
@@ -453,13 +452,12 @@ export class AlertRepository {
         ? [inArray(alertRuleChannels.channelId, channelIds)]
         : []),
     ];
-    const linkRows =
+    const linkResult =
       linkFilters.length === 0
-        ? []
+        ? null
         : await this.context.drizzle
             .delete(alertRuleChannels)
-            .where(or(...linkFilters))
-            .returning({ id: alertRuleChannels.id });
+            .where(or(...linkFilters));
 
     const ruleResult = await this.context.drizzle
       .delete(alertRules)
@@ -470,7 +468,7 @@ export class AlertRepository {
 
     if (
       rowsAffected(firingResult) > 0 ||
-      linkRows.length > 0 ||
+      rowsAffected(linkResult) > 0 ||
       rowsAffected(ruleResult) > 0 ||
       rowsAffected(result) > 0
     ) {
@@ -479,7 +477,7 @@ export class AlertRepository {
 
     return {
       firingsDeleted: rowsAffected(firingResult),
-      ruleLinksDeleted: linkRows.length,
+      ruleLinksDeleted: rowsAffected(linkResult),
       rulesDeleted: rowsAffected(ruleResult),
       channelsDeleted: rowsAffected(result),
     };

@@ -2,7 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { ssoProviders, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { updateReturning } from "./returning.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type SsoProviderRecord = typeof ssoProviders.$inferSelect;
 export type NewSsoProviderRecord = typeof ssoProviders.$inferInsert;
@@ -78,10 +78,7 @@ export class SsoProviderRepository {
   }
 
   async create(provider: NewSsoProviderRecord): Promise<SsoProviderRecord> {
-    const rows = await this.context.drizzle
-      .insert(ssoProviders)
-      .values(provider)
-      .returning();
+    const rows = await insertReturning(this.context, ssoProviders, provider);
 
     await this.afterWrite();
     return rows[0];

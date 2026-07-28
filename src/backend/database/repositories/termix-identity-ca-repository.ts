@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import { termixIdentityCa } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import { rowsAffected } from "./mutation-result.js";
+import {
+  insertedId,
+  rowsAffected,
+  supportsReturning,
+} from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 export type TermixIdentityCaRecord = typeof termixIdentityCa.$inferSelect;
 export type NewTermixIdentityCaRecord = typeof termixIdentityCa.$inferInsert;
@@ -55,27 +60,7 @@ export class TermixIdentityCaRepository {
     ca: NewTermixIdentityCaRecord,
   ): Promise<TermixIdentityCaRecord> {
     const userDataKey = DataCrypto.validateUserAccess(userId);
-    const result = this.context.drizzle.transaction((tx) => {
-      const inserted = tx
-        .insert(termixIdentityCa)
-        .values({ ...ca, privateKey: "" })
-        .returning()
-        .all();
-      const row = inserted[0];
-      const encrypted = DataCrypto.encryptRecord(
-        "termix_identity_ca",
-        { id: row.id, privateKey: ca.privateKey },
-        userId,
-        userDataKey,
-      );
-
-      return tx
-        .update(termixIdentityCa)
-        .set({ privateKey: encrypted.privateKey })
-        .where(eq(termixIdentityCa.id, row.id))
-        .returning()
-        .all()[0];
-    });
+    const result = await this.insertThenEncrypt(userId, ca, userDataKey);
 
     await this.afterWrite();
     return DataCrypto.decryptRecord(
@@ -84,6 +69,70 @@ export class TermixIdentityCaRepository {
       userId,
       userDataKey,
     );
+  }
+
+  /**
+   * Writes a CA in two steps, because the ciphertext depends on the id.
+   *
+   * The private key is encrypted with the row's own id as context, which does
+   * not exist until the row does. So: insert with an empty key, encrypt, update.
+   * The empty key must never be observable, hence the transaction.
+   *
+   * Two branches because better-sqlite3 rejects an async transaction callback —
+   * see the same note in UserRepository.
+   */
+  private async insertThenEncrypt(
+    userId: string,
+    ca: NewTermixIdentityCaRecord,
+    userDataKey: Buffer,
+  ): Promise<TermixIdentityCaRecord> {
+    const draft = { ...ca, privateKey: "" };
+
+    const seal = (id: number) =>
+      DataCrypto.encryptRecord(
+        "termix_identity_ca",
+        { id, privateKey: ca.privateKey },
+        userId,
+        userDataKey,
+      ).privateKey;
+
+    if (this.context.dialect === "sqlite") {
+      return this.context.drizzle.transaction((tx) => {
+        const row = tx
+          .insert(termixIdentityCa)
+          .values(draft)
+          .returning()
+          .all()[0];
+        return tx
+          .update(termixIdentityCa)
+          .set({ privateKey: seal(row.id) })
+          .where(eq(termixIdentityCa.id, row.id))
+          .returning()
+          .all()[0];
+      });
+    }
+
+    return this.context.drizzle.transaction(async (tx) => {
+      const written = await tx.insert(termixIdentityCa).values(draft);
+      const id = supportsReturning(this.context.dialect)
+        ? (written as unknown as { id: number }[])[0].id
+        : insertedId(written);
+
+      if (id === null || id === undefined) {
+        throw new Error("Insert into termix_identity_ca returned no id.");
+      }
+
+      await tx
+        .update(termixIdentityCa)
+        .set({ privateKey: seal(id) })
+        .where(eq(termixIdentityCa.id, id));
+
+      const [row] = await tx
+        .select()
+        .from(termixIdentityCa)
+        .where(eq(termixIdentityCa.id, id));
+      return row;
+    });
   }
 
   async updateEncryptedForIdentity(
@@ -104,14 +153,15 @@ export class TermixIdentityCaRepository {
         ).privateKey
       : undefined;
 
-    const rows = await this.context.drizzle
-      .update(termixIdentityCa)
-      .set({
+    const rows = await updateReturning(
+      this.context,
+      termixIdentityCa,
+      {
         ...update,
         ...(encryptedPrivateKey ? { privateKey: encryptedPrivateKey } : {}),
-      })
-      .where(eq(termixIdentityCa.identityId, identityId))
-      .returning();
+      },
+      eq(termixIdentityCa.identityId, identityId),
+    );
 
     await this.afterWrite();
     return this.decryptOne(rows[0] ?? null, userId);

@@ -7,6 +7,7 @@ import {
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type SessionShareRecord = typeof sessionShares.$inferSelect;
 export type SessionShareParticipantRecord =
@@ -50,22 +51,19 @@ export class SessionShareRepository {
   ) {}
 
   async create(input: SessionShareCreateInput): Promise<SessionShareRecord> {
-    const [created] = await this.context.drizzle
-      .insert(sessionShares)
-      .values({
-        id: input.id,
-        hostId: input.hostId,
-        ownerUserId: input.ownerUserId,
-        protocol: input.protocol,
-        sessionId: input.sessionId,
-        tabInstanceId: input.tabInstanceId ?? null,
-        shareType: input.shareType,
-        targetUserId: input.targetUserId ?? null,
-        linkToken: input.linkToken ?? null,
-        permissionLevel: input.permissionLevel,
-        expiresAt: input.expiresAt,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, sessionShares, {
+      id: input.id,
+      hostId: input.hostId,
+      ownerUserId: input.ownerUserId,
+      protocol: input.protocol,
+      sessionId: input.sessionId,
+      tabInstanceId: input.tabInstanceId ?? null,
+      shareType: input.shareType,
+      targetUserId: input.targetUserId ?? null,
+      linkToken: input.linkToken ?? null,
+      permissionLevel: input.permissionLevel,
+      expiresAt: input.expiresAt,
+    });
 
     await this.afterWrite();
     return created;
@@ -211,10 +209,11 @@ export class SessionShareRepository {
     userId: string | null,
     guestLabel: string | null,
   ): Promise<SessionShareParticipantRecord> {
-    const [created] = await this.context.drizzle
-      .insert(sessionShareParticipants)
-      .values({ shareId, userId, guestLabel })
-      .returning();
+    const [created] = await insertReturning(
+      this.context,
+      sessionShareParticipants,
+      { shareId, userId, guestLabel },
+    );
     await this.afterWrite();
     return created;
   }

@@ -2,7 +2,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { c2sTunnelPresets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { updateReturning } from "./returning.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type C2sTunnelPresetRecord = typeof c2sTunnelPresets.$inferSelect;
 
@@ -66,16 +66,13 @@ export class C2sTunnelPresetRepository {
     userId: string,
     input: C2sTunnelPresetCreateInput,
   ): Promise<C2sTunnelPresetRecord> {
-    const [created] = await this.context.drizzle
-      .insert(c2sTunnelPresets)
-      .values({
-        userId,
-        name: input.name,
-        config: input.config,
-        platform: input.platform ?? null,
-        computerName: input.computerName ?? null,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, c2sTunnelPresets, {
+      userId,
+      name: input.name,
+      config: input.config,
+      platform: input.platform ?? null,
+      computerName: input.computerName ?? null,
+    });
 
     await this.afterWrite();
     return created;

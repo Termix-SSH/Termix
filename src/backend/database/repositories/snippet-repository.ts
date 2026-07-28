@@ -3,7 +3,11 @@ import { randomUUID } from "crypto";
 import { snippetFolders, snippets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning, updateReturning } from "./returning.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type SnippetRecord = typeof snippets.$inferSelect;
 export type SnippetFolderRecord = typeof snippetFolders.$inferSelect;
@@ -151,19 +155,16 @@ export class SnippetRepository {
         ? await this.nextOrderForFolder(userId, folderValue)
         : input.order;
 
-    const rows = await this.context.drizzle
-      .insert(snippets)
-      .values({
-        syncId: randomUUID(),
-        userId,
-        name: input.name.trim(),
-        content: input.content.trim(),
-        description: input.description?.trim() || null,
-        folder: input.folder?.trim() || null,
-        order,
-        hostFilter: input.hostFilter ? JSON.stringify(input.hostFilter) : null,
-      })
-      .returning();
+    const rows = await insertReturning(this.context, snippets, {
+      syncId: randomUUID(),
+      userId,
+      name: input.name.trim(),
+      content: input.content.trim(),
+      description: input.description?.trim() || null,
+      folder: input.folder?.trim() || null,
+      order,
+      hostFilter: input.hostFilter ? JSON.stringify(input.hostFilter) : null,
+    });
 
     await this.afterWrite();
     return rows[0];
@@ -378,16 +379,13 @@ export class SnippetRepository {
     const existing = await this.findFolderByName(userId, name);
     if (existing) return null;
 
-    const rows = await this.context.drizzle
-      .insert(snippetFolders)
-      .values({
-        syncId: randomUUID(),
-        userId,
-        name: name.trim(),
-        color: color?.trim() || null,
-        icon: icon?.trim() || null,
-      })
-      .returning();
+    const rows = await insertReturning(this.context, snippetFolders, {
+      syncId: randomUUID(),
+      userId,
+      name: name.trim(),
+      color: color?.trim() || null,
+      icon: icon?.trim() || null,
+    });
 
     if (triggerSave) {
       await this.afterWrite();

@@ -3,7 +3,11 @@ import { randomUUID } from "crypto";
 import { dashboardServiceLinks } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning } from "./returning.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type DashboardServiceLinkRecord =
   typeof dashboardServiceLinks.$inferSelect;
@@ -40,9 +44,10 @@ export class DashboardServiceLinkRepository {
     const nextOrder =
       existing.length > 0 ? existing[existing.length - 1].order + 1 : 0;
 
-    const [created] = await this.context.drizzle
-      .insert(dashboardServiceLinks)
-      .values({
+    const [created] = await insertReturning(
+      this.context,
+      dashboardServiceLinks,
+      {
         syncId: randomUUID(),
         userId,
         label: input.label,
@@ -50,8 +55,8 @@ export class DashboardServiceLinkRepository {
         order: nextOrder,
         createdAt,
         updatedAt: createdAt,
-      })
-      .returning();
+      },
+    );
     await this.afterWrite();
     return created;
   }
@@ -79,16 +84,15 @@ export class DashboardServiceLinkRepository {
     id: number,
     updates: DashboardServiceLinkUpdate,
   ): Promise<DashboardServiceLinkRecord | null> {
-    const [updated] = await this.context.drizzle
-      .update(dashboardServiceLinks)
-      .set({ ...updates, updatedAt: new Date().toISOString() })
-      .where(
-        and(
-          eq(dashboardServiceLinks.id, id),
-          eq(dashboardServiceLinks.userId, userId),
-        ),
-      )
-      .returning();
+    const [updated] = await updateReturning(
+      this.context,
+      dashboardServiceLinks,
+      { ...updates, updatedAt: new Date().toISOString() },
+      and(
+        eq(dashboardServiceLinks.id, id),
+        eq(dashboardServiceLinks.userId, userId),
+      ),
+    );
 
     if (updated) {
       await this.afterWrite();

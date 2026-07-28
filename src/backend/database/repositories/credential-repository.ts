@@ -4,7 +4,11 @@ import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { rowsAffected } from "./mutation-result.js";
-import { deleteReturning, updateReturning } from "./returning.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type CredentialRecord = typeof sshCredentials.$inferSelect;
 export type NewCredentialRecord = typeof sshCredentials.$inferInsert;
@@ -19,10 +23,10 @@ export class CredentialRepository {
   ) {}
 
   async create(credential: NewCredentialRecord): Promise<CredentialRecord> {
-    const rows = await this.context.drizzle
-      .insert(sshCredentials)
-      .values({ syncId: randomUUID(), ...credential })
-      .returning();
+    const rows = await insertReturning(this.context, sshCredentials, {
+      syncId: randomUUID(),
+      ...credential,
+    });
     await this.afterWrite();
     return rows[0];
   }
@@ -48,10 +52,11 @@ export class CredentialRepository {
       delete (encryptedCredential as Partial<NewCredentialRecord>).id;
     }
 
-    const rows = await this.context.drizzle
-      .insert(sshCredentials)
-      .values(encryptedCredential as NewCredentialRecord)
-      .returning();
+    const rows = await insertReturning(
+      this.context,
+      sshCredentials,
+      encryptedCredential as NewCredentialRecord,
+    );
 
     await this.afterWrite();
     return DataCrypto.decryptRecord(
@@ -167,16 +172,15 @@ export class CredentialRepository {
     credentialId: number,
     update: CredentialUpdate,
   ): Promise<CredentialRecord | null> {
-    const rows = await this.context.drizzle
-      .update(sshCredentials)
-      .set({ ...update, updatedAt: sql`CURRENT_TIMESTAMP` })
-      .where(
-        and(
-          eq(sshCredentials.id, credentialId),
-          eq(sshCredentials.userId, userId),
-        ),
-      )
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      sshCredentials,
+      { ...update, updatedAt: sql`CURRENT_TIMESTAMP` },
+      and(
+        eq(sshCredentials.id, credentialId),
+        eq(sshCredentials.userId, userId),
+      ),
+    );
 
     await this.afterWrite();
     return rows[0] ?? null;
