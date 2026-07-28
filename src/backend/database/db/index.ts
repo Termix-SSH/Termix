@@ -14,6 +14,10 @@ import {
   DataDirMisconfiguredError,
 } from "../../utils/data-dir-guard.js";
 import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
+import { resolveDatabaseDialect, type DatabaseDialect } from "./dialect.js";
+import { connectRemoteDatabase } from "./connect.js";
+import { runRemoteMigrations } from "./migrate.js";
+import type { PortableDatabase } from "../repositories/database-context.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
@@ -2596,8 +2600,51 @@ async function handlePostInitFileEncryption() {
 }
 
 async function initializeDatabase(): Promise<void> {
+  const dialect = resolveDatabaseDialect();
+
+  if (dialect !== "sqlite") {
+    await initializeRemoteDatabase(dialect);
+    return;
+  }
+
   await initializeCompleteDatabase();
   await handlePostInitFileEncryption();
+}
+
+/**
+ * Startup against Postgres or MySQL.
+ *
+ * Shorter than the SQLite path because most of what that one does has no
+ * counterpart here: there is no file to decrypt, no in-memory copy to keep in
+ * step with disk, and the schema comes from drizzle-kit migrations instead of
+ * the inline DDL below.
+ *
+ * What does carry over is the settings cache. 27 call sites read settings
+ * synchronously, which better-sqlite3 allows and no remote driver does, so the
+ * table is loaded once here before anything asks for it.
+ */
+async function initializeRemoteDatabase(
+  dialect: Exclude<DatabaseDialect, "sqlite">,
+): Promise<void> {
+  databaseLogger.info(`Connecting to ${dialect} database`, {
+    operation: "db_init",
+    dialect,
+  });
+
+  db = await connectRemoteDatabase(dialect);
+  await runRemoteMigrations(dialect, db);
+
+  // Imported here rather than at the top: factory.ts imports getDb from this
+  // module, and a static import would close the cycle at module-load time.
+  const { primeCurrentSettingsCache } = await import(
+    "../repositories/factory.js"
+  );
+  await primeCurrentSettingsCache();
+
+  databaseLogger.info(`${dialect} database ready`, {
+    operation: "db_init_complete",
+    dialect,
+  });
 }
 
 export { initializeDatabase };
@@ -2677,9 +2724,9 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-let db: ReturnType<typeof drizzle<typeof schema>>;
+let db: PortableDatabase;
 
-export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
+export function getDb(): PortableDatabase {
   if (!db) {
     throw new Error(
       "Database not initialized. Ensure initializeDatabase() is called before accessing db.",
@@ -2690,6 +2737,13 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
 
 export function getSqlite(): Database.Database {
   if (!sqlite) {
+    const dialect = resolveDatabaseDialect();
+    if (dialect !== "sqlite") {
+      throw new Error(
+        `No SQLite handle: DATABASE_DIALECT is "${dialect}". This caller needs a ` +
+          `synchronous query, which only SQLite offers — give it an async path instead.`,
+      );
+    }
     throw new Error(
       "SQLite not initialized. Ensure initializeDatabase() is called before accessing sqlite.",
     );
