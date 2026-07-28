@@ -4,13 +4,11 @@ import { SsoProviderRepository } from "../../../database/repositories/sso-provid
 
 describe("SsoProviderRepository", () => {
   let adapter: TestSqliteDatabase | null = null;
-  let sqlite: Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"];
 
   afterEach(async () => {
     if (adapter) {
       await adapter.close();
       adapter = null;
-      sqlite = undefined;
     }
   });
 
@@ -19,7 +17,6 @@ describe("SsoProviderRepository", () => {
   ): Promise<SsoProviderRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    sqlite = adapter.raw;
 
     return new SsoProviderRepository(context, onWrite);
   }
@@ -75,7 +72,7 @@ describe("SsoProviderRepository", () => {
       config: "{}",
     });
 
-    sqlite?.exec(`
+    await adapter!.exec(`
       INSERT INTO users (id, username, password_hash, sso_provider_id)
       VALUES ('user-1', 'u1', 'hash', ${provider.id}),
              ('user-2', 'u2', 'hash', ${provider.id}),

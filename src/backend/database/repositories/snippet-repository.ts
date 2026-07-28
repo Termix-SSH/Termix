@@ -90,11 +90,16 @@ export class SnippetRepository {
   }
 
   async listSnippetsForExport(userId: string): Promise<SnippetRecord[]> {
-    return this.context.drizzle
-      .select()
-      .from(snippets)
-      .where(eq(snippets.userId, userId))
-      .orderBy(asc(snippets.folder), asc(snippets.order));
+    return (
+      this.context.drizzle
+        .select()
+        .from(snippets)
+        .where(eq(snippets.userId, userId))
+        // coalesce, not asc(folder): folder is nullable, and NULLs sort first on
+        // SQLite and MySQL but last on Postgres. An export whose row order depends
+        // on the engine is not much of an export.
+        .orderBy(sql`coalesce(${snippets.folder}, '')`, asc(snippets.order))
+    );
   }
 
   async listFoldersForExport(userId: string): Promise<SnippetFolderRecord[]> {
