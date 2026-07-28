@@ -2,6 +2,7 @@ import { and, desc, eq, notInArray } from "drizzle-orm";
 import { hostHealthChecks, hostHealthHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 export type HostHealthCheckRecord = typeof hostHealthChecks.$inferSelect;
 export type HostHealthHistoryRecord = typeof hostHealthHistory.$inferSelect;
@@ -46,11 +47,12 @@ export class HostHealthRepository {
   ): Promise<HostHealthCheckRecord> {
     const existing = await this.findChecksByUserAndHost(userId, hostId);
     if (existing) {
-      const [updated] = await this.context.drizzle
-        .update(hostHealthChecks)
-        .set({ checks, intervalSeconds, updatedAt: now })
-        .where(eq(hostHealthChecks.id, existing.id))
-        .returning();
+      const [updated] = await updateReturning(
+        this.context,
+        hostHealthChecks,
+        { checks, intervalSeconds, updatedAt: now },
+        eq(hostHealthChecks.id, existing.id),
+      );
 
       await this.afterWrite();
       return updated;

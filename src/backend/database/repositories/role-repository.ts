@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { hostAccess, roles, userRoles } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { deleteReturning } from "./returning.js";
 
 export type RoleRecord = typeof roles.$inferSelect;
 export type NewRoleRecord = typeof roles.$inferInsert;
@@ -79,10 +80,11 @@ export class RoleRepository {
   }
 
   async deleteRole(id: number): Promise<{ deletedUserIds: string[] }> {
-    const deletedUserRoles = await this.context.drizzle
-      .delete(userRoles)
-      .where(eq(userRoles.roleId, id))
-      .returning({ userId: userRoles.userId });
+    const deletedUserRoles = await deleteReturning(
+      this.context,
+      userRoles,
+      eq(userRoles.roleId, id),
+    );
 
     await this.context.drizzle
       .delete(hostAccess)

@@ -4,6 +4,7 @@ import { sshCredentials, sshCredentialUsage } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { rowsAffected } from "./mutation-result.js";
+import { deleteReturning, updateReturning } from "./returning.js";
 
 export type CredentialRecord = typeof sshCredentials.$inferSelect;
 export type NewCredentialRecord = typeof sshCredentials.$inferInsert;
@@ -193,16 +194,15 @@ export class CredentialRepository {
       userDataKey,
     );
 
-    const rows = await this.context.drizzle
-      .update(sshCredentials)
-      .set({ ...encryptedUpdate, updatedAt: sql`CURRENT_TIMESTAMP` })
-      .where(
-        and(
-          eq(sshCredentials.id, credentialId),
-          eq(sshCredentials.userId, userId),
-        ),
-      )
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      sshCredentials,
+      { ...encryptedUpdate, updatedAt: sql`CURRENT_TIMESTAMP` },
+      and(
+        eq(sshCredentials.id, credentialId),
+        eq(sshCredentials.userId, userId),
+      ),
+    );
 
     await this.afterWrite();
     return this.decryptOne(rows[0] ?? null, userId);
@@ -212,18 +212,17 @@ export class CredentialRepository {
     userId: string,
     credentialId: number,
   ): Promise<{ syncId: string | null } | null> {
-    const rows = await this.context.drizzle
-      .delete(sshCredentials)
-      .where(
-        and(
-          eq(sshCredentials.id, credentialId),
-          eq(sshCredentials.userId, userId),
-        ),
-      )
-      .returning({ syncId: sshCredentials.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      sshCredentials,
+      and(
+        eq(sshCredentials.id, credentialId),
+        eq(sshCredentials.userId, userId),
+      ),
+    );
 
     await this.afterWrite();
-    return rows[0] ?? null;
+    return rows[0] ? { syncId: rows[0].syncId } : null;
   }
 
   async deleteByUserId(userId: string): Promise<number> {

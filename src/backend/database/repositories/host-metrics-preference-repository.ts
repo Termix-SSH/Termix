@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { hostMetricsPreferences, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 export type HostMetricsPreferenceRecord =
   typeof hostMetricsPreferences.$inferSelect;
@@ -38,11 +39,12 @@ export class HostMetricsPreferenceRepository {
   ): Promise<HostMetricsPreferenceRecord> {
     const existing = await this.findByUserAndHost(userId, hostId);
     if (existing) {
-      const [updated] = await this.context.drizzle
-        .update(hostMetricsPreferences)
-        .set({ layout, updatedAt: now })
-        .where(eq(hostMetricsPreferences.id, existing.id))
-        .returning();
+      const [updated] = await updateReturning(
+        this.context,
+        hostMetricsPreferences,
+        { layout, updatedAt: now },
+        eq(hostMetricsPreferences.id, existing.id),
+      );
 
       await this.afterWrite();
       return updated;

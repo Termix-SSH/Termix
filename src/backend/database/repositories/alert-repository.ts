@@ -9,6 +9,7 @@ import {
 import type { DatabaseContext } from "./database-context.js";
 import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
 import { rowsAffected } from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 type AlertRuleRecord = typeof alertRules.$inferSelect;
 type NotificationChannelRecord = typeof notificationChannels.$inferSelect;
@@ -148,16 +149,15 @@ export class AlertRepository {
       return this.findNotificationChannelForUser(id, userId);
     }
 
-    const [updated] = await this.context.drizzle
-      .update(notificationChannels)
-      .set(input)
-      .where(
-        and(
-          eq(notificationChannels.id, id),
-          eq(notificationChannels.userId, userId),
-        ),
-      )
-      .returning();
+    const [updated] = await updateReturning(
+      this.context,
+      notificationChannels,
+      input,
+      and(
+        eq(notificationChannels.id, id),
+        eq(notificationChannels.userId, userId),
+      ),
+    );
 
     if (!updated) return null;
     await this.afterWrite();

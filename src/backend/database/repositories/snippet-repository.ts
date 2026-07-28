@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { snippetFolders, snippets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { deleteReturning, updateReturning } from "./returning.js";
 
 export type SnippetRecord = typeof snippets.$inferSelect;
 export type SnippetFolderRecord = typeof snippetFolders.$inferSelect;
@@ -201,11 +202,12 @@ export class SnippetRepository {
         ? JSON.stringify(input.hostFilter)
         : null;
 
-    const rows = await this.context.drizzle
-      .update(snippets)
-      .set(updateFields)
-      .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      snippets,
+      updateFields,
+      and(eq(snippets.id, snippetId), eq(snippets.userId, userId)),
+    );
 
     await this.afterWrite();
     return { existing, updated: rows[0] };
@@ -413,13 +415,12 @@ export class SnippetRepository {
     if (color !== undefined) updateFields.color = color?.trim() || null;
     if (icon !== undefined) updateFields.icon = icon?.trim() || null;
 
-    const rows = await this.context.drizzle
-      .update(snippetFolders)
-      .set(updateFields)
-      .where(
-        and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
-      )
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      snippetFolders,
+      updateFields,
+      and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
+    );
 
     await this.afterWrite();
     return rows[0] ?? null;
@@ -464,15 +465,14 @@ export class SnippetRepository {
       .set({ folder: null })
       .where(and(eq(snippets.userId, userId), eq(snippets.folder, name)));
 
-    const rows = await this.context.drizzle
-      .delete(snippetFolders)
-      .where(
-        and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
-      )
-      .returning({ syncId: snippetFolders.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      snippetFolders,
+      and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
+    );
 
     await this.afterWrite();
-    return rows[0] ?? null;
+    return rows[0] ? { syncId: rows[0].syncId } : null;
   }
 
   private async findFolderByName(

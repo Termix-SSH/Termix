@@ -4,6 +4,7 @@ import { hostAccess, hosts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { rowsAffected } from "./mutation-result.js";
+import { deleteReturning, updateReturning } from "./returning.js";
 
 export type HostRecord = typeof hosts.$inferSelect;
 export type NewHostRecord = typeof hosts.$inferInsert;
@@ -151,11 +152,12 @@ export class HostRepository {
     hostId: number,
     update: HostUpdate,
   ): Promise<HostRecord | null> {
-    const rows = await this.context.drizzle
-      .update(hosts)
-      .set({ ...update, updatedAt: sql`CURRENT_TIMESTAMP` })
-      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      hosts,
+      { ...update, updatedAt: sql`CURRENT_TIMESTAMP` },
+      and(eq(hosts.id, hostId), eq(hosts.userId, userId)),
+    );
 
     await this.afterWrite();
     return rows[0] ?? null;
@@ -174,11 +176,12 @@ export class HostRepository {
       userDataKey,
     );
 
-    const rows = await this.context.drizzle
-      .update(hosts)
-      .set({ ...encryptedUpdate, updatedAt: sql`CURRENT_TIMESTAMP` })
-      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      hosts,
+      { ...encryptedUpdate, updatedAt: sql`CURRENT_TIMESTAMP` },
+      and(eq(hosts.id, hostId), eq(hosts.userId, userId)),
+    );
 
     await this.afterWrite();
     return rows[0]
@@ -232,13 +235,14 @@ export class HostRepository {
   ): Promise<{ syncId: string | null } | null> {
     await this.deleteAccessForHost(hostId);
 
-    const rows = await this.context.drizzle
-      .delete(hosts)
-      .where(and(eq(hosts.id, hostId), eq(hosts.userId, userId)))
-      .returning({ syncId: hosts.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      hosts,
+      and(eq(hosts.id, hostId), eq(hosts.userId, userId)),
+    );
 
     await this.afterWrite();
-    return rows[0] ?? null;
+    return rows[0] ? { syncId: rows[0].syncId } : null;
   }
 
   async deleteByUserId(userId: string): Promise<number> {

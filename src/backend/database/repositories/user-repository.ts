@@ -2,6 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 import { users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 export type UserRecord = typeof users.$inferSelect;
 export type NewUserRecord = typeof users.$inferInsert;
@@ -110,11 +111,12 @@ export class UserRepository {
   }
 
   async update(id: string, update: UserUpdate): Promise<UserRecord | null> {
-    const rows = await this.context.drizzle
-      .update(users)
-      .set(update)
-      .where(eq(users.id, id))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      users,
+      update,
+      eq(users.id, id),
+    );
 
     await this.afterWrite();
     return rows[0] ?? null;

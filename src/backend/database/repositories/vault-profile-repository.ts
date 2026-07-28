@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { vaultProfiles } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { deleteReturning } from "./returning.js";
 
 export type VaultProfileRecord = typeof vaultProfiles.$inferSelect;
 
@@ -102,14 +103,15 @@ export class VaultProfileRepository {
   }
 
   async deleteById(id: number): Promise<{ syncId: string | null } | null> {
-    const rows = await this.context.drizzle
-      .delete(vaultProfiles)
-      .where(eq(vaultProfiles.id, id))
-      .returning({ syncId: vaultProfiles.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      vaultProfiles,
+      eq(vaultProfiles.id, id),
+    );
 
     if (rows.length === 0) return null;
     await this.afterWrite();
-    return rows[0];
+    return { syncId: rows[0].syncId };
   }
 
   async deleteByUserId(userId: string): Promise<number> {

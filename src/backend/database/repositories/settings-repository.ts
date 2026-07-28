@@ -2,6 +2,7 @@ import { eq, like } from "drizzle-orm";
 import { settings } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { forgetCachedSetting, updateCachedSetting } from "./settings-cache.js";
+import { deleteReturning } from "./returning.js";
 
 export class SettingsRepository {
   constructor(
@@ -61,10 +62,11 @@ export class SettingsRepository {
   }
 
   async deleteLike(pattern: string): Promise<number> {
-    const rows = await this.context.drizzle
-      .delete(settings)
-      .where(like(settings.key, pattern))
-      .returning({ key: settings.key });
+    const rows = await deleteReturning(
+      this.context,
+      settings,
+      like(settings.key, pattern),
+    );
     for (const row of rows) forgetCachedSetting(row.key);
     await this.afterWrite();
     return rows.length;

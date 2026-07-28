@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { dashboardServiceLinks } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { deleteReturning } from "./returning.js";
 
 export type DashboardServiceLinkRecord =
   typeof dashboardServiceLinks.$inferSelect;
@@ -100,19 +101,18 @@ export class DashboardServiceLinkRepository {
     userId: string,
     id: number,
   ): Promise<{ syncId: string | null } | null> {
-    const rows = await this.context.drizzle
-      .delete(dashboardServiceLinks)
-      .where(
-        and(
-          eq(dashboardServiceLinks.id, id),
-          eq(dashboardServiceLinks.userId, userId),
-        ),
-      )
-      .returning({ syncId: dashboardServiceLinks.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      dashboardServiceLinks,
+      and(
+        eq(dashboardServiceLinks.id, id),
+        eq(dashboardServiceLinks.userId, userId),
+      ),
+    );
 
     if (rows.length === 0) return null;
     await this.afterWrite();
-    return rows[0];
+    return { syncId: rows[0].syncId };
   }
 
   async deleteByUserId(userId: string): Promise<number> {

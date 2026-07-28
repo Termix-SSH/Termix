@@ -2,6 +2,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { termixIdentities, termixIdentityKeys } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 export type TermixIdentityRecord = typeof termixIdentities.$inferSelect;
 export type NewTermixIdentityRecord = typeof termixIdentities.$inferInsert;
@@ -71,11 +72,12 @@ export class TermixIdentityRepository {
     userId: string,
     update: TermixIdentityUpdate,
   ): Promise<TermixIdentityRecord | null> {
-    const rows = await this.context.drizzle
-      .update(termixIdentities)
-      .set(update)
-      .where(eq(termixIdentities.userId, userId))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      termixIdentities,
+      update,
+      eq(termixIdentities.userId, userId),
+    );
 
     if (rows.length > 0) {
       await this.afterWrite();
@@ -182,16 +184,12 @@ export class TermixIdentityRepository {
     id: number,
     update: TermixIdentityKeyUpdate,
   ): Promise<TermixIdentityKeyRecord | null> {
-    const rows = await this.context.drizzle
-      .update(termixIdentityKeys)
-      .set(update)
-      .where(
-        and(
-          eq(termixIdentityKeys.id, id),
-          eq(termixIdentityKeys.userId, userId),
-        ),
-      )
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      termixIdentityKeys,
+      update,
+      and(eq(termixIdentityKeys.id, id), eq(termixIdentityKeys.userId, userId)),
+    );
 
     if (rows.length > 0) {
       await this.afterWrite();

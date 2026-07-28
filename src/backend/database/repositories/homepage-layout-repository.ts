@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { homepageLayouts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 export type HomepageLayoutRecord = typeof homepageLayouts.$inferSelect;
 
@@ -37,11 +38,12 @@ export class HomepageLayoutRepository {
       return created;
     }
 
-    const [updated] = await this.context.drizzle
-      .update(homepageLayouts)
-      .set({ layout, updatedAt })
-      .where(eq(homepageLayouts.userId, userId))
-      .returning();
+    const [updated] = await updateReturning(
+      this.context,
+      homepageLayouts,
+      { layout, updatedAt },
+      eq(homepageLayouts.userId, userId),
+    );
     await this.afterWrite();
     return updated;
   }

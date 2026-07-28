@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { ssoProviders, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { updateReturning } from "./returning.js";
 
 export type SsoProviderRecord = typeof ssoProviders.$inferSelect;
 export type NewSsoProviderRecord = typeof ssoProviders.$inferInsert;
@@ -90,11 +91,12 @@ export class SsoProviderRepository {
     id: number,
     update: SsoProviderUpdate,
   ): Promise<SsoProviderRecord | null> {
-    const rows = await this.context.drizzle
-      .update(ssoProviders)
-      .set(update)
-      .where(eq(ssoProviders.id, id))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      ssoProviders,
+      update,
+      eq(ssoProviders.id, id),
+    );
 
     await this.afterWrite();
     return rows[0] ?? null;

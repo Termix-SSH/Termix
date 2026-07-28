@@ -4,6 +4,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { rowsAffected } from "./mutation-result.js";
+import { deleteReturning, updateReturning } from "./returning.js";
 
 export type HostFolderRecord = typeof sshFolders.$inferSelect;
 export type HostFolderHostRecord = typeof hosts.$inferSelect;
@@ -36,8 +37,7 @@ export class HostFolderRepository {
     const updatedHosts = await this.context.drizzle
       .update(hosts)
       .set({ folder: renameExpr(hosts.folder), updatedAt: now })
-      .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)))
-      .returning({ id: hosts.id });
+      .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
 
     const updatedCredentials = await this.context.drizzle
       .update(sshCredentials)
@@ -47,8 +47,7 @@ export class HostFolderRepository {
           eq(sshCredentials.userId, userId),
           folderMatch(sshCredentials.folder),
         ),
-      )
-      .returning({ id: sshCredentials.id });
+      );
 
     await this.context.drizzle
       .update(sshFolders)
@@ -57,8 +56,8 @@ export class HostFolderRepository {
 
     await this.afterWrite();
     return {
-      updatedHosts: updatedHosts.length,
-      updatedCredentials: updatedCredentials.length,
+      updatedHosts: rowsAffected(updatedHosts),
+      updatedCredentials: rowsAffected(updatedCredentials),
     };
   }
 
@@ -79,17 +78,18 @@ export class HostFolderRepository {
   ): Promise<{ folder: HostFolderRecord; created: boolean }> {
     const existing = await this.findFolder(userId, name);
     if (existing) {
-      const [updated] = await this.context.drizzle
-        .update(sshFolders)
-        .set({
+      const [updated] = await updateReturning(
+        this.context,
+        sshFolders,
+        {
           color,
           icon,
           credentialId:
             credentialId === undefined ? existing.credentialId : credentialId,
           updatedAt: now,
-        })
-        .where(and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)))
-        .returning();
+        },
+        and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)),
+      );
 
       await this.afterWrite();
       return { folder: updated, created: false };
@@ -140,10 +140,11 @@ export class HostFolderRepository {
         .where(and(eq(hosts.userId, userId), folderMatch(hosts.folder)));
     }
 
-    const deletedFolders = await this.context.drizzle
-      .delete(sshFolders)
-      .where(and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)))
-      .returning({ syncId: sshFolders.syncId });
+    const deletedFolders = await deleteReturning(
+      this.context,
+      sshFolders,
+      and(eq(sshFolders.userId, userId), folderMatch(sshFolders.name)),
+    );
 
     await this.afterWrite();
 
