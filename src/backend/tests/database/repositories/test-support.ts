@@ -93,9 +93,7 @@ export class TestSqliteDatabase {
     const db = connect(url) as unknown as DatabaseContext["drizzle"];
     const context: DatabaseContext = { dialect: this.dialect, drizzle: db };
 
-    const { runRemoteMigrations } =
-      await import("../../../database/db/migrate.js");
-    await runRemoteMigrations(this.dialect, db);
+    await migrateOnce(this.dialect, db);
     await truncateAll(context);
 
     return context;
@@ -210,9 +208,19 @@ async function truncateAll(context: DatabaseContext): Promise<void> {
     return;
   }
 
+  // Truncating all 53 tables takes ~2s on MySQL, which every test would pay.
+  // Ask which ones actually hold rows first: after the first test only a
+  // handful do, and the check is a single query.
+  // Each branch is parenthesised: LIMIT binds to the whole UNION otherwise.
+  const counts = tables
+    .map((t) => `(SELECT '${t}' AS name FROM \`${t}\` LIMIT 1)`)
+    .join(" UNION ALL ");
+  const occupied = await runSql<{ name: string }>(context, sql.raw(counts));
+  if (occupied.length === 0) return;
+
   await runSql(context, sql.raw("SET FOREIGN_KEY_CHECKS = 0"));
-  for (const table of tables) {
-    await runSql(context, sql.raw(`TRUNCATE TABLE \`${table}\``));
+  for (const { name } of occupied) {
+    await runSql(context, sql.raw(`TRUNCATE TABLE \`${name}\``));
   }
   await runSql(context, sql.raw("SET FOREIGN_KEY_CHECKS = 1"));
 }
@@ -397,6 +405,33 @@ async function resyncAutoIncrement(
       );
     }
   }
+}
+
+/**
+ * Migrations run once per worker, not once per fixture.
+ *
+ * Every test builds a fixture, and each would otherwise re-run the migrator
+ * against the same shared database. drizzle's journal makes that a no-op only
+ * when the first run finished — several fixtures racing inside one file hit
+ * "table already exists" instead.
+ */
+const migrations = new Map<string, Promise<void>>();
+
+function migrateOnce(
+  dialect: DatabaseDialect,
+  db: DatabaseContext["drizzle"],
+): Promise<void> {
+  const key = `${dialect}:${process.env.TEST_DATABASE_URL}`;
+  let running = migrations.get(key);
+  if (!running) {
+    running = (async () => {
+      const { runRemoteMigrations } =
+        await import("../../../database/db/migrate.js");
+      await runRemoteMigrations(dialect, db);
+    })();
+    migrations.set(key, running);
+  }
+  return running;
 }
 
 let cachedSqliteSchema: string | null = null;
