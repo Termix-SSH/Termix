@@ -1,6 +1,7 @@
 import { authLogger } from "../../utils/logger.js";
 import type { SSOProviderType } from "../../../types/index.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
+import { decryptSsoConfigSecrets } from "../../utils/system-secret-crypto.js";
 import { Agent } from "undici";
 import {
   createCurrentSettingsRepository,
@@ -303,30 +304,15 @@ function applyProviderDefaults(
   };
 }
 
-function decryptConfigSecret(
+/**
+ * Reads the provider secrets. System-key encrypted values are decrypted;
+ * values still carrying a legacy base64 prefix are decoded so login keeps
+ * working until the provider is next saved.
+ */
+async function decryptConfigSecret(
   config: Record<string, unknown>,
-): Record<string, unknown> {
-  const out = { ...config };
-  for (const field of ["client_secret", "bindPassword"] as const) {
-    const val = out[field] as string | undefined;
-    if (val?.startsWith("encoded:")) {
-      try {
-        out[field] = Buffer.from(val.substring(8), "base64").toString("utf8");
-      } catch {
-        // leave as-is
-      }
-    } else if (val?.startsWith("encrypted:")) {
-      // encrypted: prefix means it was encrypted with DataCrypto; without a
-      // userId/dataKey here we cannot decrypt it. The caller should use the
-      // full admin decrypt path when possible. Fall back to stripping prefix.
-      try {
-        out[field] = Buffer.from(val.substring(10), "base64").toString("utf8");
-      } catch {
-        // leave as-is
-      }
-    }
-  }
-  return out;
+): Promise<Record<string, unknown>> {
+  return decryptSsoConfigSecrets(config);
 }
 
 export async function loadProviderConfig(
@@ -360,10 +346,10 @@ export async function loadProviderConfig(
               );
             }
           } catch {
-            parsed = decryptConfigSecret(parsed);
+            parsed = await decryptConfigSecret(parsed);
           }
         } else {
-          parsed = decryptConfigSecret(parsed);
+          parsed = await decryptConfigSecret(parsed);
         }
         const providerType = row.type as SSOProviderType;
         const config = applyProviderDefaults(
@@ -400,7 +386,7 @@ export async function loadProviderConfig(
       } catch {
         parsed = {};
       }
-      parsed = decryptConfigSecret(parsed);
+      parsed = await decryptConfigSecret(parsed);
       const oidcProviderType = oidcRow.type as SSOProviderType;
       return {
         config: applyProviderDefaults(
@@ -421,7 +407,7 @@ export async function loadProviderConfig(
       await createCurrentSettingsRepository().get("oidc_config");
     if (legacyValue) {
       let config = JSON.parse(legacyValue) as Record<string, unknown>;
-      config = decryptConfigSecret(config);
+      config = await decryptConfigSecret(config);
       return {
         config: config as unknown as OIDCConfig,
         providerType: "oidc",
@@ -452,7 +438,7 @@ export async function resolveProviderByIssuer(issuer: string): Promise<{
       } catch {
         continue;
       }
-      parsed = decryptConfigSecret(parsed);
+      parsed = await decryptConfigSecret(parsed);
       const providerType = row.type as SSOProviderType;
       const config = applyProviderDefaults(
         parsed as unknown as OIDCConfig,
