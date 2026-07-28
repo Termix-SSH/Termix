@@ -1,7 +1,7 @@
 {
-  "version": "5",
-  "dialect": "mysql",
-  "id": "58669111-973f-4b5a-af0b-02c306a7c63e",
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "ac2ff449-ee23-4f1c-aec7-9a2a9b96fe98",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "alert_firings": {
@@ -9,28 +9,28 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "rule_id": {
           "name": "rule_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -48,7 +48,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "resolved_at": {
           "name": "resolved_at",
@@ -59,7 +59,7 @@
         },
         "value": {
           "name": "value",
-          "type": "double",
+          "type": "real",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -77,11 +77,11 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('warning')"
+          "default": "'warning'"
         },
         "acknowledged": {
           "name": "acknowledged",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -117,37 +117,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "alert_firings_id": {
-          "name": "alert_firings_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "alert_rule_channels": {
       "name": "alert_rule_channels",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "rule_id": {
           "name": "rule_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "channel_id": {
           "name": "channel_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -182,51 +175,44 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "alert_rule_channels_id": {
-          "name": "alert_rule_channels_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "alert_rules": {
       "name": "alert_rules",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "enabled": {
           "name": "enabled",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -241,21 +227,21 @@
         },
         "threshold_value": {
           "name": "threshold_value",
-          "type": "double",
+          "type": "real",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "threshold_duration_seconds": {
           "name": "threshold_duration_seconds",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "cooldown_minutes": {
           "name": "cooldown_minutes",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -267,7 +253,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -275,7 +261,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -307,37 +293,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "alert_rules_id": {
-          "name": "alert_rules_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "api_keys": {
       "name": "api_keys",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -362,7 +341,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "expires_at": {
           "name": "expires_at",
@@ -380,7 +359,7 @@
         },
         "is_active": {
           "name": "is_active",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -403,30 +382,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "api_keys_id": {
-          "name": "api_keys_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "audit_logs": {
       "name": "audit_logs",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -489,7 +461,7 @@
         },
         "success": {
           "name": "success",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -507,7 +479,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -526,37 +498,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "audit_logs_id": {
-          "name": "audit_logs_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "c2s_tunnel_presets": {
       "name": "c2s_tunnel_presets",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -588,7 +553,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -596,7 +561,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -615,37 +580,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "c2s_tunnel_presets_id": {
-          "name": "c2s_tunnel_presets_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "command_history": {
       "name": "command_history",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -663,7 +621,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -695,30 +653,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "command_history_id": {
-          "name": "command_history_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "dashboard_service_links": {
       "name": "dashboard_service_links",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -739,7 +690,7 @@
         },
         "order": {
           "name": "order",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -747,7 +698,7 @@
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -758,7 +709,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -766,10 +717,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "dashboard_service_links_sync_id_unique": {
+          "name": "dashboard_service_links_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "dashboard_service_links_user_id_users_id_fk": {
           "name": "dashboard_service_links_user_id_users_id_fk",
@@ -785,37 +744,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "dashboard_service_links_id": {
-          "name": "dashboard_service_links_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "dashboard_service_links_sync_id_unique": {
-          "name": "dashboard_service_links_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "dismissed_alerts": {
       "name": "dismissed_alerts",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -833,7 +778,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -852,44 +797,37 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "dismissed_alerts_id": {
-          "name": "dismissed_alerts_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "file_manager_pinned": {
       "name": "file_manager_pinned",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -907,7 +845,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -939,44 +877,37 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "file_manager_pinned_id": {
-          "name": "file_manager_pinned_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "file_manager_recent": {
       "name": "file_manager_recent",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -994,7 +925,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -1026,44 +957,37 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "file_manager_recent_id": {
-          "name": "file_manager_recent_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "file_manager_shortcuts": {
       "name": "file_manager_shortcuts",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1081,7 +1005,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -1113,30 +1037,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "file_manager_shortcuts_id": {
-          "name": "file_manager_shortcuts_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "homepage_items": {
       "name": "homepage_items",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1161,18 +1078,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('{}')"
+          "default": "'{}'"
         },
         "folder_id": {
           "name": "folder_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1183,7 +1100,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -1191,10 +1108,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "homepage_items_sync_id_unique": {
+          "name": "homepage_items_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "homepage_items_user_id_users_id_fk": {
           "name": "homepage_items_user_id_users_id_fk",
@@ -1210,37 +1135,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "homepage_items_id": {
-          "name": "homepage_items_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "homepage_items_sync_id_unique": {
-          "name": "homepage_items_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "homepage_layouts": {
       "name": "homepage_layouts",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1251,7 +1162,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('{}')"
+          "default": "'{}'"
         },
         "updated_at": {
           "name": "updated_at",
@@ -1259,10 +1170,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "homepage_layouts_user_id_unique": {
+          "name": "homepage_layouts_user_id_unique",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "homepage_layouts_user_id_users_id_fk": {
           "name": "homepage_layouts_user_id_users_id_fk",
@@ -1278,58 +1197,44 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "homepage_layouts_id": {
-          "name": "homepage_layouts_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "homepage_layouts_user_id_unique": {
-          "name": "homepage_layouts_user_id_unique",
-          "columns": [
-            "user_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "host_access": {
       "name": "host_access",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "role_id": {
           "name": "role_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "granted_by": {
           "name": "granted_by",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1340,7 +1245,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('connect')"
+          "default": "'connect'"
         },
         "expires_at": {
           "name": "expires_at",
@@ -1355,7 +1260,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "last_accessed_at": {
           "name": "last_accessed_at",
@@ -1366,7 +1271,7 @@
         },
         "access_count": {
           "name": "access_count",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1374,7 +1279,7 @@
         },
         "override_credential_id": {
           "name": "override_credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1448,37 +1353,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "host_access_id": {
-          "name": "host_access_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "host_health_checks": {
       "name": "host_health_checks",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1492,7 +1390,7 @@
         },
         "interval_seconds": {
           "name": "interval_seconds",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1504,7 +1402,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -1512,7 +1410,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {
@@ -1553,37 +1451,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "host_health_checks_id": {
-          "name": "host_health_checks_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "host_health_history": {
       "name": "host_health_history",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1601,18 +1492,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "ok": {
           "name": "ok",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "latency_ms": {
           "name": "latency_ms",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1654,30 +1545,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "host_health_history_id": {
-          "name": "host_health_history_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "host_metrics_history": {
       "name": "host_metrics_history",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1688,39 +1572,39 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "cpu_percent": {
           "name": "cpu_percent",
-          "type": "double",
+          "type": "real",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "mem_percent": {
           "name": "mem_percent",
-          "type": "double",
+          "type": "real",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "disk_percent": {
           "name": "disk_percent",
-          "type": "double",
+          "type": "real",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "net_rx_bytes": {
           "name": "net_rx_bytes",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "net_tx_bytes": {
           "name": "net_tx_bytes",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1742,37 +1626,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "host_metrics_history_id": {
-          "name": "host_metrics_history_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "host_metrics_preferences": {
       "name": "host_metrics_preferences",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1790,7 +1667,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -1798,7 +1675,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {
@@ -1839,30 +1716,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "host_metrics_preferences_id": {
-          "name": "host_metrics_preferences_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "ssh_data": {
       "name": "ssh_data",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1873,11 +1743,11 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('ssh')"
+          "default": "'ssh'"
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1891,7 +1761,7 @@
         },
         "port": {
           "name": "port",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -1919,7 +1789,7 @@
         },
         "pin": {
           "name": "pin",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1934,7 +1804,7 @@
         },
         "use_warpgate": {
           "name": "use_warpgate",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -1956,7 +1826,7 @@
         },
         "key": {
           "name": "key",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1991,7 +1861,7 @@
         },
         "autostart_key": {
           "name": "autostart_key",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2005,28 +1875,28 @@
         },
         "credential_id": {
           "name": "credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "override_credential_username": {
           "name": "override_credential_username",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "vault_profile_id": {
           "name": "vault_profile_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "enable_terminal": {
           "name": "enable_terminal",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2034,7 +1904,7 @@
         },
         "enable_session_logging": {
           "name": "enable_session_logging",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2042,7 +1912,7 @@
         },
         "allow_session_sharing": {
           "name": "allow_session_sharing",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2050,7 +1920,7 @@
         },
         "enable_command_history": {
           "name": "enable_command_history",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2058,7 +1928,7 @@
         },
         "enable_tunnel": {
           "name": "enable_tunnel",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2080,7 +1950,7 @@
         },
         "enable_file_manager": {
           "name": "enable_file_manager",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2088,7 +1958,7 @@
         },
         "scp_legacy": {
           "name": "scp_legacy",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2096,7 +1966,7 @@
         },
         "enable_docker": {
           "name": "enable_docker",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2104,7 +1974,7 @@
         },
         "enable_tmux_monitor": {
           "name": "enable_tmux_monitor",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2112,7 +1982,7 @@
         },
         "show_terminal_in_sidebar": {
           "name": "show_terminal_in_sidebar",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2120,7 +1990,7 @@
         },
         "show_file_manager_in_sidebar": {
           "name": "show_file_manager_in_sidebar",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2128,7 +1998,7 @@
         },
         "show_tunnel_in_sidebar": {
           "name": "show_tunnel_in_sidebar",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2136,7 +2006,7 @@
         },
         "show_docker_in_sidebar": {
           "name": "show_docker_in_sidebar",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2144,7 +2014,7 @@
         },
         "show_server_stats_in_sidebar": {
           "name": "show_server_stats_in_sidebar",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2173,7 +2043,7 @@
         },
         "enable_proxmox": {
           "name": "enable_proxmox",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2209,7 +2079,7 @@
         },
         "enable_ssh": {
           "name": "enable_ssh",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2217,7 +2087,7 @@
         },
         "enable_rdp": {
           "name": "enable_rdp",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2225,7 +2095,7 @@
         },
         "enable_vnc": {
           "name": "enable_vnc",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2233,7 +2103,7 @@
         },
         "enable_telnet": {
           "name": "enable_telnet",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2241,7 +2111,7 @@
         },
         "ssh_port": {
           "name": "ssh_port",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -2249,7 +2119,7 @@
         },
         "rdp_port": {
           "name": "rdp_port",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -2257,7 +2127,7 @@
         },
         "vnc_port": {
           "name": "vnc_port",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -2265,7 +2135,7 @@
         },
         "telnet_port": {
           "name": "telnet_port",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -2273,7 +2143,7 @@
         },
         "rdp_credential_id": {
           "name": "rdp_credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2308,7 +2178,7 @@
         },
         "rdp_ignore_cert": {
           "name": "rdp_ignore_cert",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -2316,7 +2186,7 @@
         },
         "vnc_credential_id": {
           "name": "vnc_credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2351,7 +2221,7 @@
         },
         "telnet_credential_id": {
           "name": "telnet_credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2393,7 +2263,7 @@
         },
         "ignore_cert": {
           "name": "ignore_cert",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -2408,7 +2278,7 @@
         },
         "use_socks5": {
           "name": "use_socks5",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2422,7 +2292,7 @@
         },
         "socks5_port": {
           "name": "socks5_port",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2496,7 +2366,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "('sha256')"
+          "default": "'sha256'"
         },
         "host_key_first_seen": {
           "name": "host_key_first_seen",
@@ -2514,7 +2384,7 @@
         },
         "host_key_changed_count": {
           "name": "host_key_changed_count",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -2522,7 +2392,7 @@
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -2533,7 +2403,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -2541,10 +2411,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ssh_data_sync_id_unique": {
+          "name": "ssh_data_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "ssh_data_user_id_users_id_fk": {
           "name": "ssh_data_user_id_users_id_fk",
@@ -2625,37 +2503,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "ssh_data_id": {
-          "name": "ssh_data_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "ssh_data_sync_id_unique": {
-          "name": "ssh_data_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "network_topology": {
       "name": "network_topology",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -2673,7 +2537,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -2681,7 +2545,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -2700,37 +2564,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "network_topology_id": {
-          "name": "network_topology_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "notification_channels": {
       "name": "notification_channels",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -2751,7 +2608,7 @@
         },
         "enabled": {
           "name": "enabled",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2763,7 +2620,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -2782,51 +2639,44 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "notification_channels_id": {
-          "name": "notification_channels_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "opkssh_tokens": {
       "name": "opkssh_tokens",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "ssh_cert": {
           "name": "ssh_cert",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "private_key": {
           "name": "private_key",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -2865,7 +2715,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "expires_at": {
           "name": "expires_at",
@@ -2920,30 +2770,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "opkssh_tokens_id": {
-          "name": "opkssh_tokens_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "recent_activity": {
       "name": "recent_activity",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -2957,7 +2800,7 @@
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -2975,7 +2818,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -3007,30 +2850,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "recent_activity_id": {
-          "name": "recent_activity_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "roles": {
       "name": "roles",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -3051,7 +2887,7 @@
         },
         "is_system": {
           "name": "is_system",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -3070,7 +2906,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -3078,49 +2914,43 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "roles_id": {
-          "name": "roles_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
+      "indexes": {
         "roles_name_unique": {
           "name": "roles_name_unique",
           "columns": [
             "name"
-          ]
+          ],
+          "isUnique": true
         }
       },
-      "checkConstraint": {}
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "session_recordings": {
       "name": "session_recordings",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3134,7 +2964,7 @@
         },
         "access_id": {
           "name": "access_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3145,7 +2975,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "ended_at": {
           "name": "ended_at",
@@ -3156,7 +2986,7 @@
         },
         "duration": {
           "name": "duration",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3188,7 +3018,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('ssh')"
+          "default": "'ssh'"
         },
         "format": {
           "name": "format",
@@ -3196,11 +3026,11 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('text')"
+          "default": "'text'"
         },
         "terminated_by_owner": {
           "name": "terminated_by_owner",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
@@ -3256,37 +3086,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "session_recordings_id": {
-          "name": "session_recordings_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "session_share_participants": {
       "name": "session_share_participants",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "share_id": {
           "name": "share_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3304,7 +3127,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "left_at": {
           "name": "left_at",
@@ -3343,37 +3166,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "session_share_participants_id": {
-          "name": "session_share_participants_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "session_shares": {
       "name": "session_shares",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "owner_user_id": {
           "name": "owner_user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -3408,14 +3224,14 @@
         },
         "target_user_id": {
           "name": "target_user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "link_token": {
           "name": "link_token",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3426,7 +3242,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('read-only')"
+          "default": "'read-only'"
         },
         "created_at": {
           "name": "created_at",
@@ -3434,7 +3250,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "expires_at": {
           "name": "expires_at",
@@ -3459,14 +3275,22 @@
         },
         "join_count": {
           "name": "join_count",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
           "default": 0
         }
       },
-      "indexes": {},
+      "indexes": {
+        "session_shares_link_token_unique": {
+          "name": "session_shares_link_token_unique",
+          "columns": [
+            "link_token"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "session_shares_host_id_ssh_data_id_fk": {
           "name": "session_shares_host_id_ssh_data_id_fk",
@@ -3508,37 +3332,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "session_shares_id": {
-          "name": "session_shares_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "session_shares_link_token_unique": {
-          "name": "session_shares_link_token_unique",
-          "columns": [
-            "link_token"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "sessions": {
       "name": "sessions",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -3580,7 +3390,7 @@
         },
         "sso_provider_id": {
           "name": "sso_provider_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3591,7 +3401,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "expires_at": {
           "name": "expires_at",
@@ -3606,7 +3416,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -3625,24 +3435,17 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "sessions_id": {
-          "name": "sessions_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "settings": {
       "name": "settings",
       "columns": {
         "key": {
           "name": "key",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
@@ -3656,37 +3459,30 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "settings_key": {
-          "name": "settings_key",
-          "columns": [
-            "key"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "shared_host_secrets": {
       "name": "shared_host_secrets",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "host_access_id": {
           "name": "host_access_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "target_user_id": {
           "name": "target_user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -3697,7 +3493,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('ssh')"
+          "default": "'ssh'"
         },
         "source_type": {
           "name": "source_type",
@@ -3705,11 +3501,11 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('credential')"
+          "default": "'credential'"
         },
         "original_credential_id": {
           "name": "original_credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3737,7 +3533,7 @@
         },
         "encrypted_key": {
           "name": "encrypted_key",
-          "type": "text",
+          "type": "text(16384)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -3769,7 +3565,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -3777,7 +3573,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {
@@ -3832,51 +3628,44 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "shared_host_secrets_id": {
-          "name": "shared_host_secrets_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "snippet_access": {
       "name": "snippet_access",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "snippet_id": {
           "name": "snippet_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "role_id": {
           "name": "role_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "granted_by": {
           "name": "granted_by",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -3887,7 +3676,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('view')"
+          "default": "'view'"
         },
         "expires_at": {
           "name": "expires_at",
@@ -3902,7 +3691,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -3960,37 +3749,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "snippet_access_id": {
-          "name": "snippet_access_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "snippet_folders": {
       "name": "snippet_folders",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4011,7 +3793,7 @@
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -4022,7 +3804,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -4030,10 +3812,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "snippet_folders_sync_id_unique": {
+          "name": "snippet_folders_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "snippet_folders_user_id_users_id_fk": {
           "name": "snippet_folders_user_id_users_id_fk",
@@ -4049,44 +3839,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "snippet_folders_id": {
-          "name": "snippet_folders_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "snippet_folders_sync_id_unique": {
-          "name": "snippet_folders_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "snippets": {
       "name": "snippets",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4114,7 +3890,7 @@
         },
         "order": {
           "name": "order",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4122,7 +3898,7 @@
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -4133,7 +3909,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -4141,7 +3917,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "host_filter": {
           "name": "host_filter",
@@ -4151,7 +3927,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "snippets_sync_id_unique": {
+          "name": "snippets_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "snippets_user_id_users_id_fk": {
           "name": "snippets_user_id_users_id_fk",
@@ -4167,51 +3951,37 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "snippets_id": {
-          "name": "snippets_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "snippets_sync_id_unique": {
-          "name": "snippets_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "ssh_credential_usage": {
       "name": "ssh_credential_usage",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "credential_id": {
           "name": "credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4222,7 +3992,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -4267,37 +4037,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "ssh_credential_usage_id": {
-          "name": "ssh_credential_usage_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "ssh_credentials": {
       "name": "ssh_credentials",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4346,21 +4109,21 @@
         },
         "key": {
           "name": "key",
-          "type": "text",
+          "type": "text(16384)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "private_key": {
           "name": "private_key",
-          "type": "text",
+          "type": "text(16384)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "public_key": {
           "name": "public_key",
-          "type": "text",
+          "type": "text(4096)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -4388,14 +4151,14 @@
         },
         "cert_public_key": {
           "name": "cert_public_key",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "usage_count": {
           "name": "usage_count",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4410,7 +4173,7 @@
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -4421,7 +4184,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -4429,10 +4192,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ssh_credentials_sync_id_unique": {
+          "name": "ssh_credentials_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "ssh_credentials_user_id_users_id_fk": {
           "name": "ssh_credentials_user_id_users_id_fk",
@@ -4448,44 +4219,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "ssh_credentials_id": {
-          "name": "ssh_credentials_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "ssh_credentials_sync_id_unique": {
-          "name": "ssh_credentials_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "ssh_folders": {
       "name": "ssh_folders",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4506,14 +4263,14 @@
         },
         "credential_id": {
           "name": "credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -4524,7 +4281,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -4532,10 +4289,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "ssh_folders_sync_id_unique": {
+          "name": "ssh_folders_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "ssh_folders_user_id_users_id_fk": {
           "name": "ssh_folders_user_id_users_id_fk",
@@ -4564,37 +4329,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "ssh_folders_id": {
-          "name": "ssh_folders_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "ssh_folders_sync_id_unique": {
-          "name": "ssh_folders_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "sso_providers": {
       "name": "sso_providers",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4608,7 +4359,7 @@
         },
         "enabled": {
           "name": "enabled",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4616,7 +4367,7 @@
         },
         "display_order": {
           "name": "display_order",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4635,7 +4386,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -4643,35 +4394,28 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "sso_providers_id": {
-          "name": "sso_providers_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "sync_tombstones": {
       "name": "sync_tombstones",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4685,7 +4429,7 @@
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4696,7 +4440,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -4715,37 +4459,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "sync_tombstones_id": {
-          "name": "sync_tombstones_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "termix_identities": {
       "name": "termix_identities",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "handle": {
           "name": "handle",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4763,7 +4500,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -4771,10 +4508,25 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "termix_identities_user_id_unique": {
+          "name": "termix_identities_user_id_unique",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": true
+        },
+        "termix_identities_handle_unique": {
+          "name": "termix_identities_handle_unique",
+          "columns": [
+            "handle"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "termix_identities_user_id_users_id_fk": {
           "name": "termix_identities_user_id_users_id_fk",
@@ -4790,71 +4542,51 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "termix_identities_id": {
-          "name": "termix_identities_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "termix_identities_user_id_unique": {
-          "name": "termix_identities_user_id_unique",
-          "columns": [
-            "user_id"
-          ]
-        },
-        "termix_identities_handle_unique": {
-          "name": "termix_identities_handle_unique",
-          "columns": [
-            "handle"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "termix_identity_ca": {
       "name": "termix_identity_ca",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "identity_id": {
           "name": "identity_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "public_key": {
           "name": "public_key",
-          "type": "text",
+          "type": "text(4096)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "private_key": {
           "name": "private_key",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "validity_days": {
           "name": "validity_days",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -4866,7 +4598,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -4874,10 +4606,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "termix_identity_ca_identity_id_unique": {
+          "name": "termix_identity_ca_identity_id_unique",
+          "columns": [
+            "identity_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "termix_identity_ca_identity_id_termix_identities_id_fk": {
           "name": "termix_identity_ca_identity_id_termix_identities_id_fk",
@@ -4906,51 +4646,37 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "termix_identity_ca_id": {
-          "name": "termix_identity_ca_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "termix_identity_ca_identity_id_unique": {
-          "name": "termix_identity_ca_identity_id_unique",
-          "columns": [
-            "identity_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "termix_identity_keys": {
       "name": "termix_identity_keys",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "identity_id": {
           "name": "identity_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "public_key": {
           "name": "public_key",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -4989,18 +4715,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('manual')"
+          "default": "'manual'"
         },
         "credential_id": {
           "name": "credential_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "enabled": {
           "name": "enabled",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -5012,7 +4738,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -5057,37 +4783,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "termix_identity_keys_id": {
-          "name": "termix_identity_keys_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "tmux_session_tags": {
       "name": "tmux_session_tags",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -5112,7 +4831,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -5144,44 +4863,37 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "tmux_session_tags_id": {
-          "name": "tmux_session_tags_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "transfer_recent": {
       "name": "transfer_recent",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "source_host_id": {
           "name": "source_host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "dest_host_id": {
           "name": "dest_host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -5206,7 +4918,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -5251,30 +4963,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "transfer_recent_id": {
-          "name": "transfer_recent_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "trusted_devices": {
       "name": "trusted_devices",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -5306,7 +5011,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "expires_at": {
           "name": "expires_at",
@@ -5321,7 +5026,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -5340,30 +5045,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "trusted_devices_id": {
-          "name": "trusted_devices_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "user_open_tabs": {
       "name": "user_open_tabs",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -5377,7 +5075,7 @@
         },
         "host_id": {
           "name": "host_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -5391,7 +5089,7 @@
         },
         "tab_order": {
           "name": "tab_order",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -5410,7 +5108,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -5418,7 +5116,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -5450,30 +5148,23 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "user_open_tabs_id": {
-          "name": "user_open_tabs_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "user_preferences": {
       "name": "user_preferences",
       "columns": {
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
         "reopen_tabs_on_login": {
           "name": "reopen_tabs_on_login",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -5516,70 +5207,70 @@
         },
         "command_autocomplete": {
           "name": "command_autocomplete",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "command_palette_enabled": {
           "name": "command_palette_enabled",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "show_host_tags": {
           "name": "show_host_tags",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "host_tray_on_click": {
           "name": "host_tray_on_click",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "pin_app_rail": {
           "name": "pin_app_rail",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "expand_app_rail_on_hover": {
           "name": "expand_app_rail_on_hover",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "folders_collapsed": {
           "name": "folders_collapsed",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "confirm_snippet_execution": {
           "name": "confirm_snippet_execution",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "disable_update_check": {
           "name": "disable_update_check",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
         "confirm_tab_close": {
           "name": "confirm_tab_close",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -5593,7 +5284,7 @@
         },
         "compact_host_view": {
           "name": "compact_host_view",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -5625,7 +5316,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {},
@@ -5644,44 +5335,37 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "user_preferences_user_id": {
-          "name": "user_preferences_user_id",
-          "columns": [
-            "user_id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "user_roles": {
       "name": "user_roles",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "role_id": {
           "name": "role_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "granted_by": {
           "name": "granted_by",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -5692,7 +5376,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {
@@ -5746,24 +5430,17 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "user_roles_id": {
-          "name": "user_roles_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "users": {
       "name": "users",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
@@ -5783,7 +5460,7 @@
         },
         "is_admin": {
           "name": "is_admin",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -5791,7 +5468,7 @@
         },
         "is_oidc": {
           "name": "is_oidc",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -5806,7 +5483,7 @@
         },
         "sso_provider_id": {
           "name": "sso_provider_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -5866,7 +5543,7 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false,
-          "default": "('openid email profile')"
+          "default": "'openid email profile'"
         },
         "totp_secret": {
           "name": "totp_secret",
@@ -5877,7 +5554,7 @@
         },
         "totp_enabled": {
           "name": "totp_enabled",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -5896,11 +5573,11 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "donation_modal_dismissed": {
           "name": "donation_modal_dismissed",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -5909,37 +5586,30 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "users_id": {
-          "name": "users_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "vault_profiles": {
       "name": "vault_profiles",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -6023,7 +5693,7 @@
         },
         "shared": {
           "name": "shared",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -6031,7 +5701,7 @@
         },
         "sync_id": {
           "name": "sync_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -6042,7 +5712,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "updated_at": {
           "name": "updated_at",
@@ -6050,10 +5720,18 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "vault_profiles_sync_id_unique": {
+          "name": "vault_profiles_sync_id_unique",
+          "columns": [
+            "sync_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "vault_profiles_user_id_users_id_fk": {
           "name": "vault_profiles_user_id_users_id_fk",
@@ -6069,58 +5747,44 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "vault_profiles_id": {
-          "name": "vault_profiles_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
-      "uniqueConstraints": {
-        "vault_profiles_sync_id_unique": {
-          "name": "vault_profiles_sync_id_unique",
-          "columns": [
-            "sync_id"
-          ]
-        }
-      },
-      "checkConstraint": {}
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "vault_tokens": {
       "name": "vault_tokens",
       "columns": {
         "id": {
           "name": "id",
-          "type": "int",
-          "primaryKey": false,
+          "type": "integer",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": true
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "profile_id": {
           "name": "profile_id",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "ssh_cert": {
           "name": "ssh_cert",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "private_key": {
           "name": "private_key",
-          "type": "text",
+          "type": "text(8192)",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -6131,7 +5795,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "expires_at": {
           "name": "expires_at",
@@ -6186,37 +5850,30 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "vault_tokens_id": {
-          "name": "vault_tokens_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     },
     "webauthn_credentials": {
       "name": "webauthn_credentials",
       "columns": {
         "id": {
           "name": "id",
-          "type": "varchar(255)",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true,
           "autoincrement": false
         },
         "user_id": {
           "name": "user_id",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
         "name": {
           "name": "name",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -6237,7 +5894,7 @@
         },
         "counter": {
           "name": "counter",
-          "type": "int",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -6252,7 +5909,7 @@
         },
         "backed_up": {
           "name": "backed_up",
-          "type": "boolean",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -6271,7 +5928,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "('preferred')"
+          "default": "'preferred'"
         },
         "created_at": {
           "name": "created_at",
@@ -6279,7 +5936,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(CURRENT_TIMESTAMP)"
+          "default": "CURRENT_TIMESTAMP"
         },
         "last_used_at": {
           "name": "last_used_at",
@@ -6305,26 +5962,19 @@
           "onUpdate": "no action"
         }
       },
-      "compositePrimaryKeys": {
-        "webauthn_credentials_id": {
-          "name": "webauthn_credentials_id",
-          "columns": [
-            "id"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraint": {}
+      "checkConstraints": {}
     }
   },
   "views": {},
+  "enums": {},
   "_meta": {
     "schemas": {},
     "tables": {},
     "columns": {}
   },
   "internal": {
-    "tables": {},
     "indexes": {}
   }
 }

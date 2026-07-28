@@ -17,33 +17,11 @@ describe("HostMetricsPreferenceRepository", () => {
   ): Promise<HostMetricsPreferenceRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        stats_config TEXT
-      );
-
-      CREATE TABLE host_metrics_preferences (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        layout TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO ssh_data (id, user_id, name, stats_config)
-      VALUES (1, 'user-1', 'one', '{}'), (2, 'user-2', 'two', '{}');
+      INSERT INTO ssh_data (id, user_id, name, stats_config, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '{}', '10.0.0.1', 22, 'root', 'password'), (2, 'user-2', 'two', '{}', '10.0.0.1', 22, 'root', 'password');
       INSERT INTO host_metrics_preferences (
         user_id, host_id, layout, created_at, updated_at
       )

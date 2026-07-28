@@ -14,6 +14,7 @@ import {
   int,
   boolean,
   double,
+  uniqueIndex,
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
@@ -578,40 +579,47 @@ export const hostAccess = mysqlTable("host_access", {
   ),
 });
 
-export const sharedHostSecrets = mysqlTable("shared_host_secrets", {
-  id: int("id").autoincrement().primaryKey(),
-
-  hostAccessId: int("host_access_id")
-    .notNull()
-    .references(() => hostAccess.id, { onDelete: "cascade" }),
-
-  targetUserId: varchar("target_user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-
-  protocol: text("protocol").notNull().default("ssh"),
-  sourceType: text("source_type").notNull().default("credential"),
-
-  originalCredentialId: int("original_credential_id").references(
-    () => sshCredentials.id,
-    { onDelete: "cascade" },
-  ),
-
-  encryptedUsername: text("encrypted_username"),
-  encryptedAuthType: text("encrypted_auth_type"),
-  encryptedPassword: text("encrypted_password"),
-  encryptedKey: text("encrypted_key"),
-  encryptedKeyPassword: text("encrypted_key_password"),
-  encryptedKeyType: text("encrypted_key_type"),
-  encryptedDomain: text("encrypted_domain"),
-
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const sharedHostSecrets = mysqlTable(
+  "shared_host_secrets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+  
+    hostAccessId: int("host_access_id")
+      .notNull()
+      .references(() => hostAccess.id, { onDelete: "cascade" }),
+  
+    targetUserId: varchar("target_user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+  
+    protocol: text("protocol").notNull().default("ssh"),
+    sourceType: text("source_type").notNull().default("credential"),
+  
+    originalCredentialId: int("original_credential_id").references(
+      () => sshCredentials.id,
+      { onDelete: "cascade" },
+    ),
+  
+    encryptedUsername: text("encrypted_username"),
+    encryptedAuthType: text("encrypted_auth_type"),
+    encryptedPassword: text("encrypted_password"),
+    encryptedKey: text("encrypted_key"),
+    encryptedKeyPassword: text("encrypted_key_password"),
+    encryptedKeyType: text("encrypted_key_type"),
+    encryptedDomain: text("encrypted_domain"),
+  
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [uniqueIndex("idx_shared_host_secrets_scope").on(table.hostAccessId, table.targetUserId, table.protocol)],
+);
 
 export const roles = mysqlTable("roles", {
   id: int("id").autoincrement().primaryKey(),
@@ -633,22 +641,29 @@ export const roles = mysqlTable("roles", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
-export const userRoles = mysqlTable("user_roles", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  roleId: int("role_id")
-    .notNull()
-    .references(() => roles.id, { onDelete: "cascade" }),
-
-  grantedBy: varchar("granted_by", { length: 255 }).references(() => users.id, {
-    onDelete: "set null",
-  }),
-  grantedAt: text("granted_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const userRoles = mysqlTable(
+  "user_roles",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    roleId: int("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  
+    grantedBy: varchar("granted_by", { length: 255 }).references(() => users.id, {
+      onDelete: "set null",
+    }),
+    grantedAt: text("granted_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId)],
+);
 
 export const auditLogs = mysqlTable("audit_logs", {
   id: int("id").autoincrement().primaryKey(),
@@ -763,29 +778,36 @@ export const sessionShareParticipants = mysqlTable(
   },
 );
 
-export const opksshTokens = mysqlTable("opkssh_tokens", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-
-  sshCert: text("ssh_cert").notNull(),
-  privateKey: text("private_key").notNull(),
-
-  email: text("email"),
-  sub: text("sub"),
-  issuer: text("issuer"),
-  audience: text("audience"),
-
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  expiresAt: text("expires_at").notNull(),
-  lastUsed: text("last_used"),
-});
+export const opksshTokens = mysqlTable(
+  "opkssh_tokens",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+  
+    sshCert: text("ssh_cert").notNull(),
+    privateKey: text("private_key").notNull(),
+  
+    email: text("email"),
+    sub: text("sub"),
+    issuer: text("issuer"),
+    audience: text("audience"),
+  
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    expiresAt: text("expires_at").notNull(),
+    lastUsed: text("last_used"),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [uniqueIndex("idx_opkssh_tokens_user_host").on(table.userId, table.hostId)],
+);
 
 // Vault SSH signer profiles. These hold ONLY non-secret connection settings and
 // are intended to be shared across users (shared === true makes a profile
@@ -826,24 +848,31 @@ export const vaultProfiles = mysqlTable("vault_profiles", {
 // Per-user cache of the ephemeral SSH private key + Vault-signed certificate.
 // Transient: rows live only until the certificate expires. Secret fields are
 // encrypted under the user's data-encryption key (see field-crypto.ts).
-export const vaultTokens = mysqlTable("vault_tokens", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  profileId: int("profile_id")
-    .notNull()
-    .references(() => vaultProfiles.id, { onDelete: "cascade" }),
-
-  sshCert: text("ssh_cert").notNull(),
-  privateKey: text("private_key").notNull(),
-
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  expiresAt: text("expires_at").notNull(),
-  lastUsed: text("last_used"),
-});
+export const vaultTokens = mysqlTable(
+  "vault_tokens",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    profileId: int("profile_id")
+      .notNull()
+      .references(() => vaultProfiles.id, { onDelete: "cascade" }),
+  
+    sshCert: text("ssh_cert").notNull(),
+    privateKey: text("private_key").notNull(),
+  
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    expiresAt: text("expires_at").notNull(),
+    lastUsed: text("last_used"),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [uniqueIndex("idx_vault_tokens_user_profile").on(table.userId, table.profileId)],
+);
 
 export const apiKeys = mysqlTable("api_keys", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -909,7 +938,9 @@ export const userPreferences = mysqlTable("user_preferences", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
-export const hostMetricsPreferences = mysqlTable("host_metrics_preferences", {
+export const hostMetricsPreferences = mysqlTable(
+  "host_metrics_preferences",
+  {
   id: int("id").autoincrement().primaryKey(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
@@ -926,9 +957,18 @@ export const hostMetricsPreferences = mysqlTable("host_metrics_preferences", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-});
+  },
+  // One layout per user per host. Enforced in production since the inline DDL
+  // creates it, but it was never declared here, so the generated Postgres and
+  // MySQL schemas lacked it — and the upsert has nothing to conflict on.
+  (table) => [
+    uniqueIndex("idx_host_metrics_prefs_user_host").on(table.userId, table.hostId),
+  ],
+);
 
-export const hostHealthChecks = mysqlTable("host_health_checks", {
+export const hostHealthChecks = mysqlTable(
+  "host_health_checks",
+  {
   id: int("id").autoincrement().primaryKey(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
@@ -945,7 +985,12 @@ export const hostHealthChecks = mysqlTable("host_health_checks", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-});
+  },
+  // Same as above: one set of checks per user per host.
+  (table) => [
+    uniqueIndex("idx_host_health_checks_user_host").on(table.userId, table.hostId),
+  ],
+);
 
 export const hostHealthHistory = mysqlTable("host_health_history", {
   id: int("id").autoincrement().primaryKey(),

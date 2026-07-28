@@ -151,8 +151,8 @@ function transform(source, dialect) {
   out = out.replace(/\bsqliteTable\(/g, isPg ? "pgTable(" : "mysqlTable(");
 
   const imports = isPg
-    ? `import {\n  pgTable,\n  text,\n  varchar,\n  integer,\n  serial,\n  boolean,\n  doublePrecision,\n} from "drizzle-orm/pg-core";`
-    : `import {\n  mysqlTable,\n  text,\n  varchar,\n  int,\n  boolean,\n  double,\n} from "drizzle-orm/mysql-core";`;
+    ? `import {\n  pgTable,\n  text,\n  varchar,\n  integer,\n  serial,\n  boolean,\n  doublePrecision,\n  uniqueIndex,\n} from "drizzle-orm/pg-core";`
+    : `import {\n  mysqlTable,\n  text,\n  varchar,\n  int,\n  boolean,\n  double,\n  uniqueIndex,\n} from "drizzle-orm/mysql-core";`;
 
   out = out.replace(
     /import\s*\{[^}]*\}\s*from\s*"drizzle-orm\/sqlite-core";/,

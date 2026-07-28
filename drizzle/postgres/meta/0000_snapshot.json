@@ -1,5 +1,5 @@
 {
-  "id": "7ac357b1-94d4-4755-b13c-214f5de65b0a",
+  "id": "f4108106-1478-406d-8dea-8620f648f478",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1338,7 +1338,29 @@
           "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_host_health_checks_user_host": {
+          "name": "idx_host_health_checks_user_host",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "host_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "host_health_checks_user_id_users_id_fk": {
           "name": "host_health_checks_user_id_users_id_fk",
@@ -1581,7 +1603,29 @@
           "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_host_metrics_prefs_user_host": {
+          "name": "idx_host_metrics_prefs_user_host",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "host_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "host_metrics_preferences_user_id_users_id_fk": {
           "name": "host_metrics_preferences_user_id_users_id_fk",
@@ -2520,7 +2564,29 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_opkssh_tokens_user_host": {
+          "name": "idx_opkssh_tokens_user_host",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "host_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "opkssh_tokens_user_id_users_id_fk": {
           "name": "opkssh_tokens_user_id_users_id_fk",
@@ -3301,7 +3367,35 @@
           "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_shared_host_secrets_scope": {
+          "name": "idx_shared_host_secrets_scope",
+          "columns": [
+            {
+              "expression": "host_access_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "target_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "protocol",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "shared_host_secrets_host_access_id_host_access_id_fk": {
           "name": "shared_host_secrets_host_access_id_host_access_id_fk",
@@ -4986,7 +5080,29 @@
           "default": "CURRENT_TIMESTAMP"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_user_roles_user_role": {
+          "name": "idx_user_roles_user_role",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "user_roles_user_id_users_id_fk": {
           "name": "user_roles_user_id_users_id_fk",
@@ -5373,7 +5489,29 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_vault_tokens_user_profile": {
+          "name": "idx_vault_tokens_user_profile",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "profile_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "vault_tokens_user_id_users_id_fk": {
           "name": "vault_tokens_user_id_users_id_fk",

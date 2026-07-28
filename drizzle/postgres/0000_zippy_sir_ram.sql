@@ -815,4 +815,10 @@ ALTER TABLE "user_roles" ADD CONSTRAINT "user_roles_granted_by_users_id_fk" FORE
 ALTER TABLE "vault_profiles" ADD CONSTRAINT "vault_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "vault_tokens" ADD CONSTRAINT "vault_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "vault_tokens" ADD CONSTRAINT "vault_tokens_profile_id_vault_profiles_id_fk" FOREIGN KEY ("profile_id") REFERENCES "public"."vault_profiles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "webauthn_credentials" ADD CONSTRAINT "webauthn_credentials_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "webauthn_credentials" ADD CONSTRAINT "webauthn_credentials_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_host_health_checks_user_host" ON "host_health_checks" USING btree ("user_id","host_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_host_metrics_prefs_user_host" ON "host_metrics_preferences" USING btree ("user_id","host_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_opkssh_tokens_user_host" ON "opkssh_tokens" USING btree ("user_id","host_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_shared_host_secrets_scope" ON "shared_host_secrets" USING btree ("host_access_id","target_user_id","protocol");--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_user_roles_user_role" ON "user_roles" USING btree ("user_id","role_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "idx_vault_tokens_user_profile" ON "vault_tokens" USING btree ("user_id","profile_id");

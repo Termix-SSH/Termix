@@ -22,34 +22,11 @@ describe("RecentActivityRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE hosts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE recent_activity (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        type TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        host_name TEXT,
-        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-1', 'two'), (3, 'user-2', 'other');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '10.0.0.1', 22, 'root', 'password'), (2, 'user-1', 'two', '10.0.0.1', 22, 'root', 'password'), (3, 'user-2', 'other', '10.0.0.1', 22, 'root', 'password');
       INSERT INTO recent_activity (id, user_id, type, host_id, host_name, timestamp)
       VALUES
         (1, 'user-1', 'connect', 1, 'one', '2026-06-26T00:00:00.000Z'),
@@ -59,7 +36,9 @@ describe("RecentActivityRepository", () => {
 
     return {
       repository: new RecentActivityRepository(context, onWrite),
-      sqlite: adapter.raw,
+      get sqlite() {
+        return adapter!.raw;
+      },
     };
   }
 

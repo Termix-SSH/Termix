@@ -17,45 +17,7 @@ describe("RoleRepository", () => {
   ): Promise<RoleRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE roles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        display_name TEXT NOT NULL,
-        description TEXT,
-        is_system INTEGER NOT NULL DEFAULT 0,
-        permissions TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE user_roles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        role_id INTEGER NOT NULL,
-        granted_by TEXT,
-        granted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE host_access (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT,
-        role_id INTEGER,
-        granted_by TEXT NOT NULL,
-        permission_level TEXT NOT NULL DEFAULT 'view',
-        expires_at TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash, is_admin, is_oidc)
       VALUES ('admin', 'admin', 'hash', 1, 0), ('user-1', 'user', 'hash', 0, 0);
     `);

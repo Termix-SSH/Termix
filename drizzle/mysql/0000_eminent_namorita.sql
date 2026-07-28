@@ -183,7 +183,8 @@ CREATE TABLE `host_health_checks` (
 	`interval_seconds` int NOT NULL DEFAULT 300,
 	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-	CONSTRAINT `host_health_checks_id` PRIMARY KEY(`id`)
+	CONSTRAINT `host_health_checks_id` PRIMARY KEY(`id`),
+	CONSTRAINT `idx_host_health_checks_user_host` UNIQUE(`user_id`,`host_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `host_health_history` (
@@ -217,7 +218,8 @@ CREATE TABLE `host_metrics_preferences` (
 	`layout` text NOT NULL,
 	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-	CONSTRAINT `host_metrics_preferences_id` PRIMARY KEY(`id`)
+	CONSTRAINT `host_metrics_preferences_id` PRIMARY KEY(`id`),
+	CONSTRAINT `idx_host_metrics_prefs_user_host` UNIQUE(`user_id`,`host_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `ssh_data` (
@@ -352,7 +354,8 @@ CREATE TABLE `opkssh_tokens` (
 	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text NOT NULL,
 	`last_used` text,
-	CONSTRAINT `opkssh_tokens_id` PRIMARY KEY(`id`)
+	CONSTRAINT `opkssh_tokens_id` PRIMARY KEY(`id`),
+	CONSTRAINT `idx_opkssh_tokens_user_host` UNIQUE(`user_id`,`host_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `recent_activity` (
@@ -464,7 +467,8 @@ CREATE TABLE `shared_host_secrets` (
 	`encrypted_domain` text,
 	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-	CONSTRAINT `shared_host_secrets_id` PRIMARY KEY(`id`)
+	CONSTRAINT `shared_host_secrets_id` PRIMARY KEY(`id`),
+	CONSTRAINT `idx_shared_host_secrets_scope` UNIQUE(`host_access_id`,`target_user_id`,`protocol`)
 );
 --> statement-breakpoint
 CREATE TABLE `snippet_access` (
@@ -698,7 +702,8 @@ CREATE TABLE `user_roles` (
 	`role_id` int NOT NULL,
 	`granted_by` varchar(255),
 	`granted_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-	CONSTRAINT `user_roles_id` PRIMARY KEY(`id`)
+	CONSTRAINT `user_roles_id` PRIMARY KEY(`id`),
+	CONSTRAINT `idx_user_roles_user_role` UNIQUE(`user_id`,`role_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `users` (
@@ -757,7 +762,8 @@ CREATE TABLE `vault_tokens` (
 	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`expires_at` text NOT NULL,
 	`last_used` text,
-	CONSTRAINT `vault_tokens_id` PRIMARY KEY(`id`)
+	CONSTRAINT `vault_tokens_id` PRIMARY KEY(`id`),
+	CONSTRAINT `idx_vault_tokens_user_profile` UNIQUE(`user_id`,`profile_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `webauthn_credentials` (

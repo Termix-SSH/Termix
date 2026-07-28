@@ -20,27 +20,6 @@ describe("SsoProviderRepository", () => {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
     sqlite = adapter.raw;
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0,
-        sso_provider_id INTEGER
-      );
-
-      CREATE TABLE sso_providers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        display_order INTEGER NOT NULL DEFAULT 0,
-        config TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
 
     return new SsoProviderRepository(context, onWrite);
   }

@@ -17,41 +17,7 @@ describe("UserPreferenceRepository", () => {
   ): Promise<UserPreferenceRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE user_preferences (
-        user_id TEXT PRIMARY KEY,
-        reopen_tabs_on_login INTEGER NOT NULL DEFAULT 0,
-        theme TEXT,
-        font_size TEXT,
-        accent_color TEXT,
-        language TEXT,
-        storage_mode TEXT,
-        command_autocomplete INTEGER,
-        command_palette_enabled INTEGER,
-        show_host_tags INTEGER,
-        host_tray_on_click INTEGER,
-        pin_app_rail INTEGER,
-        expand_app_rail_on_hover INTEGER,
-        folders_collapsed INTEGER,
-        confirm_snippet_execution INTEGER,
-        disable_update_check INTEGER,
-        confirm_tab_close INTEGER,
-        hidden_rail_tabs TEXT,
-        compact_host_view INTEGER,
-        status_color_scheme TEXT,
-        custom_themes TEXT,
-        custom_keybindings TEXT,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash');
     `);

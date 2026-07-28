@@ -18,112 +18,30 @@ describe("RbacAccessRepository", () => {
   ): Promise<RbacAccessRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE roles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        display_name TEXT NOT NULL,
-        description TEXT,
-        is_system INTEGER NOT NULL DEFAULT 0,
-        permissions TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE host_access (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT,
-        role_id INTEGER,
-        granted_by TEXT NOT NULL,
-        permission_level TEXT NOT NULL DEFAULT 'view',
-        expires_at TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_accessed_at TEXT,
-        access_count INTEGER NOT NULL DEFAULT 0,
-        override_credential_id INTEGER
-      );
-
-      CREATE TABLE shared_host_secrets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_access_id INTEGER NOT NULL,
-        target_user_id TEXT NOT NULL,
-        protocol TEXT NOT NULL DEFAULT 'ssh',
-        source_type TEXT NOT NULL DEFAULT 'credential',
-        original_credential_id INTEGER,
-        encrypted_username TEXT,
-        encrypted_auth_type TEXT,
-        encrypted_password TEXT,
-        encrypted_key TEXT,
-        encrypted_key_password TEXT,
-        encrypted_key_type TEXT,
-        encrypted_domain TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(host_access_id, target_user_id, protocol)
-      );
-
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT,
-        ip TEXT NOT NULL,
-        port INTEGER NOT NULL,
-        username TEXT NOT NULL,
-        credential_id INTEGER,
-        rdp_credential_id INTEGER,
-        vnc_credential_id INTEGER,
-        telnet_credential_id INTEGER,
-        folder TEXT,
-        tags TEXT
-      );
-
-      CREATE TABLE snippets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        content TEXT NOT NULL,
-        description TEXT,
-        folder TEXT,
-        "order" INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        host_filter TEXT
-      );
-
-      CREATE TABLE snippet_access (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        snippet_id INTEGER NOT NULL,
-        user_id TEXT,
-        role_id INTEGER,
-        granted_by TEXT NOT NULL,
-        permission_level TEXT NOT NULL DEFAULT 'view',
-        expires_at TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash, is_admin, is_oidc)
       VALUES
         ('admin', 'admin', 'hash', 1, 0),
         ('user-1', 'alice', 'hash', 0, 0),
         ('owner-1', 'owner', 'hash', 0, 0);
-
       INSERT INTO roles (id, name, display_name, is_system)
       VALUES (7, 'ops', 'Operations', 0);
-
+      INSERT INTO ssh_credentials (id, user_id, name, username, auth_type) VALUES
+        (123, 'admin', 'cred-123', 'root', 'password'),
+        (124, 'admin', 'cred-124', 'root', 'password'),
+        (125, 'admin', 'cred-125', 'root', 'password'),
+        (126, 'admin', 'cred-126', 'root', 'password');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type) VALUES
+        (43, 'admin', 'host-43', '10.0.0.43', 22, 'root', 'password');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type) VALUES
+        (44, 'admin', 'host-44', '10.0.0.45', 22, 'root', 'password');
       INSERT INTO ssh_data (
-        id, user_id, name, ip, port, username, credential_id, rdp_credential_id, vnc_credential_id, telnet_credential_id, folder, tags
-      )
-      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124, 125, 126, 'servers', 'linux');
-
+        id, user_id, name, ip, port, username, credential_id, rdp_credential_id, vnc_credential_id, telnet_credential_id, folder, tags, auth_type)
+      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124, 125, 126, 'servers', 'linux', 'password');
+      INSERT INTO snippets (id, user_id, name, content)
+      VALUES
+        (99, 'owner-1', 'deploy', 'echo deploy'),
+        (100, 'owner-1', 'rollback', 'echo rollback');
       INSERT INTO host_access (
         id, host_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
       )
@@ -131,23 +49,18 @@ describe("RbacAccessRepository", () => {
         (1, 42, 'user-1', NULL, 'admin', 'view', NULL, '2026-06-26T00:00:00.000Z'),
         (2, 42, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z'),
         (5, 44, 'user-1', NULL, 'admin', 'view', '2026-06-25T00:00:00.000Z', '2026-06-24T00:00:00.000Z');
-
-      INSERT INTO shared_host_secrets (
-        id, host_access_id, target_user_id, protocol, source_type, original_credential_id, encrypted_username, encrypted_auth_type
-      )
-      VALUES
-        (8, 2, 'user-1', 'ssh', 'credential', 123, 'enc-user', 'enc-auth'),
-        (9, 2, 'user-1', 'rdp', 'inline', NULL, 'enc-rdp-user', 'direct');
-
-      INSERT INTO snippets (id, user_id, name, content)
-      VALUES (99, 'owner-1', 'deploy', 'echo deploy');
-
       INSERT INTO snippet_access (
         id, snippet_id, user_id, role_id, granted_by, permission_level, expires_at, created_at
       )
       VALUES
         (3, 99, 'user-1', NULL, 'admin', 'view', NULL, '2026-06-26T00:00:00.000Z'),
         (4, 99, NULL, 7, 'admin', 'view', '2026-06-27T00:00:00.000Z', '2026-06-26T01:00:00.000Z');
+      INSERT INTO shared_host_secrets (
+        id, host_access_id, target_user_id, protocol, source_type, original_credential_id, encrypted_username, encrypted_auth_type
+      )
+      VALUES
+        (8, 2, 'user-1', 'ssh', 'credential', 123, 'enc-user', 'enc-auth'),
+        (9, 2, 'user-1', 'rdp', 'inline', NULL, 'enc-rdp-user', 'direct');
     `);
 
     return new RbacAccessRepository(context, onWrite);

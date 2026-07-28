@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1785267838796,
+      "tag": "0000_graceful_carnage",
+      "breakpoints": true
+    }
+  ]
+}

@@ -23,38 +23,7 @@ describe("TermixIdentityCaRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE termix_identities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL UNIQUE,
-        handle TEXT NOT NULL UNIQUE,
-        description TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE termix_identity_ca (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        identity_id INTEGER NOT NULL UNIQUE,
-        user_id TEXT NOT NULL,
-        public_key TEXT NOT NULL,
-        private_key TEXT NOT NULL,
-        validity_days INTEGER NOT NULL DEFAULT 90,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (identity_id) REFERENCES termix_identities(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash');
       INSERT INTO termix_identities (id, user_id, handle)
@@ -63,7 +32,9 @@ describe("TermixIdentityCaRepository", () => {
 
     return {
       repo: new TermixIdentityCaRepository(context, onWrite),
-      sqlite: adapter.raw,
+      get sqlite() {
+        return adapter!.raw;
+      },
       onWrite,
     };
   }

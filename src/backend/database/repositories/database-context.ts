@@ -1,12 +1,12 @@
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import type * as schema from "../db/schema.js";
 
-/**
- * Engines the repository layer can run against. SQLite is the only one wired up
- * today; the alias exists so that adding another is a change in one place
- * rather than a hunt for string literals.
- */
-export type DatabaseDialect = "sqlite";
+// Re-exported so repositories can keep importing it from here, but defined in
+// db/dialect.ts — a local copy that said "sqlite" survived here for a while and
+// typed every context as SQLite-only while the runtime already carried all
+// three, which silently made the dialect branches unreachable to the checker.
+export type { DatabaseDialect } from "../db/dialect.js";
+import type { DatabaseDialect } from "../db/dialect.js";
 
 /**
  * The database handle repositories work against.

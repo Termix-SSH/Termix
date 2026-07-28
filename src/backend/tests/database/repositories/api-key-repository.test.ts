@@ -17,28 +17,7 @@ describe("ApiKeyRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE api_keys (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        token_hash TEXT NOT NULL,
-        token_prefix TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expires_at TEXT,
-        last_used_at TEXT,
-        is_active INTEGER NOT NULL DEFAULT 1,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash) VALUES
         ('user-1', 'admin', 'hash'),
         ('user-2', 'target', 'hash');

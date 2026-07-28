@@ -20,31 +20,10 @@ describe("SnippetRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE snippets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        content TEXT NOT NULL,
-        description TEXT,
-        folder TEXT,
-        "order" INTEGER NOT NULL DEFAULT 0,
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        host_filter TEXT
-      );
-
-      CREATE TABLE snippet_folders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        color TEXT,
-        icon TEXT,
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
+    await adapter.exec(`
+      INSERT INTO users (id, username, password_hash) VALUES
+        ('user-1', 'user-1', 'hash'),
+        ('user-2', 'user-2', 'hash');
 
       INSERT INTO snippets (
         id, user_id, name, content, description, folder, "order", host_filter
@@ -53,7 +32,6 @@ describe("SnippetRepository", () => {
         (1, 'user-1', 'root', 'uptime', NULL, NULL, 2, NULL),
         (2, 'user-1', 'deploy', 'make deploy', 'Deploy app', 'ops', 1, 'linux'),
         (3, 'user-2', 'other', 'whoami', NULL, NULL, 1, NULL);
-
       INSERT INTO snippet_folders (id, user_id, name, color, icon)
       VALUES
         (1, 'user-1', 'ops', '#123456', 'terminal'),
@@ -63,7 +41,9 @@ describe("SnippetRepository", () => {
 
     return {
       repository: new SnippetRepository(context, onWrite),
-      sqlite: adapter.raw,
+      get sqlite() {
+        return adapter!.raw;
+      },
     };
   }
 
