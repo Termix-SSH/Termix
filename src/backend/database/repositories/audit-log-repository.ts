@@ -3,7 +3,7 @@ import { auditLogs } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
 import { databaseLogger } from "../../utils/logger.js";
-import { rowsAffected } from "./mutation-result.js";
+import { countValue, rowsAffected } from "./mutation-result.js";
 
 export type AuditLogRecord = typeof auditLogs.$inferSelect;
 export type NewAuditLogRecord = typeof auditLogs.$inferInsert;
@@ -83,7 +83,7 @@ export class AuditLogRepository {
 
     return {
       logs,
-      total: totalResult[0]?.count ?? 0,
+      total: countValue(totalResult[0]?.count),
     };
   }
 
@@ -210,7 +210,7 @@ export class AuditLogRepository {
     const countResult = await this.context.drizzle
       .select({ count: sql<number>`COUNT(*)` })
       .from(auditLogs);
-    const count = countResult[0]?.count ?? 0;
+    const count = countValue(countResult[0]?.count);
 
     if (count < max) return;
 

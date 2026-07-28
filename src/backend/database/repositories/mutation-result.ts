@@ -137,3 +137,21 @@ export function insertedId(result: unknown): number | null {
 export function supportsReturning(dialect: DatabaseDialect): boolean {
   return dialect !== "mysql";
 }
+
+/**
+ * Reads an aggregate count as a number.
+ *
+ * `sql<number>` is a type assertion, not a conversion. Postgres returns COUNT()
+ * as bigint, which node-postgres hands back as a **string** so that values past
+ * 2^53 survive — so the annotation is a lie there and comparisons like
+ * `count < max` compare a string to a number.
+ */
+export function countValue(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
