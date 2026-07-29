@@ -1,5 +1,8 @@
-const SECRET_BACKED_AUTH_TYPES = new Set(["password", "key"]);
-const SECRETLESS_AUTH_TYPES = new Set(["none", "opkssh", "tailscale", "vault"]);
+// Auth types that need a secret the discovered guest does not carry. A
+// configured default credential supplies exactly that, so these resolve to
+// credential auth when one is set and fall back to "none" when it is not.
+// Everything else needs no secret and is imported as configured.
+const SECRET_BACKED_AUTH_TYPES = new Set(["password", "key", "credential"]);
 
 export type ProxmoxImportAuth = {
   authType: string;
@@ -11,7 +14,7 @@ export function resolveProxmoxImportAuth(
   defaultAuthType: string | undefined,
   credentialId: number | null | undefined,
 ): ProxmoxImportAuth {
-  if (defaultAuthType === "credential" || (!defaultAuthType && credentialId)) {
+  if (!defaultAuthType || SECRET_BACKED_AUTH_TYPES.has(defaultAuthType)) {
     return credentialId
       ? {
           authType: "credential",
@@ -21,13 +24,5 @@ export function resolveProxmoxImportAuth(
       : { authType: "none" };
   }
 
-  if (defaultAuthType && SECRETLESS_AUTH_TYPES.has(defaultAuthType)) {
-    return { authType: defaultAuthType };
-  }
-
-  if (defaultAuthType && !SECRET_BACKED_AUTH_TYPES.has(defaultAuthType)) {
-    return { authType: defaultAuthType };
-  }
-
-  return { authType: "none" };
+  return { authType: defaultAuthType };
 }
