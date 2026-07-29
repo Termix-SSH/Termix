@@ -398,6 +398,15 @@ class RemoteSyncEngine {
     return data.rows || [];
   }
 
+  /**
+   * Every syncId a side currently holds, ignoring the incremental window.
+   * Used only to decide whether a deletion still has something to delete.
+   */
+  async pullSyncIds(baseUrl, token, entityType) {
+    const rows = await this.pullSide(baseUrl, token, entityType, null);
+    return new Set(rows.filter((row) => row.syncId).map((row) => row.syncId));
+  }
+
   async pullTombstones(baseUrl, token, entityType, since) {
     const url = `${baseUrl}/sync/${entityType}/tombstones${since ? `?since=${encodeURIComponent(since)}` : ""}`;
     const data = await this.fetchJson(url, token);
@@ -482,24 +491,46 @@ class RemoteSyncEngine {
       }
 
       // Apply tombstones to whichever side hasn't already deleted the row.
-      for (const tombstone of localTombstones) {
-        if (remoteBySyncId.has(tombstone.syncId)) {
-          await this.pushTombstone(
-            remoteBaseUrl,
-            remoteJwt,
-            entityType,
-            tombstone.syncId,
-          );
+      //
+      // The presence check cannot use localRows/remoteRows: those are the
+      // incremental window, and a row deleted on one side while untouched on
+      // the other is by definition outside it, so every deletion was dropped.
+      // It also cannot be skipped -- pushing unconditionally makes the
+      // receiving side record a fresh tombstone, which the next pass would push
+      // back, forever. So ask the receiving side what it actually still holds,
+      // and only when there is a deletion to apply.
+      if (localTombstones.length) {
+        const remoteSyncIds = await this.pullSyncIds(
+          remoteBaseUrl,
+          remoteJwt,
+          entityType,
+        );
+        for (const tombstone of localTombstones) {
+          if (remoteSyncIds.has(tombstone.syncId)) {
+            await this.pushTombstone(
+              remoteBaseUrl,
+              remoteJwt,
+              entityType,
+              tombstone.syncId,
+            );
+          }
         }
       }
-      for (const tombstone of remoteTombstones) {
-        if (localBySyncId.has(tombstone.syncId)) {
-          await this.pushTombstone(
-            EMBEDDED_BASE_URL,
-            this.localJwt,
-            entityType,
-            tombstone.syncId,
-          );
+      if (remoteTombstones.length) {
+        const localSyncIds = await this.pullSyncIds(
+          EMBEDDED_BASE_URL,
+          this.localJwt,
+          entityType,
+        );
+        for (const tombstone of remoteTombstones) {
+          if (localSyncIds.has(tombstone.syncId)) {
+            await this.pushTombstone(
+              EMBEDDED_BASE_URL,
+              this.localJwt,
+              entityType,
+              tombstone.syncId,
+            );
+          }
         }
       }
 
