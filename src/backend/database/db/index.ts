@@ -2636,10 +2636,11 @@ async function initializeRemoteDatabase(
 
   // Imported here rather than at the top: factory.ts imports getDb from this
   // module, and a static import would close the cycle at module-load time.
-  const { primeCurrentSettingsCache } = await import(
+  const { primeCurrentSettingsCache, startSettingsCacheRefresh } = await import(
     "../repositories/factory.js"
   );
   await primeCurrentSettingsCache();
+  startSettingsCacheRefresh();
 
   databaseLogger.info(`${dialect} database ready`, {
     operation: "db_init_complete",

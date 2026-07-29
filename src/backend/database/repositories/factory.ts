@@ -406,3 +406,49 @@ export async function primeCurrentSettingsCache(): Promise<void> {
   const rows = await createCurrentSettingsRepository().listAll();
   primeSettingsCache(rows);
 }
+
+/**
+ * How often a replica re-reads the settings table.
+ *
+ * Override with SETTINGS_CACHE_REFRESH_SECONDS; 0 disables the refresh.
+ */
+const REFRESH_SECONDS_ENV = "SETTINGS_CACHE_REFRESH_SECONDS";
+const DEFAULT_REFRESH_SECONDS = 30;
+
+let refreshTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Keeps the settings cache from drifting on a multi-replica deployment.
+ *
+ * The cache is per-process and updated in the process that writes. That is
+ * enough for SQLite, where there is only ever one process. On Postgres and
+ * MySQL — which exist here precisely so more than one instance can share the
+ * data — a setting changed on one replica would otherwise never reach the
+ * others, because the synchronous read has no way to go back to the database.
+ *
+ * Periodic re-priming does not make the value immediately consistent. It bounds
+ * how long it can be wrong, which is the difference between a setting that
+ * takes effect on the next tick and one that takes effect at the next restart.
+ */
+export function startSettingsCacheRefresh(env = process.env): void {
+  if (refreshTimer) return;
+
+  const seconds = Number(env[REFRESH_SECONDS_ENV] ?? DEFAULT_REFRESH_SECONDS);
+  if (!Number.isFinite(seconds) || seconds <= 0) return;
+
+  refreshTimer = setInterval(() => {
+    void primeCurrentSettingsCache().catch(() => {
+      // A failed refresh leaves the previous values in place, which is the
+      // right outcome: a transient database blip should not blank the cache.
+    });
+  }, seconds * 1000);
+
+  refreshTimer.unref();
+}
+
+/** Test seam. */
+export function stopSettingsCacheRefresh(): void {
+  if (!refreshTimer) return;
+  clearInterval(refreshTimer);
+  refreshTimer = null;
+}

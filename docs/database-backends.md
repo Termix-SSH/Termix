@@ -200,6 +200,15 @@ real defect here more than once.
 - `getCurrentSettingValue` is a synchronous read. On Postgres and MySQL it comes
   from a cache primed at startup and kept current by `SettingsRepository`,
   because those drivers have no synchronous query.
+
+  That cache is per-process, so on a **multi-replica** deployment a setting
+  changed on one instance does not reach the others through the write path. Each
+  replica re-reads the settings table every 30 seconds
+  (`SETTINGS_CACHE_REFRESH_SECONDS`, 0 to disable), which does not make settings
+  immediately consistent — it bounds how long they can disagree. Changing a
+  setting takes effect on the replica that made the change at once, and on the
+  others within the interval.
+
 - **Importing a backup is SQLite-only.** The restore writes tables in an order
   that is not dependency-safe and relies on `PRAGMA foreign_keys = OFF`, which
   has no equivalent here: Postgres needs superuser to disable triggers, and
