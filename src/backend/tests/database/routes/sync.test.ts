@@ -1,8 +1,29 @@
 import { describe, expect, it } from "vitest";
-import {
+import syncRouter, {
   isValidEntityType,
   stripWritePayload,
 } from "../../../database/routes/sync.js";
+
+describe("sync route order", () => {
+  it("registers POST /tombstones before the POST /:entityType wildcard", () => {
+    const postPaths = (
+      syncRouter as unknown as {
+        stack: Array<{ route?: { path: string; methods: { post?: boolean } } }>;
+      }
+    ).stack
+      .filter((layer) => layer.route?.methods?.post)
+      .map((layer) => layer.route!.path);
+
+    // "/tombstones" is a valid value for :entityType as far as Express is
+    // concerned, so registering the wildcard first makes the tombstone
+    // endpoint unreachable -- every deletion push answers 400 "Unknown entity
+    // type" instead of applying the deletion.
+    expect(postPaths).toContain("/tombstones");
+    expect(postPaths.indexOf("/tombstones")).toBeLessThan(
+      postPaths.indexOf("/:entityType"),
+    );
+  });
+});
 
 describe("isValidEntityType", () => {
   it("accepts every whitelisted sync entity type", () => {
