@@ -15,12 +15,6 @@ describe("SettingsRepository", () => {
   async function createRepository(): Promise<SettingsRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      )
-    `);
     return new SettingsRepository(context);
   }
 

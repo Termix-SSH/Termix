@@ -17,51 +17,11 @@ describe("SessionShareRepository", () => {
   ): Promise<SessionShareRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        ip TEXT
-      );
-
-      CREATE TABLE session_shares (
-        id TEXT PRIMARY KEY,
-        host_id INTEGER NOT NULL,
-        owner_user_id TEXT NOT NULL,
-        protocol TEXT NOT NULL,
-        session_id TEXT NOT NULL,
-        tab_instance_id TEXT,
-        share_type TEXT NOT NULL,
-        target_user_id TEXT,
-        link_token TEXT UNIQUE,
-        permission_level TEXT NOT NULL DEFAULT 'read-only',
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expires_at TEXT NOT NULL,
-        revoked_at TEXT,
-        last_joined_at TEXT,
-        join_count INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE session_share_participants (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        share_id TEXT NOT NULL,
-        user_id TEXT,
-        guest_label TEXT,
-        joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        left_at TEXT
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('owner-1', 'alice', 'hash'), ('guest-1', 'bob', 'hash');
-      INSERT INTO ssh_data (id, user_id, name, ip)
-      VALUES (1, 'owner-1', 'host-one', '10.0.0.1'), (2, 'owner-1', 'host-two', '10.0.0.2');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'owner-1', 'host-one', '10.0.0.1', 22, 'root', 'password'), (2, 'owner-1', 'host-two', '10.0.0.2', 22, 'root', 'password');
     `);
 
     return new SessionShareRepository(context, onWrite);

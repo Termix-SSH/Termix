@@ -1,6 +1,7 @@
 import { and, eq, inArray, or } from "drizzle-orm";
 import { hostAccess, hosts, sharedHostSecrets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type SharedHostSecretRecord = typeof sharedHostSecrets.$inferSelect;
 export type NewSharedHostSecretRecord = typeof sharedHostSecrets.$inferInsert;
@@ -108,16 +109,15 @@ export class SharedHostSecretsRepository {
   }
 
   async deleteByHostAccessId(hostAccessId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sharedHostSecrets)
-      .where(eq(sharedHostSecrets.hostAccessId, hostAccessId))
-      .returning({ id: sharedHostSecrets.id });
+      .where(eq(sharedHostSecrets.hostAccessId, hostAccessId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteForRoleMember(
@@ -148,29 +148,27 @@ export class SharedHostSecretsRepository {
   }
 
   async deleteByOriginalCredentialId(credentialId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sharedHostSecrets)
-      .where(eq(sharedHostSecrets.originalCredentialId, credentialId))
-      .returning({ id: sharedHostSecrets.id });
+      .where(eq(sharedHostSecrets.originalCredentialId, credentialId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByTargetUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sharedHostSecrets)
-      .where(eq(sharedHostSecrets.targetUserId, userId))
-      .returning({ id: sharedHostSecrets.id });
+      .where(eq(sharedHostSecrets.targetUserId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async findHostIdsReferencingCredential(

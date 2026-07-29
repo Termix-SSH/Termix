@@ -16,65 +16,25 @@ describe("SharedHostSecretsRepository", () => {
     onWrite?: () => void | Promise<void>,
   ): Promise<{
     repository: SharedHostSecretsRepository;
-    sqlite: NonNullable<
-      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
-    >;
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE host_access (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT,
-        role_id INTEGER,
-        granted_by TEXT NOT NULL,
-        permission_level TEXT NOT NULL DEFAULT 'connect',
-        expires_at TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_accessed_at TEXT,
-        access_count INTEGER NOT NULL DEFAULT 0,
-        override_credential_id INTEGER
-      );
-
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT,
-        ip TEXT NOT NULL,
-        port INTEGER NOT NULL,
-        username TEXT NOT NULL,
-        credential_id INTEGER,
-        rdp_credential_id INTEGER,
-        vnc_credential_id INTEGER,
-        telnet_credential_id INTEGER
-      );
-
-      CREATE TABLE shared_host_secrets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_access_id INTEGER NOT NULL,
-        target_user_id TEXT NOT NULL,
-        protocol TEXT NOT NULL DEFAULT 'ssh',
-        source_type TEXT NOT NULL DEFAULT 'credential',
-        original_credential_id INTEGER,
-        encrypted_username TEXT,
-        encrypted_auth_type TEXT,
-        encrypted_password TEXT,
-        encrypted_key TEXT,
-        encrypted_key_password TEXT,
-        encrypted_key_type TEXT,
-        encrypted_domain TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(host_access_id, target_user_id, protocol)
-      );
-
-      INSERT INTO ssh_data (id, user_id, name, ip, port, username, credential_id, rdp_credential_id)
-      VALUES
-        (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124),
-        (43, 'owner-1', 'staging', '10.0.0.43', 22, 'root', NULL, NULL),
-        (44, 'owner-2', 'other', '10.0.0.44', 22, 'root', 123, NULL);
-
+    await adapter.exec(`
+      INSERT INTO users (id, username, password_hash) VALUES
+        ('owner-1', 'owner-1', 'hash'),
+        ('owner-2', 'owner-2', 'hash');
+      INSERT INTO users (id, username, password_hash) VALUES
+        ('user-1', 'user-1', 'hash'),
+        ('user-2', 'user-2', 'hash');
+      INSERT INTO roles (id, name, display_name, is_system) VALUES
+        (7, 'role-7', 'Role 7', 0);
+      INSERT INTO ssh_credentials (id, user_id, name, username, auth_type) VALUES
+        (123, 'user-1', 'cred-123', 'root', 'password'),
+        (124, 'user-1', 'cred-124', 'root', 'password');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, credential_id, rdp_credential_id, auth_type)
+      VALUES (42, 'owner-1', 'prod', '10.0.0.42', 22, 'root', 123, 124, 'password'),
+        (43, 'owner-1', 'staging', '10.0.0.43', 22, 'root', NULL, NULL, 'password'),
+        (44, 'owner-2', 'other', '10.0.0.44', 22, 'root', 123, NULL, 'password');
       INSERT INTO host_access (id, host_id, user_id, role_id, granted_by)
       VALUES
         (1, 42, 'user-1', NULL, 'owner-1'),
@@ -84,7 +44,6 @@ describe("SharedHostSecretsRepository", () => {
 
     return {
       repository: new SharedHostSecretsRepository(context, onWrite),
-      sqlite: adapter.raw,
     };
   }
 

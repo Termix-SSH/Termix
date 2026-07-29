@@ -2,6 +2,12 @@ import { and, asc, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { homepageItems } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type HomepageItemRecord = typeof homepageItems.$inferSelect;
 
@@ -35,18 +41,15 @@ export class HomepageItemRepository {
     input: HomepageItemCreateInput,
     now = new Date().toISOString(),
   ): Promise<HomepageItemRecord> {
-    const [created] = await this.context.drizzle
-      .insert(homepageItems)
-      .values({
-        syncId: randomUUID(),
-        userId,
-        typeId: input.typeId,
-        title: input.title,
-        config: input.config,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, homepageItems, {
+      syncId: randomUUID(),
+      userId,
+      typeId: input.typeId,
+      title: input.title,
+      config: input.config,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     await this.afterWrite();
     return created;
@@ -71,11 +74,12 @@ export class HomepageItemRepository {
     updates: HomepageItemUpdateInput,
     updatedAt = new Date().toISOString(),
   ): Promise<HomepageItemRecord | null> {
-    const [updated] = await this.context.drizzle
-      .update(homepageItems)
-      .set({ ...updates, updatedAt })
-      .where(and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)))
-      .returning();
+    const [updated] = await updateReturning(
+      this.context,
+      homepageItems,
+      { ...updates, updatedAt },
+      and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)),
+    );
 
     if (updated) {
       await this.afterWrite();
@@ -88,27 +92,27 @@ export class HomepageItemRepository {
     userId: string,
     id: number,
   ): Promise<{ syncId: string | null } | null> {
-    const rows = await this.context.drizzle
-      .delete(homepageItems)
-      .where(and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)))
-      .returning({ syncId: homepageItems.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      homepageItems,
+      and(eq(homepageItems.id, id), eq(homepageItems.userId, userId)),
+    );
 
     if (rows.length === 0) return null;
     await this.afterWrite();
-    return rows[0];
+    return { syncId: rows[0].syncId };
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(homepageItems)
-      .where(eq(homepageItems.userId, userId))
-      .returning({ id: homepageItems.id });
+      .where(eq(homepageItems.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

@@ -18,44 +18,12 @@ describe("TermixIdentityRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE termix_identities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL UNIQUE,
-        handle TEXT NOT NULL UNIQUE,
-        description TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE termix_identity_keys (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        identity_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
-        public_key TEXT NOT NULL,
-        key_type TEXT NOT NULL,
-        algorithm TEXT NOT NULL,
-        label TEXT,
-        comment TEXT,
-        source TEXT NOT NULL DEFAULT 'manual',
-        credential_id INTEGER,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (identity_id) REFERENCES termix_identities(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
+      INSERT INTO ssh_credentials (id, user_id, name, username, auth_type) VALUES
+        (10, 'user-1', 'cred-10', 'root', 'password'),
+        (20, 'user-1', 'cred-20', 'root', 'password');
     `);
 
     return {

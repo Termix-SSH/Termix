@@ -17,31 +17,7 @@ describe("AuditLogRepository", () => {
   ): Promise<AuditLogRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE audit_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
-        username TEXT NOT NULL,
-        action TEXT NOT NULL,
-        resource_type TEXT NOT NULL,
-        resource_id TEXT,
-        resource_name TEXT,
-        details TEXT,
-        ip_address TEXT,
-        user_agent TEXT,
-        success INTEGER NOT NULL,
-        error_message TEXT,
-        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
     `);

@@ -41,23 +41,10 @@ afterEach(async () => {
 async function createRepository() {
   adapter = new TestSqliteDatabase();
   const context = await adapter.connect();
-  adapter.exec(`
-    CREATE TABLE audit_logs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT,
-      username TEXT NOT NULL,
-      action TEXT NOT NULL,
-      resource_type TEXT NOT NULL,
-      resource_id TEXT,
-      resource_name TEXT,
-      details TEXT,
-      ip_address TEXT,
-      user_agent TEXT,
-      success INTEGER NOT NULL,
-      error_message TEXT,
-      timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  await adapter.exec(`
+      INSERT INTO users (id, username, password_hash) VALUES
+        ('u-1', 'u-1', 'hash');
+    `);
   return new AuditLogRepository(context);
 }
 

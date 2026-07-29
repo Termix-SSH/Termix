@@ -17,41 +17,13 @@ describe("VaultProfileRepository", () => {
   ): Promise<VaultProfileRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE vault_profiles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        folder TEXT,
-        tags TEXT,
-        vault_addr TEXT NOT NULL,
-        vault_namespace TEXT,
-        oidc_mount TEXT,
-        oidc_role TEXT,
-        ssh_mount TEXT,
-        ssh_role TEXT NOT NULL,
-        valid_principals TEXT,
-        key_type TEXT,
-        shared INTEGER NOT NULL DEFAULT 0,
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
       INSERT INTO vault_profiles (
         id, user_id, name, vault_addr, ssh_role, shared, updated_at
       )
-      VALUES
-        (1, 'user-1', 'owned', 'https://vault.one', 'role-one', 0, '2026-01-01T00:00:00.000Z'),
+      VALUES (1, 'user-1', 'owned', 'https://vault.one', 'role-one', 0, '2026-01-01T00:00:00.000Z'),
         (2, 'user-2', 'shared', 'https://vault.two', 'role-two', 1, '2026-01-02T00:00:00.000Z'),
         (3, 'user-2', 'hidden', 'https://vault.three', 'role-three', 0, '2026-01-03T00:00:00.000Z');
     `);

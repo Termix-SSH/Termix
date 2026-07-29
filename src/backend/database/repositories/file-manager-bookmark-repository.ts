@@ -5,6 +5,7 @@ import {
   fileManagerShortcuts,
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type FileManagerRecentRecord = typeof fileManagerRecent.$inferSelect;
 export type FileManagerPinnedRecord = typeof fileManagerPinned.$inferSelect;
@@ -112,7 +113,7 @@ export class FileManagerBookmarkRepository {
     userId: string,
     input: Pick<FileManagerBookmarkInput, "hostId" | "path">,
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerRecent)
       .where(
         and(
@@ -120,14 +121,13 @@ export class FileManagerBookmarkRepository {
           eq(fileManagerRecent.hostId, input.hostId),
           eq(fileManagerRecent.path, input.path),
         ),
-      )
-      .returning({ id: fileManagerRecent.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async listPinnedForHost(
@@ -199,7 +199,7 @@ export class FileManagerBookmarkRepository {
     userId: string,
     input: Pick<FileManagerBookmarkInput, "hostId" | "path">,
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerPinned)
       .where(
         and(
@@ -207,14 +207,13 @@ export class FileManagerBookmarkRepository {
           eq(fileManagerPinned.hostId, input.hostId),
           eq(fileManagerPinned.path, input.path),
         ),
-      )
-      .returning({ id: fileManagerPinned.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async listShortcutsForHost(
@@ -288,7 +287,7 @@ export class FileManagerBookmarkRepository {
     userId: string,
     input: Pick<FileManagerBookmarkInput, "hostId" | "path">,
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerShortcuts)
       .where(
         and(
@@ -296,14 +295,13 @@ export class FileManagerBookmarkRepository {
           eq(fileManagerShortcuts.hostId, input.hostId),
           eq(fileManagerShortcuts.path, input.path),
         ),
-      )
-      .returning({ id: fileManagerShortcuts.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByUserId(userId: string): Promise<number> {
@@ -456,75 +454,66 @@ export class FileManagerBookmarkRepository {
   }
 
   private async deleteRecentByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerRecent)
-      .where(eq(fileManagerRecent.userId, userId))
-      .returning({ id: fileManagerRecent.id });
-    return rows.length;
+      .where(eq(fileManagerRecent.userId, userId));
+    return rowsAffected(result);
   }
 
   private async deletePinnedByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerPinned)
-      .where(eq(fileManagerPinned.userId, userId))
-      .returning({ id: fileManagerPinned.id });
-    return rows.length;
+      .where(eq(fileManagerPinned.userId, userId));
+    return rowsAffected(result);
   }
 
   private async deleteShortcutsByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerShortcuts)
-      .where(eq(fileManagerShortcuts.userId, userId))
-      .returning({ id: fileManagerShortcuts.id });
-    return rows.length;
+      .where(eq(fileManagerShortcuts.userId, userId));
+    return rowsAffected(result);
   }
 
   private async deleteRecentByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerRecent)
-      .where(eq(fileManagerRecent.hostId, hostId))
-      .returning({ id: fileManagerRecent.id });
-    return rows.length;
+      .where(eq(fileManagerRecent.hostId, hostId));
+    return rowsAffected(result);
   }
 
   private async deletePinnedByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerPinned)
-      .where(eq(fileManagerPinned.hostId, hostId))
-      .returning({ id: fileManagerPinned.id });
-    return rows.length;
+      .where(eq(fileManagerPinned.hostId, hostId));
+    return rowsAffected(result);
   }
 
   private async deleteShortcutsByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerShortcuts)
-      .where(eq(fileManagerShortcuts.hostId, hostId))
-      .returning({ id: fileManagerShortcuts.id });
-    return rows.length;
+      .where(eq(fileManagerShortcuts.hostId, hostId));
+    return rowsAffected(result);
   }
 
   private async deleteRecentByHostIds(hostIds: number[]): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerRecent)
-      .where(inArray(fileManagerRecent.hostId, hostIds))
-      .returning({ id: fileManagerRecent.id });
-    return rows.length;
+      .where(inArray(fileManagerRecent.hostId, hostIds));
+    return rowsAffected(result);
   }
 
   private async deletePinnedByHostIds(hostIds: number[]): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerPinned)
-      .where(inArray(fileManagerPinned.hostId, hostIds))
-      .returning({ id: fileManagerPinned.id });
-    return rows.length;
+      .where(inArray(fileManagerPinned.hostId, hostIds));
+    return rowsAffected(result);
   }
 
   private async deleteShortcutsByHostIds(hostIds: number[]): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(fileManagerShortcuts)
-      .where(inArray(fileManagerShortcuts.hostId, hostIds))
-      .returning({ id: fileManagerShortcuts.id });
-    return rows.length;
+      .where(inArray(fileManagerShortcuts.hostId, hostIds));
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

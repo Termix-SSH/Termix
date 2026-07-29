@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TestSqliteDatabase } from "./test-support.js";
 import { CredentialRepository } from "../../../database/repositories/credential-repository.js";
@@ -21,174 +22,10 @@ describe("HostRepository and CredentialRepository", () => {
   ): Promise<{
     credentials: CredentialRepository;
     hosts: HostRepository;
-    sqlite: NonNullable<
-      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
-    >;
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE ssh_credentials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        folder TEXT,
-        tags TEXT,
-        auth_type TEXT NOT NULL,
-        username TEXT,
-        password TEXT,
-        key TEXT,
-        private_key TEXT,
-        public_key TEXT,
-        key_password TEXT,
-        key_type TEXT,
-        detected_key_type TEXT,
-        cert_public_key TEXT,
-        usage_count INTEGER NOT NULL DEFAULT 0,
-        last_used TEXT,
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        connection_type TEXT NOT NULL DEFAULT 'ssh',
-        name TEXT,
-        ip TEXT NOT NULL,
-        port INTEGER NOT NULL,
-        username TEXT NOT NULL,
-        folder TEXT,
-        tags TEXT,
-        pin INTEGER NOT NULL DEFAULT 0,
-        auth_type TEXT NOT NULL,
-        use_warpgate INTEGER NOT NULL DEFAULT 0,
-        force_keyboard_interactive TEXT,
-        password TEXT,
-        key TEXT,
-        key_password TEXT,
-        key_type TEXT,
-        sudo_password TEXT,
-        autostart_password TEXT,
-        autostart_key TEXT,
-        autostart_key_password TEXT,
-        credential_id INTEGER,
-        override_credential_username INTEGER,
-        vault_profile_id INTEGER,
-        enable_terminal INTEGER NOT NULL DEFAULT 1,
-        enable_session_logging INTEGER NOT NULL DEFAULT 1,
-        allow_session_sharing INTEGER NOT NULL DEFAULT 1,
-        enable_command_history INTEGER NOT NULL DEFAULT 1,
-        enable_tunnel INTEGER NOT NULL DEFAULT 1,
-        tunnel_connections TEXT,
-        jump_hosts TEXT,
-        enable_file_manager INTEGER NOT NULL DEFAULT 1,
-        scp_legacy INTEGER NOT NULL DEFAULT 0,
-        enable_docker INTEGER NOT NULL DEFAULT 0,
-        enable_tmux_monitor INTEGER NOT NULL DEFAULT 0,
-        show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1,
-        show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0,
-        show_tunnel_in_sidebar INTEGER NOT NULL DEFAULT 0,
-        show_docker_in_sidebar INTEGER NOT NULL DEFAULT 0,
-        show_server_stats_in_sidebar INTEGER NOT NULL DEFAULT 0,
-        default_path TEXT,
-        stats_config TEXT,
-        docker_config TEXT,
-        enable_proxmox INTEGER NOT NULL DEFAULT 0,
-        proxmox_config TEXT,
-        terminal_config TEXT,
-        quick_actions TEXT,
-        notes TEXT,
-        enable_ssh INTEGER NOT NULL DEFAULT 1,
-        enable_rdp INTEGER NOT NULL DEFAULT 0,
-        enable_vnc INTEGER NOT NULL DEFAULT 0,
-        enable_telnet INTEGER NOT NULL DEFAULT 0,
-        ssh_port INTEGER DEFAULT 22,
-        rdp_port INTEGER DEFAULT 3389,
-        vnc_port INTEGER DEFAULT 5900,
-        telnet_port INTEGER DEFAULT 23,
-        rdp_credential_id INTEGER,
-        rdp_user TEXT,
-        rdp_password TEXT,
-        rdp_domain TEXT,
-        rdp_security TEXT,
-        rdp_ignore_cert INTEGER DEFAULT 0,
-        vnc_credential_id INTEGER,
-        vnc_password TEXT,
-        vnc_user TEXT,
-        telnet_user TEXT,
-        telnet_password TEXT,
-        telnet_credential_id INTEGER,
-        rdp_auth_type TEXT,
-        vnc_auth_type TEXT,
-        telnet_auth_type TEXT,
-        domain TEXT,
-        security TEXT,
-        ignore_cert INTEGER DEFAULT 0,
-        guacamole_config TEXT,
-        use_socks5 INTEGER,
-        socks5_host TEXT,
-        socks5_port INTEGER,
-        socks5_username TEXT,
-        socks5_password TEXT,
-        socks5_proxy_chain TEXT,
-        mac_address TEXT,
-        wol_broadcast_address TEXT,
-        port_knock_sequence TEXT,
-        host_key_fingerprint TEXT,
-        host_key_type TEXT,
-        host_key_algorithm TEXT DEFAULT 'sha256',
-        host_key_first_seen TEXT,
-        host_key_last_verified TEXT,
-        host_key_changed_count INTEGER DEFAULT 0,
-        connection_origin TEXT,
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (credential_id) REFERENCES ssh_credentials(id) ON DELETE SET NULL
-      );
-
-      CREATE TABLE host_access (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT,
-        role_id INTEGER,
-        granted_by TEXT NOT NULL,
-        permission_level TEXT NOT NULL DEFAULT 'view',
-        expires_at TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        last_accessed_at TEXT,
-        access_count INTEGER NOT NULL DEFAULT 0,
-        override_credential_id INTEGER,
-        FOREIGN KEY (host_id) REFERENCES ssh_data(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (override_credential_id) REFERENCES ssh_credentials(id) ON DELETE SET NULL
-      );
-
-      CREATE TABLE ssh_credential_usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        credential_id INTEGER NOT NULL,
-        host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
-        used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (credential_id) REFERENCES ssh_credentials(id) ON DELETE CASCADE,
-        FOREIGN KEY (host_id) REFERENCES ssh_data(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash) VALUES
         ('user-1', 'user', 'hash'),
         ('user-2', 'other', 'hash');
@@ -197,7 +34,6 @@ describe("HostRepository and CredentialRepository", () => {
     return {
       credentials: new CredentialRepository(context, onCredentialWrite),
       hosts: new HostRepository(context, onHostWrite),
-      sqlite: adapter.raw,
     };
   }
 
@@ -224,9 +60,9 @@ describe("HostRepository and CredentialRepository", () => {
     // deterministically observable regardless of clock resolution --
     // the sync engine's last-write-wins conflict resolution depends on
     // every mutating update actually advancing this column.
-    repo.sqlite
-      .prepare("UPDATE ssh_credentials SET updated_at = ? WHERE id = ?")
-      .run("2000-01-01 00:00:00", created.id);
+    await adapter!.run(
+      sql`UPDATE ssh_credentials SET updated_at = ${"2000-01-01 00:00:00"} WHERE id = ${created.id}`,
+    );
 
     const updated = await repo.credentials.updateForUser("user-1", created.id, {
       folder: "ops",
@@ -342,23 +178,27 @@ describe("HostRepository and CredentialRepository", () => {
       password: "secret",
     });
 
-    const raw = repo.sqlite
-      .prepare("SELECT password FROM ssh_credentials WHERE id = ?")
-      .get(created.id) as { password: string };
+    const raw = (
+      await adapter!.query(
+        sql`SELECT password FROM ssh_credentials WHERE id = ${created.id}`,
+      )
+    )[0] as { password: string };
 
     expect(raw.password).toBe("user-encrypted-password");
 
-    repo.sqlite
-      .prepare("UPDATE ssh_credentials SET updated_at = ? WHERE id = ?")
-      .run("2000-01-01 00:00:00", created.id);
+    await adapter!.run(
+      sql`UPDATE ssh_credentials SET updated_at = ${"2000-01-01 00:00:00"} WHERE id = ${created.id}`,
+    );
 
     await repo.credentials.updateEncryptedForUser("user-1", created.id, {
       password: "updated-secret",
     });
 
-    const updatedRaw = repo.sqlite
-      .prepare("SELECT password, updated_at FROM ssh_credentials WHERE id = ?")
-      .get(created.id) as { password: string; updated_at: string };
+    const updatedRaw = (
+      await adapter!.query(
+        sql`SELECT password, updated_at FROM ssh_credentials WHERE id = ${created.id}`,
+      )
+    )[0] as { password: string; updated_at: string };
 
     expect(updatedRaw.password).toBe("user-encrypted-password");
     expect(updatedRaw.updated_at).not.toBe("2000-01-01 00:00:00");
@@ -410,9 +250,9 @@ describe("HostRepository and CredentialRepository", () => {
       authType: "password",
       folder: "prod",
     });
-    repo.sqlite
-      .prepare("UPDATE ssh_credentials SET updated_at = ? WHERE id = ?")
-      .run("2000-01-01 00:00:00", primary.id);
+    await adapter!.run(
+      sql`UPDATE ssh_credentials SET updated_at = ${"2000-01-01 00:00:00"} WHERE id = ${primary.id}`,
+    );
     onWrite.mockClear();
 
     await expect(
@@ -423,9 +263,11 @@ describe("HostRepository and CredentialRepository", () => {
     expect(await repo.credentials.listFolders("user-2")).toEqual(["prod"]);
     expect(onWrite).toHaveBeenCalledTimes(1);
 
-    const renamedRow = repo.sqlite
-      .prepare("SELECT updated_at FROM ssh_credentials WHERE id = ?")
-      .get(primary.id) as { updated_at: string };
+    const renamedRow = (
+      await adapter!.query(
+        sql`SELECT updated_at FROM ssh_credentials WHERE id = ${primary.id}`,
+      )
+    )[0] as { updated_at: string };
     expect(renamedRow.updated_at).not.toBe("2000-01-01 00:00:00");
   });
 
@@ -467,9 +309,9 @@ describe("HostRepository and CredentialRepository", () => {
       (await repo.hosts.listByUserId("user-1")).map((item) => item.id),
     ).toEqual([host.id]);
 
-    repo.sqlite
-      .prepare("UPDATE ssh_data SET updated_at = ? WHERE id = ?")
-      .run("2000-01-01 00:00:00", host.id);
+    await adapter!.run(
+      sql`UPDATE ssh_data SET updated_at = ${"2000-01-01 00:00:00"} WHERE id = ${host.id}`,
+    );
 
     const updated = await repo.hosts.updateForUser("user-1", host.id, {
       name: "web-1-renamed",
@@ -511,23 +353,27 @@ describe("HostRepository and CredentialRepository", () => {
       password: "secret",
     });
 
-    const raw = repo.sqlite
-      .prepare("SELECT password FROM ssh_data WHERE id = ?")
-      .get(created.id) as { password: string };
+    const raw = (
+      await adapter!.query(
+        sql`SELECT password FROM ssh_data WHERE id = ${created.id}`,
+      )
+    )[0] as { password: string };
 
     expect(raw.password).toBe("encrypted-host-password");
 
-    repo.sqlite
-      .prepare("UPDATE ssh_data SET updated_at = ? WHERE id = ?")
-      .run("2000-01-01 00:00:00", created.id);
+    await adapter!.run(
+      sql`UPDATE ssh_data SET updated_at = ${"2000-01-01 00:00:00"} WHERE id = ${created.id}`,
+    );
 
     await repo.hosts.updateEncryptedForUser("user-1", created.id, {
       password: "updated-secret",
     });
 
-    const updatedRaw = repo.sqlite
-      .prepare("SELECT password, updated_at FROM ssh_data WHERE id = ?")
-      .get(created.id) as { password: string; updated_at: string };
+    const updatedRaw = (
+      await adapter!.query(
+        sql`SELECT password, updated_at FROM ssh_data WHERE id = ${created.id}`,
+      )
+    )[0] as { password: string; updated_at: string };
 
     expect(updatedRaw.password).toBe("encrypted-host-password");
     expect(updatedRaw.updated_at).not.toBe("2000-01-01 00:00:00");
@@ -655,9 +501,9 @@ describe("HostRepository and CredentialRepository", () => {
       username: "root",
       authType: "password",
     });
-    repo.sqlite
-      .prepare("UPDATE ssh_data SET updated_at = ? WHERE id IN (?, ?)")
-      .run("2000-01-01 00:00:00", first.id, second.id);
+    await adapter!.run(
+      sql`UPDATE ssh_data SET updated_at = ${"2000-01-01 00:00:00"} WHERE id IN (${first.id}, ${second.id})`,
+    );
     onWrite.mockClear();
 
     const states = await repo.hosts.listBulkUpdateState("user-1", [
@@ -726,11 +572,9 @@ describe("HostRepository and CredentialRepository", () => {
       authType: "password",
     });
 
-    repo.sqlite
-      .prepare(
-        "INSERT INTO host_access (host_id, user_id, granted_by) VALUES (?, ?, ?)",
-      )
-      .run(host.id, "user-2", "user-1");
+    await adapter!.run(
+      sql`INSERT INTO host_access (host_id, user_id, granted_by) VALUES (${host.id}, ${"user-2"}, ${"user-1"})`,
+    );
 
     expect(await repo.hosts.deleteAccessForHost(host.id)).toBe(1);
     expect(await repo.hosts.deleteForUser("user-1", host.id)).toEqual({

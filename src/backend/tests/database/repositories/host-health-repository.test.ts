@@ -17,44 +17,11 @@ describe("HostHealthRepository", () => {
   ): Promise<HostHealthRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    adapter.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE hosts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE host_health_checks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        checks TEXT NOT NULL,
-        interval_seconds INTEGER NOT NULL DEFAULT 300,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE host_health_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        check_id TEXT NOT NULL,
-        ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        ok INTEGER NOT NULL,
-        latency_ms INTEGER,
-        detail TEXT
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-2', 'two');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '10.0.0.1', 22, 'root', 'password'), (2, 'user-2', 'two', '10.0.0.1', 22, 'root', 'password');
       INSERT INTO host_health_checks (
         user_id, host_id, checks, interval_seconds, created_at, updated_at
       )

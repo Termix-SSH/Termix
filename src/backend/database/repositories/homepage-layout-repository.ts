@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { homepageLayouts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type HomepageLayoutRecord = typeof homepageLayouts.$inferSelect;
 
@@ -28,34 +30,35 @@ export class HomepageLayoutRepository {
     const existing = await this.findByUserId(userId);
 
     if (!existing) {
-      const [created] = await this.context.drizzle
-        .insert(homepageLayouts)
-        .values({ userId, layout, updatedAt })
-        .returning();
+      const [created] = await insertReturning(this.context, homepageLayouts, {
+        userId,
+        layout,
+        updatedAt,
+      });
       await this.afterWrite();
       return created;
     }
 
-    const [updated] = await this.context.drizzle
-      .update(homepageLayouts)
-      .set({ layout, updatedAt })
-      .where(eq(homepageLayouts.userId, userId))
-      .returning();
+    const [updated] = await updateReturning(
+      this.context,
+      homepageLayouts,
+      { layout, updatedAt },
+      eq(homepageLayouts.userId, userId),
+    );
     await this.afterWrite();
     return updated;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(homepageLayouts)
-      .where(eq(homepageLayouts.userId, userId))
-      .returning({ id: homepageLayouts.id });
+      .where(eq(homepageLayouts.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

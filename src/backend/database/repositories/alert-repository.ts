@@ -8,6 +8,8 @@ import {
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 type AlertRuleRecord = typeof alertRules.$inferSelect;
 type NotificationChannelRecord = typeof notificationChannels.$inferSelect;
@@ -118,16 +120,17 @@ export class AlertRepository {
     config: string;
     enabled: boolean;
   }): Promise<NotificationChannelRow> {
-    const [created] = await this.context.drizzle
-      .insert(notificationChannels)
-      .values({
+    const [created] = await insertReturning(
+      this.context,
+      notificationChannels,
+      {
         userId: input.userId,
         name: input.name,
         type: input.type,
         config: input.config,
         enabled: input.enabled,
-      })
-      .returning();
+      },
+    );
 
     await this.afterWrite();
     return mapChannelRow(created);
@@ -147,16 +150,15 @@ export class AlertRepository {
       return this.findNotificationChannelForUser(id, userId);
     }
 
-    const [updated] = await this.context.drizzle
-      .update(notificationChannels)
-      .set(input)
-      .where(
-        and(
-          eq(notificationChannels.id, id),
-          eq(notificationChannels.userId, userId),
-        ),
-      )
-      .returning();
+    const [updated] = await updateReturning(
+      this.context,
+      notificationChannels,
+      input,
+      and(
+        eq(notificationChannels.id, id),
+        eq(notificationChannels.userId, userId),
+      ),
+    );
 
     if (!updated) return null;
     await this.afterWrite();
@@ -167,17 +169,16 @@ export class AlertRepository {
     id: number,
     userId: string,
   ): Promise<boolean> {
-    const deleted = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(notificationChannels)
       .where(
         and(
           eq(notificationChannels.id, id),
           eq(notificationChannels.userId, userId),
         ),
-      )
-      .returning({ id: notificationChannels.id });
+      );
 
-    if (deleted.length === 0) return false;
+    if (rowsAffected(result) === 0) return false;
     await this.afterWrite();
     return true;
   }
@@ -211,21 +212,18 @@ export class AlertRepository {
     channels: number[];
     now: string;
   }): Promise<AlertRuleWithChannelsRow> {
-    const [created] = await this.context.drizzle
-      .insert(alertRules)
-      .values({
-        userId: input.userId,
-        hostId: input.hostId,
-        name: input.name,
-        enabled: input.enabled,
-        triggerType: input.triggerType,
-        thresholdValue: input.thresholdValue,
-        thresholdDurationSeconds: input.thresholdDurationSeconds,
-        cooldownMinutes: input.cooldownMinutes,
-        createdAt: input.now,
-        updatedAt: input.now,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, alertRules, {
+      userId: input.userId,
+      hostId: input.hostId,
+      name: input.name,
+      enabled: input.enabled,
+      triggerType: input.triggerType,
+      thresholdValue: input.thresholdValue,
+      thresholdDurationSeconds: input.thresholdDurationSeconds,
+      cooldownMinutes: input.cooldownMinutes,
+      createdAt: input.now,
+      updatedAt: input.now,
+    });
 
     const channels = await this.replaceRuleChannels(
       created.id,
@@ -264,9 +262,10 @@ export class AlertRepository {
       now: string;
     },
   ): Promise<AlertRuleWithChannelsRow | null> {
-    const [updated] = await this.context.drizzle
-      .update(alertRules)
-      .set({
+    const [updated] = await updateReturning(
+      this.context,
+      alertRules,
+      {
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.hostId !== undefined ? { hostId: input.hostId } : {}),
         ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
@@ -283,9 +282,9 @@ export class AlertRepository {
           ? { cooldownMinutes: input.cooldownMinutes }
           : {}),
         updatedAt: input.now,
-      })
-      .where(and(eq(alertRules.id, id), eq(alertRules.userId, userId)))
-      .returning();
+      },
+      and(eq(alertRules.id, id), eq(alertRules.userId, userId)),
+    );
 
     if (!updated) return null;
 
@@ -299,12 +298,11 @@ export class AlertRepository {
   }
 
   async deleteAlertRule(id: number, userId: string): Promise<boolean> {
-    const deleted = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(alertRules)
-      .where(and(eq(alertRules.id, id), eq(alertRules.userId, userId)))
-      .returning({ id: alertRules.id });
+      .where(and(eq(alertRules.id, id), eq(alertRules.userId, userId)));
 
-    if (deleted.length === 0) return false;
+    if (rowsAffected(result) === 0) return false;
     await this.afterWrite();
     return true;
   }
@@ -442,10 +440,9 @@ export class AlertRepository {
         .where(eq(notificationChannels.userId, userId))
     ).map((row) => row.id);
 
-    const firingRows = await this.context.drizzle
+    const firingResult = await this.context.drizzle
       .delete(alertFirings)
-      .where(eq(alertFirings.userId, userId))
-      .returning({ id: alertFirings.id });
+      .where(eq(alertFirings.userId, userId));
 
     const linkFilters = [
       ...(ruleIds.length > 0
@@ -455,37 +452,34 @@ export class AlertRepository {
         ? [inArray(alertRuleChannels.channelId, channelIds)]
         : []),
     ];
-    const linkRows =
+    const linkResult =
       linkFilters.length === 0
-        ? []
+        ? null
         : await this.context.drizzle
             .delete(alertRuleChannels)
-            .where(or(...linkFilters))
-            .returning({ id: alertRuleChannels.id });
+            .where(or(...linkFilters));
 
-    const ruleRows = await this.context.drizzle
+    const ruleResult = await this.context.drizzle
       .delete(alertRules)
-      .where(eq(alertRules.userId, userId))
-      .returning({ id: alertRules.id });
-    const channelRows = await this.context.drizzle
+      .where(eq(alertRules.userId, userId));
+    const result = await this.context.drizzle
       .delete(notificationChannels)
-      .where(eq(notificationChannels.userId, userId))
-      .returning({ id: notificationChannels.id });
+      .where(eq(notificationChannels.userId, userId));
 
     if (
-      firingRows.length > 0 ||
-      linkRows.length > 0 ||
-      ruleRows.length > 0 ||
-      channelRows.length > 0
+      rowsAffected(firingResult) > 0 ||
+      rowsAffected(linkResult) > 0 ||
+      rowsAffected(ruleResult) > 0 ||
+      rowsAffected(result) > 0
     ) {
       await this.afterWrite();
     }
 
     return {
-      firingsDeleted: firingRows.length,
-      ruleLinksDeleted: linkRows.length,
-      rulesDeleted: ruleRows.length,
-      channelsDeleted: channelRows.length,
+      firingsDeleted: rowsAffected(firingResult),
+      ruleLinksDeleted: rowsAffected(linkResult),
+      rulesDeleted: rowsAffected(ruleResult),
+      channelsDeleted: rowsAffected(result),
     };
   }
 

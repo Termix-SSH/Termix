@@ -3,6 +3,7 @@ import { auditLogs } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
 import { databaseLogger } from "../../utils/logger.js";
+import { countValue, rowsAffected } from "./mutation-result.js";
 
 export type AuditLogRecord = typeof auditLogs.$inferSelect;
 export type NewAuditLogRecord = typeof auditLogs.$inferInsert;
@@ -82,7 +83,7 @@ export class AuditLogRepository {
 
     return {
       logs,
-      total: totalResult[0]?.count ?? 0,
+      total: countValue(totalResult[0]?.count),
     };
   }
 
@@ -126,30 +127,28 @@ export class AuditLogRepository {
    * asked. `username` is denormalised, so the entry stays attributable.
    */
   async anonymizeByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(auditLogs)
       .set({ userId: null })
-      .where(eq(auditLogs.userId, userId))
-      .returning({ id: auditLogs.id });
+      .where(eq(auditLogs.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(auditLogs)
-      .where(eq(auditLogs.userId, userId))
-      .returning({ id: auditLogs.id });
+      .where(eq(auditLogs.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private buildWhere(filters: AuditLogFilters) {
@@ -184,17 +183,16 @@ export class AuditLogRepository {
     if (days === null) return;
 
     const cutoff = sqlTimestampDaysAgo(days);
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(auditLogs)
-      .where(lt(auditLogs.timestamp, cutoff))
-      .returning({ id: auditLogs.id });
+      .where(lt(auditLogs.timestamp, cutoff));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       databaseLogger.info(
-        `Pruned ${rows.length} audit entries past retention`,
+        `Pruned ${rowsAffected(result)} audit entries past retention`,
         {
           operation: "audit_retention_prune",
-          removed: rows.length,
+          removed: rowsAffected(result),
           retentionDays: days,
           cutoff,
         },
@@ -212,7 +210,7 @@ export class AuditLogRepository {
     const countResult = await this.context.drizzle
       .select({ count: sql<number>`COUNT(*)` })
       .from(auditLogs);
-    const count = countResult[0]?.count ?? 0;
+    const count = countValue(countResult[0]?.count);
 
     if (count < max) return;
 
