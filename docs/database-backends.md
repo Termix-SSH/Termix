@@ -200,3 +200,13 @@ real defect here more than once.
 - `getCurrentSettingValue` is a synchronous read. On Postgres and MySQL it comes
   from a cache primed at startup and kept current by `SettingsRepository`,
   because those drivers have no synchronous query.
+- **Importing a backup is SQLite-only.** The restore writes tables in an order
+  that is not dependency-safe and relies on `PRAGMA foreign_keys = OFF`, which
+  has no equivalent here: Postgres needs superuser to disable triggers, and
+  MySQL's session-scoped switch is not guaranteed across a pool. It refuses with
+  a message rather than failing partway through and leaving a half-restored
+  database. Restore into Postgres or MySQL with their own tooling.
+- The SQLite-era data migrations — legacy shared-credential cleanup, the
+  shared-host-secrets rebuild, per-user field-encryption backfill — do not run on
+  the other engines. A database created by the drizzle migrations never had the
+  shapes they repair.
