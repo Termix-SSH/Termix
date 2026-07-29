@@ -16,9 +16,6 @@ describe("SharedHostSecretsRepository", () => {
     onWrite?: () => void | Promise<void>,
   ): Promise<{
     repository: SharedHostSecretsRepository;
-    sqlite: NonNullable<
-      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
-    >;
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
@@ -47,9 +44,6 @@ describe("SharedHostSecretsRepository", () => {
 
     return {
       repository: new SharedHostSecretsRepository(context, onWrite),
-      get sqlite() {
-        return adapter!.raw;
-      },
     };
   }
 

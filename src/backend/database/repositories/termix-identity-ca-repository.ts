@@ -117,12 +117,19 @@ export class TermixIdentityCaRepository {
     }
 
     return this.context.drizzle.transaction(async (tx) => {
-      const written = await tx.insert(termixIdentityCa).values(draft);
-      const id = supportsReturning(this.context.dialect)
-        ? (written as unknown as { id: number }[])[0].id
-        : insertedId(written);
+      let id: number | null;
+      if (supportsReturning(this.context.dialect)) {
+        // eslint-disable-next-line no-restricted-syntax -- guarded by the check above
+        const rows = await tx
+          .insert(termixIdentityCa)
+          .values(draft)
+          .returning();
+        id = rows[0]?.id ?? null;
+      } else {
+        id = insertedId(await tx.insert(termixIdentityCa).values(draft));
+      }
 
-      if (id === null || id === undefined) {
+      if (id === null) {
         throw new Error("Insert into termix_identity_ca returned no id.");
       }
 

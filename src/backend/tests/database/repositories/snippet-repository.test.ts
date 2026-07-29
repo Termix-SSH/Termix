@@ -1,5 +1,6 @@
+import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { SnippetRepository } from "../../../database/repositories/snippet-repository.js";
 
 describe("SnippetRepository", () => {
@@ -14,9 +15,6 @@ describe("SnippetRepository", () => {
 
   async function createRepository(onWrite?: () => void): Promise<{
     repository: SnippetRepository;
-    sqlite: NonNullable<
-      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
-    >;
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
@@ -41,9 +39,6 @@ describe("SnippetRepository", () => {
 
     return {
       repository: new SnippetRepository(context, onWrite),
-      get sqlite() {
-        return adapter!.raw;
-      },
     };
   }
 
@@ -167,20 +162,20 @@ describe("SnippetRepository", () => {
     expect(onWrite).toHaveBeenCalledTimes(1);
   });
 
-  itSqliteOnly("deletes all snippets and folders for a user", async () => {
+  it("deletes all snippets and folders for a user", async () => {
     const onWrite = vi.fn();
-    const { repository, sqlite } = await createRepository(onWrite);
+    const { repository } = await createRepository(onWrite);
 
     await expect(repository.deleteByUserId("user-1")).resolves.toEqual({
       snippetsDeleted: 2,
       foldersDeleted: 2,
     });
 
-    expect(sqlite.prepare("SELECT id FROM snippets ORDER BY id").all()).toEqual(
-      [{ id: 3 }],
-    );
     expect(
-      sqlite.prepare("SELECT id FROM snippet_folders ORDER BY id").all(),
+      await adapter!.query(sql`SELECT id FROM snippets ORDER BY id`),
+    ).toEqual([{ id: 3 }]);
+    expect(
+      await adapter!.query(sql`SELECT id FROM snippet_folders ORDER BY id`),
     ).toEqual([{ id: 3 }]);
     expect(onWrite).toHaveBeenCalledTimes(1);
   });

@@ -1,5 +1,6 @@
+import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
-import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
+import { TestSqliteDatabase } from "./test-support.js";
 import { RecentActivityRepository } from "../../../database/repositories/recent-activity-repository.js";
 
 describe("RecentActivityRepository", () => {
@@ -16,9 +17,6 @@ describe("RecentActivityRepository", () => {
     onWrite?: () => void | Promise<void>,
   ): Promise<{
     repository: RecentActivityRepository;
-    sqlite: NonNullable<
-      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
-    >;
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
@@ -36,15 +34,12 @@ describe("RecentActivityRepository", () => {
 
     return {
       repository: new RecentActivityRepository(context, onWrite),
-      get sqlite() {
-        return adapter!.raw;
-      },
     };
   }
 
-  itSqliteOnly("lists, creates, and trims recent activity", async () => {
+  it("lists, creates, and trims recent activity", async () => {
     let writeCount = 0;
-    const { repository, sqlite } = await createRepository(() => {
+    const { repository } = await createRepository(() => {
       writeCount += 1;
     });
 
@@ -67,11 +62,9 @@ describe("RecentActivityRepository", () => {
 
     expect(await repository.trimUserActivity("user-1", 2)).toBe(1);
     expect(
-      sqlite
-        .prepare(
-          "SELECT id FROM recent_activity WHERE user_id = ? ORDER BY timestamp DESC",
-        )
-        .all("user-1"),
+      await adapter!.query(
+        sql`SELECT id FROM recent_activity WHERE user_id = 'user-1' ORDER BY timestamp DESC`,
+      ),
     ).toEqual([{ id: created.id }, { id: 2 }]);
     expect(writeCount).toBe(2);
   });

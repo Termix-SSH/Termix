@@ -1,4 +1,3 @@
-import { describe, it } from "vitest";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import {
@@ -27,20 +26,6 @@ export function testDialect(env = process.env): DatabaseDialect {
   if (value === "postgres" || value === "mysql") return value;
   return "sqlite";
 }
-
-/**
- * For tests that reach past drizzle into the SQLite driver — asserting on
- * stored bytes, or handing a raw handle to something that still wants one.
- *
- * They are not portable by nature, so they skip rather than fail when the run
- * is pointed at another engine. Everything they cover is also covered by a
- * portable test; what is lost on Postgres and MySQL is the byte-level
- * assertion, not the behaviour.
- */
-export const describeSqliteOnly =
-  testDialect() === "sqlite" ? describe : describe.skip;
-
-export const itSqliteOnly = testDialect() === "sqlite" ? it : it.skip;
 
 /** Every table drizzle knows about, for wiping between tests. */
 function allTableNames(): string[] {
@@ -100,22 +85,6 @@ export class TestSqliteDatabase {
   }
 
   /**
-   * Raw SQLite handle, for the few tests that assert on stored bytes or hand a
-   * driver to a repository that still takes one. Unavailable elsewhere; those
-   * tests guard themselves with `sqliteOnly`.
-   */
-  get raw(): Database.Database {
-    if (!this.sqlite) {
-      throw new Error(
-        this.dialect === "sqlite"
-          ? "connect() must be called before raw access"
-          : `raw access is SQLite-only; this run is against ${this.dialect}`,
-      );
-    }
-    return this.sqlite;
-  }
-
-  /**
    * Runs seed SQL. Synchronous on SQLite, which is what the tests were written
    * against; on the other engines it returns a promise the caller must await.
    *
@@ -151,10 +120,23 @@ export class TestSqliteDatabase {
     return runSql<T>(this.context, statement);
   }
 
-  /** Portable write for test setup. */
+  /**
+   * Portable write for test setup.
+   *
+   * Separate from query() because better-sqlite3 refuses `.all()` on a
+   * statement that returns no rows — "This statement does not return data".
+   */
   async run(statement: SQL): Promise<void> {
-    if (!this.context) throw new Error("connect() must be called before run()");
-    await runSql(this.context, statement);
+    const context = this.context;
+    if (!context) throw new Error("connect() must be called before run()");
+
+    if (this.sqlite) {
+      (context.drizzle as unknown as { run: (s: SQL) => unknown }).run(
+        statement,
+      );
+      return;
+    }
+    await runSql(context, statement);
   }
 
   async close(): Promise<void> {
