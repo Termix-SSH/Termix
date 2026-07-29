@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
 import { TestSqliteDatabase, itSqliteOnly } from "./test-support.js";
 import { HostFolderRepository } from "../../../database/repositories/host-folder-repository.js";
@@ -49,43 +50,41 @@ describe("HostFolderRepository", () => {
     };
   }
 
-  itSqliteOnly(
-    "renames folders across hosts, credentials, and folder records",
-    async () => {
-      let writes = 0;
-      const { repository, sqlite } = await createRepository(() => {
-        writes += 1;
-      });
+  it("renames folders across hosts, credentials, and folder records", async () => {
+    let writes = 0;
+    const { repository } = await createRepository(() => {
+      writes += 1;
+    });
 
-      await expect(
-        repository.renameFolder(
-          "user-1",
-          "prod",
-          "ops",
-          "2026-01-01T00:00:00.000Z",
-        ),
-      ).resolves.toEqual({ updatedHosts: 2, updatedCredentials: 2 });
+    await expect(
+      repository.renameFolder(
+        "user-1",
+        "prod",
+        "ops",
+        "2026-01-01T00:00:00.000Z",
+      ),
+    ).resolves.toEqual({ updatedHosts: 2, updatedCredentials: 2 });
 
-      expect(
-        sqlite
-          .prepare("SELECT folder FROM ssh_data WHERE user_id = ? ORDER BY id")
-          .all("user-1"),
-      ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
-      expect(
-        sqlite
-          .prepare(
-            "SELECT folder FROM ssh_credentials WHERE user_id = ? ORDER BY id",
-          )
-          .all("user-1"),
-      ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
-      expect(
-        sqlite
-          .prepare("SELECT name FROM ssh_folders WHERE user_id = ? ORDER BY id")
-          .all("user-1"),
-      ).toEqual([{ name: "ops" }, { name: "ops / api" }]);
-      expect(writes).toBe(1);
-    },
-  );
+    // Portable on purpose: the rename builds the child path with string
+    // concatenation, which is the one place a dialect difference shows up as
+    // wrong data rather than an error.
+    expect(
+      await adapter!.query(
+        sql`SELECT folder FROM ssh_data WHERE user_id = 'user-1' ORDER BY id`,
+      ),
+    ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
+    expect(
+      await adapter!.query(
+        sql`SELECT folder FROM ssh_credentials WHERE user_id = 'user-1' ORDER BY id`,
+      ),
+    ).toEqual([{ folder: "ops" }, { folder: "ops / api" }]);
+    expect(
+      await adapter!.query(
+        sql`SELECT name FROM ssh_folders WHERE user_id = 'user-1' ORDER BY id`,
+      ),
+    ).toEqual([{ name: "ops" }, { name: "ops / api" }]);
+    expect(writes).toBe(1);
+  });
 
   it("lists folders and upserts metadata", async () => {
     let writes = 0;

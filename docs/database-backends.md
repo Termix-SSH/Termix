@@ -206,6 +206,12 @@ real defect here more than once.
   MySQL's session-scoped switch is not guaranteed across a pool. It refuses with
   a message rather than failing partway through and leaving a half-restored
   database. Restore into Postgres or MySQL with their own tooling.
+- **`LIKE` is case-insensitive on SQLite and case-sensitive on Postgres.** The
+  four places that use it match folder path prefixes and settings keys, so the
+  practical effect is that renaming a folder `prod` on SQLite also catches
+  `PROD / api` and on Postgres does not. Postgres is arguably the more correct
+  of the two; nothing was changed to make them agree, because that would alter
+  SQLite behaviour for existing deployments.
 - The SQLite-era data migrations — legacy shared-credential cleanup, the
   shared-host-secrets rebuild, per-user field-encryption backfill — do not run on
   the other engines. A database created by the drizzle migrations never had the

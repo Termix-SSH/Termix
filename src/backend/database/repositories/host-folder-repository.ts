@@ -30,11 +30,24 @@ export class HostFolderRepository {
     newName: string,
     now = new Date().toISOString(),
   ): Promise<RenameFolderResult> {
+    // CAST target: every engine spells the text type differently enough to
+    // matter here — MySQL has no `text` cast and wants `char`.
+    const textType = this.context.dialect === "mysql" ? "char" : "text";
     const oldPrefix = `${oldName} / `;
     const newPrefix = `${newName} / `;
     const childLike = `${oldPrefix}%`;
+    // CONCAT, not `||`: MySQL reads `||` as logical OR unless the server runs
+    // with PIPES_AS_CONCAT, so the child paths would have been rewritten to 0.
+    // No error, just wrong folder names. CONCAT and SUBSTR mean the same thing
+    // on all three engines.
+    //
+    // The prefix is inlined rather than bound: CONCAT is variadic, so Postgres
+    // cannot infer a parameter's type from its position and rejects the
+    // statement with 42P18 before it runs. The value is a folder name the
+    // caller supplied, so it goes through a bound placeholder in a plain
+    // concatenation instead of sql.raw.
     const renameExpr = (col: SQLiteColumn) =>
-      sql`CASE WHEN ${col} = ${oldName} THEN ${newName} ELSE ${newPrefix} || substr(${col}, ${oldPrefix.length + 1}) END`;
+      sql`CASE WHEN ${col} = ${oldName} THEN ${newName} ELSE CONCAT(CAST(${newPrefix} AS ${sql.raw(textType)}), SUBSTR(${col}, ${sql.raw(String(oldPrefix.length + 1))})) END`;
     const folderMatch = (col: SQLiteColumn) =>
       or(eq(col, oldName), like(col, childLike));
 

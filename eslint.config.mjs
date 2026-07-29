@@ -69,6 +69,15 @@ export default tseslint.config([
             "MySQL has no RETURNING. Use insertReturning/updateReturning/deleteReturning from ./returning.js, or rowsAffected() if you only need a count. Inside a proven sqlite-only branch, disable this rule with a comment saying so.",
         },
         {
+          // `||` concatenates on SQLite and Postgres. On MySQL it is logical OR
+          // unless the server runs with PIPES_AS_CONCAT, so a folder path built
+          // this way silently became 0. Use CONCAT, which all three agree on.
+          selector:
+            "TaggedTemplateExpression[tag.name='sql'] TemplateElement[value.raw=/\\|\\|/]",
+          message:
+            "`||` is logical OR on MySQL, not concatenation. Use CONCAT(...).",
+        },
+        {
           // Postgres and SQLite spell it ON CONFLICT; MySQL spells it ON
           // DUPLICATE KEY and names no columns, so drizzle's mysql-core has no
           // onConflictDoUpdate at all — another TypeError, not a bad query.
