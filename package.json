@@ -44,7 +44,7 @@
     "build:mac-dev": "npm run build && npm run electron:rebuild && npm run electron:patch-builder && electron-builder --mac dir --publish=never",
     "schema:generate": "node scripts/generate-dialect-schema.cjs",
     "schema:check": "node scripts/generate-dialect-schema.cjs --check",
-    "schema:migrations": "drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts"
+    "schema:migrations": "drizzle-kit generate --config=drizzle.config.sqlite.ts && drizzle-kit generate --config=drizzle.config.pg.ts && drizzle-kit generate --config=drizzle.config.mysql.ts"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^13.3.0",
