@@ -17,6 +17,7 @@ const {
   extractOidcGroups,
   validateLogoutTokenClaims,
   verifyOIDCToken,
+  describeFetchFailure,
 } = await import("../../../database/routes/user-oidc-utils.js");
 
 const BACKCHANNEL_LOGOUT_EVENT =
@@ -24,6 +25,102 @@ const BACKCHANNEL_LOGOUT_EVENT =
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("describeFetchFailure", () => {
+  it("unwraps the undici cause, which carries the reason that matters", () => {
+    // Every transport failure surfaces as this same outer message.
+    const error = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("getaddrinfo ENOTFOUND idp.example"), {
+        code: "ENOTFOUND",
+      }),
+    });
+    expect(describeFetchFailure(error)).toBe(
+      "fetch failed: getaddrinfo ENOTFOUND idp.example (ENOTFOUND)",
+    );
+  });
+
+  it("falls back to the outer message when there is no cause", () => {
+    expect(describeFetchFailure(new Error("boom"))).toBe("boom");
+  });
+
+  it("handles a non-Error throw", () => {
+    expect(describeFetchFailure("nope")).toBe("nope");
+  });
+});
+
+describe("verifyOIDCToken JWKS diagnostics", () => {
+  const issuer = "https://login.microsoftonline.com/example/v2.0";
+  const token = "header.payload.signature";
+
+  it("reports every attempted URL and why it failed", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("not found", { status: 404 }),
+    );
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toMatch(/^Failed to fetch JWKS from any URL/);
+    expect(error.message).toContain(
+      `${issuer}/.well-known/openid-configuration: HTTP 404`,
+    );
+    expect(error.message).toContain(
+      `${issuer}/.well-known/jwks.json: HTTP 404`,
+    );
+    expect(error.message).toContain(`${issuer}/jwks/: HTTP 404`);
+  });
+
+  it("reports a transport failure with its underlying cause", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("self-signed certificate"), {
+          code: "SELF_SIGNED_CERT_IN_CHAIN",
+        }),
+      }),
+    );
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toContain(
+      "self-signed certificate (SELF_SIGNED_CERT_IN_CHAIN)",
+    );
+  });
+
+  it("says so when discovery succeeds but advertises no jwks_uri", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ issuer }), { status: 200 }),
+      )
+      .mockResolvedValue(new Response("not found", { status: 404 }));
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toContain("no jwks_uri in the discovery document");
+  });
+
+  it("says so when a JWKS response carries no keys array", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ jwks_uri: "https://idp.example/keys" }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: "unauthorized" }), {
+          status: 200,
+        }),
+      );
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toContain(
+      'https://idp.example/keys: response contains no "keys" array',
+    );
+  });
 });
 
 describe("verifyOIDCToken", () => {

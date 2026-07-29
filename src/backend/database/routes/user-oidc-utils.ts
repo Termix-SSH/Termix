@@ -47,6 +47,26 @@ export function buildFetchOptions(caCert?: string): Record<string, unknown> {
   return { dispatcher: new Agent({ connect: { ca: caCert } }) };
 }
 
+/**
+ * Renders why a fetch failed in a form an administrator can act on.
+ *
+ * undici reports every transport failure as the same "fetch failed" message
+ * and puts the reason that actually matters -- ENOTFOUND, ECONNREFUSED,
+ * UNABLE_TO_VERIFY_LEAF_SIGNATURE, a timeout -- on the cause. Reporting only
+ * the outer message says nothing at all.
+ */
+export function describeFetchFailure(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = (error as { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    const code = (cause as { code?: unknown }).code;
+    return code
+      ? `${error.message}: ${cause.message} (${code})`
+      : `${error.message}: ${cause.message}`;
+  }
+  return cause ? `${error.message}: ${String(cause)}` : error.message;
+}
+
 export function getOIDCConfigFromEnv(): OIDCConfig | null {
   const client_id = process.env.OIDC_CLIENT_ID;
   const client_secret = process.env.OIDC_CLIENT_SECRET;
@@ -187,20 +207,30 @@ export async function verifyOIDCToken(
     `${normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, "")}/.well-known/jwks.json`,
   ];
 
+  // Every attempt records why it failed. Without this the only thing an
+  // administrator ever sees is "Failed to fetch JWKS from any URL", which
+  // does not distinguish an issuer URL typo from a proxy, a private CA, or
+  // a provider outage.
+  const attempts: string[] = [];
+
+  const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
   try {
-    const discoveryUrl = `${normalizedIssuerUrl}/.well-known/openid-configuration`;
     const discoveryResponse = await fetch(discoveryUrl, fetchOptions);
-    if (discoveryResponse.ok) {
+    if (!discoveryResponse.ok) {
+      attempts.push(`${discoveryUrl}: HTTP ${discoveryResponse.status}`);
+    } else {
       const discovery = (await discoveryResponse.json()) as Record<
         string,
         unknown
       >;
-      if (discovery.jwks_uri) {
-        jwksUrls.unshift(discovery.jwks_uri as string);
+      if (typeof discovery.jwks_uri === "string" && discovery.jwks_uri) {
+        jwksUrls.unshift(discovery.jwks_uri);
+      } else {
+        attempts.push(`${discoveryUrl}: no jwks_uri in the discovery document`);
       }
     }
   } catch (discoveryError) {
-    authLogger.error(`OIDC discovery failed: ${discoveryError}`);
+    attempts.push(`${discoveryUrl}: ${describeFetchFailure(discoveryError)}`);
   }
 
   let jwks: Record<string, unknown> | null = null;
@@ -208,26 +238,25 @@ export async function verifyOIDCToken(
   for (const url of jwksUrls) {
     try {
       const response = await fetch(url, fetchOptions);
-      if (response.ok) {
-        const jwksData = (await response.json()) as Record<string, unknown>;
-        if (jwksData && jwksData.keys && Array.isArray(jwksData.keys)) {
-          jwks = jwksData;
-          break;
-        } else {
-          authLogger.error(
-            `Invalid JWKS structure from ${url}: ${JSON.stringify(jwksData)}`,
-          );
-        }
-      } else {
-        // expected - non-ok response, try next URL
+      if (!response.ok) {
+        attempts.push(`${url}: HTTP ${response.status}`);
+        continue;
       }
-    } catch {
-      continue;
+      const jwksData = (await response.json()) as Record<string, unknown>;
+      if (jwksData && Array.isArray(jwksData.keys)) {
+        jwks = jwksData;
+        break;
+      }
+      attempts.push(`${url}: response contains no "keys" array`);
+    } catch (error) {
+      attempts.push(`${url}: ${describeFetchFailure(error)}`);
     }
   }
 
   if (!jwks) {
-    throw new Error("Failed to fetch JWKS from any URL");
+    throw new Error(
+      `Failed to fetch JWKS from any URL. Attempts:\n  ${attempts.join("\n  ")}`,
+    );
   }
 
   if (!jwks.keys || !Array.isArray(jwks.keys)) {
