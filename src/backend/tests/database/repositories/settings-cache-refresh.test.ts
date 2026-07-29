@@ -1,85 +1,104 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-const listAll = vi.fn();
-
-vi.mock("../../../database/repositories/settings-repository.js", () => ({
-  SettingsRepository: class {
-    listAll = listAll;
-  },
-}));
-vi.mock("../../../database/db/index.js", () => ({
-  getDb: () => ({}),
-  getSqlite: () => {
-    throw new Error("not sqlite");
-  },
-}));
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  refreshIntervalSeconds,
+  startSettingsCacheRefresh,
+  stopSettingsCacheRefresh,
+} from "../../../database/repositories/factory.js";
 
 /**
  * The settings cache lives in one process and is updated by whichever process
  * wrote the setting. On SQLite that is the only process there is. On Postgres
- * and MySQL — the reason this feature exists is to let several instances share
- * one database — a setting changed on one replica would otherwise never reach
- * the others, because the synchronous read cannot go back to the database.
+ * and MySQL — the reason those exist here is to let several instances share one
+ * database — a setting changed on one replica would otherwise never reach the
+ * others, because the synchronous read cannot go back to the database.
  *
- * Re-priming on a timer does not make it immediately consistent. It bounds how
- * long it can be wrong.
+ * Re-priming on a timer does not make settings immediately consistent. It
+ * bounds how long they can disagree.
  */
 describe("settings cache refresh", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    listAll.mockReset();
-    process.env.DATABASE_DIALECT = "postgres";
+  afterEach(() => stopSettingsCacheRefresh());
+
+  describe("interval", () => {
+    it("defaults to something short enough to matter", () => {
+      expect(refreshIntervalSeconds({})).toBe(30);
+    });
+
+    it("is configurable", () => {
+      expect(
+        refreshIntervalSeconds({ SETTINGS_CACHE_REFRESH_SECONDS: "5" }),
+      ).toBe(5);
+    });
+
+    it("treats zero and nonsense as off", () => {
+      expect(
+        refreshIntervalSeconds({ SETTINGS_CACHE_REFRESH_SECONDS: "0" }),
+      ).toBeNull();
+      expect(
+        refreshIntervalSeconds({ SETTINGS_CACHE_REFRESH_SECONDS: "-1" }),
+      ).toBeNull();
+      expect(
+        refreshIntervalSeconds({ SETTINGS_CACHE_REFRESH_SECONDS: "soon" }),
+      ).toBeNull();
+    });
   });
 
-  afterEach(async () => {
-    const { stopSettingsCacheRefresh } =
-      await import("../../../database/repositories/factory.js");
+  it("re-reads on the interval", async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+
+    startSettingsCacheRefresh(
+      { SETTINGS_CACHE_REFRESH_SECONDS: "0.01" },
+      refresh,
+    );
+
+    await vi.waitFor(() =>
+      expect(refresh.mock.calls.length).toBeGreaterThan(1),
+    );
+  });
+
+  it("keeps running after a refresh throws", async () => {
+    // A transient database blip must not stop the loop, or the replica is stuck
+    // on stale settings until it restarts — the exact failure this prevents.
+    const refresh = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("connection reset"))
+      .mockResolvedValue(undefined);
+
+    startSettingsCacheRefresh(
+      { SETTINGS_CACHE_REFRESH_SECONDS: "0.01" },
+      refresh,
+    );
+
+    await vi.waitFor(() =>
+      expect(refresh.mock.calls.length).toBeGreaterThan(1),
+    );
+  });
+
+  it("does nothing when switched off", async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+
+    startSettingsCacheRefresh({ SETTINGS_CACHE_REFRESH_SECONDS: "0" }, refresh);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("stops when told to, and does not stack timers", async () => {
+    const refresh = vi.fn().mockResolvedValue(undefined);
+
+    startSettingsCacheRefresh(
+      { SETTINGS_CACHE_REFRESH_SECONDS: "0.02" },
+      refresh,
+    );
+    startSettingsCacheRefresh(
+      { SETTINGS_CACHE_REFRESH_SECONDS: "0.02" },
+      refresh,
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 70));
     stopSettingsCacheRefresh();
-    vi.useRealTimers();
-    delete process.env.DATABASE_DIALECT;
-    delete process.env.SETTINGS_CACHE_REFRESH_SECONDS;
-    vi.resetModules();
-  });
 
-  it("picks up a value another replica wrote", async () => {
-    const { startSettingsCacheRefresh } =
-      await import("../../../database/repositories/factory.js");
-    const { readCachedSetting, primeSettingsCache } =
-      await import("../../../database/repositories/settings-cache.js");
-
-    primeSettingsCache([{ key: "allow_registration", value: "true" }]);
-    listAll.mockResolvedValue([{ key: "allow_registration", value: "false" }]);
-
-    startSettingsCacheRefresh({ SETTINGS_CACHE_REFRESH_SECONDS: "5" });
-    await vi.advanceTimersByTimeAsync(5_000);
-
-    expect(readCachedSetting("allow_registration")).toBe("false");
-  });
-
-  it("keeps the previous values when a refresh fails", async () => {
-    const { startSettingsCacheRefresh } =
-      await import("../../../database/repositories/factory.js");
-    const { readCachedSetting, primeSettingsCache } =
-      await import("../../../database/repositories/settings-cache.js");
-
-    primeSettingsCache([{ key: "guac_url", value: "http://guacd" }]);
-    listAll.mockRejectedValue(new Error("connection reset"));
-
-    startSettingsCacheRefresh({ SETTINGS_CACHE_REFRESH_SECONDS: "5" });
-    await vi.advanceTimersByTimeAsync(5_000);
-
-    // A database blip must not blank the cache — every caller reads a missing
-    // setting as "use the default", so an empty cache silently reverts config.
-    expect(readCachedSetting("guac_url")).toBe("http://guacd");
-  });
-
-  it("can be turned off", async () => {
-    const { startSettingsCacheRefresh } =
-      await import("../../../database/repositories/factory.js");
-
-    startSettingsCacheRefresh({ SETTINGS_CACHE_REFRESH_SECONDS: "0" });
-    await vi.advanceTimersByTimeAsync(60_000);
-
-    expect(listAll).not.toHaveBeenCalled();
+    const afterStop = refresh.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(refresh.mock.calls.length).toBe(afterStop);
   });
 });

@@ -430,20 +430,31 @@ let refreshTimer: NodeJS.Timeout | null = null;
  * how long it can be wrong, which is the difference between a setting that
  * takes effect on the next tick and one that takes effect at the next restart.
  */
-export function startSettingsCacheRefresh(env = process.env): void {
+export function startSettingsCacheRefresh(
+  env = process.env,
+  refresh: () => Promise<void> = primeCurrentSettingsCache,
+): void {
   if (refreshTimer) return;
 
-  const seconds = Number(env[REFRESH_SECONDS_ENV] ?? DEFAULT_REFRESH_SECONDS);
-  if (!Number.isFinite(seconds) || seconds <= 0) return;
+  const seconds = refreshIntervalSeconds(env);
+  if (seconds === null) return;
 
   refreshTimer = setInterval(() => {
-    void primeCurrentSettingsCache().catch(() => {
+    void refresh().catch(() => {
       // A failed refresh leaves the previous values in place, which is the
       // right outcome: a transient database blip should not blank the cache.
+      // Every caller reads a missing setting as "use the default", so an empty
+      // cache would silently revert configuration across the deployment.
     });
   }, seconds * 1000);
 
   refreshTimer.unref();
+}
+
+/** The configured interval, or null when refreshing is switched off. */
+export function refreshIntervalSeconds(env = process.env): number | null {
+  const seconds = Number(env[REFRESH_SECONDS_ENV] ?? DEFAULT_REFRESH_SECONDS);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }
 
 /** Test seam. */
