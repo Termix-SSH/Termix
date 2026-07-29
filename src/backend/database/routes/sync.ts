@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import express from "express";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   hosts,
   sshCredentials,
@@ -27,6 +27,7 @@ import {
   serializeSyncReferences,
   type SyncReferenceEntity,
 } from "./sync-references.js";
+import { timestampAtOrAfter } from "../sync-timestamp.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -232,7 +233,9 @@ router.get(
       const context = createCurrentRepositoryContext();
       const conditions = [eq(table.userId, userId)];
       if (since && "updatedAt" in table) {
-        conditions.push(gt((table as typeof hosts).updatedAt, since));
+        conditions.push(
+          timestampAtOrAfter((table as typeof hosts).updatedAt, since),
+        );
       }
 
       const rows = await context.drizzle
