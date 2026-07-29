@@ -156,8 +156,34 @@ async function initializeDatabaseAsync(): Promise<void> {
     }
   } else {
     assertDataDirIsNotMisconfigured(dataDir);
-    memoryDatabase = new Database(":memory:");
-    isNewDatabase = true;
+
+    // The database still lives in memory and is serialised out on every write;
+    // turning encryption off only changes whether that file is ciphertext. It
+    // has to be read back, or each restart starts empty and silently discards
+    // everything the previous run saved.
+    const existing = readPlainDatabaseFile();
+    if (existing) {
+      memoryDatabase = new Database(existing);
+      databaseLogger.info("Loaded unencrypted database from disk", {
+        operation: "db_load_plain",
+        path: dbPath,
+        bytes: existing.length,
+      });
+    } else {
+      memoryDatabase = new Database(":memory:");
+      isNewDatabase = true;
+    }
+  }
+}
+
+/** The plain database file, or null when there is nothing to restore. */
+function readPlainDatabaseFile(): Buffer | null {
+  try {
+    const contents = fs.readFileSync(dbPath);
+    return contents.length > 0 ? contents : null;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
   }
 }
 
