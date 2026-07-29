@@ -1,8 +1,8 @@
 # Database backends
 
-Termix runs on SQLite today. Postgres and MySQL support is being built; this
-document records how the three differ, because the differences are not only
-about SQL.
+Termix runs on SQLite by default. Postgres and MySQL are supported for
+self-hosted deployments; this document records how the three differ, because the
+differences are not only about SQL.
 
 ## This is multi-backend, not a migration
 
@@ -109,20 +109,94 @@ Termix does not provide it and cannot.
 The second row is the point of field-level encryption, and it holds everywhere.
 The first and last rows are where the backends genuinely differ.
 
-## Current status
+## Running on Postgres or MySQL
 
-Implemented:
+Two variables. Unset, nothing changes and SQLite is used exactly as before.
 
-- dialect resolution (`DATABASE_DIALECT`, defaulting to `sqlite`)
-- generated Postgres and MySQL schemas, all 52 tables, with drift protection
-- durability behaviour selected per dialect
+```
+DATABASE_DIALECT=postgres
+DATABASE_URL=postgres://user:password@host:5432/termix
+```
 
-Not yet implemented:
+```
+DATABASE_DIALECT=mysql
+DATABASE_URL=mysql://user:password@host:3306/termix
+```
 
-- opening a Postgres or MySQL connection — `db/index.ts` still opens SQLite
-  unconditionally
-- DDL for the new engines; the current 67 `CREATE TABLE` statements and 122
-  `ADD COLUMN` migrations are hand-written SQLite
-- `getCurrentSettingValue`, a synchronous settings read that needs an async path
+`mariadb://` is accepted for MySQL. The scheme is checked against the dialect
+before a connection is attempted, so a mismatch fails with a readable message
+rather than a driver error deep in a stack.
 
-Setting `DATABASE_DIALECT` to anything other than `sqlite` is not useful yet.
+Point it at an **empty** database. Migrations are applied at startup, from
+`drizzle/postgres` or `drizzle/mysql`, and drizzle records what it has applied —
+so several instances against one database are safe, and so is restarting.
+
+There is no migration path from an existing SQLite database. Exporting one and
+importing it into Postgres is not something this branch does.
+
+### Docker
+
+`drizzle/` ships in the image. A compose service needs only the two variables:
+
+Added to the compose file in the README, that is one service and two variables:
+
+```yaml
+services:
+  termix:
+    image: ghcr.io/lukegus/termix:latest
+    environment:
+      PORT: "8080"
+      DATABASE_DIALECT: postgres
+      DATABASE_URL: postgres://termix:termix@db:5432/termix
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: termix
+      POSTGRES_PASSWORD: termix
+      POSTGRES_DB: termix
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+```
+
+`DATA_DIR` is still used for uploads and recordings on every backend. Only the
+database itself moves.
+
+## What is verified, and how
+
+`npm run verify:dialect -- <url>` applies the migrations to an empty database and
+drives the real repository classes against it, asserting values rather than the
+absence of exceptions.
+
+The repository test suite also runs against each engine:
+
+```
+TEST_DIALECT=postgres TEST_DATABASE_URL=<url> npx vitest run \
+  src/backend/tests/database/repositories --no-file-parallelism
+```
+
+CI runs both, against PostgreSQL 16 and MySQL 8 service containers. Eighteen
+tests assert on bytes stored by the SQLite driver and skip on other engines;
+they still run in the SQLite pass.
+
+Tested against PostgreSQL 16 and MySQL 8. **MariaDB is not a substitute for
+MySQL when testing** — it accepts DDL that MySQL 8 rejects, which has hidden a
+real defect here more than once.
+
+## Known limits
+
+- The desktop app always uses SQLite. It embeds its own backend and cannot ship
+  a database server.
+- Repositories import the SQLite table definitions on every engine. That is
+  correct — the query builder needs identifiers and value encoders, and those
+  agree — but it means `PortableDatabase` is a named approximation rather than a
+  guarantee. See `repositories/database-context.ts`.
+- `getCurrentSettingValue` is a synchronous read. On Postgres and MySQL it comes
+  from a cache primed at startup and kept current by `SettingsRepository`,
+  because those drivers have no synchronous query.
