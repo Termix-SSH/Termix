@@ -16,6 +16,8 @@ const {
   getOIDCConfigFromEnv,
   extractOidcGroups,
   validateLogoutTokenClaims,
+  parseOidcRoleMap,
+  resolveOidcMappedRoles,
 } = await import("../../../database/routes/user-oidc-utils.js");
 
 const BACKCHANNEL_LOGOUT_EVENT =
@@ -249,5 +251,95 @@ describe("validateLogoutTokenClaims", () => {
     expect(() =>
       validateLogoutTokenClaims({ ...validClaims, sub: null, sid: null }),
     ).toThrow("must contain sub and/or sid");
+  });
+});
+
+describe("parseOidcRoleMap", () => {
+  it("returns an empty map for blank input", () => {
+    expect(parseOidcRoleMap(undefined).size).toBe(0);
+    expect(parseOidcRoleMap(null).size).toBe(0);
+    expect(parseOidcRoleMap("   ").size).toBe(0);
+  });
+
+  it("parses comma-separated group:role pairs", () => {
+    const map = parseOidcRoleMap(
+      "devops-interns:devops-intern,devops-seniors:devops-senior",
+    );
+    expect(map.get("devops-interns")).toBe("devops-intern");
+    expect(map.get("devops-seniors")).toBe("devops-senior");
+    expect(map.size).toBe(2);
+  });
+
+  it("parses newline-separated pairs and trims whitespace", () => {
+    const map = parseOidcRoleMap("  a : role-a \n b:role-b \n");
+    expect(map.get("a")).toBe("role-a");
+    expect(map.get("b")).toBe("role-b");
+  });
+
+  it("normalizes leading slashes and case in group names", () => {
+    const map = parseOidcRoleMap("/DevOps-Interns:devops-intern");
+    expect(map.get("devops-interns")).toBe("devops-intern");
+  });
+
+  it("skips malformed entries instead of throwing", () => {
+    const map = parseOidcRoleMap("no-colon,:missing-group,missing-role:,ok:r");
+    expect(map.size).toBe(1);
+    expect(map.get("ok")).toBe("r");
+  });
+
+  it("splits on the last colon so group names may contain colons", () => {
+    const map = parseOidcRoleMap("ns:team:role-x");
+    expect(map.get("ns:team")).toBe("role-x");
+  });
+
+  it("preserves role-name case verbatim", () => {
+    // Role names must match roles.name exactly, so they are not lowercased.
+    expect(parseOidcRoleMap("g:DevOps_Senior").get("g")).toBe("DevOps_Senior");
+  });
+});
+
+describe("resolveOidcMappedRoles", () => {
+  const roleMap = parseOidcRoleMap(
+    "devops-interns:devops-intern,devops-seniors:devops-senior",
+  );
+
+  it("reports every mapped role as managed regardless of membership", () => {
+    const { managed } = resolveOidcMappedRoles([], roleMap);
+    expect([...managed].sort()).toEqual(["devops-intern", "devops-senior"]);
+  });
+
+  it("desires only the roles whose groups the user is in", () => {
+    const { desired } = resolveOidcMappedRoles(["devops-interns"], roleMap);
+    expect([...desired]).toEqual(["devops-intern"]);
+  });
+
+  it("matches full group paths emitted by Keycloak", () => {
+    const { desired } = resolveOidcMappedRoles(["/devops-seniors"], roleMap);
+    expect([...desired]).toEqual(["devops-senior"]);
+  });
+
+  it("ignores groups that are not mapped", () => {
+    const { desired } = resolveOidcMappedRoles(
+      ["finance", "devops-interns"],
+      roleMap,
+    );
+    expect([...desired]).toEqual(["devops-intern"]);
+  });
+
+  it("supports a user in multiple mapped groups", () => {
+    const { desired } = resolveOidcMappedRoles(
+      ["devops-interns", "devops-seniors"],
+      roleMap,
+    );
+    expect([...desired].sort()).toEqual(["devops-intern", "devops-senior"]);
+  });
+
+  it("desires nothing when the map is empty", () => {
+    const { desired, managed } = resolveOidcMappedRoles(
+      ["devops-interns"],
+      new Map(),
+    );
+    expect(desired.size).toBe(0);
+    expect(managed.size).toBe(0);
   });
 });

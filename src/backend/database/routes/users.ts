@@ -24,11 +24,14 @@ import {
   resolveDesktopAutoSessionUser,
 } from "./desktop-auto-session.js";
 import { shouldShowDonationModal } from "./donation-modal-utils.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import {
   getOIDCConfigFromEnv,
   isOIDCUserAllowed,
   verifyOIDCToken,
   extractOidcGroups,
+  parseOidcRoleMap,
+  resolveOidcMappedRoles,
   loadProviderConfig,
   buildFetchOptions,
   resolveProviderByIssuer,
@@ -1329,6 +1332,89 @@ router.get("/oidc/callback", async (req, res) => {
           isAdmin: shouldBeAdmin,
         });
       }
+    }
+
+    // Sync RBAC roles from provider group membership (OIDC_ROLE_MAP).
+    //
+    // This is what makes environment-scoped access work without hand-assigning
+    // roles: map a provider group to a Termix role, grant that role access to a
+    // set of hosts once, and membership follows the identity provider.
+    //
+    // Only roles named in the map are touched. Roles assigned by hand, and the
+    // admin/user pair maintained by the admin-group sync above, are never
+    // removed here — otherwise this would fight that block on every login.
+    //
+    // Non-fatal by design: a role-sync failure must not block a valid login.
+    try {
+      const roleMap = parseOidcRoleMap(
+        config.role_map ?? process.env.OIDC_ROLE_MAP,
+      );
+
+      if (roleMap.size > 0) {
+        const groups = extractOidcGroups(
+          userInfo as Record<string, unknown>,
+          config.group_claim,
+        );
+        const { desired, managed } = resolveOidcMappedRoles(groups, roleMap);
+
+        const roleRepository = createCurrentRoleRepository();
+        const currentRoles = await roleRepository.listUserRoles(userRecord.id);
+        const currentNames = new Set(currentRoles.map((r) => r.roleName));
+
+        const toAdd = [...desired].filter((name) => !currentNames.has(name));
+        const toRemove = currentRoles.filter(
+          (r) => managed.has(r.roleName) && !desired.has(r.roleName),
+        );
+
+        authLogger.info(
+          `Evaluating OIDC role map sync. parsedGroups: ${JSON.stringify(groups)}, desiredRoles: ${JSON.stringify([...desired])}, managedRoles: ${JSON.stringify([...managed])}, groupClaim: ${config.group_claim || "(default)"}`,
+          {
+            operation: "oidc_role_map_sync_eval",
+            userId: userRecord.id,
+          },
+        );
+
+        for (const roleName of toAdd) {
+          const assigned = await roleRepository.assignRoleNameToUser({
+            userId: userRecord.id,
+            roleName,
+            grantedBy: userRecord.id,
+          });
+          if (!assigned) {
+            authLogger.warn(
+              "OIDC role map references a role that does not exist",
+              {
+                operation: "oidc_role_map_missing_role",
+                userId: userRecord.id,
+                roleName,
+              },
+            );
+          }
+        }
+
+        for (const role of toRemove) {
+          await roleRepository.removeRoleFromUser(userRecord.id, role.roleId);
+        }
+
+        if (toAdd.length > 0 || toRemove.length > 0) {
+          authLogger.info("OIDC roles synced from group membership", {
+            operation: "oidc_role_map_sync",
+            userId: userRecord.id,
+            added: toAdd,
+            removed: toRemove.map((r) => r.roleName),
+          });
+          // Host access is resolved through cached role permissions; drop the
+          // cache so the new roles apply to this session immediately.
+          PermissionManager.getInstance().invalidateUserPermissionCache(
+            userRecord.id,
+          );
+        }
+      }
+    } catch (roleSyncError) {
+      authLogger.error("Failed to sync OIDC roles", roleSyncError, {
+        operation: "oidc_role_map_sync_failed",
+        userId: userRecord.id,
+      });
     }
 
     try {
