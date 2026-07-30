@@ -1,4 +1,10 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const users = sqliteTable("users", {
@@ -124,6 +130,9 @@ export const hosts = sqliteTable("ssh_data", {
   pin: integer("pin", { mode: "boolean" }).notNull().default(false),
   authType: text("auth_type").notNull(),
   useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
+  shareSshAuth: integer("share_ssh_auth", { mode: "boolean" })
+    .notNull()
+    .default(false),
   forceKeyboardInteractive: text("force_keyboard_interactive"),
 
   password: text("password"),
@@ -560,11 +569,37 @@ export const hostAccess = sqliteTable("host_access", {
     .default(sql`CURRENT_TIMESTAMP`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: integer("access_count").notNull().default(0),
-  overrideCredentialId: integer("override_credential_id").references(
-    () => sshCredentials.id,
-    { onDelete: "set null" },
-  ),
 });
+
+export const sharedHostAuthOverrides = sqliteTable(
+  "shared_host_auth_overrides",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    protocol: text("protocol").notNull().default("ssh"),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("shared_host_auth_overrides_host_user_protocol_unique").on(
+      table.hostId,
+      table.userId,
+      table.protocol,
+    ),
+  ],
+);
 
 export const sharedHostSecrets = sqliteTable("shared_host_secrets", {
   id: integer("id").primaryKey({ autoIncrement: true }),

@@ -68,10 +68,12 @@ import { copyToClipboard } from "@/lib/clipboard";
 import {
   canDeleteHost,
   canEditHost,
+  canOverrideHostAuth,
   canShareHost,
 } from "@/sidebar/host-permissions";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
 import { HostShareModal } from "@/sidebar/HostShareModal";
+import { HostAuthOverrideModal } from "@/sidebar/HostAuthOverrideModal";
 import {
   useStatusColorScheme,
   getStatusClasses,
@@ -341,6 +343,8 @@ export function HostItem({
   const shouldUseClickTray = trayOnClick || isTouchOnly;
   const showPasswordCopy = !host.isShared && canCopyHostPassword(host);
   const showSudoPasswordCopy = !host.isShared && canCopyHostSudoPassword(host);
+  const canOverrideAuth = canOverrideHostAuth(host, "ssh");
+  const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
 
   async function handleCopyPassword(
     e: MouseEvent,
@@ -670,7 +674,10 @@ export function HostItem({
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuContent
+                    align="end"
+                    className="text-xs  min-w-65"
+                  >
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -681,6 +688,17 @@ export function HostItem({
                       <Copy className="size-3.5 mr-2" />
                       {t("hosts.copyAddress")}
                     </DropdownMenuItem>
+                    {canOverrideAuth && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAuthOverrideOpen(true);
+                        }}
+                      >
+                        <KeyRound className="size-3.5 mr-2" />
+                        {t("hosts.sharing.authOverrideAction")}
+                      </DropdownMenuItem>
+                    )}
                     {showPasswordCopy && (
                       <DropdownMenuItem
                         onClick={(e) => handleCopyPassword(e, "password")}
@@ -870,7 +888,7 @@ export function HostItem({
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuContent align="end" className="text-xs min-w-65">
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -881,6 +899,17 @@ export function HostItem({
                       <Copy className="size-3.5 mr-2" />
                       {t("hosts.copyAddress")}
                     </DropdownMenuItem>
+                    {canOverrideAuth && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAuthOverrideOpen(true);
+                        }}
+                      >
+                        <KeyRound className="size-3.5 mr-2" />
+                        {t("hosts.sharing.authOverrideAction")}
+                      </DropdownMenuItem>
+                    )}
                     {showPasswordCopy && (
                       <DropdownMenuItem
                         onClick={(e) => handleCopyPassword(e, "password")}
@@ -926,6 +955,14 @@ export function HostItem({
                 </DropdownMenu>
               </div>
             </div>
+          )}
+          {canOverrideAuth && (
+            <HostAuthOverrideModal
+              open={authOverrideOpen}
+              onOpenChange={setAuthOverrideOpen}
+              host={host}
+              protocol="ssh"
+            />
           )}
         </div>
       </div>
@@ -1341,7 +1378,7 @@ export function HostItem({
                     <MoreHorizontal className="size-3.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuContent align="end" className="text-xs min-w-65">
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1352,6 +1389,17 @@ export function HostItem({
                     <Copy className="size-3.5 mr-2" />
                     {t("hosts.copyAddress")}
                   </DropdownMenuItem>
+                  {canOverrideAuth && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAuthOverrideOpen(true);
+                      }}
+                    >
+                      <KeyRound className="size-3.5 mr-2" />
+                      {t("hosts.sharing.authOverrideAction")}
+                    </DropdownMenuItem>
+                  )}
                   {showPasswordCopy && (
                     <DropdownMenuItem
                       onClick={(e) => handleCopyPassword(e, "password")}
@@ -1534,6 +1582,14 @@ export function HostItem({
             </div>
           </div>
         </div>
+        {canOverrideAuth && (
+          <HostAuthOverrideModal
+            open={authOverrideOpen}
+            onOpenChange={setAuthOverrideOpen}
+            host={host}
+            protocol="ssh"
+          />
+        )}
       </div>
     </div>
   );

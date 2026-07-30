@@ -7,6 +7,10 @@ import { databaseLogger } from "../../utils/logger.js";
 import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseMigration } from "../../utils/database-migration.js";
+import {
+  ensureSharedHostAuthOverrideProtocolSchema,
+  migrateLegacySharedHostAuthOverrides,
+} from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
 
@@ -1419,6 +1423,28 @@ const migrateSchema = () => {
   }
 
   try {
+    ensureSharedHostAuthOverrideProtocolSchema(sqlite);
+  } catch (schemaError) {
+    databaseLogger.warn("Failed to prepare shared_host_auth_overrides table", {
+      operation: "schema_migration",
+      error: schemaError,
+    });
+  }
+
+  try {
+    migrateLegacySharedHostAuthOverrides(
+      sqlite,
+      getRawSettingValue,
+      setRawSettingValue,
+    );
+  } catch (migrateError) {
+    databaseLogger.warn("Failed to migrate shared host auth overrides", {
+      operation: "schema_migration",
+      error: migrateError,
+    });
+  }
+
+  try {
     sqlite.prepare("SELECT credential_id FROM ssh_folders LIMIT 1").get();
   } catch {
     try {
@@ -1448,6 +1474,7 @@ const migrateSchema = () => {
     { column: "connection_type", sql: "ALTER TABLE ssh_data ADD COLUMN connection_type TEXT NOT NULL DEFAULT 'ssh'" },
     { column: "credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN credential_id INTEGER" },
     { column: "override_credential_username", sql: "ALTER TABLE ssh_data ADD COLUMN override_credential_username INTEGER" },
+    { column: "share_ssh_auth", sql: "ALTER TABLE ssh_data ADD COLUMN share_ssh_auth INTEGER NOT NULL DEFAULT 0" },
     { column: "jump_hosts", sql: "ALTER TABLE ssh_data ADD COLUMN jump_hosts TEXT" },
     { column: "show_terminal_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1" },
     { column: "show_file_manager_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0" },

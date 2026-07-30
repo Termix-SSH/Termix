@@ -2087,6 +2087,8 @@ export {
   updateHostAccess,
   getHostAccess,
   revokeHostAccess,
+  getHostAuthOverride,
+  setHostAuthOverride,
   getPermissionsCatalog,
   getSharedHosts,
   shareSnippet,

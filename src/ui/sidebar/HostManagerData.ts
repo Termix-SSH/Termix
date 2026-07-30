@@ -49,6 +49,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     lastAccess: "",
     tags: h.tags ?? [],
     authType: h.authType,
+    shareSshAuth: h.shareSshAuth ?? false,
     password: h.password,
     hasKey: !!host.hasKey || !!(typeof h.key === "string" && h.key),
     hasKeyPassword: !!host.hasKeyPassword || !!h.keyPassword,
@@ -133,6 +134,22 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     socks5ProxyChain: parseJson(h.socks5ProxyChain) ?? [],
     overrideCredentialUsername: h.overrideCredentialUsername ?? false,
     isShared: h.isShared ?? false,
+    authOverrides: h.authOverrides
+      ? Object.fromEntries(
+          Object.entries(h.authOverrides).map(([protocol, state]) => [
+            protocol,
+            state
+              ? {
+                  ...state,
+                  credentialId:
+                    state.credentialId != null
+                      ? String(state.credentialId)
+                      : undefined,
+                }
+              : state,
+          ]),
+        )
+      : undefined,
     permissionLevel: h.permissionLevel,
     sharedExpiresAt: h.sharedExpiresAt,
     ownerUsername: h.ownerUsername,

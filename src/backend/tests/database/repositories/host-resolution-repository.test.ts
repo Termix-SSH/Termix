@@ -47,6 +47,7 @@ describe("HostResolutionRepository", () => {
         pin INTEGER NOT NULL DEFAULT 0,
         auth_type TEXT NOT NULL,
         use_warpgate INTEGER NOT NULL DEFAULT 0,
+        share_ssh_auth INTEGER NOT NULL DEFAULT 0,
         force_keyboard_interactive TEXT,
         password TEXT,
         key TEXT,
@@ -185,12 +186,12 @@ describe("HostResolutionRepository", () => {
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
       INSERT INTO ssh_data (
         id, user_id, name, ip, port, username, auth_type, credential_id,
-        tunnel_connections
+        tunnel_connections, share_ssh_auth
       )
       VALUES
-        (1, 'user-1', 'web', '10.0.0.1', 22, 'root', 'password', 7, '[{"autoStart":true}]'),
-        (2, 'user-1', 'db', '10.0.0.2', 22, 'admin', 'none', NULL, NULL),
-        (3, 'user-2', 'other', '10.0.0.3', 22, 'root', 'none', NULL, '[{"autoStart":false}]');
+        (1, 'user-1', 'web', '10.0.0.1', 22, 'root', 'password', 7, '[{"autoStart":true}]', 1),
+        (2, 'user-1', 'db', '10.0.0.2', 22, 'admin', 'none', NULL, NULL, 0),
+        (3, 'user-2', 'other', '10.0.0.3', 22, 'root', 'none', NULL, '[{"autoStart":false}]', 0);
       INSERT INTO ssh_credentials (
         id, user_id, name, auth_type, username, password, private_key, key_password
       )
@@ -222,6 +223,7 @@ describe("HostResolutionRepository", () => {
       userId: "user-1",
       name: "web",
       credentialId: 7,
+      shareSshAuth: true,
     });
     await expect(
       repository.findHostByIdForUser(1, "user-1"),
@@ -500,17 +502,6 @@ describe("HostResolutionRepository", () => {
     ).resolves.toEqual([]);
     await expect(
       repository.findCredentialByIdForUser(7, "user-1"),
-    ).resolves.toBeNull();
-  });
-
-  it("loads override credential ids for shared host resolution", async () => {
-    const repository = await createRepository();
-
-    await expect(
-      repository.findOverrideCredentialId(1, "user-2"),
-    ).resolves.toBe(8);
-    await expect(
-      repository.findOverrideCredentialId(1, "user-1"),
     ).resolves.toBeNull();
   });
 

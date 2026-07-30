@@ -29,8 +29,12 @@ import {
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import {
+  containsOwnerPrivateAuthUpdate,
   isNonEmptyString,
+  isOptionalBoolean,
   isValidPort,
+  OWNER_PRIVATE_AUTH_FIELDS,
+  OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS,
   sanitizeHostForRecipient,
   stripSensitiveFields,
   transformHostResponse,
@@ -48,6 +52,11 @@ import {
   requireHostEnrollmentAccessForPath,
 } from "./host-enrollment-auth.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import type { HostResolutionHostRecord } from "../repositories/host-resolution-repository.js";
+import {
+  requiresPersonalHostAuthentication,
+  resolveRecipientSharedHostAuthentication,
+} from "../../utils/shared-host-auth-resolver.js";
 
 const router = express.Router();
 
@@ -162,6 +171,7 @@ router.post(
       authMethod,
       authType,
       useWarpgate,
+      shareSshAuth,
       credentialId,
       vaultProfileId,
       key,
@@ -241,7 +251,8 @@ router.post(
     if (
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
-      !isValidPort(port)
+      !isValidPort(port) ||
+      !isOptionalBoolean(shareSshAuth)
     ) {
       sshLogger.warn("Invalid SSH data input validation failed", {
         operation: "host_create",
@@ -273,6 +284,7 @@ router.post(
       username: effectiveUsername,
       authType: effectiveAuthType,
       useWarpgate: useWarpgate ? 1 : 0,
+      shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
       vaultProfileId: vaultProfileId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
@@ -809,6 +821,7 @@ router.put(
       authMethod,
       authType,
       useWarpgate,
+      shareSshAuth,
       credentialId,
       vaultProfileId,
       key,
@@ -889,6 +902,7 @@ router.put(
       !isNonEmptyString(userId) ||
       !isNonEmptyString(ip) ||
       !isValidPort(port) ||
+      !isOptionalBoolean(shareSshAuth) ||
       !hostId
     ) {
       sshLogger.warn("Invalid SSH data input validation failed for update", {
@@ -917,6 +931,7 @@ router.put(
       username: effectiveUsername,
       authType: effectiveAuthType,
       useWarpgate: useWarpgate ? 1 : 0,
+      shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
       vaultProfileId: vaultProfileId || null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
@@ -1116,30 +1131,103 @@ router.put(
       const ownerId = hostRecord.userId;
 
       if (!accessInfo.isOwner) {
-        // Shared editors work on the owner's real record but may never
-        // repoint it at credential/vault references (those live in the
-        // owner's personal vault) or switch the authentication type.
+        // Shared editors work on the owner's real record, but the owner's SSH
+        // authentication is private and can only be changed by that owner.
+        if (containsOwnerPrivateAuthUpdate(hostData, "ssh")) {
+          return res.status(403).json({
+            error:
+              "Only the host owner can change the host's SSH authentication",
+          });
+        }
+
+        const parseTerminalConfig = (
+          value: unknown,
+        ): Record<string, unknown> | null => {
+          if (!value) return null;
+          if (
+            typeof value === "object" &&
+            value !== null &&
+            !Array.isArray(value)
+          ) {
+            return { ...(value as Record<string, unknown>) };
+          }
+          if (typeof value === "string") {
+            const parsed = JSON.parse(value) as unknown;
+            if (
+              typeof parsed === "object" &&
+              parsed !== null &&
+              !Array.isArray(parsed)
+            ) {
+              return { ...(parsed as Record<string, unknown>) };
+            }
+          }
+          return null;
+        };
+
+        if (hostData.terminalConfig === undefined) {
+          delete sshDataObj.terminalConfig;
+        } else {
+          let incomingTerminalConfig: Record<string, unknown> | null;
+          try {
+            incomingTerminalConfig = parseTerminalConfig(
+              hostData.terminalConfig,
+            );
+          } catch {
+            return res.status(400).json({ error: "Invalid terminal config" });
+          }
+
+          if (!incomingTerminalConfig) {
+            return res.status(400).json({ error: "Invalid terminal config" });
+          }
+          const protectedTerminalConfigField =
+            OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS.find((field) =>
+              Object.prototype.hasOwnProperty.call(
+                incomingTerminalConfig,
+                field,
+              ),
+            );
+          if (protectedTerminalConfigField) {
+            return res.status(403).json({
+              error:
+                "Only the host owner can change private SSH authentication settings",
+            });
+          }
+
+          const ownerHost =
+            await createCurrentHostResolutionRepository().findHostById(
+              Number(hostId),
+              ownerId,
+            );
+          const ownerTerminalConfig = parseTerminalConfig(
+            ownerHost?.terminalConfig,
+          );
+          if (ownerTerminalConfig) {
+            for (const field of OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS) {
+              if (
+                Object.prototype.hasOwnProperty.call(ownerTerminalConfig, field)
+              ) {
+                incomingTerminalConfig[field] = ownerTerminalConfig[field];
+              }
+            }
+          }
+          sshDataObj.terminalConfig = JSON.stringify(incomingTerminalConfig);
+        }
+
         const referenceViolations: Array<[unknown, number | null, string]> = [
-          [sshDataObj.credentialId, hostRecord.credentialId, "credential"],
           [
-            sshDataObj.rdpCredentialId,
+            hostData.rdpCredentialId,
             hostRecord.rdpCredentialId,
             "RDP credential",
           ],
           [
-            sshDataObj.vncCredentialId,
+            hostData.vncCredentialId,
             hostRecord.vncCredentialId,
             "VNC credential",
           ],
           [
-            sshDataObj.telnetCredentialId,
+            hostData.telnetCredentialId,
             hostRecord.telnetCredentialId,
             "Telnet credential",
-          ],
-          [
-            sshDataObj.vaultProfileId,
-            hostRecord.vaultProfileId,
-            "Vault profile",
           ],
         ];
 
@@ -1151,13 +1239,8 @@ router.put(
           }
         }
 
-        if (
-          sshDataObj.authType !== undefined &&
-          sshDataObj.authType !== hostRecord.authType
-        ) {
-          return res.status(403).json({
-            error: "Only the host owner can change the authentication type",
-          });
+        for (const field of OWNER_PRIVATE_AUTH_FIELDS.ssh) {
+          delete sshDataObj[field];
         }
       }
 
@@ -1465,9 +1548,14 @@ router.get(
         sharedExpiresAt: accessInfo.expiresAt || undefined,
         ownerUsername,
       };
+      const resolvedSharedResult =
+        (await resolveHostCredentials(sharedResult, userId)) || sharedResult;
 
       res.json(
-        sanitizeHostForRecipient(sharedResult, accessInfo.permissionLevel),
+        sanitizeHostForRecipient(
+          resolvedSharedResult,
+          accessInfo.permissionLevel,
+        ),
       );
     } catch (err) {
       sshLogger.error("Failed to fetch SSH host by ID from database", err, {
@@ -1529,10 +1617,11 @@ router.get(
     }
 
     try {
-      const host = await createCurrentHostResolutionRepository().findHostById(
-        hostId,
-        userId,
-      );
+      const host =
+        await createCurrentHostResolutionRepository().findHostByIdForUser(
+          hostId,
+          userId,
+        );
 
       if (!host) {
         return res.status(404).json({ error: "Host not found" });
@@ -2206,61 +2295,136 @@ async function resolveHostCredentials(
   requestingUserId?: string,
 ): Promise<Record<string, unknown>> {
   try {
-    if (host.credentialId && (host.userId || host.ownerId)) {
-      const credentialId = host.credentialId as number;
-      const ownerId = (host.ownerId || host.userId) as string;
+    const ownerId = (host.ownerId || host.userId) as string | undefined;
+    if (
+      requestingUserId &&
+      ownerId &&
+      requestingUserId !== ownerId &&
+      typeof host.id === "number"
+    ) {
+      const authHost = host as unknown as HostResolutionHostRecord;
+      const needsPersonalCredential = requiresPersonalHostAuthentication(
+        authHost,
+        "ssh",
+      );
+      const baseSshOverrideState = {
+        required: needsPersonalCredential,
+        ownerAuthShared: !!host.shareSshAuth,
+      };
+      const recipientHost: Record<string, unknown> = {
+        ...host,
+        credentialId: null,
+        password: null,
+        key: null,
+        keyPassword: null,
+        keyType: null,
+        authOverrides: {
+          ssh: baseSshOverrideState,
+        },
+      };
 
-      if (requestingUserId && requestingUserId !== ownerId) {
-        try {
-          const { SharedHostSecretsManager } =
-            await import("../../utils/shared-host-secrets-manager.js");
-          const sharedCred =
-            await SharedHostSecretsManager.getInstance().getSecretForUser(
-              host.id as number,
-              requestingUserId,
-              "ssh",
-            );
+      try {
+        const resolution = await resolveRecipientSharedHostAuthentication(
+          authHost,
+          host.id,
+          requestingUserId,
+          "ssh",
+        );
 
-          if (sharedCred) {
-            const resolvedHost: Record<string, unknown> = {
-              ...host,
-              password: sharedCred.password,
-              key: sharedCred.key,
-              keyPassword: sharedCred.keyPassword,
-              keyType: sharedCred.keyType,
+        if (resolution.source === "personal-override") {
+          const credential = resolution.credential;
+          return {
+            ...recipientHost,
+            authOverrides: {
+              ssh: {
+                credentialId: resolution.credentialId,
+                required: false,
+                ownerAuthShared: !!host.shareSshAuth,
+              },
+            },
+            authType:
+              credential.key || credential.privateKey
+                ? "key"
+                : credential.password
+                  ? "password"
+                  : "none",
+            username: credential.username || recipientHost.username,
+            password: credential.password,
+            key: credential.privateKey || credential.key,
+            keyPassword: credential.keyPassword,
+            keyType: credential.keyType,
+          };
+        }
+
+        if (resolution.source === "owner-shared") {
+          if (resolution.authType === "agent") {
+            return {
+              ...recipientHost,
+              authOverrides: {
+                ssh: {
+                  required: false,
+                  ownerAuthShared: true,
+                },
+              },
+              authType: "agent",
             };
+          }
 
+          const sharedAuth = resolution.secret;
+          if (sharedAuth) {
             const resolvedUsername = pickResolvedUsername(
-              host.username,
-              sharedCred.username,
+              recipientHost.username,
+              sharedAuth.username,
               host.overrideCredentialUsername,
             );
-            if (resolvedUsername !== undefined) {
-              resolvedHost.username = resolvedUsername;
-            }
-
-            return resolvedHost;
+            return {
+              ...recipientHost,
+              authOverrides: {
+                ssh: {
+                  required: false,
+                  ownerAuthShared: true,
+                },
+              },
+              authType: sharedAuth.key
+                ? "key"
+                : sharedAuth.password
+                  ? "password"
+                  : "none",
+              username: resolvedUsername,
+              password: sharedAuth.password,
+              key: sharedAuth.key,
+              keyPassword: sharedAuth.keyPassword,
+              keyType: sharedAuth.keyType,
+            };
           }
-        } catch (sharedCredError) {
-          sshLogger.warn(
-            "Failed to get shared credential, falling back to owner credential",
-            {
-              operation: "resolve_shared_credential_fallback",
-              hostId: host.id as number,
-              requestingUserId,
-              error:
-                sharedCredError instanceof Error
-                  ? sharedCredError.message
-                  : "Unknown error",
-            },
-          );
         }
+
+        if (resolution.source === "secretless") {
+          return {
+            ...recipientHost,
+            authOverrides: {
+              ssh: {
+                required: false,
+                ownerAuthShared: !!host.shareSshAuth,
+              },
+            },
+          };
+        }
+      } catch {
+        // A missing/deleted override or snapshot behaves like unavailable auth.
       }
+
+      return recipientHost;
+    }
+
+    if (host.credentialId && (host.userId || host.ownerId)) {
+      const credentialId = host.credentialId as number;
+      const credentialOwnerId = (host.ownerId || host.userId) as string;
 
       const credential =
         await createCurrentHostResolutionRepository().findCredentialByIdForUser(
           credentialId,
-          ownerId,
+          credentialOwnerId,
         );
 
       if (credential) {

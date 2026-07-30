@@ -53,6 +53,7 @@ describe("HostFolderRepository", () => {
         pin INTEGER NOT NULL DEFAULT 0,
         auth_type TEXT NOT NULL,
         use_warpgate INTEGER NOT NULL DEFAULT 0,
+        share_ssh_auth INTEGER NOT NULL DEFAULT 0,
         force_keyboard_interactive TEXT,
         password TEXT,
         key TEXT,

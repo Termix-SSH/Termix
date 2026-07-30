@@ -238,17 +238,6 @@ export class RbacAccessRepository {
     return rows[0] ?? null;
   }
 
-  async updateHostAccessOverrideCredential(
-    accessId: number,
-    credentialId: number | null,
-  ): Promise<void> {
-    await this.context.drizzle
-      .update(hostAccess)
-      .set({ overrideCredentialId: credentialId })
-      .where(eq(hostAccess.id, accessId));
-    await this.afterWrite();
-  }
-
   async listSnippetAccess(snippetId: number): Promise<RbacAccessListItem[]> {
     const rows = await this.context.drizzle
       .select({

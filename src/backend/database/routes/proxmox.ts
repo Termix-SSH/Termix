@@ -2,14 +2,12 @@ import express from "express";
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../utils/logger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import {
-  createCurrentCredentialRepository,
-  createCurrentHostRepository,
-} from "../repositories/factory.js";
+import { createCurrentHostRepository } from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { SSHHost } from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
+import { resolveHostById } from "../../hosts/host-resolver.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -293,34 +291,18 @@ async function discoverProxmoxGuestsForHost(
     throw error;
   }
 
-  const hostRecord = await createCurrentHostRepository().findDecryptedByIdAs(
-    userId,
-    parsedHostId,
-  );
-
-  if (!hostRecord) {
+  const resolvedHost = await resolveHostById(parsedHostId, userId);
+  if (!resolvedHost) {
     const error = new Error("Host not found");
     (error as Error & { status?: number }).status = 404;
     throw error;
   }
 
-  const host = hostRecord as unknown as SSHHost;
+  const host = resolvedHost as SSHHost;
   const proxmoxCfgRaw = parseJsonObject(host.proxmoxConfig);
   const config = parseProxmoxConfig(proxmoxCfgRaw);
 
-  if (host.userId !== userId) {
-    const { PermissionManager } =
-      await import("../../utils/permission-manager.js");
-    const pm = PermissionManager.getInstance();
-    const access = await pm.canAccessHost(userId, parsedHostId, "connect");
-    if (!access.hasAccess) {
-      const error = new Error("Access denied");
-      (error as Error & { status?: number }).status = 403;
-      throw error;
-    }
-  }
-
-  let resolvedCredentials: {
+  const resolvedCredentials: {
     password?: string;
     sshKey?: string;
     keyPassword?: string;
@@ -333,50 +315,6 @@ async function discoverProxmoxGuestsForHost(
   };
 
   const hostCredentialId = host.credentialId ?? null;
-
-  if (host.credentialId) {
-    if (userId !== host.userId) {
-      try {
-        const { SharedHostSecretsManager } =
-          await import("../../utils/shared-host-secrets-manager.js");
-        const sharedCred =
-          await SharedHostSecretsManager.getInstance().getSecretForUser(
-            host.id,
-            userId,
-            "ssh",
-          );
-        if (sharedCred) {
-          resolvedCredentials = {
-            password: sharedCred.password,
-            sshKey: sharedCred.key,
-            keyPassword: sharedCred.keyPassword,
-            authType: sharedCred.authType,
-          };
-        }
-      } catch (err) {
-        proxmoxLogger.error("Failed to resolve shared credential", err, {
-          operation: "proxmox_discover",
-          hostId: parsedHostId,
-          userId,
-        });
-      }
-    } else {
-      const cred =
-        await createCurrentCredentialRepository().findDecryptedByIdForUser(
-          userId,
-          host.credentialId as number,
-        );
-      if (cred) {
-        const c = cred;
-        resolvedCredentials = {
-          password: c.password as string | undefined,
-          sshKey: (c.key || c.privateKey) as string | undefined,
-          keyPassword: c.keyPassword as string | undefined,
-          authType: c.authType as string | undefined,
-        };
-      }
-    }
-  }
 
   const sshConfig: Record<string, unknown> = {
     host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
