@@ -481,28 +481,26 @@ class RemoteSyncEngine {
         }
       }
 
-      // Apply every tombstone to the other side. Gating this on the row being
-      // present in localBySyncId/remoteBySyncId would skip the common case:
-      // once both sides have converged, the surviving copy of a deleted row
-      // has not been touched, so it is not in the incremental window at all.
-      // The receiving end ignores a deletion for a row it no longer has and
-      // records no tombstone for it, so re-sending one costs a no-op request
-      // and nothing ping-pongs back.
+      // Apply tombstones to whichever side hasn't already deleted the row.
       for (const tombstone of localTombstones) {
-        await this.pushTombstone(
-          remoteBaseUrl,
-          remoteJwt,
-          entityType,
-          tombstone.syncId,
-        );
+        if (remoteBySyncId.has(tombstone.syncId)) {
+          await this.pushTombstone(
+            remoteBaseUrl,
+            remoteJwt,
+            entityType,
+            tombstone.syncId,
+          );
+        }
       }
       for (const tombstone of remoteTombstones) {
-        await this.pushTombstone(
-          EMBEDDED_BASE_URL,
-          this.localJwt,
-          entityType,
-          tombstone.syncId,
-        );
+        if (localBySyncId.has(tombstone.syncId)) {
+          await this.pushTombstone(
+            EMBEDDED_BASE_URL,
+            this.localJwt,
+            entityType,
+            tombstone.syncId,
+          );
+        }
       }
 
       return { syncedAt };
