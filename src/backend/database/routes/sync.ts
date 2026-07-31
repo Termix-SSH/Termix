@@ -84,24 +84,6 @@ export function isValidEntityType(value: unknown): value is SyncEntityType {
   return typeof value === "string" && VALID_ENTITY_TYPES.has(value);
 }
 
-// updatedAt/deletedAt are TEXT columns written by CURRENT_TIMESTAMP, so they
-// read as "2026-07-29 10:11:21" while clients send an ISO 8601 `since` like
-// "2026-07-29T10:06:55.172Z". Both comparisons are lexical, and ' ' (0x20)
-// sorts below 'T' (0x54), so a newer row loses the comparison at position 10
-// and the incremental window comes back empty forever. Rewrite `since` into
-// the stored shape. Dropping the fraction can re-send rows from the same
-// second, which is harmless — every apply path upserts by syncId.
-export function normalizeSince(value: unknown): string | null {
-  if (typeof value !== "string" || !value) return null;
-  // Already stored-shaped. Parsing it would be worse than leaving it alone:
-  // Date treats a string with no zone as local time, which shifts the cursor
-  // by the offset and, west of UTC, moves it forward past unsynced rows.
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) return value;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 19).replace("T", " ");
-}
-
 async function findReferenceSyncId(
   context: RepositoryContext,
   entityType: SyncReferenceEntity,
@@ -231,82 +213,6 @@ export function stripWritePayload(
  *       500:
  *         description: Failed to fetch rows.
  */
-/**
- * @openapi
- * /sync/tombstones:
- *   post:
- *     summary: Report a deletion from the other side of a sync pair
- *     description: Applies a remote deletion locally (if the row still exists) and records the tombstone so future pulls stay consistent.
- *     tags:
- *       - Sync
- *     responses:
- *       200:
- *         description: Deletion applied (or row already absent).
- *       400:
- *         description: Unknown entity type or missing syncId.
- *       500:
- *         description: Failed to apply deletion.
- */
-// Must stay ahead of the "/:entityType" routes below: Express matches in
-// registration order and "tombstones" is a valid :entityType value, so a
-// wildcard registered first would answer this path with "Unknown entity type".
-router.post(
-  "/tombstones",
-  authenticateJWT,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const entityType = req.body?.entityType;
-    const syncId = req.body?.syncId;
-    if (
-      !isValidEntityType(entityType) ||
-      typeof syncId !== "string" ||
-      !syncId
-    ) {
-      return res.status(400).json({ error: "Missing entityType or syncId" });
-    }
-
-    try {
-      const { table, singleton } = ENTITY_CONFIG[entityType];
-      const context = createCurrentRepositoryContext();
-      const match = singleton
-        ? eq(table.userId, userId)
-        : and(
-            eq((table as typeof hosts).syncId, syncId),
-            eq(table.userId, userId),
-          );
-
-      const existing = await context.drizzle
-        .select()
-        .from(table as typeof hosts)
-        .where(match)
-        .limit(1);
-
-      // Only a deletion that actually removed something earns a tombstone.
-      // Recording one unconditionally would hand the sender a fresh tombstone
-      // to push back on the next pass, and the two sides would trade the same
-      // deletion forever.
-      if (existing.length > 0) {
-        await context.drizzle.delete(table as typeof hosts).where(match);
-        await createCurrentSyncTombstoneRepository().record(
-          userId,
-          entityType,
-          syncId,
-        );
-        await DatabaseSaveTrigger.forceSave("sync_tombstone_applied");
-      }
-
-      res.json({ success: true });
-    } catch (err) {
-      databaseLogger.error("Failed to apply sync tombstone", err, {
-        operation: "sync_tombstone_apply",
-        entityType,
-        userId,
-      });
-      res.status(500).json({ error: "Failed to apply deletion" });
-    }
-  },
-);
-
 router.get(
   "/:entityType",
   authenticateJWT,
@@ -316,7 +222,10 @@ router.get(
     if (!isValidEntityType(entityType)) {
       return res.status(400).json({ error: "Unknown entity type" });
     }
-    const since = normalizeSince(req.query.since);
+    const since =
+      typeof req.query.since === "string" && req.query.since
+        ? req.query.since
+        : null;
 
     try {
       const { table, singleton } = ENTITY_CONFIG[entityType];
@@ -506,7 +415,10 @@ router.get(
     if (!isValidEntityType(entityType)) {
       return res.status(400).json({ error: "Unknown entity type" });
     }
-    const since = normalizeSince(req.query.since);
+    const since =
+      typeof req.query.since === "string" && req.query.since
+        ? req.query.since
+        : null;
 
     try {
       const tombstones = await createCurrentSyncTombstoneRepository().listSince(
@@ -522,6 +434,71 @@ router.get(
         { operation: "sync_tombstones_pull", entityType, userId },
       );
       res.status(500).json({ error: "Failed to fetch tombstones" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /sync/tombstones:
+ *   post:
+ *     summary: Report a deletion from the other side of a sync pair
+ *     description: Applies a remote deletion locally (if the row still exists) and records the tombstone so future pulls stay consistent.
+ *     tags:
+ *       - Sync
+ *     responses:
+ *       200:
+ *         description: Deletion applied (or row already absent).
+ *       400:
+ *         description: Unknown entity type or missing syncId.
+ *       500:
+ *         description: Failed to apply deletion.
+ */
+router.post(
+  "/tombstones",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const entityType = req.body?.entityType;
+    const syncId = req.body?.syncId;
+    if (
+      !isValidEntityType(entityType) ||
+      typeof syncId !== "string" ||
+      !syncId
+    ) {
+      return res.status(400).json({ error: "Missing entityType or syncId" });
+    }
+
+    try {
+      const { table, singleton } = ENTITY_CONFIG[entityType];
+      const context = createCurrentRepositoryContext();
+
+      await context.drizzle
+        .delete(table as typeof hosts)
+        .where(
+          singleton
+            ? eq(table.userId, userId)
+            : and(
+                eq((table as typeof hosts).syncId, syncId),
+                eq(table.userId, userId),
+              ),
+        );
+
+      await createCurrentSyncTombstoneRepository().record(
+        userId,
+        entityType,
+        syncId,
+      );
+      await DatabaseSaveTrigger.forceSave("sync_tombstone_applied");
+
+      res.json({ success: true });
+    } catch (err) {
+      databaseLogger.error("Failed to apply sync tombstone", err, {
+        operation: "sync_tombstone_apply",
+        entityType,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to apply deletion" });
     }
   },
 );
