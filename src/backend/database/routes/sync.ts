@@ -268,6 +268,71 @@ router.get(
 
 /**
  * @openapi
+ * /sync/tombstones:
+ *   post:
+ *     summary: Report a deletion from the other side of a sync pair
+ *     description: Applies a remote deletion locally (if the row still exists) and records the tombstone so future pulls stay consistent.
+ *     tags:
+ *       - Sync
+ *     responses:
+ *       200:
+ *         description: Deletion applied (or row already absent).
+ *       400:
+ *         description: Unknown entity type or missing syncId.
+ *       500:
+ *         description: Failed to apply deletion.
+ */
+router.post(
+  "/tombstones",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const entityType = req.body?.entityType;
+    const syncId = req.body?.syncId;
+    if (
+      !isValidEntityType(entityType) ||
+      typeof syncId !== "string" ||
+      !syncId
+    ) {
+      return res.status(400).json({ error: "Missing entityType or syncId" });
+    }
+
+    try {
+      const { table, singleton } = ENTITY_CONFIG[entityType];
+      const context = createCurrentRepositoryContext();
+
+      await context.drizzle
+        .delete(table as typeof hosts)
+        .where(
+          singleton
+            ? eq(table.userId, userId)
+            : and(
+                eq((table as typeof hosts).syncId, syncId),
+                eq(table.userId, userId),
+              ),
+        );
+
+      await createCurrentSyncTombstoneRepository().record(
+        userId,
+        entityType,
+        syncId,
+      );
+      await DatabaseSaveTrigger.forceSave("sync_tombstone_applied");
+
+      res.json({ success: true });
+    } catch (err) {
+      databaseLogger.error("Failed to apply sync tombstone", err, {
+        operation: "sync_tombstone_apply",
+        entityType,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to apply deletion" });
+    }
+  },
+);
+
+/**
+ * @openapi
  * /sync/{entityType}:
  *   post:
  *     summary: Upsert a synced row by syncId
@@ -434,71 +499,6 @@ router.get(
         { operation: "sync_tombstones_pull", entityType, userId },
       );
       res.status(500).json({ error: "Failed to fetch tombstones" });
-    }
-  },
-);
-
-/**
- * @openapi
- * /sync/tombstones:
- *   post:
- *     summary: Report a deletion from the other side of a sync pair
- *     description: Applies a remote deletion locally (if the row still exists) and records the tombstone so future pulls stay consistent.
- *     tags:
- *       - Sync
- *     responses:
- *       200:
- *         description: Deletion applied (or row already absent).
- *       400:
- *         description: Unknown entity type or missing syncId.
- *       500:
- *         description: Failed to apply deletion.
- */
-router.post(
-  "/tombstones",
-  authenticateJWT,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const entityType = req.body?.entityType;
-    const syncId = req.body?.syncId;
-    if (
-      !isValidEntityType(entityType) ||
-      typeof syncId !== "string" ||
-      !syncId
-    ) {
-      return res.status(400).json({ error: "Missing entityType or syncId" });
-    }
-
-    try {
-      const { table, singleton } = ENTITY_CONFIG[entityType];
-      const context = createCurrentRepositoryContext();
-
-      await context.drizzle
-        .delete(table as typeof hosts)
-        .where(
-          singleton
-            ? eq(table.userId, userId)
-            : and(
-                eq((table as typeof hosts).syncId, syncId),
-                eq(table.userId, userId),
-              ),
-        );
-
-      await createCurrentSyncTombstoneRepository().record(
-        userId,
-        entityType,
-        syncId,
-      );
-      await DatabaseSaveTrigger.forceSave("sync_tombstone_applied");
-
-      res.json({ success: true });
-    } catch (err) {
-      databaseLogger.error("Failed to apply sync tombstone", err, {
-        operation: "sync_tombstone_apply",
-        entityType,
-        userId,
-      });
-      res.status(500).json({ error: "Failed to apply deletion" });
     }
   },
 );
