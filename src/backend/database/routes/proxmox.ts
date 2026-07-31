@@ -11,6 +11,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { SSHHost } from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
 import { createJumpHostChain } from "../../hosts/jump-host-chain.js";
+import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -261,45 +262,6 @@ function mergeTags(
   return [...new Set([...base, ...additions])]
     .filter((tag) => !removeSet.has(tag))
     .join(",");
-}
-
-function resolveProxmoxImportAuth(
-  defaultAuthType: string | undefined,
-  credentialId: number | null | undefined,
-): {
-  authType: string;
-  credentialId: number | null;
-  overrideCredentialUsername: number;
-} {
-  // An explicit special auth type (none/opkssh/tailscale/vault/…) wins.
-  if (
-    defaultAuthType &&
-    defaultAuthType !== "credential" &&
-    !["password", "key"].includes(defaultAuthType)
-  ) {
-    return {
-      authType: defaultAuthType,
-      credentialId: null,
-      overrideCredentialUsername: 0,
-    };
-  }
-
-  // A credential (configured default OR inherited from the source host) is a
-  // concrete auth source -> use it, even when defaultAuthType is the
-  // "password"/"key" default.
-  if (credentialId) {
-    return {
-      authType: "credential",
-      credentialId,
-      overrideCredentialUsername: 1,
-    };
-  }
-
-  return {
-    authType: "none",
-    credentialId: null,
-    overrideCredentialUsername: 0,
-  };
 }
 
 async function discoverProxmoxGuestsForHost(
