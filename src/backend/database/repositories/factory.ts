@@ -47,9 +47,21 @@ import { UserRepository } from "./user-repository.js";
 import { VaultProfileRepository } from "./vault-profile-repository.js";
 import { VaultTokenRepository } from "./vault-token-repository.js";
 
+/**
+ * The context every repository runs against.
+ *
+ * The dialect has to be resolved, not assumed: it is what `returning.ts` reads
+ * to decide whether it can ask for RETURNING, and whether an upsert spells
+ * itself `onConflictDoUpdate` or `onDuplicateKeyUpdate`. Reporting "sqlite"
+ * while connected to MySQL makes the second of those a TypeError on the first
+ * write.
+ *
+ * Both cross-dialect harnesses build a DatabaseContext themselves, so neither
+ * exercises this function — see tests/database/repositories/factory-context.
+ */
 export function createCurrentRepositoryContext(): DatabaseContext {
   return {
-    dialect: "sqlite",
+    dialect: resolveDatabaseDialect(),
     drizzle: getDb(),
   };
 }

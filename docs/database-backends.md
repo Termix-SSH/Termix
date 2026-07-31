@@ -189,6 +189,19 @@ Tested against PostgreSQL 16 and MySQL 8. **MariaDB is not a substitute for
 MySQL when testing** — it accepts DDL that MySQL 8 rejects, which has hidden a
 real defect here more than once.
 
+### What neither of them covers
+
+Both harnesses build a `DatabaseContext` of their own, so neither runs
+`createCurrentRepositoryContext()` — the one the application actually uses.
+That gap hid a hardcoded `dialect: "sqlite"` in it: every engine reported
+itself as SQLite at runtime while all three test passes stayed green, which on
+MySQL meant `upsert` reached for `onConflictDoUpdate` and died with a
+TypeError on the first write.
+
+Anything the factory decides from the dialect needs its own test against the
+factory. Asserting it through a hand-built context proves nothing about what
+runs in production.
+
 ## Known limits
 
 - The desktop app always uses SQLite. It embeds its own backend and cannot ship
