@@ -6,6 +6,7 @@ import {
   timestampAtOrAfter,
 } from "../../../database/sync-timestamp.js";
 import { sshCredentials } from "../../../database/db/schema.js";
+import type { DatabaseContext } from "../../../database/repositories/database-context.js";
 import { and, eq } from "drizzle-orm";
 
 // The desktop sync engine always sends its cursor as new Date().toISOString().
@@ -21,10 +22,24 @@ describe("sync cursors across timestamp layouts", () => {
     }
   });
 
-  async function connect(): Promise<TestSqliteDatabase> {
-    adapter = new TestSqliteDatabase();
-    await adapter.connect();
-    return adapter;
+  /**
+   * The harness migrates the schema itself, so the seeds below are INSERTs into
+   * the real tables. Both `sync_tombstones.user_id` and `ssh_credentials.user_id`
+   * are foreign keys into `users`, which the harness enforces, so the owning row
+   * has to exist before either seed runs.
+   */
+  async function connect(): Promise<{
+    db: TestSqliteDatabase;
+    context: DatabaseContext;
+  }> {
+    const db = new TestSqliteDatabase();
+    adapter = db;
+    const context = await db.connect();
+    await db.exec(`
+      INSERT INTO users (id, username, password_hash) VALUES
+        ('user-1', 'user', 'hash');
+    `);
+    return { db, context };
   }
 
   it("normalizes both layouts to one comparable form", () => {
@@ -37,17 +52,8 @@ describe("sync cursors across timestamp layouts", () => {
   });
 
   it("returns tombstones recorded after an ISO cursor, whatever layout they were stored in", async () => {
-    const db = await connect();
-    const context = await db.connect();
-    db.exec(`
-      CREATE TABLE sync_tombstones (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        entity_type TEXT NOT NULL,
-        sync_id TEXT NOT NULL,
-        deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    const { db, context } = await connect();
+    await db.exec(`
       INSERT INTO sync_tombstones (user_id, entity_type, sync_id, deleted_at) VALUES
         ('user-1', 'sshCredentials', 'sqlite-layout', '2026-07-29 10:07:32'),
         ('user-1', 'sshCredentials', 'iso-layout',    '2026-07-29T10:07:32.500Z'),
@@ -64,27 +70,12 @@ describe("sync cursors across timestamp layouts", () => {
   });
 
   it("returns rows written by CURRENT_TIMESTAMP against an ISO cursor", async () => {
-    const db = await connect();
-    const context = await db.connect();
-    db.exec(`
-      CREATE TABLE ssh_credentials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        folder TEXT,
-        tags TEXT,
-        auth_type TEXT NOT NULL DEFAULT 'password',
-        username TEXT NOT NULL DEFAULT 'root',
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      INSERT INTO ssh_credentials (user_id, name, updated_at) VALUES
-        ('user-1', 'newer-sqlite-layout', '2026-07-29 10:11:21'),
-        ('user-1', 'newer-iso-layout',    '2026-07-29T10:11:21.123Z'),
-        ('user-1', 'older',               '2026-07-29 08:59:59');
+    const { db, context } = await connect();
+    await db.exec(`
+      INSERT INTO ssh_credentials (user_id, name, auth_type, updated_at) VALUES
+        ('user-1', 'newer-sqlite-layout', 'password', '2026-07-29 10:11:21'),
+        ('user-1', 'newer-iso-layout',    'password', '2026-07-29T10:11:21.123Z'),
+        ('user-1', 'older',               'password', '2026-07-29 08:59:59');
     `);
 
     const rows = await context.drizzle
@@ -104,25 +95,10 @@ describe("sync cursors across timestamp layouts", () => {
   });
 
   it("keeps rows written in the same second as the cursor", async () => {
-    const db = await connect();
-    const context = await db.connect();
-    db.exec(`
-      CREATE TABLE ssh_credentials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        folder TEXT,
-        tags TEXT,
-        auth_type TEXT NOT NULL DEFAULT 'password',
-        username TEXT NOT NULL DEFAULT 'root',
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      INSERT INTO ssh_credentials (user_id, name, updated_at)
-      VALUES ('user-1', 'same-second', '2026-07-29 09:00:00');
+    const { db, context } = await connect();
+    await db.exec(`
+      INSERT INTO ssh_credentials (user_id, name, auth_type, updated_at)
+      VALUES ('user-1', 'same-second', 'password', '2026-07-29 09:00:00');
     `);
 
     const rows = await context.drizzle
