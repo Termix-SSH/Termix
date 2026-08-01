@@ -305,6 +305,12 @@ networks:
     driver: bridge
 ```
 
+### Cloud Hosting
+
+You can also run the Termix server on a cloud VPS instead of inside your own network. If Termix runs on the network it manages, an outage takes Termix with it, and your hosts and saved sessions are stuck inside the system you are trying to fix. Hosting it externally keeps it reachable no matter what happens to your network, and gives you a static IP and access from anywhere without a VPN or port forward.
+
+[GINERNET](https://docs.termix.site/install/ginernet) is a sponsor of Termix, and there is a full step by step guide for deploying to their VPS platform in the docs.
+
 <br />
 
 ## Telemetry
