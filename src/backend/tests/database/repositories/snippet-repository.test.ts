@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TestSqliteDatabase } from "./test-support.js";
 import { SnippetRepository } from "../../../database/repositories/snippet-repository.js";
@@ -14,37 +15,13 @@ describe("SnippetRepository", () => {
 
   async function createRepository(onWrite?: () => void): Promise<{
     repository: SnippetRepository;
-    sqlite: NonNullable<
-      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
-    >;
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE snippets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        content TEXT NOT NULL,
-        description TEXT,
-        folder TEXT,
-        "order" INTEGER NOT NULL DEFAULT 0,
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        host_filter TEXT
-      );
-
-      CREATE TABLE snippet_folders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        color TEXT,
-        icon TEXT,
-        sync_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
+    await adapter.exec(`
+      INSERT INTO users (id, username, password_hash) VALUES
+        ('user-1', 'user-1', 'hash'),
+        ('user-2', 'user-2', 'hash');
 
       INSERT INTO snippets (
         id, user_id, name, content, description, folder, "order", host_filter
@@ -53,7 +30,6 @@ describe("SnippetRepository", () => {
         (1, 'user-1', 'root', 'uptime', NULL, NULL, 2, NULL),
         (2, 'user-1', 'deploy', 'make deploy', 'Deploy app', 'ops', 1, 'linux'),
         (3, 'user-2', 'other', 'whoami', NULL, NULL, 1, NULL);
-
       INSERT INTO snippet_folders (id, user_id, name, color, icon)
       VALUES
         (1, 'user-1', 'ops', '#123456', 'terminal'),
@@ -63,7 +39,6 @@ describe("SnippetRepository", () => {
 
     return {
       repository: new SnippetRepository(context, onWrite),
-      sqlite: context.sqlite!,
     };
   }
 
@@ -189,18 +164,18 @@ describe("SnippetRepository", () => {
 
   it("deletes all snippets and folders for a user", async () => {
     const onWrite = vi.fn();
-    const { repository, sqlite } = await createRepository(onWrite);
+    const { repository } = await createRepository(onWrite);
 
     await expect(repository.deleteByUserId("user-1")).resolves.toEqual({
       snippetsDeleted: 2,
       foldersDeleted: 2,
     });
 
-    expect(sqlite.prepare("SELECT id FROM snippets ORDER BY id").all()).toEqual(
-      [{ id: 3 }],
-    );
     expect(
-      sqlite.prepare("SELECT id FROM snippet_folders ORDER BY id").all(),
+      await adapter!.query(sql`SELECT id FROM snippets ORDER BY id`),
+    ).toEqual([{ id: 3 }]);
+    expect(
+      await adapter!.query(sql`SELECT id FROM snippet_folders ORDER BY id`),
     ).toEqual([{ id: 3 }]);
     expect(onWrite).toHaveBeenCalledTimes(1);
   });

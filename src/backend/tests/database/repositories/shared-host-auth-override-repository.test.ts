@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { sql } from "drizzle-orm";
 import { SharedHostAuthOverrideRepository } from "../../../database/repositories/shared-host-auth-override-repository.js";
 import { TestSqliteDatabase } from "./test-support.js";
 
@@ -13,44 +14,18 @@ describe("SharedHostAuthOverrideRepository", () => {
   async function createRepository(onWrite?: () => void) {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite!.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY,
-        user_id TEXT NOT NULL
-      );
-      CREATE TABLE ssh_credentials (
-        id INTEGER PRIMARY KEY,
-        user_id TEXT NOT NULL
-      );
-      CREATE TABLE shared_host_auth_overrides (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
-        protocol TEXT NOT NULL DEFAULT 'ssh',
-        credential_id INTEGER NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(host_id, user_id, protocol),
-        FOREIGN KEY (host_id) REFERENCES ssh_data(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (credential_id) REFERENCES ssh_credentials(id) ON DELETE CASCADE
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('owner', 'owner', 'hash'), ('recipient', 'recipient', 'hash');
-      INSERT INTO ssh_data (id, user_id) VALUES (42, 'owner');
-      INSERT INTO ssh_credentials (id, user_id)
-      VALUES (7, 'recipient'), (8, 'recipient');
+      INSERT INTO ssh_data (id, user_id, ip, port, username, auth_type)
+      VALUES (42, 'owner', '10.0.0.1', 22, 'root', 'password');
+      INSERT INTO ssh_credentials (id, user_id, name, auth_type)
+      VALUES (7, 'recipient', 'cred-seven', 'password'),
+        (8, 'recipient', 'cred-eight', 'password');
     `);
 
     return {
       repository: new SharedHostAuthOverrideRepository(context, onWrite),
-      sqlite: context.sqlite!,
     };
   }
 
@@ -91,28 +66,30 @@ describe("SharedHostAuthOverrideRepository", () => {
   });
 
   it("removes overrides when the host, user, or credential is deleted", async () => {
-    const { repository, sqlite } = await createRepository();
+    const { repository } = await createRepository();
 
     await repository.setCredential(42, "recipient", "ssh", 7);
-    sqlite.prepare("DELETE FROM ssh_credentials WHERE id = ?").run(7);
+    await adapter!.run(sql`DELETE FROM ssh_credentials WHERE id = 7`);
     await expect(
       repository.findCredentialId(42, "recipient", "ssh"),
     ).resolves.toBeNull();
 
-    sqlite
-      .prepare("INSERT INTO ssh_credentials (id, user_id) VALUES (?, ?)")
-      .run(7, "recipient");
+    await adapter!.run(
+      sql`INSERT INTO ssh_credentials (id, user_id, name, auth_type)
+          VALUES (7, 'recipient', 'cred-seven', 'password')`,
+    );
     await repository.setCredential(42, "recipient", "ssh", 7);
-    sqlite.prepare("DELETE FROM ssh_data WHERE id = ?").run(42);
+    await adapter!.run(sql`DELETE FROM ssh_data WHERE id = 42`);
     await expect(
       repository.findCredentialId(42, "recipient", "ssh"),
     ).resolves.toBeNull();
 
-    sqlite
-      .prepare("INSERT INTO ssh_data (id, user_id) VALUES (?, ?)")
-      .run(42, "owner");
+    await adapter!.run(
+      sql`INSERT INTO ssh_data (id, user_id, ip, port, username, auth_type)
+          VALUES (42, 'owner', '10.0.0.1', 22, 'root', 'password')`,
+    );
     await repository.setCredential(42, "recipient", "ssh", 7);
-    sqlite.prepare("DELETE FROM users WHERE id = ?").run("recipient");
+    await adapter!.run(sql`DELETE FROM users WHERE id = 'recipient'`);
     await expect(
       repository.findCredentialId(42, "recipient", "ssh"),
     ).resolves.toBeNull();

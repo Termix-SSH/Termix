@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { opksshTokens } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { upsert } from "./returning.js";
 
 export type OpksshTokenRecord = typeof opksshTokens.$inferSelect;
 
@@ -26,9 +28,10 @@ export class OpksshTokenRepository {
   async upsert(input: OpksshTokenUpsertInput): Promise<void> {
     const createdAt = input.createdAt ?? new Date().toISOString();
 
-    await this.context.drizzle
-      .insert(opksshTokens)
-      .values({
+    await upsert(
+      this.context,
+      opksshTokens,
+      {
         userId: input.userId,
         hostId: input.hostId,
         sshCert: input.sshCert,
@@ -38,8 +41,8 @@ export class OpksshTokenRepository {
         issuer: input.issuer,
         audience: input.audience,
         expiresAt: input.expiresAt,
-      })
-      .onConflictDoUpdate({
+      },
+      {
         target: [opksshTokens.userId, opksshTokens.hostId],
         set: {
           sshCert: input.sshCert,
@@ -51,7 +54,8 @@ export class OpksshTokenRepository {
           expiresAt: input.expiresAt,
           createdAt,
         },
-      });
+      },
+    );
 
     await this.afterWrite();
   }
@@ -76,47 +80,44 @@ export class OpksshTokenRepository {
     hostId: number,
     lastUsed = new Date().toISOString(),
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(opksshTokens)
       .set({ lastUsed })
       .where(
         and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-      )
-      .returning({ id: opksshTokens.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserAndHost(userId: string, hostId: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(opksshTokens)
       .where(
         and(eq(opksshTokens.userId, userId), eq(opksshTokens.hostId, hostId)),
-      )
-      .returning({ id: opksshTokens.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(opksshTokens)
-      .where(eq(opksshTokens.userId, userId))
-      .returning({ id: opksshTokens.id });
+      .where(eq(opksshTokens.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { getGuacamoleDisplaySize } from "../../../features/guacamole/guacamole-display-size";
+import {
+  getGuacamoleDisplaySize,
+  readConfiguredDimension,
+} from "../../../features/guacamole/guacamole-display-size";
 
 describe("getGuacamoleDisplaySize", () => {
   it("requests native pixels and matching DPI for HiDPI RDP", () => {
@@ -35,5 +38,30 @@ describe("getGuacamoleDisplaySize", () => {
       dpi: 288,
       pixelRatio: 3,
     });
+  });
+
+  it("uses a configured resolution in place of the container size", () => {
+    expect(
+      getGuacamoleDisplaySize(800, 600, "rdp", 1, undefined),
+    ).toMatchObject({ width: 800, height: 600 });
+    expect(
+      getGuacamoleDisplaySize(1920, 1080, "rdp", 1, undefined),
+    ).toMatchObject({ width: 1920, height: 1080 });
+  });
+});
+
+describe("readConfiguredDimension", () => {
+  it("accepts the strings the host editor stores", () => {
+    expect(readConfiguredDimension("1920")).toBe(1920);
+    expect(readConfiguredDimension(1080)).toBe(1080);
+  });
+
+  it("treats an unset or unusable value as 'follow the container'", () => {
+    expect(readConfiguredDimension("")).toBeUndefined();
+    expect(readConfiguredDimension(undefined)).toBeUndefined();
+    expect(readConfiguredDimension(null)).toBeUndefined();
+    expect(readConfiguredDimension("auto")).toBeUndefined();
+    expect(readConfiguredDimension("0")).toBeUndefined();
+    expect(readConfiguredDimension("-1080")).toBeUndefined();
   });
 });

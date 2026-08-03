@@ -17,41 +17,11 @@ describe("SessionRecordingRepository", () => {
   ): Promise<SessionRecordingRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        ip TEXT
-      );
-
-      CREATE TABLE session_recordings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
-        access_id INTEGER,
-        started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        ended_at TEXT,
-        duration INTEGER,
-        commands TEXT,
-        dangerous_actions TEXT,
-        recording_path TEXT,
-        protocol TEXT NOT NULL DEFAULT 'ssh',
-        format TEXT NOT NULL DEFAULT 'text',
-        terminated_by_owner INTEGER DEFAULT 0,
-        termination_reason TEXT
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO ssh_data (id, user_id, name, ip)
-      VALUES (1, 'user-1', 'one', '10.0.0.1'), (2, 'user-1', 'two', '10.0.0.2'), (3, 'user-2', 'other', '10.0.0.3');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '10.0.0.1', 22, 'root', 'password'), (2, 'user-1', 'two', '10.0.0.2', 22, 'root', 'password'), (3, 'user-2', 'other', '10.0.0.3', 22, 'root', 'password');
     `);
 
     return new SessionRecordingRepository(context, onWrite);

@@ -51,7 +51,11 @@ import {
   applyHostEnrollmentDefaults,
   requireHostEnrollmentAccessForPath,
 } from "./host-enrollment-auth.js";
-import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import type { HostResolutionHostRecord } from "../repositories/host-resolution-repository.js";
 import {
   requiresPersonalHostAuthentication,
@@ -63,11 +67,6 @@ const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 const STATS_SERVER_URL = "http://localhost:30005";
-
-async function getAuditUsername(userId: string): Promise<string> {
-  const actor = await createCurrentUserRepository().findById(userId);
-  return actor?.username ?? userId;
-}
 
 function notifyStatsHostUpdated(
   hostId: number,
@@ -180,6 +179,7 @@ router.post(
       sudoPassword,
       pin,
       enableTerminal,
+      enableCommandHistory,
       enableTunnel,
       enableFileManager,
       scpLegacy,
@@ -290,6 +290,7 @@ router.post(
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
+      enableCommandHistory: enableCommandHistory ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)
@@ -830,6 +831,7 @@ router.put(
       sudoPassword,
       pin,
       enableTerminal,
+      enableCommandHistory,
       enableTunnel,
       enableFileManager,
       scpLegacy,
@@ -937,6 +939,7 @@ router.put(
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
+      enableCommandHistory: enableCommandHistory ? 1 : 0,
       enableTunnel: enableTunnel ? 1 : 0,
       tunnelConnections: Array.isArray(tunnelConnections)
         ? JSON.stringify(tunnelConnections)

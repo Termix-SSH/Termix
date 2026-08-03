@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import { hosts, sessionRecordings } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type SessionRecordingRecord = typeof sessionRecordings.$inferSelect;
 
@@ -47,10 +49,11 @@ export class SessionRecordingRepository {
   async create(
     input: SessionRecordingCreateInput,
   ): Promise<SessionRecordingRecord> {
-    const [created] = await this.context.drizzle
-      .insert(sessionRecordings)
-      .values(input)
-      .returning();
+    const [created] = await insertReturning(
+      this.context,
+      sessionRecordings,
+      input,
+    );
 
     await this.afterWrite();
     return created;
@@ -170,57 +173,71 @@ export class SessionRecordingRepository {
   }
 
   async deleteById(id: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessionRecordings)
-      .where(eq(sessionRecordings.id, id))
-      .returning({ id: sessionRecordings.id });
+      .where(eq(sessionRecordings.id, id));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteForUser(userId: string, id: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessionRecordings)
       .where(
         and(eq(sessionRecordings.id, id), eq(sessionRecordings.userId, userId)),
-      )
-      .returning({ id: sessionRecordings.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
+  }
+
+  /**
+   * Detaches recordings from a user being deleted instead of removing them.
+   * A recording is evidence about the host as much as about the person, and the
+   * file stays on disk regardless — deleting only the row would orphan it.
+   */
+  async anonymizeByUserId(userId: string): Promise<number> {
+    const result = await this.context.drizzle
+      .update(sessionRecordings)
+      .set({ userId: null })
+      .where(eq(sessionRecordings.userId, userId));
+
+    if (rowsAffected(result) > 0) {
+      await this.afterWrite();
+    }
+
+    return rowsAffected(result);
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessionRecordings)
-      .where(eq(sessionRecordings.userId, userId))
-      .returning({ id: sessionRecordings.id });
+      .where(eq(sessionRecordings.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessionRecordings)
-      .where(eq(sessionRecordings.hostId, hostId))
-      .returning({ id: sessionRecordings.id });
+      .where(eq(sessionRecordings.hostId, hostId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostIds(hostIds: number[]): Promise<number> {
@@ -228,16 +245,15 @@ export class SessionRecordingRepository {
       return 0;
     }
 
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(sessionRecordings)
-      .where(inArray(sessionRecordings.hostId, hostIds))
-      .returning({ id: sessionRecordings.id });
+      .where(inArray(sessionRecordings.hostId, hostIds));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

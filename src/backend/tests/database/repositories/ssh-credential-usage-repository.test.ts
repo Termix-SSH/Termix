@@ -17,41 +17,13 @@ describe("SshCredentialUsageRepository", () => {
   ): Promise<SshCredentialUsageRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE hosts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE ssh_credentials (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE ssh_credential_usage (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        credential_id INTEGER NOT NULL,
-        host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
-        used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-1', 'two'), (3, 'user-2', 'other');
-      INSERT INTO ssh_credentials (id, user_id, name)
-      VALUES (1, 'user-1', 'cred-one'), (2, 'user-2', 'cred-two');
+      INSERT INTO ssh_credentials (id, user_id, name, username, auth_type)
+      VALUES (1, 'user-1', 'cred-one', 'root', 'password'), (2, 'user-2', 'cred-two', 'root', 'password');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '10.0.0.1', 22, 'root', 'password'), (2, 'user-1', 'two', '10.0.0.1', 22, 'root', 'password'), (3, 'user-2', 'other', '10.0.0.1', 22, 'root', 'password');
     `);
 
     return new SshCredentialUsageRepository(context, onWrite);

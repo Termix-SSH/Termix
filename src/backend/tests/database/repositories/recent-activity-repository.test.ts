@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { afterEach, describe, expect, it } from "vitest";
 import { TestSqliteDatabase } from "./test-support.js";
 import { RecentActivityRepository } from "../../../database/repositories/recent-activity-repository.js";
@@ -16,40 +17,14 @@ describe("RecentActivityRepository", () => {
     onWrite?: () => void | Promise<void>,
   ): Promise<{
     repository: RecentActivityRepository;
-    sqlite: NonNullable<
-      Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"]
-    >;
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE hosts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE recent_activity (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        type TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        host_name TEXT,
-        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-1', 'two'), (3, 'user-2', 'other');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '10.0.0.1', 22, 'root', 'password'), (2, 'user-1', 'two', '10.0.0.1', 22, 'root', 'password'), (3, 'user-2', 'other', '10.0.0.1', 22, 'root', 'password');
       INSERT INTO recent_activity (id, user_id, type, host_id, host_name, timestamp)
       VALUES
         (1, 'user-1', 'connect', 1, 'one', '2026-06-26T00:00:00.000Z'),
@@ -59,13 +34,12 @@ describe("RecentActivityRepository", () => {
 
     return {
       repository: new RecentActivityRepository(context, onWrite),
-      sqlite: context.sqlite!,
     };
   }
 
   it("lists, creates, and trims recent activity", async () => {
     let writeCount = 0;
-    const { repository, sqlite } = await createRepository(() => {
+    const { repository } = await createRepository(() => {
       writeCount += 1;
     });
 
@@ -88,11 +62,9 @@ describe("RecentActivityRepository", () => {
 
     expect(await repository.trimUserActivity("user-1", 2)).toBe(1);
     expect(
-      sqlite
-        .prepare(
-          "SELECT id FROM recent_activity WHERE user_id = ? ORDER BY timestamp DESC",
-        )
-        .all("user-1"),
+      await adapter!.query(
+        sql`SELECT id FROM recent_activity WHERE user_id = 'user-1' ORDER BY timestamp DESC`,
+      ),
     ).toEqual([{ id: created.id }, { id: 2 }]);
     expect(writeCount).toBe(2);
   });

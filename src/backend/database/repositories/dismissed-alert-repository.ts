@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { dismissedAlerts } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type DismissedAlertRecord = typeof dismissedAlerts.$inferSelect;
 
@@ -72,34 +73,32 @@ export class DismissedAlertRepository {
   }
 
   async deleteForUser(userId: string, alertId: string): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(dismissedAlerts)
       .where(
         and(
           eq(dismissedAlerts.userId, userId),
           eq(dismissedAlerts.alertId, alertId),
         ),
-      )
-      .returning({ id: dismissedAlerts.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(dismissedAlerts)
-      .where(eq(dismissedAlerts.userId, userId))
-      .returning({ id: dismissedAlerts.id });
+      .where(eq(dismissedAlerts.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

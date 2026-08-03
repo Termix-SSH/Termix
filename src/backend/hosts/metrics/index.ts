@@ -465,24 +465,9 @@ class PollingManager {
 
       let isOnline: boolean;
       if (refreshedHost.jumpHosts && refreshedHost.jumpHosts.length > 0) {
-        const proxyConfig: SOCKS5Config | null =
-          refreshedHost.useSocks5 &&
-          (refreshedHost.socks5Host ||
-            (refreshedHost.socks5ProxyChain &&
-              refreshedHost.socks5ProxyChain.length > 0))
-            ? {
-                useSocks5: true,
-                socks5Host: refreshedHost.socks5Host,
-                socks5Port: refreshedHost.socks5Port,
-                socks5Username: refreshedHost.socks5Username,
-                socks5Password: refreshedHost.socks5Password,
-                socks5ProxyChain: refreshedHost.socks5ProxyChain,
-              }
-            : null;
         const jumpClient = await createJumpHostChain(
           refreshedHost.jumpHosts,
           userId,
-          proxyConfig,
         );
         isOnline = jumpClient
           ? await tcpPingThroughJumpHost(
@@ -632,7 +617,7 @@ class PollingManager {
       });
 
       const retentionDays = this.getRetentionDays();
-      repository.pruneOlderThan(hostId, retentionDays);
+      await repository.pruneOlderThan(hostId, retentionDays);
     } catch (err) {
       statsLogger.warn("Failed to write metrics history", {
         operation: "insert_metrics_history",
@@ -856,6 +841,38 @@ app.use(express.json({ limit: "1mb" }));
 app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
+});
+
+// Internal endpoint — only accepts calls from localhost. Registered before
+// the auth middleware since it's a service-to-service call authenticated by
+// IP + shared secret, not a user JWT.
+// Used by the main backend to notify the metrics service of SSH login events.
+app.post("/internal/login-alert", async (req, res) => {
+  const remoteIp = req.socket.remoteAddress;
+  if (
+    remoteIp !== "127.0.0.1" &&
+    remoteIp !== "::1" &&
+    remoteIp !== "::ffff:127.0.0.1"
+  ) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const systemCrypto = (await import("../../utils/system-crypto.js"))
+    .SystemCrypto;
+  const expectedToken = await systemCrypto.getInstance().getInternalAuthToken();
+  const token = req.headers["x-internal-auth"];
+  if (!token || token !== expectedToken) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const { hostId, userId, sshUser, fromIp } = req.body as {
+    hostId: number;
+    userId: string;
+    sshUser: string;
+    fromIp: string;
+  };
+  AlertEngine.getInstance()
+    .evaluateUserLogin(hostId, userId, sshUser, fromIp)
+    .catch(() => {});
+  res.json({ ok: true });
 });
 
 app.use(authManager.createAuthMiddleware());
@@ -1284,11 +1301,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
 
     let jumpClient: Client | null = null;
     if (hasJumpHosts) {
-      jumpClient = await createJumpHostChain(
-        host.jumpHosts!,
-        host.userId!,
-        proxyConfig,
-      );
+      jumpClient = await createJumpHostChain(host.jumpHosts!, host.userId!);
 
       if (!jumpClient) {
         throw new Error("Failed to establish jump host chain");
@@ -2790,36 +2803,6 @@ registerManagerRoutes(app, {
     };
     return withSshConnection(host, (client) => fn(client, managerHost));
   },
-});
-
-// Internal endpoint — only accepts calls from localhost.
-// Used by the main backend to notify the metrics service of SSH login events.
-app.post("/internal/login-alert", async (req, res) => {
-  const remoteIp = req.socket.remoteAddress;
-  if (
-    remoteIp !== "127.0.0.1" &&
-    remoteIp !== "::1" &&
-    remoteIp !== "::ffff:127.0.0.1"
-  ) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  const systemCrypto = (await import("../../utils/system-crypto.js"))
-    .SystemCrypto;
-  const expectedToken = await systemCrypto.getInstance().getInternalAuthToken();
-  const token = req.headers["x-internal-auth"];
-  if (!token || token !== expectedToken) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-  const { hostId, userId, sshUser, fromIp } = req.body as {
-    hostId: number;
-    userId: string;
-    sshUser: string;
-    fromIp: string;
-  };
-  AlertEngine.getInstance()
-    .evaluateUserLogin(hostId, userId, sshUser, fromIp)
-    .catch(() => {});
-  res.json({ ok: true });
 });
 
 process.on("SIGINT", () => {

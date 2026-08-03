@@ -1,6 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { vaultTokens } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { upsert } from "./returning.js";
 
 export type VaultTokenRecord = typeof vaultTokens.$inferSelect;
 
@@ -22,16 +24,17 @@ export class VaultTokenRepository {
   async upsert(input: VaultTokenUpsertInput): Promise<void> {
     const createdAt = input.createdAt ?? new Date().toISOString();
 
-    await this.context.drizzle
-      .insert(vaultTokens)
-      .values({
+    await upsert(
+      this.context,
+      vaultTokens,
+      {
         userId: input.userId,
         profileId: input.profileId,
         sshCert: input.sshCert,
         privateKey: input.privateKey,
         expiresAt: input.expiresAt,
-      })
-      .onConflictDoUpdate({
+      },
+      {
         target: [vaultTokens.userId, vaultTokens.profileId],
         set: {
           sshCert: input.sshCert,
@@ -39,7 +42,8 @@ export class VaultTokenRepository {
           expiresAt: input.expiresAt,
           createdAt,
         },
-      });
+      },
+    );
 
     await this.afterWrite();
   }
@@ -67,7 +71,7 @@ export class VaultTokenRepository {
     profileId: number,
     lastUsed = new Date().toISOString(),
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(vaultTokens)
       .set({ lastUsed })
       .where(
@@ -75,48 +79,45 @@ export class VaultTokenRepository {
           eq(vaultTokens.userId, userId),
           eq(vaultTokens.profileId, profileId),
         ),
-      )
-      .returning({ id: vaultTokens.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserAndProfile(
     userId: string,
     profileId: number,
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(vaultTokens)
       .where(
         and(
           eq(vaultTokens.userId, userId),
           eq(vaultTokens.profileId, profileId),
         ),
-      )
-      .returning({ id: vaultTokens.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(vaultTokens)
-      .where(eq(vaultTokens.userId, userId))
-      .returning({ id: vaultTokens.id });
+      .where(eq(vaultTokens.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

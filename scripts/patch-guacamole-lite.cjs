@@ -35,6 +35,20 @@ if (
   process.exit(0);
 }
 
+// Every patch below is required for correctness: protocol negotiation, the
+// guacd 1.6.0 name handshake, dynamic argument answering, UTF-8 tokens and
+// read-only joins. If an upstream release moves an anchor string, silently
+// skipping would ship a Termix that looks fine and then drops VNC/RDP sessions
+// at runtime, so a missing anchor has to stop the install instead.
+function missingAnchor(patch) {
+  console.error(
+    `[patch-guacamole-lite] ${patch} anchor not found in guacamole-lite. ` +
+      "The upstream file has changed and this patch no longer applies — " +
+      "update scripts/patch-guacamole-lite.cjs to match the new source.",
+  );
+  process.exit(1);
+}
+
 let guacdClientContent = fs.readFileSync(guacdClientPath, "utf8");
 let cryptContent = fs.readFileSync(cryptPath, "utf8");
 let clientConnectionContent = fs.readFileSync(clientConnectionPath, "utf8");
@@ -157,18 +171,14 @@ if (!guacdClientContent.includes("} else if (/^1_\\d+_0$/.test(version)) {")) {
       newVersionBlock,
     );
   } else {
-    console.log(
-      "[patch-guacamole-lite] Version check target not found, skipping",
-    );
-    process.exit(0);
+    missingAnchor("Version check");
   }
   patched = true;
 }
 
 if (!guacdClientContent.includes(newTimezone)) {
   if (!guacdClientContent.includes(oldTimezone)) {
-    console.log("[patch-guacamole-lite] Timezone target not found, skipping");
-    process.exit(0);
+    missingAnchor("Timezone");
   }
   guacdClientContent = guacdClientContent.replace(oldTimezone, newTimezone);
   patched = true;
@@ -180,20 +190,14 @@ if (!guacdClientContent.includes(newConnect)) {
   } else if (guacdClientContent.includes(oldConnect)) {
     guacdClientContent = guacdClientContent.replace(oldConnect, newConnect);
   } else {
-    console.log(
-      "[patch-guacamole-lite] Connect target not found, skipping name patch",
-    );
-    process.exit(0);
+    missingAnchor("Connect");
   }
   patched = true;
 }
 
 if (!guacdClientContent.includes("this.nextArgumentStreamIndex = 0;")) {
   if (!guacdClientContent.includes(oldSendBuffer)) {
-    console.log(
-      "[patch-guacamole-lite] Argument stream index target not found, skipping",
-    );
-    process.exit(0);
+    missingAnchor("Argument stream index");
   }
   guacdClientContent = guacdClientContent.replace(oldSendBuffer, newSendBuffer);
   patched = true;
@@ -201,10 +205,7 @@ if (!guacdClientContent.includes("this.nextArgumentStreamIndex = 0;")) {
 
 if (!guacdClientContent.includes("sendRequiredArguments(params) {")) {
   if (!guacdClientContent.includes(oldSendInstructionBlock)) {
-    console.log(
-      "[patch-guacamole-lite] Required argument helper target not found, skipping",
-    );
-    process.exit(0);
+    missingAnchor("Required argument helper");
   }
   guacdClientContent = guacdClientContent.replace(
     oldSendInstructionBlock,
@@ -217,10 +218,7 @@ if (
   !guacdClientContent.includes("opcode === 'required' || opcode === 'require'")
 ) {
   if (!guacdClientContent.includes(oldReadyHandler)) {
-    console.log(
-      "[patch-guacamole-lite] Required opcode target not found, skipping",
-    );
-    process.exit(0);
+    missingAnchor("Required opcode");
   }
   guacdClientContent = guacdClientContent.replace(
     oldReadyHandler,
@@ -273,10 +271,7 @@ if (!cryptContent.includes(newDecryptBlock)) {
       newDecryptBlock,
     );
   } else {
-    console.log(
-      "[patch-guacamole-lite] UTF-8 token decrypt target not found, skipping",
-    );
-    process.exit(0);
+    missingAnchor("UTF-8 token decrypt");
   }
   patched = true;
 }
@@ -329,10 +324,7 @@ const newSendMessageToGuacd =
 
 if (!clientConnectionContent.includes("isReadOnlyJoin()")) {
   if (!clientConnectionContent.includes(oldSendMessageToGuacd)) {
-    console.log(
-      "[patch-guacamole-lite] sendMessageToGuacd target not found, skipping read-only patch",
-    );
-    process.exit(0);
+    missingAnchor("sendMessageToGuacd");
   }
   clientConnectionContent = clientConnectionContent.replace(
     oldSendMessageToGuacd,
@@ -357,10 +349,7 @@ const newPreserveJoin =
 
 if (!clientConnectionContent.includes("compiledSettings.readOnly")) {
   if (!clientConnectionContent.includes(oldPreserveJoin)) {
-    console.log(
-      "[patch-guacamole-lite] join-preserve target not found, skipping readOnly propagation patch",
-    );
-    process.exit(0);
+    missingAnchor("join-preserve");
   }
   clientConnectionContent = clientConnectionContent.replace(
     oldPreserveJoin,

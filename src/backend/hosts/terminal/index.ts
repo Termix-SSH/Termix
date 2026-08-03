@@ -3000,7 +3000,6 @@ wss.on("connection", async (ws: WebSocket, req) => {
         const jumpClient = await createJumpHostChain(
           hostConfig.jumpHosts!,
           hostConfig.userId!,
-          proxyConfig,
         );
 
         if (!jumpClient) {

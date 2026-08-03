@@ -163,8 +163,4 @@ else
     echo "Warning: package.json not found"
 fi
 
-node dist/backend/backend/starter.js
-
-echo "All services started"
-
-tail -f /dev/null
+exec node dist/backend/backend/starter.js

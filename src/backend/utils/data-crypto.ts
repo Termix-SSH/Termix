@@ -1,5 +1,9 @@
 import { FieldCrypto } from "./field-crypto.js";
 import { LazyFieldEncryption } from "./lazy-field-encryption.js";
+import {
+  needsExplicitPersist,
+  resolveDatabaseDialect,
+} from "../database/db/dialect.js";
 import { UserKeyManager } from "./user-keys.js";
 import { DatabaseSaveTrigger } from "./database-save-trigger.js";
 import { databaseLogger } from "./logger.js";
@@ -218,6 +222,14 @@ class DataCrypto {
     migratedTables: string[];
     migratedFieldsCount: number;
   }> {
+    // Only a database that predates field encryption has plaintext to migrate,
+    // and only SQLite deployments can predate it — Postgres and MySQL support
+    // arrived after. The store also needs synchronous queries no other driver
+    // has, so this would throw rather than find nothing to do.
+    if (!needsExplicitPersist(resolveDatabaseDialect())) {
+      return { migrated: false, migratedTables: [], migratedFieldsCount: 0 };
+    }
+
     const result = await this.migrateUserSensitiveFieldsInStore(
       userId,
       userDataKey,

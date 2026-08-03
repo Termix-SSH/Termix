@@ -9,6 +9,8 @@ import {
   users,
 } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type RbacAccessTargetType = "user" | "role";
 
@@ -156,7 +158,7 @@ export class RbacAccessRepository {
       return { id: existing.id, created: false };
     }
 
-    const result = await this.context.drizzle.insert(hostAccess).values({
+    const [created] = await insertReturning(this.context, hostAccess, {
       hostId: input.hostId,
       userId: input.targetType === "user" ? input.targetUserId : null,
       roleId: input.targetType === "role" ? input.targetRoleId : null,
@@ -166,7 +168,7 @@ export class RbacAccessRepository {
     });
 
     await this.afterWrite();
-    return { id: Number(result.lastInsertRowid), created: true };
+    return { id: created.id, created: true };
   }
 
   async revokeHostAccess(accessId: number, hostId: number): Promise<void> {
@@ -177,16 +179,15 @@ export class RbacAccessRepository {
   }
 
   async deleteHostAccessForHost(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(hostAccess)
-      .where(eq(hostAccess.hostId, hostId))
-      .returning({ id: hostAccess.id });
+      .where(eq(hostAccess.hostId, hostId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteHostAccessForHosts(hostIds: number[]): Promise<number> {
@@ -194,30 +195,27 @@ export class RbacAccessRepository {
       return 0;
     }
 
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(hostAccess)
-      .where(inArray(hostAccess.hostId, hostIds))
-      .returning({ id: hostAccess.id });
+      .where(inArray(hostAccess.hostId, hostIds));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteHostAccessForUserReferences(userId: string): Promise<number> {
-    const directRows = await this.context.drizzle
+    const directResult = await this.context.drizzle
       .delete(hostAccess)
-      .where(eq(hostAccess.userId, userId))
-      .returning({ id: hostAccess.id });
+      .where(eq(hostAccess.userId, userId));
 
-    const grantedRows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(hostAccess)
-      .where(eq(hostAccess.grantedBy, userId))
-      .returning({ id: hostAccess.id });
+      .where(eq(hostAccess.grantedBy, userId));
 
-    const deletedCount = directRows.length + grantedRows.length;
+    const deletedCount = rowsAffected(directResult) + rowsAffected(result);
     if (deletedCount > 0) {
       await this.afterWrite();
     }
@@ -280,7 +278,7 @@ export class RbacAccessRepository {
       return { id: existing.id, created: false };
     }
 
-    const result = await this.context.drizzle.insert(snippetAccess).values({
+    const [created] = await insertReturning(this.context, snippetAccess, {
       snippetId: input.snippetId,
       userId: input.targetType === "user" ? input.targetUserId : null,
       roleId: input.targetType === "role" ? input.targetRoleId : null,
@@ -290,7 +288,7 @@ export class RbacAccessRepository {
     });
 
     await this.afterWrite();
-    return { id: Number(result.lastInsertRowid), created: true };
+    return { id: created.id, created: true };
   }
 
   async revokeSnippetAccess(
@@ -501,21 +499,20 @@ export class RbacAccessRepository {
   async deleteExpiredHostAccess(
     now = new Date().toISOString(),
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(hostAccess)
       .where(
         and(
           sql`${hostAccess.expiresAt} IS NOT NULL`,
           sql`${hostAccess.expiresAt} <= ${now}`,
         ),
-      )
-      .returning({ id: hostAccess.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async findActiveHostAccess(
@@ -624,17 +621,16 @@ export class RbacAccessRepository {
     hostId: number,
     update: { permissionLevel?: string; expiresAt?: string | null },
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(hostAccess)
       .set(update)
-      .where(and(eq(hostAccess.id, accessId), eq(hostAccess.hostId, hostId)))
-      .returning({ id: hostAccess.id });
+      .where(and(eq(hostAccess.id, accessId), eq(hostAccess.hostId, hostId)));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async findHostAccessOwnerId(hostAccessId: number): Promise<string | null> {

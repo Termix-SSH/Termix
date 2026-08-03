@@ -1,9 +1,6 @@
 import { Client as SSHClient } from "ssh2";
 import { fileLogger } from "../utils/logger.js";
-import {
-  createSocks5Connection,
-  type SOCKS5Config,
-} from "../utils/socks5-helper.js";
+import { createSocks5Connection } from "../utils/socks5-helper.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
 import { SSHHostKeyVerifier } from "./host-key-verifier.js";
 import { getJumpHostSocks5Config } from "./jump-host-proxy.js";
@@ -52,7 +49,6 @@ async function resolveJumpHost(
 export async function createJumpHostChain(
   jumpHosts: Array<{ hostId: number }>,
   userId: string,
-  socks5Config?: SOCKS5Config | null,
 ): Promise<SSHClient | null> {
   if (!jumpHosts || jumpHosts.length === 0) {
     return null;
@@ -84,10 +80,7 @@ export async function createJumpHostChain(
       }
     }
 
-    const firstHopSocks5Config = getJumpHostSocks5Config(
-      jumpHostConfigs[0],
-      socks5Config,
-    );
+    const firstHopSocks5Config = getJumpHostSocks5Config(jumpHostConfigs[0]);
     let proxySocket: import("net").Socket | null = null;
     if (firstHopSocks5Config?.useSocks5) {
       const firstHop = jumpHostConfigs[0]!;

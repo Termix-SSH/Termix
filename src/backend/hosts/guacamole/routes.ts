@@ -1,20 +1,26 @@
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
+import { withRecordingSettings } from "./recording-settings.js";
 import { guacLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import net from "net";
 import crypto from "crypto";
 import path from "path";
-import type { AuthenticatedRequest, ProxyNode } from "../../../types/index.js";
+import type { AuthenticatedRequest } from "../../../types/index.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentSettingsRepository,
 } from "../../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
-import type { SOCKS5Config } from "../../utils/socks5-helper.js";
 import { waitForGuacdOpen } from "./guacamole-server.js";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
+import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -485,40 +491,21 @@ router.post(
 
       if (jumpHosts.length > 0) {
         try {
-          let socks5ProxyChain: ProxyNode[] = [];
-          if (hostRecord.socks5ProxyChain) {
-            try {
-              socks5ProxyChain =
-                typeof hostRecord.socks5ProxyChain === "string"
-                  ? JSON.parse(hostRecord.socks5ProxyChain as string)
-                  : (hostRecord.socks5ProxyChain as ProxyNode[]);
-            } catch {
-              socks5ProxyChain = [];
-            }
+          let guacdUrl: string | undefined;
+          try {
+            guacdUrl =
+              (await createCurrentSettingsRepository().get("guac_url")) ??
+              undefined;
+          } catch {
+            // Environment/default guacd configuration remains available.
           }
+          const guacdHost =
+            perConnectionGuacdHost || resolveGuacdOptions(guacdUrl).host;
+          const tunnelEndpoint = resolveJumpTunnelEndpoint(guacdHost);
 
-          const proxyConfig: SOCKS5Config | null =
-            hostRecord.useSocks5 &&
-            (hostRecord.socks5Host || socks5ProxyChain.length > 0)
-              ? {
-                  useSocks5: hostRecord.useSocks5 as boolean,
-                  socks5Host: hostRecord.socks5Host as string | undefined,
-                  socks5Port: hostRecord.socks5Port as number | undefined,
-                  socks5Username: hostRecord.socks5Username as
-                    | string
-                    | undefined,
-                  socks5Password: hostRecord.socks5Password as
-                    | string
-                    | undefined,
-                  socks5ProxyChain,
-                }
-              : null;
-
-          const jumpClient = await createJumpHostChain(
-            jumpHosts,
-            userId,
-            proxyConfig,
-          );
+          // The chain dials the first hop through that hop's own SOCKS5
+          // settings; the target host's proxy config does not apply to it.
+          const jumpClient = await createJumpHostChain(jumpHosts, userId);
 
           if (!jumpClient) {
             guacLogger.error(
@@ -550,7 +537,7 @@ router.post(
               );
             });
             server.on("error", reject);
-            server.listen(0, "127.0.0.1", () => {
+            server.listen(0, tunnelEndpoint.bindHost, () => {
               const addr = server.address() as net.AddressInfo;
               // Auto-cleanup after 1 hour
               setTimeout(
@@ -563,7 +550,7 @@ router.post(
               resolve(addr.port);
             });
           });
-          hostname = "127.0.0.1";
+          hostname = tunnelEndpoint.advertisedHost;
           port = tunnelPort;
           guacLogger.info("SSH tunnel established for guacamole", {
             operation: "guac_ssh_tunnel",
@@ -602,15 +589,16 @@ router.post(
             userId,
             protocol: connectionType as "rdp" | "vnc" | "telnet",
             path: recordingName,
+            guacdPath: recordingPath,
             startedAt: new Date().toISOString(),
           }
         : undefined;
       if (recordingEnabled) {
-        guacConfig["recording-path"] = recordingPath;
-        guacConfig["recording-name"] = recordingName;
-        guacConfig["create-recording-path"] = true;
-        guacConfig["recording-exclude-output"] = false;
-        guacConfig["recording-include-keys"] = true;
+        guacConfig = withRecordingSettings(
+          guacConfig,
+          recordingPath,
+          recordingName,
+        );
       }
 
       const termixConnectId = crypto.randomUUID();
@@ -684,6 +672,19 @@ router.post(
       }
 
       const sessionInfo = await waitForGuacdOpen(termixConnectId, 10000);
+
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      await logAudit({
+        userId,
+        username: await getAuditUsername(userId),
+        action: `${connectionType}_connect`,
+        resourceType: "host",
+        resourceId: String(hostId),
+        resourceName: `${hostname}:${port}`,
+        ipAddress,
+        userAgent,
+        success: true,
+      });
 
       res.json({
         token,
