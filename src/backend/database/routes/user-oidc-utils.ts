@@ -39,6 +39,7 @@ export type OIDCConfig = {
   allowed_users: string;
   admin_group: string;
   group_claim?: string;
+  role_map?: string;
   ca_cert?: string;
 };
 
@@ -97,7 +98,75 @@ export function getOIDCConfigFromEnv(): OIDCConfig | null {
     allowed_users: process.env.OIDC_ALLOWED_USERS || "",
     admin_group: process.env.OIDC_ADMIN_GROUP || "",
     group_claim: process.env.OIDC_GROUP_CLAIM || "",
+    role_map: process.env.OIDC_ROLE_MAP || "",
   };
+}
+
+/**
+ * Normalizes a group name for comparison. Providers are inconsistent about
+ * whether they emit bare names (`devops-interns`) or full paths
+ * (`/devops-interns`, Keycloak's "Full group path" option), so leading slashes
+ * are stripped and case is ignored.
+ */
+function normalizeGroupName(group: string): string {
+  return group.trim().replace(/^\/+/, "").toLowerCase();
+}
+
+/**
+ * Parses `OIDC_ROLE_MAP` into a group -> role-name lookup.
+ *
+ * Format is a comma- or newline-separated list of `group:role` pairs, e.g.
+ * `devops-interns:devops-intern,devops-seniors:devops-senior`. Group keys are
+ * normalized via {@link normalizeGroupName}; role names are passed through
+ * verbatim because they must match `roles.name` exactly.
+ *
+ * Malformed entries are skipped rather than throwing — a typo in one pair must
+ * not lock every user out of login.
+ */
+export function parseOidcRoleMap(raw?: string | null): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!raw || !raw.trim()) return map;
+
+  for (const entry of raw.split(/[\n,]/)) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+
+    // rsplit on the last ":" so group names containing a colon still work.
+    const separator = trimmed.lastIndexOf(":");
+    if (separator <= 0 || separator === trimmed.length - 1) continue;
+
+    const group = normalizeGroupName(trimmed.slice(0, separator));
+    const roleName = trimmed.slice(separator + 1).trim();
+    if (!group || !roleName) continue;
+
+    map.set(group, roleName);
+  }
+
+  return map;
+}
+
+/**
+ * Resolves which mapped roles a user should hold, given their provider groups.
+ *
+ * Returns both the `desired` roles (mapped groups the user is actually in) and
+ * the full set of `managed` roles (every role named in the map). Callers must
+ * only ever add/remove roles within `managed` — roles assigned by hand in
+ * Termix, and the `admin`/`user` roles maintained by the admin-group sync, are
+ * deliberately left alone.
+ */
+export function resolveOidcMappedRoles(
+  groups: string[],
+  roleMap: Map<string, string>,
+): { desired: Set<string>; managed: Set<string> } {
+  const managed = new Set(roleMap.values());
+  const desired = new Set<string>();
+
+  for (const group of groups) {
+    const roleName = roleMap.get(normalizeGroupName(group));
+    if (roleName) desired.add(roleName);
+  }
+
+  return { desired, managed };
 }
 
 /**
