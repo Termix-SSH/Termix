@@ -1,3 +1,11 @@
+import type { HostAuthOverrides } from "./auth-protocols.js";
+
+export type {
+  AuthOverrideProtocol,
+  HostAuthOverrideState,
+  HostAuthOverrides,
+} from "./auth-protocols.js";
+
 export type Host = {
   id: string;
   name: string;
@@ -20,6 +28,7 @@ export type Host = {
     | "vault"
     | "agent";
   useWarpgate?: boolean;
+  shareSshAuth?: boolean;
   credentialId?: string;
   vaultProfileId?: string;
   overrideCredentialUsername?: boolean;
@@ -178,6 +187,7 @@ export type Host = {
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;
+  authOverrides?: HostAuthOverrides<string>;
   permissionLevel?: SharePermissionLevel;
   sharedExpiresAt?: string;
   ownerUsername?: string;

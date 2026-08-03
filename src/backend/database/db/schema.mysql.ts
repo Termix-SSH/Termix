@@ -139,6 +139,9 @@ export const hosts = mysqlTable("ssh_data", {
   pin: boolean("pin").notNull().default(false),
   authType: text("auth_type").notNull(),
   useWarpgate: boolean("use_warpgate").notNull().default(false),
+  shareSshAuth: boolean("share_ssh_auth")
+    .notNull()
+    .default(false),
   forceKeyboardInteractive: text("force_keyboard_interactive"),
 
   password: text("password"),
@@ -573,33 +576,59 @@ export const hostAccess = mysqlTable("host_access", {
     .default(sql`(CURRENT_TIMESTAMP)`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: int("access_count").notNull().default(0),
-  overrideCredentialId: int("override_credential_id").references(
-    () => sshCredentials.id,
-    { onDelete: "set null" },
-  ),
 });
+
+export const sharedHostAuthOverrides = mysqlTable(
+  "shared_host_auth_overrides",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
+    credentialId: int("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("shared_host_auth_overrides_host_user_protocol_unique").on(
+      table.hostId,
+      table.userId,
+      table.protocol,
+    ),
+  ],
+);
 
 export const sharedHostSecrets = mysqlTable(
   "shared_host_secrets",
   {
     id: int("id").autoincrement().primaryKey(),
-  
+
     hostAccessId: int("host_access_id")
       .notNull()
       .references(() => hostAccess.id, { onDelete: "cascade" }),
-  
+
     targetUserId: varchar("target_user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-  
+
     protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
     sourceType: text("source_type").notNull().default("credential"),
-  
+
     originalCredentialId: int("original_credential_id").references(
       () => sshCredentials.id,
       { onDelete: "cascade" },
     ),
-  
+
     encryptedUsername: text("encrypted_username"),
     encryptedAuthType: text("encrypted_auth_type"),
     encryptedPassword: text("encrypted_password"),
@@ -607,7 +636,7 @@ export const sharedHostSecrets = mysqlTable(
     encryptedKeyPassword: text("encrypted_key_password"),
     encryptedKeyType: text("encrypted_key_type"),
     encryptedDomain: text("encrypted_domain"),
-  
+
     createdAt: text("created_at")
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
@@ -618,7 +647,13 @@ export const sharedHostSecrets = mysqlTable(
   // Declared inline in the production DDL as UNIQUE(...), but never here,
   // so the generated Postgres and MySQL schemas allowed duplicates the
   // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_shared_host_secrets_scope").on(table.hostAccessId, table.targetUserId, table.protocol)],
+  (table) => [
+    uniqueIndex("idx_shared_host_secrets_scope").on(
+      table.hostAccessId,
+      table.targetUserId,
+      table.protocol,
+    ),
+  ],
 );
 
 export const roles = mysqlTable("roles", {

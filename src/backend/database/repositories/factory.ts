@@ -31,6 +31,7 @@ import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { SessionShareRepository } from "./session-share-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
+import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
@@ -319,6 +320,15 @@ export function createCurrentSharedHostSecretsRepository(): SharedHostSecretsRep
   return new SharedHostSecretsRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("shared_host_secrets_repository_write"),
+  );
+}
+
+export function createCurrentSharedHostAuthOverrideRepository(): SharedHostAuthOverrideRepository {
+  return new SharedHostAuthOverrideRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "shared_host_auth_override_repository_write",
+    ),
   );
 }
 

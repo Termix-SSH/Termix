@@ -50,6 +50,7 @@ import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
 import type { ManagerHost } from "./managers/types.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
+import { resolveHostById } from "../host-resolver.js";
 import {
   isTcpPingEnabled,
   supportsMetrics,
@@ -914,14 +915,9 @@ async function fetchHostById(
       return undefined;
     }
 
-    const accessInfo = await permissionManager.canAccessHost(
-      userId,
-      id,
-      "connect",
-    );
-
-    if (!accessInfo.hasAccess) {
-      statsLogger.warn(`User ${userId} cannot access host ${id}`, {
+    const host = await resolveHostById(id, userId);
+    if (!host) {
+      statsLogger.warn(`User ${userId} cannot resolve host ${id}`, {
         operation: "fetch_host_access_denied",
         userId,
         hostId: id,
@@ -929,14 +925,7 @@ async function fetchHostById(
       return undefined;
     }
 
-    const repository = createCurrentHostResolutionRepository();
-    const host = await repository.findHostById(id, userId);
-
-    if (!host) {
-      return undefined;
-    }
-
-    return await resolveHostCredentials(host, userId);
+    return host as SSHHostWithCredentials;
   } catch (err) {
     statsLogger.error(`Failed to fetch host ${id}`, err);
     return undefined;

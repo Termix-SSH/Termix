@@ -171,7 +171,6 @@ CREATE TABLE `host_access` (
 	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
 	`last_accessed_at` text,
 	`access_count` int NOT NULL DEFAULT 0,
-	`override_credential_id` int,
 	CONSTRAINT `host_access_id` PRIMARY KEY(`id`)
 );
 --> statement-breakpoint
@@ -235,6 +234,7 @@ CREATE TABLE `ssh_data` (
 	`pin` boolean NOT NULL DEFAULT false,
 	`auth_type` text NOT NULL,
 	`use_warpgate` boolean NOT NULL DEFAULT false,
+	`share_ssh_auth` boolean NOT NULL DEFAULT false,
 	`force_keyboard_interactive` text,
 	`password` text,
 	`key` text,
@@ -449,6 +449,18 @@ CREATE TABLE `settings` (
 	`key` varchar(255) NOT NULL,
 	`value` text NOT NULL,
 	CONSTRAINT `settings_key` PRIMARY KEY(`key`)
+);
+--> statement-breakpoint
+CREATE TABLE `shared_host_auth_overrides` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`host_id` int NOT NULL,
+	`user_id` varchar(255) NOT NULL,
+	`protocol` varchar(255) NOT NULL DEFAULT 'ssh',
+	`credential_id` int NOT NULL,
+	`created_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	`updated_at` text NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+	CONSTRAINT `shared_host_auth_overrides_id` PRIMARY KEY(`id`),
+	CONSTRAINT `shared_host_auth_overrides_host_user_protocol_unique` UNIQUE(`host_id`,`user_id`,`protocol`)
 );
 --> statement-breakpoint
 CREATE TABLE `shared_host_secrets` (
@@ -807,7 +819,6 @@ ALTER TABLE `host_access` ADD CONSTRAINT `host_access_host_id_ssh_data_id_fk` FO
 ALTER TABLE `host_access` ADD CONSTRAINT `host_access_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `host_access` ADD CONSTRAINT `host_access_role_id_roles_id_fk` FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `host_access` ADD CONSTRAINT `host_access_granted_by_users_id_fk` FOREIGN KEY (`granted_by`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE `host_access` ADD CONSTRAINT `host_access_override_credential_id_ssh_credentials_id_fk` FOREIGN KEY (`override_credential_id`) REFERENCES `ssh_credentials`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `host_health_checks` ADD CONSTRAINT `host_health_checks_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `host_health_checks` ADD CONSTRAINT `host_health_checks_host_id_ssh_data_id_fk` FOREIGN KEY (`host_id`) REFERENCES `ssh_data`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `host_health_history` ADD CONSTRAINT `host_health_history_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -836,6 +847,9 @@ ALTER TABLE `session_shares` ADD CONSTRAINT `session_shares_host_id_ssh_data_id_
 ALTER TABLE `session_shares` ADD CONSTRAINT `session_shares_owner_user_id_users_id_fk` FOREIGN KEY (`owner_user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `session_shares` ADD CONSTRAINT `session_shares_target_user_id_users_id_fk` FOREIGN KEY (`target_user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `sessions` ADD CONSTRAINT `sessions_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `shared_host_auth_overrides` ADD CONSTRAINT `shared_host_auth_overrides_host_id_ssh_data_id_fk` FOREIGN KEY (`host_id`) REFERENCES `ssh_data`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `shared_host_auth_overrides` ADD CONSTRAINT `shared_host_auth_overrides_user_id_users_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `shared_host_auth_overrides` ADD CONSTRAINT `shared_host_auth_overrides_credential_id_ssh_credentials_id_fk` FOREIGN KEY (`credential_id`) REFERENCES `ssh_credentials`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `shared_host_secrets` ADD CONSTRAINT `shared_host_secrets_host_access_id_host_access_id_fk` FOREIGN KEY (`host_access_id`) REFERENCES `host_access`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `shared_host_secrets` ADD CONSTRAINT `shared_host_secrets_target_user_id_users_id_fk` FOREIGN KEY (`target_user_id`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE `shared_host_secrets` ADD CONSTRAINT `shared_host_secrets_original_credential_id_ssh_credentials_id_fk` FOREIGN KEY (`original_credential_id`) REFERENCES `ssh_credentials`(`id`) ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

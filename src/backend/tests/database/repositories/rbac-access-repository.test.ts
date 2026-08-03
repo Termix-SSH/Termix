@@ -349,11 +349,6 @@ describe("RbacAccessRepository", () => {
     const directAccess = await repo.findDirectHostAccess(42, "user-1");
     expect(directAccess?.id).toBe(1);
 
-    await repo.updateHostAccessOverrideCredential(1, 123);
-    expect(
-      (await repo.findDirectHostAccess(42, "user-1"))?.overrideCredentialId,
-    ).toBe(123);
-
     await repo.touchHostAccess(1, "2026-06-26T03:00:00.000Z");
     expect(
       (await repo.findDirectHostAccess(42, "user-1"))?.lastAccessedAt,
@@ -361,7 +356,7 @@ describe("RbacAccessRepository", () => {
 
     await repo.revokeHostAccess(1, 42);
     expect(await repo.findDirectHostAccess(42, "user-1")).toBeNull();
-    expect(writeCount).toBe(5);
+    expect(writeCount).toBe(4);
   });
 
   it("finds active host access and deletes expired host access", async () => {

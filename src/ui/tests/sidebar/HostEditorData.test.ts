@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   createHostEditorForm,
   buildHostEditorPayload,
+  omitOwnerSshAuthFromSharedEdit,
   type HostProtocols,
 } from "../../sidebar/HostEditorData";
 import type { Host } from "@/types/ui-types";
@@ -34,7 +35,65 @@ const telnetOnly: HostProtocols = {
   enableTelnet: true,
 };
 
+describe("omitOwnerSshAuthFromSharedEdit", () => {
+  it("keeps editable host settings but removes all owner SSH authentication fields", () => {
+    const form = createHostEditorForm(null);
+    const payload = buildHostEditorPayload(
+      {
+        ...form,
+        ip: "10.0.0.42",
+        authType: "agent",
+        credentialId: "7",
+        password: "owner-password",
+        key: "owner-key",
+        keyPassword: "owner-passphrase",
+        keyType: "ssh-ed25519",
+        vaultProfileId: "9",
+        overrideCredentialUsername: true,
+        shareSshAuth: true,
+        sudoPassword: "owner-sudo",
+        agentSocketPath: "/run/user/1000/ssh-agent.sock",
+        notes: "editable",
+      },
+      sshOnly,
+    );
+
+    const sharedEdit = omitOwnerSshAuthFromSharedEdit(payload);
+
+    expect(sharedEdit.name).toBe(payload.name);
+    expect(sharedEdit.ip).toBe("10.0.0.42");
+    expect(sharedEdit.notes).toBe("editable");
+    expect(sharedEdit.terminalConfig?.sudoPassword).toBeUndefined();
+    expect(sharedEdit.terminalConfig?.agentSocketPath).toBeUndefined();
+    for (const field of [
+      "authType",
+      "credentialId",
+      "vaultProfileId",
+      "overrideCredentialUsername",
+      "shareSshAuth",
+      "password",
+      "key",
+      "keyPassword",
+      "keyType",
+      "sudoPassword",
+    ]) {
+      expect(Object.prototype.hasOwnProperty.call(sharedEdit, field)).toBe(
+        false,
+      );
+    }
+  });
+});
+
 describe("buildHostEditorPayload auth field isolation", () => {
+  it("persists the owner's SSH authentication sharing choice", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      shareSshAuth: true,
+    };
+
+    expect(buildHostEditorPayload(form, sshOnly).shareSshAuth).toBe(true);
+  });
+
   it("only sends the password when authType is password", () => {
     const form = {
       ...createHostEditorForm(null),

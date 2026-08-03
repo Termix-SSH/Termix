@@ -1,9 +1,61 @@
+import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
+
 export function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 export function isValidPort(port: unknown): port is number {
   return typeof port === "number" && port > 0 && port <= 65535;
+}
+
+export function isOptionalBoolean(
+  value: unknown,
+): value is boolean | undefined {
+  return value === undefined || typeof value === "boolean";
+}
+
+export const OWNER_PRIVATE_AUTH_FIELDS = {
+  ssh: [
+    "authType",
+    "authMethod",
+    "credentialId",
+    "vaultProfileId",
+    "overrideCredentialUsername",
+    "shareSshAuth",
+    "password",
+    "key",
+    "keyPassword",
+    "keyType",
+    "sudoPassword",
+  ],
+  rdp: [
+    "rdpAuthType",
+    "rdpCredentialId",
+    "rdpUser",
+    "rdpPassword",
+    "rdpDomain",
+  ],
+  vnc: ["vncAuthType", "vncCredentialId", "vncUser", "vncPassword"],
+  telnet: [
+    "telnetAuthType",
+    "telnetCredentialId",
+    "telnetUser",
+    "telnetPassword",
+  ],
+} as const satisfies Record<AuthOverrideProtocol, readonly string[]>;
+
+export const OWNER_PRIVATE_TERMINAL_CONFIG_FIELDS = [
+  "sudoPassword",
+  "agentSocketPath",
+] as const;
+
+export function containsOwnerPrivateAuthUpdate(
+  hostData: Record<string, unknown>,
+  protocol: AuthOverrideProtocol,
+): boolean {
+  return OWNER_PRIVATE_AUTH_FIELDS[protocol].some((field) =>
+    Object.prototype.hasOwnProperty.call(hostData, field),
+  );
 }
 
 export const FOLDER_PATH_SEPARATOR = " / ";
@@ -231,6 +283,17 @@ export function stripSensitiveFields(
   for (const field of SENSITIVE_FIELDS) {
     delete result[field];
   }
+  if (
+    result.terminalConfig &&
+    typeof result.terminalConfig === "object" &&
+    !Array.isArray(result.terminalConfig)
+  ) {
+    const terminalConfig = {
+      ...(result.terminalConfig as Record<string, unknown>),
+    };
+    delete terminalConfig.sudoPassword;
+    result.terminalConfig = terminalConfig;
+  }
   return result;
 }
 
@@ -251,8 +314,9 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "tags",
   "pin",
   "authType",
+  "shareSshAuth",
+  "authOverrides",
   "connectionType",
-  "credentialId",
   "enableTerminal",
   "enableTunnel",
   "enableFileManager",
@@ -290,6 +354,37 @@ export function sanitizeHostForRecipient(
   permissionLevel: string | undefined,
 ): Record<string, unknown> {
   const stripped = stripSensitiveFields(host);
+  delete stripped.credentialId;
+  delete stripped.overrideCredentialUsername;
+  if (
+    stripped.terminalConfig &&
+    typeof stripped.terminalConfig === "object" &&
+    !Array.isArray(stripped.terminalConfig)
+  ) {
+    const terminalConfig = {
+      ...(stripped.terminalConfig as Record<string, unknown>),
+    };
+    delete terminalConfig.agentSocketPath;
+    stripped.terminalConfig = terminalConfig;
+  }
+  const authOverrides =
+    stripped.authOverrides &&
+    typeof stripped.authOverrides === "object" &&
+    !Array.isArray(stripped.authOverrides)
+      ? (stripped.authOverrides as Record<string, unknown>)
+      : undefined;
+  const sshOverride =
+    authOverrides?.ssh &&
+    typeof authOverrides.ssh === "object" &&
+    !Array.isArray(authOverrides.ssh)
+      ? (authOverrides.ssh as Record<string, unknown>)
+      : undefined;
+  if (!sshOverride?.credentialId) {
+    stripped.hasPassword = false;
+    stripped.hasKey = false;
+    stripped.hasKeyPassword = false;
+    stripped.hasSudoPassword = false;
+  }
 
   if (permissionLevel !== "connect") {
     return stripped;
@@ -316,6 +411,7 @@ export function transformHostResponse(
           : []
         : [],
     pin: !!host.pin,
+    shareSshAuth: !!host.shareSshAuth,
     enableTerminal: !!host.enableTerminal,
     enableTunnel: !!host.enableTunnel,
     enableFileManager: host.enableFileManager !== false,
