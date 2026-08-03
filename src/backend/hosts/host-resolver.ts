@@ -113,6 +113,13 @@ export async function resolveHostById(
       host.quickActions = [];
     }
   }
+  if (typeof host.portKnockSequence === "string" && host.portKnockSequence) {
+    try {
+      host.portKnockSequence = JSON.parse(host.portKnockSequence as string);
+    } catch {
+      host.portKnockSequence = [];
+    }
+  }
 
   if (!ownerEquivalent) {
     const resolved = await resolveSharedSshSecrets(

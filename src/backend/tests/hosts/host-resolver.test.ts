@@ -301,4 +301,27 @@ describe("resolveHostById", () => {
     await resolveHostById(42, "owner");
     expect(state.auditCalls).toHaveLength(0);
   });
+
+  it("parses an empty port_knock_sequence '[]' string into an empty array (no bogus knock)", async () => {
+    state.host = baseHost({ portKnockSequence: "[]" });
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.portKnockSequence).toEqual([]);
+  });
+
+  it("parses a real port_knock_sequence JSON string into an array", async () => {
+    state.host = baseHost({
+      portKnockSequence: '[{"port":1234,"protocol":"tcp","delay":100}]',
+    });
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.portKnockSequence).toEqual([
+      { port: 1234, protocol: "tcp", delay: 100 },
+    ]);
+  });
+
 });
