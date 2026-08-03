@@ -47,7 +47,7 @@
     "@simplewebauthn/server": "^13.3.2",
     "@tanstack/react-virtual": "^3.14.6",
     "@types/ldapjs": "^3.0.6",
-    "axios": "^1.18.1",
+    "axios": "^1.19.0",
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "body-parser": "^2.3.0",
@@ -63,7 +63,7 @@
     "jsonwebtoken": "^9.0.3",
     "jszip": "^3.10.1",
     "ldapjs": "^3.0.7",
-    "motion": "^12.42.2",
+    "motion": "^12.43.0",
     "multer": "^2.2.0",
     "nanoid": "^6.0.0",
     "qrcode": "^1.5.4",
@@ -71,7 +71,7 @@
     "socks": "^2.8.7",
     "speakeasy": "^2.0.0",
     "ssh2": "^1.17.0",
-    "undici": "^8.7.0",
+    "undici": "^8.9.0",
     "ws": "^8.21.1"
   },
   "devDependencies": {
