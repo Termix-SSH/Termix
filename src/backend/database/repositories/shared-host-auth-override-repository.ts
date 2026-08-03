@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import type { AuthOverrideProtocol } from "../../../types/auth-protocols.js";
 import { sharedHostAuthOverrides } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { deleteReturning, upsert } from "./returning.js";
 
 export type SharedHostAuthOverrideRecord =
   typeof sharedHostAuthOverrides.$inferSelect;
@@ -49,15 +50,16 @@ export class SharedHostAuthOverrideRepository {
     protocol: AuthOverrideProtocol,
     credentialId: number,
   ): Promise<void> {
-    await this.context.drizzle
-      .insert(sharedHostAuthOverrides)
-      .values({
+    await upsert(
+      this.context,
+      sharedHostAuthOverrides,
+      {
         hostId,
         userId,
         protocol,
         credentialId,
-      })
-      .onConflictDoUpdate({
+      },
+      {
         target: [
           sharedHostAuthOverrides.hostId,
           sharedHostAuthOverrides.userId,
@@ -67,7 +69,8 @@ export class SharedHostAuthOverrideRepository {
           credentialId,
           updatedAt: new Date().toISOString(),
         },
-      });
+      },
+    );
 
     await this.afterWrite();
   }
@@ -77,16 +80,15 @@ export class SharedHostAuthOverrideRepository {
     userId: string,
     protocol: AuthOverrideProtocol,
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
-      .delete(sharedHostAuthOverrides)
-      .where(
-        and(
-          eq(sharedHostAuthOverrides.hostId, hostId),
-          eq(sharedHostAuthOverrides.userId, userId),
-          eq(sharedHostAuthOverrides.protocol, protocol),
-        ),
-      )
-      .returning({ id: sharedHostAuthOverrides.id });
+    const rows = await deleteReturning(
+      this.context,
+      sharedHostAuthOverrides,
+      and(
+        eq(sharedHostAuthOverrides.hostId, hostId),
+        eq(sharedHostAuthOverrides.userId, userId),
+        eq(sharedHostAuthOverrides.protocol, protocol),
+      ),
+    );
 
     if (rows.length > 0) {
       await this.afterWrite();

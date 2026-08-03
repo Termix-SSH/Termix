@@ -20,9 +20,7 @@ const createProtocolAwareTableSql = `
 `;
 
 export type SharedHostAuthOverrideSchemaResult =
-  | "created"
-  | "migrated"
-  | "current";
+  "created" | "migrated" | "current";
 
 /**
  * Keeps the override storage protocol-capable without enabling any additional

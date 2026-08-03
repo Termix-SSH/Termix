@@ -66,12 +66,7 @@ export interface LDAPProviderConfig {
 
 export type ConnectionType = "ssh" | "rdp" | "vnc" | "telnet";
 export type SSHAuthType =
-  | "password"
-  | "key"
-  | "credential"
-  | "none"
-  | "opkssh"
-  | "tailscale";
+  "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
 
 export type GuacamoleAuthType = "password" | "credential";
 
@@ -781,12 +776,7 @@ export type ErrorType =
 // ============================================================================
 
 export type AuthType =
-  | "password"
-  | "key"
-  | "credential"
-  | "none"
-  | "opkssh"
-  | "tailscale";
+  "password" | "key" | "credential" | "none" | "opkssh" | "tailscale";
 
 export type KeyType = "rsa" | "ecdsa" | "ed25519";
 

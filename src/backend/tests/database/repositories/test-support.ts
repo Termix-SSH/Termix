@@ -162,9 +162,7 @@ async function runSql<T>(
   }
 
   const result = (await db.execute!(statement)) as
-    | { rows?: T[] }
-    | T[]
-    | undefined;
+    { rows?: T[] } | T[] | undefined;
 
   // mysql2 answers [rows, fields]; node-postgres answers { rows }.
   if (Array.isArray(result)) {

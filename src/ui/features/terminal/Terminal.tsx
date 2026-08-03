@@ -1020,10 +1020,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         const origin = await resolveConnectionOrigin({
           connectionType: "ssh",
           connectionOrigin: hostConfig.connectionOrigin as
-            | "local"
-            | "remote"
-            | null
-            | undefined,
+            "local" | "remote" | null | undefined,
         });
         const resolvedUrl = await buildOriginWsUrl({
           origin,
@@ -2070,10 +2067,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.letterSpacing = config.letterSpacing;
       terminal.options.lineHeight = config.lineHeight;
       terminal.options.bellStyle = config.bellStyle as
-        | "none"
-        | "sound"
-        | "visual"
-        | "both";
+        "none" | "sound" | "visual" | "both";
 
       terminal.options.theme = {
         background: config.backgroundImage

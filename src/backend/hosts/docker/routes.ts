@@ -7,11 +7,7 @@ import {
   getAuditUsername,
   getRequestMeta,
 } from "../../utils/audit-logger.js";
-import {
-  createCurrentCredentialRepository,
-  createCurrentHostRepository,
-  createCurrentHostResolutionRepository,
-} from "../../database/repositories/factory.js";
+import { createCurrentHostRepository } from "../../database/repositories/factory.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
 import { resolveHostById } from "../host-resolver.js";
 import { createConnectionLog } from "../connection-log.js";

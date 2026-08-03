@@ -765,8 +765,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
@@ -824,8 +823,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;

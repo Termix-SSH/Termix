@@ -370,8 +370,7 @@ export function isCurrentAuthInvalidationError(error: unknown): boolean {
   const axiosError = error as AxiosError;
   const apiError = error as ApiError;
   const responseData = axiosError.response?.data as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const errorCode = responseData?.code || apiError.code;
   const errorMessage = responseData?.error || apiError.message;
   const status = axiosError.response?.status || apiError.status;

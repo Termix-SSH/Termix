@@ -202,8 +202,7 @@ export async function createJumpHostChain(
           const result = await applyAgentAuth(
             connectConfig,
             jumpHostConfig.terminalConfig as
-              | Record<string, unknown>
-              | undefined,
+              Record<string, unknown> | undefined,
           );
           if ("error" in result) {
             throw new Error(result.error);

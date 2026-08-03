@@ -427,10 +427,7 @@ async function auditTmuxAction(
 // Typed error codes so the frontend can render a helpful state instead of a
 // raw 500 (same pattern as SESSION_EXPIRED handling in main-axios).
 type TmuxErrorCode =
-  | "TMUX_NOT_INSTALLED"
-  | "TMUX_NO_SERVER"
-  | "HOST_UNREACHABLE"
-  | "TMUX_ERROR";
+  "TMUX_NOT_INSTALLED" | "TMUX_NO_SERVER" | "HOST_UNREACHABLE" | "TMUX_ERROR";
 
 function classifyTmuxError(err: unknown): TmuxErrorCode {
   const msg = err instanceof Error ? err.message : "";

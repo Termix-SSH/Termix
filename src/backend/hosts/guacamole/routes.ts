@@ -299,8 +299,7 @@ router.post(
 
       // Extract per-connection guacd proxy settings before passing the rest as connection settings
       const perConnectionGuacdHost = guacConfig["guacd-hostname"] as
-        | string
-        | undefined;
+        string | undefined;
       const perConnectionGuacdPortRaw = guacConfig["guacd-port"];
       const perConnectionGuacdPort = perConnectionGuacdPortRaw
         ? parseInt(String(perConnectionGuacdPortRaw), 10) || undefined

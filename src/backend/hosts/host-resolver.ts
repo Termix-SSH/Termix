@@ -231,10 +231,7 @@ export async function resolveHostById(
  * fallback; otherwise only secret-less auth types pass.
  */
 type SharedAuthResolution =
-  | "recipient-override"
-  | "shared-snapshot"
-  | "shared-agent"
-  | "secretless";
+  "recipient-override" | "shared-snapshot" | "shared-agent" | "secretless";
 
 async function resolveRecipientSshAuth(
   host: Record<string, unknown>,

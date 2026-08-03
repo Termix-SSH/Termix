@@ -598,8 +598,7 @@ router.post(
           authType = (cred.authType || authType) as string;
           password = (cred.password || undefined) as string | undefined;
           privateKey = (cred.privateKey || cred.key || undefined) as
-            | string
-            | undefined;
+            string | undefined;
           passphrase = (cred.keyPassword || undefined) as string | undefined;
         }
       }

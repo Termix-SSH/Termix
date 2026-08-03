@@ -1246,8 +1246,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             {
               userId,
               permissionLevel: share.permissionLevel as
-                | "read-write"
-                | "read-only",
+                "read-write" | "read-only",
               tabInstanceId: joinData.tabInstanceId,
               shareId: share.id,
             },
@@ -2791,8 +2790,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       sendLog("auth", "info", "Using Vault SSH signer authentication");
       try {
         const vaultProfile = resolvedHostData?.vaultProfile as
-          | { id: number }
-          | undefined;
+          { id: number } | undefined;
         if (!vaultProfile?.id) {
           throw new Error("Host has no Vault signer profile configured");
         }
@@ -2941,8 +2939,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     // Cloudflare Tunnel: connect via WebSocket proxy
     const cfConfig = hostConfig.terminalConfig as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     if (cfConfig?.cfAccessClientId && cfConfig?.cfAccessClientSecret) {
       try {
         const WebSocket = (await import("ws")).default;

@@ -598,8 +598,7 @@ export function AppShell({
             const termRef = terminalRefs.current.get(tabId);
             (
               termRef?.current as
-                | import("@/features/terminal/Terminal").TerminalHandle
-                | null
+                import("@/features/terminal/Terminal").TerminalHandle | null
             )?.focus();
           }
           return;

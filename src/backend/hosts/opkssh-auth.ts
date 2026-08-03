@@ -26,11 +26,7 @@ interface OPKSSHAuthSession {
   remoteRedirectUri: string;
   providers: Array<{ alias: string; issuer: string }>;
   status:
-    | "starting"
-    | "waiting_for_auth"
-    | "authenticating"
-    | "completed"
-    | "error";
+    "starting" | "waiting_for_auth" | "authenticating" | "completed" | "error";
   ws: WebSocket;
   stdoutBuffer: string;
   privateKeyBuffer: string;

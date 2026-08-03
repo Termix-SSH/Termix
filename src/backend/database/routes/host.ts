@@ -679,8 +679,7 @@ router.post(
         }
 
         resolvedPassword = pickResolvedPassword(password, cred.password) as
-          | string
-          | undefined;
+          string | undefined;
         resolvedKey = cred.privateKey as string | undefined;
         resolvedKeyPassword = cred.keyPassword as string | undefined;
         resolvedKeyType = cred.keyType as string | undefined;

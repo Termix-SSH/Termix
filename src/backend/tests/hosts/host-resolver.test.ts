@@ -477,5 +477,4 @@ describe("resolveHostById", () => {
       { port: 1234, protocol: "tcp", delay: 100 },
     ]);
   });
-
 });

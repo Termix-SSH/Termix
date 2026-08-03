@@ -1978,8 +1978,7 @@ export function HostEditor({
                       (host ? `${host.username}@${host.ip}` : "new");
                     const tunnelName = `${host?.id ?? "new"}::${i}::${hostLabel}::${tun.sourcePort}::${endpointValue}::${tun.endpointPort}`;
                     const tunnelStatus = tunnelStatuses[tunnelName]?.status as
-                      | string
-                      | undefined;
+                      string | undefined;
                     const isConnected = tunnelStatus === "connected";
                     return (
                       <div
