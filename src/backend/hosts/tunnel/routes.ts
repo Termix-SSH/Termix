@@ -7,6 +7,11 @@ import type {
   AuthenticatedRequest,
 } from "../../../types/index.js";
 import { CONNECTION_STATES } from "../../../types/index.js";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import { tunnelLogger } from "../../utils/logger.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -362,6 +367,26 @@ export function registerTunnelRoutes(app: express.Express): void {
         })();
 
         pendingTunnelOperations.set(tunnelName, operation);
+
+        const { ipAddress, userAgent } = getRequestMeta(req);
+        await logAudit({
+          userId,
+          username: await getAuditUsername(userId),
+          action: "tunnel_connect",
+          resourceType: "tunnel",
+          resourceId: tunnelConfig.sourceHostId
+            ? String(tunnelConfig.sourceHostId)
+            : undefined,
+          resourceName: tunnelName,
+          details: JSON.stringify({
+            endpointHost: tunnelConfig.endpointHost,
+            endpointPort: tunnelConfig.endpointPort,
+            sourcePort: tunnelConfig.sourcePort,
+          }),
+          ipAddress,
+          userAgent,
+          success: true,
+        });
 
         res.json({ message: "Connection request received", tunnelName });
 

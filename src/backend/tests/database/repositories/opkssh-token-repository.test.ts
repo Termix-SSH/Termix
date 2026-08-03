@@ -17,39 +17,11 @@ describe("OpksshTokenRepository", () => {
   ): Promise<OpksshTokenRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE hosts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE opkssh_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER NOT NULL,
-        ssh_cert TEXT NOT NULL,
-        private_key TEXT NOT NULL,
-        email TEXT,
-        sub TEXT,
-        issuer TEXT,
-        audience TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expires_at TEXT NOT NULL,
-        last_used TEXT,
-        UNIQUE(user_id, host_id)
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-1', 'two'), (3, 'user-2', 'other');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '10.0.0.1', 22, 'root', 'password'), (2, 'user-1', 'two', '10.0.0.1', 22, 'root', 'password'), (3, 'user-2', 'other', '10.0.0.1', 22, 'root', 'password');
       INSERT INTO opkssh_tokens (
         user_id, host_id, ssh_cert, private_key, email, expires_at
       )

@@ -13,6 +13,7 @@ export interface ProxmoxDiscoverResult {
   guests: ProxmoxGuest[];
   credentialId: number | null;
   defaultCredentialId: number | null;
+  jumpHosts?: unknown[] | null;
 }
 
 export interface ProxmoxSyncResult {

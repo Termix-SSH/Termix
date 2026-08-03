@@ -17,26 +17,13 @@ describe("HostMetricsHistoryRepository", () => {
   ): Promise<HostMetricsHistoryRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE hosts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
+    await adapter.exec(`
+      INSERT INTO users (id, username, password_hash) VALUES
+        ('user-1', 'user-1', 'hash'),
+        ('user-2', 'user-2', 'hash');
 
-      CREATE TABLE host_metrics_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        host_id INTEGER NOT NULL,
-        ts TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        cpu_percent REAL,
-        mem_percent REAL,
-        disk_percent REAL,
-        net_rx_bytes INTEGER,
-        net_tx_bytes INTEGER
-      );
-
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-2', 'two');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'one', '10.0.0.1', 22, 'root', 'password'), (2, 'user-2', 'two', '10.0.0.1', 22, 'root', 'password');
       INSERT INTO host_metrics_history (
         host_id, ts, cpu_percent, mem_percent, disk_percent, net_rx_bytes, net_tx_bytes
       )
@@ -78,7 +65,7 @@ describe("HostMetricsHistoryRepository", () => {
   it("prunes old history for a host only", async () => {
     const repo = await createRepository();
 
-    repo.pruneOlderThan(1, 1);
+    await repo.pruneOlderThan(1, 1);
 
     const rows = await repo.listRange(
       1,

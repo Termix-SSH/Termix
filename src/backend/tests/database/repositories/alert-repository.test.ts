@@ -17,68 +17,11 @@ describe("AlertRepository", () => {
   ): Promise<AlertRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE ssh_data (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT,
-        ip TEXT NOT NULL
-      );
-
-      CREATE TABLE alert_rules (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        host_id INTEGER,
-        name TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        trigger_type TEXT NOT NULL,
-        threshold_value REAL,
-        threshold_duration_seconds INTEGER,
-        cooldown_minutes INTEGER NOT NULL DEFAULT 15,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE notification_channels (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        config TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
-      CREATE TABLE alert_rule_channels (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        rule_id INTEGER NOT NULL,
-        channel_id INTEGER NOT NULL
-      );
-
-      CREATE TABLE alert_firings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        rule_id INTEGER NOT NULL,
-        host_id INTEGER NOT NULL,
-        host_name TEXT NOT NULL,
-        fired_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        resolved_at TEXT,
-        value REAL,
-        message TEXT NOT NULL,
-        severity TEXT NOT NULL DEFAULT 'warning',
-        acknowledged INTEGER NOT NULL DEFAULT 0
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO ssh_data (id, user_id, name, ip)
-      VALUES (1, 'user-1', 'alpha', '127.0.0.1');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'alpha', '127.0.0.1', 22, 'root', 'password');
     `);
 
     return new AlertRepository(context, onWrite);
@@ -229,7 +172,7 @@ describe("AlertRepository", () => {
     expect(unacknowledged.total).toBe(0);
 
     await repo.acknowledgeAllFirings("user-1");
-    repo.pruneFiringsOlderThan("user-1", 0);
+    await repo.pruneFiringsOlderThan("user-1", 0);
   });
 
   it("loads enabled rules and notification channels for the alert engine", async () => {

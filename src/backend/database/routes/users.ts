@@ -28,6 +28,7 @@ import { PermissionManager } from "../../utils/permission-manager.js";
 import {
   getOIDCConfigFromEnv,
   isOIDCUserAllowed,
+  OIDCTokenFormatError,
   verifyOIDCToken,
   extractOidcGroups,
   parseOidcRoleMap,
@@ -1052,20 +1053,37 @@ router.get("/oidc/callback", async (req, res) => {
     );
 
     if (tokenData.id_token) {
-      userInfo = await verifyOIDCToken(
-        tokenData.id_token as string,
-        config.issuer_url,
-        config.client_id,
-        caCert,
-      );
+      try {
+        userInfo = await verifyOIDCToken(
+          tokenData.id_token as string,
+          config.issuer_url,
+          config.client_id,
+          caCert,
+        );
 
-      const expectedNonce = storedNonce;
-      if (userInfo.nonce !== expectedNonce) {
-        authLogger.warn("OIDC ID token nonce mismatch", {
-          operation: "oidc_nonce_mismatch",
-          providerId: callbackProviderId,
-        });
-        return res.status(401).json({ error: "Invalid OIDC token nonce" });
+        const expectedNonce = storedNonce;
+        if (userInfo.nonce !== expectedNonce) {
+          authLogger.warn("OIDC ID token nonce mismatch", {
+            operation: "oidc_nonce_mismatch",
+            providerId: callbackProviderId,
+          });
+          return res.status(401).json({ error: "Invalid OIDC token nonce" });
+        }
+      } catch (error) {
+        // A token we cannot parse as a JWS carries no claims we could trust, so
+        // fall through to the userinfo endpoint instead of failing the login.
+        // Signature and claim failures still reject: those are real rejections.
+        if (!(error instanceof OIDCTokenFormatError)) throw error;
+
+        userInfo = null;
+        authLogger.warn(
+          "OIDC ID token cannot be verified, falling back to userinfo endpoint",
+          {
+            operation: "oidc_id_token_unverifiable",
+            providerId: callbackProviderId,
+            reason: error.message,
+          },
+        );
       }
     }
 

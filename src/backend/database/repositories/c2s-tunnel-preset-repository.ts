@@ -1,6 +1,8 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { c2sTunnelPresets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type C2sTunnelPresetRecord = typeof c2sTunnelPresets.$inferSelect;
 
@@ -64,16 +66,13 @@ export class C2sTunnelPresetRepository {
     userId: string,
     input: C2sTunnelPresetCreateInput,
   ): Promise<C2sTunnelPresetRecord> {
-    const [created] = await this.context.drizzle
-      .insert(c2sTunnelPresets)
-      .values({
-        userId,
-        name: input.name,
-        config: input.config,
-        platform: input.platform ?? null,
-        computerName: input.computerName ?? null,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, c2sTunnelPresets, {
+      userId,
+      name: input.name,
+      config: input.config,
+      platform: input.platform ?? null,
+      computerName: input.computerName ?? null,
+    });
 
     await this.afterWrite();
     return created;
@@ -84,16 +83,15 @@ export class C2sTunnelPresetRepository {
     id: number,
     updates: C2sTunnelPresetUpdateInput,
   ): Promise<C2sTunnelPresetRecord | null> {
-    const [updated] = await this.context.drizzle
-      .update(c2sTunnelPresets)
-      .set({
+    const [updated] = await updateReturning(
+      this.context,
+      c2sTunnelPresets,
+      {
         ...updates,
         updatedAt: sql`CURRENT_TIMESTAMP`,
-      })
-      .where(
-        and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
-      )
-      .returning();
+      },
+      and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
+    );
 
     if (updated) {
       await this.afterWrite();
@@ -103,31 +101,29 @@ export class C2sTunnelPresetRepository {
   }
 
   async deleteForUser(userId: string, id: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(c2sTunnelPresets)
       .where(
         and(eq(c2sTunnelPresets.id, id), eq(c2sTunnelPresets.userId, userId)),
-      )
-      .returning({ id: c2sTunnelPresets.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(c2sTunnelPresets)
-      .where(eq(c2sTunnelPresets.userId, userId))
-      .returning({ id: c2sTunnelPresets.id });
+      .where(eq(c2sTunnelPresets.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

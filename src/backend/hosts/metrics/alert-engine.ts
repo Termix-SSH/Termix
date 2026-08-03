@@ -225,7 +225,7 @@ export class AlertEngine {
         severity: context.severity,
       });
 
-      repository.pruneFiringsOlderThan(rule.userId, 30);
+      await repository.pruneFiringsOlderThan(rule.userId, 30);
     } catch (err) {
       statsLogger.warn("Failed to write alert firing", {
         operation: "alert_firing_insert_error",

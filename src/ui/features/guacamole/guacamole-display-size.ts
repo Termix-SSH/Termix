@@ -1,6 +1,15 @@
 const DEFAULT_RDP_DPI = 96;
 const MAX_DEVICE_PIXEL_RATIO = 3;
 
+/**
+ * Reads a guacamoleConfig display field. The UI stores these as strings, and
+ * leaves them empty when the size should follow the browser window.
+ */
+export function readConfiguredDimension(value: unknown): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export interface GuacamoleDisplaySize {
   width: number;
   height: number;

@@ -2,6 +2,12 @@ import { desc, eq, or } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { vaultProfiles } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type VaultProfileRecord = typeof vaultProfiles.$inferSelect;
 
@@ -45,26 +51,23 @@ export class VaultProfileRepository {
   }
 
   async create(input: VaultProfileCreateInput): Promise<VaultProfileRecord> {
-    const [created] = await this.context.drizzle
-      .insert(vaultProfiles)
-      .values({
-        syncId: randomUUID(),
-        userId: input.userId,
-        name: input.name,
-        description: input.description,
-        folder: input.folder,
-        tags: input.tags,
-        vaultAddr: input.vaultAddr,
-        vaultNamespace: input.vaultNamespace,
-        oidcMount: input.oidcMount,
-        oidcRole: input.oidcRole,
-        sshMount: input.sshMount,
-        sshRole: input.sshRole,
-        validPrincipals: input.validPrincipals,
-        keyType: input.keyType,
-        shared: input.shared ?? false,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, vaultProfiles, {
+      syncId: randomUUID(),
+      userId: input.userId,
+      name: input.name,
+      description: input.description,
+      folder: input.folder,
+      tags: input.tags,
+      vaultAddr: input.vaultAddr,
+      vaultNamespace: input.vaultNamespace,
+      oidcMount: input.oidcMount,
+      oidcRole: input.oidcRole,
+      sshMount: input.sshMount,
+      sshRole: input.sshRole,
+      validPrincipals: input.validPrincipals,
+      keyType: input.keyType,
+      shared: input.shared ?? false,
+    });
 
     await this.afterWrite();
     return created;
@@ -84,14 +87,15 @@ export class VaultProfileRepository {
     id: number,
     input: VaultProfileUpdateInput,
   ): Promise<VaultProfileRecord | null> {
-    const [updated] = await this.context.drizzle
-      .update(vaultProfiles)
-      .set({
+    const [updated] = await updateReturning(
+      this.context,
+      vaultProfiles,
+      {
         ...input,
         updatedAt: input.updatedAt ?? new Date().toISOString(),
-      })
-      .where(eq(vaultProfiles.id, id))
-      .returning();
+      },
+      eq(vaultProfiles.id, id),
+    );
 
     if (updated) {
       await this.afterWrite();
@@ -101,27 +105,27 @@ export class VaultProfileRepository {
   }
 
   async deleteById(id: number): Promise<{ syncId: string | null } | null> {
-    const rows = await this.context.drizzle
-      .delete(vaultProfiles)
-      .where(eq(vaultProfiles.id, id))
-      .returning({ syncId: vaultProfiles.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      vaultProfiles,
+      eq(vaultProfiles.id, id),
+    );
 
     if (rows.length === 0) return null;
     await this.afterWrite();
-    return rows[0];
+    return { syncId: rows[0].syncId };
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(vaultProfiles)
-      .where(eq(vaultProfiles.userId, userId))
-      .returning({ id: vaultProfiles.id });
+      .where(eq(vaultProfiles.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

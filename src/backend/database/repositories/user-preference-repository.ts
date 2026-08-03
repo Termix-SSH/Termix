@@ -1,6 +1,8 @@
 import { eq } from "drizzle-orm";
 import { userPreferences } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturningWhere, updateReturning } from "./returning.js";
 
 export type UserPreferenceRecord = typeof userPreferences.$inferSelect;
 export type NewUserPreferenceRecord = typeof userPreferences.$inferInsert;
@@ -31,34 +33,36 @@ export class UserPreferenceRepository {
     const existing = await this.findByUserId(userId);
 
     if (!existing) {
-      const rows = await this.context.drizzle
-        .insert(userPreferences)
-        .values({ userId, ...update })
-        .returning();
+      const rows = await insertReturningWhere(
+        this.context,
+        userPreferences,
+        { userId, ...update },
+        eq(userPreferences.userId, userId),
+      );
       await this.afterWrite();
       return rows[0];
     }
 
-    const rows = await this.context.drizzle
-      .update(userPreferences)
-      .set(update)
-      .where(eq(userPreferences.userId, userId))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      userPreferences,
+      update,
+      eq(userPreferences.userId, userId),
+    );
     await this.afterWrite();
     return rows[0];
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(userPreferences)
-      .where(eq(userPreferences.userId, userId))
-      .returning({ userId: userPreferences.userId });
+      .where(eq(userPreferences.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

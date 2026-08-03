@@ -6,12 +6,15 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
-import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import {
   createCurrentCredentialRepository,
   createCurrentHostResolutionRepository,
   createCurrentHostRepository,
-  createCurrentUserRepository,
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 
@@ -24,11 +27,6 @@ function isNonEmptyString(val: unknown): val is string {
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
-
-async function getAuditUsername(userId: string): Promise<string> {
-  const actor = await createCurrentUserRepository().findById(userId);
-  return actor?.username ?? userId;
-}
 
 /**
  * @openapi

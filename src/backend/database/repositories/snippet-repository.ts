@@ -2,6 +2,12 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { snippetFolders, snippets } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import {
+  deleteReturning,
+  insertReturning,
+  updateReturning,
+} from "./returning.js";
 
 export type SnippetRecord = typeof snippets.$inferSelect;
 export type SnippetFolderRecord = typeof snippetFolders.$inferSelect;
@@ -84,11 +90,16 @@ export class SnippetRepository {
   }
 
   async listSnippetsForExport(userId: string): Promise<SnippetRecord[]> {
-    return this.context.drizzle
-      .select()
-      .from(snippets)
-      .where(eq(snippets.userId, userId))
-      .orderBy(asc(snippets.folder), asc(snippets.order));
+    return (
+      this.context.drizzle
+        .select()
+        .from(snippets)
+        .where(eq(snippets.userId, userId))
+        // coalesce, not asc(folder): folder is nullable, and NULLs sort first on
+        // SQLite and MySQL but last on Postgres. An export whose row order depends
+        // on the engine is not much of an export.
+        .orderBy(sql`coalesce(${snippets.folder}, '')`, asc(snippets.order))
+    );
   }
 
   async listFoldersForExport(userId: string): Promise<SnippetFolderRecord[]> {
@@ -149,19 +160,16 @@ export class SnippetRepository {
         ? await this.nextOrderForFolder(userId, folderValue)
         : input.order;
 
-    const rows = await this.context.drizzle
-      .insert(snippets)
-      .values({
-        syncId: randomUUID(),
-        userId,
-        name: input.name.trim(),
-        content: input.content.trim(),
-        description: input.description?.trim() || null,
-        folder: input.folder?.trim() || null,
-        order,
-        hostFilter: input.hostFilter ? JSON.stringify(input.hostFilter) : null,
-      })
-      .returning();
+    const rows = await insertReturning(this.context, snippets, {
+      syncId: randomUUID(),
+      userId,
+      name: input.name.trim(),
+      content: input.content.trim(),
+      description: input.description?.trim() || null,
+      folder: input.folder?.trim() || null,
+      order,
+      hostFilter: input.hostFilter ? JSON.stringify(input.hostFilter) : null,
+    });
 
     await this.afterWrite();
     return rows[0];
@@ -200,11 +208,12 @@ export class SnippetRepository {
         ? JSON.stringify(input.hostFilter)
         : null;
 
-    const rows = await this.context.drizzle
-      .update(snippets)
-      .set(updateFields)
-      .where(and(eq(snippets.id, snippetId), eq(snippets.userId, userId)))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      snippets,
+      updateFields,
+      and(eq(snippets.id, snippetId), eq(snippets.userId, userId)),
+    );
 
     await this.afterWrite();
     return { existing, updated: rows[0] };
@@ -229,23 +238,21 @@ export class SnippetRepository {
     snippetsDeleted: number;
     foldersDeleted: number;
   }> {
-    const deletedSnippets = await this.context.drizzle
+    const snippetResult = await this.context.drizzle
       .delete(snippets)
-      .where(eq(snippets.userId, userId))
-      .returning({ id: snippets.id });
+      .where(eq(snippets.userId, userId));
 
-    const deletedFolders = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(snippetFolders)
-      .where(eq(snippetFolders.userId, userId))
-      .returning({ id: snippetFolders.id });
+      .where(eq(snippetFolders.userId, userId));
 
-    if (deletedSnippets.length > 0 || deletedFolders.length > 0) {
+    if (rowsAffected(snippetResult) > 0 || rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
     return {
-      snippetsDeleted: deletedSnippets.length,
-      foldersDeleted: deletedFolders.length,
+      snippetsDeleted: rowsAffected(snippetResult),
+      foldersDeleted: rowsAffected(result),
     };
   }
 
@@ -377,16 +384,13 @@ export class SnippetRepository {
     const existing = await this.findFolderByName(userId, name);
     if (existing) return null;
 
-    const rows = await this.context.drizzle
-      .insert(snippetFolders)
-      .values({
-        syncId: randomUUID(),
-        userId,
-        name: name.trim(),
-        color: color?.trim() || null,
-        icon: icon?.trim() || null,
-      })
-      .returning();
+    const rows = await insertReturning(this.context, snippetFolders, {
+      syncId: randomUUID(),
+      userId,
+      name: name.trim(),
+      color: color?.trim() || null,
+      icon: icon?.trim() || null,
+    });
 
     if (triggerSave) {
       await this.afterWrite();
@@ -414,13 +418,12 @@ export class SnippetRepository {
     if (color !== undefined) updateFields.color = color?.trim() || null;
     if (icon !== undefined) updateFields.icon = icon?.trim() || null;
 
-    const rows = await this.context.drizzle
-      .update(snippetFolders)
-      .set(updateFields)
-      .where(
-        and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
-      )
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      snippetFolders,
+      updateFields,
+      and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
+    );
 
     await this.afterWrite();
     return rows[0] ?? null;
@@ -465,15 +468,14 @@ export class SnippetRepository {
       .set({ folder: null })
       .where(and(eq(snippets.userId, userId), eq(snippets.folder, name)));
 
-    const rows = await this.context.drizzle
-      .delete(snippetFolders)
-      .where(
-        and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
-      )
-      .returning({ syncId: snippetFolders.syncId });
+    const rows = await deleteReturning(
+      this.context,
+      snippetFolders,
+      and(eq(snippetFolders.userId, userId), eq(snippetFolders.name, name)),
+    );
 
     await this.afterWrite();
-    return rows[0] ?? null;
+    return rows[0] ? { syncId: rows[0].syncId } : null;
   }
 
   private async findFolderByName(

@@ -17,33 +17,11 @@ describe("TransferRecentRepository", () => {
   ): Promise<TransferRecentRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE hosts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE transfer_recent (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        source_host_id INTEGER NOT NULL,
-        dest_host_id INTEGER NOT NULL,
-        dest_path TEXT NOT NULL,
-        dest_path_label TEXT NOT NULL,
-        last_used TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO hosts (id, user_id, name)
-      VALUES (1, 'user-1', 'source'), (2, 'user-1', 'dest-a'), (3, 'user-1', 'dest-b'), (4, 'user-2', 'other');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type)
+      VALUES (1, 'user-1', 'source', '10.0.0.1', 22, 'root', 'password'), (2, 'user-1', 'dest-a', '10.0.0.1', 22, 'root', 'password'), (3, 'user-1', 'dest-b', '10.0.0.1', 22, 'root', 'password'), (4, 'user-2', 'other', '10.0.0.1', 22, 'root', 'password');
     `);
 
     return new TransferRecentRepository(context, onWrite);

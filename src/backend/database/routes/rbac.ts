@@ -352,8 +352,6 @@ router.post(
  *         description: Folder shared successfully.
  *       400:
  *         description: Invalid request body.
- *       404:
- *         description: Folder has no hosts.
  *       500:
  *         description: Failed to share folder.
  */
@@ -415,9 +413,6 @@ router.post(
           userId,
           folder,
         );
-      if (hostsInFolder.length === 0) {
-        return res.status(404).json({ error: "Folder has no hosts" });
-      }
 
       const expiresAt = expiryFromDuration(durationHours);
       const rbacAccessRepository = createCurrentRbacAccessRepository();

@@ -69,6 +69,10 @@ export const GuacamoleDisplay = forwardRef<
   ref,
 ) {
   const { t } = useTranslation();
+  // The host config pins the session resolution; without it the display follows
+  // the container.
+  const hasConfiguredSize =
+    connectionConfig.width != null && connectionConfig.height != null;
   const containerRef = useRef<HTMLDivElement>(null);
   const displayRef = useRef<HTMLDivElement>(null);
   const displayElementRef = useRef<HTMLElement | null>(null);
@@ -493,7 +497,10 @@ export const GuacamoleDisplay = forwardRef<
           isConnectingRef.current = false;
           setIsReady(true);
           onConnect?.();
-          if (containerRef.current) {
+          // A configured resolution is the size the session should render at;
+          // resizing it to the container would discard it. rescaleDisplay still
+          // fits that fixed display into whatever space is available.
+          if (!hasConfiguredSize && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
             const size = getGuacamoleDisplaySize(
               rect.width,
@@ -601,6 +608,7 @@ export const GuacamoleDisplay = forwardRef<
     connectionConfig.protocol,
     connectionConfig.type,
     connectionConfig.dpi,
+    hasConfiguredSize,
     touchMode,
     t,
   ]);
@@ -675,15 +683,17 @@ export const GuacamoleDisplay = forwardRef<
       resizeTimeoutRef.current = setTimeout(() => {
         if (clientRef.current && containerRef.current) {
           const rect = containerRef.current.getBoundingClientRect();
-          const size = getGuacamoleDisplaySize(
-            rect.width,
-            rect.height,
-            connectionConfig.protocol ?? connectionConfig.type,
-            window.devicePixelRatio,
-            connectionConfig.dpi,
-          );
           if (rect.width > 0 && rect.height > 0) {
-            clientRef.current.sendSize(size.width, size.height);
+            if (!hasConfiguredSize) {
+              const size = getGuacamoleDisplaySize(
+                rect.width,
+                rect.height,
+                connectionConfig.protocol ?? connectionConfig.type,
+                window.devicePixelRatio,
+                connectionConfig.dpi,
+              );
+              clientRef.current.sendSize(size.width, size.height);
+            }
             rescaleDisplay(true);
           }
         }
@@ -699,6 +709,7 @@ export const GuacamoleDisplay = forwardRef<
     connectionConfig.dpi,
     connectionConfig.protocol,
     connectionConfig.type,
+    hasConfiguredSize,
     rescaleDisplay,
   ]);
 
