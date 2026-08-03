@@ -95,11 +95,13 @@ describe("assertDataDirIsNotMisconfigured", () => {
     expect(() => assertDataDirIsNotMisconfigured(dataDir, {}, cwd)).toThrow(
       DataDirMisconfiguredError,
     );
+    // Matched as substrings, not patterns: Windows paths are full of
+    // backslash sequences a RegExp would read as escapes.
     expect(() => assertDataDirIsNotMisconfigured(dataDir, {}, cwd)).toThrow(
-      new RegExp(`${legacyDir}`),
+      legacyDir,
     );
     expect(() => assertDataDirIsNotMisconfigured(dataDir, {}, cwd)).toThrow(
-      new RegExp(`${dataDir}`),
+      dataDir,
     );
   });
 
