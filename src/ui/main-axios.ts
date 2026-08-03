@@ -1451,6 +1451,7 @@ export {
   bulkImportSSHHosts,
   importSSHConfigHosts,
   discoverProxmoxGuests,
+  discoverProxmoxGuestsStream,
   syncProxmoxGuests,
   bulkUpdateSSHHosts,
   deleteSSHHost,
