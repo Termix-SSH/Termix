@@ -1,4 +1,9 @@
 import type { Host, SharePermissionLevel } from "@/types/ui-types";
+import {
+  AUTH_PROTOCOL_METADATA,
+  isSupportedAuthOverrideProtocol,
+  type AuthOverrideProtocol,
+} from "@/types/auth-protocols";
 
 const LEVEL_RANK: Record<SharePermissionLevel, number> = {
   connect: 1,
@@ -25,4 +30,16 @@ export function canShareHost(host: Host): boolean {
 
 export function canDeleteHost(host: Host): boolean {
   return !host.isShared;
+}
+
+export function canOverrideHostAuth(
+  host: Host,
+  protocol: AuthOverrideProtocol,
+): boolean {
+  const enableField = AUTH_PROTOCOL_METADATA[protocol].enableField;
+  return (
+    !!host.isShared &&
+    isSupportedAuthOverrideProtocol(protocol) &&
+    !!host[enableField]
+  );
 }

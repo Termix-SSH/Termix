@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { SidebarTree, isFolder } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
+import { HostExportDialog } from "@/sidebar/HostExportDialog";
 import { ProxmoxDiscoverDialog } from "@/components/proxmox/ProxmoxDiscoverDialog";
 import { Button } from "@/components/button";
 import {
@@ -40,7 +41,6 @@ import {
   getSSHHosts,
   bulkImportSSHHosts,
   importSSHConfigHosts,
-  exportAllSSHHosts,
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
@@ -200,6 +200,10 @@ export function HostsPanel({
   const [refreshing, setRefreshing] = useState(false);
   const [rawHosts, setRawHosts] = useState<SSHHostWithStatus[]>([]);
   const [shareModalHost, setShareModalHost] = useState<Host | null>(null);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportPreselection, setExportPreselection] = useState<Set<string>>(
+    new Set(),
+  );
   const [proxmoxDialogOpen, setProxmoxDialogOpen] = useState(false);
   const [proxmoxHostId, setProxmoxHostId] = useState<number | undefined>(
     undefined,
@@ -332,29 +336,6 @@ export function HostsPanel({
       // best-effort
     } finally {
       setRefreshing(false);
-    }
-  }
-
-  async function handleExportHosts(share = false) {
-    try {
-      const result = await exportAllSSHHosts(
-        share ? { share: true } : undefined,
-      );
-      const data = JSON.stringify(result, null, 2);
-      const blob = new Blob([data], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = share ? "termix-hosts-share.json" : "termix-hosts.json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast.success(
-        t(share ? "hosts.hostsShareExported" : "hosts.hostsExported"),
-      );
-    } catch {
-      toast.error(t("hosts.exportFailed"));
     }
   }
 
@@ -607,18 +588,14 @@ export function HostsPanel({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => handleExportHosts(false)}
+                  onClick={() => {
+                    setExportPreselection(new Set());
+                    setExportDialogOpen(true);
+                  }}
                   disabled={rawHosts.length === 0}
                 >
                   <Download className="size-3.5 mr-2" />
-                  {t("hosts.exportAll")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleExportHosts(true)}
-                  disabled={rawHosts.length === 0}
-                >
-                  <Download className="size-3.5 mr-2" />
-                  {t("hosts.exportForSharing")}
+                  {t("hosts.export.menuItem")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDownloadSample}>
                   <Download className="size-3.5 mr-2" />
@@ -967,18 +944,14 @@ export function HostsPanel({
                       {t("hosts.importSSHConfig")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => handleExportHosts(false)}
+                      onClick={() => {
+                        setExportPreselection(new Set());
+                        setExportDialogOpen(true);
+                      }}
                       disabled={rawHosts.length === 0}
                     >
                       <Download className="size-3.5 mr-2" />
-                      {t("hosts.exportAll")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleExportHosts(true)}
-                      disabled={rawHosts.length === 0}
-                    >
-                      <Download className="size-3.5 mr-2" />
-                      {t("hosts.exportForSharing")}
+                      {t("hosts.export.menuItem")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleDownloadSample}>
                       <Download className="size-3.5 mr-2" />
@@ -1033,6 +1006,10 @@ export function HostsPanel({
           selectionMode={selectionMode}
           onToggleSelectionMode={toggleSelectionMode}
           loading={loading}
+          onExportSelected={(ids) => {
+            setExportPreselection(new Set(ids));
+            setExportDialogOpen(true);
+          }}
         />
       </div>
 
@@ -1046,6 +1023,13 @@ export function HostsPanel({
         open={shareModalHost !== null}
         onClose={() => setShareModalHost(null)}
         host={shareModalHost}
+      />
+
+      <HostExportDialog
+        open={exportDialogOpen}
+        onClose={() => setExportDialogOpen(false)}
+        hosts={rawHosts}
+        preselectedHostIds={exportPreselection}
       />
 
       <ProxmoxDiscoverDialog

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "170ededd-8277-4445-b7b6-a67ac8491b18",
+  "id": "426410c9-f34a-47bc-9df6-17748689ad0d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "alert_firings": {
@@ -1276,13 +1276,6 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
-        },
-        "override_credential_id": {
-          "name": "override_credential_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {},
@@ -1337,19 +1330,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "host_access_override_credential_id_ssh_credentials_id_fk": {
-          "name": "host_access_override_credential_id_ssh_credentials_id_fk",
-          "tableFrom": "host_access",
-          "tableTo": "ssh_credentials",
-          "columnsFrom": [
-            "override_credential_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1804,6 +1784,14 @@
         },
         "use_warpgate": {
           "name": "use_warpgate",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "share_ssh_auth": {
+          "name": "share_ssh_auth",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -3459,6 +3447,118 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "shared_host_auth_overrides": {
+      "name": "shared_host_auth_overrides",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "host_id": {
+          "name": "host_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "protocol": {
+          "name": "protocol",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'ssh'"
+        },
+        "credential_id": {
+          "name": "credential_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {
+        "shared_host_auth_overrides_host_user_protocol_unique": {
+          "name": "shared_host_auth_overrides_host_user_protocol_unique",
+          "columns": [
+            "host_id",
+            "user_id",
+            "protocol"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "shared_host_auth_overrides_host_id_ssh_data_id_fk": {
+          "name": "shared_host_auth_overrides_host_id_ssh_data_id_fk",
+          "tableFrom": "shared_host_auth_overrides",
+          "tableTo": "ssh_data",
+          "columnsFrom": [
+            "host_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "shared_host_auth_overrides_user_id_users_id_fk": {
+          "name": "shared_host_auth_overrides_user_id_users_id_fk",
+          "tableFrom": "shared_host_auth_overrides",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "shared_host_auth_overrides_credential_id_ssh_credentials_id_fk": {
+          "name": "shared_host_auth_overrides_credential_id_ssh_credentials_id_fk",
+          "tableFrom": "shared_host_auth_overrides",
+          "tableTo": "ssh_credentials",
+          "columnsFrom": [
+            "credential_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

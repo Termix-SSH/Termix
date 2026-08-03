@@ -178,12 +178,10 @@ CREATE TABLE `host_access` (
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`last_accessed_at` text,
 	`access_count` integer DEFAULT 0 NOT NULL,
-	`override_credential_id` integer,
 	FOREIGN KEY (`host_id`) REFERENCES `ssh_data`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`role_id`) REFERENCES `roles`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`granted_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`override_credential_id`) REFERENCES `ssh_credentials`(`id`) ON UPDATE no action ON DELETE set null
+	FOREIGN KEY (`granted_by`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `host_health_checks` (
@@ -249,6 +247,7 @@ CREATE TABLE `ssh_data` (
 	`pin` integer DEFAULT false NOT NULL,
 	`auth_type` text NOT NULL,
 	`use_warpgate` integer DEFAULT false NOT NULL,
+	`share_ssh_auth` integer DEFAULT false NOT NULL,
 	`force_keyboard_interactive` text,
 	`password` text,
 	`key` text(8192),
@@ -475,6 +474,20 @@ CREATE TABLE `settings` (
 	`value` text NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `shared_host_auth_overrides` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`host_id` integer NOT NULL,
+	`user_id` text NOT NULL,
+	`protocol` text DEFAULT 'ssh' NOT NULL,
+	`credential_id` integer NOT NULL,
+	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`host_id`) REFERENCES `ssh_data`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`credential_id`) REFERENCES `ssh_credentials`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `shared_host_auth_overrides_host_user_protocol_unique` ON `shared_host_auth_overrides` (`host_id`,`user_id`,`protocol`);--> statement-breakpoint
 CREATE TABLE `shared_host_secrets` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`host_access_id` integer NOT NULL,

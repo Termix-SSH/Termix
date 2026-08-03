@@ -60,6 +60,7 @@ import {
   buildHostEditorPayload,
   createHostEditorForm,
   mapSnippetResponse,
+  omitOwnerSshAuthFromSharedEdit,
   type HostAuthType,
   type HostBellStyle,
   type HostBackspaceMode,
@@ -268,7 +269,10 @@ export function HostEditor({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const data = buildHostEditorPayload(form, protocols);
+      const fullData = buildHostEditorPayload(form, protocols);
+      const data = lockAuthReferences
+        ? omitOwnerSshAuthFromSharedEdit(fullData)
+        : fullData;
       let saved: SSHHost;
       if (adminTargetUserId) {
         saved = host
@@ -460,6 +464,7 @@ export function HostEditor({
                 title={t("hosts.authenticationLabel")}
                 icon={<Shield className="size-3.5" />}
                 action={
+                  !isSharedHost &&
                   canQuickCreateCredential && (
                     <Button
                       type="button"
@@ -474,7 +479,18 @@ export function HostEditor({
                   )
                 }
               >
-                <div className="flex flex-col gap-4 py-3">
+                {isSharedHost && (
+                  <div className="py-3 text-xs text-muted-foreground">
+                    {t(
+                      host?.shareSshAuth
+                        ? "hosts.sharing.ownerAuthShared"
+                        : "hosts.sharing.ownerAuthPrivate",
+                    )}
+                  </div>
+                )}
+                <div
+                  className={`flex flex-col gap-4 py-3 ${isSharedHost ? "hidden" : ""}`}
+                >
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {t("hosts.authMethod")}
@@ -977,6 +993,15 @@ export function HostEditor({
                       </div>
                     </div>
                   )}
+                  <SettingRow
+                    label={t("hosts.shareSshAuthLabel")}
+                    description={t("hosts.shareSshAuthDesc")}
+                  >
+                    <FakeSwitch
+                      checked={form.shareSshAuth}
+                      onChange={(v) => setField("shareSshAuth", v)}
+                    />
+                  </SettingRow>
                   <SettingRow
                     label={t("hosts.forceKeyboardInteractiveLabel")}
                     description={t("hosts.forceKeyboardInteractiveShortDesc")}

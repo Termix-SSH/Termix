@@ -50,9 +50,9 @@ describe("HostResolutionRepository", () => {
         ('user-1', 'switches / floor1', NULL),
         ('user-1', 'no-cred', NULL);
       INSERT INTO host_access (
-        host_id, user_id, granted_by, permission_level, override_credential_id
+        host_id, user_id, granted_by, permission_level
       )
-      VALUES (1, 'user-2', 'user-1', 'execute', 8);
+      VALUES (1, 'user-2', 'user-1', 'execute');
     `);
 
     return new HostResolutionRepository(context, onWrite);
@@ -352,17 +352,6 @@ describe("HostResolutionRepository", () => {
     ).resolves.toEqual([]);
     await expect(
       repository.findCredentialByIdForUser(7, "user-1"),
-    ).resolves.toBeNull();
-  });
-
-  it("loads override credential ids for shared host resolution", async () => {
-    const repository = await createRepository();
-
-    await expect(
-      repository.findOverrideCredentialId(1, "user-2"),
-    ).resolves.toBe(8);
-    await expect(
-      repository.findOverrideCredentialId(1, "user-1"),
     ).resolves.toBeNull();
   });
 

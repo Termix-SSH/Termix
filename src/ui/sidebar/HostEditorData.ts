@@ -69,6 +69,7 @@ export function createHostEditorForm(
     telnetPort: host?.telnetPort ?? 23,
     authType: host?.authType ?? "password",
     useWarpgate: host?.useWarpgate ?? false,
+    shareSshAuth: host?.shareSshAuth ?? false,
     password: host?.password ?? "",
     key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
     keyPassword: host?.hasKeyPassword
@@ -253,6 +254,37 @@ export function createHostEditorForm(
 
 export type HostEditorForm = ReturnType<typeof createHostEditorForm>;
 
+export function omitOwnerSshAuthFromSharedEdit(
+  payload: SSHHostData,
+): SSHHostData {
+  const {
+    authType: _authType,
+    password: _password,
+    key: _key,
+    keyPassword: _keyPassword,
+    keyType: _keyType,
+    sudoPassword: _sudoPassword,
+    credentialId: _credentialId,
+    vaultProfileId: _vaultProfileId,
+    overrideCredentialUsername: _overrideCredentialUsername,
+    shareSshAuth: _shareSshAuth,
+    ...editableFields
+  } = payload;
+
+  const terminalConfig = editableFields.terminalConfig
+    ? { ...editableFields.terminalConfig }
+    : undefined;
+  if (terminalConfig) {
+    delete terminalConfig.sudoPassword;
+    delete terminalConfig.agentSocketPath;
+  }
+
+  return {
+    ...editableFields,
+    terminalConfig,
+  } as SSHHostData;
+}
+
 export function buildHostEditorPayload(
   form: HostEditorForm,
   protocols: HostProtocols,
@@ -288,6 +320,7 @@ export function buildHostEditorPayload(
     pin: form.pin,
     authType: form.authType,
     useWarpgate: form.useWarpgate,
+    shareSshAuth: form.shareSshAuth,
     password:
       usesPassword || usesKey || usesCredential ? form.password || null : null,
     key: usesKey

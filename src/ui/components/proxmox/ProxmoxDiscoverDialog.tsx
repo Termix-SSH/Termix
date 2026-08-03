@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Server, RefreshCw, CheckSquare, Square, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/select";
 import {
-  discoverProxmoxGuests,
+  discoverProxmoxGuestsStream,
   bulkImportSSHHosts,
   getSSHHosts,
 } from "@/main-axios";
@@ -56,9 +56,17 @@ export function ProxmoxDiscoverDialog({
     preselectedHostId ? String(preselectedHostId) : "",
   );
   const [discovering, setDiscovering] = useState(false);
+  const [progress, setProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const streamCloseRef = useRef<(() => void) | null>(null);
   const [guests, setGuests] = useState<ProxmoxGuest[] | null>(null);
   const [discoveredCredentialId, setDiscoveredCredentialId] = useState<
     number | null
+  >(null);
+  const [discoveredJumpHosts, setDiscoveredJumpHosts] = useState<
+    unknown[] | null
   >(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [importing, setImporting] = useState(false);
@@ -82,35 +90,50 @@ export function ProxmoxDiscoverDialog({
     if (!preselectedHostId) setSelectedHostId("");
     setGuests(null);
     setDiscoveredCredentialId(null);
+    setDiscoveredJumpHosts(null);
     setSelected(new Set());
+    streamCloseRef.current?.();
+    streamCloseRef.current = null;
+    setProgress(null);
     setDiscovering(false);
     setImporting(false);
   }
 
-  async function handleDiscover() {
+  function handleDiscover() {
     const hostId =
       preselectedHostId ?? (selectedHostId ? Number(selectedHostId) : null);
     if (!hostId) return;
     setDiscovering(true);
     setGuests(null);
     setDiscoveredCredentialId(null);
+    setDiscoveredJumpHosts(null);
     setSelected(new Set());
-    try {
-      const result = await discoverProxmoxGuests(hostId);
-      setGuests(result.guests);
-      setDiscoveredCredentialId(result.credentialId ?? null);
-      setSelected(
-        new Set(
-          result.guests
-            .filter((g) => g.status === "running")
-            .map((g) => g.vmid),
-        ),
-      );
-    } catch (err: any) {
-      toast.error(err?.message ?? t("hosts.proxmoxDiscoveryFailed"));
-    } finally {
-      setDiscovering(false);
-    }
+    setProgress(null);
+    streamCloseRef.current?.();
+    streamCloseRef.current = discoverProxmoxGuestsStream(hostId, {
+      onProgress: (done, total) => setProgress({ done, total }),
+      onResult: (result) => {
+        setGuests(result.guests);
+        setDiscoveredCredentialId(result.credentialId ?? null);
+        setDiscoveredJumpHosts(result.jumpHosts ?? null);
+        setSelected(
+          new Set(
+            result.guests
+              .filter((g) => g.status === "running")
+              .map((g) => g.vmid),
+          ),
+        );
+        setDiscovering(false);
+        setProgress(null);
+        streamCloseRef.current = null;
+      },
+      onError: (message) => {
+        toast.error(message ?? t("hosts.proxmoxDiscoveryFailed"));
+        setDiscovering(false);
+        setProgress(null);
+        streamCloseRef.current = null;
+      },
+    });
   }
 
   async function handleImport() {
@@ -122,38 +145,41 @@ export function ProxmoxDiscoverDialog({
       const importAuth = resolveProxmoxImportAuth(defaultAuthType, credId);
 
       const selectedGuests = guests.filter((g) => selected.has(g.vmid));
-      const skippedNoIp = selectedGuests.filter((g) => !g.ip).length;
 
-      const toImport = selectedGuests
-        .filter((g) => !!g.ip)
-        .map((g) => ({
-          name: g.name,
-          ip: g.ip as string,
-          port: g.connectionType === "rdp" ? 3389 : 22,
-          username: defaultUsername ?? "root",
-          folder: importFolder,
-          ...importAuth,
-          enableTerminal: g.connectionType !== "rdp",
-          enableFileManager: g.connectionType !== "rdp",
-          enableTunnel: g.connectionType !== "rdp",
-          enableSsh: g.connectionType !== "rdp",
-          enableRdp: g.connectionType === "rdp",
-          enableDocker: g.enableDocker,
-          connectionType: g.connectionType,
-          tags: ["proxmox", g.type, g.node],
-          proxmoxConfig: {
-            source: {
-              source: "proxmox",
-              sourceHostId: Number(effectiveHostId),
-              node: g.node,
-              vmid: g.vmid,
-              type: g.type,
-              lastSeenAt: new Date().toISOString(),
-              lastStatus: g.status,
-              missingSince: null,
-            },
+      const toImport = selectedGuests.map((g) => ({
+        name: g.name,
+        // No IP discovered (e.g. QEMU without a running guest agent): import
+        // with a placeholder so the host is created and the user can fill in
+        // the real IP. Re-sync keeps the manual value (guest.ip || existing.ip).
+        ip: g.ip || "0.0.0.0",
+        port: g.connectionType === "rdp" ? 3389 : 22,
+        username: defaultUsername ?? "root",
+        folder: importFolder,
+        // Inherit the jump-host chain from the scanned Proxmox host so the
+        // imported guests are reachable the same way; user can override.
+        jumpHosts: discoveredJumpHosts ?? undefined,
+        ...importAuth,
+        enableTerminal: g.connectionType !== "rdp",
+        enableFileManager: g.connectionType !== "rdp",
+        enableTunnel: g.connectionType !== "rdp",
+        enableSsh: g.connectionType !== "rdp",
+        enableRdp: g.connectionType === "rdp",
+        enableDocker: g.enableDocker,
+        connectionType: g.connectionType,
+        tags: ["proxmox", g.type, g.node],
+        proxmoxConfig: {
+          source: {
+            source: "proxmox",
+            sourceHostId: Number(effectiveHostId),
+            node: g.node,
+            vmid: g.vmid,
+            type: g.type,
+            lastSeenAt: new Date().toISOString(),
+            lastStatus: g.status,
+            missingSince: null,
           },
-        }));
+        },
+      }));
 
       const result = toImport.length
         ? await bulkImportSSHHosts(toImport, false)
@@ -174,9 +200,6 @@ export function ProxmoxDiscoverDialog({
           : null,
         result.failed
           ? t("hosts.proxmoxResultFailed", { count: result.failed })
-          : null,
-        skippedNoIp
-          ? t("hosts.proxmoxResultSkippedNoIp", { count: skippedNoIp })
           : null,
       ]
         .filter(Boolean)
@@ -285,7 +308,9 @@ export function ProxmoxDiscoverDialog({
                 className={`size-3.5 mr-1.5 ${discovering ? "animate-spin" : ""}`}
               />
               {discovering
-                ? t("hosts.proxmoxDiscovering")
+                ? progress
+                  ? `${t("hosts.proxmoxDiscovering")} ${progress.done}/${progress.total}`
+                  : t("hosts.proxmoxDiscovering")
                 : t("hosts.proxmoxDiscoverGuests")}
             </Button>
           )}
@@ -357,11 +382,15 @@ export function ProxmoxDiscoverDialog({
                           >
                             {g.status}
                           </span>
-                          {g.ip && (
-                            <span className="text-muted-foreground text-[10px] shrink-0 font-mono">
-                              {g.ip}
-                            </span>
-                          )}
+                          <span
+                            className={`shrink-0 text-[10px] font-mono ${
+                              g.ip
+                                ? "text-muted-foreground"
+                                : "text-amber-400/80 italic"
+                            }`}
+                          >
+                            {g.ip || "no IP"}
+                          </span>
                         </button>
                       ))}
                     </div>

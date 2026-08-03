@@ -1,6 +1,13 @@
 import type { Client } from "ssh2";
 import type { Request } from "express";
 import type { RefObject } from "react";
+import type { HostAuthOverrides } from "./auth-protocols.js";
+
+export type {
+  AuthOverrideProtocol,
+  HostAuthOverrideState,
+  HostAuthOverrides,
+} from "./auth-protocols.js";
 
 // ============================================================================
 // SSO / AUTHENTICATION PROVIDER TYPES
@@ -126,6 +133,7 @@ export interface Host {
     | "agent"
     | "vault";
   useWarpgate?: boolean;
+  shareSshAuth?: boolean;
   password?: string;
   key?: string;
   keyPassword?: string;
@@ -218,6 +226,7 @@ export interface Host {
   hasKeyPassword?: boolean;
 
   isShared?: boolean;
+  authOverrides?: HostAuthOverrides;
   permissionLevel?: "connect" | "view" | "edit" | "manage";
   sharedExpiresAt?: string;
   ownerUsername?: string;
@@ -257,6 +266,7 @@ export interface HostData {
     | "tailscale"
     | "agent";
   useWarpgate?: boolean;
+  shareSshAuth?: boolean;
   password?: string;
   key?: File | string | null;
   keyPassword?: string;

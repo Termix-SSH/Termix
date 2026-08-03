@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
-import { hostAccess, hosts, sshCredentials, sshFolders } from "../db/schema.js";
+import { hosts, sshCredentials, sshFolders } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 
@@ -328,19 +328,6 @@ export class HostResolutionRepository {
       .limit(1);
 
     return this.decryptOne("ssh_credentials", rows[0], decryptUserId);
-  }
-
-  async findOverrideCredentialId(
-    hostId: number,
-    userId: string,
-  ): Promise<number | null> {
-    const rows = await this.context.drizzle
-      .select({ overrideCredentialId: hostAccess.overrideCredentialId })
-      .from(hostAccess)
-      .where(and(eq(hostAccess.hostId, hostId), eq(hostAccess.userId, userId)))
-      .limit(1);
-
-    return rows[0]?.overrideCredentialId ?? null;
   }
 
   /**
