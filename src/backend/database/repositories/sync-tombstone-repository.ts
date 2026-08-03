@@ -1,5 +1,6 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { syncTombstones } from "../db/schema.js";
+import { timestampAtOrAfter } from "../sync-timestamp.js";
 import type { DatabaseContext } from "./database-context.js";
 
 export type SyncTombstoneRecord = typeof syncTombstones.$inferSelect;
@@ -57,7 +58,8 @@ export class SyncTombstoneRepository {
       eq(syncTombstones.userId, userId),
       eq(syncTombstones.entityType, entityType),
     ];
-    if (since) conditions.push(gt(syncTombstones.deletedAt, since));
+    if (since)
+      conditions.push(timestampAtOrAfter(syncTombstones.deletedAt, since));
 
     return this.context.drizzle
       .select()
