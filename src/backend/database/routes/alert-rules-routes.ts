@@ -4,6 +4,7 @@ import { createCurrentAlertRepository } from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { databaseLogger } from "../../utils/logger.js";
 import { sendWebhook, sendNtfy } from "../../utils/notification-sender.js";
+import { sendDiscord } from "../../utils/discord-sender.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -70,8 +71,8 @@ router.post("/notification-channels", async (req, res) => {
   if (!name || typeof name !== "string" || !name.trim()) {
     return res.status(400).json({ error: "name is required" });
   }
-  if (type !== "webhook" && type !== "ntfy") {
-    return res.status(400).json({ error: "type must be 'webhook' or 'ntfy'" });
+  if (type !== "webhook" && type !== "ntfy" && type !== "discord") {
+    return res.status(400).json({ error: "type must be 'webhook', 'ntfy' or 'discord'" });
   }
   if (!config || typeof config !== "object") {
     return res.status(400).json({ error: "config is required" });
@@ -87,6 +88,21 @@ router.post("/notification-channels", async (req, res) => {
     const c = config as Record<string, unknown>;
     if (!c.url || typeof c.url !== "string")
       return res.status(400).json({ error: "webhook config requires url" });
+  }
+  if (type === "discord") {
+    const c = config as Record<string, unknown>;
+    if (!c.url || typeof c.url !== "string")
+      return res.status(400).json({ error: "discord config requires url" });
+    if (
+      !/^https:\/\/(?:canary\.|ptb\.)?(?:discord\.com|discordapp\.com)\/api\/webhooks\/.+/i.test(
+        c.url,
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          "discord config requires a valid Discord webhook URL (https://discord.com/api/webhooks/...)",
+      });
+    }
   }
 
   try {
@@ -134,10 +150,10 @@ router.put(
     );
     if (!existing) return res.status(404).json({ error: "Channel not found" });
 
-    if (type && type !== "webhook" && type !== "ntfy") {
+    if (type && type !== "webhook" && type !== "ntfy" && type !== "discord") {
       return res
         .status(400)
-        .json({ error: "type must be 'webhook' or 'ntfy'" });
+        .json({ error: "type must be 'webhook', 'ntfy' or 'discord'" });
     }
     if (
       name === undefined &&
@@ -243,6 +259,11 @@ router.post(
       } else if (row.type === "ntfy") {
         await sendNtfy(
           config as unknown as Parameters<typeof sendNtfy>[0],
+          testPayload,
+        );
+      } else if (row.type === "discord") {
+        await sendDiscord(
+          config as unknown as Parameters<typeof sendDiscord>[0],
           testPayload,
         );
       }
