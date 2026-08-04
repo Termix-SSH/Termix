@@ -1,6 +1,7 @@
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gte, lt, lte } from "drizzle-orm";
 import { hostMetricsHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { sqlTimestampDaysAgo } from "./sql-timestamp.js";
 
 export type HostMetricsHistoryRecord = typeof hostMetricsHistory.$inferSelect;
 
@@ -32,12 +33,15 @@ export class HostMetricsHistoryRepository {
     await this.afterWrite();
   }
 
-  pruneOlderThan(hostId: number, retentionDays: number): void {
-    this.context.sqlite
-      ?.prepare(
-        "DELETE FROM host_metrics_history WHERE host_id = ? AND ts < datetime('now', ?)",
-      )
-      .run(hostId, `-${retentionDays} days`);
+  async pruneOlderThan(hostId: number, retentionDays: number): Promise<void> {
+    await this.context.drizzle
+      .delete(hostMetricsHistory)
+      .where(
+        and(
+          eq(hostMetricsHistory.hostId, hostId),
+          lt(hostMetricsHistory.ts, sqlTimestampDaysAgo(retentionDays)),
+        ),
+      );
   }
 
   async listRange(

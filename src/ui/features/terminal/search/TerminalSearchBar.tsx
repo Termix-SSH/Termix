@@ -3,6 +3,13 @@ import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
+import { Separator } from "@/components/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
 import { cn } from "@/lib/utils.ts";
 
 interface TerminalSearchBarProps {
@@ -21,6 +28,48 @@ interface TerminalSearchBarProps {
   resultIndex: number;
   resultCount: number;
   inputRef: React.RefObject<HTMLInputElement | null>;
+}
+
+interface SearchToggleProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  className?: string;
+  children: React.ReactNode;
+}
+
+function SearchToggle({
+  label,
+  active,
+  onClick,
+  className,
+  children,
+}: SearchToggleProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label={label}
+          aria-pressed={active}
+          onClick={onClick}
+          className={cn(
+            "font-mono text-[11px] leading-none text-muted-foreground",
+            active &&
+              "border-border bg-muted text-foreground hover:bg-muted dark:bg-muted/60",
+            className,
+          )}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function TerminalSearchBar({
@@ -68,100 +117,133 @@ export function TerminalSearchBar({
     e.stopPropagation();
   };
 
-  const toggleButtonClass = (active: boolean) =>
-    cn(
-      "flex h-6 w-6 shrink-0 items-center justify-center rounded-none border border-transparent text-xs font-semibold text-muted-foreground transition-colors hover:bg-hover hover:text-foreground",
-      active && "border-edge bg-accent text-accent-foreground",
-    );
-
-  const resultLabel =
-    query.length === 0
-      ? ""
-      : resultCount === 0
-        ? t("terminal.searchNoResults")
-        : t("terminal.searchResultCount", {
-            index: resultIndex + 1,
-            count: resultCount,
-          });
+  const hasQuery = query.length > 0;
+  const noResults = hasQuery && resultCount === 0;
+  const resultLabel = !hasQuery
+    ? ""
+    : resultCount === 0
+      ? t("terminal.searchNoResults")
+      : t("terminal.searchResultCount", {
+          index: resultIndex + 1,
+          count: resultCount,
+        });
 
   return (
-    <div className="absolute top-2 right-2 z-[130] flex items-center gap-1 rounded-md border border-edge bg-canvas px-1.5 py-1 shadow-lg">
-      <Input
-        ref={inputRef}
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={t("terminal.searchPlaceholder")}
-        className="h-6 w-40 rounded-none border-none bg-transparent px-1.5 text-xs shadow-none focus-visible:ring-0"
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="none"
-        spellCheck={false}
-      />
+    <TooltipProvider delayDuration={500}>
+      <div
+        className="absolute top-2 right-2 z-[130] flex items-center gap-1 border border-border bg-background/95 p-1 shadow-lg backdrop-blur-sm"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="relative flex items-center">
+          <Input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={t("terminal.searchPlaceholder")}
+            aria-label={t("terminal.searchPlaceholder")}
+            className={cn(
+              "h-7 w-48 pr-16 font-mono",
+              noResults &&
+                "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
+            )}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+          <span
+            className={cn(
+              "pointer-events-none absolute right-2 font-mono text-[11px] tabular-nums select-none",
+              noResults ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {resultLabel}
+          </span>
+        </div>
 
-      <span className="min-w-[64px] shrink-0 text-center text-xs text-muted-foreground select-none">
-        {resultLabel}
-      </span>
+        <Separator orientation="vertical" className="mx-0.5 !h-5" />
 
-      <div className="flex items-center gap-0.5 border-l border-edge pl-1">
-        <button
-          type="button"
-          title={t("terminal.searchCaseSensitive")}
-          aria-pressed={caseSensitive}
-          className={toggleButtonClass(caseSensitive)}
-          onClick={onToggleCaseSensitive}
-        >
-          Aa
-        </button>
-        <button
-          type="button"
-          title={t("terminal.searchWholeWord")}
-          aria-pressed={wholeWord}
-          className={cn(toggleButtonClass(wholeWord), "underline")}
-          onClick={onToggleWholeWord}
-        >
-          ab
-        </button>
-        <button
-          type="button"
-          title={t("terminal.searchRegex")}
-          aria-pressed={regex}
-          className={toggleButtonClass(regex)}
-          onClick={onToggleRegex}
-        >
-          .*
-        </button>
+        <div className="flex items-center gap-0.5">
+          <SearchToggle
+            label={t("terminal.searchCaseSensitive")}
+            active={caseSensitive}
+            onClick={onToggleCaseSensitive}
+          >
+            Aa
+          </SearchToggle>
+          <SearchToggle
+            label={t("terminal.searchWholeWord")}
+            active={wholeWord}
+            onClick={onToggleWholeWord}
+            className="underline underline-offset-2"
+          >
+            ab
+          </SearchToggle>
+          <SearchToggle
+            label={t("terminal.searchRegex")}
+            active={regex}
+            onClick={onToggleRegex}
+          >
+            .*
+          </SearchToggle>
+        </div>
+
+        <Separator orientation="vertical" className="mx-0.5 !h-5" />
+
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("terminal.searchPrevious")}
+                disabled={!hasQuery || resultCount === 0}
+                onClick={onFindPrevious}
+              >
+                <ChevronUp />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {t("terminal.searchPrevious")}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("terminal.searchNext")}
+                disabled={!hasQuery || resultCount === 0}
+                onClick={onFindNext}
+              >
+                <ChevronDown />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {t("terminal.searchNext")}
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("terminal.searchClose")}
+                onClick={onClose}
+              >
+                <X />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" sideOffset={6}>
+              {t("terminal.searchClose")}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
-
-      <div className="flex items-center gap-0.5 border-l border-edge pl-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          title={t("terminal.searchPrevious")}
-          onClick={onFindPrevious}
-        >
-          <ChevronUp />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          title={t("terminal.searchNext")}
-          onClick={onFindNext}
-        >
-          <ChevronDown />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-xs"
-          title={t("terminal.searchClose")}
-          onClick={onClose}
-        >
-          <X />
-        </Button>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }

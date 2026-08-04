@@ -46,8 +46,12 @@ import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
-import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
+import {
+  highlightTerminalOutput,
+  updateControlStringMode,
+} from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
+import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
@@ -67,6 +71,7 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
+import { isTabKeyEvent } from "./terminal-key-event.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -464,6 +469,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const activityLoggingRef = useRef(false);
     const passwordPromptShownRef = useRef(false);
     const alternateScreenModeRef = useRef(false);
+    const controlStringModeRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -609,8 +615,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     function openSearch() {
       setShowSearch(true);
-      searchInputRef.current?.focus();
-      searchInputRef.current?.select();
       if (searchQueryRef.current) {
         runSearch("next", searchQueryRef.current);
       }
@@ -815,12 +819,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
       alternateScreenModeRef.current = alternateScreen.isActive;
 
+      // Must run for every chunk, including ones we go on to skip, or the
+      // control-string state stops tracking the stream.
+      const controlString = updateControlStringMode(
+        output,
+        controlStringModeRef.current,
+      );
+      controlStringModeRef.current = controlString.isActive;
+
       const syntaxHighlightingEnabled =
         hostConfig.terminalConfig?.syntaxHighlighting !== false;
       if (
         !syntaxHighlightingEnabled ||
         alternateScreen.sawSequence ||
-        alternateScreen.isActive
+        alternateScreen.isActive ||
+        controlString.wasActive ||
+        controlString.isActive
       ) {
         return output;
       }
@@ -1130,10 +1144,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         const origin = await resolveConnectionOrigin({
           connectionType: "ssh",
           connectionOrigin: hostConfig.connectionOrigin as
-            | "local"
-            | "remote"
-            | null
-            | undefined,
+            "local" | "remote" | null | undefined,
         });
         const resolvedUrl = await buildOriginWsUrl({
           origin,
@@ -1187,6 +1198,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     ) {
       ws.addEventListener("open", () => {
         alternateScreenModeRef.current = false;
+        controlStringModeRef.current = false;
         connectionTimeoutRef.current = setTimeout(() => {
           if (
             !isConnected &&
@@ -2179,10 +2191,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.letterSpacing = config.letterSpacing;
       terminal.options.lineHeight = config.lineHeight;
       terminal.options.bellStyle = config.bellStyle as
-        | "none"
-        | "sound"
-        | "visual"
-        | "both";
+        "none" | "sound" | "visual" | "both";
 
       terminal.options.theme = {
         background: config.backgroundImage
@@ -2462,7 +2471,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       // the capture phase blocks that traversal while still allowing the event to
       // reach xterm.js's internal handler (which fires our attachCustomKeyEventHandler).
       const handleTabCapture = (e: KeyboardEvent) => {
-        if (e.key === "Tab") {
+        if (isTabKeyEvent(e)) {
           e.preventDefault();
         }
       };
@@ -2636,6 +2645,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           e.stopPropagation();
           openSearch();
           return false;
+        }
+
+        if (navigator.userAgent.includes("Android")) {
+          const sequence = getAndroidHardwareKeySequence(
+            e,
+            terminal.modes.applicationCursorKeysMode,
+            hostConfig.terminalConfig?.backspaceMode,
+          );
+          if (sequence) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+              webSocketRef.current.send(
+                JSON.stringify({ type: "input", data: sequence }),
+              );
+            }
+            return false;
+          }
         }
 
         // Forward global app shortcuts to AppShell directly — xterm swallows
@@ -2838,7 +2865,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
 
           if (
-            e.key === "Tab" &&
+            isTabKeyEvent(e) &&
             !e.ctrlKey &&
             !e.altKey &&
             !e.metaKey &&
@@ -2861,7 +2888,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.key === "Tab" &&
+          isTabKeyEvent(e) &&
           e.shiftKey &&
           !e.ctrlKey &&
           !e.altKey &&
@@ -2878,7 +2905,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.key === "Tab" &&
+          isTabKeyEvent(e) &&
           !e.ctrlKey &&
           !e.altKey &&
           !e.metaKey &&

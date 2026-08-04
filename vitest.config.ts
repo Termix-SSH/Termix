@@ -34,6 +34,12 @@ export default defineConfig({
           name: "backend",
           environment: "node",
           include: ["src/backend/**/*.test.ts"],
+          // The repository tests can be pointed at a real Postgres or MySQL
+          // (TEST_DIALECT). Connecting, migrating and clearing tables between
+          // tests costs seconds there, against microseconds for in-memory
+          // SQLite, so the default timeout only fits the SQLite run.
+          testTimeout: process.env.TEST_DIALECT ? 60_000 : 5_000,
+          hookTimeout: process.env.TEST_DIALECT ? 60_000 : 10_000,
         },
       },
       {

@@ -53,6 +53,7 @@ describe("analytics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env = { ...originalEnv };
+    delete process.env.ENABLE_TELEMETRY;
   });
 
   afterEach(() => {
@@ -60,6 +61,7 @@ describe("analytics", () => {
   });
 
   it("isAnalyticsEnabled defaults to true via the settings repository", async () => {
+    delete process.env.ENABLE_TELEMETRY;
     mockGetBoolean.mockResolvedValue(true);
     const { isAnalyticsEnabled } = await import("../../utils/analytics.js");
 
@@ -67,6 +69,60 @@ describe("analytics", () => {
 
     expect(result).toBe(true);
     expect(mockGetBoolean).toHaveBeenCalledWith("analytics_enabled", true);
+  });
+
+  it("ENABLE_TELEMETRY=false disables analytics without consulting the database", async () => {
+    process.env.ENABLE_TELEMETRY = "false";
+    const { isAnalyticsEnabled } = await import("../../utils/analytics.js");
+
+    const result = await isAnalyticsEnabled();
+
+    expect(result).toBe(false);
+    expect(mockGetBoolean).not.toHaveBeenCalled();
+  });
+
+  it("ENABLE_TELEMETRY=true forces analytics on without consulting the database", async () => {
+    process.env.ENABLE_TELEMETRY = "TRUE";
+    const { isAnalyticsEnabled } = await import("../../utils/analytics.js");
+
+    const result = await isAnalyticsEnabled();
+
+    expect(result).toBe(true);
+    expect(mockGetBoolean).not.toHaveBeenCalled();
+  });
+
+  it("getTelemetryEnvOverride returns null when unset or blank", async () => {
+    const { getTelemetryEnvOverride } =
+      await import("../../utils/analytics.js");
+
+    delete process.env.ENABLE_TELEMETRY;
+    expect(getTelemetryEnvOverride()).toBe(null);
+
+    process.env.ENABLE_TELEMETRY = "   ";
+    expect(getTelemetryEnvOverride()).toBe(null);
+  });
+
+  it("startAnalyticsHeartbeat sends nothing when ENABLE_TELEMETRY=false", async () => {
+    process.env.ENABLE_TELEMETRY = "false";
+    process.env.POSTHOG_API_KEY = "phc_test";
+    const { startAnalyticsHeartbeat } =
+      await import("../../utils/analytics.js");
+
+    startAnalyticsHeartbeat();
+    await Promise.resolve();
+
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
+  it("collectAndSendHeartbeat does not call PostHog when ENABLE_TELEMETRY=false", async () => {
+    process.env.ENABLE_TELEMETRY = "false";
+    process.env.POSTHOG_API_KEY = "phc_test";
+    const { collectAndSendHeartbeat } =
+      await import("../../utils/analytics.js");
+
+    await collectAndSendHeartbeat();
+
+    expect(mockPost).not.toHaveBeenCalled();
   });
 
   it("getOrCreateInstanceId returns the existing id without generating one", async () => {

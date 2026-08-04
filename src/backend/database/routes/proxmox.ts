@@ -2,14 +2,14 @@ import express from "express";
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../utils/logger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
-import {
-  createCurrentCredentialRepository,
-  createCurrentHostRepository,
-} from "../repositories/factory.js";
+import { createCurrentHostRepository } from "../repositories/factory.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { SSHHost } from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
+import { resolveHostById } from "../../hosts/host-resolver.js";
+import { createJumpHostChain } from "../../hosts/jump-host-chain.js";
+import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -35,7 +35,7 @@ function isSafeNodeName(name: string): boolean {
 function execCommand(
   client: SSHClient,
   command: string,
-  timeoutMs = 8000,
+  timeoutMs = 25000,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -187,6 +187,20 @@ type ProxmoxSyncResult = {
   errors: string[];
 };
 
+function parseJumpHostsField(raw: unknown): unknown[] | null {
+  if (!raw) return null;
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 function parseJsonObject(value: unknown): Record<string, unknown> {
   if (!value) return {};
   if (typeof value === "object") return value as Record<string, unknown>;
@@ -248,43 +262,16 @@ function mergeTags(
     .join(",");
 }
 
-function resolveProxmoxImportAuth(
-  defaultAuthType: string | undefined,
-  credentialId: number | null | undefined,
-): {
-  authType: string;
-  credentialId: number | null;
-  overrideCredentialUsername: number;
-} {
-  if (defaultAuthType === "credential" || (!defaultAuthType && credentialId)) {
-    return credentialId
-      ? { authType: "credential", credentialId, overrideCredentialUsername: 1 }
-      : { authType: "none", credentialId: null, overrideCredentialUsername: 0 };
-  }
-
-  if (defaultAuthType && !["password", "key"].includes(defaultAuthType)) {
-    return {
-      authType: defaultAuthType,
-      credentialId: null,
-      overrideCredentialUsername: 0,
-    };
-  }
-
-  return {
-    authType: "none",
-    credentialId: null,
-    overrideCredentialUsername: 0,
-  };
-}
-
 async function discoverProxmoxGuestsForHost(
   userId: string,
   parsedHostId: number,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<{
   host: SSHHost;
   guests: ProxmoxGuest[];
   credentialId: number | null;
   defaultCredentialId: number | null;
+  jumpHosts: unknown[] | null;
   config: ReturnType<typeof parseProxmoxConfig>;
 }> {
   if (!DataCrypto.canUserAccessData(userId)) {
@@ -293,34 +280,18 @@ async function discoverProxmoxGuestsForHost(
     throw error;
   }
 
-  const hostRecord = await createCurrentHostRepository().findDecryptedByIdAs(
-    userId,
-    parsedHostId,
-  );
-
-  if (!hostRecord) {
+  const resolvedHost = await resolveHostById(parsedHostId, userId);
+  if (!resolvedHost) {
     const error = new Error("Host not found");
     (error as Error & { status?: number }).status = 404;
     throw error;
   }
 
-  const host = hostRecord as unknown as SSHHost;
+  const host = resolvedHost as SSHHost;
   const proxmoxCfgRaw = parseJsonObject(host.proxmoxConfig);
   const config = parseProxmoxConfig(proxmoxCfgRaw);
 
-  if (host.userId !== userId) {
-    const { PermissionManager } =
-      await import("../../utils/permission-manager.js");
-    const pm = PermissionManager.getInstance();
-    const access = await pm.canAccessHost(userId, parsedHostId, "connect");
-    if (!access.hasAccess) {
-      const error = new Error("Access denied");
-      (error as Error & { status?: number }).status = 403;
-      throw error;
-    }
-  }
-
-  let resolvedCredentials: {
+  const resolvedCredentials: {
     password?: string;
     sshKey?: string;
     keyPassword?: string;
@@ -333,50 +304,6 @@ async function discoverProxmoxGuestsForHost(
   };
 
   const hostCredentialId = host.credentialId ?? null;
-
-  if (host.credentialId) {
-    if (userId !== host.userId) {
-      try {
-        const { SharedHostSecretsManager } =
-          await import("../../utils/shared-host-secrets-manager.js");
-        const sharedCred =
-          await SharedHostSecretsManager.getInstance().getSecretForUser(
-            host.id,
-            userId,
-            "ssh",
-          );
-        if (sharedCred) {
-          resolvedCredentials = {
-            password: sharedCred.password,
-            sshKey: sharedCred.key,
-            keyPassword: sharedCred.keyPassword,
-            authType: sharedCred.authType,
-          };
-        }
-      } catch (err) {
-        proxmoxLogger.error("Failed to resolve shared credential", err, {
-          operation: "proxmox_discover",
-          hostId: parsedHostId,
-          userId,
-        });
-      }
-    } else {
-      const cred =
-        await createCurrentCredentialRepository().findDecryptedByIdForUser(
-          userId,
-          host.credentialId as number,
-        );
-      if (cred) {
-        const c = cred;
-        resolvedCredentials = {
-          password: c.password as string | undefined,
-          sshKey: (c.key || c.privateKey) as string | undefined,
-          keyPassword: c.keyPassword as string | undefined,
-          authType: c.authType as string | undefined,
-        };
-      }
-    }
-  }
 
   const sshConfig: Record<string, unknown> = {
     host: host.ip?.replace(/^\[|\]$/g, "") || host.ip,
@@ -420,7 +347,51 @@ async function discoverProxmoxGuestsForHost(
     await new Promise<void>((resolve, reject) => {
       client.on("ready", resolve);
       client.on("error", reject);
-      client.connect(sshConfig as import("ssh2").ConnectConfig);
+
+      // Reuse the shared jump-host chain (same path terminal/metrics use)
+      // so Proxmox hosts that are only reachable via a jump host work too
+      // (otherwise the direct connect fails with EHOSTUNREACH). jumpHosts is
+      // stored as a JSON string on the decrypted record, so parse it first.
+      let parsedJumpHosts: Array<{ hostId: number }> = [];
+      try {
+        const rawJumpHosts = (host as { jumpHosts?: unknown }).jumpHosts;
+        const parsed =
+          typeof rawJumpHosts === "string"
+            ? JSON.parse(rawJumpHosts)
+            : rawJumpHosts;
+        if (Array.isArray(parsed)) parsedJumpHosts = parsed;
+      } catch {
+        parsedJumpHosts = [];
+      }
+
+      if (parsedJumpHosts.length > 0) {
+        createJumpHostChain(parsedJumpHosts, userId)
+          .then((jumpClient) => {
+            if (!jumpClient) {
+              reject(new Error("Jump host chain could not be established"));
+              return;
+            }
+            jumpClient.forwardOut(
+              "127.0.0.1",
+              0,
+              sshConfig.host as string,
+              sshConfig.port as number,
+              (err, stream) => {
+                if (err || !stream) {
+                  reject(err || new Error("Jump host forward failed"));
+                  return;
+                }
+                sshConfig.sock = stream;
+                delete sshConfig.host;
+                delete sshConfig.port;
+                client.connect(sshConfig as import("ssh2").ConnectConfig);
+              },
+            );
+          })
+          .catch(reject);
+      } else {
+        client.connect(sshConfig as import("ssh2").ConnectConfig);
+      }
     });
 
     proxmoxLogger.info("Proxmox discovery SSH connection established", {
@@ -493,7 +464,7 @@ async function discoverProxmoxGuestsForHost(
           const cfgJson = await execCommand(
             client,
             `pvesh get /nodes/${g.node}/lxc/${g.vmid}/config --output-format json 2>/dev/null`,
-            8000,
+            25000,
           );
           configIp = parseLxcIp(JSON.parse(cfgJson), config.preferredPrefixes);
         } catch {
@@ -507,7 +478,7 @@ async function discoverProxmoxGuestsForHost(
             const ifRaw = await execCommand(
               client,
               `pvesh get /nodes/${g.node}/lxc/${g.vmid}/interfaces --output-format json 2>/dev/null`,
-              5000,
+              12000,
             );
             const data = JSON.parse(ifRaw);
             const entries: Array<Record<string, unknown>> = Array.isArray(data)
@@ -539,7 +510,7 @@ async function discoverProxmoxGuestsForHost(
           const ifJson = await execCommand(
             client,
             `pvesh get /nodes/${g.node}/qemu/${g.vmid}/agent/network-get-interfaces --output-format json 2>/dev/null`,
-            5000,
+            12000,
           );
           const data = JSON.parse(ifJson);
           const ifaces: Array<Record<string, unknown>> = Array.isArray(
@@ -577,13 +548,21 @@ async function discoverProxmoxGuestsForHost(
       return null;
     }
 
-    const CONCURRENCY = 6;
+    // Low concurrency on purpose: pvesh is heavy and small Proxmox nodes
+    // (especially reached over a high-latency jump chain) suffer severe
+    // contention when many run at once — calls then exceed execCommand's
+    // timeout and IPs come back empty. 2 keeps each call well under budget.
+    const CONCURRENCY = 2;
     const ips: (string | null)[] = new Array(guestBases.length).fill(null);
     let cursor = 0;
+    let completed = 0;
+    onProgress?.(0, guestBases.length);
     async function ipWorker() {
       while (cursor < guestBases.length) {
         const i = cursor++;
         ips[i] = await resolveIp(guestBases[i]);
+        completed++;
+        onProgress?.(completed, guestBases.length);
       }
     }
     await Promise.all(
@@ -613,6 +592,9 @@ async function discoverProxmoxGuestsForHost(
       guests,
       credentialId: hostCredentialId,
       defaultCredentialId: config.defaultCredentialId,
+      jumpHosts: parseJumpHostsField(
+        (host as unknown as { jumpHosts?: unknown }).jumpHosts,
+      ),
       config,
     };
   } finally {
@@ -688,14 +670,6 @@ async function syncProxmoxHost(
         missingSince: null,
       };
 
-      if (!existing && !guest.ip) {
-        result.skipped++;
-        result.errors.push(
-          `${guest.name}: skipped because no IP address was discovered`,
-        );
-        continue;
-      }
-
       const baseConfig = existing
         ? parseJsonObject(existing.proxmoxConfig)
         : {};
@@ -718,11 +692,11 @@ async function syncProxmoxHost(
         typeof existing?.username === "string" && existing.username
           ? existing.username
           : connectionType === "rdp"
-            ? null
+            ? ""
             : "root";
       const update: Record<string, unknown> = {
         name: guest.name,
-        ip: guest.ip || existing?.ip,
+        ip: guest.ip || existing?.ip || "0.0.0.0",
         port,
         username,
         connectionType,
@@ -781,7 +755,9 @@ async function syncProxmoxHost(
         telnetPort: null,
         defaultPath: "/",
         tunnelConnections: "[]",
-        jumpHosts: null,
+        jumpHosts:
+          (discovery.host as unknown as { jumpHosts?: string | null })
+            .jumpHosts ?? null,
         quickActions: null,
         statsConfig: null,
         dockerConfig: null,
@@ -1010,6 +986,81 @@ proxmoxAutoSyncStartupTimer.unref?.();
  *       500:
  *         description: Discovery failed.
  */
+router.get(
+  "/discover/stream",
+  authenticateJWT,
+  requireDataAccess,
+  async (req, res) => {
+    const userId = (req as unknown as AuthenticatedRequest).userId;
+    const parsedHostId = Number((req.query as { hostId?: unknown }).hostId);
+    if (!parsedHostId || !Number.isInteger(parsedHostId) || parsedHostId <= 0) {
+      return res.status(400).json({ error: "Missing or invalid hostId" });
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-store, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    res.flushHeaders?.();
+
+    let closed = false;
+    const send = (event: string, data: unknown) => {
+      if (closed) return;
+      try {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      } catch {
+        closed = true;
+      }
+    };
+    const heartbeat = setInterval(() => {
+      if (closed) return;
+      try {
+        res.write(": keepalive\n\n");
+      } catch {
+        closed = true;
+        clearInterval(heartbeat);
+      }
+    }, 15000);
+    req.on("close", () => {
+      closed = true;
+      clearInterval(heartbeat);
+    });
+
+    try {
+      const discovery = await discoverProxmoxGuestsForHost(
+        userId,
+        parsedHostId,
+        (done, total) => send("progress", { done, total }),
+      );
+      send("result", {
+        guests: discovery.guests,
+        credentialId: discovery.credentialId,
+        defaultCredentialId: discovery.defaultCredentialId,
+        jumpHosts: discovery.jumpHosts,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      proxmoxLogger.error("Proxmox discovery (stream) failed", err, {
+        operation: "proxmox_discover",
+        hostId: parsedHostId,
+        userId,
+      });
+      send("fail", { message });
+    } finally {
+      clearInterval(heartbeat);
+      if (!closed) {
+        try {
+          res.end();
+        } catch {
+          // ignore end errors
+        }
+      }
+    }
+  },
+);
+
 router.post(
   "/discover",
   authenticateJWT,
@@ -1032,6 +1083,7 @@ router.post(
         guests: discovery.guests,
         credentialId: discovery.credentialId,
         defaultCredentialId: discovery.defaultCredentialId,
+        jumpHosts: discovery.jumpHosts,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";

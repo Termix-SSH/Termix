@@ -317,7 +317,7 @@ You can also run the Termix server on a cloud VPS instead of inside your own net
 
 Termix sends a small anonymous usage ping once every 24 hours to help understand how many instances are running and which features are actually used. This only includes a randomly generated instance ID, a count of users and hosts, the app version, and whether certain features (terminal, file manager, tunnels, docker, etc.) were used in the last 24 hours. It never includes usernames, hostnames, IP addresses, credentials, or any other identifying or connection data.
 
-This is opt-out and enabled by default. You can disable it at any time in Admin Settings under **General**.
+This is opt-out and enabled by default. You can disable it at any time in Admin Settings under General, or set `ENABLE_TELEMETRY=false` to turn it off before you ever spin-up Termix.
 
 <br />
 

@@ -1237,8 +1237,7 @@ export function DashboardTab({
     () => {
       try {
         return (localStorage.getItem("dashboardView") ?? "dashboard") as
-          | "dashboard"
-          | "homepage";
+          "dashboard" | "homepage";
       } catch {
         return "dashboard";
       }

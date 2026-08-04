@@ -199,9 +199,14 @@ export interface UserInfo {
   username: string;
   is_admin: boolean;
   is_oidc: boolean;
+  is_dual_auth?: boolean;
   password_hash?: string;
   data_unlocked?: boolean;
   show_donation_modal?: boolean;
+}
+
+export interface RemoteSyncUserInfo extends UserInfo {
+  roles: UserRole[];
 }
 
 interface UserCount {
@@ -365,8 +370,7 @@ export function isCurrentAuthInvalidationError(error: unknown): boolean {
   const axiosError = error as AxiosError;
   const apiError = error as ApiError;
   const responseData = axiosError.response?.data as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const errorCode = responseData?.code || apiError.code;
   const errorMessage = responseData?.error || apiError.message;
   const status = axiosError.response?.status || apiError.status;
@@ -763,6 +767,7 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
 let remoteFileManagerApi: AxiosInstance | null = null;
 let remoteTunnelApi: AxiosInstance | null = null;
 let remoteStatsApi: AxiosInstance | null = null;
+let remoteGuacamoleApi: AxiosInstance | null = null;
 
 export function getRemoteFileManagerApi(): AxiosInstance {
   if (!remoteFileManagerApi) {
@@ -783,6 +788,13 @@ export function getRemoteStatsApi(): AxiosInstance {
     remoteStatsApi = createRemoteOriginApiInstance("");
   }
   return remoteStatsApi;
+}
+
+export function getRemoteGuacamoleApi(): AxiosInstance {
+  if (!remoteGuacamoleApi) {
+    remoteGuacamoleApi = createRemoteOriginApiInstance("");
+  }
+  return remoteGuacamoleApi;
 }
 
 // Maps a live SSH session (keyed by sessionId, which today is the host's
@@ -1438,6 +1450,7 @@ export {
   bulkImportSSHHosts,
   importSSHConfigHosts,
   discoverProxmoxGuests,
+  discoverProxmoxGuestsStream,
   syncProxmoxGuests,
   bulkUpdateSSHHosts,
   deleteSSHHost,
@@ -1678,6 +1691,18 @@ export async function getUserInfo(): Promise<UserInfo> {
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user info");
+  }
+}
+
+export async function getRemoteSyncUserInfo(): Promise<RemoteSyncUserInfo | null> {
+  if (!isElectron()) return null;
+  try {
+    // ?? null so a missing preload bridge matches the declared return type
+    // rather than resolving to undefined.
+    return ((await window.electronAPI?.invoke?.("get-remote-sync-user-info")) ??
+      null) as RemoteSyncUserInfo | null;
+  } catch {
+    return null;
   }
 }
 
@@ -2087,6 +2112,8 @@ export {
   updateHostAccess,
   getHostAccess,
   revokeHostAccess,
+  getHostAuthOverride,
+  setHostAuthOverride,
   getPermissionsCatalog,
   getSharedHosts,
   shareSnippet,

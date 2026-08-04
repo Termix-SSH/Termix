@@ -76,22 +76,13 @@ export interface HostTransferDeps {
 }
 
 export type TransferPhase =
-  | "compressing"
-  | "transferring"
-  | "extracting"
-  | "reconnecting";
+  "compressing" | "transferring" | "extracting" | "reconnecting";
 export type TransferStatus =
-  | "running"
-  | "success"
-  | "partial"
-  | "error"
-  | "cancelled";
+  "running" | "success" | "partial" | "error" | "cancelled";
 export type TransferMethod = "stream" | "tar" | "item_sftp";
 
 export type TransferHopId =
-  | "source_read"
-  | "dest_sftp_write"
-  | "dest_local_write";
+  "source_read" | "dest_sftp_write" | "dest_local_write";
 
 export interface TransferHopMetrics {
   id: TransferHopId;

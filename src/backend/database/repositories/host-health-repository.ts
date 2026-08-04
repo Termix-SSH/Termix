@@ -1,6 +1,8 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, notInArray } from "drizzle-orm";
 import { hostHealthChecks, hostHealthHistory } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type HostHealthCheckRecord = typeof hostHealthChecks.$inferSelect;
 export type HostHealthHistoryRecord = typeof hostHealthHistory.$inferSelect;
@@ -45,27 +47,25 @@ export class HostHealthRepository {
   ): Promise<HostHealthCheckRecord> {
     const existing = await this.findChecksByUserAndHost(userId, hostId);
     if (existing) {
-      const [updated] = await this.context.drizzle
-        .update(hostHealthChecks)
-        .set({ checks, intervalSeconds, updatedAt: now })
-        .where(eq(hostHealthChecks.id, existing.id))
-        .returning();
+      const [updated] = await updateReturning(
+        this.context,
+        hostHealthChecks,
+        { checks, intervalSeconds, updatedAt: now },
+        eq(hostHealthChecks.id, existing.id),
+      );
 
       await this.afterWrite();
       return updated;
     }
 
-    const [created] = await this.context.drizzle
-      .insert(hostHealthChecks)
-      .values({
-        userId,
-        hostId,
-        checks,
-        intervalSeconds,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning();
+    const [created] = await insertReturning(this.context, hostHealthChecks, {
+      userId,
+      hostId,
+      checks,
+      intervalSeconds,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     await this.afterWrite();
     return created;
@@ -94,7 +94,7 @@ export class HostHealthRepository {
       })),
     );
 
-    this.pruneHistory(userId, hostId, keep);
+    await this.pruneHistory(userId, hostId, keep);
     await this.afterWrite();
     return results.length;
   }
@@ -121,41 +121,55 @@ export class HostHealthRepository {
     checksDeleted: number;
     historyDeleted: number;
   }> {
-    const historyRows = await this.context.drizzle
+    const historyResult = await this.context.drizzle
       .delete(hostHealthHistory)
-      .where(eq(hostHealthHistory.userId, userId))
-      .returning({ id: hostHealthHistory.id });
+      .where(eq(hostHealthHistory.userId, userId));
 
-    const checkRows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(hostHealthChecks)
-      .where(eq(hostHealthChecks.userId, userId))
-      .returning({ id: hostHealthChecks.id });
+      .where(eq(hostHealthChecks.userId, userId));
 
-    if (historyRows.length > 0 || checkRows.length > 0) {
+    if (rowsAffected(historyResult) > 0 || rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
     return {
-      checksDeleted: checkRows.length,
-      historyDeleted: historyRows.length,
+      checksDeleted: rowsAffected(result),
+      historyDeleted: rowsAffected(historyResult),
     };
   }
 
-  private pruneHistory(userId: string, hostId: number, keep: number): void {
-    this.context.sqlite
-      ?.prepare(
-        `DELETE FROM host_health_history
-         WHERE id IN (
-           SELECT id FROM host_health_history
-           WHERE user_id = ? AND host_id = ?
-           AND id NOT IN (
-             SELECT id FROM host_health_history
-             WHERE user_id = ? AND host_id = ?
-             ORDER BY ts DESC LIMIT ?
-           )
-         )`,
-      )
-      .run(userId, hostId, userId, hostId, keep);
+  /** Keeps the newest `keep` rows for the host and drops the rest. */
+  private async pruneHistory(
+    userId: string,
+    hostId: number,
+    keep: number,
+  ): Promise<void> {
+    const scope = and(
+      eq(hostHealthHistory.userId, userId),
+      eq(hostHealthHistory.hostId, hostId),
+    );
+
+    const retained = await this.context.drizzle
+      .select({ id: hostHealthHistory.id })
+      .from(hostHealthHistory)
+      .where(scope)
+      .orderBy(desc(hostHealthHistory.ts))
+      .limit(keep);
+
+    // Nothing retained means nothing to keep back, so the scope alone is the
+    // delete condition.
+    await this.context.drizzle.delete(hostHealthHistory).where(
+      retained.length
+        ? and(
+            scope,
+            notInArray(
+              hostHealthHistory.id,
+              retained.map((row) => row.id),
+            ),
+          )
+        : scope,
+    );
   }
 
   private async afterWrite(): Promise<void> {

@@ -64,12 +64,7 @@ export function isValidSignal(sig: unknown): sig is Signal {
 }
 
 export type ServiceAction =
-  | "start"
-  | "stop"
-  | "restart"
-  | "reload"
-  | "enable"
-  | "disable";
+  "start" | "stop" | "restart" | "reload" | "enable" | "disable";
 const SERVICE_ACTIONS: ServiceAction[] = [
   "start",
   "stop",

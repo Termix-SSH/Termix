@@ -44,6 +44,7 @@ const localeLoaders = {
 } satisfies Record<string, () => Promise<LocaleModule>>;
 
 export const supportedLngs = ["en", ...Object.keys(localeLoaders)];
+const PENDING_LOGIN_LANGUAGE_KEY = "termix-pending-login-language";
 
 export function normalizeLanguageCode(language?: string | null): string {
   if (!language) return "en";
@@ -121,6 +122,18 @@ export async function changeAppLanguage(language: string): Promise<string> {
   await i18n.changeLanguage(normalizedLanguage);
   localStorage.setItem("i18nextLng", normalizedLanguage);
   return normalizedLanguage;
+}
+
+export function rememberLoginLanguage(language: string): string {
+  const normalizedLanguage = normalizeLanguageCode(language);
+  sessionStorage.setItem(PENDING_LOGIN_LANGUAGE_KEY, normalizedLanguage);
+  return normalizedLanguage;
+}
+
+export function consumeLoginLanguage(): string | null {
+  const language = sessionStorage.getItem(PENDING_LOGIN_LANGUAGE_KEY);
+  sessionStorage.removeItem(PENDING_LOGIN_LANGUAGE_KEY);
+  return language ? normalizeLanguageCode(language) : null;
 }
 
 export default i18n;

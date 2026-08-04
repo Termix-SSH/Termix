@@ -6,6 +6,10 @@ import {
   getCurrentRepositorySqlite,
 } from "../../database/repositories/factory.js";
 import { SharedHostSecretsManager } from "../shared-host-secrets-manager.js";
+import {
+  needsExplicitPersist,
+  resolveDatabaseDialect,
+} from "../../database/db/dialect.js";
 
 const MIGRATION_FLAG = "shared_host_secrets_migrated_v1";
 
@@ -35,8 +39,14 @@ export async function runSharedHostSecretsMigration(): Promise<{
     return null;
   }
 
-  const sqlite = getCurrentRepositorySqlite();
   const result = { snapshotted: 0, skipped: 0 };
+
+  // Same reasoning as legacy-share-cleanup: this rebuilds shares that only a
+  // pre-existing SQLite deployment can have, using a synchronous query no other
+  // driver provides.
+  if (!needsExplicitPersist(resolveDatabaseDialect())) return result;
+
+  const sqlite = getCurrentRepositorySqlite();
 
   try {
     const grants = sqlite

@@ -8,54 +8,39 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import type { SSOProviderType } from "../../../types/index.js";
 import { createCurrentSsoProviderRepository } from "../repositories/factory.js";
 import { getOIDCConfigFromEnv } from "./user-oidc-utils.js";
+import {
+  decryptSsoConfigSecrets,
+  encryptSsoConfigSecrets,
+} from "../../utils/system-secret-crypto.js";
 
 const authManager = AuthManager.getInstance();
 
-function decryptProviderConfig(
+/**
+ * SSO secrets belong to the installation, not to a user: `sso_providers` has no
+ * userId and the values must be readable during login, before anyone is
+ * authenticated. They are encrypted with the system key rather than a user DEK.
+ * Values written by the previous base64 scheme still decode, and are upgraded
+ * the next time the provider is saved.
+ */
+async function decryptProviderConfig(
   configJson: string,
   _userId: string,
-): Record<string, unknown> {
+): Promise<Record<string, unknown>> {
   let config: Record<string, unknown>;
   try {
     config = JSON.parse(configJson);
   } catch {
     return {};
   }
-
-  for (const field of ["client_secret", "bindPassword"] as const) {
-    const val = config[field] as string | undefined;
-    if (val?.startsWith("encoded:")) {
-      try {
-        config[field] = Buffer.from(val.substring(8), "base64").toString(
-          "utf8",
-        );
-      } catch {
-        config[field] = "[ENCODING ERROR]";
-      }
-    }
-  }
-  return config;
+  return decryptSsoConfigSecrets(config);
 }
 
-function encryptProviderConfig(
+async function encryptProviderConfig(
   config: Record<string, unknown>,
   _userId: string,
   _providerId: string,
-): string {
-  const encoded: Record<string, unknown> = { ...config };
-  if (
-    typeof config.client_secret === "string" &&
-    !config.client_secret.startsWith("encoded:")
-  ) {
-    encoded.client_secret = `encoded:${Buffer.from(config.client_secret).toString("base64")}`;
-  }
-  if (
-    typeof config.bindPassword === "string" &&
-    !config.bindPassword.startsWith("encoded:")
-  ) {
-    encoded.bindPassword = `encoded:${Buffer.from(config.bindPassword).toString("base64")}`;
-  }
-  return JSON.stringify(encoded);
+): Promise<string> {
+  return JSON.stringify(await encryptSsoConfigSecrets(config));
 }
 
 function applyProviderDefaults(
@@ -141,10 +126,12 @@ export function registerSSOProviderRoutes(router: Router): void {
     try {
       const rows = await createCurrentSsoProviderRepository().listAll();
 
-      const result = rows.map((row) => ({
-        ...row,
-        config: decryptProviderConfig(row.config, userId),
-      }));
+      const result = await Promise.all(
+        rows.map(async (row) => ({
+          ...row,
+          config: await decryptProviderConfig(row.config, userId),
+        })),
+      );
       res.json(result);
     } catch (err) {
       authLogger.error("Failed to list SSO providers (admin)", err);
@@ -253,7 +240,7 @@ export function registerSSOProviderRoutes(router: Router): void {
       }
 
       const tempId = `new-${Date.now()}`;
-      const encryptedConfig = encryptProviderConfig(
+      const encryptedConfig = await encryptProviderConfig(
         configWithDefaults as Record<string, unknown>,
         userId,
         tempId,
@@ -275,7 +262,7 @@ export function registerSSOProviderRoutes(router: Router): void {
       });
       res.status(201).json({
         ...inserted,
-        config: decryptProviderConfig(inserted.config, userId),
+        config: await decryptProviderConfig(inserted.config, userId),
       });
     } catch (err) {
       authLogger.error("Failed to create SSO provider", err);
@@ -332,7 +319,7 @@ export function registerSSOProviderRoutes(router: Router): void {
 
       let encryptedConfig = existing.config;
       if (rawConfig !== undefined) {
-        const existingDecrypted = decryptProviderConfig(
+        const existingDecrypted = await decryptProviderConfig(
           existing.config,
           userId,
         );
@@ -342,7 +329,7 @@ export function registerSSOProviderRoutes(router: Router): void {
           ),
           ...rawConfig,
         };
-        encryptedConfig = encryptProviderConfig(
+        encryptedConfig = await encryptProviderConfig(
           mergedConfig,
           userId,
           String(providerId),
@@ -369,7 +356,7 @@ export function registerSSOProviderRoutes(router: Router): void {
       });
       res.json({
         ...updated,
-        config: decryptProviderConfig(updated.config, userId),
+        config: await decryptProviderConfig(updated.config, userId),
       });
     } catch (err) {
       authLogger.error("Failed to update SSO provider", err);

@@ -72,11 +72,7 @@ const SharedSessionView = lazy(
 );
 
 type Phase =
-  | "verifying"
-  | "idle-auth"
-  | "fading-in"
-  | "idle-app"
-  | "fading-out";
+  "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
 
 function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);

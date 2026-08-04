@@ -1,4 +1,10 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  integer,
+  real,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const users = sqliteTable("users", {
@@ -124,6 +130,9 @@ export const hosts = sqliteTable("ssh_data", {
   pin: integer("pin", { mode: "boolean" }).notNull().default(false),
   authType: text("auth_type").notNull(),
   useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
+  shareSshAuth: integer("share_ssh_auth", { mode: "boolean" })
+    .notNull()
+    .default(false),
   forceKeyboardInteractive: text("force_keyboard_interactive"),
 
   password: text("password"),
@@ -560,46 +569,85 @@ export const hostAccess = sqliteTable("host_access", {
     .default(sql`CURRENT_TIMESTAMP`),
   lastAccessedAt: text("last_accessed_at"),
   accessCount: integer("access_count").notNull().default(0),
-  overrideCredentialId: integer("override_credential_id").references(
-    () => sshCredentials.id,
-    { onDelete: "set null" },
-  ),
 });
 
-export const sharedHostSecrets = sqliteTable("shared_host_secrets", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const sharedHostAuthOverrides = sqliteTable(
+  "shared_host_auth_overrides",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    protocol: text("protocol").notNull().default("ssh"),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("shared_host_auth_overrides_host_user_protocol_unique").on(
+      table.hostId,
+      table.userId,
+      table.protocol,
+    ),
+  ],
+);
 
-  hostAccessId: integer("host_access_id")
-    .notNull()
-    .references(() => hostAccess.id, { onDelete: "cascade" }),
+export const sharedHostSecrets = sqliteTable(
+  "shared_host_secrets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
 
-  targetUserId: text("target_user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    hostAccessId: integer("host_access_id")
+      .notNull()
+      .references(() => hostAccess.id, { onDelete: "cascade" }),
 
-  protocol: text("protocol").notNull().default("ssh"),
-  sourceType: text("source_type").notNull().default("credential"),
+    targetUserId: text("target_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
-  originalCredentialId: integer("original_credential_id").references(
-    () => sshCredentials.id,
-    { onDelete: "cascade" },
-  ),
+    protocol: text("protocol").notNull().default("ssh"),
+    sourceType: text("source_type").notNull().default("credential"),
 
-  encryptedUsername: text("encrypted_username"),
-  encryptedAuthType: text("encrypted_auth_type"),
-  encryptedPassword: text("encrypted_password"),
-  encryptedKey: text("encrypted_key", { length: 16384 }),
-  encryptedKeyPassword: text("encrypted_key_password"),
-  encryptedKeyType: text("encrypted_key_type"),
-  encryptedDomain: text("encrypted_domain"),
+    originalCredentialId: integer("original_credential_id").references(
+      () => sshCredentials.id,
+      { onDelete: "cascade" },
+    ),
 
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    encryptedUsername: text("encrypted_username"),
+    encryptedAuthType: text("encrypted_auth_type"),
+    encryptedPassword: text("encrypted_password"),
+    encryptedKey: text("encrypted_key", { length: 16384 }),
+    encryptedKeyPassword: text("encrypted_key_password"),
+    encryptedKeyType: text("encrypted_key_type"),
+    encryptedDomain: text("encrypted_domain"),
+
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [
+    uniqueIndex("idx_shared_host_secrets_scope").on(
+      table.hostAccessId,
+      table.targetUserId,
+      table.protocol,
+    ),
+  ],
+);
 
 export const roles = sqliteTable("roles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -621,29 +669,36 @@ export const roles = sqliteTable("roles", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const userRoles = sqliteTable("user_roles", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  roleId: integer("role_id")
-    .notNull()
-    .references(() => roles.id, { onDelete: "cascade" }),
-
-  grantedBy: text("granted_by").references(() => users.id, {
-    onDelete: "set null",
-  }),
-  grantedAt: text("granted_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const userRoles = sqliteTable(
+  "user_roles",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id")
+      .notNull()
+      .references(() => roles.id, { onDelete: "cascade" }),
+  
+    grantedBy: text("granted_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    grantedAt: text("granted_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId)],
+);
 
 export const auditLogs = sqliteTable("audit_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
 
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  // Nullable on purpose: the trail outlives the account, and username keeps the
+  // entry attributable once the reference is gone.
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   username: text("username").notNull(),
 
   action: text("action").notNull(),
@@ -669,9 +724,10 @@ export const sessionRecordings = sqliteTable("session_recordings", {
   hostId: integer("host_id")
     .notNull()
     .references(() => hosts.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+  // Nullable on purpose: a recording is evidence about the host as much as the
+  // person, so it outlives the account. username keeps it attributable.
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  username: text("username"),
   accessId: integer("access_id").references(() => hostAccess.id, {
     onDelete: "set null",
   }),
@@ -750,29 +806,36 @@ export const sessionShareParticipants = sqliteTable(
   },
 );
 
-export const opksshTokens = sqliteTable("opkssh_tokens", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-
-  sshCert: text("ssh_cert", { length: 8192 }).notNull(),
-  privateKey: text("private_key", { length: 8192 }).notNull(),
-
-  email: text("email"),
-  sub: text("sub"),
-  issuer: text("issuer"),
-  audience: text("audience"),
-
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
-  lastUsed: text("last_used"),
-});
+export const opksshTokens = sqliteTable(
+  "opkssh_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+  
+    sshCert: text("ssh_cert", { length: 8192 }).notNull(),
+    privateKey: text("private_key", { length: 8192 }).notNull(),
+  
+    email: text("email"),
+    sub: text("sub"),
+    issuer: text("issuer"),
+    audience: text("audience"),
+  
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+    lastUsed: text("last_used"),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [uniqueIndex("idx_opkssh_tokens_user_host").on(table.userId, table.hostId)],
+);
 
 // Vault SSH signer profiles. These hold ONLY non-secret connection settings and
 // are intended to be shared across users (shared === true makes a profile
@@ -813,24 +876,31 @@ export const vaultProfiles = sqliteTable("vault_profiles", {
 // Per-user cache of the ephemeral SSH private key + Vault-signed certificate.
 // Transient: rows live only until the certificate expires. Secret fields are
 // encrypted under the user's data-encryption key (see field-crypto.ts).
-export const vaultTokens = sqliteTable("vault_tokens", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  profileId: integer("profile_id")
-    .notNull()
-    .references(() => vaultProfiles.id, { onDelete: "cascade" }),
-
-  sshCert: text("ssh_cert", { length: 8192 }).notNull(),
-  privateKey: text("private_key", { length: 8192 }).notNull(),
-
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
-  lastUsed: text("last_used"),
-});
+export const vaultTokens = sqliteTable(
+  "vault_tokens",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    profileId: integer("profile_id")
+      .notNull()
+      .references(() => vaultProfiles.id, { onDelete: "cascade" }),
+  
+    sshCert: text("ssh_cert", { length: 8192 }).notNull(),
+    privateKey: text("private_key", { length: 8192 }).notNull(),
+  
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+    lastUsed: text("last_used"),
+  },
+  // Declared inline in the production DDL as UNIQUE(...), but never here,
+  // so the generated Postgres and MySQL schemas allowed duplicates the
+  // SQLite deployment forbids — and the upsert had nothing to conflict on.
+  (table) => [uniqueIndex("idx_vault_tokens_user_profile").on(table.userId, table.profileId)],
+);
 
 export const apiKeys = sqliteTable("api_keys", {
   id: text("id").primaryKey(),
@@ -898,7 +968,9 @@ export const userPreferences = sqliteTable("user_preferences", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const hostMetricsPreferences = sqliteTable("host_metrics_preferences", {
+export const hostMetricsPreferences = sqliteTable(
+  "host_metrics_preferences",
+  {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
@@ -915,9 +987,18 @@ export const hostMetricsPreferences = sqliteTable("host_metrics_preferences", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-});
+  },
+  // One layout per user per host. Enforced in production since the inline DDL
+  // creates it, but it was never declared here, so the generated Postgres and
+  // MySQL schemas lacked it — and the upsert has nothing to conflict on.
+  (table) => [
+    uniqueIndex("idx_host_metrics_prefs_user_host").on(table.userId, table.hostId),
+  ],
+);
 
-export const hostHealthChecks = sqliteTable("host_health_checks", {
+export const hostHealthChecks = sqliteTable(
+  "host_health_checks",
+  {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
@@ -934,7 +1015,12 @@ export const hostHealthChecks = sqliteTable("host_health_checks", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-});
+  },
+  // Same as above: one set of checks per user per host.
+  (table) => [
+    uniqueIndex("idx_host_health_checks_user_host").on(table.userId, table.hostId),
+  ],
+);
 
 export const hostHealthHistory = sqliteTable("host_health_history", {
   id: integer("id").primaryKey({ autoIncrement: true }),

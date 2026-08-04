@@ -1,5 +1,6 @@
 import { handleApiError, rbacApi } from "@/main-axios";
 import type { AccessRecord, Role, UserRole } from "@/main-axios";
+import type { AuthOverrideProtocol } from "@/types/auth-protocols";
 
 export async function getRoles(): Promise<{ roles: Role[] }> {
   try {
@@ -229,6 +230,40 @@ export async function revokeHostAccess(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "revoke host access");
+  }
+}
+
+export async function getHostAuthOverride(
+  hostId: number,
+  protocol: AuthOverrideProtocol,
+): Promise<{ protocol: AuthOverrideProtocol; credentialId: number | null }> {
+  try {
+    const response = await rbacApi.get(
+      `/rbac/host-access/${hostId}/auth/${protocol}`,
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "fetch host authentication override");
+  }
+}
+
+export async function setHostAuthOverride(
+  hostId: number,
+  protocol: AuthOverrideProtocol,
+  credentialId: number | null,
+): Promise<{
+  success: boolean;
+  protocol: AuthOverrideProtocol;
+  credentialId: number | null;
+}> {
+  try {
+    const response = await rbacApi.put(
+      `/rbac/host-access/${hostId}/auth/${protocol}`,
+      { credentialId },
+    );
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error, "update host authentication override");
   }
 }
 

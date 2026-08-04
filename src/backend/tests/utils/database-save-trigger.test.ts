@@ -38,4 +38,28 @@ describe("DatabaseSaveTrigger", () => {
     expect(DatabaseSaveTrigger.isDirty).toBe(false);
     expect(DatabaseSaveTrigger.getStatus().pendingSave).toBe(false);
   });
+
+  it("queues a force save behind an in-flight save", async () => {
+    let finishFirstSave: (() => void) | undefined;
+    const firstSave = new Promise<void>((resolve) => {
+      finishFirstSave = resolve;
+    });
+    const save = vi
+      .fn<() => Promise<void>>()
+      .mockReturnValueOnce(firstSave)
+      .mockResolvedValueOnce(undefined);
+    DatabaseSaveTrigger.initialize(save);
+
+    const first = DatabaseSaveTrigger.forceSave("first_write");
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+
+    const second = DatabaseSaveTrigger.forceSave("sso_provider_write");
+    expect(save).toHaveBeenCalledTimes(1);
+
+    finishFirstSave?.();
+    await Promise.all([first, second]);
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(DatabaseSaveTrigger.getStatus().pendingSave).toBe(false);
+  });
 });

@@ -60,12 +60,7 @@ type ApiErrorLike = {
 };
 
 type ManageTabId =
-  | "account"
-  | "hosts"
-  | "credentials"
-  | "snippets"
-  | "sessions"
-  | "danger";
+  "account" | "hosts" | "credentials" | "snippets" | "sessions" | "danger";
 
 type ManagedSnippet = {
   id: number;

@@ -17,31 +17,7 @@ describe("AuditLogRepository", () => {
   ): Promise<AuditLogRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE audit_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        username TEXT NOT NULL,
-        action TEXT NOT NULL,
-        resource_type TEXT NOT NULL,
-        resource_id TEXT,
-        resource_name TEXT,
-        details TEXT,
-        ip_address TEXT,
-        user_agent TEXT,
-        success INTEGER NOT NULL,
-        error_message TEXT,
-        timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
     `);
@@ -128,5 +104,47 @@ describe("AuditLogRepository", () => {
         })
       ).logs.map((log) => log.userId),
     ).toEqual(["user-2"]);
+  });
+
+  it("keeps entries when their user is deleted, detaching instead of removing", async () => {
+    const repo = await createRepository();
+
+    await repo.create({
+      userId: "user-1",
+      username: "alice",
+      action: "delete_host",
+      resourceType: "host",
+      resourceId: "9",
+      success: true,
+      timestamp: "2026-07-01T00:00:00.000Z",
+    });
+    await repo.create({
+      userId: "user-2",
+      username: "bob",
+      action: "create_host",
+      resourceType: "host",
+      resourceId: "8",
+      success: true,
+      timestamp: "2026-07-02T00:00:00.000Z",
+    });
+
+    expect(await repo.anonymizeByUserId("user-1")).toBe(1);
+
+    const { logs } = await repo.listPage({ filters: {}, limit: 10, offset: 0 });
+    expect(logs).toHaveLength(2);
+
+    const detached = logs.find((log) => log.action === "delete_host");
+    // The account is gone; the entry and its actor name are not.
+    expect(detached?.userId).toBeNull();
+    expect(detached?.username).toBe("alice");
+    expect(logs.find((log) => log.action === "create_host")?.userId).toBe(
+      "user-2",
+    );
+  });
+
+  it("reports nothing to detach for a user with no entries", async () => {
+    const repo = await createRepository();
+
+    expect(await repo.anonymizeByUserId("user-2")).toBe(0);
   });
 });

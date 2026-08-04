@@ -8,11 +8,7 @@ export interface KeyCombo {
 }
 
 export type KeybindingActionType =
-  | "copy"
-  | "paste"
-  | "sendControlCode"
-  | "sendText"
-  | "runSnippet";
+  "copy" | "paste" | "sendControlCode" | "sendText" | "runSnippet";
 
 export interface KeybindingAction {
   type: KeybindingActionType;

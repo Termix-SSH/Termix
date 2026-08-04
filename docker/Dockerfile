@@ -76,6 +76,9 @@ COPY --chown=node:node --from=frontend-builder /app/dist /app/html
 COPY --chown=node:node --from=production-deps /app/node_modules /app/node_modules
 COPY --chown=node:node --from=backend-builder /app/dist/backend ./dist/backend
 COPY --chown=node:node package.json ./
+# Schema for Postgres and MySQL. Unused by the default SQLite deployment, which
+# builds its tables at startup instead.
+COPY --chown=node:node drizzle ./drizzle
 
 VOLUME ["/app/data"]
 

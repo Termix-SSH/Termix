@@ -60,7 +60,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
 
       - name: Setup Docker Buildx
-        uses: useblacksmith/setup-docker-builder@v1
+        uses: useblacksmith/setup-docker-builder@v2
 
       - name: Determine tags
         id: tags

@@ -713,7 +713,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const filename = `termix-export-${user[0].username}-${timestamp}.sqlite`;
+    const filename = `termix-export-${user.username}-${timestamp}.sqlite`;
     const tempPath = path.join(tempDir, filename);
 
     apiLogger.info("Creating export database", {
@@ -882,7 +882,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
         );
       `);
 
-      const userRecord = user[0];
+      const userRecord = user;
       const insertUser = exportDb.prepare(`
         INSERT INTO users (id, username, password_hash, is_admin, is_oidc, oidc_identifier, client_id, client_secret, issuer_url, authorization_url, token_url, identifier_path, name_path, scopes, totp_secret, totp_enabled, totp_backup_codes)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

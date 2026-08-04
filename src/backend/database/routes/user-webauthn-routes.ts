@@ -421,8 +421,7 @@ export function registerUserWebAuthnRoutes(
     }
 
     const response = req.body?.response as
-      | AuthenticationResponseJSON
-      | undefined;
+      AuthenticationResponseJSON | undefined;
     if (!response?.id) {
       return res.status(400).json({ error: "Invalid passkey response" });
     }

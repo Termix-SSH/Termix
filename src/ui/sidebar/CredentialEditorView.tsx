@@ -283,9 +283,7 @@ export function CredentialEditorView({
                         try {
                           const result = await generateKeyPair(
                             keyType as
-                              | "ssh-ed25519"
-                              | "ssh-rsa"
-                              | "ecdsa-sha2-nistp256",
+                              "ssh-ed25519" | "ssh-rsa" | "ecdsa-sha2-nistp256",
                             bits,
                             credForm.passphrase === "existing_key_password"
                               ? undefined

@@ -31,6 +31,7 @@ type GeneralSettingsSectionProps = {
   open: boolean;
   onToggle: () => void;
   analyticsEnabled: boolean;
+  analyticsLocked: boolean;
   handleToggleAnalytics: () => void;
   sessionSharingGloballyEnabled: boolean;
   handleToggleSessionSharingGloballyEnabled: () => void;
@@ -72,6 +73,7 @@ export function AdminGeneralSettingsSection({
   open,
   onToggle,
   analyticsEnabled,
+  analyticsLocked,
   handleToggleAnalytics,
   sessionSharingGloballyEnabled,
   handleToggleSessionSharingGloballyEnabled,
@@ -120,9 +122,17 @@ export function AdminGeneralSettingsSection({
       <div className="flex flex-col gap-0 pt-2">
         <SettingRow
           label={t("admin.analyticsEnabled")}
-          description={t("admin.analyticsEnabledDesc")}
+          description={
+            analyticsLocked
+              ? t("admin.analyticsEnabledLockedDesc")
+              : t("admin.analyticsEnabledDesc")
+          }
         >
-          <AdminToggle on={analyticsEnabled} onToggle={handleToggleAnalytics} />
+          <AdminToggle
+            on={analyticsEnabled}
+            onToggle={handleToggleAnalytics}
+            disabled={analyticsLocked}
+          />
         </SettingRow>
         <SettingRow
           label={t("admin.sessionSharingGloballyEnabled")}
