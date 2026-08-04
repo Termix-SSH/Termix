@@ -86,16 +86,9 @@ import { useTheme } from "@/components/theme-provider";
 import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
-import { LegalDisclosure } from "@/legal/LegalDisclosure";
 
 type UserProfileSection =
-  | "account"
-  | "appearance"
-  | "security"
-  | "api-keys"
-  | "data"
-  | "c2s-tunnels"
-  | "legal";
+  "account" | "appearance" | "security" | "api-keys" | "data" | "c2s-tunnels";
 
 const THEMES: { id: ThemeId; preview: string }[] = [
   { id: "system", preview: "auto" },
@@ -2070,16 +2063,6 @@ export function UserProfilePanel({
             </SettingRow>
           </div>
         </div>
-      </AccordionSection>
-
-      <AccordionSection
-        id="legal"
-        label={t("newUi.sidebar.userProfile.sectionLegal")}
-        icon={<ScrollText className="size-3.5" />}
-        open={openSections.has("legal")}
-        onToggle={() => toggle("legal")}
-      >
-        <LegalDisclosure />
       </AccordionSection>
 
       {/* The embedded desktop backend auto-authenticates its machine-local

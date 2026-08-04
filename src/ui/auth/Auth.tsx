@@ -46,7 +46,6 @@ import {
   removeSilentSigninFromSearch,
   shouldTriggerSilentSignin,
 } from "./silent-signin";
-import { LegalDisclosureDialog } from "@/legal/LegalDisclosure";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -242,7 +241,6 @@ export function Auth({ onLogin }: AuthProps) {
   const [language, setLanguage] = useState(() =>
     normalizeLanguageCode(localStorage.getItem("i18nextLng")),
   );
-  const [legalOpen, setLegalOpen] = useState(false);
 
   function handleLanguageChange(code: string) {
     const language = rememberLoginLanguage(code);
@@ -1590,17 +1588,6 @@ export function Auth({ onLogin }: AuthProps) {
                     ))}
                   </select>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setLegalOpen(true)}
-                  className="self-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                >
-                  {t("newUi.sidebar.userProfile.sectionLegal")}
-                </button>
-                <LegalDisclosureDialog
-                  open={legalOpen}
-                  onOpenChange={setLegalOpen}
-                />
               </div>
             )}
           </div>
