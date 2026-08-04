@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bell,
+  Check,
   Clock,
   Fingerprint,
   Hammer,
@@ -9,21 +10,20 @@ import {
   LayoutPanelLeft,
   LogOut,
   Network,
-  Pin,
-  PinOff,
   Play,
   Plug,
   ScrollText,
   Server,
   Settings,
+  SlidersHorizontal,
   Usb,
   User,
   Zap,
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { getAlertFirings } from "@/api/alerts-api";
-import { getUserPreferences, saveUserPreferences } from "@/api/open-tabs-api";
 import { isElectron } from "@/lib/electron";
+import { readRailPreference, setRailPreference } from "./rail-preferences";
 
 export type RailView =
   | "hosts"
@@ -165,12 +165,11 @@ export function AppRail({
 }) {
   const { t } = useTranslation();
   const [hovered, setHovered] = useState(false);
-  const [pinned, setPinned] = useState(
-    () => localStorage.getItem("pinAppRail") === "true",
+  const [pinned, setPinned] = useState(() => readRailPreference("pinAppRail"));
+  const [expandOnHover, setExpandOnHover] = useState(() =>
+    readRailPreference("expandAppRailOnHover"),
   );
-  const [expandOnHover, setExpandOnHover] = useState(
-    () => localStorage.getItem("expandAppRailOnHover") !== "false",
-  );
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
 
   useEffect(() => {
@@ -224,12 +223,9 @@ export function AppRail({
   });
 
   useEffect(() => {
-    const pinHandler = () =>
-      setPinned(localStorage.getItem("pinAppRail") === "true");
+    const pinHandler = () => setPinned(readRailPreference("pinAppRail"));
     const hoverHandler = () =>
-      setExpandOnHover(
-        localStorage.getItem("expandAppRailOnHover") !== "false",
-      );
+      setExpandOnHover(readRailPreference("expandAppRailOnHover"));
     window.addEventListener("pinAppRailChanged", pinHandler);
     window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
     return () => {
@@ -237,6 +233,24 @@ export function AppRail({
       window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
     };
   }, []);
+
+  useEffect(() => {
+    if (!menuPos) return;
+    const onDown = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest("[data-rail-context-menu]")) {
+        setMenuPos(null);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuPos(null);
+    };
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuPos]);
 
   useEffect(() => {
     const handler = () => {
@@ -291,17 +305,13 @@ export function AppRail({
   const railButtons = buildRailButtons(splitMode, t, effectiveHiddenTabs);
 
   const togglePinned = () => {
-    const next = !pinned;
-    setPinned(next);
-    localStorage.setItem("pinAppRail", String(next));
-    window.dispatchEvent(new Event("pinAppRailChanged"));
-    void getUserPreferences()
-      .then((preferences) => {
-        if (preferences.storageMode === "cloud") {
-          return saveUserPreferences({ pinAppRail: next });
-        }
-      })
-      .catch(() => {});
+    setRailPreference("pinAppRail", !pinned);
+    setMenuPos(null);
+  };
+
+  const toggleExpandOnHover = () => {
+    setRailPreference("expandAppRailOnHover", !expandOnHover);
+    setMenuPos(null);
   };
 
   return (
@@ -310,6 +320,16 @@ export function AppRail({
       style={{ width: railExpanded ? 160 : 40 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        // Keep the menu on screen when right-clicking near the viewport edges
+        const MENU_W = 190;
+        const MENU_H = 96;
+        setMenuPos({
+          x: Math.min(e.clientX, window.innerWidth - MENU_W - 8),
+          y: Math.min(e.clientY, window.innerHeight - MENU_H - 8),
+        });
+      }}
     >
       <div className="flex flex-col flex-1 gap-1 overflow-y-auto scrollbar-none min-h-0">
         {railButtons.map((item, i) =>
@@ -373,35 +393,6 @@ export function AppRail({
       </div>
 
       <div className="shrink-0 flex flex-col gap-1 border-t border-border pt-1 pb-1">
-        <button
-          onClick={togglePinned}
-          style={btnStyle}
-          className={`${btnBase} ${
-            pinned
-              ? "text-accent-brand bg-accent-brand/10"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-          }`}
-          title={
-            pinned
-              ? t("newUi.sidebar.userProfile.unpinAppRail")
-              : t("newUi.sidebar.userProfile.pinAppRail")
-          }
-          aria-pressed={pinned}
-        >
-          <span
-            className="shrink-0 flex items-center justify-center"
-            style={{ width: 16, height: 16 }}
-          >
-            {pinned ? <PinOff size={16} /> : <Pin size={16} />}
-          </span>
-          <span
-            className={`text-xs font-medium whitespace-nowrap overflow-hidden transition-[opacity,width] duration-150 ${railExpanded ? "opacity-100 delay-75" : "opacity-0 w-0"}`}
-          >
-            {pinned
-              ? t("newUi.sidebar.userProfile.unpinAppRail")
-              : t("newUi.sidebar.userProfile.pinAppRail")}
-          </span>
-        </button>
         {[
           {
             view: "alerts" as RailView,
@@ -496,6 +487,50 @@ export function AppRail({
           </div>
         </button>
       </div>
+
+      {menuPos && (
+        <div
+          data-rail-context-menu
+          style={{ position: "fixed", left: menuPos.x, top: menuPos.y }}
+          className="z-[10000] bg-popover border border-border shadow-lg py-1 min-w-[190px]"
+        >
+          <button
+            onClick={togglePinned}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+            role="menuitemcheckbox"
+            aria-checked={pinned}
+          >
+            <span className="shrink-0 w-3 flex items-center justify-center">
+              {pinned && <Check className="size-3" />}
+            </span>
+            {t("newUi.sidebar.userProfile.pinAppRail")}
+          </button>
+          <button
+            onClick={toggleExpandOnHover}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+            role="menuitemcheckbox"
+            aria-checked={expandOnHover}
+          >
+            <span className="shrink-0 w-3 flex items-center justify-center">
+              {expandOnHover && <Check className="size-3" />}
+            </span>
+            {t("newUi.sidebar.userProfile.expandAppRailOnHover")}
+          </button>
+          <div className="h-px bg-border my-1" />
+          <button
+            onClick={() => {
+              onRailClick("user-profile");
+              setMenuPos(null);
+            }}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+          >
+            <span className="shrink-0 w-3 flex items-center justify-center">
+              <SlidersHorizontal className="size-3" />
+            </span>
+            {t("nav.sidebarSettings")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

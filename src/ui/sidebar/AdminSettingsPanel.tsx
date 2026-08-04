@@ -133,6 +133,7 @@ export function AdminSettingsPanel({
   const [tailscaleApiKey, setTailscaleApiKey] = useState("");
   const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
+  const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
     useState(true);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
@@ -342,6 +343,7 @@ export function AdminSettingsPanel({
       }
       if (analytics.status === "fulfilled") {
         setAnalyticsEnabled(analytics.value.enabled);
+        setAnalyticsLocked(analytics.value.locked ?? false);
       }
       if (sessionSharingEnabled.status === "fulfilled") {
         setSessionSharingGloballyEnabled(sessionSharingEnabled.value.enabled);
@@ -454,6 +456,7 @@ export function AdminSettingsPanel({
   }
 
   async function handleToggleAnalytics() {
+    if (analyticsLocked) return;
     const newVal = !analyticsEnabled;
     setAnalyticsEnabled(newVal);
     try {
@@ -928,6 +931,7 @@ export function AdminSettingsPanel({
         open={openSections.has("general")}
         onToggle={() => toggle("general")}
         analyticsEnabled={analyticsEnabled}
+        analyticsLocked={analyticsLocked}
         handleToggleAnalytics={handleToggleAnalytics}
         sessionSharingGloballyEnabled={sessionSharingGloballyEnabled}
         handleToggleSessionSharingGloballyEnabled={

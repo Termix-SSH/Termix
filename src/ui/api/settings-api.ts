@@ -149,7 +149,10 @@ export async function updateGuacamoleSettings(settings: {
 // ANALYTICS SETTINGS
 // ============================================================================
 
-export async function getAnalyticsEnabled(): Promise<{ enabled: boolean }> {
+export async function getAnalyticsEnabled(): Promise<{
+  enabled: boolean;
+  locked?: boolean;
+}> {
   try {
     const response = await authApi.get("/users/analytics-enabled");
     return response.data;

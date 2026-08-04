@@ -19,6 +19,7 @@ import {
   getUserPreferences,
 } from "@/main-axios";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
+import { readRailPreference, setRailPreference } from "./rail-preferences";
 import {
   deleteWebAuthnCredential,
   listWebAuthnCredentials,
@@ -616,11 +617,11 @@ export function UserProfilePanel({
   const [statusColorScheme, setStatusColorScheme] = useState(
     () => localStorage.getItem("statusColorScheme") ?? "accent",
   );
-  const [pinAppRail, setPinAppRail] = useState(
-    () => localStorage.getItem("pinAppRail") === "true",
+  const [pinAppRail, setPinAppRail] = useState(() =>
+    readRailPreference("pinAppRail"),
   );
-  const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(
-    () => localStorage.getItem("expandAppRailOnHover") !== "false",
+  const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(() =>
+    readRailPreference("expandAppRailOnHover"),
   );
   const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
@@ -694,6 +695,21 @@ export function UserProfilePanel({
       })
       .catch(() => {});
   }, [t]);
+
+  // The rail can toggle these from its right-click menu while this panel is
+  // mounted, so mirror the change back into the switches instead of letting
+  // them drift from the stored value.
+  useEffect(() => {
+    const pinHandler = () => setPinAppRail(readRailPreference("pinAppRail"));
+    const hoverHandler = () =>
+      setExpandAppRailOnHover(readRailPreference("expandAppRailOnHover"));
+    window.addEventListener("pinAppRailChanged", pinHandler);
+    window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    return () => {
+      window.removeEventListener("pinAppRailChanged", pinHandler);
+      window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    };
+  }, []);
 
   function saveToCloud(prefs: Parameters<typeof saveUserPreferences>[0]) {
     void saveUserPreferences(prefs).catch(() => {});
@@ -1877,9 +1893,7 @@ export function UserProfilePanel({
                 checked={pinAppRail}
                 onChange={(v) => {
                   setPinAppRail(v);
-                  localStorage.setItem("pinAppRail", v.toString());
-                  window.dispatchEvent(new Event("pinAppRailChanged"));
-                  if (storageMode === "cloud") saveToCloud({ pinAppRail: v });
+                  setRailPreference("pinAppRail", v);
                 }}
               />
             </SettingRow>
@@ -1893,12 +1907,7 @@ export function UserProfilePanel({
                 checked={expandAppRailOnHover}
                 onChange={(v) => {
                   setExpandAppRailOnHover(v);
-                  localStorage.setItem("expandAppRailOnHover", v.toString());
-                  window.dispatchEvent(
-                    new Event("expandAppRailOnHoverChanged"),
-                  );
-                  if (storageMode === "cloud")
-                    saveToCloud({ expandAppRailOnHover: v });
+                  setRailPreference("expandAppRailOnHover", v);
                 }}
               />
             </SettingRow>
