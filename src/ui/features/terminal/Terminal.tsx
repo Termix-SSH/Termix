@@ -15,6 +15,7 @@ import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { SearchAddon } from "@xterm/addon-search";
 import { useTranslation } from "react-i18next";
 import { getBasePath } from "@/lib/base-path";
 import {
@@ -52,6 +53,7 @@ import {
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
+import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
@@ -352,6 +354,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const autocompleteSuggestionsRef = useRef<string[]>([]);
     const autocompleteSelectedIndexRef = useRef(0);
 
+    const searchAddonRef = useRef<SearchAddon | null>(null);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchCaseSensitive, setSearchCaseSensitive] = useState(false);
+    const [searchWholeWord, setSearchWholeWord] = useState(false);
+    const [searchRegex, setSearchRegex] = useState(false);
+    const [searchResultIndex, setSearchResultIndex] = useState(-1);
+    const [searchResultCount, setSearchResultCount] = useState(0);
+
+    const showSearchRef = useRef(false);
+    const searchQueryRef = useRef("");
+    const searchCaseSensitiveRef = useRef(false);
+    const searchWholeWordRef = useRef(false);
+    const searchRegexRef = useRef(false);
+
     const [showHistoryDialog] = useState(false);
     const [, setCommandHistory] = useState<string[]>([]);
     const [, setIsLoadingHistory] = useState(false);
@@ -420,6 +438,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     useEffect(() => {
       autocompleteSelectedIndexRef.current = autocompleteSelectedIndex;
     }, [autocompleteSelectedIndex]);
+
+    useEffect(() => {
+      showSearchRef.current = showSearch;
+    }, [showSearch]);
+
+    useEffect(() => {
+      searchQueryRef.current = searchQuery;
+    }, [searchQuery]);
+
+    useEffect(() => {
+      searchCaseSensitiveRef.current = searchCaseSensitive;
+    }, [searchCaseSensitive]);
+
+    useEffect(() => {
+      searchWholeWordRef.current = searchWholeWord;
+    }, [searchWholeWord]);
+
+    useEffect(() => {
+      searchRegexRef.current = searchRegex;
+    }, [searchRegex]);
+
+    useEffect(() => {
+      if (showSearch) {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    }, [showSearch]);
 
     const activityLoggingRef = useRef(false);
     const passwordPromptShownRef = useRef(false);
@@ -534,6 +579,85 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.fontSize = nextFontSize;
       performFit();
       hardRefresh();
+    }
+
+    function getSearchOptions() {
+      return {
+        caseSensitive: searchCaseSensitiveRef.current,
+        wholeWord: searchWholeWordRef.current,
+        regex: searchRegexRef.current,
+        incremental: true,
+        decorations: {
+          matchBackground: `${themeColors.yellow}55`,
+          matchBorder: themeColors.yellow,
+          matchOverviewRuler: themeColors.yellow,
+          activeMatchBackground: `${themeColors.foreground}33`,
+          activeMatchBorder: themeColors.foreground,
+          activeMatchColorOverviewRuler: themeColors.foreground,
+        },
+      };
+    }
+
+    function runSearch(direction: "next" | "previous", term?: string) {
+      const searchAddon = searchAddonRef.current;
+      const query = term ?? searchQueryRef.current;
+      if (!searchAddon || !query) return;
+
+      if (direction === "next") {
+        searchAddon.findNext(query, getSearchOptions());
+      } else {
+        searchAddon.findPrevious(query, {
+          ...getSearchOptions(),
+          incremental: false,
+        });
+      }
+    }
+
+    function openSearch() {
+      setShowSearch(true);
+      if (searchQueryRef.current) {
+        runSearch("next", searchQueryRef.current);
+      }
+    }
+
+    function closeSearch() {
+      searchAddonRef.current?.clearDecorations();
+      setShowSearch(false);
+      setSearchResultIndex(-1);
+      setSearchResultCount(0);
+      setTimeout(() => terminal?.focus(), 0);
+    }
+
+    function handleSearchQueryChange(value: string) {
+      setSearchQuery(value);
+      searchQueryRef.current = value;
+
+      if (!value) {
+        searchAddonRef.current?.clearDecorations();
+        setSearchResultIndex(-1);
+        setSearchResultCount(0);
+        return;
+      }
+
+      runSearch("next", value);
+    }
+
+    function toggleSearchCaseSensitive() {
+      searchCaseSensitiveRef.current = !searchCaseSensitiveRef.current;
+      setSearchCaseSensitive(searchCaseSensitiveRef.current);
+      runSearch("next");
+    }
+
+    function toggleSearchWholeWord() {
+      searchWholeWordRef.current = !searchWholeWordRef.current;
+      setSearchWholeWord(searchWholeWordRef.current);
+      runSearch("next");
+    }
+
+    function toggleSearchRegex() {
+      searchRegexRef.current = !searchRegexRef.current;
+      setSearchRegex(searchRegexRef.current);
+      runSearch("next");
     }
 
     function handleTotpSubmit(code: string) {
@@ -2176,6 +2300,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const clipboardProvider = new RobustClipboardProvider();
       const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
       const unicode11Addon = new Unicode11Addon();
+      const searchAddon = new SearchAddon();
       const webLinksAddon = new WebLinksAddon((_event, uri) => {
         const url =
           uri.startsWith("http://") || uri.startsWith("https://")
@@ -2195,10 +2320,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
 
       fitAddonRef.current = fitAddon;
+      searchAddonRef.current = searchAddon;
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(clipboardAddon);
       terminal.loadAddon(unicode11Addon);
       terminal.loadAddon(webLinksAddon);
+      terminal.loadAddon(searchAddon);
+
+      searchAddon.onDidChangeResults(({ resultIndex, resultCount }) => {
+        setSearchResultIndex(resultIndex);
+        setSearchResultCount(resultCount);
+      });
 
       terminal.unicode.activeVersion = "11";
 
@@ -2487,6 +2619,32 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             });
             return false;
           }
+        }
+
+        if (
+          showSearchRef.current &&
+          e.key === "Escape" &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          !e.shiftKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeSearch();
+          return false;
+        }
+
+        if (
+          (e.ctrlKey || e.metaKey) &&
+          !e.altKey &&
+          !e.shiftKey &&
+          e.key.toLowerCase() === "f"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          openSearch();
+          return false;
         }
 
         if (navigator.userAgent.includes("Android")) {
@@ -3275,6 +3433,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           selectedIndex={autocompleteSelectedIndex}
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
+        />
+
+        <TerminalSearchBar
+          visible={showSearch}
+          query={searchQuery}
+          onQueryChange={handleSearchQueryChange}
+          onFindNext={() => runSearch("next")}
+          onFindPrevious={() => runSearch("previous")}
+          onClose={closeSearch}
+          caseSensitive={searchCaseSensitive}
+          onToggleCaseSensitive={toggleSearchCaseSensitive}
+          wholeWord={searchWholeWord}
+          onToggleWholeWord={toggleSearchWholeWord}
+          regex={searchRegex}
+          onToggleRegex={toggleSearchRegex}
+          resultIndex={searchResultIndex}
+          resultCount={searchResultCount}
+          inputRef={searchInputRef}
         />
 
         {linkClickDialog &&
