@@ -1,6 +1,5 @@
 import { lookup, type LookupAddress, type LookupAllOptions } from "dns";
 import { BlockList, isIP } from "net";
-import { Agent } from "undici";
 
 type DnsLookupFn = (
   hostname: string,
@@ -118,19 +117,21 @@ export async function safeOutboundFetch(
     throw new Error("Private destinations are not allowed");
   }
 
-  const dispatcher = new Agent({
-    connect: {
-      lookup: createDnsLookupHook(),
-    },
+  await new Promise<void>((resolve, reject) => {
+    lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
+      if (error) return reject(error);
+      if (!addresses.length) {
+        return reject(new Error("DNS resolution returned no addresses"));
+      }
+      if (addresses.some(({ address }) => isBlockedAddress(address))) {
+        return reject(new Error("Private destinations are not allowed"));
+      }
+      resolve();
+    });
   });
 
-  try {
-    return await fetch(url, {
-      ...options,
-      redirect: "error",
-      dispatcher,
-    } as RequestInit & { dispatcher: Agent });
-  } finally {
-    await dispatcher.close();
-  }
+  return await fetch(url, {
+    ...options,
+    redirect: "error",
+  });
 }
