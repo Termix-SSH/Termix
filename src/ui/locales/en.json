@@ -2198,6 +2198,7 @@
     "cpuUsage": "CPU Usage",
     "memoryUsage": "Memory Usage",
     "diskUsage": "Disk Usage",
+    "selectFilesystem": "Select filesystem",
     "temperature": "Temperature",
     "highestTemperature": "Highest temperature",
     "failedToFetchHostConfig": "Failed to fetch host configuration",

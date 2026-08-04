@@ -77,11 +77,25 @@ interface MemoryMetrics {
   totalGiB: number | null;
 }
 
+export interface DiskFilesystem {
+  filesystem: string;
+  mount: string;
+  percent: number | null;
+  usedHuman: string | null;
+  totalHuman: string | null;
+  availableHuman: string | null;
+  usedBytes: number | null;
+  totalBytes: number | null;
+  availableBytes: number | null;
+}
+
 interface DiskMetrics {
   percent: number | null;
   usedHuman: string | null;
   totalHuman: string | null;
   availableHuman?: string | null;
+  mount?: string | null;
+  filesystems?: DiskFilesystem[];
 }
 
 export interface NetworkInterface {

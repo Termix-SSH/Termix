@@ -677,8 +677,8 @@ export function HostItem({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
-                    align="end"
-                    className="text-xs  min-w-65"
+                    align="start"
+                    className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
                   >
                     <DropdownMenuItem
                       onClick={(e) => {
@@ -890,7 +890,10 @@ export function HostItem({
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="text-xs min-w-65">
+                  <DropdownMenuContent
+                    align="start"
+                    className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
+                  >
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1380,7 +1383,10 @@ export function HostItem({
                     <MoreHorizontal className="size-3.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="text-xs min-w-65">
+                <DropdownMenuContent
+                  align="start"
+                  className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
+                >
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();

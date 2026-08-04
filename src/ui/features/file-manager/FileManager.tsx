@@ -67,6 +67,7 @@ import {
   transferToHost,
   addTransferRecent,
   type TransferMethodPreference,
+  type DiskFilesystem,
 } from "@/main-axios.ts";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
@@ -155,6 +156,8 @@ function FileManagerContent({
     usedHuman: string;
     totalHuman: string;
     percent: number;
+    mount: string | null;
+    filesystems: DiskFilesystem[];
   } | null>(null);
 
   const [contextMenu, setContextMenu] = useState<{
@@ -2805,6 +2808,8 @@ function FileManagerContent({
               usedHuman: metrics.disk.usedHuman,
               totalHuman: metrics.disk.totalHuman,
               percent: metrics.disk.percent,
+              mount: metrics.disk.mount ?? null,
+              filesystems: metrics.disk.filesystems ?? [],
             });
           }
         })

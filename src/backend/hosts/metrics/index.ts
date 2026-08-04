@@ -24,7 +24,10 @@ import type {
 } from "../../../types/connection-log.js";
 import { collectCpuMetrics } from "./widgets/cpu-collector.js";
 import { collectMemoryMetrics } from "./widgets/memory-collector.js";
-import { collectDiskMetrics } from "./widgets/disk-collector.js";
+import {
+  collectDiskMetrics,
+  type DiskFilesystem,
+} from "./widgets/disk-collector.js";
 import { collectNetworkMetrics } from "./widgets/network-collector.js";
 import { collectUptimeMetrics } from "./widgets/uptime-collector.js";
 import { collectProcessesMetrics } from "./widgets/processes-collector.js";
@@ -1463,6 +1466,8 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     usedHuman: string | null;
     totalHuman: string | null;
     availableHuman: string | null;
+    mount: string | null;
+    filesystems: DiskFilesystem[];
   };
   network: {
     interfaces: Array<{
@@ -2030,6 +2035,8 @@ app.get("/metrics/:id", validateHostId, async (req, res) => {
         usedHuman: null,
         totalHuman: null,
         availableHuman: null,
+        mount: null,
+        filesystems: [],
       },
       network: { interfaces: [] },
       uptime: { seconds: null, formatted: null },
