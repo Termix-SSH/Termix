@@ -211,14 +211,14 @@ export function HostExportDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="flex flex-col w-[95vw] sm:max-w-6xl max-h-[85dvh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>{t("hosts.export.title")}</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col md:flex-row gap-4 min-h-0">
+        <div className="flex flex-col md:flex-row gap-4 flex-1 min-h-0 min-w-0 overflow-y-auto md:overflow-visible">
           {/* Scope + host picker */}
-          <div className="flex flex-col gap-2 md:w-56 shrink-0">
+          <div className="flex flex-col gap-2 md:w-56 shrink-0 min-h-0">
             <div className="text-xs text-muted-foreground">
               {t("hosts.export.scope")}
             </div>
@@ -248,7 +248,7 @@ export function HostExportDialog({
                 disabled={scope === "all"}
               />
             </div>
-            <div className="flex-1 overflow-y-auto max-h-64 flex flex-col gap-1 pr-1">
+            <div className="flex-1 min-h-0 overflow-y-auto max-h-64 flex flex-col gap-1 pr-1">
               {visibleHosts.map((host) => {
                 const key = hostKey(host as unknown as Record<string, unknown>);
                 return (
@@ -269,7 +269,7 @@ export function HostExportDialog({
           </div>
 
           {/* Field groups */}
-          <div className="flex flex-col gap-2 md:w-48 shrink-0">
+          <div className="flex flex-col gap-2 md:w-48 shrink-0 md:overflow-y-auto">
             <div className="text-xs text-muted-foreground">
               {t("hosts.export.include")}
             </div>
@@ -299,17 +299,17 @@ export function HostExportDialog({
           </div>
 
           {/* Preview */}
-          <div className="flex flex-col gap-2 flex-1 min-w-0">
+          <div className="flex flex-col gap-2 flex-1 min-w-0 min-h-0">
             <div className="text-xs text-muted-foreground">
               {t("hosts.export.preview")}
             </div>
-            <pre className="flex-1 overflow-auto max-h-40 md:max-h-80 rounded-sm bg-muted border border-border p-2 text-[11px] leading-relaxed">
+            <pre className="flex-1 w-full min-w-0 overflow-auto max-h-64 md:max-h-none rounded-sm bg-muted border border-border p-2 text-[11px] leading-relaxed whitespace-pre">
               {preview}
             </pre>
           </div>
         </div>
 
-        <div className="text-xs text-muted-foreground">
+        <div className="shrink-0 text-xs text-muted-foreground">
           {count === 0
             ? t("hosts.export.noneSelected")
             : `${t("hosts.export.summary", {
@@ -322,7 +322,7 @@ export function HostExportDialog({
               }`}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0">
           <Button variant="outline" onClick={onClose}>
             {t("hosts.export.cancel")}
           </Button>
