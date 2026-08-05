@@ -21,6 +21,10 @@ import type { ProxyNode } from "../../../types/index.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
 import {
+  parseTailscaleCheckBanner,
+  isTailscaleCheckCompleteBanner,
+} from "../tailscale-check.js";
+import {
   sessionManager,
   isMessageAllowedForParticipant,
 } from "./session-manager.js";
@@ -105,6 +109,10 @@ interface WebSocketMessage {
 }
 
 const authManager = AuthManager.getInstance();
+
+// Tailscale holds a check-mode connection open for up to 30 minutes while the
+// user completes the browser login, so match that rather than timing out first.
+const TAILSCALE_CHECK_TIMEOUT_MS = 1_800_000;
 
 const userConnections = new Map<string, Set<WebSocket>>();
 
@@ -1410,7 +1418,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     sendLog("dns", "info", `Starting address resolution of ${ip}`);
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
-    const connectionTimeout = setTimeout(() => {
+    const onConnectionTimeout = () => {
       if (sshConn && isConnecting && !isConnected) {
         sshLogger.error("SSH connection timeout", undefined, {
           operation: "ssh_connect",
@@ -1428,7 +1436,15 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
         cleanupAuthState(connectionTimeout);
       }
-    }, 120000);
+    };
+
+    // Reassigned when Tailscale check mode starts, so the short connect timeout
+    // does not tear down a connection the server is deliberately holding open.
+    let connectionTimeout = setTimeout(onConnectionTimeout, 120000);
+
+    let tailscaleCheckPending = false;
+    let tailscaleForcePasswordAttempted = false;
+    let isTailscaleRetrying = false;
 
     let resolvedHostData:
       | (Record<string, unknown> & {
@@ -1641,8 +1657,54 @@ wss.on("connection", async (ws: WebSocket, req) => {
     }
     sendLog("tcp", "info", `Connecting to ${ip} port ${port}`);
 
+    // Tailscale SSH check mode delivers its re-auth URL as an auth banner and then
+    // blocks for up to 30 minutes while the user logs in via the browser.
+    sshConn.on("banner", (banner: string) => {
+      const check = parseTailscaleCheckBanner(banner);
+      if (check) {
+        tailscaleCheckPending = true;
+
+        clearTimeout(connectionTimeout);
+        connectionTimeout = setTimeout(
+          onConnectionTimeout,
+          TAILSCALE_CHECK_TIMEOUT_MS,
+        );
+
+        sendLog(
+          "auth",
+          "info",
+          `Tailscale SSH requires an additional check. Waiting for browser authentication at ${check.url}`,
+        );
+
+        ws.send(
+          JSON.stringify({
+            type: "tailscale_check_required",
+            hostId: id,
+            url: check.url,
+            message: check.message,
+          }),
+        );
+        return;
+      }
+
+      if (tailscaleCheckPending && isTailscaleCheckCompleteBanner(banner)) {
+        tailscaleCheckPending = false;
+        sendLog("auth", "info", "Tailscale SSH check completed");
+        ws.send(
+          JSON.stringify({ type: "tailscale_check_completed", hostId: id }),
+        );
+      }
+    });
+
     sshConn.on("ready", () => {
       clearTimeout(connectionTimeout);
+      isTailscaleRetrying = false;
+      if (tailscaleCheckPending) {
+        tailscaleCheckPending = false;
+        ws.send(
+          JSON.stringify({ type: "tailscale_check_completed", hostId: id }),
+        );
+      }
       sshLogger.success("SSH connection established", {
         operation: "terminal_ssh_connected",
         sessionId,
@@ -2313,6 +2375,51 @@ wss.on("connection", async (ws: WebSocket, req) => {
         return;
       }
 
+      // Tailscale documents the "+password" username suffix as the workaround for
+      // clients that mishandle a successful reply to auth type "none". It routes
+      // through PasswordCallback into the same check-mode flow, and the password
+      // value is ignored. Retry once before reporting an auth failure.
+      // Skipped when tunnelled: connectConfig.sock is a one-shot stream that
+      // cannot be reused for a second connect.
+      if (
+        resolvedCredentials.authType === "tailscale" &&
+        !tailscaleForcePasswordAttempted &&
+        !tailscaleCheckPending &&
+        !connectConfig.sock &&
+        (authMethodNotAvailable ||
+          err.message.includes("All configured authentication methods failed"))
+      ) {
+        tailscaleForcePasswordAttempted = true;
+
+        sendLog(
+          "auth",
+          "info",
+          "Retrying Tailscale SSH in forced password mode",
+        );
+        sshLogger.info("Retrying Tailscale SSH with +password suffix", {
+          operation: "tailscale_force_password_retry",
+          hostId: id,
+          userId,
+          username,
+        });
+
+        clearTimeout(connectionTimeout);
+        connectionTimeout = setTimeout(
+          onConnectionTimeout,
+          TAILSCALE_CHECK_TIMEOUT_MS,
+        );
+
+        connectConfig.username = `${username}+password`;
+        connectConfig.password = "termix";
+        connectConfig.tryKeyboard = false;
+
+        // ssh2's connect() ends an open socket and reconnects on close, keeping
+        // every listener attached, so the same client can be reused here.
+        isTailscaleRetrying = true;
+        sshConn.connect(connectConfig);
+        return;
+      }
+
       if (
         resolvedCredentials.authType === "tailscale" &&
         (authMethodNotAvailable ||
@@ -2474,6 +2581,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
     });
 
     sshConn.on("close", () => {
+      // The +password retry ends the socket before reconnecting; that close is
+      // part of the retry, not a disconnect.
+      if (isTailscaleRetrying) {
+        return;
+      }
+
       clearTimeout(connectionTimeout);
       sshLogger.info("SSH connection closed", {
         operation: "terminal_ssh_disconnected",
@@ -2604,10 +2717,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
         typeof hostKeepaliveCountMax === "number"
           ? Math.max(1, hostKeepaliveCountMax)
           : 5,
-      readyTimeout: 120000,
+      readyTimeout:
+        resolvedCredentials.authType === "tailscale"
+          ? TAILSCALE_CHECK_TIMEOUT_MS
+          : 120000,
       tcpKeepAlive: true,
       tcpKeepAliveInitialDelay: 30000,
-      timeout: 120000,
+      // The socket sits idle while a Tailscale check-mode login is pending.
+      timeout:
+        resolvedCredentials.authType === "tailscale"
+          ? TAILSCALE_CHECK_TIMEOUT_MS
+          : 120000,
       hostVerifier: await SSHHostKeyVerifier.createHostVerifier(
         id,
         ip,

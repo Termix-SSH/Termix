@@ -36,6 +36,7 @@ import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog.tsx";
+import { TailscaleCheckDialog } from "@/ssh/dialogs/TailscaleCheckDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog.tsx";
 import { TmuxSessionPicker } from "@/ssh/dialogs/TmuxSessionPicker.tsx";
 import {
@@ -228,6 +229,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       providers?: Array<{ alias: string; issuer: string }>;
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const [tailscaleCheckDialog, setTailscaleCheckDialog] = useState<{
+      isOpen: boolean;
+      authUrl: string;
+      message?: string;
+      stage: "prompt" | "waiting";
+    } | null>(null);
+    const tailscaleCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const tailscaleCheckPendingRef = useRef(false);
 
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
@@ -1204,6 +1214,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             !isConnected &&
             !totpRequired &&
             !isPasswordPrompt &&
+            !tailscaleCheckPendingRef.current &&
             !connectionErrorRef.current
           ) {
             if (terminal) {
@@ -1765,6 +1776,42 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               stage: "error",
               error: msg.instructions || msg.error,
             });
+          } else if (msg.type === "tailscale_check_required") {
+            if (connectionErrorRef.current) return;
+            tailscaleCheckPendingRef.current = true;
+
+            // Tailscale holds the connection open while the user authenticates,
+            // so the normal connect timeout must not fire during the wait.
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+
+            setTailscaleCheckDialog({
+              isOpen: true,
+              authUrl: msg.url || "",
+              message: msg.message,
+              stage: "prompt",
+            });
+
+            if (tailscaleCheckTimeoutRef.current) {
+              clearTimeout(tailscaleCheckTimeoutRef.current);
+            }
+            tailscaleCheckTimeoutRef.current = setTimeout(() => {
+              tailscaleCheckPendingRef.current = false;
+              setTailscaleCheckDialog(null);
+              updateConnectionError(t("terminal.tailscaleCheckTimeout"));
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }, 1800000);
+          } else if (msg.type === "tailscale_check_completed") {
+            tailscaleCheckPendingRef.current = false;
+            if (tailscaleCheckTimeoutRef.current) {
+              clearTimeout(tailscaleCheckTimeoutRef.current);
+              tailscaleCheckTimeoutRef.current = null;
+            }
+            setTailscaleCheckDialog(null);
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -1958,6 +2005,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           clearTimeout(totpTimeoutRef.current);
           totpTimeoutRef.current = null;
         }
+
+        tailscaleCheckPendingRef.current = false;
+        if (tailscaleCheckTimeoutRef.current) {
+          clearTimeout(tailscaleCheckTimeoutRef.current);
+          tailscaleCheckTimeoutRef.current = null;
+        }
+        setTailscaleCheckDialog(null);
 
         if (wasSessionExpiredRef.current) {
           wasSessionExpiredRef.current = false;
@@ -3290,6 +3344,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 );
               }
               setOpksshDialog((prev) =>
+                prev ? { ...prev, stage: "waiting" } : null,
+              );
+            }}
+            backgroundColor={backgroundColor}
+          />
+        )}
+
+        {tailscaleCheckDialog?.isOpen && (
+          <TailscaleCheckDialog
+            isOpen={tailscaleCheckDialog.isOpen}
+            authUrl={tailscaleCheckDialog.authUrl}
+            message={tailscaleCheckDialog.message}
+            stage={tailscaleCheckDialog.stage}
+            onCancel={() => {
+              tailscaleCheckPendingRef.current = false;
+              if (tailscaleCheckTimeoutRef.current) {
+                clearTimeout(tailscaleCheckTimeoutRef.current);
+                tailscaleCheckTimeoutRef.current = null;
+              }
+              setTailscaleCheckDialog(null);
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }}
+            onOpenUrl={() => {
+              window.open(tailscaleCheckDialog.authUrl, "_blank");
+              setTailscaleCheckDialog((prev) =>
                 prev ? { ...prev, stage: "waiting" } : null,
               );
             }}

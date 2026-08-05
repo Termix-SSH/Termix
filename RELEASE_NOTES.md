@@ -23,6 +23,7 @@ https://youtu.be/g0QjNdV3YYY
 - Added configurable audit log retention by age and row count
 - Audit entries for file manager, RDP/VNC/Telnet, Docker and tunnel sessions
 - Encrypted SSO secrets instead of BASE64 encoding them
+- Added support for Tailscale SSH check mode with in-terminal browser authentication
 
 <!-- /UPDATE_LOG -->
 
@@ -64,5 +65,6 @@ https://youtu.be/g0QjNdV3YYY
 - Desktop app failing to find its backend on some architectures
 - Centralized outbound address validation for homepage proxy requests
 - Default font size to medium instead of large
+- Tailscale hosts hanging on connect when the tailnet ACL requires a periodic check
 
 <!-- /BUG_FIXES -->
