@@ -37,6 +37,7 @@ https://youtu.be/g0QjNdV3YYY
 - Added the ability to make folders of hosts available to specific users instead of everyone recreating them.
 - Reworked SSH credentials to support both a password and an SSH key on the same credential, with an option to auto fill the password when prompted.
 - Added a custom group claim option for OIDC login, useful for identity providers like Zitadel that don't use a plain "groups" claim.
+
 <!-- /UPDATE_LOG -->
 
 <!-- BUG_FIXES -->
@@ -70,4 +71,5 @@ https://youtu.be/g0QjNdV3YYY
 - Remove chacha20-poly1305 without native ssh2 binding.
 - Corrected SSRF blocklist from false-positive on all IPv4.
 - Fixed terminal background image incorrectly displaying.
+
 <!-- /BUG_FIXES -->
