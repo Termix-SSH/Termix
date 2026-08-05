@@ -63,5 +63,6 @@ https://youtu.be/g0QjNdV3YYY
 - Remote sync losing references between linked records
 - Desktop app failing to find its backend on some architectures
 - Centralized outbound address validation for homepage proxy requests
+- Default font size to medium instead of large
 
 <!-- /BUG_FIXES -->
