@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import express from "express";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   hosts,
   sshCredentials,
@@ -10,6 +10,7 @@ import {
   vaultProfiles,
   dashboardServiceLinks,
   homepageItems,
+  userPreferences,
 } from "../db/schema.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
@@ -21,6 +22,12 @@ import {
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
 import type { SyncEntityType } from "../repositories/sync-tombstone-repository.js";
+import {
+  deserializeSyncReferences,
+  serializeSyncReferences,
+  type SyncReferenceEntity,
+} from "./sync-references.js";
+import { timestampAtOrAfter } from "../sync-timestamp.js";
 
 const router = express.Router();
 const authManager = AuthManager.getInstance();
@@ -43,11 +50,13 @@ interface EntityConfig {
     | typeof snippetFolders
     | typeof vaultProfiles
     | typeof dashboardServiceLinks
-    | typeof homepageItems;
+    | typeof homepageItems
+    | typeof userPreferences;
   // Fields that only make sense on the device that created the row, or
   // that are managed elsewhere and must never be overwritten by a sync
   // payload from the other side.
   readOnlyFields: string[];
+  singleton?: boolean;
 }
 
 const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
@@ -62,12 +71,71 @@ const ENTITY_CONFIG: Record<SyncEntityType, EntityConfig> = {
   vaultProfiles: { table: vaultProfiles, readOnlyFields: [] },
   dashboardServiceLinks: { table: dashboardServiceLinks, readOnlyFields: [] },
   homepageItems: { table: homepageItems, readOnlyFields: [] },
+  userPreferences: {
+    table: userPreferences,
+    readOnlyFields: ["storageMode"],
+    singleton: true,
+  },
 };
 
 const VALID_ENTITY_TYPES = new Set(Object.keys(ENTITY_CONFIG));
+type RepositoryContext = ReturnType<typeof createCurrentRepositoryContext>;
 
 export function isValidEntityType(value: unknown): value is SyncEntityType {
   return typeof value === "string" && VALID_ENTITY_TYPES.has(value);
+}
+
+async function findReferenceSyncId(
+  context: RepositoryContext,
+  entityType: SyncReferenceEntity,
+  id: number,
+  userId: string,
+): Promise<string | null> {
+  if (entityType === "sshCredentials") {
+    const [row] = await context.drizzle
+      .select({ syncId: sshCredentials.syncId })
+      .from(sshCredentials)
+      .where(and(eq(sshCredentials.id, id), eq(sshCredentials.userId, userId)))
+      .limit(1);
+    return row?.syncId ?? null;
+  }
+
+  const [row] = await context.drizzle
+    .select({ syncId: vaultProfiles.syncId })
+    .from(vaultProfiles)
+    .where(and(eq(vaultProfiles.id, id), eq(vaultProfiles.userId, userId)))
+    .limit(1);
+  return row?.syncId ?? null;
+}
+
+async function findReferenceId(
+  context: RepositoryContext,
+  entityType: SyncReferenceEntity,
+  syncId: string,
+  userId: string,
+): Promise<number | null> {
+  if (entityType === "sshCredentials") {
+    const [row] = await context.drizzle
+      .select({ id: sshCredentials.id })
+      .from(sshCredentials)
+      .where(
+        and(
+          eq(sshCredentials.syncId, syncId),
+          eq(sshCredentials.userId, userId),
+        ),
+      )
+      .limit(1);
+    return row?.id ?? null;
+  }
+
+  const [row] = await context.drizzle
+    .select({ id: vaultProfiles.id })
+    .from(vaultProfiles)
+    .where(
+      and(eq(vaultProfiles.syncId, syncId), eq(vaultProfiles.userId, userId)),
+    )
+    .limit(1);
+  return row?.id ?? null;
 }
 
 function requireUserDataKey(userId: string): Buffer {
@@ -161,11 +229,13 @@ router.get(
         : null;
 
     try {
-      const { table } = ENTITY_CONFIG[entityType];
+      const { table, singleton } = ENTITY_CONFIG[entityType];
       const context = createCurrentRepositoryContext();
       const conditions = [eq(table.userId, userId)];
       if (since && "updatedAt" in table) {
-        conditions.push(gt((table as typeof hosts).updatedAt, since));
+        conditions.push(
+          timestampAtOrAfter((table as typeof hosts).updatedAt, since),
+        );
       }
 
       const rows = await context.drizzle
@@ -173,8 +243,18 @@ router.get(
         .from(table as typeof hosts)
         .where(and(...conditions));
 
-      const decrypted = rows.map((row) =>
-        decryptIfNeeded(entityType, row as Record<string, unknown>, userId),
+      const decrypted = await Promise.all(
+        rows.map(async (row) => {
+          const result = await serializeSyncReferences(
+            entityType,
+            decryptIfNeeded(entityType, row as Record<string, unknown>, userId),
+            (referenceType, id) =>
+              findReferenceSyncId(context, referenceType, id, userId),
+          );
+          return singleton
+            ? { ...result, syncId: `${entityType}:singleton` }
+            : result;
+        }),
       );
 
       res.json({ rows: decrypted });
@@ -185,6 +265,71 @@ router.get(
         userId,
       });
       res.status(500).json({ error: "Failed to fetch rows" });
+    }
+  },
+);
+
+/**
+ * @openapi
+ * /sync/tombstones:
+ *   post:
+ *     summary: Report a deletion from the other side of a sync pair
+ *     description: Applies a remote deletion locally (if the row still exists) and records the tombstone so future pulls stay consistent.
+ *     tags:
+ *       - Sync
+ *     responses:
+ *       200:
+ *         description: Deletion applied (or row already absent).
+ *       400:
+ *         description: Unknown entity type or missing syncId.
+ *       500:
+ *         description: Failed to apply deletion.
+ */
+router.post(
+  "/tombstones",
+  authenticateJWT,
+  async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const entityType = req.body?.entityType;
+    const syncId = req.body?.syncId;
+    if (
+      !isValidEntityType(entityType) ||
+      typeof syncId !== "string" ||
+      !syncId
+    ) {
+      return res.status(400).json({ error: "Missing entityType or syncId" });
+    }
+
+    try {
+      const { table, singleton } = ENTITY_CONFIG[entityType];
+      const context = createCurrentRepositoryContext();
+
+      await context.drizzle
+        .delete(table as typeof hosts)
+        .where(
+          singleton
+            ? eq(table.userId, userId)
+            : and(
+                eq((table as typeof hosts).syncId, syncId),
+                eq(table.userId, userId),
+              ),
+        );
+
+      await createCurrentSyncTombstoneRepository().record(
+        userId,
+        entityType,
+        syncId,
+      );
+      await DatabaseSaveTrigger.forceSave("sync_tombstone_applied");
+
+      res.json({ success: true });
+    } catch (err) {
+      databaseLogger.error("Failed to apply sync tombstone", err, {
+        operation: "sync_tombstone_apply",
+        entityType,
+        userId,
+      });
+      res.status(500).json({ error: "Failed to apply deletion" });
     }
   },
 );
@@ -227,22 +372,30 @@ router.post(
     }
 
     try {
-      const { table } = ENTITY_CONFIG[entityType];
+      const { table, singleton } = ENTITY_CONFIG[entityType];
       const context = createCurrentRepositoryContext();
 
       const existingRows = await context.drizzle
         .select()
         .from(table as typeof hosts)
         .where(
-          and(
-            eq((table as typeof hosts).syncId, syncId),
-            eq(table.userId, userId),
-          ),
+          singleton
+            ? eq(table.userId, userId)
+            : and(
+                eq((table as typeof hosts).syncId, syncId),
+                eq(table.userId, userId),
+              ),
         )
         .limit(1);
       const existing = existingRows[0] as Record<string, unknown> | undefined;
 
-      const writePayload = stripWritePayload(entityType, payload);
+      const resolvedPayload = await deserializeSyncReferences(
+        entityType,
+        payload,
+        (referenceType, referenceSyncId) =>
+          findReferenceId(context, referenceType, referenceSyncId, userId),
+      );
+      const writePayload = stripWritePayload(entityType, resolvedPayload);
       const encryptedPayload = encryptIfNeeded(
         entityType,
         writePayload,
@@ -265,11 +418,15 @@ router.post(
       } else {
         const insertedRows = await context.drizzle
           .insert(table as typeof hosts)
-          .values({
-            ...encryptedPayload,
-            userId,
-            syncId,
-          } as typeof hosts.$inferInsert)
+          .values(
+            (singleton
+              ? { ...encryptedPayload, userId }
+              : {
+                  ...encryptedPayload,
+                  userId,
+                  syncId,
+                }) as typeof hosts.$inferInsert,
+          )
           .returning();
         resultRow = insertedRows[0] as Record<string, unknown>;
       }
@@ -345,69 +502,6 @@ router.get(
         { operation: "sync_tombstones_pull", entityType, userId },
       );
       res.status(500).json({ error: "Failed to fetch tombstones" });
-    }
-  },
-);
-
-/**
- * @openapi
- * /sync/tombstones:
- *   post:
- *     summary: Report a deletion from the other side of a sync pair
- *     description: Applies a remote deletion locally (if the row still exists) and records the tombstone so future pulls stay consistent.
- *     tags:
- *       - Sync
- *     responses:
- *       200:
- *         description: Deletion applied (or row already absent).
- *       400:
- *         description: Unknown entity type or missing syncId.
- *       500:
- *         description: Failed to apply deletion.
- */
-router.post(
-  "/tombstones",
-  authenticateJWT,
-  async (req: Request, res: Response) => {
-    const userId = (req as AuthenticatedRequest).userId;
-    const entityType = req.body?.entityType;
-    const syncId = req.body?.syncId;
-    if (
-      !isValidEntityType(entityType) ||
-      typeof syncId !== "string" ||
-      !syncId
-    ) {
-      return res.status(400).json({ error: "Missing entityType or syncId" });
-    }
-
-    try {
-      const { table } = ENTITY_CONFIG[entityType];
-      const context = createCurrentRepositoryContext();
-
-      await context.drizzle
-        .delete(table as typeof hosts)
-        .where(
-          and(
-            eq((table as typeof hosts).syncId, syncId),
-            eq(table.userId, userId),
-          ),
-        );
-
-      await createCurrentSyncTombstoneRepository().record(
-        userId,
-        entityType,
-        syncId,
-      );
-      await DatabaseSaveTrigger.forceSave("sync_tombstone_applied");
-
-      res.json({ success: true });
-    } catch (err) {
-      databaseLogger.error("Failed to apply sync tombstone", err, {
-        operation: "sync_tombstone_apply",
-        entityType,
-        userId,
-      });
-      res.status(500).json({ error: "Failed to apply deletion" });
     }
   },
 );

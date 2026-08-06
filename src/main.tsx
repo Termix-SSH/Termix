@@ -72,11 +72,7 @@ const SharedSessionView = lazy(
 );
 
 type Phase =
-  | "verifying"
-  | "idle-auth"
-  | "fading-in"
-  | "idle-app"
-  | "fading-out";
+  "verifying" | "idle-auth" | "fading-in" | "idle-app" | "fading-out";
 
 function FullscreenApp() {
   const searchParams = new URLSearchParams(window.location.search);
@@ -196,7 +192,7 @@ function App() {
     const savedSize = localStorage.getItem(
       "termix-font-size",
     ) as FontSizeId | null;
-    applyFontSize(savedSize ?? "lg");
+    applyFontSize(savedSize ?? "md");
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };

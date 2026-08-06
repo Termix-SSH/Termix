@@ -16,10 +16,148 @@ const {
   getOIDCConfigFromEnv,
   extractOidcGroups,
   validateLogoutTokenClaims,
+  parseOidcRoleMap,
+  resolveOidcMappedRoles,
+  verifyOIDCToken,
+  describeFetchFailure,
 } = await import("../../../database/routes/user-oidc-utils.js");
 
 const BACKCHANNEL_LOGOUT_EVENT =
   "http://schemas.openid.net/event/backchannel-logout";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("describeFetchFailure", () => {
+  it("unwraps the undici cause, which carries the reason that matters", () => {
+    // Every transport failure surfaces as this same outer message.
+    const error = new TypeError("fetch failed", {
+      cause: Object.assign(new Error("getaddrinfo ENOTFOUND idp.example"), {
+        code: "ENOTFOUND",
+      }),
+    });
+    expect(describeFetchFailure(error)).toBe(
+      "fetch failed: getaddrinfo ENOTFOUND idp.example (ENOTFOUND)",
+    );
+  });
+
+  it("falls back to the outer message when there is no cause", () => {
+    expect(describeFetchFailure(new Error("boom"))).toBe("boom");
+  });
+
+  it("handles a non-Error throw", () => {
+    expect(describeFetchFailure("nope")).toBe("nope");
+  });
+});
+
+describe("verifyOIDCToken JWKS diagnostics", () => {
+  const issuer = "https://login.microsoftonline.com/example/v2.0";
+  const token = "header.payload.signature";
+
+  it("reports every attempted URL and why it failed", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("not found", { status: 404 }),
+    );
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toMatch(/^Failed to fetch JWKS from any URL/);
+    expect(error.message).toContain(
+      `${issuer}/.well-known/openid-configuration: HTTP 404`,
+    );
+    expect(error.message).toContain(
+      `${issuer}/.well-known/jwks.json: HTTP 404`,
+    );
+    expect(error.message).toContain(`${issuer}/jwks/: HTTP 404`);
+  });
+
+  it("reports a transport failure with its underlying cause", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(
+      new TypeError("fetch failed", {
+        cause: Object.assign(new Error("self-signed certificate"), {
+          code: "SELF_SIGNED_CERT_IN_CHAIN",
+        }),
+      }),
+    );
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toContain(
+      "self-signed certificate (SELF_SIGNED_CERT_IN_CHAIN)",
+    );
+  });
+
+  it("says so when discovery succeeds but advertises no jwks_uri", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ issuer }), { status: 200 }),
+      )
+      .mockResolvedValue(new Response("not found", { status: 404 }));
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toContain("no jwks_uri in the discovery document");
+  });
+
+  it("says so when a JWKS response carries no keys array", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ jwks_uri: "https://idp.example/keys" }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValue(
+        new Response(JSON.stringify({ error: "unauthorized" }), {
+          status: 200,
+        }),
+      );
+
+    const error = await verifyOIDCToken(token, issuer, "client").catch(
+      (e) => e as Error,
+    );
+    expect(error.message).toContain(
+      'https://idp.example/keys: response contains no "keys" array',
+    );
+  });
+});
+
+describe("verifyOIDCToken", () => {
+  it("uses the protected-header algorithm when the provider JWK omits alg", async () => {
+    const { exportJWK, generateKeyPair, SignJWT } = await import("jose");
+    const { publicKey, privateKey } = await generateKeyPair("RS256");
+    const jwk = await exportJWK(publicKey);
+    jwk.kid = "entra-key";
+
+    const issuer = "https://login.microsoftonline.com/example/v2.0";
+    const clientId = "termix-client";
+    const token = await new SignJWT({ sub: "user-1" })
+      .setProtectedHeader({ alg: "RS256", kid: jwk.kid })
+      .setIssuer(issuer)
+      .setAudience(clientId)
+      .setExpirationTime("5m")
+      .sign(privateKey);
+
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ jwks_uri: "https://idp.example/keys" }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }),
+      );
+
+    const payload = await verifyOIDCToken(token, issuer, clientId);
+
+    expect(payload.sub).toBe("user-1");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe("isOIDCUserAllowed", () => {
   it("allows everyone when the allow-list is empty", () => {
@@ -249,5 +387,145 @@ describe("validateLogoutTokenClaims", () => {
     expect(() =>
       validateLogoutTokenClaims({ ...validClaims, sub: null, sid: null }),
     ).toThrow("must contain sub and/or sid");
+  });
+});
+
+describe("parseOidcRoleMap", () => {
+  it("returns an empty map for blank input", () => {
+    expect(parseOidcRoleMap(undefined).size).toBe(0);
+    expect(parseOidcRoleMap(null).size).toBe(0);
+    expect(parseOidcRoleMap("   ").size).toBe(0);
+  });
+
+  it("parses comma-separated group:role pairs", () => {
+    const map = parseOidcRoleMap(
+      "devops-interns:devops-intern,devops-seniors:devops-senior",
+    );
+    expect(map.get("devops-interns")).toBe("devops-intern");
+    expect(map.get("devops-seniors")).toBe("devops-senior");
+    expect(map.size).toBe(2);
+  });
+
+  it("parses newline-separated pairs and trims whitespace", () => {
+    const map = parseOidcRoleMap("  a : role-a \n b:role-b \n");
+    expect(map.get("a")).toBe("role-a");
+    expect(map.get("b")).toBe("role-b");
+  });
+
+  it("normalizes leading slashes and case in group names", () => {
+    const map = parseOidcRoleMap("/DevOps-Interns:devops-intern");
+    expect(map.get("devops-interns")).toBe("devops-intern");
+  });
+
+  it("skips malformed entries instead of throwing", () => {
+    const map = parseOidcRoleMap("no-colon,:missing-group,missing-role:,ok:r");
+    expect(map.size).toBe(1);
+    expect(map.get("ok")).toBe("r");
+  });
+
+  it("splits on the last colon so group names may contain colons", () => {
+    const map = parseOidcRoleMap("ns:team:role-x");
+    expect(map.get("ns:team")).toBe("role-x");
+  });
+
+  it("preserves role-name case verbatim", () => {
+    // Role names must match roles.name exactly, so they are not lowercased.
+    expect(parseOidcRoleMap("g:DevOps_Senior").get("g")).toBe("DevOps_Senior");
+  });
+});
+
+describe("resolveOidcMappedRoles", () => {
+  const roleMap = parseOidcRoleMap(
+    "devops-interns:devops-intern,devops-seniors:devops-senior",
+  );
+
+  it("reports every mapped role as managed regardless of membership", () => {
+    const { managed } = resolveOidcMappedRoles([], roleMap);
+    expect([...managed].sort()).toEqual(["devops-intern", "devops-senior"]);
+  });
+
+  it("desires only the roles whose groups the user is in", () => {
+    const { desired } = resolveOidcMappedRoles(["devops-interns"], roleMap);
+    expect([...desired]).toEqual(["devops-intern"]);
+  });
+
+  it("matches full group paths emitted by Keycloak", () => {
+    const { desired } = resolveOidcMappedRoles(["/devops-seniors"], roleMap);
+    expect([...desired]).toEqual(["devops-senior"]);
+  });
+
+  it("ignores groups that are not mapped", () => {
+    const { desired } = resolveOidcMappedRoles(
+      ["finance", "devops-interns"],
+      roleMap,
+    );
+    expect([...desired]).toEqual(["devops-intern"]);
+  });
+
+  it("supports a user in multiple mapped groups", () => {
+    const { desired } = resolveOidcMappedRoles(
+      ["devops-interns", "devops-seniors"],
+      roleMap,
+    );
+    expect([...desired].sort()).toEqual(["devops-intern", "devops-senior"]);
+  });
+
+  it("desires nothing when the map is empty", () => {
+    const { desired, managed } = resolveOidcMappedRoles(
+      ["devops-interns"],
+      new Map(),
+    );
+    expect(desired.size).toBe(0);
+    expect(managed.size).toBe(0);
+  });
+});
+
+// Imported as a namespace rather than destructured into the shared block at the
+// top of the file, so this suite stays independent of what that block binds.
+const oidcUtils = await import("../../../database/routes/user-oidc-utils.js");
+
+describe("verifyOIDCToken token shape", () => {
+  const issuer = "https://idp.example.com/application/o/termix";
+
+  // The shape check runs before any network call, so no fetch stub is needed.
+  const fetchSpy = vi.fn();
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchSpy);
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    fetchSpy.mockReset();
+  });
+
+  it("reports an encrypted (JWE) token as a format error", async () => {
+    const jwe = ["header", "key", "iv", "ciphertext", "tag"].join(".");
+
+    await expect(
+      oidcUtils.verifyOIDCToken(jwe, issuer, "client"),
+    ).rejects.toThrow(oidcUtils.OIDCTokenFormatError);
+    await expect(
+      oidcUtils.verifyOIDCToken(jwe, issuer, "client"),
+    ).rejects.toThrow(/JWE \(encrypted\)/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("reports any other non-JWS segment count as a format error", async () => {
+    await expect(
+      oidcUtils.verifyOIDCToken("header.payload", issuer, "client"),
+    ).rejects.toThrow(/expected 3 segments, got 2/);
+    await expect(
+      oidcUtils.verifyOIDCToken("opaque", issuer, "client"),
+    ).rejects.toThrow(/expected 3 segments, got 1/);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("lets a three-segment token through to key resolution", async () => {
+    fetchSpy.mockResolvedValue({ ok: false });
+
+    // Reaches JWKS fetching, so it fails on the key lookup rather than the shape.
+    await expect(
+      oidcUtils.verifyOIDCToken("header.payload.signature", issuer, "client"),
+    ).rejects.not.toThrow(oidcUtils.OIDCTokenFormatError);
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });

@@ -17,6 +17,7 @@ import {
   logActivity,
   isElectron,
 } from "@/main-axios.ts";
+import { readConfiguredDimension } from "@/features/guacamole/guacamole-display-size.ts";
 import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
@@ -362,7 +363,15 @@ const GuacamoleAppInner = React.forwardRef<
   }
 
   const resolvedProtocol = resolvedProtocolForConnect;
-  const configuredDpi = Number(hostConfig.guacamoleConfig?.dpi);
+  const configuredDpi = readConfiguredDimension(
+    hostConfig.guacamoleConfig?.dpi,
+  );
+  const configuredWidth = readConfiguredDimension(
+    hostConfig.guacamoleConfig?.width,
+  );
+  const configuredHeight = readConfiguredDimension(
+    hostConfig.guacamoleConfig?.height,
+  );
 
   return (
     <div className="relative w-full h-full">
@@ -400,10 +409,9 @@ const GuacamoleAppInner = React.forwardRef<
           token,
           protocol: resolvedProtocol,
           type: resolvedProtocol,
-          dpi:
-            Number.isFinite(configuredDpi) && configuredDpi > 0
-              ? configuredDpi
-              : undefined,
+          width: configuredWidth,
+          height: configuredHeight,
+          dpi: configuredDpi,
         }}
         isVisible={isVisible}
         touchMode={touchMode}

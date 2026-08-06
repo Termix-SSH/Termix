@@ -108,13 +108,7 @@ export interface NotesConfig {
 }
 
 export type HostMetricKey =
-  | "cpu"
-  | "memory"
-  | "disk"
-  | "uptime"
-  | "network"
-  | "system"
-  | "processes";
+  "cpu" | "memory" | "disk" | "uptime" | "network" | "system" | "processes";
 
 export interface HostStatusConfig {
   hostId: number;
@@ -155,11 +149,7 @@ export interface RssFeedConfig {
 // ---- New widget configs ----
 
 export type MetricsChartMetric =
-  | "cpu"
-  | "memory"
-  | "disk"
-  | "net_rx"
-  | "net_tx";
+  "cpu" | "memory" | "disk" | "net_rx" | "net_tx";
 export type MetricsChartRange = "15m" | "1h" | "6h" | "24h";
 
 export interface MetricsChartConfig {
@@ -192,13 +182,7 @@ export interface PingStatusConfig {
 }
 
 export type ActivityType =
-  | "terminal"
-  | "file_manager"
-  | "docker"
-  | "tunnel"
-  | "rdp"
-  | "vnc"
-  | "telnet";
+  "terminal" | "file_manager" | "docker" | "tunnel" | "rdp" | "vnc" | "telnet";
 
 export interface RecentActivityConfig {
   maxItems: number;

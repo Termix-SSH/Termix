@@ -1,6 +1,10 @@
 import { databaseLogger } from "../logger.js";
 import { DatabaseSaveTrigger } from "../database-save-trigger.js";
 import { getCurrentRepositorySqlite } from "../../database/repositories/factory.js";
+import {
+  needsExplicitPersist,
+  resolveDatabaseDialect,
+} from "../../database/db/dialect.js";
 
 interface SqliteLike {
   prepare(sql: string): {
@@ -39,8 +43,15 @@ function dropColumnIfExists(
 export async function runLegacySharedCredentialCleanup(): Promise<{
   columnsDropped: number;
 }> {
-  const sqlite = getCurrentRepositorySqlite() as unknown as SqliteLike;
   const result = { columnsDropped: 0 };
+
+  // Nothing to clean up on an engine this application has never run on. A
+  // Postgres or MySQL database is created by the drizzle migrations, which have
+  // never emitted these legacy columns, so there is nothing to drop — and the
+  // check itself needs a synchronous PRAGMA that only SQLite offers.
+  if (!needsExplicitPersist(resolveDatabaseDialect())) return result;
+
+  const sqlite = getCurrentRepositorySqlite() as unknown as SqliteLike;
 
   for (const [table, column] of [
     ["ssh_credentials", "system_password"],

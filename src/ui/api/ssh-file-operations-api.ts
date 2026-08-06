@@ -800,11 +800,7 @@ export async function compressSSHFiles(
 // ============================================================================
 
 export type HostConnectionState =
-  | "disconnected"
-  | "connecting"
-  | "ready"
-  | "auth_required"
-  | "error";
+  "disconnected" | "connecting" | "ready" | "auth_required" | "error";
 
 export interface EnsureSSHSessionResult {
   state: HostConnectionState;

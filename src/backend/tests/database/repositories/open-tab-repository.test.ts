@@ -17,29 +17,12 @@ describe("OpenTabRepository", () => {
   ): Promise<OpenTabRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE user_open_tabs (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        tab_type TEXT NOT NULL,
-        host_id INTEGER,
-        label TEXT NOT NULL,
-        tab_order INTEGER NOT NULL DEFAULT 0,
-        backend_session_id TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
+      INSERT INTO ssh_data (id, user_id, name, ip, port, username, auth_type) VALUES
+        (1, 'user-1', 'host-1', '10.0.0.1', 22, 'root', 'password'),
+        (2, 'user-1', 'host-2', '10.0.0.2', 22, 'root', 'password');
     `);
 
     return new OpenTabRepository(context, onWrite);

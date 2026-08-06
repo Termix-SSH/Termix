@@ -17,35 +17,11 @@ describe("VaultTokenRepository", () => {
   ): Promise<VaultTokenRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE vault_profiles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        name TEXT NOT NULL
-      );
-
-      CREATE TABLE vault_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        profile_id INTEGER NOT NULL,
-        ssh_cert TEXT NOT NULL,
-        private_key TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expires_at TEXT NOT NULL,
-        last_used TEXT,
-        UNIQUE(user_id, profile_id)
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
-      INSERT INTO vault_profiles (id, user_id, name)
-      VALUES (1, 'user-1', 'one'), (2, 'user-2', 'two');
+      INSERT INTO vault_profiles (id, user_id, name, vault_addr, ssh_role)
+      VALUES (1, 'user-1', 'one', 'http://vault', 'r'), (2, 'user-2', 'two', 'http://vault', 'r');
       INSERT INTO vault_tokens (
         user_id, profile_id, ssh_cert, private_key, expires_at
       )

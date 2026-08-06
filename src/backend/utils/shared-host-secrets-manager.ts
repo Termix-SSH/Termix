@@ -57,9 +57,9 @@ function enabledProtocols(
   };
 }
 
-// Per-recipient copies of a shared host's connection secrets, re-encrypted
-// under the recipient's DEK. Every enabled protocol gets its own snapshot;
-// secret-less auth types (opkssh, vault, agent, none, ...) produce none.
+// Per-recipient copies of connection secrets, re-encrypted under the
+// recipient's DEK. SSH authentication is copied only when the host owner
+// explicitly opts in; recipient-owned credential overrides remain separate.
 class SharedHostSecretsManager {
   private static instance: SharedHostSecretsManager;
 
@@ -366,7 +366,7 @@ class SharedHostSecretsManager {
     const enabled = enabledProtocols(host);
     const snapshots: ProtocolSnapshot[] = [];
 
-    if (enabled.ssh) {
+    if (enabled.ssh && host.shareSshAuth) {
       if (host.credentialId) {
         const credential = await repository.findCredentialByIdForUser(
           host.credentialId,

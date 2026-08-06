@@ -5,13 +5,6 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { SettingRow } from "@/components/section-card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/select";
-import {
   Database,
   Lock,
   Pencil,
@@ -31,6 +24,7 @@ type GeneralSettingsSectionProps = {
   open: boolean;
   onToggle: () => void;
   analyticsEnabled: boolean;
+  analyticsLocked: boolean;
   handleToggleAnalytics: () => void;
   sessionSharingGloballyEnabled: boolean;
   handleToggleSessionSharingGloballyEnabled: () => void;
@@ -72,6 +66,7 @@ export function AdminGeneralSettingsSection({
   open,
   onToggle,
   analyticsEnabled,
+  analyticsLocked,
   handleToggleAnalytics,
   sessionSharingGloballyEnabled,
   handleToggleSessionSharingGloballyEnabled,
@@ -120,9 +115,17 @@ export function AdminGeneralSettingsSection({
       <div className="flex flex-col gap-0 pt-2">
         <SettingRow
           label={t("admin.analyticsEnabled")}
-          description={t("admin.analyticsEnabledDesc")}
+          description={
+            analyticsLocked
+              ? t("admin.analyticsEnabledLockedDesc")
+              : t("admin.analyticsEnabledDesc")
+          }
         >
-          <AdminToggle on={analyticsEnabled} onToggle={handleToggleAnalytics} />
+          <AdminToggle
+            on={analyticsEnabled}
+            onToggle={handleToggleAnalytics}
+            disabled={analyticsLocked}
+          />
         </SettingRow>
         <SettingRow
           label={t("admin.sessionSharingGloballyEnabled")}
@@ -1146,30 +1149,20 @@ export function AdminSSLSection({
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             {t("admin.sslChallengeType")}
           </label>
-          <Select
+          <select
             value={settings.challengeType}
-            onValueChange={(v) =>
+            onChange={(e) =>
               setSettings((p) => ({
                 ...p,
-                challengeType: v as AcmeChallengeType,
+                challengeType: e.target.value as AcmeChallengeType,
               }))
             }
+            className="w-full px-2 py-1.5 text-xs bg-background border border-border text-foreground outline-none focus:ring-1 focus:ring-ring"
           >
-            <SelectTrigger size="sm" className="w-full text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="http-webroot" className="text-xs">
-                HTTP (webroot)
-              </SelectItem>
-              <SelectItem value="dns-cloudflare" className="text-xs">
-                DNS (Cloudflare)
-              </SelectItem>
-              <SelectItem value="manual" className="text-xs">
-                {t("admin.sslManualOption")}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <option value="http-webroot">HTTP (webroot)</option>
+            <option value="dns-cloudflare">DNS (Cloudflare)</option>
+            <option value="manual">{t("admin.sslManualOption")}</option>
+          </select>
           <span className="text-[10px] text-muted-foreground">
             {t("admin.sslChallengeTypeDesc")}
           </span>

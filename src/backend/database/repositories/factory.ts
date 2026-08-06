@@ -1,5 +1,7 @@
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { getDb, getSqlite } from "../db/index.js";
+import { needsExplicitPersist, resolveDatabaseDialect } from "../db/dialect.js";
+import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
 import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
 import { AlertRepository } from "./alert-repository.js";
@@ -29,6 +31,7 @@ import { SessionRecordingRepository } from "./session-recording-repository.js";
 import { SessionRepository } from "./session-repository.js";
 import { SessionShareRepository } from "./session-share-repository.js";
 import { SettingsRepository } from "./settings-repository.js";
+import { SharedHostAuthOverrideRepository } from "./shared-host-auth-override-repository.js";
 import { SharedHostSecretsRepository } from "./shared-host-secrets-repository.js";
 import { SnippetRepository } from "./snippet-repository.js";
 import { SshCredentialUsageRepository } from "./ssh-credential-usage-repository.js";
@@ -45,25 +48,62 @@ import { UserRepository } from "./user-repository.js";
 import { VaultProfileRepository } from "./vault-profile-repository.js";
 import { VaultTokenRepository } from "./vault-token-repository.js";
 
+/**
+ * The context every repository runs against.
+ *
+ * The dialect has to be resolved, not assumed: it is what `returning.ts` reads
+ * to decide whether it can ask for RETURNING, and whether an upsert spells
+ * itself `onConflictDoUpdate` or `onDuplicateKeyUpdate`. Reporting "sqlite"
+ * while connected to MySQL makes the second of those a TypeError on the first
+ * write.
+ *
+ * Both cross-dialect harnesses build a DatabaseContext themselves, so neither
+ * exercises this function — see tests/database/repositories/factory-context.
+ */
 export function createCurrentRepositoryContext(): DatabaseContext {
   return {
-    dialect: "sqlite",
+    dialect: resolveDatabaseDialect(),
     drizzle: getDb(),
-    sqlite: getSqlite(),
   };
 }
 
+/**
+ * Post-write hook handed to every repository.
+ *
+ * Only meaningful for SQLite, where the database lives in memory and has to be
+ * serialised back to its encrypted file. On Postgres and MySQL the write is
+ * already durable, so no hook is installed at all rather than one that does
+ * nothing — repositories call it as `this.onWrite?.()`.
+ */
 export function createCurrentRepositoryWriteHook(
   reason: string,
-): () => Promise<void> {
+): (() => Promise<void>) | undefined {
+  if (!needsExplicitPersist(resolveDatabaseDialect())) return undefined;
   return () => DatabaseSaveTrigger.forceSave(reason);
 }
 
+/**
+ * Raw driver handle for the few synchronous call sites that cannot await —
+ * getCurrentSettingValue below, and settings reads during startup. Repositories
+ * must not use this: they take a DatabaseContext, which is drizzle-only.
+ * Porting to another engine means giving these callers an async path first.
+ */
 export function getCurrentRepositorySqlite() {
   return getSqlite();
 }
 
+/**
+ * Synchronous settings read.
+ *
+ * SQLite can be queried synchronously, so it is read directly and stays
+ * authoritative. Other engines have no synchronous query, so the value comes
+ * from the cache primed at startup and kept current by SettingsRepository.
+ */
 export function getCurrentSettingValue(key: string): string | null {
+  if (!needsExplicitPersist(resolveDatabaseDialect())) {
+    return readCachedSetting(key);
+  }
+
   const row = getCurrentRepositorySqlite()
     .prepare("SELECT value FROM settings WHERE key = ?")
     .get(key) as { value?: string } | undefined;
@@ -283,6 +323,15 @@ export function createCurrentSharedHostSecretsRepository(): SharedHostSecretsRep
   );
 }
 
+export function createCurrentSharedHostAuthOverrideRepository(): SharedHostAuthOverrideRepository {
+  return new SharedHostAuthOverrideRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "shared_host_auth_override_repository_write",
+    ),
+  );
+}
+
 export function createCurrentSnippetRepository(): SnippetRepository {
   return new SnippetRepository(
     createCurrentRepositoryContext(),
@@ -369,4 +418,70 @@ export function createCurrentVaultTokenRepository(): VaultTokenRepository {
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("vault_token_repository_write"),
   );
+}
+
+/**
+ * Loads the settings cache. Must run during startup on engines without a
+ * synchronous read, before anything calls getCurrentSettingValue.
+ */
+export async function primeCurrentSettingsCache(): Promise<void> {
+  const rows = await createCurrentSettingsRepository().listAll();
+  primeSettingsCache(rows);
+}
+
+/**
+ * How often a replica re-reads the settings table.
+ *
+ * Override with SETTINGS_CACHE_REFRESH_SECONDS; 0 disables the refresh.
+ */
+const REFRESH_SECONDS_ENV = "SETTINGS_CACHE_REFRESH_SECONDS";
+const DEFAULT_REFRESH_SECONDS = 30;
+
+let refreshTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Keeps the settings cache from drifting on a multi-replica deployment.
+ *
+ * The cache is per-process and updated in the process that writes. That is
+ * enough for SQLite, where there is only ever one process. On Postgres and
+ * MySQL — which exist here precisely so more than one instance can share the
+ * data — a setting changed on one replica would otherwise never reach the
+ * others, because the synchronous read has no way to go back to the database.
+ *
+ * Periodic re-priming does not make the value immediately consistent. It bounds
+ * how long it can be wrong, which is the difference between a setting that
+ * takes effect on the next tick and one that takes effect at the next restart.
+ */
+export function startSettingsCacheRefresh(
+  env = process.env,
+  refresh: () => Promise<void> = primeCurrentSettingsCache,
+): void {
+  if (refreshTimer) return;
+
+  const seconds = refreshIntervalSeconds(env);
+  if (seconds === null) return;
+
+  refreshTimer = setInterval(() => {
+    void refresh().catch(() => {
+      // A failed refresh leaves the previous values in place, which is the
+      // right outcome: a transient database blip should not blank the cache.
+      // Every caller reads a missing setting as "use the default", so an empty
+      // cache would silently revert configuration across the deployment.
+    });
+  }, seconds * 1000);
+
+  refreshTimer.unref();
+}
+
+/** The configured interval, or null when refreshing is switched off. */
+export function refreshIntervalSeconds(env = process.env): number | null {
+  const seconds = Number(env[REFRESH_SECONDS_ENV] ?? DEFAULT_REFRESH_SECONDS);
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+}
+
+/** Test seam. */
+export function stopSettingsCacheRefresh(): void {
+  if (!refreshTimer) return;
+  clearInterval(refreshTimer);
+  refreshTimer = null;
 }

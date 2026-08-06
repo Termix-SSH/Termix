@@ -4,13 +4,11 @@ import { SsoProviderRepository } from "../../../database/repositories/sso-provid
 
 describe("SsoProviderRepository", () => {
   let adapter: TestSqliteDatabase | null = null;
-  let sqlite: Awaited<ReturnType<TestSqliteDatabase["connect"]>>["sqlite"];
 
   afterEach(async () => {
     if (adapter) {
       await adapter.close();
       adapter = null;
-      sqlite = undefined;
     }
   });
 
@@ -19,28 +17,6 @@ describe("SsoProviderRepository", () => {
   ): Promise<SsoProviderRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    sqlite = context.sqlite;
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0,
-        sso_provider_id INTEGER
-      );
-
-      CREATE TABLE sso_providers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
-        display_order INTEGER NOT NULL DEFAULT 0,
-        config TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
 
     return new SsoProviderRepository(context, onWrite);
   }
@@ -96,7 +72,7 @@ describe("SsoProviderRepository", () => {
       config: "{}",
     });
 
-    sqlite?.exec(`
+    await adapter!.exec(`
       INSERT INTO users (id, username, password_hash, sso_provider_id)
       VALUES ('user-1', 'u1', 'hash', ${provider.id}),
              ('user-2', 'u2', 'hash', ${provider.id}),

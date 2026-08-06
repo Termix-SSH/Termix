@@ -1,4 +1,20 @@
-import { authApi, handleApiError } from "@/main-axios";
+import {
+  authApi,
+  getRemoteGuacamoleApi,
+  handleApiError,
+  isElectron,
+} from "@/main-axios";
+import type { AxiosInstance } from "axios";
+
+/**
+ * The embedded desktop backend does not bundle guacd, which is why
+ * resolveConnectionOrigin() pins RDP/VNC/Telnet to "remote". These calls have to
+ * follow: asking the embedded backend reports the guacd *it* cannot reach,
+ * rather than the one on the connected server that serves the session.
+ */
+function guacamoleApi(): AxiosInstance {
+  return isElectron() ? getRemoteGuacamoleApi() : authApi;
+}
 
 export interface GuacamoleTokenRequest {
   protocol: "rdp" | "vnc" | "telnet";
@@ -189,7 +205,7 @@ export async function getGuacamoleToken(
   try {
     const guacParams = toGuacamoleParams(request.guacamoleConfig);
 
-    const response = await authApi.post("/guacamole/token", {
+    const response = await guacamoleApi().post("/guacamole/token", {
       type: request.protocol,
       hostname: request.hostname,
       port: request.port,
@@ -212,15 +228,18 @@ export async function getGuacamoleTokenFromHost(
   promptedCredentials?: { username?: string; password?: string },
 ): Promise<GuacamoleTokenResponse> {
   try {
-    const response = await authApi.post(`/guacamole/connect-host/${hostId}`, {
-      ...(protocol ? { protocol } : {}),
-      ...(promptedCredentials?.username
-        ? { promptedUsername: promptedCredentials.username }
-        : {}),
-      ...(promptedCredentials?.password
-        ? { promptedPassword: promptedCredentials.password }
-        : {}),
-    });
+    const response = await guacamoleApi().post(
+      `/guacamole/connect-host/${hostId}`,
+      {
+        ...(protocol ? { protocol } : {}),
+        ...(promptedCredentials?.username
+          ? { promptedUsername: promptedCredentials.username }
+          : {}),
+        ...(promptedCredentials?.password
+          ? { promptedPassword: promptedCredentials.password }
+          : {}),
+      },
+    );
     return response.data;
   } catch (error) {
     throw handleApiError(error, "get guacamole token from host");
@@ -230,6 +249,6 @@ export async function getGuacamoleTokenFromHost(
 export async function getGuacdStatus(): Promise<{
   guacd: { status: string };
 }> {
-  const response = await authApi.get("/guacamole/status");
+  const response = await guacamoleApi().get("/guacamole/status");
   return response.data;
 }

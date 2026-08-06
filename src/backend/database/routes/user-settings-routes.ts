@@ -7,6 +7,7 @@ import {
   setGlobalLogLevel,
 } from "../../utils/logger.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { getTelemetryEnvOverride } from "../../utils/analytics.js";
 import {
   createCurrentSettingsRepository,
   createCurrentUserRepository,
@@ -524,7 +525,7 @@ export function registerUserSettingsRoutes(
    * /users/analytics-enabled:
    *   get:
    *     summary: Get analytics enabled setting
-   *     description: Returns whether anonymous usage telemetry is enabled.
+   *     description: Returns whether anonymous usage telemetry is enabled, and whether the value is locked by the ENABLE_TELEMETRY environment variable.
    *     tags:
    *       - Users
    *     responses:
@@ -537,14 +538,21 @@ export function registerUserSettingsRoutes(
    *               properties:
    *                 enabled:
    *                   type: boolean
+   *                 locked:
+   *                   type: boolean
    */
   router.get("/analytics-enabled", authenticateJWT, async (_req, res) => {
     try {
+      const override = getTelemetryEnvOverride();
+      if (override !== null) {
+        return res.json({ enabled: override, locked: true });
+      }
       res.json({
         enabled: await createCurrentSettingsRepository().getBoolean(
           "analytics_enabled",
           true,
         ),
+        locked: false,
       });
     } catch (err) {
       authLogger.error("Failed to get analytics enabled setting", err);
@@ -576,6 +584,8 @@ export function registerUserSettingsRoutes(
    *         description: Setting updated.
    *       403:
    *         description: Not authorized.
+   *       409:
+   *         description: Setting is locked by the ENABLE_TELEMETRY environment variable.
    *       500:
    *         description: Failed to update setting.
    */
@@ -585,6 +595,11 @@ export function registerUserSettingsRoutes(
       const actor = await getAdminActor(userId);
       if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
+      }
+      if (getTelemetryEnvOverride() !== null) {
+        return res.status(409).json({
+          error: "Telemetry is locked by the ENABLE_TELEMETRY env variable",
+        });
       }
       const { enabled } = req.body;
       if (typeof enabled !== "boolean") {

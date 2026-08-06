@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  containsOwnerPrivateAuthUpdate,
   isNonEmptyString,
+  isOptionalBoolean,
   isValidPort,
   normalizeImportedHost,
   renameFolderPath,
@@ -8,6 +10,45 @@ import {
   stripSensitiveFields,
   transformHostResponse,
 } from "../../../database/routes/host-normalizers.js";
+
+describe("containsOwnerPrivateAuthUpdate", () => {
+  it("detects owner-only SSH auth fields, including explicit clears", () => {
+    expect(containsOwnerPrivateAuthUpdate({ password: null }, "ssh")).toBe(
+      true,
+    );
+    expect(
+      containsOwnerPrivateAuthUpdate({ credentialId: undefined }, "ssh"),
+    ).toBe(true);
+    expect(
+      containsOwnerPrivateAuthUpdate({ authType: "password" }, "ssh"),
+    ).toBe(true);
+    expect(containsOwnerPrivateAuthUpdate({ shareSshAuth: true }, "ssh")).toBe(
+      true,
+    );
+  });
+
+  it("keeps protocol field definitions isolated", () => {
+    expect(containsOwnerPrivateAuthUpdate({ rdpCredentialId: 7 }, "rdp")).toBe(
+      true,
+    );
+    expect(containsOwnerPrivateAuthUpdate({ rdpCredentialId: 7 }, "ssh")).toBe(
+      false,
+    );
+  });
+
+  it("allows shared editors to update non-authentication host settings", () => {
+    expect(
+      containsOwnerPrivateAuthUpdate(
+        {
+          name: "renamed",
+          ip: "10.0.0.5",
+          notes: "updated",
+        },
+        "ssh",
+      ),
+    ).toBe(false);
+  });
+});
 
 describe("isNonEmptyString", () => {
   it("accepts non-blank strings", () => {
@@ -21,6 +62,21 @@ describe("isNonEmptyString", () => {
     expect(isNonEmptyString(123)).toBe(false);
     expect(isNonEmptyString(null)).toBe(false);
     expect(isNonEmptyString(undefined)).toBe(false);
+  });
+});
+
+describe("isOptionalBoolean", () => {
+  it("accepts booleans and an omitted value", () => {
+    expect(isOptionalBoolean(true)).toBe(true);
+    expect(isOptionalBoolean(false)).toBe(true);
+    expect(isOptionalBoolean(undefined)).toBe(true);
+  });
+
+  it("rejects truthy string and numeric lookalikes", () => {
+    expect(isOptionalBoolean("false")).toBe(false);
+    expect(isOptionalBoolean("0")).toBe(false);
+    expect(isOptionalBoolean(1)).toBe(false);
+    expect(isOptionalBoolean(null)).toBe(false);
   });
 });
 
@@ -143,11 +199,16 @@ describe("stripSensitiveFields", () => {
       key: "PRIVATE KEY",
       keyPassword: "kp",
       sudoPassword: "sp",
+      terminalConfig: {
+        theme: "termix",
+        sudoPassword: "nested-sudo",
+      },
     });
     expect(result.password).toBeUndefined();
     expect(result.key).toBeUndefined();
     expect(result.keyPassword).toBeUndefined();
     expect(result.sudoPassword).toBeUndefined();
+    expect(result.terminalConfig).toEqual({ theme: "termix" });
     expect(result.hasPassword).toBe(true);
     expect(result.hasKey).toBe(true);
     expect(result.hasKeyPassword).toBe(true);
@@ -190,11 +251,13 @@ describe("transformHostResponse", () => {
       tags: "a,b,c",
       enableTerminal: 1,
       enableTunnel: 0,
+      shareSshAuth: 1,
       pin: 1,
     });
     expect(result.tags).toEqual(["a", "b", "c"]);
     expect(result.enableTerminal).toBe(true);
     expect(result.enableTunnel).toBe(false);
+    expect(result.shareSshAuth).toBe(true);
     expect(result.pin).toBe(true);
   });
 
@@ -258,6 +321,9 @@ describe("sanitizeHostForRecipient", () => {
     tags: ["linux"],
     notes: "secret runbook",
     quickActions: [{ name: "restart", snippetId: "1" }],
+    credentialId: 7,
+    shareSshAuth: true,
+    overrideCredentialUsername: true,
     password: "hunter2",
     key: "PRIVATE",
     sudoPassword: "sudo",
@@ -268,6 +334,11 @@ describe("sanitizeHostForRecipient", () => {
     sshPort: 22,
     rdpPort: 3389,
     defaultPath: "/srv",
+    terminalConfig: {
+      theme: "termix",
+      sudoPassword: "nested-sudo",
+      agentSocketPath: "/run/user/1000/ssh-agent.sock",
+    },
   };
 
   it("always strips secrets for recipients", () => {
@@ -277,6 +348,12 @@ describe("sanitizeHostForRecipient", () => {
     expect(result.sudoPassword).toBeUndefined();
     expect(result.rdpPassword).toBeUndefined();
     expect(result.socks5Password).toBeUndefined();
+    expect(result.credentialId).toBeUndefined();
+    expect(result.overrideCredentialUsername).toBeUndefined();
+    expect(result.terminalConfig).toEqual({ theme: "termix" });
+    expect(result.shareSshAuth).toBe(true);
+    expect(result.hasPassword).toBe(false);
+    expect(result.hasKey).toBe(false);
     // view keeps configuration fields
     expect(result.notes).toBe("secret runbook");
     expect(result.quickActions).toEqual(sharedHost.quickActions);
@@ -284,7 +361,17 @@ describe("sanitizeHostForRecipient", () => {
 
   it("reduces connect-level hosts to connection essentials", () => {
     const result = sanitizeHostForRecipient(
-      { ...sharedHost, permissionLevel: "connect" },
+      {
+        ...sharedHost,
+        permissionLevel: "connect",
+        authOverrides: {
+          ssh: {
+            credentialId: 9,
+            required: false,
+            ownerAuthShared: true,
+          },
+        },
+      },
       "connect",
     );
     expect(result.name).toBe("prod");
@@ -292,6 +379,14 @@ describe("sanitizeHostForRecipient", () => {
     expect(result.enableRdp).toBe(true);
     expect(result.rdpPort).toBe(3389);
     expect(result.permissionLevel).toBe("connect");
+    expect(result.shareSshAuth).toBe(true);
+    expect(result.authOverrides).toEqual({
+      ssh: {
+        credentialId: 9,
+        required: false,
+        ownerAuthShared: true,
+      },
+    });
     expect(result.notes).toBeUndefined();
     expect(result.quickActions).toBeUndefined();
     expect(result.password).toBeUndefined();

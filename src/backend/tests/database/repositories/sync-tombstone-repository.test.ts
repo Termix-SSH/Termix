@@ -17,21 +17,7 @@ describe("SyncTombstoneRepository", () => {
   ): Promise<SyncTombstoneRepository> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE sync_tombstones (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        entity_type TEXT NOT NULL,
-        sync_id TEXT NOT NULL,
-        deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash'), ('user-2', 'bob', 'hash');
     `);
@@ -102,24 +88,9 @@ describe("SyncTombstoneRepository", () => {
     const adapterLocal = new TestSqliteDatabase();
     adapter = adapterLocal;
     const context = await adapterLocal.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL
-      );
-
-      CREATE TABLE sync_tombstones (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
-        entity_type TEXT NOT NULL,
-        sync_id TEXT NOT NULL,
-        deleted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash)
       VALUES ('user-1', 'alice', 'hash');
-
       INSERT INTO sync_tombstones (user_id, entity_type, sync_id, deleted_at)
       VALUES
         ('user-1', 'hosts', 'old', '2026-01-01T00:00:00.000Z'),

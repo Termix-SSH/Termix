@@ -1,6 +1,7 @@
 import { and, eq, gt } from "drizzle-orm";
 import { userOpenTabs } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type OpenTabRecord = typeof userOpenTabs.$inferSelect;
 export type NewOpenTabRecord = typeof userOpenTabs.$inferInsert;
@@ -111,43 +112,40 @@ export class OpenTabRepository {
     update: OpenTabUpdate,
     updatedAt = new Date().toISOString(),
   ): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(userOpenTabs)
       .set({ ...update, updatedAt })
-      .where(and(eq(userOpenTabs.id, id), eq(userOpenTabs.userId, userId)))
-      .returning({ id: userOpenTabs.id });
+      .where(and(eq(userOpenTabs.id, id), eq(userOpenTabs.userId, userId)));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async deleteForUser(userId: string, id: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(userOpenTabs)
-      .where(and(eq(userOpenTabs.id, id), eq(userOpenTabs.userId, userId)))
-      .returning({ id: userOpenTabs.id });
+      .where(and(eq(userOpenTabs.id, id), eq(userOpenTabs.userId, userId)));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(userOpenTabs)
-      .where(eq(userOpenTabs.userId, userId))
-      .returning({ id: userOpenTabs.id });
+      .where(eq(userOpenTabs.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async findByIdForUser(

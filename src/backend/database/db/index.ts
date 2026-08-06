@@ -7,8 +7,21 @@ import { databaseLogger } from "../../utils/logger.js";
 import { DatabaseFileEncryption } from "../../utils/database-file-encryption.js";
 import { SystemCrypto } from "../../utils/system-crypto.js";
 import { DatabaseMigration } from "../../utils/database-migration.js";
+import {
+  ensureSharedHostAuthOverrideProtocolSchema,
+  migrateLegacySharedHostAuthOverrides,
+} from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
+import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
+import {
+  assertDataDirIsNotMisconfigured,
+  DataDirMisconfiguredError,
+} from "../../utils/data-dir-guard.js";
 import { getDefaultGuacdUrl } from "../../utils/guacd-config.js";
+import { resolveDatabaseDialect, type DatabaseDialect } from "./dialect.js";
+import { connectRemoteDatabase } from "./connect.js";
+import { runRemoteMigrations } from "./migrate.js";
+import type { PortableDatabase } from "../repositories/database-context.js";
 
 const dataDir = process.env.DATA_DIR || "./db/data";
 const dbDir = path.resolve(dataDir);
@@ -104,11 +117,16 @@ async function initializeDatabaseAsync(): Promise<void> {
             );
           }
         } else {
+          assertDataDirIsNotMisconfigured(dataDir);
           memoryDatabase = new Database(":memory:");
           isNewDatabase = true;
         }
       }
     } catch (error) {
+      // Not a decryption problem: the database is fine, we are pointed at the
+      // wrong directory. Surface that message as-is.
+      if (error instanceof DataDirMisconfiguredError) throw error;
+
       databaseLogger.error("Failed to initialize memory database", error, {
         operation: "db_memory_init_failed",
         errorMessage: error instanceof Error ? error.message : "Unknown error",
@@ -145,8 +163,35 @@ async function initializeDatabaseAsync(): Promise<void> {
       );
     }
   } else {
-    memoryDatabase = new Database(":memory:");
-    isNewDatabase = true;
+    assertDataDirIsNotMisconfigured(dataDir);
+
+    // The database still lives in memory and is serialised out on every write;
+    // turning encryption off only changes whether that file is ciphertext. It
+    // has to be read back, or each restart starts empty and silently discards
+    // everything the previous run saved.
+    const existing = readPlainDatabaseFile();
+    if (existing) {
+      memoryDatabase = new Database(existing);
+      databaseLogger.info("Loaded unencrypted database from disk", {
+        operation: "db_load_plain",
+        path: dbPath,
+        bytes: existing.length,
+      });
+    } else {
+      memoryDatabase = new Database(":memory:");
+      isNewDatabase = true;
+    }
+  }
+}
+
+/** The plain database file, or null when there is nothing to restore. */
+function readPlainDatabaseFile(): Buffer | null {
+  try {
+    const contents = fs.readFileSync(dbPath);
+    return contents.length > 0 ? contents : null;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
   }
 }
 
@@ -472,13 +517,14 @@ async function initializeCompleteDatabase(): Promise<void> {
         success INTEGER NOT NULL,
         error_message TEXT,
         timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS session_recordings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         host_id INTEGER NOT NULL,
-        user_id TEXT NOT NULL,
+        user_id TEXT,
+        username TEXT,
         access_id INTEGER,
         started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         ended_at TEXT,
@@ -491,7 +537,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         terminated_by_owner INTEGER DEFAULT 0,
         termination_reason TEXT,
         FOREIGN KEY (host_id) REFERENCES ssh_data (id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
         FOREIGN KEY (access_id) REFERENCES host_access (id) ON DELETE SET NULL
     );
 
@@ -1419,6 +1465,28 @@ const migrateSchema = () => {
   }
 
   try {
+    ensureSharedHostAuthOverrideProtocolSchema(sqlite);
+  } catch (schemaError) {
+    databaseLogger.warn("Failed to prepare shared_host_auth_overrides table", {
+      operation: "schema_migration",
+      error: schemaError,
+    });
+  }
+
+  try {
+    migrateLegacySharedHostAuthOverrides(
+      sqlite,
+      getRawSettingValue,
+      setRawSettingValue,
+    );
+  } catch (migrateError) {
+    databaseLogger.warn("Failed to migrate shared host auth overrides", {
+      operation: "schema_migration",
+      error: migrateError,
+    });
+  }
+
+  try {
     sqlite.prepare("SELECT credential_id FROM ssh_folders LIMIT 1").get();
   } catch {
     try {
@@ -1448,6 +1516,7 @@ const migrateSchema = () => {
     { column: "connection_type", sql: "ALTER TABLE ssh_data ADD COLUMN connection_type TEXT NOT NULL DEFAULT 'ssh'" },
     { column: "credential_id", sql: "ALTER TABLE ssh_data ADD COLUMN credential_id INTEGER" },
     { column: "override_credential_username", sql: "ALTER TABLE ssh_data ADD COLUMN override_credential_username INTEGER" },
+    { column: "share_ssh_auth", sql: "ALTER TABLE ssh_data ADD COLUMN share_ssh_auth INTEGER NOT NULL DEFAULT 0" },
     { column: "jump_hosts", sql: "ALTER TABLE ssh_data ADD COLUMN jump_hosts TEXT" },
     { column: "show_terminal_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_terminal_in_sidebar INTEGER NOT NULL DEFAULT 1" },
     { column: "show_file_manager_in_sidebar", sql: "ALTER TABLE ssh_data ADD COLUMN show_file_manager_in_sidebar INTEGER NOT NULL DEFAULT 0" },
@@ -1637,7 +1706,7 @@ const migrateSchema = () => {
       sqlite.exec(`
         CREATE TABLE IF NOT EXISTS audit_logs (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
+          user_id TEXT,
           username TEXT NOT NULL,
           action TEXT NOT NULL,
           resource_type TEXT NOT NULL,
@@ -1649,7 +1718,7 @@ const migrateSchema = () => {
           success INTEGER NOT NULL,
           error_message TEXT,
           timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
         );
       `);
     } catch (createError) {
@@ -2497,6 +2566,10 @@ const migrateSchema = () => {
   }
   // --- sync end ---
 
+  // Audit trails and session recordings used to be deleted along with the user
+  // they referenced, which defeats the point of keeping them.
+  migrateAuditRetention(sqlite);
+
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",
   });
@@ -2580,8 +2653,52 @@ async function handlePostInitFileEncryption() {
 }
 
 async function initializeDatabase(): Promise<void> {
+  const dialect = resolveDatabaseDialect();
+
+  if (dialect !== "sqlite") {
+    await initializeRemoteDatabase(dialect);
+    return;
+  }
+
   await initializeCompleteDatabase();
   await handlePostInitFileEncryption();
+}
+
+/**
+ * Startup against Postgres or MySQL.
+ *
+ * Shorter than the SQLite path because most of what that one does has no
+ * counterpart here: there is no file to decrypt, no in-memory copy to keep in
+ * step with disk, and the schema comes from drizzle-kit migrations instead of
+ * the inline DDL below.
+ *
+ * What does carry over is the settings cache. 27 call sites read settings
+ * synchronously, which better-sqlite3 allows and no remote driver does, so the
+ * table is loaded once here before anything asks for it.
+ */
+async function initializeRemoteDatabase(
+  dialect: Exclude<DatabaseDialect, "sqlite">,
+): Promise<void> {
+  databaseLogger.info(`Connecting to ${dialect} database`, {
+    operation: "db_init",
+    dialect,
+  });
+
+  db = await connectRemoteDatabase(dialect);
+  await runRemoteMigrations(dialect, db);
+
+  // Imported here rather than at the top: factory.ts imports getDb from this
+  // module, and a static import would close the cycle at module-load time.
+  const { primeCurrentSettingsCache, startSettingsCacheRefresh } = await import(
+    "../repositories/factory.js"
+  );
+  await primeCurrentSettingsCache();
+  startSettingsCacheRefresh();
+
+  databaseLogger.info(`${dialect} database ready`, {
+    operation: "db_init_complete",
+    dialect,
+  });
 }
 
 export { initializeDatabase };
@@ -2661,9 +2778,9 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-let db: ReturnType<typeof drizzle<typeof schema>>;
+let db: PortableDatabase;
 
-export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
+export function getDb(): PortableDatabase {
   if (!db) {
     throw new Error(
       "Database not initialized. Ensure initializeDatabase() is called before accessing db.",
@@ -2674,6 +2791,13 @@ export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
 
 export function getSqlite(): Database.Database {
   if (!sqlite) {
+    const dialect = resolveDatabaseDialect();
+    if (dialect !== "sqlite") {
+      throw new Error(
+        `No SQLite handle: DATABASE_DIALECT is "${dialect}". This caller needs a ` +
+          `synchronous query, which only SQLite offers — give it an async path instead.`,
+      );
+    }
     throw new Error(
       "SQLite not initialized. Ensure initializeDatabase() is called before accessing sqlite.",
     );

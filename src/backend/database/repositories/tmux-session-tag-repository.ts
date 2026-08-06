@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { tmuxSessionTags } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
 
 export type TmuxSessionTagRecord = typeof tmuxSessionTags.$inferSelect;
 
@@ -45,7 +46,7 @@ export class TmuxSessionTagRepository {
     sessionName: string,
     newSessionName: string,
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .update(tmuxSessionTags)
       .set({ sessionName: newSessionName })
       .where(
@@ -53,35 +54,33 @@ export class TmuxSessionTagRepository {
           eq(tmuxSessionTags.hostId, hostId),
           eq(tmuxSessionTags.sessionName, sessionName),
         ),
-      )
-      .returning({ id: tmuxSessionTags.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteSessionForHost(
     hostId: number,
     sessionName: string,
   ): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(tmuxSessionTags)
       .where(
         and(
           eq(tmuxSessionTags.hostId, hostId),
           eq(tmuxSessionTags.sessionName, sessionName),
         ),
-      )
-      .returning({ id: tmuxSessionTags.id });
+      );
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async replaceForUserHostSession(
@@ -90,7 +89,7 @@ export class TmuxSessionTagRepository {
     sessionName: string,
     tags: string[],
   ): Promise<number> {
-    const deletedRows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(tmuxSessionTags)
       .where(
         and(
@@ -98,8 +97,7 @@ export class TmuxSessionTagRepository {
           eq(tmuxSessionTags.hostId, hostId),
           eq(tmuxSessionTags.sessionName, sessionName),
         ),
-      )
-      .returning({ id: tmuxSessionTags.id });
+      );
 
     if (tags.length > 0) {
       await this.context.drizzle.insert(tmuxSessionTags).values(
@@ -112,7 +110,7 @@ export class TmuxSessionTagRepository {
       );
     }
 
-    const changedRows = deletedRows.length + tags.length;
+    const changedRows = rowsAffected(result) + tags.length;
     if (changedRows > 0) {
       await this.afterWrite();
     }
@@ -121,16 +119,15 @@ export class TmuxSessionTagRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(tmuxSessionTags)
-      .where(eq(tmuxSessionTags.userId, userId))
-      .returning({ id: tmuxSessionTags.id });
+      .where(eq(tmuxSessionTags.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

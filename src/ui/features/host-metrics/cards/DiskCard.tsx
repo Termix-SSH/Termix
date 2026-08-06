@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { HardDrive } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ServerMetrics } from "@/main-axios";
+import { FilesystemPicker } from "./FilesystemPicker";
 import { RadialGauge, Sparkline, MiniStat } from "@/components/charts";
 import { MetricCard } from "./MetricCard";
 import { LineChart, type LineChartSeries } from "@/components/charts/LineChart";
@@ -45,10 +46,41 @@ export function DiskCard({
     };
   }, [activeTab, hostId]);
 
-  const percent = metrics?.disk?.percent ?? null;
-  const usedHuman = metrics?.disk?.usedHuman ?? null;
-  const totalHuman = metrics?.disk?.totalHuman ?? null;
-  const availableHuman = metrics?.disk?.availableHuman ?? null;
+  const filesystems = useMemo(
+    () => metrics?.disk?.filesystems ?? [],
+    [metrics?.disk?.filesystems],
+  );
+  const defaultMount = metrics?.disk?.mount ?? null;
+  const [selectedMount, setSelectedMount] = useState<string | null>(null);
+
+  // Drop a stale selection if the mount disappears between polls, so the card
+  // falls back to the primary filesystem instead of rendering nothing.
+  useEffect(() => {
+    if (
+      selectedMount !== null &&
+      filesystems.length > 0 &&
+      !filesystems.some((fs) => fs.mount === selectedMount)
+    ) {
+      setSelectedMount(null);
+    }
+  }, [filesystems, selectedMount]);
+
+  const activeMount = selectedMount ?? defaultMount;
+  const activeFs = filesystems.find((fs) => fs.mount === activeMount) ?? null;
+  const isCustomMount = selectedMount !== null && activeFs !== null;
+
+  const percent = isCustomMount
+    ? activeFs.percent
+    : (metrics?.disk?.percent ?? null);
+  const usedHuman = isCustomMount
+    ? activeFs.usedHuman
+    : (metrics?.disk?.usedHuman ?? null);
+  const totalHuman = isCustomMount
+    ? activeFs.totalHuman
+    : (metrics?.disk?.totalHuman ?? null);
+  const availableHuman = isCustomMount
+    ? activeFs.availableHuman
+    : (metrics?.disk?.availableHuman ?? null);
 
   const series: LineChartSeries[] = [
     {
@@ -65,9 +97,18 @@ export function DiskCard({
       title={t("hostMetrics.diskUsage")}
       icon={<HardDrive className="size-3.5" />}
       action={
-        hostId != null ? (
-          <CardTimeTabs value={activeTab} onChange={setActiveTab} />
-        ) : undefined
+        <div className="flex items-center gap-1.5">
+          {activeTab === "live" && (
+            <FilesystemPicker
+              filesystems={filesystems}
+              value={activeMount}
+              onChange={setSelectedMount}
+            />
+          )}
+          {hostId != null && (
+            <CardTimeTabs value={activeTab} onChange={setActiveTab} />
+          )}
+        </div>
       }
     >
       <div className="flex flex-col gap-3">
@@ -77,7 +118,7 @@ export function DiskCard({
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <div className="grid grid-cols-2 gap-2">
                 <MiniStat
-                  caption={t("hostMetrics.disk")}
+                  caption={activeMount ?? t("hostMetrics.disk")}
                   value={
                     usedHuman && totalHuman
                       ? `${usedHuman}/${totalHuman}`

@@ -4,14 +4,17 @@ import { ChevronDown } from "lucide-react";
 export function AdminToggle({
   on,
   onToggle,
+  disabled = false,
 }: {
   on: boolean;
   onToggle: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onToggle}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center border-2 transition-colors ${on ? "bg-accent-brand border-accent-brand" : "bg-muted border-border"}`}
+      disabled={disabled}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center border-2 transition-colors ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"} ${on ? "bg-accent-brand border-accent-brand" : "bg-muted border-border"}`}
     >
       <span
         className={`pointer-events-none inline-block h-3 w-3 bg-background shadow-sm transition-transform ${on ? "translate-x-4" : "translate-x-0.5"}`}

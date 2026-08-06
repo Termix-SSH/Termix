@@ -1,3 +1,11 @@
+import type { HostAuthOverrides } from "./auth-protocols.js";
+
+export type {
+  AuthOverrideProtocol,
+  HostAuthOverrideState,
+  HostAuthOverrides,
+} from "./auth-protocols.js";
+
 export type Host = {
   id: string;
   name: string;
@@ -20,6 +28,7 @@ export type Host = {
     | "vault"
     | "agent";
   useWarpgate?: boolean;
+  shareSshAuth?: boolean;
   credentialId?: string;
   vaultProfileId?: string;
   overrideCredentialUsername?: boolean;
@@ -178,6 +187,7 @@ export type Host = {
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;
+  authOverrides?: HostAuthOverrides<string>;
   permissionLevel?: SharePermissionLevel;
   sharedExpiresAt?: string;
   ownerUsername?: string;
@@ -304,11 +314,7 @@ export type Tab = {
 };
 
 export type DockerContainerStatus =
-  | "running"
-  | "exited"
-  | "paused"
-  | "created"
-  | "restarting";
+  "running" | "exited" | "paused" | "created" | "restarting";
 
 export type DockerContainer = {
   id: string;
@@ -358,10 +364,7 @@ export type LayoutPreset = {
 };
 
 export type UserProfileSection =
-  | "account"
-  | "appearance"
-  | "security"
-  | "api-keys";
+  "account" | "appearance" | "security" | "api-keys";
 export type AdminSection =
   | "general"
   | "sso"
@@ -389,13 +392,7 @@ export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
 
 export type ToolsTab = "ssh-tools" | "snippets" | "history" | "split-screen";
 export type SplitMode =
-  | "none"
-  | "2-way"
-  | "3-way"
-  | "3-way-horizontal"
-  | "4-way"
-  | "5-way"
-  | "6-way";
+  "none" | "2-way" | "3-way" | "3-way-horizontal" | "4-way" | "5-way" | "6-way";
 
 export type Snippet = {
   id: number;

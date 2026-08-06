@@ -1,6 +1,8 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { recentActivity } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning } from "./returning.js";
 
 export type RecentActivityRecord = typeof recentActivity.$inferSelect;
 export type NewRecentActivityRecord = typeof recentActivity.$inferInsert;
@@ -26,10 +28,7 @@ export class RecentActivityRepository {
   async create(
     activity: NewRecentActivityRecord,
   ): Promise<RecentActivityRecord> {
-    const rows = await this.context.drizzle
-      .insert(recentActivity)
-      .values(activity)
-      .returning();
+    const rows = await insertReturning(this.context, recentActivity, activity);
 
     await this.afterWrite();
     return rows[0];
@@ -51,42 +50,39 @@ export class RecentActivityRepository {
       return 0;
     }
 
-    const deletedRows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(recentActivity)
-      .where(inArray(recentActivity.id, idsToDelete))
-      .returning({ id: recentActivity.id });
+      .where(inArray(recentActivity.id, idsToDelete));
 
-    if (deletedRows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return deletedRows.length;
+    return rowsAffected(result);
   }
 
   async deleteByUserId(userId: string): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(recentActivity)
-      .where(eq(recentActivity.userId, userId))
-      .returning({ id: recentActivity.id });
+      .where(eq(recentActivity.userId, userId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostId(hostId: number): Promise<number> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(recentActivity)
-      .where(eq(recentActivity.hostId, hostId))
-      .returning({ id: recentActivity.id });
+      .where(eq(recentActivity.hostId, hostId));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   async deleteByHostIds(hostIds: number[]): Promise<number> {
@@ -94,16 +90,15 @@ export class RecentActivityRepository {
       return 0;
     }
 
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(recentActivity)
-      .where(inArray(recentActivity.hostId, hostIds))
-      .returning({ id: recentActivity.id });
+      .where(inArray(recentActivity.hostId, hostIds));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length;
+    return rowsAffected(result);
   }
 
   private async afterWrite(): Promise<void> {

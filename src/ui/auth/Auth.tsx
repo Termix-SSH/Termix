@@ -37,7 +37,11 @@ import {
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
 import { Checkbox } from "@/components/checkbox";
-import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
+import {
+  changeAppLanguage,
+  normalizeLanguageCode,
+  rememberLoginLanguage,
+} from "@/i18n/i18n";
 import {
   removeSilentSigninFromSearch,
   shouldTriggerSilentSignin,
@@ -239,7 +243,8 @@ export function Auth({ onLogin }: AuthProps) {
   );
 
   function handleLanguageChange(code: string) {
-    void changeAppLanguage(code)
+    const language = rememberLoginLanguage(code);
+    void changeAppLanguage(language)
       .then((language) => setLanguage(language))
       .catch(() => {});
   }

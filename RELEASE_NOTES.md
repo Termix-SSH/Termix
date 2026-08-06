@@ -12,62 +12,59 @@ https://youtu.be/g0QjNdV3YYY
 
 <!-- UPDATE_LOG -->
 
-- Added simple telemetrics to PostHog (user count, total hosts across users, and version metrics).
-- Reworked Electron desktop app to run standalone-first with a now optional sync to a remote Termix server.
-- Added support for starting connections locally or from the remote server on desktop app.
-- Added support for custom key shortcuts.
-- Added support for more MFA types (SSH-only).
-- Added multiplayer/shared sessions for terminals and remote desktop (share via link or user).
-- Added support for logging into SSH hosts that require multi-factor authentication (like Duo or JumpCloud push/TOTP prompts).
-- Added the option to convert a Quick Connect session into a saved host after connecting.
-- Added an export option for sharing host entries without credentials, so a host list can be shared without leaking passwords or keys.
-- Unified the folder picker across hosts, credentials, and snippets so they all use the same searchable, create-in-place selector.
-- Allowed pasting into the key recording field from the clipboard.
-- Allowed sharing hosts that use authentication type "none".
-- Allowed setting authentication type "none" on RDP hosts.
-- Added the option to show two or more sidebar panels open at the same time.
-- Added global custom themes that can be applied across all hosts instead of per host.
-- Added a button to quickly create a Credentials entry from a host's existing authentication details.
-- Added persistent split screen, so your layout and assigned tabs are restored after closing and reopening the app.
-- Added tag matching to host search, so searching now matches tags as well as hostnames.
-- Brought back the ability to collapse snippets.
-- Added the ability to assign login credentials to an entire folder of hosts instead of one at a time.
-- Added the ability to share terminal, VNC, and RDP sessions with other users, including read-only and read-write modes.
-- Added the ability to share entire folders of hosts with other users instead of sharing hosts one by one.
-- Added the ability to make folders of hosts available to specific users instead of everyone recreating them.
-- Reworked SSH credentials to support both a password and an SSH key on the same credential, with an option to auto fill the password when prompted.
-- Added a custom group claim option for OIDC login, useful for identity providers like Zitadel that don't use a plain "groups" claim.
+- Added support for multi disk usage in file manager/host metrics
+- Added better Ctrl + F terminal search
+- Added right click menu on app rail to pin sidebar faster
+- Support for overriding shared SSH credential
+- Added mapping for OIDC provider groups to RBAC roles
+- Added host export dialog for more customizable host exporting
+- Initial groundwork for supporting more database types (postgres and mysql)
+- Added audit log export (CSV/NDJSON) and optional live forwarding to a SIEM
+- Added configurable audit log retention by age and row count
+- Audit entries for file manager, RDP/VNC/Telnet, Docker and tunnel sessions
+- Encrypted SSO secrets instead of BASE64 encoding them
+- Added support for Tailscale SSH check mode with in-terminal browser authentication
+
 <!-- /UPDATE_LOG -->
 
 <!-- BUG_FIXES -->
 
-- Fixed the Add Channel dialog failing with "config is required" when adding Webhook or ntfy alert channels.
-- Fixed font size and UI scaling being too small even at the largest setting on high resolution displays.
-- Fixed the Docker integration not working on hosts using authentication type "none".
-- Fixed the latest Russian translation updates from Crowdin not being included in the app.
-- Fixed missing Nerd Font symbol support in the Android app.
-- Fixed credential changes on RDP hosts not saving properly.
-- Fixed credential folders not showing up in the folder dropdown when editing a credential.
-- Fixed RDP hosts not using their stored credential and falling back to a direct connection.
-- Fixed Cmd + scroll on Mac resizing the terminal instead of scrolling.
-- Fixed text repeating itself in the terminal when typing with a wireless keyboard on Android.
-- Fixed RDP connections failing when going through a jump host.
-- Fixed SSH connections failing when going through a jump host in some setups.
-- Fixed OIDC login failing with a database error when the identity provider didn't return a client ID.
-- Fixed SSH client-to-server tunnels failing with an authentication error.
-- Fixed Host Metrics disk usage only showing the root filesystem and ignoring other mounted disks.
-- Fixed Android navigation buttons covering the terminal's top bar keys.
-- Fixed Proxmox discovery importing DHCP LXC containers with an IP of 0.0.0.0 instead of their real address.
-- Fixed VNC connections to macOS Screen Sharing hanging after the handshake instead of connecting.
-- Fixed File Manager delete still failing on Windows hosts running PowerShell 5.1.
-- Fixed the terminal dropping characters while typing on iOS.
-- Fixed SSH lines like "[username@host]" being wrongly highlighted as a log level and breaking output formatting.
-- Fixed RDP touch mode on Android not registering taps as clicks.
-- Fixed VNC connections still failing due to a guacd protocol version mismatch.
-- Guacamole tab showing "connecting" instead of rendering the desktop.
-- Fixed tmux not using Tailscale when starting connections.
-- Fixed an invalid websocket frame from causing code 10006 crash triggering restart loop.
-- Remove chacha20-poly1305 without native ssh2 binding.
-- Corrected SSRF blocklist from false-positive on all IPv4.
-- Fixed terminal background image incorrectly displaying.
+- Hardened nginx headers/asset caching
+- Deleting an account no longer deletes its audit entries and session recordings
+- Made logger display expanded error messages
+- Removed phantom port knocking
+- Fixed Proxmox guest discovery failures over jump host
+- Compare sync cursors independently of timestamp layout
+- Fixed sync deleting not reaching other side
+- Remote sync stalling after first pass and never propagating deletions
+- DB_FILE_ENCRYPTION variable loading DB file as empty
+- Removed unneeded field encryption boundaries
+- SSH login alerts being dropped silently
+- Honor lookupOptions.all in custom DNS lookup hook
+- Jump host SOCKS proxy settings being ignored
+- Jump host tunnels not reachable by guacd
+- Per-host RDP/VNC recording flags being ignored
+- RDP sessions not using the configured resolution
+- OIDC login failing with unverifiable ID tokens or JWKs without alg
+- Refuse to start with an empty database when data exists elsewhere
+- Database not persisting during container shutdown
+- Host command history setting not saving
+- Desktop preference sync and remote sync account identity
+- Desktop guacd calls not routed to the connected remote server
+- File manager navigation getting stuck after permission errors
+- Read-only shared hosts could be dragged into folders
+- Terminal highlighting breaking inside split control strings
+- Windows terminal Tab key and Android hardware keyboard keys
+- tmux monitor failing on Tailscale-authenticated hosts
+- Database export not staying same-origin on localhost
+- Snippet execution results not reported correctly
+- Shared hosts appearing twice
+- Wake-on-LAN broadcast address being dropped
+- Sharing an empty folder was rejected
+- Remote sync losing references between linked records
+- Desktop app failing to find its backend on some architectures
+- Centralized outbound address validation for homepage proxy requests
+- Default font size to medium instead of large
+- Tailscale hosts hanging on connect when the tailnet ACL requires a periodic check
+
 <!-- /BUG_FIXES -->
