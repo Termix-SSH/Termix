@@ -1,6 +1,6 @@
 <!-- SUMMARY -->
 
-Standalone-first Electron desktop app with optional remote sync, shared/multiplayer terminal and remote desktop sessions, improved SSH MFA support, custom key shortcuts, bug fixes across terminal, RDP/VNC, mobile, and auth.
+Enterprise audit logging with SIEM export, OIDC group-to-RBAC mapping, Tailscale SSH check mode, multi-disk metrics, and bug fixes across sync, jump hosts, RDP/VNC, and auth.
 
 <!-- /SUMMARY -->
 
