@@ -24,6 +24,7 @@ https://youtu.be/g0QjNdV3YYY
 - Audit entries for file manager, RDP/VNC/Telnet, Docker and tunnel sessions
 - Encrypted SSO secrets instead of BASE64 encoding them
 - Added support for Tailscale SSH check mode with in-terminal browser authentication
+- Added ENABLE_TELEMETRY variable to disable the usage ping before startup
 
 <!-- /UPDATE_LOG -->
 
