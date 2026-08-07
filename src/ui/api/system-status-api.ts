@@ -137,9 +137,10 @@ export interface VersionInfo {
   };
   cached?: boolean;
   cache_age?: number;
-  // The endpoint carries more than the fields above, and older callers read
-  // some of them (`updateAvailable`, for one), so stay a superset of the
-  // `Record<string, unknown>` this used to return.
+  // Callers reach for fields beyond the ones above -- SystemOverviewWidget
+  // reads `updateAvailable`, which this endpoint does not in fact return --
+  // so keep the index signature the previous `Record<string, unknown>` gave
+  // them. Typing those reads out of existence is a separate change.
   [key: string]: unknown;
 }
 
