@@ -31,6 +31,7 @@ import {
   getSSHHosts,
   getUptime,
   getVersionInfo,
+  releaseUrlFrom,
   getDatabaseHealth,
   getRecentActivity,
   getTunnelStatuses,
@@ -1378,7 +1379,7 @@ export function DashboardTab({
       .then((info) => {
         setVersionText(info.localVersion ?? "");
         setVersionStatus(info.status ?? "up_to_date");
-        setReleaseUrl(info.latest_release?.html_url ?? "");
+        setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});
     getDatabaseHealth()

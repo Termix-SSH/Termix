@@ -14,6 +14,7 @@ import {
   enableTOTP,
   disableTOTP,
   getVersionInfo,
+  releaseUrlFrom,
   getUserRoles,
   saveUserPreferences,
   getUserPreferences,
@@ -694,7 +695,7 @@ export function UserProfilePanel({
       .then((info) => {
         setVersion(info.localVersion);
         setVersionStatus(info.status ?? "up_to_date");
-        setReleaseUrl(info.latest_release?.html_url ?? "");
+        setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});
   }, [t]);

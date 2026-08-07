@@ -143,6 +143,14 @@ export interface VersionInfo {
   [key: string]: unknown;
 }
 
+// Where the release page lives inside a version response. Both surfaces that
+// render a version badge read it, and an empty string is what they treat as
+// "no link to offer", so keep the shape in one place rather than repeating the
+// optional chain at each call site.
+export function releaseUrlFrom(info: VersionInfo | null | undefined): string {
+  return info?.latest_release?.html_url ?? "";
+}
+
 export async function getVersionInfo(checkRemote = true): Promise<VersionInfo> {
   try {
     const response = await authApi.get(
