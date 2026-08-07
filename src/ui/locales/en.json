@@ -211,6 +211,7 @@
     "uptimeLabel": "Uptime",
     "overviewVersion": "Version",
     "overviewUpdate": "Up to date",
+    "overviewUpdateLabel": "Update",
     "overviewUpdateAvailable": "Update available",
     "overviewDatabase": "Database",
     "overviewUptime": "Uptime",
