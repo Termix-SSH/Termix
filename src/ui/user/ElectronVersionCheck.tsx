@@ -17,9 +17,8 @@ type ElectronWindow = Window & {
 
 export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   const { t } = useTranslation();
-  const [versionInfo, setVersionInfo] = useState<Record<
-    string,
-    unknown
+  const [versionInfo, setVersionInfo] = useState<Awaited<
+    ReturnType<typeof checkElectronUpdate>
   > | null>(null);
   const [versionChecking, setVersionChecking] = useState(false);
   const [versionDismissed] = useState(false);
@@ -35,23 +34,24 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
       const updateInfo = await checkElectronUpdate();
       setVersionInfo(updateInfo);
 
-      const currentVersion = await (
-        window as ElectronWindow
-      ).electronAPI?.getAppVersion?.();
+      // Keyed on the remote version being offered, not the local one: keying on
+      // the local version suppressed the prompt for exactly the users who had
+      // not updated yet, and only showed it again once they had.
+      const remoteVersion = updateInfo?.remoteVersion;
       const dismissedVersion = localStorage.getItem(
         "electron-version-check-dismissed",
       );
 
-      if (dismissedVersion === currentVersion) {
+      if (remoteVersion && dismissedVersion === remoteVersion) {
         onContinue();
         return;
       }
 
       if (updateInfo?.status === "up_to_date") {
-        if (currentVersion) {
+        if (remoteVersion) {
           localStorage.setItem(
             "electron-version-check-dismissed",
-            currentVersion,
+            remoteVersion,
           );
         }
         onContinue();
@@ -86,11 +86,16 @@ export function ElectronVersionCheck({ onContinue }: VersionCheckModalProps) {
   };
 
   const handleContinue = async () => {
-    const currentVersion = await (
-      window as ElectronWindow
-    ).electronAPI?.getAppVersion?.();
-    if (currentVersion) {
-      localStorage.setItem("electron-version-check-dismissed", currentVersion);
+    // Without a remote version (the check failed) fall back to the local one,
+    // which never matches a later release and so cannot suppress its prompt.
+    const dismissedVersion =
+      versionInfo?.remoteVersion ??
+      (await (window as ElectronWindow).electronAPI?.getAppVersion?.());
+    if (dismissedVersion) {
+      localStorage.setItem(
+        "electron-version-check-dismissed",
+        dismissedVersion,
+      );
     }
     onContinue();
   };

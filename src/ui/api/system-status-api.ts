@@ -124,9 +124,26 @@ export async function getReleasesRSS(
   }
 }
 
-export async function getVersionInfo(
-  checkRemote = true,
-): Promise<Record<string, unknown>> {
+export interface VersionInfo {
+  status?: "up_to_date" | "requires_update" | "beta";
+  localVersion?: string;
+  remoteVersion?: string;
+  latest_release?: {
+    tag_name?: string;
+    name?: string;
+    published_at?: string;
+    html_url?: string;
+    body?: string;
+  };
+  cached?: boolean;
+  cache_age?: number;
+  // The endpoint carries more than the fields above, and older callers read
+  // some of them (`updateAvailable`, for one), so stay a superset of the
+  // `Record<string, unknown>` this used to return.
+  [key: string]: unknown;
+}
+
+export async function getVersionInfo(checkRemote = true): Promise<VersionInfo> {
   try {
     const response = await authApi.get(
       `/version${checkRemote ? "" : "?checkRemote=false"}`,
