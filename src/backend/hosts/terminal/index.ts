@@ -46,6 +46,7 @@ import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../../utils/alert-trigger.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
+import { hostAddressMismatch } from "./host-identity.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -1476,6 +1477,39 @@ wss.on("connection", async (ws: WebSocket, req) => {
           id,
           userId,
         )) as unknown as typeof resolvedHostData;
+
+        // A client addresses the host by a numeric row id. When the desktop
+        // app delegates the connection to a remote sync server, that id is
+        // resolved here, against a table whose autoincrement ids need not line
+        // up with the ones the client is displaying. Everything below is then
+        // taken from whichever row happens to own that id -- the address, the
+        // credentials, the jump hosts, the stored host key -- so a mismatch
+        // opens an interactive shell on a machine the user did not choose, and
+        // says nothing about it.
+        if (hostAddressMismatch(clientIp, resolvedHostData?.ip)) {
+          sshLogger.error(
+            "Refusing to connect: host id resolves to a different address here",
+            undefined,
+            {
+              operation: "ssh_connect_host_id_mismatch",
+              hostId: id,
+              userId,
+              clientIp,
+              resolvedIp: resolvedHostData?.ip,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message:
+                "Host mismatch: this server resolved the selected host to a different machine, so the connection was refused. " +
+                "The host ids on this device and on the sync server have drifted apart. " +
+                'Set the connection origin to "This device" for this host, or re-run a full sync, then try again.',
+            }),
+          );
+          cleanupAuthState(connectionTimeout);
+          return;
+        }
 
         if (resolvedHostData) {
           if (
