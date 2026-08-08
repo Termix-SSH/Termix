@@ -15,6 +15,7 @@ import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
+  HOST_NOT_ON_THIS_SERVER_MESSAGE,
 } from "../terminal/host-identity.js";
 
 const sshLogger = systemLogger;
@@ -391,14 +392,22 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
           try {
             // Resolve host with credentials server-side
-            const { resolveHostById } = await import("../host-resolver.js");
-            const resolvedHost = await resolveHostById(hostId, userId);
+            const { resolveHostById, resolveHostBySyncId } =
+              await import("../host-resolver.js");
+            // syncId names the host on both sides of a sync pair; the numeric
+            // id only names it in the database the client is displaying.
+            const hostSyncId = hostConfig?.syncId;
+            const resolvedHost = hostSyncId
+              ? await resolveHostBySyncId(hostSyncId, userId)
+              : await resolveHostById(hostId, userId);
 
             if (!resolvedHost) {
               ws.send(
                 JSON.stringify({
                   type: "error",
-                  message: "Host not found",
+                  message: hostSyncId
+                    ? HOST_NOT_ON_THIS_SERVER_MESSAGE
+                    : "Host not found",
                 }),
               );
               return;
@@ -407,7 +416,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
             // The connection below dials resolvedHost.ip outright, so if this
             // server has a different machine under the id the client sent, the
             // console opens on that machine's Docker daemon instead.
-            if (hostAddressMismatch(hostConfig?.ip, resolvedHost.ip)) {
+            if (
+              !hostSyncId &&
+              hostAddressMismatch(hostConfig?.ip, resolvedHost.ip)
+            ) {
               sshLogger.error(
                 "Refusing Docker console: host id resolves to a different address here",
                 undefined,

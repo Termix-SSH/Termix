@@ -74,6 +74,24 @@ export class HostResolutionRepository {
     return this.decryptOne("ssh_data", rows[0], userId);
   }
 
+  /**
+   * Translates a sync identity into this database's own row id.
+   *
+   * Deliberately not scoped to a user: `sync_id` is unique across the table,
+   * and a host shared with the caller belongs to someone else. Whether the
+   * caller may reach the row is decided by the permission check that follows,
+   * not here.
+   */
+  async findHostIdBySyncId(syncId: string): Promise<number | null> {
+    const rows = await this.context.drizzle
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(eq(hosts.syncId, syncId))
+      .limit(1);
+
+    return rows[0]?.id ?? null;
+  }
+
   async findHostByIdForUser(
     hostId: number,
     userId: string,

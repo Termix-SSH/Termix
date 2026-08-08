@@ -49,6 +49,7 @@ import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
 import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
+  HOST_NOT_ON_THIS_SERVER_MESSAGE,
 } from "./host-identity.js";
 
 interface ConnectToHostData {
@@ -56,6 +57,8 @@ interface ConnectToHostData {
   rows: number;
   hostConfig: {
     id: number;
+    /** Names the host across a sync pair; `id` only names it locally. */
+    syncId?: string | null;
     instanceId?: string;
     ip: string;
     port: number;
@@ -1326,6 +1329,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const { hostConfig, initialPath, executeCommand, tmuxAttachSession } = data;
     const {
       id,
+      syncId: hostSyncId,
       ip: rawIp,
       port: clientPort,
       username: clientUsername,
@@ -1475,21 +1479,45 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     if (id && userId) {
       try {
-        const { resolveHostById } = await import("../host-resolver.js");
-        resolvedHostData = (await resolveHostById(
-          id,
-          userId,
-        )) as unknown as typeof resolvedHostData;
+        const { resolveHostById, resolveHostBySyncId } =
+          await import("../host-resolver.js");
 
-        // A client addresses the host by a numeric row id. When the desktop
-        // app delegates the connection to a remote sync server, that id is
-        // resolved here, against a table whose autoincrement ids need not line
-        // up with the ones the client is displaying. Everything below is then
-        // taken from whichever row happens to own that id -- the address, the
-        // credentials, the jump hosts, the stored host key -- so a mismatch
-        // opens an interactive shell on a machine the user did not choose, and
-        // says nothing about it.
-        if (hostAddressMismatch(clientIp, resolvedHostData?.ip)) {
+        // Prefer the sync identity. A numeric id belongs to whichever database
+        // produced it, so on a sync server it names a different host than the
+        // desktop app meant; syncId is the same string on both sides.
+        resolvedHostData = (hostSyncId
+          ? await resolveHostBySyncId(hostSyncId, userId)
+          : await resolveHostById(id, userId)) as unknown as
+          typeof resolvedHostData | null;
+
+        if (hostSyncId && !resolvedHostData) {
+          sshLogger.error(
+            "Refusing to connect: host is not known to this server",
+            undefined,
+            {
+              operation: "ssh_connect_host_sync_id_unknown",
+              hostId: id,
+              userId,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: HOST_NOT_ON_THIS_SERVER_MESSAGE,
+            }),
+          );
+          cleanupAuthState(connectionTimeout);
+          return;
+        }
+
+        // Older clients send only the numeric id, which cannot be trusted to
+        // mean the same host here. Everything below is taken from the row it
+        // lands on -- the address, the credentials, the jump hosts, the stored
+        // host key -- so compare the address before using any of it.
+        if (
+          !hostSyncId &&
+          hostAddressMismatch(clientIp, resolvedHostData?.ip)
+        ) {
           sshLogger.error(
             "Refusing to connect: host id resolves to a different address here",
             undefined,

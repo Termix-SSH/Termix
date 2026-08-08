@@ -47,6 +47,15 @@ export const HOST_ADDRESS_MISMATCH_MESSAGE =
   'Set the connection origin to "This device" for this host, or re-run a full sync, then try again.';
 
 /**
+ * Shown when the client named a host by sync identity that this server does
+ * not have. Distinct from a mismatch: nothing was resolved at all, so the
+ * remedy is to sync the host across rather than to pick a different origin.
+ */
+export const HOST_NOT_ON_THIS_SERVER_MESSAGE =
+  "This host does not exist on the sync server, so the connection was refused. " +
+  'Run a sync so the server knows about it, or set the connection origin to "This device" for this host.';
+
+/**
  * Thrown where a mismatch is reported by rejecting rather than by messaging
  * the socket. Callers whose host-resolution is wrapped in a "failed to resolve
  * credentials, carry on" catch must let this one through: continuing is the
@@ -56,5 +65,13 @@ export class HostAddressMismatchError extends Error {
   constructor() {
     super(HOST_ADDRESS_MISMATCH_MESSAGE);
     this.name = "HostAddressMismatchError";
+  }
+}
+
+/** Counterpart of {@link HostAddressMismatchError} for an unknown sync id. */
+export class HostNotOnThisServerError extends Error {
+  constructor() {
+    super(HOST_NOT_ON_THIS_SERVER_MESSAGE);
+    this.name = "HostNotOnThisServerError";
   }
 }
