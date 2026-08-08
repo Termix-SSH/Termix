@@ -2002,6 +2002,7 @@ export {
   dismissAlert,
   getReleasesRSS,
   getVersionInfo,
+  releaseUrlFrom,
   getDatabaseHealth,
 } from "@/api/system-status-api";
 
