@@ -45,6 +45,7 @@ import {
 import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../../utils/alert-trigger.js";
+import { getClientIp } from "../../utils/request-origin.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
 
 interface ConnectToHostData {
@@ -326,7 +327,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       error,
       {
         operation: "websocket_connection_auth_error",
-        ip: req.socket.remoteAddress,
+        ip: getClientIp(req),
       },
     );
     ws.close(1008, "Authentication required");
@@ -2184,7 +2185,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               id,
               hostConfig.userId,
               username,
-              req.socket.remoteAddress ?? "unknown",
+              getClientIp(req),
             ).catch(() => {});
           }
 
