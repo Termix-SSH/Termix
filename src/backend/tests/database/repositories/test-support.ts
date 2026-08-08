@@ -352,11 +352,20 @@ async function resyncAutoIncrement(
 ): Promise<void> {
   for (const table of tables) {
     // Only tables whose id is generated. A text primary key, like users.id,
-    // has no sequence and no counter to move.
+    // has no sequence and no counter to move, and a table keyed on something
+    // else entirely — host_sidebar_preferences.user_id — has no id at all.
     if (context.dialect === "postgres") {
+      // pg_get_serial_sequence() raises 42703 rather than returning null when
+      // the column is missing, so let information_schema decide whether there
+      // is an id to ask about: no id column yields no row.
       const [seq] = await runSql<{ name: string | null }>(
         context,
-        sql.raw(`SELECT pg_get_serial_sequence('${table}', 'id') AS name`),
+        sql.raw(
+          `SELECT pg_get_serial_sequence('${table}', 'id') AS name ` +
+            `FROM information_schema.columns ` +
+            `WHERE table_schema = current_schema() AND table_name = '${table}' ` +
+            `AND column_name = 'id'`,
+        ),
       );
       if (!seq?.name) continue;
 
