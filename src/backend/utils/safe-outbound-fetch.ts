@@ -1,19 +1,24 @@
-import { lookup, type LookupAddress, type LookupAllOptions } from "dns";
+import { lookup, type LookupAddress, type LookupOptions } from "dns";
 import { BlockList, isIP } from "net";
+import { Agent, fetch as undiciFetch } from "undici";
+import { getProxyAgent } from "./proxy-agent.js";
 
 type DnsLookupFn = (
   hostname: string,
-  options: LookupAllOptions,
-  callback: (
-    err: NodeJS.ErrnoException | null,
-    addresses: LookupAddress[],
-  ) => void,
+  options: LookupOptions,
+  callback: DnsLookupCallback,
+) => void;
+
+type DnsLookupCallback = (
+  err: NodeJS.ErrnoException | null,
+  address: string | LookupAddress[] | undefined,
+  family?: number,
 ) => void;
 
 type LookupHookCallback = (
   error: NodeJS.ErrnoException | Error | null,
-  address: string,
-  family: number,
+  address?: string | LookupAddress[],
+  family?: number,
 ) => void;
 
 const blockedAddresses = new BlockList();
@@ -70,30 +75,61 @@ export function isBlockedAddress(address: string): boolean {
 export function createDnsLookupHook(dnsLookup: DnsLookupFn = lookup) {
   return function lookupHook(
     host: string,
-    lookupOptions: LookupAllOptions,
+    lookupOptions: LookupOptions,
     callback: LookupHookCallback,
   ): void {
+    const cleanHost = String(host ?? "").replace(/^\[|\]$/g, "");
+    const lookupAll = lookupOptions.all ?? false;
     dnsLookup(
-      host,
-      { ...lookupOptions, all: true, verbatim: true },
-      (error, addresses) => {
+      cleanHost,
+      { ...lookupOptions, all: lookupAll, verbatim: true },
+      (error, addresses, family) => {
         if (error) return callback(error, "", 0);
-        if (!addresses.length) {
+
+        if (lookupAll) {
+          const addrs = addresses as LookupAddress[];
+          if (!addrs.length) {
+            return callback(
+              new Error("DNS resolution returned no addresses"),
+              "",
+              0,
+            );
+          }
+          if (addrs.some(({ address }) => isBlockedAddress(address))) {
+            return callback(
+              new Error("Private destinations are not allowed"),
+              "",
+              0,
+            );
+          }
+          return callback(null, addrs, 0);
+        }
+
+        const result = Array.isArray(addresses)
+          ? addresses[0]
+          : addresses != null
+            ? { address: addresses, family }
+            : undefined;
+
+        const addr = String(result?.address ?? "").replace(/^\[|\]$/g, "");
+        const fam =
+          typeof result?.family === "number" ? result.family : isIP(addr) || 0;
+
+        if (!addr || isIP(addr) === 0) {
           return callback(
-            new Error("DNS resolution returned no addresses"),
+            new Error("DNS lookup returned invalid address"),
             "",
             0,
           );
         }
-        if (addresses.some(({ address }) => isBlockedAddress(address))) {
+        if (isBlockedAddress(addr)) {
           return callback(
             new Error("Private destinations are not allowed"),
             "",
             0,
           );
         }
-        const selected = addresses[0];
-        callback(null, selected.address, selected.family);
+        return callback(null, addr, fam);
       },
     );
   };
@@ -117,21 +153,13 @@ export async function safeOutboundFetch(
     throw new Error("Private destinations are not allowed");
   }
 
-  await new Promise<void>((resolve, reject) => {
-    lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
-      if (error) return reject(error);
-      if (!addresses.length) {
-        return reject(new Error("DNS resolution returned no addresses"));
-      }
-      if (addresses.some(({ address }) => isBlockedAddress(address))) {
-        return reject(new Error("Private destinations are not allowed"));
-      }
-      resolve();
-    });
-  });
+  const proxy = getProxyAgent(url.toString());
+  const dispatcher =
+    proxy ?? new Agent({ connect: { lookup: createDnsLookupHook(lookup) } });
 
-  return await fetch(url, {
+  return await undiciFetch(url.toString(), {
     ...options,
+    dispatcher,
     redirect: "error",
   });
 }
