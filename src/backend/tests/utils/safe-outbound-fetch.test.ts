@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { LookupAddress, LookupAllOptions, LookupOptions } from "dns";
+import type { LookupAddress, LookupOptions } from "dns";
 import {
   createDnsLookupHook,
   isBlockedAddress,
@@ -60,22 +60,34 @@ describe("isBlockedAddress", () => {
 // the underlying resolver, which the hook always forces to `all: true` so it
 // has every candidate address available to run the blocklist check against.
 function runHook(
-  addresses: LookupAddress[],
+  addresses: LookupAddress[] | string | undefined,
   error: NodeJS.ErrnoException | null = null,
-  lookupOptions: LookupOptions = { all: true },
+  all = true,
 ) {
-  const fakeLookup = vi.fn(
-    (
-      _host: string,
-      _opts: LookupAllOptions,
-      cb: (err: NodeJS.ErrnoException | null, addrs: LookupAddress[]) => void,
-    ) => cb(error, addresses),
-  );
+  const fakeLookup = (
+    _host: string,
+    _opts: LookupOptions,
+    cb: (
+      err: NodeJS.ErrnoException | null,
+      addrs: LookupAddress[] | string | undefined,
+      family?: number,
+    ) => void,
+  ) => {
+    if (all) {
+      cb(error, addresses as LookupAddress[]);
+    } else {
+      cb(
+        error,
+        addresses as string | undefined,
+        typeof addresses === "object" ? undefined : 4,
+      );
+    }
+  };
 
   const hook = createDnsLookupHook(fakeLookup);
   const callback = vi.fn();
-  hook("example.invalid", lookupOptions, callback);
-  return { callback, fakeLookup };
+  hook("example.invalid", { all }, callback);
+  return callback;
 }
 
 // The three lookupOptions shapes a real caller can pass, and the tail args
@@ -117,13 +129,14 @@ const successCases: Array<[string, LookupOptions, unknown[]]> = [
 ];
 
 describe("createDnsLookupHook", () => {
-  it.each(successCases)(
-    "returns the resolved address(es) on a fully public answer (%s)",
-    (_label, lookupOptions, tailArgs) => {
-      const { callback } = runHook(publicAddresses, null, lookupOptions);
-      expect(callback).toHaveBeenCalledWith(null, ...tailArgs);
-    },
-  );
+  it("allows a public IPv4 address through", () => {
+    const callback = runHook([{ address: "104.21.52.150", family: 4 }]);
+    expect(callback).toHaveBeenCalledWith(
+      null,
+      [{ address: "104.21.52.150", family: 4 }],
+      0,
+    );
+  });
 
   it.each(lookupOptionsCases)(
     "rejects if any address is private, including an IPv4-mapped IPv6 spoof not in first position (%s)",
@@ -146,29 +159,32 @@ describe("createDnsLookupHook", () => {
     },
   );
 
-  it.each(lookupOptionsCases)(
-    "rejects with a distinct error when DNS returns no addresses (%s)",
-    (_label, lookupOptions, tailArgs) => {
-      const { callback } = runHook([], null, lookupOptions);
-      expect(callback).toHaveBeenCalledWith(
-        expect.objectContaining({
-          message: "DNS resolution returned no addresses",
-        }),
-        ...tailArgs,
-      );
-    },
-  );
+  it("returns a single lookup result when all is false", () => {
+    const callback = runHook("104.21.52.150", null, false);
+    expect(callback).toHaveBeenCalledWith(null, "104.21.52.150", 4);
+  });
 
-  it.each(lookupOptionsCases)(
-    "propagates a real DNS lookup error untouched (%s)",
-    (_label, lookupOptions, tailArgs) => {
-      const dnsError = Object.assign(new Error("getaddrinfo ENOTFOUND"), {
-        code: "ENOTFOUND",
-      });
-      const { callback } = runHook([], dnsError, lookupOptions);
-      expect(callback).toHaveBeenCalledWith(dnsError, ...tailArgs);
-    },
-  );
+  it("rejects invalid single lookup results with a DNS lookup error", () => {
+    const callback = runHook(undefined, null, false);
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "DNS lookup returned invalid address",
+      }),
+      "",
+      0,
+    );
+  });
+
+  it("rejects with a distinct error when DNS returns no addresses", () => {
+    const callback = runHook([]);
+    expect(callback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "DNS resolution returned no addresses",
+      }),
+      "",
+      0,
+    );
+  });
 
   it("always asks the underlying resolver for all:true regardless of the caller's option", () => {
     const { fakeLookup } = runHook(

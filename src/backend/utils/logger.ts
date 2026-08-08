@@ -49,6 +49,7 @@ const SENSITIVE_FIELDS = [
   "privateKey",
   "publicKey",
   "token",
+  "url",
   "secret",
   "clientSecret",
   "keyPassword",

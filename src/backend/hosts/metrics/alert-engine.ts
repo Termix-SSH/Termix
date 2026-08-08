@@ -5,6 +5,7 @@ import {
   type AlertPayload,
   type NotificationChannel,
 } from "../../utils/notification-sender.js";
+import { sendDiscord } from "../../utils/discord-sender.js";
 
 type AlertTriggerType =
   | "host_offline"
@@ -236,13 +237,42 @@ export class AlertEngine {
 
     const channels = await this.loadChannelsForRule(rule.id);
     for (const channel of channels) {
-      sendNotification(channel, payload).catch((err) => {
-        statsLogger.warn("Failed to send notification", {
-          operation: "notification_delivery_error",
-          channelId: channel.id,
-          error: err instanceof Error ? err.message : String(err),
+      if (channel.type === "discord") {
+        // parse config and send via Discord sender directly
+        try {
+          let parsed: Record<string, unknown>;
+          try {
+            parsed = JSON.parse(channel.config) as Record<string, unknown>;
+          } catch {
+            statsLogger.warn("Failed to parse discord channel config", {
+              operation: "discord_config_parse_error",
+              channelId: channel.id,
+            });
+            continue;
+          }
+          sendDiscord(parsed as any, payload).catch((err) => {
+            statsLogger.warn("Failed to send discord notification", {
+              operation: "discord_notification_error",
+              channelId: channel.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
+        } catch (err) {
+          statsLogger.warn("Failed to send discord notification", {
+            operation: "discord_notification_error",
+            channelId: channel.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      } else {
+        sendNotification(channel, payload).catch((err) => {
+          statsLogger.warn("Failed to send notification", {
+            operation: "notification_delivery_error",
+            channelId: channel.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-      });
+      }
     }
   }
 
