@@ -42,7 +42,10 @@ import {
 import { toast } from "sonner";
 import { getHostPassword, wakeOnLan } from "@/main-axios";
 import type { Host, TabType } from "@/types/ui-types";
-import type { HostDensity, HostTrayTrigger } from "@/types/host-sidebar-preferences";
+import type {
+  HostDensity,
+  HostTrayTrigger,
+} from "@/types/host-sidebar-preferences";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   canDeleteHost,
@@ -462,7 +465,9 @@ export function HostItem({
             </DropdownMenuItem>
           )}
           {showPasswordCopy && (
-            <DropdownMenuItem onClick={(e) => handleCopyPassword(e, "password")}>
+            <DropdownMenuItem
+              onClick={(e) => handleCopyPassword(e, "password")}
+            >
               <Key className="size-3.5 mr-2" />
               {t("nav.copyPassword")}
             </DropdownMenuItem>
@@ -551,20 +556,22 @@ export function HostItem({
                   {t("hosts.copyHostMetricsUrlAction")}
                 </DropdownMenuItem>
               )}
-              {host.enableSsh && host.enableTerminal && host.enableTmuxMonitor && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    writeClipboardText(
-                      `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
-                    );
-                    toast.success(t("hosts.tmuxMonitorUrlCopied"));
-                  }}
-                >
-                  <Layers className="size-3.5 mr-2" />
-                  {t("hosts.copyTmuxMonitorUrlAction")}
-                </DropdownMenuItem>
-              )}
+              {host.enableSsh &&
+                host.enableTerminal &&
+                host.enableTmuxMonitor && (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      writeClipboardText(
+                        `${window.location.origin}?view=tmux_monitor&hostId=${host.id}`,
+                      );
+                      toast.success(t("hosts.tmuxMonitorUrlCopied"));
+                    }}
+                  >
+                    <Layers className="size-3.5 mr-2" />
+                    {t("hosts.copyTmuxMonitorUrlAction")}
+                  </DropdownMenuItem>
+                )}
               {host.enableRdp && (
                 <DropdownMenuItem
                   onClick={(e) => {
@@ -747,7 +754,9 @@ export function HostItem({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          {host.pin && <Pin className="size-2.5 text-accent-brand/50 shrink-0" />}
+          {host.pin && (
+            <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
+          )}
           {host.isShared && (
             <TooltipProvider delayDuration={300}>
               <Tooltip>
@@ -784,7 +793,9 @@ export function HostItem({
           {!selectionMode && (shouldUseClickTray || actionsOnly) && (
             <button
               title={
-                isTrayOpen ? t("hosts.collapseActions") : t("hosts.expandActions")
+                isTrayOpen
+                  ? t("hosts.collapseActions")
+                  : t("hosts.expandActions")
               }
               onClick={(e) => {
                 e.stopPropagation();

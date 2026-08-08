@@ -69,9 +69,7 @@ describe("useCredentialSidebarPreferences", () => {
   });
 
   it("keeps the cached value and still marks loaded when the fetch fails", async () => {
-    api.getCredentialSidebarPreferences.mockRejectedValue(
-      new Error("offline"),
-    );
+    api.getCredentialSidebarPreferences.mockRejectedValue(new Error("offline"));
 
     const { result } = renderHook(() => useCredentialSidebarPreferences());
 
@@ -94,8 +92,8 @@ describe("useCredentialSidebarPreferences", () => {
 
     expect(result.current.preferences.display.density).toBe("compact");
     expect(
-      JSON.parse(localStorage.getItem("credentialSidebarPreferences")!)
-        .display.density,
+      JSON.parse(localStorage.getItem("credentialSidebarPreferences")!).display
+        .density,
     ).toBe("compact");
   });
 
@@ -151,9 +149,7 @@ describe("useCredentialSidebarPreferences", () => {
 
     expect(first.result.current.preferences.display.density).toBe("compact");
     await waitFor(() =>
-      expect(second.result.current.preferences.display.density).toBe(
-        "compact",
-      ),
+      expect(second.result.current.preferences.display.density).toBe("compact"),
     );
   });
 
@@ -163,7 +159,10 @@ describe("useCredentialSidebarPreferences", () => {
 
     act(() => {
       result.current.update({
-        sort: { key: "not-a-real-key" as unknown as "default", pinnedFirst: false },
+        sort: {
+          key: "not-a-real-key" as unknown as "default",
+          pinnedFirst: false,
+        },
       });
     });
 

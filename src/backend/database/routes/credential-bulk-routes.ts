@@ -73,10 +73,11 @@ export function registerCredentialBulkRoutes(
       }
 
       try {
-        const updated = await createCurrentCredentialRepository().reorderForUser(
-          userId,
-          normalized,
-        );
+        const updated =
+          await createCurrentCredentialRepository().reorderForUser(
+            userId,
+            normalized,
+          );
         return res.json({ updated });
       } catch (error) {
         authLogger.error("Failed to reorder credentials:", error);

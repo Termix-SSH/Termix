@@ -116,7 +116,10 @@ export function CredentialsPanel({
                     <ArrowUpDown className="size-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="text-xs min-w-[160px]">
+                <DropdownMenuContent
+                  align="start"
+                  className="text-xs min-w-[160px]"
+                >
                   <DropdownMenuItem
                     onClick={() => handleSortChange("default")}
                     className="flex items-center gap-1.5"
@@ -188,7 +191,10 @@ export function CredentialsPanel({
                     <Filter className="size-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="text-xs min-w-[180px]">
+                <DropdownMenuContent
+                  align="start"
+                  className="text-xs min-w-[180px]"
+                >
                   {filterActive && (
                     <>
                       <DropdownMenuItem
@@ -226,7 +232,9 @@ export function CredentialsPanel({
                         <DropdownMenuCheckboxItem
                           key={tag}
                           checked={filterState.tags.includes(tag)}
-                          onCheckedChange={() => handleFilterToggle("tags", tag)}
+                          onCheckedChange={() =>
+                            handleFilterToggle("tags", tag)
+                          }
                           onSelect={(e) => e.preventDefault()}
                         >
                           {tag}

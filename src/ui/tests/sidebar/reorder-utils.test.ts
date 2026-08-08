@@ -18,9 +18,9 @@ describe("computeDropSortOrder", () => {
   });
 
   it("returns the midpoint when dropped between two neighbors", () => {
-    expect(
-      computeDropSortOrder({ sortOrder: 1000 }, { sortOrder: 2000 }),
-    ).toBe(1500);
+    expect(computeDropSortOrder({ sortOrder: 1000 }, { sortOrder: 2000 })).toBe(
+      1500,
+    );
   });
 
   it("returns null when the gap between neighbors is exhausted", () => {
@@ -30,17 +30,15 @@ describe("computeDropSortOrder", () => {
   });
 
   it("treats a missing sortOrder on a neighbor as null", () => {
-    expect(
-      computeDropSortOrder({ sortOrder: null }, { sortOrder: 1000 }),
-    ).toBe(0);
+    expect(computeDropSortOrder({ sortOrder: null }, { sortOrder: 1000 })).toBe(
+      0,
+    );
   });
 });
 
 describe("renumberSiblings", () => {
   it("assigns evenly-spaced sortOrder values in list order", () => {
-    expect(
-      renumberSiblings([{ id: "a" }, { id: "b" }, { id: "c" }]),
-    ).toEqual([
+    expect(renumberSiblings([{ id: "a" }, { id: "b" }, { id: "c" }])).toEqual([
       { id: "a", sortOrder: 0 },
       { id: "b", sortOrder: 1000 },
       { id: "c", sortOrder: 2000 },

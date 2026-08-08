@@ -63,9 +63,7 @@ describe("HostRepository.reorderForUser", () => {
     expect(updated).toBe(0);
 
     expect(
-      await adapter!.query(
-        sql`SELECT sort_order FROM ssh_data WHERE id = 3`,
-      ),
+      await adapter!.query(sql`SELECT sort_order FROM ssh_data WHERE id = 3`),
     ).toEqual([{ sort_order: null }]);
   });
 

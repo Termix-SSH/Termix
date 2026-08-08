@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Folder, FolderOpen, Pencil, Trash2, X } from "lucide-react";
+import {
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
 import type { CredentialFolder } from "../visible-rows";
 
 const UNCATEGORIZED = "Uncategorized";

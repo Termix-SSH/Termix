@@ -32,9 +32,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   try {
     const existing =
-      await createCurrentHostSidebarPreferenceRepository().findByUserId(
-        userId,
-      );
+      await createCurrentHostSidebarPreferenceRepository().findByUserId(userId);
 
     if (existing) {
       const preferences = sanitizeHostSidebarPreferences(
@@ -43,9 +41,8 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
       return res.json({ preferences });
     }
 
-    const legacy = await createCurrentUserPreferenceRepository().findByUserId(
-      userId,
-    );
+    const legacy =
+      await createCurrentUserPreferenceRepository().findByUserId(userId);
     const defaults = defaultHostSidebarPreferences();
     const seeded = sanitizeHostSidebarPreferences({
       ...defaults,
@@ -115,9 +112,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
 
   try {
     const existing =
-      await createCurrentHostSidebarPreferenceRepository().findByUserId(
-        userId,
-      );
+      await createCurrentHostSidebarPreferenceRepository().findByUserId(userId);
     const base = existing
       ? sanitizeHostSidebarPreferences(JSON.parse(existing.data))
       : defaultHostSidebarPreferences();

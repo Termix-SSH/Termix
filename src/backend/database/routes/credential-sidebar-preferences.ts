@@ -103,14 +103,10 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
 
     return res.json({ success: true, preferences: merged });
   } catch (e) {
-    databaseLogger.error(
-      "Failed to update credential sidebar preferences",
-      e,
-      {
-        operation: "update_credential_sidebar_preferences",
-        userId,
-      },
-    );
+    databaseLogger.error("Failed to update credential sidebar preferences", e, {
+      operation: "update_credential_sidebar_preferences",
+      userId,
+    });
     return res
       .status(500)
       .json({ error: "Failed to update credential sidebar preferences" });

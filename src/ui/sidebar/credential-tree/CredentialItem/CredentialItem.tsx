@@ -1,12 +1,5 @@
 import { useTranslation } from "react-i18next";
-import {
-  ChevronRight,
-  Copy,
-  Pencil,
-  Pin,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { ChevronRight, Copy, Pencil, Pin, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 import type { Credential } from "@/types/ui-types";
@@ -110,7 +103,8 @@ export function CredentialItem({
   const shouldUseClickTray =
     !alwaysShowTray && !actionsOnly && (trayTrigger === "click" || isTouchOnly);
 
-  const depthStyle = depth > 0 ? ({ paddingLeft: depth * 12 } as const) : undefined;
+  const depthStyle =
+    depth > 0 ? ({ paddingLeft: depth * 12 } as const) : undefined;
 
   const trayButtonClass =
     "flex items-center justify-center size-6.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
@@ -216,10 +210,14 @@ export function CredentialItem({
         />
       )}
 
-      <div className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-1"}`}>
+      <div
+        className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-1"}`}
+      >
         {/* Name row */}
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`${tokens.nameTextSize} font-semibold truncate text-foreground leading-none tracking-tight`}>
+          <span
+            className={`${tokens.nameTextSize} font-semibold truncate text-foreground leading-none tracking-tight`}
+          >
             {cred.name}
           </span>
           <span
@@ -232,7 +230,9 @@ export function CredentialItem({
               {t("credentials.idBadge")}
             </span>
           )}
-          {cred.pin && <Pin className="size-2.5 text-accent-brand/50 shrink-0" />}
+          {cred.pin && (
+            <Pin className="size-2.5 text-accent-brand/50 shrink-0" />
+          )}
           {!shouldUseClickTray && !actionsOnly && (
             <span className="text-[11px] text-muted-foreground/45 truncate leading-none ml-auto shrink-0 group-hover:hidden">
               {usedByCount > 0 ? `${usedByCount}h` : ""}
@@ -273,7 +273,9 @@ export function CredentialItem({
 
         {/* Tag pills */}
         {showTags && cred.tags && cred.tags.length > 0 && (
-          <div className={`flex items-center gap-1 min-w-0 overflow-hidden ${tokens.showTagsRow ? "" : "-mt-0.5"}`}>
+          <div
+            className={`flex items-center gap-1 min-w-0 overflow-hidden ${tokens.showTagsRow ? "" : "-mt-0.5"}`}
+          >
             {cred.tags.slice(0, isCompact ? 2 : 4).map((tag) => (
               <span
                 key={tag}
@@ -305,11 +307,14 @@ export function CredentialItem({
           <div
             className={`flex flex-col gap-0.5 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "" : "pt-1.5"}`}
           >
-            {connectionButtons && !alwaysShowTray && !actionsOnly && !shouldUseClickTray && (
-              <div className="flex items-center flex-wrap gap-0.5">
-                {connectionButtons}
-              </div>
-            )}
+            {connectionButtons &&
+              !alwaysShowTray &&
+              !actionsOnly &&
+              !shouldUseClickTray && (
+                <div className="flex items-center flex-wrap gap-0.5">
+                  {connectionButtons}
+                </div>
+              )}
             <div
               className={`flex items-center gap-0.5 border-t border-border/30 ${alwaysShowTray || actionsOnly || shouldUseClickTray ? "pt-1.5" : "pt-1 mt-0.5"}`}
             >

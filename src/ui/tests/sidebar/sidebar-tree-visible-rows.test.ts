@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Host, HostFolder } from "@/types/ui-types";
-import {
-  isFolder,
-  collectVisibleRows,
-} from "../../sidebar/tree/visible-rows";
+import { isFolder, collectVisibleRows } from "../../sidebar/tree/visible-rows";
 
 function host(id: string, name: string): Host {
   return {

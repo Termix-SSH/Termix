@@ -48,7 +48,8 @@ export function sortHostTree(
       if (key === "manual") {
         const aOrder = a.sortOrder;
         const bOrder = b.sortOrder;
-        if (aOrder == null && bOrder == null) return a.name.localeCompare(b.name);
+        if (aOrder == null && bOrder == null)
+          return a.name.localeCompare(b.name);
         if (aOrder == null) return 1;
         if (bOrder == null) return -1;
         return aOrder - bOrder;
@@ -74,7 +75,8 @@ export function sortHostTree(
       case "manual": {
         const aOrder = a.sortOrder;
         const bOrder = b.sortOrder;
-        if (aOrder == null && bOrder == null) return a.name.localeCompare(b.name);
+        if (aOrder == null && bOrder == null)
+          return a.name.localeCompare(b.name);
         if (aOrder == null) return 1;
         if (bOrder == null) return -1;
         return aOrder - bOrder;

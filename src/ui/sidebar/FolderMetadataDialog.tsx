@@ -74,9 +74,7 @@ export function FolderMetadataDialog({
   const isDuplicate =
     !!resultingPath &&
     resultingPath !== currentPath &&
-    existingPaths.some(
-      (p) => p.toLowerCase() === resultingPath.toLowerCase(),
-    );
+    existingPaths.some((p) => p.toLowerCase() === resultingPath.toLowerCase());
 
   useEffect(() => {
     if (open) {

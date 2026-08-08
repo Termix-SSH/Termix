@@ -10,7 +10,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { KeyRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { reorderCredentials, reorderFolders } from "@/main-axios";
-import { computeDropSortOrder, renumberSiblings } from "@/sidebar/reorder-utils";
+import {
+  computeDropSortOrder,
+  renumberSiblings,
+} from "@/sidebar/reorder-utils";
 import type { Credential } from "@/types/ui-types";
 import type {
   CredentialDensity,
@@ -109,9 +112,9 @@ export function CredentialSidebarTree({
   // Tracks the single credential being dragged for folder reassignment,
   // separate from draggedReorderKey (which drives manual-sort-mode
   // position reordering). Only active outside manual sort mode.
-  const [draggedCredentialId, setDraggedCredentialId] = useState<
-    string | null
-  >(null);
+  const [draggedCredentialId, setDraggedCredentialId] = useState<string | null>(
+    null,
+  );
   // Tracks which single row is currently the manual-reorder drop target,
   // lifted here rather than local per-row state so only one row can ever
   // show the drop-indicator bar at a time. See HostItem/SidebarTree's
@@ -184,7 +187,8 @@ export function CredentialSidebarTree({
         (clickTrayActive || actionsOnly);
 
       if (actionsOnly) {
-        if (isOpen) return isKey ? OPEN_KEY_ROW_HEIGHT : OPEN_PASSWORD_ROW_HEIGHT;
+        if (isOpen)
+          return isKey ? OPEN_KEY_ROW_HEIGHT : OPEN_PASSWORD_ROW_HEIGHT;
         return isKey
           ? ACTIONS_ONLY_KEY_ROW_HEIGHT
           : ACTIONS_ONLY_PASSWORD_ROW_HEIGHT;
@@ -218,7 +222,9 @@ export function CredentialSidebarTree({
     getItemKey: (index) => {
       const row = visibleRows[index];
       if (!row) return index;
-      return isFolder(row.item) ? `folder:${row.item.name}` : `cred:${row.item.id}`;
+      return isFolder(row.item)
+        ? `folder:${row.item.name}`
+        : `cred:${row.item.id}`;
     },
   });
 
@@ -304,7 +310,10 @@ export function CredentialSidebarTree({
 
         if (draggedType === "cred") {
           await reorderCredentials(
-            renumbered.map((r) => ({ id: Number(r.id), sortOrder: r.sortOrder })),
+            renumbered.map((r) => ({
+              id: Number(r.id),
+              sortOrder: r.sortOrder,
+            })),
           );
         } else {
           await reorderFolders(
@@ -344,7 +353,9 @@ export function CredentialSidebarTree({
           ))}
           <div className="flex items-center justify-center gap-2 pt-2 text-muted-foreground/40">
             <Loader2 className="size-3.5 animate-spin" />
-            <span className="text-xs">{t("credentials.loadingCredentials")}</span>
+            <span className="text-xs">
+              {t("credentials.loadingCredentials")}
+            </span>
           </div>
         </div>
       </div>

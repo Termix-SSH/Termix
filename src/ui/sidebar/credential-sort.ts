@@ -29,7 +29,8 @@ export function sortCredentials(
       sorted.sort((a, b) => {
         const aOrder = a.sortOrder ?? null;
         const bOrder = b.sortOrder ?? null;
-        if (aOrder == null && bOrder == null) return a.name.localeCompare(b.name);
+        if (aOrder == null && bOrder == null)
+          return a.name.localeCompare(b.name);
         if (aOrder == null) return 1;
         if (bOrder == null) return -1;
         if (aOrder !== bOrder) return aOrder - bOrder;

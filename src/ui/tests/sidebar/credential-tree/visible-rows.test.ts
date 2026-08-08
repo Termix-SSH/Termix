@@ -7,7 +7,13 @@ import {
 } from "../../../sidebar/credential-tree/visible-rows";
 
 function cred(name: string, opts: Partial<Credential> = {}): Credential {
-  return { id: name, name, username: `user-${name}`, type: "password", ...opts };
+  return {
+    id: name,
+    name,
+    username: `user-${name}`,
+    type: "password",
+    ...opts,
+  };
 }
 
 describe("isFolder", () => {
@@ -44,9 +50,9 @@ describe("collectVisibleRows", () => {
       { name: "staging", children: [cred("zeus")] },
     ];
     const rows = collectVisibleRows(folders, "apo", new Set());
-    expect(rows.map((r) => (isFolder(r.item) ? r.item.name : r.item.name))).toEqual(
-      ["prod", "apollo"],
-    );
+    expect(
+      rows.map((r) => (isFolder(r.item) ? r.item.name : r.item.name)),
+    ).toEqual(["prod", "apollo"]);
   });
 
   it("auto-expands folders while a query is active regardless of open state", () => {

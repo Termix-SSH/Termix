@@ -37,7 +37,10 @@ import {
   reorderSSHHosts,
   reorderFolders,
 } from "@/main-axios";
-import { computeDropSortOrder, renumberSiblings } from "@/sidebar/reorder-utils";
+import {
+  computeDropSortOrder,
+  renumberSiblings,
+} from "@/sidebar/reorder-utils";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type { SSHHostData } from "@/types/index";
 import type { SortKey } from "@/sidebar/host-sort";
@@ -113,12 +116,8 @@ export function SidebarTree({
     message: string;
     onConfirm: () => Promise<void> | void;
   } | null>(null);
-  const {
-    draggedHostIds,
-    setDraggedHostIds,
-    rootDragOver,
-    setRootDragOver,
-  } = useSidebarDragState();
+  const { draggedHostIds, setDraggedHostIds, rootDragOver, setRootDragOver } =
+    useSidebarDragState();
   const [folderDialog, setFolderDialog] = useState<{
     mode: "create" | "edit";
     folder?: HostFolder;
@@ -277,7 +276,10 @@ export function SidebarTree({
 
         if (draggedType === "host") {
           await reorderSSHHosts(
-            renumbered.map((r) => ({ id: Number(r.id), sortOrder: r.sortOrder })),
+            renumbered.map((r) => ({
+              id: Number(r.id),
+              sortOrder: r.sortOrder,
+            })),
           );
         } else {
           await reorderFolders(

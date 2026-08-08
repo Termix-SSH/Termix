@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { Credential } from "@/types/ui-types";
-import { credentialPassesFilters, sortCredentials } from "../../sidebar/credential-sort";
+import {
+  credentialPassesFilters,
+  sortCredentials,
+} from "../../sidebar/credential-sort";
 
-function cred(
-  name: string,
-  opts: Partial<Credential> = {},
-): Credential {
+function cred(name: string, opts: Partial<Credential> = {}): Credential {
   return {
     id: name,
     name,
@@ -44,12 +44,12 @@ describe("sortCredentials", () => {
       cred("a", { username: "zeta" }),
       cred("b", { username: "alpha" }),
     ];
-    expect(sortCredentials(creds, "username-asc").map((c) => c.username)).toEqual(
-      ["alpha", "zeta"],
-    );
-    expect(sortCredentials(creds, "username-desc").map((c) => c.username)).toEqual(
-      ["zeta", "alpha"],
-    );
+    expect(
+      sortCredentials(creds, "username-asc").map((c) => c.username),
+    ).toEqual(["alpha", "zeta"]);
+    expect(
+      sortCredentials(creds, "username-desc").map((c) => c.username),
+    ).toEqual(["zeta", "alpha"]);
   });
 
   it("sorts manually by sortOrder, nulls last, name tie-break", () => {
@@ -74,14 +74,10 @@ describe("sortCredentials", () => {
   });
 
   it("keeps pinned-first independent from the selected base sort", () => {
-    const creds = [
-      cred("alpha"),
-      cred("zeta", { pin: true }),
-      cred("beta"),
-    ];
-    expect(
-      sortCredentials(creds, "name-asc", true).map((c) => c.name),
-    ).toEqual(["zeta", "alpha", "beta"]);
+    const creds = [cred("alpha"), cred("zeta", { pin: true }), cred("beta")];
+    expect(sortCredentials(creds, "name-asc", true).map((c) => c.name)).toEqual(
+      ["zeta", "alpha", "beta"],
+    );
   });
 });
 

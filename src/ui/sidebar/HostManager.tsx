@@ -313,7 +313,9 @@ export function HostManager({
       onConfirm: async () => {
         try {
           await handleDeleteCredential(cred);
-          toast.success(t("credentials.deletedCredential", { name: cred.name }));
+          toast.success(
+            t("credentials.deletedCredential", { name: cred.name }),
+          );
         } catch {
           toast.error(t("credentials.failedToDeleteCredential"));
         }
@@ -382,7 +384,9 @@ export function HostManager({
           >
             <ArrowLeft className="size-3.5 shrink-0" />
             <span>
-              {isHost ? t("hosts.backToHosts") : t("credentials.backToCredentials")}
+              {isHost
+                ? t("hosts.backToHosts")
+                : t("credentials.backToCredentials")}
             </span>
             {isHost && editingHost !== "new" && (
               <span
@@ -584,7 +588,9 @@ export function HostManager({
               onEditingFolderValueChange={setEditingCredFolderValue}
               onRenameFolder={handleRenameCredentialFolder}
               onMoveCredentialToFolder={handleMoveCredentialToFolder}
-              onDeployCredential={(cred) => setDeployDialog({ cred, hostId: "" })}
+              onDeployCredential={(cred) =>
+                setDeployDialog({ cred, hostId: "" })
+              }
               onEditCredential={handleEditCredential}
               onDeleteCredential={handleConfirmDeleteCredential}
             />
@@ -634,7 +640,9 @@ export function HostManager({
               </button>
             </div>
             <div className="text-xs text-muted-foreground">
-              {t("credentials.deployDialogDesc", { name: deployDialog.cred.name })}
+              {t("credentials.deployDialogDesc", {
+                name: deployDialog.cred.name,
+              })}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

@@ -314,8 +314,7 @@ export function FolderItem({
                 reorderMode={reorderMode}
                 onReorderDrop={
                   onReorderDrop
-                    ? (position) =>
-                        onReorderDrop(`host:${child.id}`, position)
+                    ? (position) => onReorderDrop(`host:${child.id}`, position)
                     : undefined
                 }
               />

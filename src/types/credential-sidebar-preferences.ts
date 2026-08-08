@@ -24,10 +24,7 @@ export type CredentialSortKey =
 export type CredentialDensity = "comfortable" | "compact";
 
 export type CredentialTrayTrigger =
-  | "always"
-  | "hover"
-  | "click"
-  | "actionsOnly";
+  "always" | "hover" | "click" | "actionsOnly";
 
 export interface CredentialSidebarFilterState {
   type: ("password" | "key")[];

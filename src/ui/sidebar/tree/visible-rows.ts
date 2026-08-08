@@ -64,7 +64,9 @@ export function collectAllHosts(children: (Host | HostFolder)[]): Host[] {
 // Open/close state and folder assignment are both keyed by the full " / " path,
 // so two folders that share a leaf name don't collapse together. Synthetic group
 // headers (group-by views) are excluded from the assignable-folder list.
-export function collectAllFolderPaths(children: (Host | HostFolder)[]): string[] {
+export function collectAllFolderPaths(
+  children: (Host | HostFolder)[],
+): string[] {
   const paths = new Set<string>();
   for (const child of children) {
     if (isFolder(child)) {

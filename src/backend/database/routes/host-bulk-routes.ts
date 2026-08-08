@@ -353,7 +353,8 @@ export function registerHostBulkRoutes(
           !Number.isFinite(entry.sortOrder)
         ) {
           return res.status(400).json({
-            error: "Each position requires an integer id and a numeric sortOrder",
+            error:
+              "Each position requires an integer id and a numeric sortOrder",
           });
         }
         normalized.push({ id: entry.id, sortOrder: entry.sortOrder });
