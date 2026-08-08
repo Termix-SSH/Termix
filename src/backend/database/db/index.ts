@@ -1117,43 +1117,57 @@ const migrateSchema = () => {
 
     if (usernameCol && usernameCol.notnull === 1) {
       const tempTableName = "ssh_credentials_temp_migration";
-      const allColumns = tableInfo.map((col) => col.name).join(", ");
+      const allColumns = tableInfo.map((col) => `"${col.name}"`).join(", ");
+
+      // Derive the replacement table from the live definition instead of
+      // restating it here. The table keeps gaining columns (cert_public_key,
+      // pin, sort_order, sync_id, ...), and a second copy of the column list
+      // falls behind every time one is added — leaving the copy narrower than
+      // the table, so the INSERT below fails and the constraint stays put.
+      const createSql = sqlite
+        .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'ssh_credentials'")
+        .pluck()
+        .get() as string | undefined;
+
+      if (!createSql) {
+        throw new Error("ssh_credentials has no stored table definition");
+      }
+
+      // Only the table name is rewritten; replace() stops at the first match,
+      // and in a CREATE TABLE statement that is the table being defined.
+      const renamedSql = createSql.replace("ssh_credentials", tempTableName);
+      const tempCreateSql = renamedSql.replace(/(["`[]?username["`\]]?\s+TEXT)\s+NOT\s+NULL/i, "$1");
+
+      if (tempCreateSql === renamedSql) {
+        throw new Error("could not derive a nullable-username definition for ssh_credentials");
+      }
+
+      // DROP TABLE takes the table's indexes with it, so replay them afterwards.
+      const indexDefs = sqlite
+        .prepare(
+          "SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'ssh_credentials' AND sql IS NOT NULL",
+        )
+        .pluck()
+        .all() as string[];
 
       sqlite.exec(`PRAGMA foreign_keys = OFF`);
       sqlite.exec(`
-        CREATE TABLE ${tempTableName} (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id TEXT NOT NULL,
-          name TEXT NOT NULL,
-          description TEXT,
-          folder TEXT,
-          tags TEXT,
-          auth_type TEXT NOT NULL,
-          username TEXT,
-          password TEXT,
-          key TEXT,
-          key_password TEXT,
-          key_type TEXT,
-          usage_count INTEGER NOT NULL DEFAULT 0,
-          last_used TEXT,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          private_key TEXT,
-          public_key TEXT,
-          detected_key_type TEXT,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
+        ${tempCreateSql};
 
-        INSERT INTO ${tempTableName} SELECT ${allColumns} FROM ssh_credentials;
+        INSERT INTO ${tempTableName} (${allColumns}) SELECT ${allColumns} FROM ssh_credentials;
 
         DROP TABLE ssh_credentials;
 
         ALTER TABLE ${tempTableName} RENAME TO ssh_credentials;
       `);
+      for (const indexSql of indexDefs) {
+        sqlite.exec(indexSql);
+      }
       sqlite.exec(`PRAGMA foreign_keys = ON`);
 
       databaseLogger.info("Successfully migrated ssh_credentials table to remove username NOT NULL constraint", {
         operation: "schema_migration_username_nullable",
+        restoredIndexes: indexDefs.length,
       });
     }
   } catch (migrationError) {
