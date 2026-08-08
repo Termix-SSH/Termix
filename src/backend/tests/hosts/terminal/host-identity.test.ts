@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
+  HOST_NOT_ON_THIS_SERVER_MESSAGE,
   HostAddressMismatchError,
+  HostNotOnThisServerError,
   normalizeHostAddress,
 } from "../../../hosts/terminal/host-identity.js";
 
@@ -81,6 +83,29 @@ describe("HostAddressMismatchError", () => {
     // to be in it.
     expect(HOST_ADDRESS_MISMATCH_MESSAGE).toContain("This device");
     expect(HOST_ADDRESS_MISMATCH_MESSAGE).toContain("full sync");
+  });
+});
+
+describe("HostNotOnThisServerError", () => {
+  it("is distinguishable from a mismatch, and survives a rethrow", () => {
+    // Different remedies: an unknown host needs syncing across, a mismatched
+    // one needs a different origin. The SFTP catches rethrow both.
+    const thrown = (() => {
+      try {
+        throw new HostNotOnThisServerError();
+      } catch (error) {
+        return error;
+      }
+    })();
+
+    expect(thrown).toBeInstanceOf(HostNotOnThisServerError);
+    expect(thrown).not.toBeInstanceOf(HostAddressMismatchError);
+    expect((thrown as Error).message).toBe(HOST_NOT_ON_THIS_SERVER_MESSAGE);
+  });
+
+  it("tells the user to sync rather than to switch origin", () => {
+    expect(HOST_NOT_ON_THIS_SERVER_MESSAGE).toContain("sync");
+    expect(HOST_NOT_ON_THIS_SERVER_MESSAGE).toContain("This device");
   });
 });
 

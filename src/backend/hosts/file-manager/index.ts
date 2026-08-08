@@ -52,6 +52,7 @@ import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import {
   hostAddressMismatch,
   HostAddressMismatchError,
+  HostNotOnThisServerError,
 } from "../terminal/host-identity.js";
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
@@ -65,12 +66,30 @@ import { applyAgentAuth } from "../terminal-auth-helpers.js";
  * user would browse, edit and delete its files believing they are on the host
  * they picked.
  */
-function assertResolvedHostMatches(
+function assertResolvedHost(
   clientIp: unknown,
+  hostSyncId: string | null | undefined,
   resolvedHost: { ip?: string } | null | undefined,
   hostId: number,
   userId: string,
 ): void {
+  // Named by sync identity: it either exists here or it does not. Falling back
+  // to the numeric id is what picks the wrong machine.
+  if (hostSyncId) {
+    if (resolvedHost) return;
+    fileLogger.error(
+      "Refusing SFTP connection: host is not known to this server",
+      undefined,
+      {
+        operation: "file_manager_host_sync_id_unknown",
+        hostId,
+        userId,
+      },
+    );
+    throw new HostNotOnThisServerError();
+  }
+
+  // Older clients send only the numeric id, which means a different host here.
   if (!hostAddressMismatch(clientIp, resolvedHost?.ip)) return;
 
   fileLogger.error(
@@ -673,6 +692,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
     hostId,
+    syncId: hostSyncId,
     ip,
     port,
     username,
@@ -785,9 +805,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedSocks5ProxyChain = socks5ProxyChain;
   if (hostId && userId && !password && !sshKey) {
     try {
-      const { resolveHostById } = await import("../host-resolver.js");
-      const resolvedHost = await resolveHostById(hostId, userId);
-      assertResolvedHostMatches(ip, resolvedHost, hostId, userId);
+      const { resolveHostById, resolveHostBySyncId } =
+        await import("../host-resolver.js");
+      const resolvedHost = hostSyncId
+        ? await resolveHostBySyncId(hostSyncId, userId)
+        : await resolveHostById(hostId, userId);
+      assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
       if (resolvedHost) {
         resolvedIp = resolvedHost.ip;
         resolvedPort = resolvedHost.port;
@@ -835,7 +858,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         );
       }
     } catch (error) {
-      if (error instanceof HostAddressMismatchError) throw error;
+      if (
+        error instanceof HostAddressMismatchError ||
+        error instanceof HostNotOnThisServerError
+      )
+        throw error;
       fileLogger.warn(`Failed to resolve host credentials for ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
@@ -845,9 +872,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   } else if (credentialId && hostId && userId) {
     // Legacy: credential resolution from credentialId
     try {
-      const { resolveHostById } = await import("../host-resolver.js");
-      const resolvedHost = await resolveHostById(hostId, userId);
-      assertResolvedHostMatches(ip, resolvedHost, hostId, userId);
+      const { resolveHostById, resolveHostBySyncId } =
+        await import("../host-resolver.js");
+      const resolvedHost = hostSyncId
+        ? await resolveHostBySyncId(hostSyncId, userId)
+        : await resolveHostById(hostId, userId);
+      assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
       if (resolvedHost) {
         resolvedIp = resolvedHost.ip;
         resolvedPort = resolvedHost.port;
@@ -895,7 +925,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         );
       }
     } catch (error) {
-      if (error instanceof HostAddressMismatchError) throw error;
+      if (
+        error instanceof HostAddressMismatchError ||
+        error instanceof HostNotOnThisServerError
+      )
+        throw error;
       fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
         operation: "ssh_credentials",
         hostId,

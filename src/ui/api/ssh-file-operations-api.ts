@@ -60,6 +60,8 @@ export async function connectSSH(
   sessionId: string,
   config: {
     hostId?: number;
+    /** Names the host across a sync pair; hostId only names it locally. */
+    syncId?: string | null;
     ip: string;
     port: number;
     username: string;
@@ -830,6 +832,7 @@ export async function ensureSSHSessionForHost(
   try {
     const result = await connectSSH(sessionId, {
       hostId: host.id,
+      syncId: host.syncId ?? null,
       ip: host.ip,
       port: host.port,
       username: host.username,

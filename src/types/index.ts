@@ -214,6 +214,13 @@ export interface Host {
   rdpAuthType?: "direct" | "credential" | "none" | null;
   vncAuthType?: "direct" | "credential" | null;
   telnetAuthType?: "direct" | "credential" | null;
+  /**
+   * Stable identity across a desktop/server sync pair. `id` is an
+   * autoincrement local to whichever database produced the row, so it cannot
+   * name the same host on both sides; this can. Absent on hosts that have
+   * never been part of a sync.
+   */
+  syncId?: string | null;
   createdAt: string;
   updatedAt: string;
 
