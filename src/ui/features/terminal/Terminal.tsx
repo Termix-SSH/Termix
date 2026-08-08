@@ -64,7 +64,8 @@ import {
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-import { Save } from "lucide-react";
+import { Save, ImagePlus, ClipboardPaste } from "lucide-react";
+import { authApi } from "@/main-axios.ts";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
@@ -189,6 +190,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const [shareModalOpen, setShareModalOpen] = useState(false);
     const [isSavingQuickConnect, setIsSavingQuickConnect] = useState(false);
     const [isQuickConnectSaved, setIsQuickConnectSaved] = useState(false);
+    const [isImageUploading, setIsImageUploading] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [isFitted, setIsFitted] = useState(false);
     const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -3119,6 +3121,121 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const hasConnectionError = !!connectionError;
 
+    function getImageUploadErrorMessage(error: unknown): string {
+      if (error instanceof Error && error.message) return error.message;
+      const response = (
+        error as {
+          response?: {
+            data?: { error?: string; message?: string };
+          };
+        }
+      )?.response;
+      return (
+        response?.data?.error ||
+        response?.data?.message ||
+        "Image upload failed"
+      );
+    }
+
+    async function handleImageUpload(file: File) {
+      if (file.type && !file.type.startsWith("image/")) {
+        toast.error("Choose an image file");
+        return;
+      }
+      setIsImageUploading(true);
+      try {
+        const form = new FormData();
+        form.append("image", file);
+        const response = await authApi.post("/terminal/image-upload", form, {
+          headers: { "Content-Type": undefined },
+        });
+        const { shellPath } = response.data as {
+          shellPath: string;
+        };
+        const prompt = `Please inspect this image: ${shellPath}`;
+        const promptInserted =
+          webSocketRef.current?.readyState === WebSocket.OPEN;
+        if (promptInserted) {
+          webSocketRef.current?.send(
+            JSON.stringify({ type: "input", data: prompt }),
+          );
+        }
+        if (promptInserted) {
+          toast.success(`Image saved and prompt inserted: ${shellPath}`);
+        } else {
+          toast.warning(
+            `Image saved, but the terminal prompt was not available: ${shellPath}`,
+          );
+        }
+      } catch (error) {
+        const response = (error as { response?: { data?: { code?: string } } })
+          ?.response;
+        const code = response?.data?.code;
+        const message = getImageUploadErrorMessage(error);
+        toast.error(code ? `${message} (${code})` : message);
+      } finally {
+        setIsImageUploading(false);
+      }
+    }
+
+    async function handleClipboardImage() {
+      if (!navigator.clipboard?.read) {
+        toast.error("Clipboard image access is not available in this browser");
+        return;
+      }
+      setIsImageUploading(true);
+      try {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageType = item.types.find((type) =>
+            type.startsWith("image/"),
+          );
+          if (!imageType) continue;
+          const blob = await item.getType(imageType);
+          let clipboardFile = new File([blob], "clipboard-image.png", {
+            type: imageType,
+          });
+          // Rasterize browser-specific clipboard formats to PNG when
+          // possible; Sharp remains the server-side validator.
+          if (typeof createImageBitmap === "function") {
+            try {
+              const bitmap = await createImageBitmap(blob);
+              try {
+                const canvas = document.createElement("canvas");
+                canvas.width = bitmap.width;
+                canvas.height = bitmap.height;
+                const context = canvas.getContext("2d");
+                if (!context) throw new Error("Canvas unavailable");
+                context.drawImage(bitmap, 0, 0);
+                const png = await new Promise<Blob>((resolve, reject) => {
+                  canvas.toBlob((result) => {
+                    if (result) resolve(result);
+                    else reject(new Error("Clipboard image conversion failed"));
+                  }, "image/png");
+                });
+                clipboardFile = new File([png], "clipboard-image.png", {
+                  type: "image/png",
+                });
+              } finally {
+                bitmap.close();
+              }
+            } catch {
+              // Fall back to the original clipboard blob.
+            }
+          }
+          await handleImageUpload(clipboardFile);
+          return;
+        }
+        toast.error("No image found in the clipboard");
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Clipboard read failed",
+        );
+      } finally {
+        setIsImageUploading(false);
+      }
+    }
+
     return (
       <div
         className="h-full w-full relative"
@@ -3158,20 +3275,52 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }}
         />
 
-        {isTmuxAttached && isConnected && (
-          <button
-            onClick={() => {
-              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
-                webSocketRef.current.send(
-                  JSON.stringify({ type: "tmux_detach" }),
-                );
-              }
-            }}
-            title={t("terminal.tmuxDetach")}
-            className="absolute top-2 right-2 z-[110] px-2 py-1 text-xs rounded bg-black/60 text-white/70 hover:text-white hover:bg-black/80 transition-colors"
-          >
-            tmux:detach
-          </button>
+        {isConnected && (
+          <div className="absolute top-2 right-2 z-[110] flex max-w-[calc(100%-1rem)] flex-wrap items-center justify-end gap-1 rounded bg-black/60 p-1 text-xs text-white/80">
+            <button
+              type="button"
+              disabled={!isTmuxAttached}
+              onClick={() => {
+                if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                  webSocketRef.current.send(
+                    JSON.stringify({ type: "tmux_detach" }),
+                  );
+                }
+              }}
+              title={t("terminal.tmuxDetach")}
+              className="inline-flex h-7 items-center rounded px-2 text-white/70 transition-colors hover:bg-black/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              tmux:detach
+            </button>
+            <label
+              title="Upload an image file and insert a review prompt into the active terminal agent"
+              className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded px-2 hover:bg-black/80 hover:text-white"
+            >
+              <ImagePlus className="size-3.5" />
+              {isImageUploading ? "uploading..." : "upload image"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={isImageUploading}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void handleImageUpload(file);
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              title="Read an image from the browser clipboard and insert a review prompt into the active terminal agent"
+              className="inline-flex h-7 items-center gap-1.5 rounded px-2 hover:bg-black/80 hover:text-white disabled:opacity-50"
+              disabled={isImageUploading}
+              onClick={() => void handleClipboardImage()}
+            >
+              <ClipboardPaste className="size-3.5" />
+              paste image
+            </button>
+          </div>
         )}
 
         {isQuickConnect &&

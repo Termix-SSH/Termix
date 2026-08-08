@@ -10,6 +10,22 @@ const sslKeyPath = path.join(process.cwd(), "ssl/termix.key");
 
 const hasSSL = fs.existsSync(sslCertPath) && fs.existsSync(sslKeyPath);
 const useHTTPS = process.env.VITE_HTTPS === "true" && hasSSL;
+const apiProxyPorts = [
+  30001, 30002, 30003, 30004, 30005, 30006, 30007, 30008, 30009, 30010, 30011,
+  30012,
+];
+const apiProxy = Object.fromEntries(
+  apiProxyPorts.map((port) => [
+    `/__termix_api/${port}`,
+    {
+      target: `http://127.0.0.1:${port}`,
+      changeOrigin: true,
+      ws: true,
+      rewrite: (requestPath: string) =>
+        requestPath.replace(new RegExp(`^/__termix_api/${port}`), ""),
+    },
+  ]),
+);
 const packageJson = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8"),
 ) as { version?: string };
@@ -114,5 +130,6 @@ export default defineConfig({
       : false,
     port: 5173,
     host: "localhost",
+    proxy: apiProxy,
   },
 });
