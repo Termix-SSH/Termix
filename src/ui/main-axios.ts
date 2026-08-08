@@ -662,7 +662,9 @@ function isDev(): boolean {
   );
 }
 
-const apiHost = import.meta.env.VITE_API_HOST || "localhost";
+const apiHost =
+  import.meta.env.VITE_API_HOST ||
+  (typeof window !== "undefined" ? window.location.hostname : "localhost");
 
 interface AxiosRequestConfigExtended extends AxiosRequestConfig {
   startTime?: number;
@@ -719,6 +721,9 @@ function getApiUrl(path: string, defaultPort: number): string {
     // remote-sync-axios.ts), not by these shared instances.
     return `http://localhost:${defaultPort}${path}`;
   } else if (devMode) {
+    if (!import.meta.env.VITE_API_HOST) {
+      return `/__termix_api/${defaultPort}${path}`;
+    }
     const protocol = window.location.protocol === "https:" ? "https" : "http";
     const sslPort = protocol === "https" ? 8443 : defaultPort;
     const url = `${protocol}://${apiHost}:${sslPort}${path}`;
