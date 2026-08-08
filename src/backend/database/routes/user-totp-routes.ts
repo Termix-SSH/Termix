@@ -325,20 +325,16 @@ export function registerUserTotpRoutes(
         return res.status(404).json({ error: "User not found" });
       }
 
-      if (!totp_code || (!userRecord.isOidc && !password)) {
+      // One re-authentication value, whichever kind it is. The dialog offers a
+      // single field -- "Enter TOTP code or password" -- so it arrives in
+      // whichever of the two body fields the caller happened to use.
+      const credential = totp_code || password;
+      if (!credential) {
         return res.status(400).json({
           error: userRecord.isOidc
             ? "A TOTP code is required"
-            : "Both password and TOTP code are required",
+            : "A TOTP code or password is required",
         });
-      }
-
-      if (
-        !userRecord.isOidc &&
-        (!userRecord.passwordHash ||
-          !(await bcrypt.compare(password, userRecord.passwordHash)))
-      ) {
-        return res.status(401).json({ error: "Incorrect password" });
       }
 
       if (!userRecord.totpEnabled) {
@@ -346,11 +342,18 @@ export function registerUserTotpRoutes(
       }
 
       const userDataKey = authManager.getUserDataKey(userId);
-      const verified = await verifyTotpReauth(
+      // TOTP code or backup code first; verifyTotpReauth deliberately refuses
+      // the account password, so that stays a separate comparison here.
+      let verified = await verifyTotpReauth(
         userRecord,
-        totp_code,
+        credential,
         userDataKey,
       );
+
+      if (!verified && !userRecord.isOidc && userRecord.passwordHash) {
+        verified = await bcrypt.compare(credential, userRecord.passwordHash);
+      }
+
       if (!verified) {
         return res
           .status(401)
