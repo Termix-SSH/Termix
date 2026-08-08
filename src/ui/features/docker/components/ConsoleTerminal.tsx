@@ -304,7 +304,6 @@ export function ConsoleTerminal({
           localPort: 30009,
           localPath: "/docker/console/",
           remotePath: "/docker/console/",
-          includeLocalJwt: false,
         });
         if (!resolvedUrl) {
           setIsConnecting(false);
