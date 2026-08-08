@@ -8,6 +8,7 @@ import {
   Download,
   Filter,
   FolderPlus,
+  GripVertical,
   Group,
   ListChecks,
   MoreHorizontal,
@@ -15,6 +16,7 @@ import {
   RefreshCw,
   Search,
   Server,
+  SlidersHorizontal,
   Upload,
   X,
 } from "lucide-react";
@@ -23,6 +25,7 @@ import { SidebarTree, isFolder } from "@/sidebar/SidebarTree";
 import { HostManager } from "@/sidebar/HostManager";
 import { HostShareModal } from "@/sidebar/HostShareModal";
 import { HostExportDialog } from "@/sidebar/HostExportDialog";
+import { CustomizeSidebarPanel } from "@/sidebar/CustomizeSidebarPanel";
 import { ProxmoxDiscoverDialog } from "@/components/proxmox/ProxmoxDiscoverDialog";
 import { Button } from "@/components/button";
 import {
@@ -44,19 +47,14 @@ import {
 } from "@/main-axios";
 import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
-import {
-  resolveHostSortPreferences,
-  sortHostTree,
-  type SortKey,
-} from "@/sidebar/host-sort";
+import { sortHostTree, type SortKey } from "@/sidebar/host-sort";
+import { useHostSidebarPreferences } from "@/sidebar/tree/hooks/useHostSidebarPreferences";
+import type {
+  HostGroupKey,
+  HostSidebarFilterState,
+} from "@/types/host-sidebar-preferences";
 
-type FilterState = {
-  status: ("online" | "offline" | "pinned")[];
-  authType: ("password" | "key" | "credential" | "none" | "opkssh")[];
-  protocol: ("ssh" | "rdp" | "vnc" | "telnet")[];
-  features: ("terminal" | "fileManager" | "tunnel" | "docker")[];
-  tags: string[];
-};
+type FilterState = HostSidebarFilterState;
 
 const DEFAULT_FILTERS: FilterState = {
   status: [],
@@ -66,7 +64,7 @@ const DEFAULT_FILTERS: FilterState = {
   tags: [],
 };
 
-type GroupKey = "folder" | "tag" | "status" | "protocol" | "auth";
+type GroupKey = HostGroupKey;
 
 function flattenHosts(folder: HostFolder): Host[] {
   const out: Host[] = [];
@@ -196,6 +194,7 @@ export function HostsPanel({
   const { t } = useTranslation();
   const [hostSearch, setHostSearch] = useState("");
   const [managerEditing, setManagerEditing] = useState(false);
+  const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [rawHosts, setRawHosts] = useState<SSHHostWithStatus[]>([]);
@@ -217,29 +216,12 @@ export function HostsPanel({
   const [proxmoxDefaultUsername, setProxmoxDefaultUsername] = useState<
     string | undefined
   >(undefined);
-  const [sortKey, setSortKey] = useState<SortKey>(() => {
-    return resolveHostSortPreferences(
-      localStorage.getItem("hostSortKey"),
-      localStorage.getItem("hostPinnedFirst"),
-    ).sortKey;
-  });
-  const [pinnedFirst, setPinnedFirst] = useState(() => {
-    return resolveHostSortPreferences(
-      localStorage.getItem("hostSortKey"),
-      localStorage.getItem("hostPinnedFirst"),
-    ).pinnedFirst;
-  });
-  const [groupKey, setGroupKey] = useState<GroupKey>(
-    () => (localStorage.getItem("hostGroupKey") as GroupKey) ?? "folder",
-  );
-  const [filterState, setFilterState] = useState<FilterState>(() => {
-    try {
-      const saved = localStorage.getItem("hostFilterState");
-      return saved ? (JSON.parse(saved) as FilterState) : DEFAULT_FILTERS;
-    } catch {
-      return DEFAULT_FILTERS;
-    }
-  });
+  const { preferences: sidebarPrefs, update: updateSidebarPrefs } =
+    useHostSidebarPreferences();
+  const sortKey = sidebarPrefs.sort.key;
+  const pinnedFirst = sidebarPrefs.sort.pinnedFirst;
+  const groupKey = sidebarPrefs.groupKey;
+  const filterState = sidebarPrefs.filters;
   const filterActive = Object.values(filterState).some((arr) => arr.length > 0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sshConfigInputRef = useRef<HTMLInputElement>(null);
@@ -247,18 +229,21 @@ export function HostsPanel({
   const allTags = [...new Set(rawHosts.flatMap((h) => h.tags ?? []))];
 
   function handleSortChange(key: SortKey) {
-    setSortKey(key);
-    localStorage.setItem("hostSortKey", key);
+    updateSidebarPrefs((prev) => ({
+      ...prev,
+      sort: { ...prev.sort, key },
+    }));
   }
 
   function handlePinnedFirstChange(enabled: boolean) {
-    setPinnedFirst(enabled);
-    localStorage.setItem("hostPinnedFirst", String(enabled));
+    updateSidebarPrefs((prev) => ({
+      ...prev,
+      sort: { ...prev.sort, pinnedFirst: enabled },
+    }));
   }
 
   function handleGroupChange(key: GroupKey) {
-    setGroupKey(key);
-    localStorage.setItem("hostGroupKey", key);
+    updateSidebarPrefs((prev) => ({ ...prev, groupKey: key }));
   }
 
   function groupLabel(key: GroupKey, group: string): string {
@@ -279,20 +264,17 @@ export function HostsPanel({
     group: K,
     value: FilterState[K][number],
   ) {
-    setFilterState((prev) => {
-      const arr = prev[group] as string[];
+    updateSidebarPrefs((prev) => {
+      const arr = prev.filters[group] as string[];
       const next = arr.includes(value as string)
         ? arr.filter((v) => v !== value)
         : [...arr, value as string];
-      const updated = { ...prev, [group]: next };
-      localStorage.setItem("hostFilterState", JSON.stringify(updated));
-      return updated as FilterState;
+      return { ...prev, filters: { ...prev.filters, [group]: next } };
     });
   }
 
   function handleFilterClear() {
-    setFilterState(DEFAULT_FILTERS);
-    localStorage.setItem("hostFilterState", JSON.stringify(DEFAULT_FILTERS));
+    updateSidebarPrefs((prev) => ({ ...prev, filters: DEFAULT_FILTERS }));
   }
 
   useEffect(() => {
@@ -520,19 +502,21 @@ export function HostsPanel({
             }}
           />
 
-          <div className="flex flex-wrap items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 text-muted-foreground hover:text-foreground"
-              title={t("hosts.refreshBtn2")}
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw
-                className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
-              />
-            </Button>
+          <div className="flex items-center gap-1.5 overflow-x-auto overflow-y-hidden toolbar-scrollbar">
+            <div className="flex items-center border border-border shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground hover:text-foreground"
+                title={t("hosts.refreshBtn2")}
+                onClick={handleRefresh}
+                disabled={refreshing}
+              >
+                <RefreshCw
+                  className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
+                />
+              </Button>
+              <div className="w-px self-stretch bg-border" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -603,6 +587,8 @@ export function HostsPanel({
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
+            <div className="flex items-center border border-border shrink-0">
             <button
               title={
                 selectionMode
@@ -610,10 +596,11 @@ export function HostsPanel({
                   : t("hosts.selectHosts")
               }
               onClick={toggleSelectionMode}
-              className={`flex items-center justify-center size-7 rounded-sm shrink-0 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/10 border border-accent-brand/30" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60 border border-transparent"}`}
+              className={`flex items-center justify-center size-7 shrink-0 transition-colors ${selectionMode ? "text-accent-brand bg-accent-brand/15" : "text-muted-foreground/60 hover:text-foreground hover:bg-muted/60"}`}
             >
               <ListChecks className="size-3.5" />
             </button>
+            <div className="w-px self-stretch bg-border" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -692,6 +679,18 @@ export function HostsPanel({
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => handleSortChange("manual")}
+                  className="flex items-center gap-1.5"
+                >
+                  {sortKey === "manual" ? (
+                    <Check className="size-3 shrink-0 text-accent-brand" />
+                  ) : (
+                    <GripVertical className="size-3 shrink-0 text-muted-foreground/40" />
+                  )}
+                  {t("hosts.sortManual")}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuCheckboxItem
                   checked={pinnedFirst}
                   onCheckedChange={handlePinnedFirstChange}
@@ -701,6 +700,7 @@ export function HostsPanel({
                 </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <div className="w-px self-stretch bg-border" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -823,6 +823,7 @@ export function HostsPanel({
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+            <div className="w-px self-stretch bg-border" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -961,19 +962,41 @@ export function HostsPanel({
                 </DropdownMenuSub>
               </DropdownMenuContent>
             </DropdownMenu>
-            <button
-              onClick={() =>
-                window.dispatchEvent(new CustomEvent("host-manager:add-host"))
-              }
-              title={t("hosts.addHost")}
-              className="flex items-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 border border-accent-brand/30 rounded-sm shrink-0 transition-colors"
-            >
-              <Plus className="size-3 shrink-0" />
-              {t("hosts.addHost")}
-            </button>
+            </div>
+            <div className="flex items-center border border-border shrink-0">
+              <button
+                onClick={() => setCustomizePanelOpen(true)}
+                title={t("hosts.customizeSidebar")}
+                className="flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              >
+                <SlidersHorizontal className="size-3.5" />
+              </button>
+            </div>
+            <div className="flex items-center border border-accent-brand/30 ml-auto shrink-0">
+              <button
+                onClick={() =>
+                  window.dispatchEvent(
+                    new CustomEvent("host-manager:add-host"),
+                  )
+                }
+                title={t("hosts.addHost")}
+                className="flex items-center justify-center gap-1 h-7 px-2 text-[10px] font-medium text-accent-brand hover:bg-accent-brand/10 transition-colors"
+              >
+                <Plus className="size-3 shrink-0" />
+                <span className="hidden min-[280px]:inline">
+                  {t("hosts.addHost")}
+                </span>
+              </button>
+            </div>
           </div>
         </div>
       )}
+      <CustomizeSidebarPanel
+        open={customizePanelOpen}
+        onOpenChange={setCustomizePanelOpen}
+        preferences={sidebarPrefs}
+        update={updateSidebarPrefs}
+      />
 
       <div
         className={`flex flex-col flex-1 min-h-0 ${managerEditing ? "hidden" : ""}`}
@@ -1010,6 +1033,10 @@ export function HostsPanel({
             setExportPreselection(new Set(ids));
             setExportDialogOpen(true);
           }}
+          sortKey={sortKey}
+          density={sidebarPrefs.display.density}
+          trayTrigger={sidebarPrefs.display.trayTrigger}
+          showTags={sidebarPrefs.display.showTags}
         />
       </div>
 

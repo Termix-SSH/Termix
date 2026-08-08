@@ -21,6 +21,8 @@ import { HostMetricsHistoryRepository } from "./host-metrics-history-repository.
 import { HostMetricsPreferenceRepository } from "./host-metrics-preference-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
+import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repository.js";
+import { CredentialSidebarPreferenceRepository } from "./credential-sidebar-preference-repository.js";
 import { NetworkTopologyRepository } from "./network-topology-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
 import { OpksshTokenRepository } from "./opkssh-token-repository.js";
@@ -243,6 +245,24 @@ export function createCurrentHostResolutionRepository(): HostResolutionRepositor
   return new HostResolutionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("host_resolution_repository_write"),
+  );
+}
+
+export function createCurrentHostSidebarPreferenceRepository(): HostSidebarPreferenceRepository {
+  return new HostSidebarPreferenceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "host_sidebar_preference_repository_write",
+    ),
+  );
+}
+
+export function createCurrentCredentialSidebarPreferenceRepository(): CredentialSidebarPreferenceRepository {
+  return new CredentialSidebarPreferenceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook(
+      "credential_sidebar_preference_repository_write",
+    ),
   );
 }
 

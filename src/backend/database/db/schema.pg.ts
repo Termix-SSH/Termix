@@ -138,6 +138,9 @@ export const hosts = pgTable("ssh_data", {
   folder: text("folder"),
   tags: text("tags"),
   pin: boolean("pin").notNull().default(false),
+  // Manual drag-to-reorder position within a folder. Null means the host has
+  // never been manually reordered; falls back to name sort in that case.
+  sortOrder: integer("sort_order"),
   authType: text("auth_type").notNull(),
   useWarpgate: boolean("use_warpgate").notNull().default(false),
   shareSshAuth: boolean("share_ssh_auth")
@@ -370,6 +373,11 @@ export const sshCredentials = pgTable("ssh_credentials", {
   description: text("description"),
   folder: text("folder"),
   tags: text("tags"),
+  pin: boolean("pin").notNull().default(false),
+  // Manual drag-to-reorder position within a folder. Null means the
+  // credential has never been manually reordered; falls back to name sort
+  // in that case, same convention as hosts.sortOrder.
+  sortOrder: integer("sort_order"),
   authType: text("auth_type").notNull(),
   username: text("username"),
   password: text("password"),
@@ -499,6 +507,9 @@ export const sshFolders = pgTable("ssh_folders", {
   credentialId: integer("credential_id").references(() => sshCredentials.id, {
     onDelete: "set null",
   }),
+  // Manual drag-to-reorder position among sibling folders. Null falls back
+  // to name sort, same convention as hosts.sortOrder.
+  sortOrder: integer("sort_order"),
   syncId: varchar("sync_id", { length: 255 }).unique(),
   createdAt: text("created_at")
     .notNull()
@@ -1000,6 +1011,33 @@ export const hostMetricsPreferences = pgTable(
   (table) => [
     uniqueIndex("idx_host_metrics_prefs_user_host").on(table.userId, table.hostId),
   ],
+);
+
+export const hostSidebarPreferences = pgTable("host_sidebar_preferences", {
+  userId: varchar("user_id", { length: 255 })
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // JSON-encoded HostSidebarPreferences. No secrets in this blob, stored as
+  // plain JSON like hostMetricsPreferences.layout.
+  data: text("data").notNull(),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const credentialSidebarPreferences = pgTable(
+  "credential_sidebar_preferences",
+  {
+    userId: varchar("user_id", { length: 255 })
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // JSON-encoded CredentialSidebarPreferences. No secrets in this blob,
+    // same convention as hostSidebarPreferences.data.
+    data: text("data").notNull(),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
 );
 
 export const hostHealthChecks = pgTable(

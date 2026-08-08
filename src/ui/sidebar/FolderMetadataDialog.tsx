@@ -33,6 +33,8 @@ export function FolderMetadataDialog({
   open,
   mode,
   initial,
+  existingPaths = [],
+  currentPath,
   onOpenChange,
   onSubmit,
 }: {
@@ -44,6 +46,10 @@ export function FolderMetadataDialog({
     icon?: string;
     credentialId?: number | null;
   };
+  /** Every folder path that already exists, for duplicate-name validation. */
+  existingPaths?: string[];
+  /** The folder's own current full path, in edit mode -- excluded from the duplicate check. */
+  currentPath?: string;
   onOpenChange: (v: boolean) => void;
   onSubmit: (value: FolderMetadataValue) => void;
 }) {
@@ -53,6 +59,24 @@ export function FolderMetadataDialog({
   const [icon, setIcon] = useState(DEFAULT_FOLDER_ICON);
   const [credentialId, setCredentialId] = useState<string>("");
   const [credentials, setCredentials] = useState<CredentialOption[]>([]);
+
+  const parentPath =
+    mode === "edit" && currentPath?.includes(" / ")
+      ? currentPath.slice(0, currentPath.lastIndexOf(" / "))
+      : "";
+  const resultingPath = name
+    ? mode === "edit"
+      ? parentPath
+        ? `${parentPath} / ${normalizePath(name)}`
+        : normalizePath(name)
+      : normalizePath(name)
+    : "";
+  const isDuplicate =
+    !!resultingPath &&
+    resultingPath !== currentPath &&
+    existingPaths.some(
+      (p) => p.toLowerCase() === resultingPath.toLowerCase(),
+    );
 
   useEffect(() => {
     if (open) {
@@ -83,7 +107,7 @@ export function FolderMetadataDialog({
 
   function handleSubmit() {
     const normalized = normalizePath(name);
-    if (!normalized) return;
+    if (!normalized || isDuplicate) return;
     onSubmit({
       name: normalized,
       color,
@@ -117,12 +141,20 @@ export function FolderMetadataDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSubmit();
+                if (e.key === "Enter" && !isDuplicate) handleSubmit();
               }}
+              aria-invalid={isDuplicate}
+              className={isDuplicate ? "border-destructive" : undefined}
             />
-            <p className="text-[10px] text-muted-foreground">
-              {t("hosts.folderNestingHint")}
-            </p>
+            {isDuplicate ? (
+              <p className="text-[10px] text-destructive">
+                {t("hosts.folderNameDuplicate")}
+              </p>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">
+                {t("hosts.folderNestingHint")}
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold">
@@ -189,6 +221,7 @@ export function FolderMetadataDialog({
             variant="outline"
             className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
             onClick={handleSubmit}
+            disabled={!name.trim() || isDuplicate}
           >
             {mode === "create"
               ? t("hosts.createFolderButton")

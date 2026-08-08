@@ -6,6 +6,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
 import { registerCredentialKeyRoutes } from "./credential-key-routes.js";
 import { registerCredentialDeployRoutes } from "./credential-deploy-routes.js";
+import { registerCredentialBulkRoutes } from "./credential-bulk-routes.js";
 import {
   logAudit,
   getAuditUsername,
@@ -307,6 +308,11 @@ router.get(
     }
   },
 );
+
+// Registered here (before the PUT /:id route below) so the literal
+// "/reorder" path segment is matched before Express falls through to the
+// PUT /:id param route and treats "reorder" as an id.
+registerCredentialBulkRoutes(router, authenticateJWT);
 
 /**
  * @openapi
@@ -845,6 +851,8 @@ function formatCredentialOutput(
           ? credential.tags.split(",").filter(Boolean)
           : []
         : [],
+    pin: !!credential.pin,
+    sortOrder: credential.sortOrder ?? null,
     authType: credential.authType,
     username: credential.username || null,
     publicKey: credential.publicKey,

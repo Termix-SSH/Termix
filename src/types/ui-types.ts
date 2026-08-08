@@ -45,6 +45,7 @@ export type Host = {
   macAddress?: string;
   wolBroadcastAddress?: string;
   pin?: boolean;
+  sortOrder?: number | null;
 
   enableTerminal: boolean;
   enableCommandHistory: boolean;
@@ -207,6 +208,9 @@ export type Credential = {
   description?: string;
   folder?: string;
   tags?: string[];
+  pin?: boolean;
+  sortOrder?: number | null;
+  certPublicKey?: string;
 };
 
 // HashiCorp Vault SSH signer profile — shareable connection settings only
@@ -236,6 +240,7 @@ export type HostFolder = {
   color?: string;
   icon?: string;
   credentialId?: number | null;
+  sortOrder?: number | null;
 };
 
 export type TabType =

@@ -170,4 +170,53 @@ describe("HostFolderRepository", () => {
     ).toEqual([{ id: 3 }]);
     expect(writes).toBe(1);
   });
+
+  it("sets sortOrder on existing folder rows", async () => {
+    let writes = 0;
+    const { repository } = await createRepository(() => {
+      writes += 1;
+    });
+
+    const updated = await repository.reorderFolders(
+      "user-1",
+      [
+        { name: "prod", sortOrder: 2000 },
+        { name: "prod / api", sortOrder: 1000 },
+      ],
+      "2026-04-01T00:00:00.000Z",
+    );
+    expect(updated).toBe(2);
+    expect(writes).toBe(1);
+
+    expect(
+      await adapter!.query(
+        sql`SELECT name, sort_order FROM ssh_folders WHERE user_id = 'user-1' ORDER BY id`,
+      ),
+    ).toEqual([
+      { name: "prod", sort_order: 2000 },
+      { name: "prod / api", sort_order: 1000 },
+    ]);
+  });
+
+  it("creates a folder row when reordering a folder with no existing metadata", async () => {
+    const { repository } = await createRepository();
+
+    const updated = await repository.reorderFolders(
+      "user-1",
+      [{ name: "implicit-folder", sortOrder: 500 }],
+      "2026-04-01T00:00:00.000Z",
+    );
+    expect(updated).toBe(1);
+
+    expect(
+      await adapter!.query(
+        sql`SELECT name, sort_order FROM ssh_folders WHERE name = 'implicit-folder'`,
+      ),
+    ).toEqual([{ name: "implicit-folder", sort_order: 500 }]);
+  });
+
+  it("no-ops on an empty positions array", async () => {
+    const { repository } = await createRepository();
+    await expect(repository.reorderFolders("user-1", [])).resolves.toBe(0);
+  });
 });

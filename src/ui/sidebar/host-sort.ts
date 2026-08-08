@@ -1,13 +1,7 @@
 import type { Host, HostFolder } from "@/types/ui-types";
+import type { SortKey } from "@/types/host-sidebar-preferences";
 
-export type SortKey =
-  | "default"
-  | "name-asc"
-  | "name-desc"
-  | "ip-asc"
-  | "ip-desc"
-  | "status-online"
-  | "status-offline";
+export type { SortKey };
 
 const SORT_KEYS = new Set<SortKey>([
   "default",
@@ -17,6 +11,7 @@ const SORT_KEYS = new Set<SortKey>([
   "ip-desc",
   "status-online",
   "status-offline",
+  "manual",
 ]);
 
 export function resolveHostSortPreferences(
@@ -49,7 +44,17 @@ export function sortHostTree(
     const bIsFolder = isFolder(b);
     if (aIsFolder && !bIsFolder) return -1;
     if (!aIsFolder && bIsFolder) return 1;
-    if (aIsFolder && bIsFolder) return a.name.localeCompare(b.name);
+    if (aIsFolder && bIsFolder) {
+      if (key === "manual") {
+        const aOrder = a.sortOrder;
+        const bOrder = b.sortOrder;
+        if (aOrder == null && bOrder == null) return a.name.localeCompare(b.name);
+        if (aOrder == null) return 1;
+        if (bOrder == null) return -1;
+        return aOrder - bOrder;
+      }
+      return a.name.localeCompare(b.name);
+    }
 
     if (pinnedFirst && !!a.pin !== !!b.pin) return b.pin ? 1 : -1;
 
@@ -66,6 +71,14 @@ export function sortHostTree(
         return Number(b.online) - Number(a.online);
       case "status-offline":
         return Number(a.online) - Number(b.online);
+      case "manual": {
+        const aOrder = a.sortOrder;
+        const bOrder = b.sortOrder;
+        if (aOrder == null && bOrder == null) return a.name.localeCompare(b.name);
+        if (aOrder == null) return 1;
+        if (bOrder == null) return -1;
+        return aOrder - bOrder;
+      }
       case "default":
         return 0;
     }

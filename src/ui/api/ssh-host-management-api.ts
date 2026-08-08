@@ -259,6 +259,18 @@ export async function bulkUpdateSSHHosts(
   }
 }
 
+export async function reorderSSHHosts(
+  positions: { id: number; sortOrder: number }[],
+): Promise<{ updated: number }> {
+  try {
+    const response = await sshHostApi.put("/reorder", { positions });
+    invalidateHostsAndStatusCaches();
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "reorder SSH hosts");
+  }
+}
+
 export async function deleteSSHHost(
   hostId: number,
 ): Promise<Record<string, unknown>> {

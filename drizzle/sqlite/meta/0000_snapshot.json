@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "426410c9-f34a-47bc-9df6-17748689ad0d",
+  "id": "818cd7d9-d223-494f-ac73-f98708c72dc2",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "alert_firings": {
@@ -645,6 +645,52 @@
           "tableTo": "ssh_data",
           "columnsFrom": [
             "host_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "credential_sidebar_preferences": {
+      "name": "credential_sidebar_preferences",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "data": {
+          "name": "data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "credential_sidebar_preferences_user_id_users_id_fk": {
+          "name": "credential_sidebar_preferences_user_id_users_id_fk",
+          "tableFrom": "credential_sidebar_preferences",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -1700,6 +1746,52 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "host_sidebar_preferences": {
+      "name": "host_sidebar_preferences",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "data": {
+          "name": "data",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "host_sidebar_preferences_user_id_users_id_fk": {
+          "name": "host_sidebar_preferences_user_id_users_id_fk",
+          "tableFrom": "host_sidebar_preferences",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "ssh_data": {
       "name": "ssh_data",
       "columns": {
@@ -1774,6 +1866,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         },
         "auth_type": {
           "name": "auth_type",
@@ -4186,6 +4285,21 @@
           "notNull": false,
           "autoincrement": false
         },
+        "pin": {
+          "name": "pin",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "sort_order": {
+          "name": "sort_order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "auth_type": {
           "name": "auth_type",
           "type": "text",
@@ -4363,6 +4477,13 @@
         },
         "credential_id": {
           "name": "credential_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sort_order": {
+          "name": "sort_order",
           "type": "integer",
           "primaryKey": false,
           "notNull": false,

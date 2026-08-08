@@ -1467,6 +1467,7 @@ export {
   discoverProxmoxGuestsStream,
   syncProxmoxGuests,
   bulkUpdateSSHHosts,
+  reorderSSHHosts,
   deleteSSHHost,
   getSSHHostById,
   exportSSHHostWithCredentials,
@@ -1570,6 +1571,16 @@ export {
   managerPost,
   type PlatformInfo,
 } from "@/api/host-metrics-api";
+
+export {
+  getHostSidebarPreferences,
+  saveHostSidebarPreferences,
+} from "@/api/host-sidebar-preferences-api";
+
+export {
+  getCredentialSidebarPreferences,
+  saveCredentialSidebarPreferences,
+} from "@/api/credential-sidebar-preferences-api";
 
 export {
   getGlobalMonitoringSettings,
@@ -2025,8 +2036,10 @@ export {
   renameFolder,
   getSSHFolders,
   updateFolderMetadata,
+  reorderFolders,
   deleteAllHostsInFolder,
   renameCredentialFolder,
+  reorderCredentials,
   detectKeyType,
   detectPublicKeyType,
   validateKeyPair,

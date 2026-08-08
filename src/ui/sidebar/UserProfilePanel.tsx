@@ -20,6 +20,7 @@ import {
 } from "@/main-axios";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
+import { useHostSidebarPreferences } from "./tree/hooks/useHostSidebarPreferences";
 import {
   deleteWebAuthnCredential,
   listWebAuthnCredentials,
@@ -604,19 +605,10 @@ export function UserProfilePanel({
     return v !== null ? v === "true" : true;
   });
   const [keybindingsDialogOpen, setKeybindingsDialogOpen] = useState(false);
-  const [showHostTags, setShowHostTags] = useState(() => {
-    const v = localStorage.getItem("showHostTags");
-    return v !== null ? v === "true" : true;
-  });
-  const [hostTrayOnClick, setHostTrayOnClick] = useState(
-    () => localStorage.getItem("hostTrayOnClick") !== "false",
-  );
-  const [compactHostView, setCompactHostView] = useState(
-    () => localStorage.getItem("compactHostView") === "true",
-  );
-  const [statusColorScheme, setStatusColorScheme] = useState(
-    () => localStorage.getItem("statusColorScheme") ?? "accent",
-  );
+  // Sidebar display customization (density, tags, tray trigger, status
+  // colors) now lives in the dedicated Customize Sidebar panel opened from
+  // the Hosts toolbar, not here -- resetToDefaults still needs write access.
+  const { update: updateSidebarPrefs } = useHostSidebarPreferences();
   const [pinAppRail, setPinAppRail] = useState(() =>
     readRailPreference("pinAppRail"),
   );
@@ -774,26 +766,9 @@ export function UserProfilePanel({
             String(prefs.commandPaletteEnabled),
           );
         }
-        if (prefs.showHostTags != null) {
-          setShowHostTags(prefs.showHostTags);
-          localStorage.setItem("showHostTags", String(prefs.showHostTags));
-          window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
-        }
-        if (prefs.hostTrayOnClick != null) {
-          setHostTrayOnClick(prefs.hostTrayOnClick);
-          localStorage.setItem(
-            "hostTrayOnClick",
-            String(prefs.hostTrayOnClick),
-          );
-        }
-        if (prefs.compactHostView != null) {
-          setCompactHostView(prefs.compactHostView);
-          localStorage.setItem(
-            "compactHostView",
-            String(prefs.compactHostView),
-          );
-          window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
-        }
+        // showHostTags/hostTrayOnClick/compactHostView/statusColorScheme are
+        // no longer restored here -- useHostSidebarPreferences independently
+        // fetches its own authoritative copy from /host-sidebar/preferences.
         if (prefs.pinAppRail != null) {
           setPinAppRail(prefs.pinAppRail);
           localStorage.setItem("pinAppRail", String(prefs.pinAppRail));
@@ -841,11 +816,6 @@ export function UserProfilePanel({
           localStorage.setItem("hiddenRailTabs", prefs.hiddenRailTabs);
           window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
         }
-        if (prefs.statusColorScheme != null) {
-          setStatusColorScheme(prefs.statusColorScheme);
-          localStorage.setItem("statusColorScheme", prefs.statusColorScheme);
-          window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
-        }
       } catch {
         // leave UI as-is on error
       }
@@ -871,14 +841,16 @@ export function UserProfilePanel({
     localStorage.setItem("commandAutocomplete", "false");
     setCommandPaletteEnabled(true);
     localStorage.setItem("commandPaletteShortcutEnabled", "true");
-    setShowHostTags(true);
-    localStorage.setItem("showHostTags", "true");
-    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
-    setHostTrayOnClick(true);
-    localStorage.setItem("hostTrayOnClick", "true");
-    setCompactHostView(false);
-    localStorage.setItem("compactHostView", "false");
-    window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
+    updateSidebarPrefs((prev) => ({
+      ...prev,
+      display: {
+        ...prev.display,
+        showTags: true,
+        trayTrigger: "hover",
+        density: "comfortable",
+        statusColorScheme: "accent",
+      },
+    }));
     setPinAppRail(false);
     localStorage.setItem("pinAppRail", "false");
     window.dispatchEvent(new Event("pinAppRailChanged"));
@@ -896,9 +868,6 @@ export function UserProfilePanel({
     setHiddenRailTabs(new Set());
     localStorage.removeItem("hiddenRailTabs");
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
-    setStatusColorScheme("accent");
-    localStorage.setItem("statusColorScheme", "accent");
-    window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
     if (storageMode === "cloud") {
       saveToCloud({
         theme: "system",
@@ -907,9 +876,6 @@ export function UserProfilePanel({
         language: "en",
         commandAutocomplete: false,
         commandPaletteEnabled: true,
-        showHostTags: true,
-        hostTrayOnClick: true,
-        compactHostView: false,
         pinAppRail: false,
         expandAppRailOnHover: true,
         foldersCollapsed: true,
@@ -917,7 +883,6 @@ export function UserProfilePanel({
         disableUpdateCheck: false,
         confirmTabClose: false,
         hiddenRailTabs: "[]",
-        statusColorScheme: "accent",
       });
     }
     localSnapshot.current = {};
@@ -972,20 +937,9 @@ export function UserProfilePanel({
       String(restoredPalette),
     );
 
-    const restoredHostTags = restore("showHostTags", "true") !== "false";
-    setShowHostTags(restoredHostTags);
-    localStorage.setItem("showHostTags", String(restoredHostTags));
-    window.dispatchEvent(new CustomEvent("showHostTagsChanged"));
-
-    const restoredTrayOnClick = restore("hostTrayOnClick", "true") !== "false";
-    setHostTrayOnClick(restoredTrayOnClick);
-    localStorage.setItem("hostTrayOnClick", String(restoredTrayOnClick));
-
-    const restoredCompactHostView =
-      restore("compactHostView", "false") === "true";
-    setCompactHostView(restoredCompactHostView);
-    localStorage.setItem("compactHostView", String(restoredCompactHostView));
-    window.dispatchEvent(new CustomEvent("compactHostViewChanged"));
+    // showHostTags/hostTrayOnClick/compactHostView/statusColorScheme are no
+    // longer part of this snapshot -- useHostSidebarPreferences keeps its own
+    // localStorage cache independent of storageMode switches.
 
     const restoredPinRail = restore("pinAppRail", "false") === "true";
     setPinAppRail(restoredPinRail);
@@ -1045,12 +999,6 @@ export function UserProfilePanel({
       localStorage.setItem("hiddenRailTabs", restoredHiddenRaw);
     }
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
-
-    const restoredStatusScheme =
-      restore("statusColorScheme", "accent") ?? "accent";
-    setStatusColorScheme(restoredStatusScheme);
-    localStorage.setItem("statusColorScheme", restoredStatusScheme);
-    window.dispatchEvent(new CustomEvent("statusColorSchemeChanged"));
 
     localStorage.removeItem("termix-local-snapshot");
     localSnapshot.current = {};
@@ -1823,68 +1771,11 @@ export function UserProfilePanel({
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-              {t("newUi.sidebar.userProfile.settingsSidebar")}
+              {t("newUi.sidebar.userProfile.settingsAppRail")}
             </span>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.showHostTags")}
-              description={t("newUi.sidebar.userProfile.showHostTagsDesc")}
-            >
-              <FakeSwitch
-                checked={showHostTags}
-                onChange={(v) => {
-                  setShowHostTags(v);
-                  localStorage.setItem("showHostTags", v.toString());
-                  window.dispatchEvent(new Event("showHostTagsChanged"));
-                  if (storageMode === "cloud") saveToCloud({ showHostTags: v });
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.hostTrayOnClick")}
-              description={t("newUi.sidebar.userProfile.hostTrayOnClickDesc")}
-            >
-              <FakeSwitch
-                checked={hostTrayOnClick}
-                onChange={(v) => {
-                  setHostTrayOnClick(v);
-                  localStorage.setItem("hostTrayOnClick", v.toString());
-                  window.dispatchEvent(new Event("hostTrayOnClickChanged"));
-                  if (storageMode === "cloud")
-                    saveToCloud({ hostTrayOnClick: v });
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.compactHostView")}
-              description={t("newUi.sidebar.userProfile.compactHostViewDesc")}
-            >
-              <FakeSwitch
-                checked={compactHostView}
-                onChange={(v) => {
-                  setCompactHostView(v);
-                  localStorage.setItem("compactHostView", v.toString());
-                  window.dispatchEvent(new Event("compactHostViewChanged"));
-                  if (storageMode === "cloud")
-                    saveToCloud({ compactHostView: v });
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.statusColors")}
-              description={t("newUi.sidebar.userProfile.statusColorsDesc")}
-            >
-              <FakeSwitch
-                checked={statusColorScheme === "status"}
-                onChange={(v) => {
-                  const scheme = v ? "status" : "accent";
-                  setStatusColorScheme(scheme);
-                  localStorage.setItem("statusColorScheme", scheme);
-                  window.dispatchEvent(new Event("statusColorSchemeChanged"));
-                  if (storageMode === "cloud")
-                    saveToCloud({ statusColorScheme: scheme });
-                }}
-              />
-            </SettingRow>
+            <p className="text-[10px] text-muted-foreground mb-2">
+              {t("newUi.sidebar.userProfile.sidebarSettingsMoved")}
+            </p>
             <SettingRow
               label={t("newUi.sidebar.userProfile.pinAppRail")}
               description={t("newUi.sidebar.userProfile.pinAppRailDesc")}

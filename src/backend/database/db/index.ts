@@ -292,6 +292,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         folder TEXT,
         tags TEXT,
         pin INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER,
         auth_type TEXT NOT NULL,
         password TEXT,
         key TEXT,
@@ -436,6 +437,7 @@ async function initializeCompleteDatabase(): Promise<void> {
         color TEXT,
         icon TEXT,
         credential_id INTEGER,
+        sort_order INTEGER,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
@@ -624,6 +626,20 @@ async function initializeCompleteDatabase(): Promise<void> {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_host_metrics_prefs_user_host
         ON host_metrics_preferences (user_id, host_id);
+
+    CREATE TABLE IF NOT EXISTS host_sidebar_preferences (
+        user_id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS credential_sidebar_preferences (
+        user_id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
 
     CREATE TABLE IF NOT EXISTS host_health_checks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -930,6 +946,8 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_data", "folder", "TEXT");
   addColumnIfNotExists("ssh_data", "tags", "TEXT");
   addColumnIfNotExists("ssh_data", "pin", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfNotExists("ssh_data", "sort_order", "INTEGER");
+  addColumnIfNotExists("ssh_folders", "sort_order", "INTEGER");
   addColumnIfNotExists(
     "ssh_data",
     "auth_type",
@@ -1078,6 +1096,13 @@ const migrateSchema = () => {
   addColumnIfNotExists("ssh_credentials", "detected_key_type", "TEXT");
 
   addColumnIfNotExists("ssh_credentials", "cert_public_key", "TEXT");
+
+  addColumnIfNotExists(
+    "ssh_credentials",
+    "pin",
+    "INTEGER NOT NULL DEFAULT 0",
+  );
+  addColumnIfNotExists("ssh_credentials", "sort_order", "INTEGER");
 
   try {
     const tableInfo = sqlite.prepare("PRAGMA table_info(ssh_credentials)").all() as Array<{

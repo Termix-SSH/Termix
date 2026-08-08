@@ -43,6 +43,7 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
  * /user-preferences:
  *   get:
  *     summary: Get preferences for the current user
+ *     description: showHostTags, hostTrayOnClick, compactHostView, statusColorScheme and foldersCollapsed are legacy fields, kept here read-only for backward compatibility. The authoritative copy is GET /host-sidebar/preferences.
  *     tags:
  *       - User Preferences
  *     responses:
@@ -139,6 +140,7 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  * /user-preferences:
  *   put:
  *     summary: Update preferences for the current user
+ *     description: showHostTags, hostTrayOnClick, compactHostView, statusColorScheme and foldersCollapsed are no longer accepted here -- they moved to PUT /host-sidebar/preferences as part of the sidebar redesign.
  *     tags:
  *       - User Preferences
  *     requestBody:
@@ -164,15 +166,9 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *                 type: boolean
  *               commandPaletteEnabled:
  *                 type: boolean
- *               showHostTags:
- *                 type: boolean
- *               hostTrayOnClick:
- *                 type: boolean
  *               pinAppRail:
  *                 type: boolean
  *               expandAppRailOnHover:
- *                 type: boolean
- *               foldersCollapsed:
  *                 type: boolean
  *               confirmSnippetExecution:
  *                 type: boolean
@@ -181,10 +177,6 @@ router.get("/", authenticateJWT, async (req: Request, res: Response) => {
  *               confirmTabClose:
  *                 type: boolean
  *               hiddenRailTabs:
- *                 type: string
- *               compactHostView:
- *                 type: boolean
- *               statusColorScheme:
  *                 type: string
  *               customThemes:
  *                 type: string
@@ -207,17 +199,12 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     storageMode,
     commandAutocomplete,
     commandPaletteEnabled,
-    showHostTags,
-    hostTrayOnClick,
     pinAppRail,
     expandAppRailOnHover,
-    foldersCollapsed,
     confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
     hiddenRailTabs,
-    compactHostView,
-    statusColorScheme,
     customThemes,
     customKeybindings,
   } = req.body as {
@@ -229,20 +216,20 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     storageMode?: string | null;
     commandAutocomplete?: boolean | null;
     commandPaletteEnabled?: boolean | null;
-    showHostTags?: boolean | null;
-    hostTrayOnClick?: boolean | null;
     pinAppRail?: boolean | null;
     expandAppRailOnHover?: boolean | null;
-    foldersCollapsed?: boolean | null;
     confirmSnippetExecution?: boolean | null;
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
-    compactHostView?: boolean | null;
-    statusColorScheme?: string | null;
     customThemes?: string | null;
     customKeybindings?: string | null;
   };
+  // showHostTags, hostTrayOnClick, compactHostView, statusColorScheme,
+  // foldersCollapsed are no longer writable here -- they moved to
+  // /host-sidebar/preferences as of the sidebar redesign. The columns stay
+  // in the table (read once as a migration seed by that route) but this
+  // endpoint silently ignores them if a stale client still sends them.
 
   const updates: UserPreferenceUpdate = {
     updatedAt: new Date().toISOString(),
@@ -264,7 +251,6 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     language,
     storageMode,
     hiddenRailTabs,
-    statusColorScheme,
     customThemes,
     customKeybindings,
   })) {
@@ -326,15 +312,11 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   const boolFields: Record<string, boolean | null | undefined> = {
     commandAutocomplete,
     commandPaletteEnabled,
-    showHostTags,
-    hostTrayOnClick,
     pinAppRail,
     expandAppRailOnHover,
-    foldersCollapsed,
     confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
-    compactHostView,
   };
   for (const [key, value] of Object.entries(boolFields)) {
     if (value !== undefined && value !== null && typeof value !== "boolean") {
@@ -352,21 +334,14 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     updates.commandAutocomplete = commandAutocomplete;
   if (commandPaletteEnabled !== undefined)
     updates.commandPaletteEnabled = commandPaletteEnabled;
-  if (showHostTags !== undefined) updates.showHostTags = showHostTags;
-  if (hostTrayOnClick !== undefined) updates.hostTrayOnClick = hostTrayOnClick;
   if (pinAppRail !== undefined) updates.pinAppRail = pinAppRail;
   if (expandAppRailOnHover !== undefined)
     updates.expandAppRailOnHover = expandAppRailOnHover;
-  if (foldersCollapsed !== undefined)
-    updates.foldersCollapsed = foldersCollapsed;
   if (confirmSnippetExecution !== undefined)
     updates.confirmSnippetExecution = confirmSnippetExecution;
   if (disableUpdateCheck !== undefined)
     updates.disableUpdateCheck = disableUpdateCheck;
   if (confirmTabClose !== undefined) updates.confirmTabClose = confirmTabClose;
-  if (compactHostView !== undefined) updates.compactHostView = compactHostView;
-  if (statusColorScheme !== undefined)
-    updates.statusColorScheme = statusColorScheme;
   if (customThemes !== undefined) updates.customThemes = customThemes;
   if (customKeybindings !== undefined)
     updates.customKeybindings = customKeybindings;

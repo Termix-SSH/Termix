@@ -19,6 +19,9 @@ type RawCredential = {
   folder?: string | null;
   tags?: string[];
   publicKey?: string | null;
+  pin?: boolean | null;
+  sortOrder?: number | null;
+  certPublicKey?: string | null;
 };
 
 function parseJson<T>(v: unknown): T | undefined {
@@ -63,6 +66,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
         : undefined,
     notes: h.notes,
     pin: h.pin ?? false,
+    sortOrder: h.sortOrder ?? null,
     macAddress: h.macAddress,
     wolBroadcastAddress: h.wolBroadcastAddress,
     enableSsh: h.enableSsh != null ? h.enableSsh : isSshHost,
@@ -168,5 +172,8 @@ export function mapCredentials(res: unknown): Credential[] {
     folder: c.folder ?? "",
     tags: c.tags ?? [],
     publicKey: c.publicKey ?? undefined,
+    pin: c.pin ?? false,
+    sortOrder: c.sortOrder ?? null,
+    certPublicKey: c.certPublicKey ?? undefined,
   }));
 }

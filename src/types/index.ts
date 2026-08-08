@@ -351,6 +351,7 @@ export interface SSHFolder {
   color?: string;
   icon?: string;
   credentialId?: number | null;
+  sortOrder?: number | null;
   createdAt: string;
   updatedAt: string;
 }

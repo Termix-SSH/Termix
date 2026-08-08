@@ -239,6 +239,20 @@ export async function updateFolderMetadata(
   }
 }
 
+export async function reorderFolders(
+  positions: { name: string; sortOrder: number }[],
+): Promise<{ updated: number }> {
+  try {
+    const response = await authApi.put("/host/folders/reorder", {
+      positions,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "reorder folders");
+    throw error;
+  }
+}
+
 export async function deleteAllHostsInFolder(
   folderName: string,
 ): Promise<{ deletedCount: number }> {
@@ -281,6 +295,20 @@ export async function renameCredentialFolder(
     return response.data;
   } catch (error) {
     throw handleApiError(error, "rename credential folder");
+  }
+}
+
+export async function reorderCredentials(
+  positions: { id: number; sortOrder: number }[],
+): Promise<{ updated: number }> {
+  try {
+    const response = await authApi.put("/credentials/reorder", {
+      positions,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "reorder credentials");
+    throw error;
   }
 }
 

@@ -90,6 +90,13 @@ CREATE TABLE `command_history` (
 	FOREIGN KEY (`host_id`) REFERENCES `ssh_data`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
+CREATE TABLE `credential_sidebar_preferences` (
+	`user_id` text PRIMARY KEY NOT NULL,
+	`data` text NOT NULL,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `dashboard_service_links` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`user_id` text NOT NULL,
@@ -234,6 +241,13 @@ CREATE TABLE `host_metrics_preferences` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `idx_host_metrics_prefs_user_host` ON `host_metrics_preferences` (`user_id`,`host_id`);--> statement-breakpoint
+CREATE TABLE `host_sidebar_preferences` (
+	`user_id` text PRIMARY KEY NOT NULL,
+	`data` text NOT NULL,
+	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `ssh_data` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`user_id` text NOT NULL,
@@ -245,6 +259,7 @@ CREATE TABLE `ssh_data` (
 	`folder` text,
 	`tags` text,
 	`pin` integer DEFAULT false NOT NULL,
+	`sort_order` integer,
 	`auth_type` text NOT NULL,
 	`use_warpgate` integer DEFAULT false NOT NULL,
 	`share_ssh_auth` integer DEFAULT false NOT NULL,
@@ -572,6 +587,8 @@ CREATE TABLE `ssh_credentials` (
 	`description` text,
 	`folder` text,
 	`tags` text,
+	`pin` integer DEFAULT false NOT NULL,
+	`sort_order` integer,
 	`auth_type` text NOT NULL,
 	`username` text,
 	`password` text,
@@ -598,6 +615,7 @@ CREATE TABLE `ssh_folders` (
 	`color` text,
 	`icon` text,
 	`credential_id` integer,
+	`sort_order` integer,
 	`sync_id` text,
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	`updated_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL,

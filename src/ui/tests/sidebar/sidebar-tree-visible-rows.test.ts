@@ -1,57 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Host, HostFolder } from "@/types/ui-types";
-
-// Mirror of SidebarTree collectVisibleRows for unit coverage without exporting
-// the full React module graph.
-function isFolder(item: Host | HostFolder): item is HostFolder {
-  return "children" in item;
-}
-
-function hostMatchesQuery(host: Host, query: string): boolean {
-  const q = query.toLowerCase();
-  return (
-    host.name.toLowerCase().includes(q) ||
-    host.ip.toLowerCase().includes(q) ||
-    host.username.toLowerCase().includes(q)
-  );
-}
-
-function folderHasMatch(folder: HostFolder, query: string): boolean {
-  if (folder.name.toLowerCase().includes(query.toLowerCase())) return true;
-  for (const child of folder.children) {
-    if (isFolder(child)) {
-      if (folderHasMatch(child, query)) return true;
-    } else if (hostMatchesQuery(child, query)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-type VirtualRow = { item: Host | HostFolder; depth: number };
-
-function collectVisibleRows(
-  children: (Host | HostFolder)[],
-  query: string,
-  openSet: Set<string>,
-  out: VirtualRow[] = [],
-  depth = 0,
-): VirtualRow[] {
-  for (const child of children) {
-    if (isFolder(child)) {
-      const visible = query ? folderHasMatch(child, query) : true;
-      if (!visible) continue;
-      out.push({ item: child, depth });
-      const childOpen = query ? true : openSet.has(child.path ?? child.name);
-      if (childOpen)
-        collectVisibleRows(child.children, query, openSet, out, depth + 1);
-    } else {
-      if (!query || hostMatchesQuery(child, query))
-        out.push({ item: child, depth });
-    }
-  }
-  return out;
-}
+import {
+  isFolder,
+  collectVisibleRows,
+} from "../../sidebar/tree/visible-rows";
 
 function host(id: string, name: string): Host {
   return {

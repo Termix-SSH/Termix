@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import type { StatusColorScheme } from "@/types/host-sidebar-preferences";
 
-export type StatusColorScheme = "accent" | "status";
+export type { StatusColorScheme };
 
 export function useStatusColorScheme(): StatusColorScheme {
   const [scheme, setScheme] = useState<StatusColorScheme>(
