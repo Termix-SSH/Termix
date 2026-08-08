@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import express from "express";
-import { and, eq } from "drizzle-orm";
+import { and, eq, type SQL } from "drizzle-orm";
 import {
   hosts,
   sshCredentials,
@@ -83,6 +83,31 @@ type RepositoryContext = ReturnType<typeof createCurrentRepositoryContext>;
 
 export function isValidEntityType(value: unknown): value is SyncEntityType {
   return typeof value === "string" && VALID_ENTITY_TYPES.has(value);
+}
+
+/**
+ * Locates the stored row a sync payload corresponds to.
+ *
+ * Read and write have to agree on this. A singleton entity is keyed on its
+ * owner rather than a sync id, and `user_preferences` — the only singleton —
+ * has no `id` column at all, so an update cannot fall back to one: `table.id`
+ * is undefined there and drizzle emits `WHERE  = ?`.
+ */
+export function locateSyncRow(
+  entityType: SyncEntityType,
+  userId: string,
+  syncId: string,
+): SQL {
+  const { table, singleton } = ENTITY_CONFIG[entityType];
+
+  if (singleton) {
+    return eq(table.userId, userId);
+  }
+
+  return and(
+    eq((table as typeof hosts).syncId, syncId),
+    eq(table.userId, userId),
+  )!;
 }
 
 async function findReferenceSyncId(
@@ -301,19 +326,12 @@ router.post(
     }
 
     try {
-      const { table, singleton } = ENTITY_CONFIG[entityType];
+      const { table } = ENTITY_CONFIG[entityType];
       const context = createCurrentRepositoryContext();
 
       await context.drizzle
         .delete(table as typeof hosts)
-        .where(
-          singleton
-            ? eq(table.userId, userId)
-            : and(
-                eq((table as typeof hosts).syncId, syncId),
-                eq(table.userId, userId),
-              ),
-        );
+        .where(locateSyncRow(entityType, userId, syncId));
 
       await createCurrentSyncTombstoneRepository().record(
         userId,
@@ -372,20 +390,17 @@ router.post(
     }
 
     try {
+      // singleton is still needed below: those tables have no sync_id column
+      // for the insert to populate.
       const { table, singleton } = ENTITY_CONFIG[entityType];
       const context = createCurrentRepositoryContext();
+
+      const locateRow = locateSyncRow(entityType, userId, syncId);
 
       const existingRows = await context.drizzle
         .select()
         .from(table as typeof hosts)
-        .where(
-          singleton
-            ? eq(table.userId, userId)
-            : and(
-                eq((table as typeof hosts).syncId, syncId),
-                eq(table.userId, userId),
-              ),
-        )
+        .where(locateRow)
         .limit(1);
       const existing = existingRows[0] as Record<string, unknown> | undefined;
 
@@ -407,12 +422,7 @@ router.post(
         const updatedRows = await context.drizzle
           .update(table as typeof hosts)
           .set(encryptedPayload)
-          .where(
-            and(
-              eq((table as typeof hosts).id, existing.id as number),
-              eq(table.userId, userId),
-            ),
-          )
+          .where(locateRow)
           .returning();
         resultRow = updatedRows[0] as Record<string, unknown>;
       } else {
