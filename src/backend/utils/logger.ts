@@ -49,6 +49,7 @@ const SENSITIVE_FIELDS = [
   "privateKey",
   "publicKey",
   "token",
+  "url",
   "secret",
   "clientSecret",
   "keyPassword",
@@ -152,30 +153,10 @@ export class Logger {
       if (sanitizedContext.duration)
         contextParts.push(`duration:${sanitizedContext.duration}ms`);
 
-     const extraContext = Object.entries(sanitizedContext).filter(
-       ([key]) =>
-         ![
-           "operation",
-           "userId",
-           "hostId",
-           "tunnelName",
-           "sessionId",
-           "requestId",
-           "duration",
-         ].includes(key),
-     );
-     for (const [key, value] of extraContext) {
-       const displayValue =
-         typeof value === "string" || typeof value === "number" ||
-         typeof value === "boolean"
-           ? value
-           : JSON.stringify(value);
-       contextParts.push(`${key}:${displayValue}`);
-     }
 
-     if (contextParts.length > 0) {
-       contextStr = chalk.gray(` [${contextParts.join(",")}]`);
-     }
+      if (contextParts.length > 0) {
+        contextStr = chalk.gray(` [${contextParts.join(",")}]`);
+      }
     }
 
     return `${timestamp} ${levelTag} ${serviceTag} ${message}${contextStr}`;
