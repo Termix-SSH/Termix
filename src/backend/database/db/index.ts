@@ -507,7 +507,7 @@ async function initializeCompleteDatabase(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS audit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id TEXT NOT NULL,
+        user_id TEXT,
         username TEXT NOT NULL,
         action TEXT NOT NULL,
         resource_type TEXT NOT NULL,
@@ -1172,6 +1172,69 @@ const migrateSchema = () => {
     }
   } catch (migrationError) {
     databaseLogger.warn("Failed to migrate ssh_credentials username column", {
+      operation: "schema_migration",
+      error: migrationError,
+    });
+  }
+
+  try {
+    const auditLogColumns = sqlite.prepare("PRAGMA table_info(audit_logs)").all() as Array<{
+      name: string;
+      notnull: number;
+    }>;
+    const auditUserIdCol = auditLogColumns.find((col) => col.name === "user_id");
+
+    if (auditUserIdCol && auditUserIdCol.notnull === 1) {
+      const tempTableName = "audit_logs_temp_migration";
+      const columns = [
+        "id",
+        "user_id",
+        "username",
+        "action",
+        "resource_type",
+        "resource_id",
+        "resource_name",
+        "details",
+        "ip_address",
+        "user_agent",
+        "success",
+        "error_message",
+        "timestamp",
+      ].join(", ");
+
+      sqlite.exec(`PRAGMA foreign_keys = OFF`);
+      sqlite.exec(`
+        CREATE TABLE ${tempTableName} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT,
+          username TEXT NOT NULL,
+          action TEXT NOT NULL,
+          resource_type TEXT NOT NULL,
+          resource_id TEXT,
+          resource_name TEXT,
+          details TEXT,
+          ip_address TEXT,
+          user_agent TEXT,
+          success INTEGER NOT NULL,
+          error_message TEXT,
+          timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+        );
+
+        INSERT INTO ${tempTableName} (${columns}) SELECT ${columns} FROM audit_logs;
+
+        DROP TABLE audit_logs;
+
+        ALTER TABLE ${tempTableName} RENAME TO audit_logs;
+      `);
+      sqlite.exec(`PRAGMA foreign_keys = ON`);
+
+      databaseLogger.info("Successfully migrated audit_logs table to remove user_id NOT NULL constraint", {
+        operation: "schema_migration_audit_user_id_nullable",
+      });
+    }
+  } catch (migrationError) {
+    databaseLogger.warn("Failed to migrate audit_logs user_id column", {
       operation: "schema_migration",
       error: migrationError,
     });
