@@ -57,6 +57,7 @@ import {
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
 import { applyAgentAuth } from "../terminal-auth-helpers.js";
+import { applyCACertIfPresent } from "./ca-cert-auth.js";
 
 /**
  * The host id came from whichever database the client is displaying. If this
@@ -264,6 +265,15 @@ async function buildDedicatedTransferConnectConfig(
       .replace(/\r/g, "\n");
     config.privateKey = Buffer.from(cleanKey, "utf8");
     if (host.keyPassword) config.passphrase = host.keyPassword;
+
+    await applyCACertIfPresent(
+      config,
+      client,
+      config.privateKey as Buffer,
+      host as { certPublicKey?: string | null },
+      username,
+      host.keyPassword,
+    );
   } else if (authType === "password") {
     if (!host.password) {
       throw new Error("Password required for transfer connection");
@@ -788,6 +798,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keyPassword,
     authType,
     sudoPassword: undefined as string | undefined,
+    certPublicKey: undefined as string | undefined,
   };
   let hostKeepaliveInterval: number | undefined;
   let hostKeepaliveCountMax: number | undefined;
@@ -821,6 +832,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
+          certPublicKey: (resolvedHost as { certPublicKey?: string })
+            .certPublicKey,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
@@ -888,6 +901,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
+          certPublicKey: (resolvedHost as { certPublicKey?: string })
+            .certPublicKey,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
@@ -1026,11 +1041,23 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
       if (resolvedCredentials.keyPassword)
         config.passphrase = resolvedCredentials.keyPassword;
+
+      await applyCACertIfPresent(
+        config,
+        client,
+        config.privateKey as Buffer,
+        resolvedCredentials,
+        resolvedUsername,
+        resolvedCredentials.keyPassword,
+      );
+
       connectionLogs.push(
         createConnectionLog(
           "info",
           "sftp_auth",
-          "Using SSH key authentication",
+          resolvedCredentials.certPublicKey?.trim()
+            ? "Using SSH key authentication with CA certificate"
+            : "Using SSH key authentication",
         ),
       );
     } catch (keyError) {
