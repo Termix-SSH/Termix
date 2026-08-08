@@ -9,6 +9,18 @@ export interface DfRow {
   parts: string[];
 }
 
+export interface DiskFilesystem {
+  filesystem: string;
+  mount: string;
+  percent: number | null;
+  usedHuman: string | null;
+  totalHuman: string | null;
+  availableHuman: string | null;
+  usedBytes: number | null;
+  totalBytes: number | null;
+  availableBytes: number | null;
+}
+
 export function parseDfLines(output: string): DfRow[] {
   return output
     .split("\n")
@@ -62,17 +74,73 @@ export function findWorstMountIndex(bytesRows: DfRow[]): {
   };
 }
 
+// Merges the `df -B1` and `df -h` row sets into one filesystem list. Byte rows
+// drive the maths; human rows only supply the display strings, matched by mount
+// point so a mismatched row count can't shift the columns.
+export function buildFilesystemList(
+  bytesRows: DfRow[],
+  humanRows: DfRow[],
+): DiskFilesystem[] {
+  const aligned = humanRows.length === bytesRows.length;
+
+  return bytesRows
+    .map((row, index) => {
+      const totalBytes = Number(row.parts[1]);
+      const usedBytes = Number(row.parts[2]);
+      const availableBytes = Number(row.parts[3]);
+      if (!Number.isFinite(totalBytes) || totalBytes <= 0) return null;
+
+      const humanRow = aligned
+        ? humanRows[index]
+        : humanRows.find((h) => h.mount === row.mount);
+
+      const percent = Number.isFinite(usedBytes)
+        ? Math.max(0, Math.min(100, (usedBytes / totalBytes) * 100))
+        : null;
+
+      return {
+        filesystem: row.filesystem,
+        mount: row.mount,
+        percent: toFixedNum(percent, 0),
+        usedHuman: humanRow?.parts[2] || null,
+        totalHuman: humanRow?.parts[1] || null,
+        availableHuman: humanRow?.parts[3] || null,
+        usedBytes: Number.isFinite(usedBytes) ? usedBytes : null,
+        totalBytes,
+        availableBytes: Number.isFinite(availableBytes) ? availableBytes : null,
+      };
+    })
+    .filter((fs): fs is DiskFilesystem => fs !== null);
+}
+
+// The headline disk figure should be the root filesystem - that is what users
+// mean by "the server's disk". Only when there is no root mount (containers,
+// chroots) do we fall back to the most-utilized mount.
+export function selectPrimaryFilesystem(
+  filesystems: DiskFilesystem[],
+): DiskFilesystem | null {
+  if (filesystems.length === 0) return null;
+
+  const root = filesystems.find((fs) => fs.mount === "/");
+  if (root) return root;
+
+  let best = filesystems[0];
+  for (const fs of filesystems) {
+    const ratio = (fs.usedBytes ?? 0) / (fs.totalBytes || 1);
+    const bestRatio = (best.usedBytes ?? 0) / (best.totalBytes || 1);
+    if (ratio > bestRatio) best = fs;
+  }
+  return best;
+}
+
 export async function collectDiskMetrics(client: Client): Promise<{
   percent: number | null;
   usedHuman: string | null;
   totalHuman: string | null;
   availableHuman: string | null;
+  mount: string | null;
+  filesystems: DiskFilesystem[];
 }> {
-  let diskPercent: number | null = null;
-  let usedHuman: string | null = null;
-  let totalHuman: string | null = null;
-  let availableHuman: string | null = null;
-
   try {
     const [diskOutHuman, diskOutBytes] = await Promise.all([
       execCommand(client, "df -h -P | tail -n +2"),
@@ -81,35 +149,25 @@ export async function collectDiskMetrics(client: Client): Promise<{
 
     const humanRows = parseDfLines(diskOutHuman.stdout);
     const bytesRows = parseDfLines(diskOutBytes.stdout);
-    const worst = findWorstMountIndex(bytesRows);
+    const filesystems = buildFilesystemList(bytesRows, humanRows);
+    const primary = selectPrimaryFilesystem(filesystems);
 
-    if (worst.totalBytes > 0) {
-      diskPercent = Math.max(
-        0,
-        Math.min(100, (worst.usedBytes / worst.totalBytes) * 100),
-      );
-
-      const humanRow =
-        humanRows.length === bytesRows.length
-          ? humanRows[worst.index]
-          : humanRows.find((row) => row.mount === bytesRows[worst.index].mount);
-      if (humanRow) {
-        totalHuman = humanRow.parts[1] || null;
-        usedHuman = humanRow.parts[2] || null;
-        availableHuman = humanRow.parts[3] || null;
-      }
-    }
+    return {
+      percent: primary?.percent ?? null,
+      usedHuman: primary?.usedHuman ?? null,
+      totalHuman: primary?.totalHuman ?? null,
+      availableHuman: primary?.availableHuman ?? null,
+      mount: primary?.mount ?? null,
+      filesystems,
+    };
   } catch {
-    diskPercent = null;
-    usedHuman = null;
-    totalHuman = null;
-    availableHuman = null;
+    return {
+      percent: null,
+      usedHuman: null,
+      totalHuman: null,
+      availableHuman: null,
+      mount: null,
+      filesystems: [],
+    };
   }
-
-  return {
-    percent: toFixedNum(diskPercent, 0),
-    usedHuman,
-    totalHuman,
-    availableHuman,
-  };
 }

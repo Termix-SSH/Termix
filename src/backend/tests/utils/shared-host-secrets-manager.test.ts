@@ -4,13 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const ownerDEK = crypto.randomBytes(32);
 const targetDEK = crypto.randomBytes(32);
 
-type SecretRow = Record<string, unknown> & {
-  id: number;
-  hostAccessId: number;
-  targetUserId: string;
-  protocol: string;
-};
-
 const state = vi.hoisted(() => ({
   hosts: new Map<number, Record<string, unknown>>(),
   credentials: new Map<number, Record<string, unknown>>(),
@@ -142,6 +135,7 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     keyPassword: null,
     keyType: null,
     credentialId: null,
+    shareSshAuth: false,
     enableSsh: true,
     enableRdp: false,
     enableVnc: false,
@@ -173,26 +167,29 @@ beforeEach(() => {
 });
 
 describe("SharedHostSecretsManager", () => {
-  it("snapshots an inline-password SSH host and the target can decrypt it", async () => {
+  it("keeps an inline-password SSH host private by default", async () => {
     state.hosts.set(42, baseHost());
 
     await manager.snapshotForUser(7, 42, "target", "owner");
 
-    expect(state.secretRows).toHaveLength(1);
-    const row = state.secretRows[0];
-    expect(row.protocol).toBe("ssh");
-    expect(row.sourceType).toBe("inline");
-    expect(row.encryptedPassword).not.toBe("hunter2");
+    expect(state.secretRows).toHaveLength(0);
+    expect(await manager.getSecretForUser(42, "target", "ssh")).toBeNull();
+  });
 
-    const secret = await manager.getSecretForUser(42, "target", "ssh");
-    expect(secret).toMatchObject({
+  it("snapshots inline SSH authentication when the owner opts in", async () => {
+    state.hosts.set(42, baseHost({ shareSshAuth: true }));
+
+    await manager.snapshotForUser(7, 42, "target", "owner");
+
+    expect(state.secretRows.map((row) => row.protocol)).toEqual(["ssh"]);
+    expect(await manager.getSecretForUser(42, "target", "ssh")).toMatchObject({
       username: "root",
       authType: "password",
       password: "hunter2",
     });
   });
 
-  it("snapshots every enabled protocol from credential and inline sources", async () => {
+  it("snapshots opted-in SSH credential auth alongside enabled non-SSH protocols", async () => {
     state.credentials.set(123, {
       id: 123,
       userId: "owner",
@@ -209,6 +206,7 @@ describe("SharedHostSecretsManager", () => {
       baseHost({
         authType: "credential",
         credentialId: 123,
+        shareSshAuth: true,
         password: null,
         enableRdp: true,
         rdpUser: "rdp-admin",
@@ -228,8 +226,7 @@ describe("SharedHostSecretsManager", () => {
       "telnet",
     ]);
 
-    const ssh = await manager.getSecretForUser(42, "target", "ssh");
-    expect(ssh).toMatchObject({
+    expect(await manager.getSecretForUser(42, "target", "ssh")).toMatchObject({
       username: "cred-user",
       authType: "key",
       key: "PRIVATE-KEY",
@@ -253,28 +250,28 @@ describe("SharedHostSecretsManager", () => {
   });
 
   it("produces no snapshot rows for secret-less auth types", async () => {
-    state.hosts.set(42, baseHost({ authType: "opkssh", password: null }));
+    state.hosts.set(
+      42,
+      baseHost({
+        authType: "opkssh",
+        password: null,
+        shareSshAuth: true,
+      }),
+    );
 
     await manager.snapshotForUser(7, 42, "target", "owner");
     expect(state.secretRows).toHaveLength(0);
   });
 
-  it("removes stale protocol rows on re-snapshot", async () => {
-    state.hosts.set(
-      42,
-      baseHost({
-        enableRdp: true,
-        rdpUser: "rdp-admin",
-        rdpPassword: "rdp-pass",
-      }),
-    );
+  it("removes the SSH snapshot when the owner disables sharing", async () => {
+    state.hosts.set(42, baseHost({ shareSshAuth: true }));
     await manager.snapshotForUser(7, 42, "target", "owner");
-    expect(state.secretRows).toHaveLength(2);
+    expect(state.secretRows).toHaveLength(1);
 
-    // Owner turns RDP off; the RDP snapshot must disappear.
+    // Owner makes SSH authentication private again.
     state.hosts.set(42, baseHost());
     await manager.snapshotForUser(7, 42, "target", "owner");
-    expect(state.secretRows.map((row) => row.protocol)).toEqual(["ssh"]);
+    expect(state.secretRows).toHaveLength(0);
   });
 
   it("fails fast when a participant has no DEK", async () => {
@@ -286,7 +283,14 @@ describe("SharedHostSecretsManager", () => {
   });
 
   it("cannot be decrypted with the wrong DEK", async () => {
-    state.hosts.set(42, baseHost());
+    state.hosts.set(
+      42,
+      baseHost({
+        enableRdp: true,
+        rdpUser: "rdp-admin",
+        rdpPassword: "rdp-pass",
+      }),
+    );
     await manager.snapshotForUser(7, 42, "target", "owner");
 
     const row = state.secretRows[0];
@@ -294,14 +298,21 @@ describe("SharedHostSecretsManager", () => {
       FieldCrypto.decryptField(
         row.encryptedPassword as string,
         ownerDEK,
-        "shared-7-target-ssh",
+        "shared-7-target-rdp",
         "password",
       ),
     ).toThrow();
   });
 
   it("resyncHost re-snapshots direct grants and role members", async () => {
-    state.hosts.set(42, baseHost());
+    state.hosts.set(
+      42,
+      baseHost({
+        enableRdp: true,
+        rdpUser: "rdp-admin",
+        rdpPassword: "rdp-pass",
+      }),
+    );
     state.accessToHost = new Map([
       [1, 42],
       [2, 42],
@@ -322,16 +333,30 @@ describe("SharedHostSecretsManager", () => {
       [2, "member-1"],
     ]);
 
-    // Owner rotates the inline password; resync updates the copies.
-    state.hosts.set(42, baseHost({ password: "rotated" }));
+    // Owner rotates the non-SSH password; resync updates those copies.
+    state.hosts.set(
+      42,
+      baseHost({
+        enableRdp: true,
+        rdpUser: "rdp-admin",
+        rdpPassword: "rotated",
+      }),
+    );
     await manager.resyncHost(42);
 
-    const secret = await manager.getSecretForUser(42, "target", "ssh");
+    const secret = await manager.getSecretForUser(42, "target", "rdp");
     expect(secret?.password).toBe("rotated");
   });
 
   it("snapshotForRoleMember fans out from role grants", async () => {
-    state.hosts.set(42, baseHost());
+    state.hosts.set(
+      42,
+      baseHost({
+        enableRdp: true,
+        rdpUser: "rdp-admin",
+        rdpPassword: "rdp-pass",
+      }),
+    );
     state.accessToHost = new Map([[2, 42]]);
     state.grants = [{ id: 2, hostId: 42, userId: null, roleId: 9 }];
 
@@ -341,7 +366,7 @@ describe("SharedHostSecretsManager", () => {
     expect(state.secretRows[0]).toMatchObject({
       hostAccessId: 2,
       targetUserId: "member-1",
-      protocol: "ssh",
+      protocol: "rdp",
     });
   });
 });

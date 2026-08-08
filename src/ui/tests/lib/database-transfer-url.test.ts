@@ -51,4 +51,21 @@ describe("getDatabaseTransferUrl", () => {
       }),
     ).toBe("http://localhost:30001/database/export");
   });
+
+  it.each(["localhost", "127.0.0.1"])(
+    "keeps Docker access through %s on the browser origin",
+    (hostname) => {
+      expect(
+        getDatabaseTransferUrl("export", {
+          electron: false,
+          location: {
+            protocol: "http:",
+            host: `${hostname}:8080`,
+            hostname,
+            port: "8080",
+          },
+        }),
+      ).toBe(`http://${hostname}:8080/database/export`);
+    },
+  );
 });

@@ -29,15 +29,14 @@ function parseProxyChain(value: JumpHostProxyConfig["socks5ProxyChain"]) {
 
 export function getJumpHostSocks5Config(
   firstHop: JumpHostProxyConfig | null | undefined,
-  fallbackConfig?: SOCKS5Config | null,
 ): SOCKS5Config | null {
   if (!firstHop?.useSocks5) {
-    return fallbackConfig ?? null;
+    return null;
   }
 
   const socks5ProxyChain = parseProxyChain(firstHop.socks5ProxyChain);
   if (!firstHop.socks5Host && socks5ProxyChain.length === 0) {
-    return fallbackConfig ?? null;
+    return null;
   }
 
   return {

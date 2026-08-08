@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
-import { ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import {
   useState,
   useRef,
@@ -125,6 +125,7 @@ import {
   createSSHHost,
   getActiveSessions,
   getUserPreferences,
+  saveUserPreferences,
   dismissDonationModal,
   isElectron,
   type UserPreferences,
@@ -139,7 +140,7 @@ import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
-import { changeAppLanguage } from "@/i18n/i18n";
+import { changeAppLanguage, consumeLoginLanguage } from "@/i18n/i18n";
 import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
 
 function buildHostTree(
@@ -263,6 +264,7 @@ export function AppShell({
   });
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
+  const [settingsFullscreen, setSettingsFullscreen] = useState(false);
   const [isAppFullscreen, setIsAppFullscreen] = useState(
     () => !!document.fullscreenElement,
   );
@@ -287,6 +289,21 @@ export function AppShell({
   }, [paneTabIds, tabs]);
 
   const isMobile = useIsMobile();
+  const isSettingsView =
+    railView === "user-profile" || railView === "admin-settings";
+
+  useEffect(() => {
+    if (!settingsFullscreen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSettingsFullscreen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [settingsFullscreen]);
+
+  useEffect(() => {
+    if (!isSettingsView) setSettingsFullscreen(false);
+  }, [isSettingsView]);
 
   const sidebarOpenBeforeMobile = useRef(sidebarOpen);
   useEffect(() => {
@@ -581,8 +598,7 @@ export function AppShell({
             const termRef = terminalRefs.current.get(tabId);
             (
               termRef?.current as
-                | import("@/features/terminal/Terminal").TerminalHandle
-                | null
+                import("@/features/terminal/Terminal").TerminalHandle | null
             )?.focus();
           }
           return;
@@ -691,6 +707,7 @@ export function AppShell({
   useEffect(() => {
     getUserPreferences()
       .then((prefs) => {
+        const loginLanguage = consumeLoginLanguage();
         setUserPrefs(prefs);
         if (prefs.storageMode === "cloud") {
           // Persist the current browser values before overwriting, so any tab can restore them
@@ -724,8 +741,12 @@ export function AppShell({
             localStorage.setItem("termix-accent", prefs.accentColor);
             applyAccentColor(prefs.accentColor);
           }
-          if (prefs.language && prefs.language !== i18n.language) {
-            void changeAppLanguage(prefs.language);
+          const preferredLanguage = loginLanguage ?? prefs.language;
+          if (preferredLanguage && preferredLanguage !== i18n.language) {
+            void changeAppLanguage(preferredLanguage);
+          }
+          if (loginLanguage && loginLanguage !== prefs.language) {
+            void saveUserPreferences({ language: loginLanguage });
           }
           if (
             prefs.commandAutocomplete !== null &&
@@ -1510,6 +1531,7 @@ export function AppShell({
       setSidebarOpen(false);
     } else {
       if (view !== railView) setSidebarEditing(false);
+      if (view !== railView) setSettingsFullscreen(false);
       setRailView(view);
       setSidebarOpen(true);
     }
@@ -1867,12 +1889,42 @@ export function AppShell({
           </Button>
         </>
       )}
+      {isSettingsView && (
+        <>
+          <Separator orientation="vertical" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            title={
+              settingsFullscreen
+                ? t("newUi.sidebar.userProfile.exitFullscreenSettings")
+                : t("newUi.sidebar.userProfile.openFullscreenSettings")
+            }
+            aria-label={
+              settingsFullscreen
+                ? t("newUi.sidebar.userProfile.exitFullscreenSettings")
+                : t("newUi.sidebar.userProfile.openFullscreenSettings")
+            }
+            onClick={() => setSettingsFullscreen((value) => !value)}
+          >
+            {settingsFullscreen ? (
+              <Minimize2 className="size-4" />
+            ) : (
+              <Maximize2 className="size-4" />
+            )}
+          </Button>
+        </>
+      )}
       <Separator orientation="vertical" />
       <Button
         variant="ghost"
         size="icon"
         className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
-        onClick={() => setSidebarOpen(false)}
+        onClick={() => {
+          setSettingsFullscreen(false);
+          setSidebarOpen(false);
+        }}
       >
         <ChevronLeft className="size-4" />
       </Button>
@@ -1904,30 +1956,38 @@ export function AppShell({
         )}
         <div className="flex flex-1 min-h-0">
           {/* Skinny icon rail — desktop only, hidden on mobile */}
-          <AppRail
-            railView={railView}
-            sidebarOpen={sidebarOpen}
-            splitMode={splitMode}
-            username={username}
-            isAdmin={showMultiUserUI}
-            onRailClick={handleRailClick}
-            onOpenTab={openSingletonTab}
-            onLogout={onLogout}
-          />
+          {!settingsFullscreen && (
+            <AppRail
+              railView={railView}
+              sidebarOpen={sidebarOpen}
+              splitMode={splitMode}
+              username={username}
+              isAdmin={showMultiUserUI}
+              onRailClick={handleRailClick}
+              onOpenTab={openSingletonTab}
+              onLogout={onLogout}
+            />
+          )}
 
           {/* Desktop: inline resizable sidebar */}
           {!isMobile && (
             <div
-              className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
+              className={`${settingsFullscreen ? "fixed inset-0 z-50" : "relative"} flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden ${sidebarOpen ? `border-r transition-colors ${sidebarDragging ? "border-accent-brand/60" : "border-border"}` : ""}`}
               style={{
-                width: sidebarOpen ? (sidebarEditing ? 560 : sidebarWidth) : 0,
+                width: settingsFullscreen
+                  ? "100vw"
+                  : sidebarOpen
+                    ? sidebarEditing
+                      ? 560
+                      : sidebarWidth
+                    : 0,
                 transition: sidebarDragging ? "none" : "width 0.2s",
               }}
             >
               {sidebarHeader}
               {sidebarPanelContent}
 
-              {sidebarOpen && !sidebarEditing && (
+              {sidebarOpen && !sidebarEditing && !settingsFullscreen && (
                 <div
                   onMouseDown={onSidebarMouseDown}
                   className={`absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${sidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
@@ -1942,7 +2002,7 @@ export function AppShell({
               <SheetContent
                 side="left"
                 showCloseButton={false}
-                className="p-0 flex flex-col min-h-0 w-[min(85vw,360px)] max-w-full bg-sidebar border-r border-border gap-0"
+                className={`p-0 flex flex-col min-h-0 max-w-full bg-sidebar border-r border-border gap-0 ${settingsFullscreen ? "w-screen" : "w-[min(85vw,360px)]"}`}
                 style={{ height: "100dvh" }}
               >
                 {sidebarHeader}
@@ -1953,6 +2013,8 @@ export function AppShell({
 
           {/* Main content area */}
           <div
+            inert={settingsFullscreen ? true : undefined}
+            aria-hidden={settingsFullscreen || undefined}
             className={`relative flex flex-col flex-1 min-w-0 overflow-hidden transition-all duration-200 ${!isMobile && !sidebarOpen ? "pl-6" : ""}`}
           >
             {!isMobile && !sidebarOpen && (

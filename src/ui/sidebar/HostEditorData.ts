@@ -69,6 +69,7 @@ export function createHostEditorForm(
     telnetPort: host?.telnetPort ?? 23,
     authType: host?.authType ?? "password",
     useWarpgate: host?.useWarpgate ?? false,
+    shareSshAuth: host?.shareSshAuth ?? false,
     password: host?.password ?? "",
     key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
     keyPassword: host?.hasKeyPassword
@@ -98,9 +99,7 @@ export function createHostEditorForm(
       : "single") as "single" | "chain",
     socks5ProxyChain: (host?.socks5ProxyChain ?? []) as HostSocks5ProxyNode[],
     connectionOrigin: (host?.connectionOrigin ?? null) as
-      | "local"
-      | "remote"
-      | null,
+      "local" | "remote" | null,
     enableTerminal: host?.enableTerminal ?? true,
     enableSessionLogging:
       host?.enableSessionLogging ?? d?.enableSessionLogging ?? true,
@@ -140,20 +139,14 @@ export function createHostEditorForm(
     letterSpacing: host?.terminalConfig?.letterSpacing ?? 0,
     lineHeight: host?.terminalConfig?.lineHeight ?? 1.0,
     bellStyle: (host?.terminalConfig?.bellStyle ?? "none") as
-      | "none"
-      | "sound"
-      | "visual"
-      | "both",
+      "none" | "sound" | "visual" | "both",
     rightClickSelectsWord: host?.terminalConfig?.rightClickSelectsWord ?? false,
     fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ?? "alt") as
-      | "alt"
-      | "ctrl"
-      | "shift",
+      "alt" | "ctrl" | "shift",
     fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
     minimumContrastRatio: host?.terminalConfig?.minimumContrastRatio ?? 1,
     backspaceMode: (host?.terminalConfig?.backspaceMode ?? "normal") as
-      | "normal"
-      | "control-h",
+      "normal" | "control-h",
     startupSnippetId: host?.terminalConfig?.startupSnippetId ?? null,
     moshCommand: host?.terminalConfig?.moshCommand ?? "",
     agentForwarding: host?.terminalConfig?.agentForwarding ?? false,
@@ -215,17 +208,13 @@ export function createHostEditorForm(
       host?.telnetCredentialId != null ? String(host.telnetCredentialId) : "",
     rdpAuthType: (host?.rdpAuthType ??
       (host?.rdpCredentialId ? "credential" : "direct")) as
-      | "direct"
-      | "credential"
-      | "none",
+      "direct" | "credential" | "none",
     vncAuthType: (host?.vncAuthType ??
       (host?.vncCredentialId ? "credential" : "direct")) as
-      | "direct"
-      | "credential",
+      "direct" | "credential",
     telnetAuthType: (host?.telnetAuthType ??
       (host?.telnetCredentialId ? "credential" : "direct")) as
-      | "direct"
-      | "credential",
+      "direct" | "credential",
     guacamoleConfig: host?.guacamoleConfig ?? {},
     statsConfig: host?.statsConfig ?? {
       statusCheckEnabled: d?.statusCheckEnabled ?? true,
@@ -252,6 +241,37 @@ export function createHostEditorForm(
 }
 
 export type HostEditorForm = ReturnType<typeof createHostEditorForm>;
+
+export function omitOwnerSshAuthFromSharedEdit(
+  payload: SSHHostData,
+): SSHHostData {
+  const {
+    authType: _authType,
+    password: _password,
+    key: _key,
+    keyPassword: _keyPassword,
+    keyType: _keyType,
+    sudoPassword: _sudoPassword,
+    credentialId: _credentialId,
+    vaultProfileId: _vaultProfileId,
+    overrideCredentialUsername: _overrideCredentialUsername,
+    shareSshAuth: _shareSshAuth,
+    ...editableFields
+  } = payload;
+
+  const terminalConfig = editableFields.terminalConfig
+    ? { ...editableFields.terminalConfig }
+    : undefined;
+  if (terminalConfig) {
+    delete terminalConfig.sudoPassword;
+    delete terminalConfig.agentSocketPath;
+  }
+
+  return {
+    ...editableFields,
+    terminalConfig,
+  } as SSHHostData;
+}
 
 export function buildHostEditorPayload(
   form: HostEditorForm,
@@ -288,6 +308,7 @@ export function buildHostEditorPayload(
     pin: form.pin,
     authType: form.authType,
     useWarpgate: form.useWarpgate,
+    shareSshAuth: form.shareSshAuth,
     password:
       usesPassword || usesKey || usesCredential ? form.password || null : null,
     key: usesKey

@@ -1,10 +1,16 @@
 import { describe, expect, it, beforeEach } from "vitest";
 
-import { changeAppLanguage, normalizeLanguageCode } from "../../i18n/i18n";
+import {
+  changeAppLanguage,
+  consumeLoginLanguage,
+  normalizeLanguageCode,
+  rememberLoginLanguage,
+} from "../../i18n/i18n";
 
 describe("i18n language handling", () => {
   beforeEach(() => {
     localStorage.clear();
+    sessionStorage.clear();
   });
 
   it("normalizes persisted desktop language codes", () => {
@@ -17,5 +23,11 @@ describe("i18n language handling", () => {
   it("stores the normalized language after a successful switch", async () => {
     await expect(changeAppLanguage("zh_CN")).resolves.toBe("zh-CN");
     expect(localStorage.getItem("i18nextLng")).toBe("zh-CN");
+  });
+
+  it("keeps an explicit login language until preferences are hydrated", () => {
+    expect(rememberLoginLanguage("zh_CN")).toBe("zh-CN");
+    expect(consumeLoginLanguage()).toBe("zh-CN");
+    expect(consumeLoginLanguage()).toBeNull();
   });
 });

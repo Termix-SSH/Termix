@@ -6,22 +6,25 @@ const state = vi.hoisted(() => ({
   isAdminBypass: false,
   overrideCredentialId: null as number | null,
   credentials: new Map<string, Record<string, unknown>>(),
-  sharedSecret: null as Record<string, unknown> | null,
+  vaultProfile: null as Record<string, unknown> | null,
   auditCalls: [] as Record<string, unknown>[],
   folderCredentialId: null as number | null,
+  sharedSecret: null as Record<string, unknown> | null,
 }));
 
 vi.mock("../../database/repositories/factory.js", () => ({
   createCurrentHostResolutionRepository: () => ({
     findHostOwnerId: async () => (state.host?.userId as string) ?? null,
     findHostById: async () => (state.host ? { ...state.host } : null),
-    findOverrideCredentialId: async () => state.overrideCredentialId,
     findCredentialByIdForUser: async (credentialId: number, userId: string) =>
       state.credentials.get(`${credentialId}:${userId}`) ?? null,
     findFolderCredentialId: async () => state.folderCredentialId,
   }),
+  createCurrentSharedHostAuthOverrideRepository: () => ({
+    findCredentialId: async () => state.overrideCredentialId,
+  }),
   createCurrentVaultProfileRepository: () => ({
-    findById: async () => null,
+    findById: async () => state.vaultProfile,
   }),
   createCurrentUserRepository: () => ({
     findById: async (userId: string) => ({ id: userId, username: userId }),
@@ -79,6 +82,7 @@ function baseHost(overrides: Record<string, unknown> = {}) {
     keyPassword: null,
     keyType: null,
     credentialId: null,
+    shareSshAuth: false,
     vaultProfileId: null,
     sudoPassword: "owner-sudo",
     autostartPassword: "auto-pass",
@@ -101,9 +105,10 @@ beforeEach(() => {
   state.isAdminBypass = false;
   state.overrideCredentialId = null;
   state.credentials.clear();
-  state.sharedSecret = null;
+  state.vaultProfile = null;
   state.auditCalls = [];
   state.folderCredentialId = null;
+  state.sharedSecret = null;
 });
 
 describe("resolveHostById", () => {
@@ -198,8 +203,12 @@ describe("resolveHostById", () => {
     expect(host.password).toBe("host-pass");
   });
 
-  it("uses the share snapshot for a non-owner and strips owner-only secrets", async () => {
-    state.host = baseHost({ username: "" });
+  it("does not expose the owner's secret-backed SSH authentication", async () => {
+    expect(await resolveHostById(42, "recipient")).toBeNull();
+  });
+
+  it("uses the owner-provided SSH snapshot when sharing is enabled", async () => {
+    state.host = baseHost({ shareSshAuth: true, username: "host-user" });
     state.sharedSecret = {
       username: "shared-user",
       authType: "password",
@@ -210,14 +219,56 @@ describe("resolveHostById", () => {
       string,
       unknown
     >;
+    expect(host.username).toBe("host-user");
     expect(host.password).toBe("shared-pass");
-    expect(host.username).toBe("shared-user");
-    expect(host.sudoPassword).toBeNull();
-    expect(host.autostartPassword).toBeNull();
+    expect(host.authType).toBe("password");
   });
 
-  it("prefers the recipient's override credential over the snapshot", async () => {
-    state.host = baseHost({ username: "" });
+  it("denies shared secret-backed auth when the opted-in snapshot is missing", async () => {
+    state.host = baseHost({ shareSshAuth: true });
+    expect(await resolveHostById(42, "recipient")).toBeNull();
+  });
+
+  it("keeps SSH agent authentication private unless the owner opts in", async () => {
+    state.host = baseHost({
+      authType: "agent",
+      password: null,
+      terminalConfig: JSON.stringify({
+        agentSocketPath: "/run/user/1000/ssh-agent.sock",
+      }),
+    });
+
+    expect(await resolveHostById(42, "recipient")).toBeNull();
+  });
+
+  it("allows SSH agent authentication after the owner explicitly opts in", async () => {
+    state.host = baseHost({
+      authType: "agent",
+      password: null,
+      shareSshAuth: true,
+      terminalConfig: JSON.stringify({
+        agentSocketPath: "/run/user/1000/ssh-agent.sock",
+      }),
+    });
+
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.authType).toBe("agent");
+    expect(host.terminalConfig).toEqual({
+      agentSocketPath: "/run/user/1000/ssh-agent.sock",
+      sudoPassword: null,
+    });
+  });
+
+  it("uses the recipient's credential instead of the owner's authentication", async () => {
+    state.host = baseHost({ username: "", shareSshAuth: true });
+    state.sharedSecret = {
+      username: "shared-user",
+      authType: "password",
+      password: "shared-pass",
+    };
     state.overrideCredentialId = 5;
     state.credentials.set("5:recipient", {
       id: 5,
@@ -229,11 +280,6 @@ describe("resolveHostById", () => {
       keyPassword: null,
       keyType: null,
     });
-    state.sharedSecret = {
-      username: "shared-user",
-      authType: "password",
-      password: "shared-pass",
-    };
 
     const host = (await resolveHostById(42, "recipient")) as Record<
       string,
@@ -243,14 +289,122 @@ describe("resolveHostById", () => {
     expect(host.username).toBe("my-user");
   });
 
-  it("denies a non-owner when a secret-bearing host has no snapshot", async () => {
+  it("uses the recipient credential username even when the owner forces their own credential username", async () => {
+    state.host = baseHost({
+      username: "owner-login",
+      overrideCredentialUsername: true,
+    });
+    state.overrideCredentialId = 5;
+    state.credentials.set("5:recipient", {
+      id: 5,
+      username: "recipient-login",
+      authType: "key",
+      password: null,
+      privateKey: "RECIPIENT-KEY",
+      key: null,
+      keyPassword: null,
+      keyType: "ssh-ed25519",
+    });
+
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.username).toBe("recipient-login");
+    expect(host.authType).toBe("key");
+    expect(host.key).toBe("RECIPIENT-KEY");
+  });
+
+  it("fully replaces Vault authentication with the recipient override", async () => {
+    state.host = baseHost({
+      authType: "vault",
+      password: null,
+      vaultProfileId: 7,
+    });
+    state.vaultProfile = { id: 7 };
+    state.overrideCredentialId = 5;
+    state.credentials.set("5:recipient", {
+      id: 5,
+      username: "recipient-login",
+      authType: "key",
+      password: null,
+      privateKey: "RECIPIENT-KEY",
+      key: null,
+      keyPassword: null,
+      keyType: "ssh-ed25519",
+      certPublicKey: "ssh-ed25519-cert-v01@example certificate",
+    });
+
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.authType).toBe("key");
+    expect(host.key).toBe("RECIPIENT-KEY");
+    expect(host.certPublicKey).toBe("ssh-ed25519-cert-v01@example certificate");
+    expect(host.vaultProfile).toBeUndefined();
+  });
+
+  it("falls back to the host username when the override credential has none", async () => {
+    state.host = baseHost({ username: "shared-login" });
+    state.overrideCredentialId = 5;
+    state.credentials.set("5:recipient", {
+      id: 5,
+      username: null,
+      authType: "password",
+      password: "my-pass",
+      privateKey: null,
+      key: null,
+      keyPassword: null,
+      keyType: null,
+    });
+
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.username).toBe("shared-login");
+  });
+
+  it("denies a non-owner when a secret-bearing host has no personal credential", async () => {
+    expect(await resolveHostById(42, "recipient")).toBeNull();
+  });
+
+  it("ignores a stored override when shared access is inactive", async () => {
+    state.hasAccess = false;
+    state.overrideCredentialId = 5;
+    state.credentials.set("5:recipient", {
+      id: 5,
+      username: "recipient",
+      authType: "password",
+      password: "my-pass",
+    });
+
     expect(await resolveHostById(42, "recipient")).toBeNull();
   });
 
   it("lets a non-owner through on secret-less auth types without a snapshot", async () => {
-    state.host = baseHost({ authType: "none", password: null });
-    const host = await resolveHostById(42, "recipient");
-    expect(host).not.toBeNull();
+    state.host = baseHost({
+      authType: "none",
+      password: "stale-owner-password",
+      key: "stale-owner-key",
+      credentialId: null,
+      terminalConfig: JSON.stringify({
+        theme: "termix",
+        sudoPassword: "owner-sudo",
+      }),
+    });
+    const host = (await resolveHostById(42, "recipient")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.password).toBeNull();
+    expect(host.key).toBeNull();
+    expect(host.credentialId).toBeNull();
+    expect(host.terminalConfig).toEqual({
+      theme: "termix",
+      sudoPassword: null,
+    });
   });
 
   it("resolves an admin bypass like the owner, keeping owner-only secrets", async () => {
@@ -300,5 +454,27 @@ describe("resolveHostById", () => {
   it("does not audit an ordinary owner resolution", async () => {
     await resolveHostById(42, "owner");
     expect(state.auditCalls).toHaveLength(0);
+  });
+
+  it("parses an empty port_knock_sequence '[]' string into an empty array (no bogus knock)", async () => {
+    state.host = baseHost({ portKnockSequence: "[]" });
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.portKnockSequence).toEqual([]);
+  });
+
+  it("parses a real port_knock_sequence JSON string into an array", async () => {
+    state.host = baseHost({
+      portKnockSequence: '[{"port":1234,"protocol":"tcp","delay":100}]',
+    });
+    const host = (await resolveHostById(42, "owner")) as Record<
+      string,
+      unknown
+    >;
+    expect(host.portKnockSequence).toEqual([
+      { port: 1234, protocol: "tcp", delay: 100 },
+    ]);
   });
 });

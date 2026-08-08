@@ -1019,8 +1019,7 @@ export async function connectSSHTunnel(
           resolvedEndpointCredentials = {
             password: credential.password as string | undefined,
             sshKey: (credential.key || credential.privateKey) as
-              | string
-              | undefined,
+              string | undefined,
             keyPassword: credential.keyPassword as string | undefined,
             keyType: credential.keyType as string | undefined,
             authMethod: credential.authType as string,

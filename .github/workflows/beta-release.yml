@@ -157,7 +157,7 @@ jobs:
 
   docker:
     needs: [prep, verify, create-release]
-    if: ${{ always() && needs.prep.outputs.dev_branch != '' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') }}
+    if: ${{ always() && needs.prep.outputs.dev_branch != '' && needs.verify.result == 'success' && (needs.create-release.result == 'success' || needs.create-release.result == 'skipped') }}
     uses: ./.github/workflows/docker.yml
     with:
       version: ${{ needs.prep.outputs.beta_version }}

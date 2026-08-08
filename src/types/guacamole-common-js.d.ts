@@ -49,8 +49,7 @@ declare module "guacamole-common-js" {
       onplay: (() => void) | null;
       onpause: (() => void) | null;
       onseek:
-        | ((position: number, current: number, total: number) => void)
-        | null;
+        ((position: number, current: number, total: number) => void) | null;
       getDisplay(): Display;
       getPosition(): number;
       getDuration(): number;

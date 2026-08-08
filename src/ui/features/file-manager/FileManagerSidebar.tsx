@@ -6,7 +6,15 @@ import React, {
   useMemo,
 } from "react";
 import { cn } from "@/lib/utils.ts";
-import { Star, Clock, Bookmark, File, Folder } from "lucide-react";
+import {
+  Star,
+  Clock,
+  Bookmark,
+  File,
+  Folder,
+  ChevronDown,
+  Check,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { SSHHost } from "@/types";
 import {
@@ -17,9 +25,16 @@ import {
   removeRecentFile,
   removePinnedFile,
   removeFolderShortcut,
+  type DiskFilesystem,
 } from "@/main-axios.ts";
 import { toast } from "sonner";
 import FolderTree from "@/components/folder.tsx";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/dropdown-menu.tsx";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -71,7 +86,92 @@ interface FileManagerSidebarProps {
   onItemContextMenu?: (event: React.MouseEvent, item: SidebarItem) => void;
   sshSessionId?: string;
   refreshTrigger?: number;
-  diskInfo?: { usedHuman: string; totalHuman: string; percent: number };
+  diskInfo?: {
+    usedHuman: string;
+    totalHuman: string;
+    percent: number;
+    mount?: string | null;
+    filesystems?: DiskFilesystem[];
+  };
+}
+
+// ─── Storage meter ─────────────────────────────────────────────────────────────
+
+function StorageMeter({
+  storage,
+  filesystems,
+  selectedMount,
+  onSelectMount,
+}: {
+  storage: { percent: number; usedHuman: string; totalHuman: string };
+  filesystems: DiskFilesystem[];
+  selectedMount: string | null;
+  onSelectMount: (mount: string) => void;
+}) {
+  const { t } = useTranslation();
+  const hasPicker = filesystems.length > 1;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        {hasPicker ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex min-w-0 items-center gap-1 transition-colors hover:text-foreground">
+              <span className="truncate">
+                {selectedMount ?? t("fileManager.disk")}
+              </span>
+              <ChevronDown className="size-3 shrink-0" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="w-auto min-w-[220px] max-w-[min(360px,calc(100vw-2rem))]"
+            >
+              {filesystems.map((fs) => (
+                <DropdownMenuItem
+                  key={fs.mount}
+                  onSelect={() => onSelectMount(fs.mount)}
+                  className="gap-3"
+                >
+                  <Check
+                    className={cn(
+                      "size-3 shrink-0",
+                      fs.mount === selectedMount ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <span className="min-w-0 flex-1 truncate font-medium">
+                    {fs.mount}
+                  </span>
+                  <span className="ml-auto shrink-0 whitespace-nowrap text-[10px] tabular-nums text-muted-foreground">
+                    {fs.usedHuman && fs.totalHuman
+                      ? `${fs.usedHuman}/${fs.totalHuman}`
+                      : "N/A"}
+                    {fs.percent != null ? ` · ${fs.percent}%` : ""}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <span className="truncate">
+            {selectedMount ?? t("fileManager.disk")}
+          </span>
+        )}
+        <span className="shrink-0 text-accent-brand">
+          {storage.percent}% {t("fileManager.used")}
+        </span>
+      </div>
+      <div className="h-1.5 bg-muted rounded-none overflow-hidden border border-border">
+        <div
+          className="h-full bg-accent-brand"
+          style={{ width: `${storage.percent}%` }}
+        />
+      </div>
+      <span className="text-[10px] font-bold text-muted-foreground/60 tracking-tight">
+        {storage.usedHuman} {t("fileManager.of")} {storage.totalHuman}{" "}
+        {t("fileManager.used").toLowerCase()}
+      </span>
+    </div>
+  );
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
@@ -95,6 +195,9 @@ export function FileManagerSidebar({
 
   // ── Directory tree state ──────────────────────────────────────────────────────
   const [directoryTree, setDirectoryTree] = useState<SidebarItem[]>([]);
+
+  // ── Storage state ─────────────────────────────────────────────────────────────
+  const [selectedMount, setSelectedMount] = useState<string | null>(null);
 
   /**
    * Tracks which folder paths have already been lazy-loaded so we don't
@@ -228,8 +331,8 @@ export function FileManagerSidebar({
    * Called the first time a folder is expanded via FolderTree's onSelect.
    */
   const loadSubdirectory = useCallback(
-    async (folderId: string, folderPath: string) => {
-      if (!sshSessionId) return;
+    async (folderId: string, folderPath: string): Promise<boolean> => {
+      if (!sshSessionId) return false;
 
       try {
         const subResponse = await listSSHFiles(sshSessionId, folderPath);
@@ -262,16 +365,20 @@ export function FileManagerSidebar({
             });
           return updateChildren(prevTree);
         });
+        loadedFoldersRef.current.add(folderPath);
+        return true;
       } catch (error: unknown) {
         const status =
           (error as { status?: number })?.status ||
           (error as { response?: { status?: number } })?.response?.status;
         if (status === 409) {
           // Another request was listing this path — retry after the lock clears
-          setTimeout(() => loadSubdirectory(folderId, folderPath), 600);
-          return;
+          setTimeout(() => void loadSubdirectory(folderId, folderPath), 600);
+          return false;
         }
+        loadedFoldersRef.current.delete(folderPath);
         console.error("Failed to load subdirectory:", error);
+        return false;
       }
     },
     [sshSessionId],
@@ -309,8 +416,7 @@ export function FileManagerSidebar({
 
     const parent = findByPath(directoryTree);
     if (parent && !loadedFoldersRef.current.has(parent.path)) {
-      loadedFoldersRef.current.add(parent.path);
-      loadSubdirectory(parent.id, parent.path);
+      void loadSubdirectory(parent.id, parent.path);
     }
   }, [currentPath, directoryTree, loadSubdirectory, sshSessionId]);
 
@@ -416,7 +522,6 @@ export function FileManagerSidebar({
         item.path !== "/" &&
         !loadedFoldersRef.current.has(item.path)
       ) {
-        loadedFoldersRef.current.add(item.path);
         await loadSubdirectory(id, item.path);
       }
     },
@@ -586,7 +691,27 @@ export function FileManagerSidebar({
 
   // ─── Render ───────────────────────────────────────────────────────────────────
 
-  const storageUsedPct = diskInfo?.percent ?? null;
+  const storageFilesystems = diskInfo?.filesystems ?? [];
+  const activeStorageMount = selectedMount ?? diskInfo?.mount ?? null;
+  const selectedFs =
+    selectedMount !== null
+      ? (storageFilesystems.find((fs) => fs.mount === selectedMount) ?? null)
+      : null;
+
+  const storage =
+    selectedFs && selectedFs.percent !== null
+      ? {
+          percent: selectedFs.percent,
+          usedHuman: selectedFs.usedHuman ?? "N/A",
+          totalHuman: selectedFs.totalHuman ?? "N/A",
+        }
+      : diskInfo && diskInfo.percent !== null
+        ? {
+            percent: diskInfo.percent,
+            usedHuman: diskInfo.usedHuman,
+            totalHuman: diskInfo.totalHuman,
+          }
+        : null;
 
   return (
     <>
@@ -667,7 +792,7 @@ export function FileManagerSidebar({
           </div>
 
           {/* ── Storage — mobile only (inside scroll) ──────────────── */}
-          {diskInfo && storageUsedPct !== null && (
+          {storage && (
             <div className="md:hidden">
               <div className="border-t border-border mx-0 my-2" />
               <div className="px-3 py-1.5">
@@ -675,47 +800,30 @@ export function FileManagerSidebar({
                   {t("fileManager.storage")}
                 </span>
               </div>
-              <div className="px-3 pb-3 flex flex-col gap-2">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <span>{t("fileManager.disk")}</span>
-                  <span className="text-accent-brand">
-                    {storageUsedPct}% {t("fileManager.used")}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-none overflow-hidden border border-border">
-                  <div
-                    className="h-full bg-accent-brand"
-                    style={{ width: `${storageUsedPct}%` }}
-                  />
-                </div>
-                <span className="text-[10px] font-bold text-muted-foreground/60 tracking-tight">
-                  {diskInfo.usedHuman} {t("fileManager.of")}{" "}
-                  {diskInfo.totalHuman} {t("fileManager.used").toLowerCase()}
-                </span>
+              <div className="px-3 pb-3">
+                <StorageMeter
+                  storage={storage}
+                  filesystems={storageFilesystems}
+                  selectedMount={activeStorageMount}
+                  onSelectMount={setSelectedMount}
+                />
               </div>
             </div>
           )}
         </div>
 
         {/* ── Storage — desktop only (bottom of sidebar) ──────────── */}
-        {diskInfo && storageUsedPct !== null && (
+        {storage && (
           <div className="hidden md:flex flex-col p-3 gap-2 border-t border-border shrink-0">
-            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              <span>{t("fileManager.storage")}</span>
-              <span className="text-accent-brand">
-                {storageUsedPct}% {t("fileManager.used")}
-              </span>
-            </div>
-            <div className="h-1.5 bg-muted rounded-none overflow-hidden border border-border">
-              <div
-                className="h-full bg-accent-brand"
-                style={{ width: `${storageUsedPct}%` }}
-              />
-            </div>
-            <span className="text-[10px] font-bold text-muted-foreground/60 tracking-tight">
-              {diskInfo.usedHuman} {t("fileManager.of")} {diskInfo.totalHuman}{" "}
-              {t("fileManager.used").toLowerCase()}
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              {t("fileManager.storage")}
             </span>
+            <StorageMeter
+              storage={storage}
+              filesystems={storageFilesystems}
+              selectedMount={activeStorageMount}
+              onSelectMount={setSelectedMount}
+            />
           </div>
         )}
       </div>

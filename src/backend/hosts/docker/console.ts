@@ -139,8 +139,7 @@ async function createJumpHostChain(
         resolvedCredentials = {
           password: credential.password as string | undefined,
           sshKey: (credential.key || credential.privateKey) as
-            | string
-            | undefined,
+            string | undefined,
           keyPassword: credential.keyPassword as string | undefined,
           authType: credential.authType as string | undefined,
         };
@@ -220,8 +219,7 @@ async function createJumpHostChain(
       const result = await applyAgentAuth(
         config,
         jumpHost.terminalConfig as unknown as
-          | Record<string, unknown>
-          | undefined,
+          Record<string, unknown> | undefined,
       );
       if ("error" in result) {
         throw new Error(result.error);
@@ -442,8 +440,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               const result = await applyAgentAuth(
                 config,
                 resolvedHost.terminalConfig as unknown as
-                  | Record<string, unknown>
-                  | undefined,
+                  Record<string, unknown> | undefined,
               );
               if ("error" in result) {
                 ws.send(

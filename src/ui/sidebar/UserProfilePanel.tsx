@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   getUserInfo,
+  getRemoteSyncUserInfo,
   getApiKeys,
   createApiKey,
   deleteApiKey,
@@ -18,6 +19,7 @@ import {
   getUserPreferences,
 } from "@/main-axios";
 import { getDatabaseTransferUrl } from "@/lib/database-transfer-url";
+import { readRailPreference, setRailPreference } from "./rail-preferences";
 import {
   deleteWebAuthnCredential,
   listWebAuthnCredentials,
@@ -29,6 +31,7 @@ import type { UserRole } from "@/main-axios";
 import type React from "react";
 import { isElectron } from "@/lib/electron";
 import { RemoteSyncPanel } from "@/settings/RemoteSyncPanel.tsx";
+import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state";
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -86,12 +89,7 @@ import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 
 type UserProfileSection =
-  | "account"
-  | "appearance"
-  | "security"
-  | "api-keys"
-  | "data"
-  | "c2s-tunnels";
+  "account" | "appearance" | "security" | "api-keys" | "data" | "c2s-tunnels";
 
 const THEMES: { id: ThemeId; preview: string }[] = [
   { id: "system", preview: "auto" },
@@ -144,12 +142,13 @@ const LANGUAGES = [
   { code: "vi", label: "Tiếng Việt" },
 ];
 
-function AccordionSection({
+export function AccordionSection({
   id,
   label,
   icon,
   open,
   onToggle,
+  hidden = false,
   children,
 }: {
   id: string;
@@ -157,8 +156,11 @@ function AccordionSection({
   icon: React.ReactNode;
   open: boolean;
   onToggle: () => void;
+  hidden?: boolean;
   children: React.ReactNode;
 }) {
+  if (hidden) return null;
+
   return (
     <div className="border border-border bg-card overflow-hidden">
       <button
@@ -475,6 +477,8 @@ export function UserProfilePanel({
 
   // User info
   const [userId, setUserId] = useState("");
+  const [accountUsername, setAccountUsername] = useState(username ?? "");
+  const [accountTotpEnabled, setAccountTotpEnabled] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [authMethod, setAuthMethod] = useState("");
   const [version, setVersion] = useState("");
@@ -546,9 +550,9 @@ export function UserProfilePanel({
   // opt-in feature configured from this same panel). "cloud" storage mode
   // and Termix ID both assume a real multi-device server account, so they
   // stay hidden/forced-off until the user actually connects one.
-  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState(
-    () => !isElectron(),
-  );
+  const [isRemoteSyncConnected, setIsRemoteSyncConnected] = useState<
+    boolean | null
+  >(() => (isElectron() ? null : true));
 
   useEffect(() => {
     if (!isElectron()) return;
@@ -576,7 +580,13 @@ export function UserProfilePanel({
   }, []);
 
   useEffect(() => {
-    if (isElectron() && !isRemoteSyncConnected && storageMode === "cloud") {
+    if (
+      shouldForceLocalPreferenceStorage(
+        isElectron(),
+        isRemoteSyncConnected,
+        storageMode,
+      )
+    ) {
       setStorageMode("local");
       onPrefsChange?.({ storageMode: "local" });
     }
@@ -607,11 +617,11 @@ export function UserProfilePanel({
   const [statusColorScheme, setStatusColorScheme] = useState(
     () => localStorage.getItem("statusColorScheme") ?? "accent",
   );
-  const [pinAppRail, setPinAppRail] = useState(
-    () => localStorage.getItem("pinAppRail") === "true",
+  const [pinAppRail, setPinAppRail] = useState(() =>
+    readRailPreference("pinAppRail"),
   );
-  const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(
-    () => localStorage.getItem("expandAppRailOnHover") !== "false",
+  const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(() =>
+    readRailPreference("expandAppRailOnHover"),
   );
   const [foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
@@ -642,11 +652,15 @@ export function UserProfilePanel({
 
   useEffect(() => {
     getUserInfo()
-      .then((info) => {
-        setUserId(info.userId);
-        setTotpEnabled(info.totp_enabled ?? false);
-        setIsOidc(info.is_oidc ?? false);
-        setIsDualAuth(info.is_dual_auth ?? false);
+      .then(async (localInfo) => {
+        setUserId(localInfo.userId);
+        setTotpEnabled(localInfo.totp_enabled ?? false);
+        setIsOidc(localInfo.is_oidc ?? false);
+        setIsDualAuth(localInfo.is_dual_auth ?? false);
+        const remoteInfo = await getRemoteSyncUserInfo();
+        const info = remoteInfo ?? localInfo;
+        setAccountUsername(info.username);
+        setAccountTotpEnabled(info.totp_enabled ?? false);
         setUserRole(
           info.is_admin
             ? t("newUi.sidebar.userProfile.roleAdministrator")
@@ -659,9 +673,13 @@ export function UserProfilePanel({
         } else {
           setAuthMethod(t("newUi.sidebar.userProfile.authMethodLocal"));
         }
-        getUserRoles(info.userId)
-          .then(({ roles }) => setUserRoles(roles ?? []))
-          .catch(() => {});
+        if (remoteInfo) {
+          setUserRoles(remoteInfo.roles ?? []);
+        } else {
+          getUserRoles(localInfo.userId)
+            .then(({ roles }) => setUserRoles(roles ?? []))
+            .catch(() => {});
+        }
       })
       .catch(() => {});
     getApiKeys()
@@ -677,6 +695,21 @@ export function UserProfilePanel({
       })
       .catch(() => {});
   }, [t]);
+
+  // The rail can toggle these from its right-click menu while this panel is
+  // mounted, so mirror the change back into the switches instead of letting
+  // them drift from the stored value.
+  useEffect(() => {
+    const pinHandler = () => setPinAppRail(readRailPreference("pinAppRail"));
+    const hoverHandler = () =>
+      setExpandAppRailOnHover(readRailPreference("expandAppRailOnHover"));
+    window.addEventListener("pinAppRailChanged", pinHandler);
+    window.addEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    return () => {
+      window.removeEventListener("pinAppRailChanged", pinHandler);
+      window.removeEventListener("expandAppRailOnHoverChanged", hoverHandler);
+    };
+  }, []);
 
   function saveToCloud(prefs: Parameters<typeof saveUserPreferences>[0]) {
     void saveUserPreferences(prefs).catch(() => {});
@@ -1085,6 +1118,7 @@ export function UserProfilePanel({
       const result = await enableTOTP(totpCode);
       setTotpBackupCodes(result.backup_codes ?? []);
       setTotpEnabled(true);
+      if (!isRemoteSyncConnected) setAccountTotpEnabled(true);
       setTotpStep("backup");
       toast.success(t("newUi.sidebar.userProfile.totpEnabledSuccess"));
     } catch (e: unknown) {
@@ -1105,6 +1139,7 @@ export function UserProfilePanel({
     try {
       await disableTOTP(disableTotpInput);
       setTotpEnabled(false);
+      if (!isRemoteSyncConnected) setAccountTotpEnabled(false);
       setShowDisableTotp(false);
       setDisableTotpInput("");
       toast.success(t("newUi.sidebar.userProfile.totpDisabledSuccess"));
@@ -1291,7 +1326,7 @@ export function UserProfilePanel({
   const canChangePasword = !isOidc || isDualAuth;
 
   return (
-    <div className="flex flex-col gap-2 p-3">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-2 p-3">
       <NewApiKeyDialog
         open={newKeyOpen}
         onOpenChange={setNewKeyOpen}
@@ -1323,7 +1358,7 @@ export function UserProfilePanel({
       {/* Storage mode toggle — only meaningful once a remote server is
           connected; with no sync there's nowhere for "cloud" to sync to,
           so this stays forced to local storage and hidden. */}
-      {(!isElectron() || isRemoteSyncConnected) && (
+      {(!isElectron() || isRemoteSyncConnected === true) && (
         <div className="border border-border bg-card px-3 py-2.5 flex flex-col gap-2">
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             {t("newUi.sidebar.userProfile.storageModeSwitch")}
@@ -1372,61 +1407,73 @@ export function UserProfilePanel({
         onToggle={() => toggle("account")}
       >
         <div className="flex flex-col gap-0 pt-2">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-0">
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.usernameLabel")}
-              </span>
-              <span className="text-sm font-semibold mt-0.5">
-                {username ?? "—"}
-              </span>
+          {isElectron() ? (
+            <div className="border border-accent-brand/40 bg-accent-brand/10 px-3 py-2.5 mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-accent-brand">
+                <ShieldCheck className="size-3.5" />
+                {t("newUi.sidebar.userProfile.desktopProfileTitle")}
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
+                {t("newUi.sidebar.userProfile.desktopProfileDescription")}
+              </p>
             </div>
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.roleLabel")}
-              </span>
-              <div className="flex flex-wrap gap-1 mt-0.5">
-                <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand w-fit">
-                  {userRole || "—"}
+          ) : (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0">
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.usernameLabel")}
                 </span>
-                {userRoles.map((r) => (
-                  <span
-                    key={r.roleId}
-                    className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground w-fit"
-                  >
-                    {r.roleDisplayName}
+                <span className="text-sm font-semibold mt-0.5">
+                  {accountUsername || "—"}
+                </span>
+              </div>
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.roleLabel")}
+                </span>
+                <div className="flex flex-wrap gap-1 mt-0.5">
+                  <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-accent-brand/40 bg-accent-brand/10 text-accent-brand w-fit">
+                    {userRole || "—"}
                   </span>
-                ))}
+                  {userRoles.map((r) => (
+                    <span
+                      key={r.roleId}
+                      className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold border border-border bg-muted text-muted-foreground w-fit"
+                    >
+                      {r.roleDisplayName}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.authMethodLabel")}
+                </span>
+                <span className="text-sm font-semibold mt-0.5">
+                  {authMethod || "—"}
+                </span>
+              </div>
+              <div className="flex flex-col py-2">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
+                  {t("newUi.sidebar.userProfile.twoFaLabel")}
+                </span>
+                <span className="flex items-center gap-1 mt-0.5">
+                  {accountTotpEnabled ? (
+                    <>
+                      <ShieldCheck className="size-3.5 text-accent-brand" />
+                      <span className="text-sm font-semibold text-accent-brand">
+                        {t("newUi.sidebar.userProfile.twoFaOn")}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {t("newUi.sidebar.userProfile.twoFaOff")}
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.authMethodLabel")}
-              </span>
-              <span className="text-sm font-semibold mt-0.5">
-                {authMethod || "—"}
-              </span>
-            </div>
-            <div className="flex flex-col py-2">
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-                {t("newUi.sidebar.userProfile.twoFaLabel")}
-              </span>
-              <span className="flex items-center gap-1 mt-0.5">
-                {totpEnabled ? (
-                  <>
-                    <ShieldCheck className="size-3.5 text-accent-brand" />
-                    <span className="text-sm font-semibold text-accent-brand">
-                      {t("newUi.sidebar.userProfile.twoFaOn")}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    {t("newUi.sidebar.userProfile.twoFaOff")}
-                  </span>
-                )}
-              </span>
-            </div>
-          </div>
+          )}
 
           <div className="border-t border-border pt-3 mt-1">
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
@@ -1489,26 +1536,28 @@ export function UserProfilePanel({
             </div>
           )}
 
-          <div className="border-t border-border pt-3 mt-3">
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium text-destructive">
-                  {t("newUi.sidebar.userProfile.deleteAccount")}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t("newUi.sidebar.userProfile.deleteAccountDescription")}
-                </span>
+          {!isElectron() && (
+            <div className="border-t border-border pt-3 mt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium text-destructive">
+                    {t("newUi.sidebar.userProfile.deleteAccount")}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {t("newUi.sidebar.userProfile.deleteAccountDescription")}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 ml-3 text-[10px] h-7"
+                  onClick={() => setShowDeleteConfirm(true)}
+                >
+                  {t("newUi.sidebar.userProfile.deleteButton")}
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive shrink-0 ml-3 text-[10px] h-7"
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                {t("newUi.sidebar.userProfile.deleteButton")}
-              </Button>
             </div>
-          </div>
+          )}
         </div>
       </AccordionSection>
 
@@ -1844,9 +1893,7 @@ export function UserProfilePanel({
                 checked={pinAppRail}
                 onChange={(v) => {
                   setPinAppRail(v);
-                  localStorage.setItem("pinAppRail", v.toString());
-                  window.dispatchEvent(new Event("pinAppRailChanged"));
-                  if (storageMode === "cloud") saveToCloud({ pinAppRail: v });
+                  setRailPreference("pinAppRail", v);
                 }}
               />
             </SettingRow>
@@ -1860,12 +1907,7 @@ export function UserProfilePanel({
                 checked={expandAppRailOnHover}
                 onChange={(v) => {
                   setExpandAppRailOnHover(v);
-                  localStorage.setItem("expandAppRailOnHover", v.toString());
-                  window.dispatchEvent(
-                    new Event("expandAppRailOnHoverChanged"),
-                  );
-                  if (storageMode === "cloud")
-                    saveToCloud({ expandAppRailOnHover: v });
+                  setRailPreference("expandAppRailOnHover", v);
                 }}
               />
             </SettingRow>
@@ -2032,8 +2074,11 @@ export function UserProfilePanel({
         </div>
       </AccordionSection>
 
-      {/* Security */}
+      {/* The embedded desktop backend auto-authenticates its machine-local
+          profile, so server login controls would imply protection they do
+          not provide. Remote Sync owns its separate account UI above. */}
       <AccordionSection
+        hidden={isElectron()}
         id="security"
         label={t("newUi.sidebar.userProfile.sectionSecurity")}
         icon={<Shield className="size-3.5" />}

@@ -3,11 +3,13 @@ import axios from "axios";
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../utils/logger.js";
 import {
-  createCurrentCredentialRepository,
-  createCurrentHostRepository,
-  createCurrentHostResolutionRepository,
-} from "../../database/repositories/factory.js";
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
+import { createCurrentHostRepository } from "../../database/repositories/factory.js";
 import { createJumpHostChain } from "../jump-host-chain.js";
+import { resolveHostById } from "../host-resolver.js";
 import { createConnectionLog } from "../connection-log.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -158,13 +160,8 @@ export function registerDockerSshRoutes(app: express.Express): void {
     );
 
     try {
-      const hostRecord =
-        await createCurrentHostResolutionRepository().findHostById(
-          hostId,
-          userId,
-        );
-
-      if (!hostRecord) {
+      const resolvedHost = await resolveHostById(hostId, userId);
+      if (!resolvedHost) {
         connectionLogs.push(
           createConnectionLog("error", "docker_connecting", "Host not found"),
         );
@@ -173,36 +170,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
           .json({ error: "Host not found", connectionLogs });
       }
 
-      const host = hostRecord as unknown as SSHHost;
-
-      if (host.userId !== userId) {
-        const { PermissionManager } =
-          await import("../../utils/permission-manager.js");
-        const permissionManager = PermissionManager.getInstance();
-        const accessInfo = await permissionManager.canAccessHost(
-          userId,
-          hostId,
-          "connect",
-        );
-
-        if (!accessInfo.hasAccess) {
-          sshLogger.warn("User does not have access to host", {
-            operation: "docker_connect",
-            hostId,
-            userId,
-          });
-          connectionLogs.push(
-            createConnectionLog(
-              "error",
-              "docker_connecting",
-              "Access denied to host",
-            ),
-          );
-          return res
-            .status(403)
-            .json({ error: "Access denied", connectionLogs });
-        }
-      }
+      const host = resolvedHost as SSHHost;
       if (typeof host.jumpHosts === "string" && host.jumpHosts) {
         try {
           host.jumpHosts = JSON.parse(host.jumpHosts);
@@ -266,7 +234,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
         delete pendingTOTPSessions[sessionId];
       }
 
-      let resolvedCredentials: {
+      const resolvedCredentials: {
         password?: string;
         sshKey?: string;
         keyPassword?: string;
@@ -288,55 +256,6 @@ export function registerDockerSshRoutes(app: express.Express): void {
       }
       if (userProvidedKeyPassword) {
         resolvedCredentials.keyPassword = userProvidedKeyPassword;
-      }
-
-      if (host.credentialId) {
-        const ownerId = host.userId;
-
-        if (userId !== ownerId) {
-          try {
-            const { SharedHostSecretsManager } =
-              await import("../../utils/shared-host-secrets-manager.js");
-            const sharedCred =
-              await SharedHostSecretsManager.getInstance().getSecretForUser(
-                host.id,
-                userId,
-                "ssh",
-              );
-
-            if (sharedCred) {
-              resolvedCredentials = {
-                password: sharedCred.password,
-                sshKey: sharedCred.key,
-                keyPassword: sharedCred.keyPassword,
-                authType: sharedCred.authType,
-              };
-            }
-          } catch (error) {
-            sshLogger.error("Failed to resolve shared credential", error, {
-              operation: "docker_connect",
-              hostId,
-              userId,
-            });
-          }
-        } else {
-          const credential =
-            await createCurrentCredentialRepository().findDecryptedByIdForUser(
-              userId,
-              host.credentialId as number,
-            );
-
-          if (credential) {
-            resolvedCredentials = {
-              password: credential.password as string | undefined,
-              sshKey: (credential.key || credential.privateKey) as
-                | string
-                | undefined,
-              keyPassword: credential.keyPassword as string | undefined,
-              authType: credential.authType as string | undefined,
-            };
-          }
-        }
       }
 
       const client = new SSHClient();
@@ -590,6 +509,20 @@ export function registerDockerSshRoutes(app: express.Express): void {
             stream.stderr.on("data", () => {});
           }
         });
+
+        void (async () => {
+          const { ipAddress, userAgent } = getRequestMeta(req);
+          await logAudit({
+            userId,
+            username: await getAuditUsername(userId),
+            action: "docker_connect",
+            resourceType: "host",
+            resourceId: hostId ? String(hostId) : undefined,
+            ipAddress,
+            userAgent,
+            success: true,
+          });
+        })();
 
         res.json({
           success: true,
@@ -994,7 +927,6 @@ export function registerDockerSshRoutes(app: express.Express): void {
           const jumpClient = await createJumpHostChain(
             host.jumpHosts as Array<{ hostId: number }>,
             userId,
-            proxyConfig,
           );
 
           if (!jumpClient) {

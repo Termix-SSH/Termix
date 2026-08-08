@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1785738871436,
+      "tag": "0000_clean_pretty_boy",
+      "breakpoints": true
+    }
+  ]
+}

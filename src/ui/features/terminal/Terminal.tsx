@@ -15,6 +15,7 @@ import { RobustClipboardProvider } from "@/lib/clipboard-provider";
 import { copyToClipboard } from "@/lib/clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { SearchAddon } from "@xterm/addon-search";
 import { useTranslation } from "react-i18next";
 import { getBasePath } from "@/lib/base-path";
 import {
@@ -35,6 +36,7 @@ import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
 import { OPKSSHDialog } from "@/ssh/dialogs/OPKSSHDialog.tsx";
+import { TailscaleCheckDialog } from "@/ssh/dialogs/TailscaleCheckDialog.tsx";
 import { HostKeyVerificationDialog } from "@/ssh/dialogs/HostKeyVerificationDialog.tsx";
 import { TmuxSessionPicker } from "@/ssh/dialogs/TmuxSessionPicker.tsx";
 import {
@@ -45,9 +47,14 @@ import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
 import { useCommandTracker } from "@/features/terminal/command-history/useCommandTracker.ts";
-import { highlightTerminalOutput } from "@/lib/terminal-syntax-highlighter.ts";
+import {
+  highlightTerminalOutput,
+  updateControlStringMode,
+} from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
+import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
+import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
 import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
@@ -65,6 +72,7 @@ import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
 } from "./terminal-font-zoom.ts";
+import { isTabKeyEvent } from "./terminal-key-event.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -222,6 +230,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     } | null>(null);
     const opksshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    const [tailscaleCheckDialog, setTailscaleCheckDialog] = useState<{
+      isOpen: boolean;
+      authUrl: string;
+      message?: string;
+      stage: "prompt" | "waiting";
+    } | null>(null);
+    const tailscaleCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const tailscaleCheckPendingRef = useRef(false);
+
     const opksshFailedRef = useRef(false);
     const currentHostIdRef = useRef<number | null>(null);
     const currentHostConfigRef = useRef<TerminalHostConfig | null>(null);
@@ -347,6 +364,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const autocompleteSuggestionsRef = useRef<string[]>([]);
     const autocompleteSelectedIndexRef = useRef(0);
 
+    const searchAddonRef = useRef<SearchAddon | null>(null);
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchCaseSensitive, setSearchCaseSensitive] = useState(false);
+    const [searchWholeWord, setSearchWholeWord] = useState(false);
+    const [searchRegex, setSearchRegex] = useState(false);
+    const [searchResultIndex, setSearchResultIndex] = useState(-1);
+    const [searchResultCount, setSearchResultCount] = useState(0);
+
+    const showSearchRef = useRef(false);
+    const searchQueryRef = useRef("");
+    const searchCaseSensitiveRef = useRef(false);
+    const searchWholeWordRef = useRef(false);
+    const searchRegexRef = useRef(false);
+
     const [showHistoryDialog] = useState(false);
     const [, setCommandHistory] = useState<string[]>([]);
     const [, setIsLoadingHistory] = useState(false);
@@ -416,9 +449,37 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       autocompleteSelectedIndexRef.current = autocompleteSelectedIndex;
     }, [autocompleteSelectedIndex]);
 
+    useEffect(() => {
+      showSearchRef.current = showSearch;
+    }, [showSearch]);
+
+    useEffect(() => {
+      searchQueryRef.current = searchQuery;
+    }, [searchQuery]);
+
+    useEffect(() => {
+      searchCaseSensitiveRef.current = searchCaseSensitive;
+    }, [searchCaseSensitive]);
+
+    useEffect(() => {
+      searchWholeWordRef.current = searchWholeWord;
+    }, [searchWholeWord]);
+
+    useEffect(() => {
+      searchRegexRef.current = searchRegex;
+    }, [searchRegex]);
+
+    useEffect(() => {
+      if (showSearch) {
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      }
+    }, [showSearch]);
+
     const activityLoggingRef = useRef(false);
     const passwordPromptShownRef = useRef(false);
     const alternateScreenModeRef = useRef(false);
+    const controlStringModeRef = useRef(false);
 
     const lastSentSizeRef = useRef<{ cols: number; rows: number } | null>(null);
     const pendingSizeRef = useRef<{ cols: number; rows: number } | null>(null);
@@ -528,6 +589,85 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.fontSize = nextFontSize;
       performFit();
       hardRefresh();
+    }
+
+    function getSearchOptions() {
+      return {
+        caseSensitive: searchCaseSensitiveRef.current,
+        wholeWord: searchWholeWordRef.current,
+        regex: searchRegexRef.current,
+        incremental: true,
+        decorations: {
+          matchBackground: `${themeColors.yellow}55`,
+          matchBorder: themeColors.yellow,
+          matchOverviewRuler: themeColors.yellow,
+          activeMatchBackground: `${themeColors.foreground}33`,
+          activeMatchBorder: themeColors.foreground,
+          activeMatchColorOverviewRuler: themeColors.foreground,
+        },
+      };
+    }
+
+    function runSearch(direction: "next" | "previous", term?: string) {
+      const searchAddon = searchAddonRef.current;
+      const query = term ?? searchQueryRef.current;
+      if (!searchAddon || !query) return;
+
+      if (direction === "next") {
+        searchAddon.findNext(query, getSearchOptions());
+      } else {
+        searchAddon.findPrevious(query, {
+          ...getSearchOptions(),
+          incremental: false,
+        });
+      }
+    }
+
+    function openSearch() {
+      setShowSearch(true);
+      if (searchQueryRef.current) {
+        runSearch("next", searchQueryRef.current);
+      }
+    }
+
+    function closeSearch() {
+      searchAddonRef.current?.clearDecorations();
+      setShowSearch(false);
+      setSearchResultIndex(-1);
+      setSearchResultCount(0);
+      setTimeout(() => terminal?.focus(), 0);
+    }
+
+    function handleSearchQueryChange(value: string) {
+      setSearchQuery(value);
+      searchQueryRef.current = value;
+
+      if (!value) {
+        searchAddonRef.current?.clearDecorations();
+        setSearchResultIndex(-1);
+        setSearchResultCount(0);
+        return;
+      }
+
+      runSearch("next", value);
+    }
+
+    function toggleSearchCaseSensitive() {
+      searchCaseSensitiveRef.current = !searchCaseSensitiveRef.current;
+      setSearchCaseSensitive(searchCaseSensitiveRef.current);
+      runSearch("next");
+    }
+
+    function toggleSearchWholeWord() {
+      searchWholeWordRef.current = !searchWholeWordRef.current;
+      setSearchWholeWord(searchWholeWordRef.current);
+      runSearch("next");
+    }
+
+    function toggleSearchRegex() {
+      searchRegexRef.current = !searchRegexRef.current;
+      setSearchRegex(searchRegexRef.current);
+      runSearch("next");
     }
 
     function handleTotpSubmit(code: string) {
@@ -689,12 +829,22 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
       alternateScreenModeRef.current = alternateScreen.isActive;
 
+      // Must run for every chunk, including ones we go on to skip, or the
+      // control-string state stops tracking the stream.
+      const controlString = updateControlStringMode(
+        output,
+        controlStringModeRef.current,
+      );
+      controlStringModeRef.current = controlString.isActive;
+
       const syntaxHighlightingEnabled =
         hostConfig.terminalConfig?.syntaxHighlighting !== false;
       if (
         !syntaxHighlightingEnabled ||
         alternateScreen.sawSequence ||
-        alternateScreen.isActive
+        alternateScreen.isActive ||
+        controlString.wasActive ||
+        controlString.isActive
       ) {
         return output;
       }
@@ -1004,10 +1154,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         const origin = await resolveConnectionOrigin({
           connectionType: "ssh",
           connectionOrigin: hostConfig.connectionOrigin as
-            | "local"
-            | "remote"
-            | null
-            | undefined,
+            "local" | "remote" | null | undefined,
         });
         const resolvedUrl = await buildOriginWsUrl({
           origin,
@@ -1061,11 +1208,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     ) {
       ws.addEventListener("open", () => {
         alternateScreenModeRef.current = false;
+        controlStringModeRef.current = false;
         connectionTimeoutRef.current = setTimeout(() => {
           if (
             !isConnected &&
             !totpRequired &&
             !isPasswordPrompt &&
+            !tailscaleCheckPendingRef.current &&
             !connectionErrorRef.current
           ) {
             if (terminal) {
@@ -1627,6 +1776,42 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               stage: "error",
               error: msg.instructions || msg.error,
             });
+          } else if (msg.type === "tailscale_check_required") {
+            if (connectionErrorRef.current) return;
+            tailscaleCheckPendingRef.current = true;
+
+            // Tailscale holds the connection open while the user authenticates,
+            // so the normal connect timeout must not fire during the wait.
+            if (connectionTimeoutRef.current) {
+              clearTimeout(connectionTimeoutRef.current);
+              connectionTimeoutRef.current = null;
+            }
+
+            setTailscaleCheckDialog({
+              isOpen: true,
+              authUrl: msg.url || "",
+              message: msg.message,
+              stage: "prompt",
+            });
+
+            if (tailscaleCheckTimeoutRef.current) {
+              clearTimeout(tailscaleCheckTimeoutRef.current);
+            }
+            tailscaleCheckTimeoutRef.current = setTimeout(() => {
+              tailscaleCheckPendingRef.current = false;
+              setTailscaleCheckDialog(null);
+              updateConnectionError(t("terminal.tailscaleCheckTimeout"));
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }, 1800000);
+          } else if (msg.type === "tailscale_check_completed") {
+            tailscaleCheckPendingRef.current = false;
+            if (tailscaleCheckTimeoutRef.current) {
+              clearTimeout(tailscaleCheckTimeoutRef.current);
+              tailscaleCheckTimeoutRef.current = null;
+            }
+            setTailscaleCheckDialog(null);
           } else if (msg.type === "keyboard_interactive_available") {
             setKeyboardInteractiveDetected(true);
             setIsConnecting(false);
@@ -1820,6 +2005,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           clearTimeout(totpTimeoutRef.current);
           totpTimeoutRef.current = null;
         }
+
+        tailscaleCheckPendingRef.current = false;
+        if (tailscaleCheckTimeoutRef.current) {
+          clearTimeout(tailscaleCheckTimeoutRef.current);
+          tailscaleCheckTimeoutRef.current = null;
+        }
+        setTailscaleCheckDialog(null);
 
         if (wasSessionExpiredRef.current) {
           wasSessionExpiredRef.current = false;
@@ -2053,10 +2245,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.letterSpacing = config.letterSpacing;
       terminal.options.lineHeight = config.lineHeight;
       terminal.options.bellStyle = config.bellStyle as
-        | "none"
-        | "sound"
-        | "visual"
-        | "both";
+        "none" | "sound" | "visual" | "both";
 
       terminal.options.theme = {
         background: config.backgroundImage
@@ -2165,6 +2354,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       const clipboardProvider = new RobustClipboardProvider();
       const clipboardAddon = new ClipboardAddon(undefined, clipboardProvider);
       const unicode11Addon = new Unicode11Addon();
+      const searchAddon = new SearchAddon();
       const webLinksAddon = new WebLinksAddon((_event, uri) => {
         const url =
           uri.startsWith("http://") || uri.startsWith("https://")
@@ -2184,10 +2374,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       });
 
       fitAddonRef.current = fitAddon;
+      searchAddonRef.current = searchAddon;
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(clipboardAddon);
       terminal.loadAddon(unicode11Addon);
       terminal.loadAddon(webLinksAddon);
+      terminal.loadAddon(searchAddon);
+
+      searchAddon.onDidChangeResults(({ resultIndex, resultCount }) => {
+        setSearchResultIndex(resultIndex);
+        setSearchResultCount(resultCount);
+      });
 
       terminal.unicode.activeVersion = "11";
 
@@ -2328,7 +2525,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       // the capture phase blocks that traversal while still allowing the event to
       // reach xterm.js's internal handler (which fires our attachCustomKeyEventHandler).
       const handleTabCapture = (e: KeyboardEvent) => {
-        if (e.key === "Tab") {
+        if (isTabKeyEvent(e)) {
           e.preventDefault();
         }
       };
@@ -2474,6 +2671,50 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               readTextFromClipboard,
               getSnippetById,
             });
+            return false;
+          }
+        }
+
+        if (
+          showSearchRef.current &&
+          e.key === "Escape" &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          !e.shiftKey
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeSearch();
+          return false;
+        }
+
+        if (
+          (e.ctrlKey || e.metaKey) &&
+          !e.altKey &&
+          !e.shiftKey &&
+          e.key.toLowerCase() === "f"
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          openSearch();
+          return false;
+        }
+
+        if (navigator.userAgent.includes("Android")) {
+          const sequence = getAndroidHardwareKeySequence(
+            e,
+            terminal.modes.applicationCursorKeysMode,
+            hostConfig.terminalConfig?.backspaceMode,
+          );
+          if (sequence) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+              webSocketRef.current.send(
+                JSON.stringify({ type: "input", data: sequence }),
+              );
+            }
             return false;
           }
         }
@@ -2678,7 +2919,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
 
           if (
-            e.key === "Tab" &&
+            isTabKeyEvent(e) &&
             !e.ctrlKey &&
             !e.altKey &&
             !e.metaKey &&
@@ -2701,7 +2942,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.key === "Tab" &&
+          isTabKeyEvent(e) &&
           e.shiftKey &&
           !e.ctrlKey &&
           !e.altKey &&
@@ -2718,7 +2959,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
 
         if (
-          e.key === "Tab" &&
+          isTabKeyEvent(e) &&
           !e.ctrlKey &&
           !e.altKey &&
           !e.metaKey &&
@@ -3110,6 +3351,33 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           />
         )}
 
+        {tailscaleCheckDialog?.isOpen && (
+          <TailscaleCheckDialog
+            isOpen={tailscaleCheckDialog.isOpen}
+            authUrl={tailscaleCheckDialog.authUrl}
+            message={tailscaleCheckDialog.message}
+            stage={tailscaleCheckDialog.stage}
+            onCancel={() => {
+              tailscaleCheckPendingRef.current = false;
+              if (tailscaleCheckTimeoutRef.current) {
+                clearTimeout(tailscaleCheckTimeoutRef.current);
+                tailscaleCheckTimeoutRef.current = null;
+              }
+              setTailscaleCheckDialog(null);
+              if (webSocketRef.current) {
+                webSocketRef.current.close();
+              }
+            }}
+            onOpenUrl={() => {
+              window.open(tailscaleCheckDialog.authUrl, "_blank");
+              setTailscaleCheckDialog((prev) =>
+                prev ? { ...prev, stage: "waiting" } : null,
+              );
+            }}
+            backgroundColor={backgroundColor}
+          />
+        )}
+
         {vaultDialog && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60">
             <div className="w-[420px] max-w-[90%] border border-border bg-background p-5 shadow-lg">
@@ -3246,6 +3514,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           selectedIndex={autocompleteSelectedIndex}
           position={autocompletePosition}
           onSelect={handleAutocompleteSelect}
+        />
+
+        <TerminalSearchBar
+          visible={showSearch}
+          query={searchQuery}
+          onQueryChange={handleSearchQueryChange}
+          onFindNext={() => runSearch("next")}
+          onFindPrevious={() => runSearch("previous")}
+          onClose={closeSearch}
+          caseSensitive={searchCaseSensitive}
+          onToggleCaseSensitive={toggleSearchCaseSensitive}
+          wholeWord={searchWholeWord}
+          onToggleWholeWord={toggleSearchWholeWord}
+          regex={searchRegex}
+          onToggleRegex={toggleSearchRegex}
+          resultIndex={searchResultIndex}
+          resultCount={searchResultCount}
+          inputRef={searchInputRef}
         />
 
         {linkClickDialog &&

@@ -1,5 +1,22 @@
 import type { Request } from "express";
-import { createCurrentAuditLogRepository } from "../database/repositories/factory.js";
+import { forwardAuditEntry } from "./audit-forwarder.js";
+import {
+  createCurrentAuditLogRepository,
+  createCurrentUserRepository,
+} from "../database/repositories/factory.js";
+
+/**
+ * Resolves the display name to store alongside the entry. It is denormalised on
+ * purpose: the record has to stay readable after the account is gone.
+ */
+export async function getAuditUsername(userId: string): Promise<string> {
+  try {
+    const actor = await createCurrentUserRepository().findById(userId);
+    return actor?.username ?? userId;
+  } catch {
+    return userId;
+  }
+}
 
 export interface AuditLogParams {
   userId: string;
@@ -16,6 +33,10 @@ export interface AuditLogParams {
 }
 
 export async function logAudit(params: AuditLogParams): Promise<void> {
+  // Local storage is the source of truth and runs first; forwarding is a copy
+  // and must never delay or fail the audited operation.
+  void forwardAuditEntry(params).catch(() => {});
+
   try {
     await createCurrentAuditLogRepository().create({
       userId: params.userId,

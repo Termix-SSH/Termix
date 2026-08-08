@@ -22,11 +22,7 @@ import {
 } from "@/components/dropdown-menu";
 
 export type CredentialSortKey =
-  | "default"
-  | "name-asc"
-  | "name-desc"
-  | "username-asc"
-  | "username-desc";
+  "default" | "name-asc" | "name-desc" | "username-asc" | "username-desc";
 
 export type CredentialFilterState = {
   type: ("password" | "key")[];

@@ -5,6 +5,10 @@ import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
+import {
+  createSnippetExecutionResult,
+  getSnippetExecutionTimeoutMs,
+} from "./snippets-execution.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
   createCurrentHostResolutionRepository,
@@ -594,8 +598,7 @@ router.post(
           authType = (cred.authType || authType) as string;
           password = (cred.password || undefined) as string | undefined;
           privateKey = (cred.privateKey || cred.key || undefined) as
-            | string
-            | undefined;
+            string | undefined;
           passphrase = (cred.keyPassword || undefined) as string | undefined;
         }
       }
@@ -609,10 +612,8 @@ router.post(
         output: string;
         error?: string;
       }>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          conn.end();
-          reject(new Error("Command execution timeout (30s)"));
-        }, 30000);
+        const timeoutMs = getSnippetExecutionTimeoutMs();
+        let timeout: NodeJS.Timeout | undefined;
 
         conn.on("ready", () => {
           conn.exec(snippet.content, (err, stream) => {
@@ -622,14 +623,21 @@ router.post(
               return reject(err);
             }
 
-            stream.on("close", () => {
+            if (timeoutMs) {
+              timeout = setTimeout(() => {
+                conn.end();
+                reject(
+                  new Error(`Command execution timeout (${timeoutMs / 1000}s)`),
+                );
+              }, timeoutMs);
+            }
+
+            stream.on("close", (exitCode: number | null) => {
               clearTimeout(timeout);
               conn.end();
-              if (errorOutput) {
-                resolve({ success: false, output, error: errorOutput });
-              } else {
-                resolve({ success: true, output });
-              }
+              resolve(
+                createSnippetExecutionResult(exitCode, output, errorOutput),
+              );
             });
 
             stream.on("data", (data: Buffer) => {

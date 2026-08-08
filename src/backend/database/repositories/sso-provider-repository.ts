@@ -1,6 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { ssoProviders, users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
+import { rowsAffected } from "./mutation-result.js";
+import { insertReturning, updateReturning } from "./returning.js";
 
 export type SsoProviderRecord = typeof ssoProviders.$inferSelect;
 export type NewSsoProviderRecord = typeof ssoProviders.$inferInsert;
@@ -76,10 +78,7 @@ export class SsoProviderRepository {
   }
 
   async create(provider: NewSsoProviderRecord): Promise<SsoProviderRecord> {
-    const rows = await this.context.drizzle
-      .insert(ssoProviders)
-      .values(provider)
-      .returning();
+    const rows = await insertReturning(this.context, ssoProviders, provider);
 
     await this.afterWrite();
     return rows[0];
@@ -89,27 +88,27 @@ export class SsoProviderRepository {
     id: number,
     update: SsoProviderUpdate,
   ): Promise<SsoProviderRecord | null> {
-    const rows = await this.context.drizzle
-      .update(ssoProviders)
-      .set(update)
-      .where(eq(ssoProviders.id, id))
-      .returning();
+    const rows = await updateReturning(
+      this.context,
+      ssoProviders,
+      update,
+      eq(ssoProviders.id, id),
+    );
 
     await this.afterWrite();
     return rows[0] ?? null;
   }
 
   async delete(id: number): Promise<boolean> {
-    const rows = await this.context.drizzle
+    const result = await this.context.drizzle
       .delete(ssoProviders)
-      .where(eq(ssoProviders.id, id))
-      .returning({ id: ssoProviders.id });
+      .where(eq(ssoProviders.id, id));
 
-    if (rows.length > 0) {
+    if (rowsAffected(result) > 0) {
       await this.afterWrite();
     }
 
-    return rows.length > 0;
+    return rowsAffected(result) > 0;
   }
 
   async countUsersByProviderId(providerId: number): Promise<number> {

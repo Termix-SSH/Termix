@@ -2,6 +2,7 @@
 import {
   useState,
   useEffect,
+  useMemo,
   useRef,
   useLayoutEffect,
   type MouseEvent,
@@ -17,6 +18,7 @@ import {
   Copy,
   CopyPlus,
   Cpu,
+  Download,
   FolderOpen,
   FolderSearch,
   Key,
@@ -68,10 +70,12 @@ import { copyToClipboard } from "@/lib/clipboard";
 import {
   canDeleteHost,
   canEditHost,
+  canOverrideHostAuth,
   canShareHost,
 } from "@/sidebar/host-permissions";
 import { FolderMetadataDialog } from "./FolderMetadataDialog";
 import { HostShareModal } from "@/sidebar/HostShareModal";
+import { HostAuthOverrideModal } from "@/sidebar/HostAuthOverrideModal";
 import {
   useStatusColorScheme,
   getStatusClasses,
@@ -341,6 +345,8 @@ export function HostItem({
   const shouldUseClickTray = trayOnClick || isTouchOnly;
   const showPasswordCopy = !host.isShared && canCopyHostPassword(host);
   const showSudoPasswordCopy = !host.isShared && canCopyHostSudoPassword(host);
+  const canOverrideAuth = canOverrideHostAuth(host, "ssh");
+  const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
 
   async function handleCopyPassword(
     e: MouseEvent,
@@ -404,7 +410,7 @@ export function HostItem({
   if (compactHostView) {
     return (
       <div
-        draggable={!selectionMode && !isTouchOnly}
+        draggable={!selectionMode && !isTouchOnly && canEditHost(host)}
         onDragStart={(e) => {
           e.dataTransfer.effectAllowed = "move";
           onDragStart?.();
@@ -670,7 +676,10 @@ export function HostItem({
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuContent
+                    align="start"
+                    className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
+                  >
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -681,6 +690,17 @@ export function HostItem({
                       <Copy className="size-3.5 mr-2" />
                       {t("hosts.copyAddress")}
                     </DropdownMenuItem>
+                    {canOverrideAuth && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAuthOverrideOpen(true);
+                        }}
+                      >
+                        <KeyRound className="size-3.5 mr-2" />
+                        {t("hosts.sharing.authOverrideAction")}
+                      </DropdownMenuItem>
+                    )}
                     {showPasswordCopy && (
                       <DropdownMenuItem
                         onClick={(e) => handleCopyPassword(e, "password")}
@@ -870,7 +890,10 @@ export function HostItem({
                       <MoreHorizontal className="size-3.5" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuContent
+                    align="start"
+                    className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
+                  >
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
@@ -881,6 +904,17 @@ export function HostItem({
                       <Copy className="size-3.5 mr-2" />
                       {t("hosts.copyAddress")}
                     </DropdownMenuItem>
+                    {canOverrideAuth && (
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAuthOverrideOpen(true);
+                        }}
+                      >
+                        <KeyRound className="size-3.5 mr-2" />
+                        {t("hosts.sharing.authOverrideAction")}
+                      </DropdownMenuItem>
+                    )}
                     {showPasswordCopy && (
                       <DropdownMenuItem
                         onClick={(e) => handleCopyPassword(e, "password")}
@@ -927,6 +961,14 @@ export function HostItem({
               </div>
             </div>
           )}
+          {canOverrideAuth && (
+            <HostAuthOverrideModal
+              open={authOverrideOpen}
+              onOpenChange={setAuthOverrideOpen}
+              host={host}
+              protocol="ssh"
+            />
+          )}
         </div>
       </div>
     );
@@ -934,7 +976,7 @@ export function HostItem({
 
   return (
     <div
-      draggable={!selectionMode && !isTouchOnly}
+      draggable={!selectionMode && !isTouchOnly && canEditHost(host)}
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = "move";
         onDragStart?.();
@@ -1341,7 +1383,10 @@ export function HostItem({
                     <MoreHorizontal className="size-3.5" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuContent
+                  align="start"
+                  className="text-xs w-auto min-w-44 max-w-72 whitespace-nowrap"
+                >
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1352,6 +1397,17 @@ export function HostItem({
                     <Copy className="size-3.5 mr-2" />
                     {t("hosts.copyAddress")}
                   </DropdownMenuItem>
+                  {canOverrideAuth && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAuthOverrideOpen(true);
+                      }}
+                    >
+                      <KeyRound className="size-3.5 mr-2" />
+                      {t("hosts.sharing.authOverrideAction")}
+                    </DropdownMenuItem>
+                  )}
                   {showPasswordCopy && (
                     <DropdownMenuItem
                       onClick={(e) => handleCopyPassword(e, "password")}
@@ -1534,6 +1590,14 @@ export function HostItem({
             </div>
           </div>
         </div>
+        {canOverrideAuth && (
+          <HostAuthOverrideModal
+            open={authOverrideOpen}
+            onOpenChange={setAuthOverrideOpen}
+            host={host}
+            protocol="ssh"
+          />
+        )}
       </div>
     </div>
   );
@@ -1794,6 +1858,7 @@ export function SidebarTree({
   selectionMode,
   onToggleSelectionMode,
   loading = false,
+  onExportSelected,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (host: Host, type: TabType) => void;
@@ -1804,6 +1869,7 @@ export function SidebarTree({
   selectionMode: boolean;
   onToggleSelectionMode: () => void;
   loading?: boolean;
+  onExportSelected?: (hostIds: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => {
@@ -1861,6 +1927,12 @@ export function SidebarTree({
     };
   }, []);
 
+  const hostsById = useMemo(() => {
+    const map = new Map<string, Host>();
+    for (const host of collectAllHosts(children)) map.set(host.id, host);
+    return map;
+  }, [children]);
+
   function handleDragHostStart(hostId: string) {
     // When the dragged host is part of an active selection, move the whole set.
     if (selectionMode && selectedHostIds.has(hostId)) {
@@ -1875,12 +1947,19 @@ export function SidebarTree({
     targetPath: string,
   ) {
     setDraggedHostIds(null);
+    // A selection can mix owned hosts with shared ones the recipient may not
+    // edit; moving those would fail server-side and take the whole batch down.
+    const movableIds = hostIds.filter((id) => {
+      const host = hostsById.get(id);
+      return !host || canEditHost(host);
+    });
+    if (movableIds.length === 0) return;
     try {
-      await bulkUpdateSSHHosts(hostIds.map(Number), { folder: targetPath });
+      await bulkUpdateSSHHosts(movableIds.map(Number), { folder: targetPath });
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
       toast.success(
         t("hosts.movedToFolder", {
-          count: hostIds.length,
+          count: movableIds.length,
           folder: targetPath || t("hosts.folderPickerNone"),
         }),
       );
@@ -2467,6 +2546,18 @@ export function SidebarTree({
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            <button
+              className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
+              disabled={selectedHostIds.size === 0}
+              onClick={() => {
+                onExportSelected?.(Array.from(selectedHostIds));
+                setSelectedHostIds(new Set());
+                onToggleSelectionMode();
+              }}
+            >
+              <Download className="size-3" />
+              {t("hosts.export.bulkButton")}
+            </button>
             <button
               className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-1 hover:bg-muted rounded transition-colors flex items-center gap-1 disabled:opacity-40"
               disabled={selectedHostIds.size === 0}

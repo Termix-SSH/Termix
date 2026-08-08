@@ -1,4 +1,9 @@
 import express from "express";
+import {
+  logAudit,
+  getAuditUsername,
+  getRequestMeta,
+} from "../../utils/audit-logger.js";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
@@ -289,11 +294,7 @@ async function startDedicatedTransferConnect(
   const hasJumpHosts = jumpHosts && jumpHosts.length > 0;
 
   if (hasJumpHosts) {
-    const jumpClient = await createJumpHostChain(
-      jumpHosts,
-      userId,
-      proxyConfig,
-    );
+    const jumpClient = await createJumpHostChain(jumpHosts, userId);
     if (!jumpClient) {
       throw new Error("Failed to connect through jump hosts for transfer");
     }
@@ -764,8 +765,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
@@ -823,8 +823,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         hostKeepaliveInterval = resolvedHost.terminalConfig?.keepaliveInterval;
         hostKeepaliveCountMax = resolvedHost.terminalConfig?.keepaliveCountMax;
         resolvedScpLegacy = resolvedHost.scpLegacy ?? false;
@@ -1169,6 +1168,24 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       scpLegacy: resolvedScpLegacy,
     };
     scheduleSessionCleanup(sessionId);
+
+    if (userId) {
+      const { ipAddress, userAgent } = getRequestMeta(req);
+      void (async () => {
+        await logAudit({
+          userId,
+          username: await getAuditUsername(userId),
+          action: "file_manager_connect",
+          resourceType: "host",
+          resourceId: hostId ? String(hostId) : undefined,
+          resourceName: `${username}@${ip}:${port}`,
+          ipAddress,
+          userAgent,
+          success: true,
+        });
+      })();
+    }
+
     res.json({
       status: "success",
       message: "SSH connection established",
@@ -1616,11 +1633,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           `Connecting via ${resolvedJumpHosts.length} jump host(s)`,
         ),
       );
-      const jumpClient = await createJumpHostChain(
-        resolvedJumpHosts,
-        userId,
-        proxyConfig,
-      );
+      const jumpClient = await createJumpHostChain(resolvedJumpHosts, userId);
 
       if (!jumpClient) {
         fileLogger.error("Failed to establish jump host chain", {

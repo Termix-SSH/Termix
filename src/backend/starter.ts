@@ -171,9 +171,17 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     await authManager.initialize();
     DataCrypto.initialize();
 
+    const { runLegacySharedSshAuthOptInMigration } =
+      await import("./utils/crypto-migration/legacy-shared-ssh-auth-opt-in-migration.js");
+    await runLegacySharedSshAuthOptInMigration();
+
     const { runSharedHostSecretsMigration } =
       await import("./utils/crypto-migration/shared-host-secrets-migration.js");
     await runSharedHostSecretsMigration();
+
+    const { runPrivateSharedSshAuthMigration } =
+      await import("./utils/crypto-migration/private-shared-ssh-auth-migration.js");
+    await runPrivateSharedSshAuthMigration();
 
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();

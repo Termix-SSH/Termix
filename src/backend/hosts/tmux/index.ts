@@ -40,6 +40,7 @@ import {
   type PaneMetrics,
 } from "./monitor-helpers.js";
 import type { SSHHost, AuthenticatedRequest } from "../../../types/index.js";
+import { getTmuxAuthBehavior } from "./auth-utils.js";
 
 const PANE_ID_RE = /^%\d+$/;
 // tmux session names cannot contain ":" or "."; keep to a conservative
@@ -59,11 +60,12 @@ interface TmuxSessionOverview extends TmuxSessionSummary {
 // and docker; jump hosts and SOCKS5 reuse the shared helpers)
 
 async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
+  const authBehavior = getTmuxAuthBehavior(host.authType);
   const base: ConnectConfig = {
     host: (host.ip || "").replace(/^\[|\]$/g, ""),
     port: host.port,
     username: host.username,
-    tryKeyboard: true,
+    tryKeyboard: authBehavior.tryKeyboard,
     keepaliveInterval: 30000,
     keepaliveCountMax: 3,
     readyTimeout: 60000,
@@ -94,7 +96,7 @@ async function buildSshConfig(host: SSHHost): Promise<ConnectConfig> {
     if (host.keyPassword) {
       (base as Record<string, unknown>).passphrase = host.keyPassword;
     }
-  } else if (host.authType === "none") {
+  } else if (authBehavior.credentialless) {
     // no credentials needed
   } else if (host.authType === "vault") {
     // cert auth setup happens in connectToHost (needs client instance)
@@ -143,11 +145,7 @@ export function connectToHost(host: SSHHost): () => Promise<Client> {
 
     let jumpClient: Client | null = null;
     if (host.jumpHosts && host.jumpHosts.length > 0 && host.userId) {
-      jumpClient = await createJumpHostChain(
-        host.jumpHosts,
-        host.userId,
-        proxyConfig,
-      );
+      jumpClient = await createJumpHostChain(host.jumpHosts, host.userId);
       if (!jumpClient) {
         throw new Error("Failed to establish jump host chain");
       }
@@ -429,10 +427,7 @@ async function auditTmuxAction(
 // Typed error codes so the frontend can render a helpful state instead of a
 // raw 500 (same pattern as SESSION_EXPIRED handling in main-axios).
 type TmuxErrorCode =
-  | "TMUX_NOT_INSTALLED"
-  | "TMUX_NO_SERVER"
-  | "HOST_UNREACHABLE"
-  | "TMUX_ERROR";
+  "TMUX_NOT_INSTALLED" | "TMUX_NO_SERVER" | "HOST_UNREACHABLE" | "TMUX_ERROR";
 
 function classifyTmuxError(err: unknown): TmuxErrorCode {
   const msg = err instanceof Error ? err.message : "";

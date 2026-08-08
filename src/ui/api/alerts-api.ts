@@ -112,8 +112,7 @@ function mapRule(r: Record<string, unknown>): AlertRule {
     enabled: Boolean(r.enabled),
     triggerType: (r.trigger_type ?? r.triggerType) as string,
     thresholdValue: (r.threshold_value ?? r.thresholdValue ?? null) as
-      | number
-      | null,
+      number | null,
     thresholdDurationSeconds: (r.threshold_duration_seconds ??
       r.thresholdDurationSeconds ??
       null) as number | null,

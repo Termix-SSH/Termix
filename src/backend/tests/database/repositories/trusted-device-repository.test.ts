@@ -17,27 +17,7 @@ describe("TrustedDeviceRepository", () => {
   }> {
     adapter = new TestSqliteDatabase();
     const context = await adapter.connect();
-    context.sqlite?.exec(`
-      CREATE TABLE users (
-        id TEXT PRIMARY KEY,
-        username TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
-        is_admin INTEGER NOT NULL DEFAULT 0,
-        is_oidc INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE trusted_devices (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL,
-        device_fingerprint TEXT NOT NULL,
-        device_type TEXT NOT NULL,
-        device_info TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expires_at TEXT NOT NULL,
-        last_used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-      );
-
+    await adapter.exec(`
       INSERT INTO users (id, username, password_hash) VALUES
         ('user-1', 'admin', 'hash'),
         ('user-2', 'user', 'hash');
