@@ -46,7 +46,10 @@ import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../../utils/alert-trigger.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
-import { hostAddressMismatch } from "./host-identity.js";
+import {
+  hostAddressMismatch,
+  HOST_ADDRESS_MISMATCH_MESSAGE,
+} from "./host-identity.js";
 
 interface ConnectToHostData {
   cols: number;
@@ -1501,10 +1504,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           ws.send(
             JSON.stringify({
               type: "error",
-              message:
-                "Host mismatch: this server resolved the selected host to a different machine, so the connection was refused. " +
-                "The host ids on this device and on the sync server have drifted apart. " +
-                'Set the connection origin to "This device" for this host, or re-run a full sync, then try again.',
+              message: HOST_ADDRESS_MISMATCH_MESSAGE,
             }),
           );
           cleanupAuthState(connectionTimeout);

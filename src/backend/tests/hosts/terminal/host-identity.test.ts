@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   hostAddressMismatch,
+  HOST_ADDRESS_MISMATCH_MESSAGE,
+  HostAddressMismatchError,
   normalizeHostAddress,
 } from "../../../hosts/terminal/host-identity.js";
 
@@ -52,6 +54,33 @@ describe("hostAddressMismatch", () => {
     // An id alone must not be enough to pick a machine.
     expect(hostAddressMismatch(undefined, "10.0.0.9")).toBe(true);
     expect(hostAddressMismatch("", "10.0.0.9")).toBe(true);
+  });
+});
+
+describe("HostAddressMismatchError", () => {
+  it("survives the catch blocks that swallow resolution failures", () => {
+    // SFTP host resolution sits inside "failed to resolve credentials, carry
+    // on" handlers. Continuing is precisely what must not happen here, so
+    // those catches rethrow this type -- which only works if it is
+    // recognisable with instanceof after being thrown.
+    const rethrow = () => {
+      try {
+        throw new HostAddressMismatchError();
+      } catch (error) {
+        if (error instanceof HostAddressMismatchError) throw error;
+        return "swallowed";
+      }
+    };
+
+    expect(rethrow).toThrow(HostAddressMismatchError);
+    expect(rethrow).toThrow(HOST_ADDRESS_MISMATCH_MESSAGE);
+  });
+
+  it("tells the user which of their settings to change", () => {
+    // The message is the only actionable thing they get; the workaround has
+    // to be in it.
+    expect(HOST_ADDRESS_MISMATCH_MESSAGE).toContain("This device");
+    expect(HOST_ADDRESS_MISMATCH_MESSAGE).toContain("full sync");
   });
 });
 

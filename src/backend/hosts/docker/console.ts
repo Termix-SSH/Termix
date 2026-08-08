@@ -12,6 +12,10 @@ import {
   type ContainerRuntime,
 } from "./container-runtime.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import {
+  hostAddressMismatch,
+  HOST_ADDRESS_MISMATCH_MESSAGE,
+} from "../terminal/host-identity.js";
 
 const sshLogger = systemLogger;
 
@@ -395,6 +399,30 @@ wss.on("connection", async (ws: WebSocket, req) => {
                 JSON.stringify({
                   type: "error",
                   message: "Host not found",
+                }),
+              );
+              return;
+            }
+
+            // The connection below dials resolvedHost.ip outright, so if this
+            // server has a different machine under the id the client sent, the
+            // console opens on that machine's Docker daemon instead.
+            if (hostAddressMismatch(hostConfig?.ip, resolvedHost.ip)) {
+              sshLogger.error(
+                "Refusing Docker console: host id resolves to a different address here",
+                undefined,
+                {
+                  operation: "docker_console_host_id_mismatch",
+                  hostId,
+                  userId,
+                  clientIp: hostConfig?.ip,
+                  resolvedIp: resolvedHost.ip,
+                },
+              );
+              ws.send(
+                JSON.stringify({
+                  type: "error",
+                  message: HOST_ADDRESS_MISMATCH_MESSAGE,
                 }),
               );
               return;

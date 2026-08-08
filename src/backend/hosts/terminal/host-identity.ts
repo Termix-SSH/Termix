@@ -36,3 +36,25 @@ export function hostAddressMismatch(
 
   return resolved !== normalizeHostAddress(clientAddress);
 }
+
+/**
+ * Shown to the user on every path that refuses a mismatch, so the wording of
+ * the one thing they can act on does not depend on which feature they used.
+ */
+export const HOST_ADDRESS_MISMATCH_MESSAGE =
+  "Host mismatch: this server resolved the selected host to a different machine, so the connection was refused. " +
+  "The host ids on this device and on the sync server have drifted apart. " +
+  'Set the connection origin to "This device" for this host, or re-run a full sync, then try again.';
+
+/**
+ * Thrown where a mismatch is reported by rejecting rather than by messaging
+ * the socket. Callers whose host-resolution is wrapped in a "failed to resolve
+ * credentials, carry on" catch must let this one through: continuing is the
+ * behaviour being prevented.
+ */
+export class HostAddressMismatchError extends Error {
+  constructor() {
+    super(HOST_ADDRESS_MISMATCH_MESSAGE);
+    this.name = "HostAddressMismatchError";
+  }
+}
