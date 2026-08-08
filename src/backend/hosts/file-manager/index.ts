@@ -49,9 +49,43 @@ import {
 import { registerFileListingRoutes } from "./list-routes.js";
 import { registerFileOperationRoutes } from "./operation-routes.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import {
+  hostAddressMismatch,
+  HostAddressMismatchError,
+} from "../terminal/host-identity.js";
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
 import { applyAgentAuth } from "../terminal-auth-helpers.js";
+
+/**
+ * The host id came from whichever database the client is displaying. If this
+ * server has a different machine under that id — desktop and sync server
+ * autoincrement sequences drift apart — then the address, the credentials and
+ * the jump hosts resolved from it all belong to that other machine, and the
+ * user would browse, edit and delete its files believing they are on the host
+ * they picked.
+ */
+function assertResolvedHostMatches(
+  clientIp: unknown,
+  resolvedHost: { ip?: string } | null | undefined,
+  hostId: number,
+  userId: string,
+): void {
+  if (!hostAddressMismatch(clientIp, resolvedHost?.ip)) return;
+
+  fileLogger.error(
+    "Refusing SFTP connection: host id resolves to a different address here",
+    undefined,
+    {
+      operation: "file_manager_host_id_mismatch",
+      hostId,
+      userId,
+      clientIp,
+      resolvedIp: resolvedHost?.ip,
+    },
+  );
+  throw new HostAddressMismatchError();
+}
 
 const app = express();
 
@@ -753,6 +787,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     try {
       const { resolveHostById } = await import("../host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
+      assertResolvedHostMatches(ip, resolvedHost, hostId, userId);
       if (resolvedHost) {
         resolvedIp = resolvedHost.ip;
         resolvedPort = resolvedHost.port;
@@ -800,6 +835,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         );
       }
     } catch (error) {
+      if (error instanceof HostAddressMismatchError) throw error;
       fileLogger.warn(`Failed to resolve host credentials for ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
@@ -811,6 +847,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     try {
       const { resolveHostById } = await import("../host-resolver.js");
       const resolvedHost = await resolveHostById(hostId, userId);
+      assertResolvedHostMatches(ip, resolvedHost, hostId, userId);
       if (resolvedHost) {
         resolvedIp = resolvedHost.ip;
         resolvedPort = resolvedHost.port;
@@ -858,6 +895,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         );
       }
     } catch (error) {
+      if (error instanceof HostAddressMismatchError) throw error;
       fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
