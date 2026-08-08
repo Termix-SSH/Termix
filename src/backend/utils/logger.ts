@@ -153,7 +153,6 @@ export class Logger {
       if (sanitizedContext.duration)
         contextParts.push(`duration:${sanitizedContext.duration}ms`);
 
-
       if (contextParts.length > 0) {
         contextStr = chalk.gray(` [${contextParts.join(",")}]`);
       }

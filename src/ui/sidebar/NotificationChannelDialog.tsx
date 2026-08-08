@@ -192,7 +192,11 @@ export function NotificationChannelDialog({
                   onClick={() => setType(ct)}
                   className={`px-3 py-1 text-xs font-semibold border transition-colors ${type === ct ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:border-accent-brand/30"}`}
                 >
-                  {ct === "webhook" ? "Webhook" : ct === "ntfy" ? "ntfy" : "Discord"}
+                  {ct === "webhook"
+                    ? "Webhook"
+                    : ct === "ntfy"
+                      ? "ntfy"
+                      : "Discord"}
                 </button>
               ))}
             </div>

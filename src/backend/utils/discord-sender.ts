@@ -9,7 +9,10 @@ export interface DiscordConfig {
 
 import type { AlertPayload } from "./notification-sender.js";
 
-async function fetchWithRetry(url: string, options: RequestInit): Promise<void> {
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+): Promise<void> {
   const attempt = async () => {
     const res = await safeOutboundFetch(url, options);
     if (!res.ok) {
@@ -35,14 +38,18 @@ async function fetchWithRetry(url: string, options: RequestInit): Promise<void> 
       statsLogger.warn("Discord notification delivery failed after retry", {
         operation: "discord_notification_send_failed",
         url,
-        error: secondErr instanceof Error ? secondErr.message : String(secondErr),
+        error:
+          secondErr instanceof Error ? secondErr.message : String(secondErr),
       });
       throw secondErr;
     }
   }
 }
 
-export async function sendDiscord(config: DiscordConfig, payload: AlertPayload): Promise<void> {
+export async function sendDiscord(
+  config: DiscordConfig,
+  payload: AlertPayload,
+): Promise<void> {
   const { url, username, avatar_url } = config;
   const colorMap: Record<string, number> = {
     info: 3066993,
@@ -64,7 +71,11 @@ export async function sendDiscord(config: DiscordConfig, payload: AlertPayload):
   } as Record<string, unknown>;
 
   if (payload.value !== undefined && payload.value !== null) {
-    (embed.fields as any).push({ name: "Value", value: String(payload.value), inline: true });
+    (embed.fields as any).push({
+      name: "Value",
+      value: String(payload.value),
+      inline: true,
+    });
   }
 
   const body: Record<string, unknown> = { embeds: [embed] };

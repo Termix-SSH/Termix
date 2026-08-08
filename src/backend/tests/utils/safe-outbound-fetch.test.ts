@@ -59,18 +59,22 @@ function runHook(
   all = true,
 ) {
   const fakeLookup = (
-  _host: string,
-  _opts: LookupOptions,
-  cb: (
-    err: NodeJS.ErrnoException | null,
-    addrs: LookupAddress[] | string | undefined,
-    family?: number,
-  ) => void,
-) => {
+    _host: string,
+    _opts: LookupOptions,
+    cb: (
+      err: NodeJS.ErrnoException | null,
+      addrs: LookupAddress[] | string | undefined,
+      family?: number,
+    ) => void,
+  ) => {
     if (all) {
       cb(error, addresses as LookupAddress[]);
     } else {
-      cb(error, addresses as string | undefined, typeof addresses === "object" ? undefined : 4);
+      cb(
+        error,
+        addresses as string | undefined,
+        typeof addresses === "object" ? undefined : 4,
+      );
     }
   };
 
@@ -83,7 +87,11 @@ function runHook(
 describe("createDnsLookupHook", () => {
   it("allows a public IPv4 address through", () => {
     const callback = runHook([{ address: "104.21.52.150", family: 4 }]);
-    expect(callback).toHaveBeenCalledWith(null, [{ address: "104.21.52.150", family: 4 }], 0);
+    expect(callback).toHaveBeenCalledWith(
+      null,
+      [{ address: "104.21.52.150", family: 4 }],
+      0,
+    );
   });
 
   it("rejects a private address with the private-destination error", () => {

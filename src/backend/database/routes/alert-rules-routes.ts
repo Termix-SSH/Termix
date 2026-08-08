@@ -72,7 +72,9 @@ router.post("/notification-channels", async (req, res) => {
     return res.status(400).json({ error: "name is required" });
   }
   if (type !== "webhook" && type !== "ntfy" && type !== "discord") {
-    return res.status(400).json({ error: "type must be 'webhook', 'ntfy' or 'discord'" });
+    return res
+      .status(400)
+      .json({ error: "type must be 'webhook', 'ntfy' or 'discord'" });
   }
   if (!config || typeof config !== "object") {
     return res.status(400).json({ error: "config is required" });

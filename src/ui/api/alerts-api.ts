@@ -69,15 +69,16 @@ export async function getNotificationChannels(): Promise<
   return res.data;
 }
 
-export type NotificationChannelPayload =
-  | (Partial<Omit<NotificationChannel, "config">> & {
-      // When creating/updating the channel the UI may pass a parsed object
-      // for `config` (e.g., { url, username }) — the backend stores it as
-      // a JSON string. Accept either a string or any structured object here.
-      // Use `unknown` to allow the component-local config types to be passed
-      // without importing them into this module.
-      config: string | unknown;
-    });
+export type NotificationChannelPayload = Partial<
+  Omit<NotificationChannel, "config">
+> & {
+  // When creating/updating the channel the UI may pass a parsed object
+  // for `config` (e.g., { url, username }) — the backend stores it as
+  // a JSON string. Accept either a string or any structured object here.
+  // Use `unknown` to allow the component-local config types to be passed
+  // without importing them into this module.
+  config: string | unknown;
+};
 
 export async function createNotificationChannel(
   data: NotificationChannelPayload,
