@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { HostData } from "@/types/index";
 import { useTranslation } from "react-i18next";
 import { Server, RefreshCw, CheckSquare, Square, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -188,7 +189,7 @@ export function ProxmoxDiscoverDialog({
       }));
 
       const result = toImport.length
-        ? await bulkImportSSHHosts(toImport, false)
+        ? await bulkImportSSHHosts(toImport as unknown as HostData[], false)
         : { success: 0, updated: 0, skipped: 0, failed: 0 };
 
       if (toImport.length) {

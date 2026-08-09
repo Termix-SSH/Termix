@@ -123,7 +123,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     telnetUser: h.telnetUser,
     telnetPassword: h.telnetPassword ?? "",
     hasTelnetPassword: !!host.hasTelnetPassword || !!h.telnetPassword,
-    quickActions: (h.quickActions ?? []).map((a: HostQuickAction) => ({
+    quickActions: (h.quickActions ?? []).map((a) => ({
       name: a.name,
       snippetId: String(a.snippetId),
     })),

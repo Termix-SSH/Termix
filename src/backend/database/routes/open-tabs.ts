@@ -213,6 +213,7 @@ router.patch("/:id", authenticateJWT, async (req: Request, res: Response) => {
   const userId = (req as AuthenticatedRequest).userId;
   const id = String(req.params.id);
   const updates = req.body as Partial<{
+    hostId: number | null;
     label: string;
     tabOrder: number;
     backendSessionId: string | null;

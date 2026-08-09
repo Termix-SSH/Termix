@@ -14,6 +14,9 @@ declare module "guacamole-common-js" {
       onerror: ((error: Status) => void) | null;
       onclipboard: ((stream: InputStream, mimetype: string) => void) | null;
       onaudio: ((stream: InputStream, mimetype: string) => void) | null;
+      onfile:
+        | ((stream: InputStream, mimetype: string, filename: string) => void)
+        | null;
     }
 
     class AudioPlayer {
@@ -133,6 +136,7 @@ declare module "guacamole-common-js" {
 
     class Keyboard {
       constructor(element: Document | HTMLElement);
+      reset(): void;
       onkeydown: ((keysym: number) => void) | null;
       onkeyup: ((keysym: number) => void) | null;
     }
@@ -141,11 +145,27 @@ declare module "guacamole-common-js" {
       code: number;
       message: string;
       isError(): boolean;
+      static readonly Code: {
+        SUCCESS: number;
+        UNSUPPORTED: number;
+        SERVER_ERROR: number;
+        SERVER_BUSY: number;
+        UPSTREAM_TIMEOUT: number;
+        UPSTREAM_ERROR: number;
+        RESOURCE_NOT_FOUND: number;
+        RESOURCE_CONFLICT: number;
+        RESOURCE_CLOSED: number;
+        CLIENT_BAD_REQUEST: number;
+        CLIENT_UNAUTHORIZED: number;
+        CLIENT_FORBIDDEN: number;
+        CLIENT_TIMEOUT: number;
+      };
     }
 
     class InputStream {
       onblob: ((data: string) => void) | null;
       onend: (() => void) | null;
+      sendAck(message: string, code: number): void;
     }
 
     class OutputStream {
@@ -163,6 +183,14 @@ declare module "guacamole-common-js" {
       constructor(stream: OutputStream);
       sendText(text: string): void;
       sendEnd(): void;
+    }
+
+    class BlobReader {
+      constructor(stream: InputStream, mimetype: string);
+      getBlob(): Blob;
+      getLength(): number;
+      onprogress: ((length: number) => void) | null;
+      onend: (() => void) | null;
     }
   }
 

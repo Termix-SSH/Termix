@@ -998,18 +998,6 @@ export function HostEditor({
                       )}
                     </div>
                   )}
-                  {authMethod === "warpgate" && (
-                    <div className="flex flex-col gap-2 border-t border-border pt-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                          {t("hosts.warpgateLabel")}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground">
-                        {t("hosts.warpgateDesc")}
-                      </p>
-                    </div>
-                  )}
                   {authMethod === "agent" && (
                     <div className="flex flex-col gap-2 border-t border-border pt-3">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

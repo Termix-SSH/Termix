@@ -3,7 +3,7 @@ import {
   eventMatchesCombo,
   findMatchingKeybinding,
 } from "../../lib/keybinding-match";
-import type { CustomKeybinding, KeyCombo } from "../../types/keybindings";
+import type { CustomKeybinding, KeyCombo } from "../../../types/keybindings";
 
 function makeEvent(
   init: Partial<KeyboardEventInit> & { key: string; code?: string },

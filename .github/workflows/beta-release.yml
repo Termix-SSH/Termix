@@ -82,7 +82,7 @@ jobs:
         run: npx prettier --check .
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run type-check
 
       - name: Run unit tests
         run: npm run test

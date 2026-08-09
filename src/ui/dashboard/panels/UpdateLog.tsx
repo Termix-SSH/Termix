@@ -3,6 +3,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/alert.tsx";
 import { Button } from "@/components/button.tsx";
 import { Sheet, SheetContent } from "@/components/sheet.tsx";
 import { getReleasesRSS, getVersionInfo } from "@/main-axios.ts";
+import type { ReleasesRSSResponse, VersionInfo } from "@/api/system-status-api";
 import { useTranslation } from "react-i18next";
 import { X } from "lucide-react";
 
@@ -10,53 +11,10 @@ interface UpdateLogProps extends React.ComponentProps<"div"> {
   loggedIn: boolean;
 }
 
-interface ReleaseItem {
-  id: number;
-  title: string;
-  description: string;
-  link: string;
-  pubDate: string;
-  version: string;
-  isPrerelease: boolean;
-  isDraft: boolean;
-  assets: Array<{
-    name: string;
-    size: number;
-    download_count: number;
-    download_url: string;
-  }>;
-}
-
-interface RSSResponse {
-  feed: {
-    title: string;
-    description: string;
-    link: string;
-    updated: string;
-  };
-  items: ReleaseItem[];
-  total_count: number;
-  cached: boolean;
-  cache_age?: number;
-}
-
-interface VersionResponse {
-  status: "up_to_date" | "requires_update" | "beta";
-  version: string;
-  localVersion?: string;
-  latest_release: {
-    name: string;
-    published_at: string;
-    html_url: string;
-  };
-  cached: boolean;
-  cache_age?: number;
-}
-
 export function UpdateLog({ loggedIn }: UpdateLogProps) {
   const { t } = useTranslation();
-  const [releases, setReleases] = useState<RSSResponse | null>(null);
-  const [versionInfo, setVersionInfo] = useState<VersionResponse | null>(null);
+  const [releases, setReleases] = useState<ReleasesRSSResponse | null>(null);
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);

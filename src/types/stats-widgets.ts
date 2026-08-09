@@ -70,6 +70,8 @@ export interface StatsConfig {
   metricsInterval: number;
   useGlobalMetricsInterval?: boolean;
   disableTcpPing?: boolean;
+  /** Filesystem mount points to leave out of the disk widget. */
+  excludedMounts?: string[];
 }
 
 export const DEFAULT_STATS_CONFIG: StatsConfig = {

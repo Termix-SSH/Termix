@@ -572,7 +572,7 @@ export function ConsoleTerminal({
           {isConnecting && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
-                <SimpleLoader size="lg" />
+                <SimpleLoader visible={true} />
                 <p className="text-muted-foreground mt-4">
                   {t("docker.connectingTo", { containerName })}
                 </p>

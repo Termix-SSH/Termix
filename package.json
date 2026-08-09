@@ -19,7 +19,7 @@
     "prebuild": "node scripts/write-electron-build-info.cjs",
     "lint": "node scripts/generate-dialect-schema.cjs --check && eslint .",
     "lint:fix": "eslint --fix .",
-    "type-check": "tsc --noEmit",
+    "type-check": "tsc -b --force",
     "test": "vitest run",
     "verify:dialect": "tsx scripts/verify-dialects.mjs",
     "test:watch": "vitest",

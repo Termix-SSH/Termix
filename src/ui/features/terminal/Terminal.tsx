@@ -2248,8 +2248,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminal.options.minimumContrastRatio = config.minimumContrastRatio;
       terminal.options.letterSpacing = config.letterSpacing;
       terminal.options.lineHeight = config.lineHeight;
-      terminal.options.bellStyle = config.bellStyle as
-        "none" | "sound" | "visual" | "both";
 
       terminal.options.theme = {
         background: config.backgroundImage
@@ -2325,7 +2323,6 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         minimumContrastRatio: config.minimumContrastRatio,
         letterSpacing: config.letterSpacing,
         lineHeight: config.lineHeight,
-        bellStyle: config.bellStyle as "none" | "sound" | "visual" | "both",
         theme: {
           background: config.backgroundImage
             ? "transparent"

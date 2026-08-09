@@ -1,3 +1,5 @@
+import type { GuacamoleConfig } from "./guacamole-config.js";
+import type { StatsConfig } from "./stats-widgets.js";
 import type { Client } from "ssh2";
 import type { Request } from "express";
 import type { RefObject } from "react";
@@ -109,7 +111,7 @@ export interface QuickAction {
   snippetId: number;
 }
 
-export interface Host {
+export type Host = {
   id: number;
   name: string;
   ip: string;
@@ -165,7 +167,7 @@ export interface Host {
   tunnelConnections: TunnelConnection[];
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
-  statsConfig?: string | Record<string, unknown>;
+  statsConfig?: string | StatsConfig;
   terminalConfig?: TerminalConfig;
   notes?: string;
 
@@ -188,7 +190,7 @@ export interface Host {
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  guacamoleConfig?: string | Record<string, unknown>;
+  guacamoleConfig?: string | GuacamoleConfig;
   dockerConfig?: Record<string, unknown> | null;
 
   enableSsh?: boolean;
@@ -224,15 +226,28 @@ export interface Host {
   createdAt: string;
   updatedAt: string;
 
+  sortOrder?: number | null;
+  connectionOrigin?: "local" | "remote" | null;
+
+  /** Assigned when a host is opened in a tab; distinguishes duplicate tabs. */
+  instanceId?: string;
+
   hasKey?: boolean;
   hasKeyPassword?: boolean;
+  // Set by formatHostOutput() alongside hasKey/hasKeyPassword so the UI can
+  // tell a stored secret from an empty one without receiving it.
+  hasPassword?: boolean;
+  hasSudoPassword?: boolean;
+  hasRdpPassword?: boolean;
+  hasVncPassword?: boolean;
+  hasTelnetPassword?: boolean;
 
   isShared?: boolean;
   authOverrides?: HostAuthOverrides;
   permissionLevel?: "connect" | "view" | "edit" | "manage";
   sharedExpiresAt?: string;
   ownerUsername?: string;
-}
+};
 
 export interface JumpHostData {
   hostId: number;
@@ -246,7 +261,13 @@ export interface QuickActionData {
 export interface ProxyNode {
   host: string;
   port: number;
-  type: 4 | 5 | "http";
+  /**
+   * The host editor writes "socks4"/"socks5"/"http", while proxy-helper.ts
+   * tests for "http" and casts everything else to 4|5 before handing it to the
+   * socks client. The two spellings have never agreed; typed as the union of
+   * what is actually stored rather than pretending one side is right.
+   */
+  type: 4 | 5 | "http" | "socks4" | "socks5";
   username?: string;
   password?: string;
 }
@@ -266,7 +287,8 @@ export interface HostData {
     | "none"
     | "opkssh"
     | "tailscale"
-    | "agent";
+    | "agent"
+    | "vault";
   useWarpgate?: boolean;
   shareSshAuth?: boolean;
   password?: string;
@@ -275,6 +297,8 @@ export interface HostData {
   keyType?: string;
   sudoPassword?: string;
   credentialId?: number | null;
+  vaultProfileId?: number | null;
+  connectionOrigin?: "local" | "remote" | null;
   overrideCredentialUsername?: boolean;
   enableTerminal?: boolean;
   enableSessionLogging?: boolean;
@@ -297,7 +321,7 @@ export interface HostData {
   tunnelConnections?: TunnelConnection[];
   jumpHosts?: JumpHostData[];
   quickActions?: QuickActionData[];
-  statsConfig?: string | Record<string, unknown>;
+  statsConfig?: string | StatsConfig;
   terminalConfig?: TerminalConfig;
   notes?: string;
 
@@ -320,7 +344,7 @@ export interface HostData {
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  guacamoleConfig?: Record<string, unknown> | null;
+  guacamoleConfig?: GuacamoleConfig | null;
   dockerConfig?: Record<string, unknown> | null;
 
   enableSsh?: boolean;
@@ -678,9 +702,10 @@ export interface TerminalConfig {
   customThemeColors?: {
     background: string;
     foreground: string;
-    cursor: string;
-    cursorAccent: string;
-    selectionBackground: string;
+    cursor?: string;
+    cursorAccent?: string;
+    selectionBackground?: string;
+    selectionForeground?: string;
     black: string;
     red: string;
     green: string;
@@ -716,6 +741,7 @@ export interface TabContextTab {
     | "file_manager"
     | "user_profile"
     | "docker"
+    | "tunnel"
     | "network_graph"
     | "tmux_monitor" // --- tmux-monitor ---
     | "rdp"

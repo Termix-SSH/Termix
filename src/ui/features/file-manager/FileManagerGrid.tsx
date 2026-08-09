@@ -782,7 +782,7 @@ export function FileManagerGrid({
         activeElement &&
         (activeElement.tagName === "INPUT" ||
           activeElement.tagName === "TEXTAREA" ||
-          activeElement.contentEditable === "true")
+          (activeElement as HTMLElement).contentEditable === "true")
       ) {
         return;
       }

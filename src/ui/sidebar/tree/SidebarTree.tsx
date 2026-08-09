@@ -472,7 +472,9 @@ export function SidebarTree({
         rdpSecurity: host.security ?? null,
         rdpIgnoreCert: host.ignoreCert ?? false,
         vncAuthType: host.vncAuthType ?? null,
-        vncCredentialId: host.vncCredentialId ?? null,
+        vncCredentialId: host.vncCredentialId
+          ? Number(host.vncCredentialId)
+          : null,
         vncPassword: host.vncPassword ?? null,
         vncUser: host.vncUser ?? null,
         telnetUser: host.telnetUser ?? null,

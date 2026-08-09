@@ -1,3 +1,6 @@
+import type { GuacamoleConfig } from "./guacamole-config.js";
+import type { TerminalConfig } from "./index.js";
+import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
 export type {
@@ -49,35 +52,11 @@ export type Host = {
 
   enableTerminal: boolean;
   enableCommandHistory: boolean;
-  terminalConfig?: {
-    cursorBlink: boolean;
-    cursorStyle: "block" | "underline" | "bar";
-    fontSize: number;
-    fontFamily: string;
-    letterSpacing: number;
-    lineHeight: number;
-    theme: string;
-    scrollback: number;
-    bellStyle: "none" | "sound" | "visual" | "both";
-    rightClickSelectsWord: boolean;
-    macOptionIsMeta: boolean;
-    fastScrollModifier: "alt" | "ctrl" | "shift";
-    fastScrollSensitivity: number;
-    minimumContrastRatio: number;
-    backspaceMode: "normal" | "control-h";
-    agentForwarding: boolean;
-    autoMosh: boolean;
-    moshCommand: string;
-    autoTmux: boolean;
-    sudoPasswordAutoFill: boolean;
-    sudoPassword?: string;
-    keepaliveInterval?: number;
-    keepaliveCountMax?: number;
-    environmentVariables: { key: string; value: string }[];
-    startupSnippetId?: number | null;
-    linkClickBehavior?: "confirm" | "direct";
-    agentSocketPath?: string;
-  };
+  enableSessionLogging?: boolean;
+  allowSessionSharing?: boolean;
+  /** Stable identity across a desktop/server sync pair. */
+  syncId?: string | null;
+  terminalConfig?: TerminalConfig;
 
   useSocks5?: boolean;
   socks5Host?: string;
@@ -88,11 +67,12 @@ export type Host = {
   socks5ProxyChain?: {
     host: string;
     port: number;
-    type: 4 | 5 | "http" | string;
+    type: 4 | 5 | "http" | "socks4" | "socks5";
     username?: string;
     password?: string;
   }[];
-  jumpHosts?: { hostId: string }[];
+  /** hostid is a legacy lowercase spelling still present in stored rows. */
+  jumpHosts?: { hostId: string; hostid?: string }[];
   portKnockSequence?: {
     port: number;
     protocol: "tcp" | "udp";
@@ -143,16 +123,7 @@ export type Host = {
     };
   } | null;
 
-  statsConfig?: {
-    statusCheckEnabled: boolean;
-    statusCheckInterval: number;
-    useGlobalStatusInterval: boolean;
-    metricsEnabled: boolean;
-    metricsInterval: number;
-    useGlobalMetricsInterval: boolean;
-    enabledWidgets: string[];
-    excludedMounts?: string[];
-  };
+  statsConfig?: StatsConfig;
   quickActions: { name: string; snippetId: string }[];
 
   enableSsh: boolean;
@@ -186,7 +157,7 @@ export type Host = {
   telnetPassword?: string;
   hasTelnetPassword?: boolean;
 
-  guacamoleConfig?: Record<string, unknown>;
+  guacamoleConfig?: GuacamoleConfig;
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;
@@ -315,6 +286,7 @@ export type Tab = {
     reconnect?: () => void;
     fit?: () => void;
     notifyResize?: () => void;
+    refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
     openShareModal?: () => void;
     canShare?: () => boolean;

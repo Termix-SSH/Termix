@@ -75,7 +75,7 @@ beforeEach(() => {
   mainAxios.checkElectronUpdate.mockReset();
   (window as ElectronTestWindow).electronAPI = {
     getAppVersion: vi.fn(async () => "2.6.0"),
-  };
+  } as unknown as ElectronTestWindow["electronAPI"];
 });
 
 afterEach(() => {

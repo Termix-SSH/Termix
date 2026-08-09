@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 
 const api = vi.hoisted(() => ({
-  resolveShareLink: vi.fn(async () => {
+  resolveShareLink: vi.fn(async (): Promise<unknown> => {
     throw new Error("resolveShareLink not mocked for this test");
   }),
   ShareLinkError: class ShareLinkError extends Error {

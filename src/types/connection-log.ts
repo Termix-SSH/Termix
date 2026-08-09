@@ -8,6 +8,7 @@ export type ConnectionStage =
   | "error"
   | "proxy"
   | "jump"
+  | "validation"
   | "docker_connecting"
   | "docker_auth"
   | "docker_session"
@@ -32,7 +33,7 @@ export type LogEntry = {
   type: "info" | "success" | "warning" | "error";
   stage: ConnectionStage;
   message: string;
-  details?: Record<string, unknown>;
+  details?: Record<string, unknown> | string;
 };
 
 export interface ConnectionLogResponse {

@@ -987,7 +987,7 @@ function SnippetCard({
           {hasTargetHosts && (
             <Zap
               className="size-3 shrink-0 mt-0.5 text-accent-brand/70"
-              title={t("newUi.sidebar.snippets.hasTargetHosts")}
+              aria-label={t("newUi.sidebar.snippets.hasTargetHosts")}
             />
           )}
         </div>
@@ -1517,7 +1517,9 @@ export function SnippetsPanel({
 
     getSnippets()
       .then((data) => {
-        const arr: RawSnippet[] = Array.isArray(data) ? data : [];
+        const arr = (Array.isArray(data)
+          ? data
+          : []) as unknown as RawSnippet[];
         updateSnippets(arr.map(mapRawSnippet));
       })
       .catch(() => {});
@@ -1684,7 +1686,9 @@ export function SnippetsPanel({
     const collapsed = getFoldersCollapsed();
     getSnippets()
       .then((data) => {
-        const arr: RawSnippet[] = Array.isArray(data) ? data : [];
+        const arr = (Array.isArray(data)
+          ? data
+          : []) as unknown as RawSnippet[];
         updateSnippets(arr.map(mapRawSnippet));
       })
       .catch(() => {});

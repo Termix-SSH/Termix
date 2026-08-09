@@ -1,6 +1,6 @@
 import { authApi, handleApiError } from "@/main-axios";
 
-export interface AuditLog {
+export type AuditLog = {
   id: number;
   userId: string;
   username: string;
@@ -14,7 +14,7 @@ export interface AuditLog {
   success: boolean;
   errorMessage: string | null;
   timestamp: string;
-}
+};
 
 export interface AuditLogFilters {
   page?: number;

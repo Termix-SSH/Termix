@@ -1282,7 +1282,7 @@ export function UserProfilePanel({
       <NewApiKeyDialog
         open={newKeyOpen}
         onOpenChange={setNewKeyOpen}
-        onAdd={(key) => setApiKeys((prev) => [key, ...prev])}
+        onAdd={(key) => setApiKeys((prev) => [key as ApiKey, ...prev])}
         userId={userId}
       />
 

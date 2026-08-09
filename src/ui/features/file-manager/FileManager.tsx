@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { asHttpError } from "@/lib/http-error";
 import { cn } from "@/lib/utils.ts";
 import { FileManagerGrid } from "./FileManagerGrid.tsx";
 import { FileManagerSidebar } from "./FileManagerSidebar.tsx";
@@ -427,8 +428,8 @@ function FileManagerContent({
       setHasConnectionError(true);
       addLog({
         type: "error",
+        stage: "error",
         message: t("fileManager.sshRequiredForFileManager"),
-        timestamp: new Date().toISOString(),
       });
       setIsLoading(false);
       return;
@@ -850,7 +851,7 @@ function FileManagerContent({
         activeElement &&
         (activeElement.tagName === "INPUT" ||
           activeElement.tagName === "TEXTAREA" ||
-          activeElement.contentEditable === "true")
+          (activeElement as HTMLElement).contentEditable === "true")
       ) {
         return;
       }
@@ -1339,9 +1340,10 @@ function FileManagerContent({
         });
       }
     } catch (error: unknown) {
+      const httpError = asHttpError(error);
       toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
+        httpError.response?.data?.error ||
+          httpError.message ||
           t("fileManager.failedToResolveSymlink"),
       );
     }
@@ -2556,15 +2558,17 @@ function FileManagerContent({
     );
 
     openWindow({
-      id: windowId,
-      type: "diff",
       title: t("fileManager.fileComparison", {
         file1: file1.name,
         file2: file2.name,
       }),
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 600,
       isMaximized: false,
+      isMinimized: false,
       component: createWindowComponent,
-      zIndex: Date.now(),
     });
 
     toast.success(
@@ -2690,9 +2694,7 @@ function FileManagerContent({
 
     try {
       const pinnedData = await getPinnedFiles(currentHost.id);
-      const pinnedPaths = new Set(
-        pinnedData.map((item: Record<string, unknown>) => item.path),
-      );
+      const pinnedPaths = new Set(pinnedData.map((item) => item.path));
       setPinnedFiles(pinnedPaths);
     } catch (error) {
       console.error("Failed to load pinned files:", error);
@@ -2951,7 +2953,6 @@ function FileManagerContent({
                 currentHost={currentHost}
                 currentPath={currentPath}
                 onPathChange={navigateTo}
-                onLoadDirectory={loadDirectory}
                 onFileOpen={handleSidebarFileOpen}
                 onItemContextMenu={handleSidebarItemContextMenu}
                 sshSessionId={sshSessionId}

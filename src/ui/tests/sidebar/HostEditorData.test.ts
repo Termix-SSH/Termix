@@ -168,7 +168,10 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as Record<string, unknown> | null;
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
 
     expect(tc?.agentSocketPath).toBe("/run/user/1000/gnupg/S.gpg-agent.ssh");
     expect(payload.password).toBeNull();
@@ -183,7 +186,10 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as Record<string, unknown> | null;
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
 
     expect(tc?.agentSocketPath).toBeNull();
   });
@@ -197,7 +203,10 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as Record<string, unknown> | null;
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
 
     expect(tc?.agentSocketPath).toBeNull();
   });
@@ -210,7 +219,10 @@ describe("buildHostEditorPayload auth field isolation", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as Record<string, unknown> | null;
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
 
     expect(tc?.sudoPasswordAutoFill).toBe(true);
     expect(tc?.sudoPassword).toBe("sudo-secret");
@@ -230,7 +242,10 @@ describe("sudo password persistence indicator", () => {
     const form = { ...createHostEditorForm(host) };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as Record<string, unknown> | null;
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
 
     expect(tc?.sudoPassword).toBeUndefined();
     expect(JSON.parse(JSON.stringify(tc))).not.toHaveProperty("sudoPassword");
@@ -244,7 +259,10 @@ describe("sudo password persistence indicator", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as Record<string, unknown> | null;
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
 
     expect(tc?.sudoPassword).toBe("new-sudo-pass");
   });
@@ -257,7 +275,10 @@ describe("sudo password persistence indicator", () => {
     };
 
     const payload = buildHostEditorPayload(form, sshOnly);
-    const tc = payload.terminalConfig as Record<string, unknown> | null;
+    const tc = payload.terminalConfig as unknown as Record<
+      string,
+      unknown
+    > | null;
 
     expect(tc?.sudoPassword).toBeNull();
   });
