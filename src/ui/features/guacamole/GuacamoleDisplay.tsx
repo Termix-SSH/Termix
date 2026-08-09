@@ -24,6 +24,7 @@ import {
   pasteTextToRemote,
 } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
+import { bindPointerInput } from "./guacamole-pointer.ts";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -447,10 +448,9 @@ export const GuacamoleDisplay = forwardRef<
       setIsReady(true);
     }
 
-    const sendMouseEvent = (event: Guacamole.Mouse.MouseEvent) => {
+    const sendMouseState = (state: Guacamole.Mouse.State) => {
       displayElement.focus({ preventScroll: true });
       const scale = scaleRef.current;
-      const state = event.state;
       const adjustedState = new Guacamole.Mouse.State(
         Math.round(state.x / scale),
         Math.round(state.y / scale),
@@ -463,30 +463,7 @@ export const GuacamoleDisplay = forwardRef<
       client.sendMouseState(adjustedState);
     };
 
-    if (touchMode === "touchscreen") {
-      const touchscreen = new Guacamole.Mouse.Touchscreen(displayElement);
-      touchscreen.onEach(["mousedown", "mousemove", "mouseup"], sendMouseEvent);
-    } else if (touchMode === "touchpad") {
-      const touchpad = new Guacamole.Mouse.Touchpad(displayElement);
-      touchpad.onEach(["mousedown", "mousemove", "mouseup"], sendMouseEvent);
-    } else {
-      const mouse = new Guacamole.Mouse(displayElement);
-      const sendMouseState = (state: Guacamole.Mouse.State) => {
-        displayElement.focus({ preventScroll: true });
-        const scale = scaleRef.current;
-        const adjustedState = new Guacamole.Mouse.State(
-          Math.round(state.x / scale),
-          Math.round(state.y / scale),
-          state.left,
-          state.middle,
-          state.right,
-          state.up,
-          state.down,
-        ) as Guacamole.Mouse.State;
-        client.sendMouseState(adjustedState);
-      };
-      mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = sendMouseState;
-    }
+    bindPointerInput(displayElement, touchMode, sendMouseState);
 
     const keyboard = new Guacamole.Keyboard(displayElement);
     keyboardRef.current = keyboard;
