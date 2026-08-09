@@ -2747,7 +2747,7 @@
     "validating": "Validating Docker...",
     "connecting": "Connecting...",
     "error": "Error",
-    "version": "Docker {{version}}",
+    "version": "{{runtime}} {{version}}",
     "connectionFailed": "Failed to connect to Docker",
     "containerStarted": "Container {{name}} started",
     "failedToStartContainer": "Failed to start container {{name}}",

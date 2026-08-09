@@ -84,6 +84,8 @@ function DockerManagerInner({
   const [isValidating, setIsValidating] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"list" | "detail">("list");
   const [isLoadingContainers, setIsLoadingContainers] = React.useState(false);
+  const [hasLoadedContainersOnce, setHasLoadedContainersOnce] =
+    React.useState(false);
   const [totpRequired, setTotpRequired] = React.useState(false);
   const [totpSessionId, setTotpSessionId] = React.useState<string | null>(null);
   const [totpPrompt, setTotpPrompt] = React.useState<string>("");
@@ -314,6 +316,10 @@ function DockerManagerInner({
   }, [sessionId]);
 
   React.useEffect(() => {
+    setHasLoadedContainersOnce(false);
+  }, [sessionId]);
+
+  React.useEffect(() => {
     if (!sessionId || !isVisible || !dockerValidation?.available) return;
 
     let cancelled = false;
@@ -330,6 +336,7 @@ function DockerManagerInner({
       } finally {
         if (!cancelled) {
           setIsLoadingContainers(false);
+          setHasLoadedContainersOnce(true);
         }
       }
     };
@@ -699,6 +706,10 @@ function DockerManagerInner({
                     <span className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
                       {dockerValidation?.version
                         ? t("docker.version", {
+                            runtime:
+                              dockerValidation.runtime === "podman"
+                                ? "Podman"
+                                : "Docker",
                             version: dockerValidation.version,
                           })
                         : t("docker.manager")}
@@ -753,7 +764,7 @@ function DockerManagerInner({
             </Card>
 
             {sessionId ? (
-              isLoadingContainers && containers.length === 0 ? (
+              !hasLoadedContainersOnce ? (
                 <div className="flex flex-col items-center justify-center h-full opacity-40 py-20">
                   <RefreshCw className="size-8 animate-spin mb-4" />
                   <span className="text-sm font-semibold">

@@ -120,6 +120,7 @@ function hostToSSHHost(h: Host): SSHHost {
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,
     enableDocker: h.enableDocker ?? false,
+    dockerConfig: h.dockerConfig ?? null,
     showTerminalInSidebar: true,
     showFileManagerInSidebar: true,
     showTunnelInSidebar: true,
