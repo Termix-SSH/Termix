@@ -38,6 +38,18 @@ type GuacamoleConfigSource = {
   guacamoleConfig?: string | Record<string, unknown> | null;
 };
 
+export function parseGuacamoleConfig(
+  config?: string | GuacamoleConfig | null,
+): GuacamoleConfig {
+  if (!config) return {};
+  if (typeof config !== "string") return config;
+  try {
+    return JSON.parse(config) as GuacamoleConfig;
+  } catch {
+    return {};
+  }
+}
+
 export function getGuacamoleDpi(
   source?: GuacamoleConfigSource,
 ): number | undefined {

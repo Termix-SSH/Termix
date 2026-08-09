@@ -31,7 +31,16 @@ export interface NetworkTopologyData {
   edges: NetworkTopologyEdge[];
 }
 
-export async function getSnippets(): Promise<Record<string, unknown>> {
+/**
+ * A snippet row as the list endpoint returns it. Callers that need the full
+ * shape narrow it themselves; only the id is relied on across the app.
+ */
+export interface SnippetRow {
+  id: number;
+  [key: string]: unknown;
+}
+
+export async function getSnippets(): Promise<SnippetRow[]> {
   try {
     const response = await authApi.get("/snippets");
     return response.data;

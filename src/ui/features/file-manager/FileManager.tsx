@@ -428,6 +428,7 @@ function FileManagerContent({
       setHasConnectionError(true);
       addLog({
         type: "error",
+        stage: "error",
         message: t("fileManager.sshRequiredForFileManager"),
       });
       setIsLoading(false);
@@ -850,7 +851,7 @@ function FileManagerContent({
         activeElement &&
         (activeElement.tagName === "INPUT" ||
           activeElement.tagName === "TEXTAREA" ||
-          activeElement.contentEditable === "true")
+          (activeElement as HTMLElement).contentEditable === "true")
       ) {
         return;
       }
@@ -2557,7 +2558,6 @@ function FileManagerContent({
     );
 
     openWindow({
-      id: windowId,
       type: "diff",
       title: t("fileManager.fileComparison", {
         file1: file1.name,
@@ -2691,9 +2691,7 @@ function FileManagerContent({
 
     try {
       const pinnedData = await getPinnedFiles(currentHost.id);
-      const pinnedPaths = new Set(
-        pinnedData.map((item: Record<string, unknown>) => item.path),
-      );
+      const pinnedPaths = new Set(pinnedData.map((item) => item.path));
       setPinnedFiles(pinnedPaths);
     } catch (error) {
       console.error("Failed to load pinned files:", error);

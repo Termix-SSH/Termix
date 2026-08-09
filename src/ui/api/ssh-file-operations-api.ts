@@ -615,13 +615,20 @@ export async function setSudoPassword(
   }
 }
 
+export interface CopySSHItemResult {
+  message?: string;
+  /** Set when the copy was renamed to avoid clobbering an existing entry. */
+  uniqueName?: string;
+  targetPath?: string;
+}
+
 export async function copySSHItem(
   sessionId: string,
   sourcePath: string,
   targetDir: string,
   hostId?: number,
   userId?: string,
-): Promise<Record<string, unknown>> {
+): Promise<CopySSHItemResult> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
       "/ssh/copyItem",
