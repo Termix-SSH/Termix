@@ -22,6 +22,7 @@ import {
 } from "@/main-axios";
 
 import type { Host, Credential } from "@/types/ui-types";
+import type { SSHHostWithStatus } from "@/main-axios";
 import type {
   CredentialSidebarFilterState,
   CredentialSortKey,
@@ -440,7 +441,9 @@ export function HostManager({
                 setActiveHostTab("general");
               }}
               onSave={(saved) => {
-                const updated = sshHostToHost(saved);
+                const updated = sshHostToHost(
+                  saved as unknown as SSHHostWithStatus,
+                );
                 setHosts((prev) => {
                   const idx = prev.findIndex((h) => h.id === updated.id);
                   if (idx >= 0) {

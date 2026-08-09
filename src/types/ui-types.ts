@@ -286,6 +286,7 @@ export type Tab = {
     reconnect?: () => void;
     fit?: () => void;
     notifyResize?: () => void;
+    refresh?: () => void;
     getApplicationCursorKeysMode?: () => boolean;
     openShareModal?: () => void;
     canShare?: () => boolean;

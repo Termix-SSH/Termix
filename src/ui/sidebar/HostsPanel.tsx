@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { HostData } from "@/types/index";
 import { useTranslation } from "react-i18next";
 import {
   ArrowUpDown,
@@ -443,7 +444,7 @@ export function HostsPanel({
                   }),
                 );
                 const result = await bulkImportSSHHosts(
-                  normalized,
+                  normalized as unknown as HostData[],
                   importOverwriteRef.current,
                   credentialsArray,
                 );
@@ -561,11 +562,7 @@ export function HostsPanel({
                       setProxmoxHostId(undefined);
                       setProxmoxDialogOpen(true);
                     }}
-                    disabled={
-                      !rawHosts.some(
-                        (h) => !isFolder(h) && (h as any).enableProxmox,
-                      )
-                    }
+                    disabled={!rawHosts.some((h) => h.enableProxmox)}
                   >
                     <Server className="size-3.5 mr-2" />
                     {t("hosts.proxmoxImportTitle")}

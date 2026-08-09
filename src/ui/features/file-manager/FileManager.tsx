@@ -2558,14 +2558,17 @@ function FileManagerContent({
     );
 
     openWindow({
-      type: "diff",
       title: t("fileManager.fileComparison", {
         file1: file1.name,
         file2: file2.name,
       }),
+      x: offsetX,
+      y: offsetY,
+      width: 800,
+      height: 600,
       isMaximized: false,
+      isMinimized: false,
       component: createWindowComponent,
-      zIndex: Date.now(),
     });
 
     toast.success(
@@ -2950,7 +2953,6 @@ function FileManagerContent({
                 currentHost={currentHost}
                 currentPath={currentPath}
                 onPathChange={navigateTo}
-                onLoadDirectory={loadDirectory}
                 onFileOpen={handleSidebarFileOpen}
                 onItemContextMenu={handleSidebarItemContextMenu}
                 sshSessionId={sshSessionId}

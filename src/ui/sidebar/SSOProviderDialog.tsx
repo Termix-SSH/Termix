@@ -75,7 +75,7 @@ function emptyOidc(): OIDCProviderConfig {
   };
 }
 
-function emptyLdap(): LDAPProviderConfig {
+function emptyLdap(): Required<LDAPProviderConfig> {
   return {
     host: "",
     port: 389,

@@ -100,7 +100,7 @@ export async function getUserAlerts(): Promise<{
 
 export async function dismissAlert(
   alertId: string,
-): Promise<ReleasesRSSResponse> {
+): Promise<Record<string, unknown>> {
   try {
     const response = await authApi.post("/alerts/dismiss", { alertId });
     return response.data;
@@ -141,7 +141,7 @@ export interface ReleasesRSSResponse {
 
 export async function getReleasesRSS(
   perPage: number = 100,
-): Promise<Record<string, unknown>> {
+): Promise<ReleasesRSSResponse> {
   try {
     const response = await authApi.get(`/releases/rss?per_page=${perPage}`);
     return response.data;

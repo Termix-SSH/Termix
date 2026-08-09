@@ -41,7 +41,6 @@ const FileManagerApp: React.FC<FileManagerAppProps> = ({
 
         return (
           <FileManager
-            embedded={true}
             initialHost={hostConfig}
             initialPath={initialPath}
             onClose={() => {}}
