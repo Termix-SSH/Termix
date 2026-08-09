@@ -151,6 +151,7 @@ export type Host = {
     metricsInterval: number;
     useGlobalMetricsInterval: boolean;
     enabledWidgets: string[];
+    excludedMounts?: string[];
   };
   quickActions: { name: string; snippetId: string }[];
 

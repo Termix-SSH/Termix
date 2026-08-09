@@ -137,6 +137,7 @@ interface StatsConfig {
   metricsInterval: number;
   useGlobalMetricsInterval?: boolean;
   disableTcpPing?: boolean;
+  excludedMounts?: string[];
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -157,6 +158,7 @@ const DEFAULT_STATS_CONFIG: StatsConfig = {
   statusCheckInterval: 60,
   metricsEnabled: true,
   metricsInterval: 30,
+  excludedMounts: [],
 };
 
 interface HostPollingConfig {
@@ -1520,10 +1522,13 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     const existingSession = metricsSessions[sessionKey];
 
     try {
+      const excludedMounts =
+        pollingManager.parseStatsConfig(host.statsConfig).excludedMounts;
+
       const collectFn = async (client: Client) => {
         const cpu = await collectCpuMetrics(client);
         const memory = await collectMemoryMetrics(client);
-        const disk = await collectDiskMetrics(client);
+        const disk = await collectDiskMetrics(client, excludedMounts);
         const network = await collectNetworkMetrics(client);
         const uptime = await collectUptimeMetrics(client);
         const processes = await collectProcessesMetrics(client);

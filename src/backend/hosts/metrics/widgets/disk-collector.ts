@@ -5,12 +5,14 @@ const PSEUDO_FS_RE = /^(tmpfs|devtmpfs|overlay|udev|none|shm)$/;
 
 export interface DfRow {
   filesystem: string;
+  type: string;
   mount: string;
   parts: string[];
 }
 
 export interface DiskFilesystem {
   filesystem: string;
+  type: string;
   mount: string;
   percent: number | null;
   usedHuman: string | null;
@@ -21,6 +23,10 @@ export interface DiskFilesystem {
   availableBytes: number | null;
 }
 
+// Parses `df -T -P`-style output: Filesystem, Type, then the size columns,
+// with Mounted-on last. The Type column (e.g. ext4, nfs4, cifs) is what lets
+// callers filter network shares out by filesystem type rather than guessing
+// from the source path.
 export function parseDfLines(output: string): DfRow[] {
   return output
     .split("\n")
@@ -28,15 +34,20 @@ export function parseDfLines(output: string): DfRow[] {
     .filter(Boolean)
     .map((line) => {
       const parts = line.split(/\s+/);
-      return { filesystem: parts[0] || "", mount: parts[5] || "", parts };
+      return {
+        filesystem: parts[0] || "",
+        type: parts[1] || "",
+        mount: parts[6] || "",
+        parts,
+      };
     })
     .filter(
-      (row) => row.parts.length >= 6 && !PSEUDO_FS_RE.test(row.filesystem),
+      (row) => row.parts.length >= 7 && !PSEUDO_FS_RE.test(row.type),
     );
 }
 
-// Finds the index of the most-utilized real filesystem in a `df -B1`-style
-// row set (parts[1] = total bytes, parts[2] = used bytes), so a nearly-full
+// Finds the index of the most-utilized real filesystem in a `df -T -B1`-style
+// row set (parts[2] = total bytes, parts[3] = used bytes), so a nearly-full
 // secondary mount (e.g. /data) isn't hidden behind a healthy root filesystem.
 export function findWorstMountIndex(bytesRows: DfRow[]): {
   index: number;
@@ -48,8 +59,8 @@ export function findWorstMountIndex(bytesRows: DfRow[]): {
   let worstTotalBytes = 0;
 
   bytesRows.forEach((row, index) => {
-    const totalBytes = Number(row.parts[1]);
-    const usedBytes = Number(row.parts[2]);
+    const totalBytes = Number(row.parts[2]);
+    const usedBytes = Number(row.parts[3]);
     if (
       !Number.isFinite(totalBytes) ||
       !Number.isFinite(usedBytes) ||
@@ -74,9 +85,9 @@ export function findWorstMountIndex(bytesRows: DfRow[]): {
   };
 }
 
-// Merges the `df -B1` and `df -h` row sets into one filesystem list. Byte rows
-// drive the maths; human rows only supply the display strings, matched by mount
-// point so a mismatched row count can't shift the columns.
+// Merges the `df -T -B1` and `df -T -h` row sets into one filesystem list.
+// Byte rows drive the maths; human rows only supply the display strings,
+// matched by mount point so a mismatched row count can't shift the columns.
 export function buildFilesystemList(
   bytesRows: DfRow[],
   humanRows: DfRow[],
@@ -85,9 +96,9 @@ export function buildFilesystemList(
 
   return bytesRows
     .map((row, index) => {
-      const totalBytes = Number(row.parts[1]);
-      const usedBytes = Number(row.parts[2]);
-      const availableBytes = Number(row.parts[3]);
+      const totalBytes = Number(row.parts[2]);
+      const usedBytes = Number(row.parts[3]);
+      const availableBytes = Number(row.parts[4]);
       if (!Number.isFinite(totalBytes) || totalBytes <= 0) return null;
 
       const humanRow = aligned
@@ -100,11 +111,12 @@ export function buildFilesystemList(
 
       return {
         filesystem: row.filesystem,
+        type: row.type,
         mount: row.mount,
         percent: toFixedNum(percent, 0),
-        usedHuman: humanRow?.parts[2] || null,
-        totalHuman: humanRow?.parts[1] || null,
-        availableHuman: humanRow?.parts[3] || null,
+        usedHuman: humanRow?.parts[3] || null,
+        totalHuman: humanRow?.parts[2] || null,
+        availableHuman: humanRow?.parts[4] || null,
         usedBytes: Number.isFinite(usedBytes) ? usedBytes : null,
         totalBytes,
         availableBytes: Number.isFinite(availableBytes) ? availableBytes : null,
@@ -133,7 +145,34 @@ export function selectPrimaryFilesystem(
   return best;
 }
 
-export async function collectDiskMetrics(client: Client): Promise<{
+// Excluded mounts are user-configured per host: an exact mount-path match
+// (e.g. "/mnt/nas") or a filesystem-type substring match (e.g. "nfs" matches
+// nfs/nfs4, "cifs" matches cifs/smb3), so network shares can be dropped from
+// the headline percent and the filesystem list without hiding local disks.
+export function filterExcludedFilesystems(
+  filesystems: DiskFilesystem[],
+  excludedMounts?: string[] | null,
+): DiskFilesystem[] {
+  if (!excludedMounts || excludedMounts.length === 0) return filesystems;
+
+  const normalized = excludedMounts
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  if (normalized.length === 0) return filesystems;
+
+  return filesystems.filter((fs) => {
+    const mount = fs.mount.toLowerCase();
+    const type = fs.type.toLowerCase();
+    return !normalized.some(
+      (entry) => mount === entry || (type && type.includes(entry)),
+    );
+  });
+}
+
+export async function collectDiskMetrics(
+  client: Client,
+  excludedMounts?: string[] | null,
+): Promise<{
   percent: number | null;
   usedHuman: string | null;
   totalHuman: string | null;
@@ -143,13 +182,16 @@ export async function collectDiskMetrics(client: Client): Promise<{
 }> {
   try {
     const [diskOutHuman, diskOutBytes] = await Promise.all([
-      execCommand(client, "df -h -P | tail -n +2"),
-      execCommand(client, "df -B1 -P | tail -n +2"),
+      execCommand(client, "df -hT -P | tail -n +2"),
+      execCommand(client, "df -TB1 -P | tail -n +2"),
     ]);
 
     const humanRows = parseDfLines(diskOutHuman.stdout);
     const bytesRows = parseDfLines(diskOutBytes.stdout);
-    const filesystems = buildFilesystemList(bytesRows, humanRows);
+    const filesystems = filterExcludedFilesystems(
+      buildFilesystemList(bytesRows, humanRows),
+      excludedMounts,
+    );
     const primary = selectPrimaryFilesystem(filesystems);
 
     return {

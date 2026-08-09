@@ -79,6 +79,7 @@ interface MemoryMetrics {
 
 export interface DiskFilesystem {
   filesystem: string;
+  type: string;
   mount: string;
   percent: number | null;
   usedHuman: string | null;

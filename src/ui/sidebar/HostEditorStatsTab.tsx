@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Activity,
+  HardDrive,
   LayoutDashboard,
   Plus,
   Server,
@@ -28,6 +30,21 @@ export function HostStatsTab({
   snippets: { id: number; name: string }[];
 }) {
   const { t } = useTranslation();
+  const [newMount, setNewMount] = useState("");
+  const excludedMounts = form.statsConfig.excludedMounts ?? [];
+
+  const addExcludedMount = () => {
+    const value = newMount.trim();
+    if (!value || excludedMounts.includes(value)) {
+      setNewMount("");
+      return;
+    }
+    setField("statsConfig", {
+      ...form.statsConfig,
+      excludedMounts: [...excludedMounts, value],
+    });
+    setNewMount("");
+  };
 
   return (
     <>
@@ -141,6 +158,70 @@ export function HostStatsTab({
                 />
               </SettingRow>
             )}
+        </div>
+      </SectionCard>
+      <SectionCard
+        title={t("hosts.excludedMountsLabel")}
+        icon={<HardDrive className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-3 py-3">
+          <p className="text-xs text-muted-foreground">
+            {t("hosts.excludedMountsDesc")}
+          </p>
+          <div className="flex items-center gap-2">
+            <Input
+              className="h-7 text-xs flex-1"
+              placeholder={t("hosts.excludedMountsPlaceholder")}
+              value={newMount}
+              onChange={(e) => setNewMount(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addExcludedMount();
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px] px-2 border-accent-brand/40 text-accent-brand"
+              onClick={addExcludedMount}
+            >
+              <Plus className="size-3 mr-1" /> {t("hosts.addExcludedMount")}
+            </Button>
+          </div>
+          {excludedMounts.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-4 text-muted-foreground/40 gap-1.5">
+              <HardDrive className="size-6" />
+              <span className="text-xs">{t("hosts.excludedMountsEmpty")}</span>
+            </div>
+          )}
+          {excludedMounts.map((mount, i) => (
+            <div
+              key={`${mount}-${i}`}
+              className="flex items-center gap-2 p-2 bg-muted/20 border border-border group"
+            >
+              <span className="text-xs flex-1 font-mono truncate">
+                {mount}
+              </span>
+              <button
+                className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() =>
+                  setField(
+                    "statsConfig",
+                    {
+                      ...form.statsConfig,
+                      excludedMounts: excludedMounts.filter(
+                        (_, idx) => idx !== i,
+                      ),
+                    },
+                  )
+                }
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       </SectionCard>
       <SectionCard

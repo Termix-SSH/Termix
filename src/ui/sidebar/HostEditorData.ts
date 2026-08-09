@@ -239,6 +239,7 @@ export function createHostEditorForm(
         "firewall",
         "temperature",
       ],
+      excludedMounts: [] as string[],
     },
   };
 }
