@@ -240,6 +240,17 @@ function guestSourceKey(sourceHostId: number, guest: ProxmoxGuest): string {
   return `${sourceHostId}:${guest.node}:${guest.type}:${guest.vmid}`;
 }
 
+function guestTags(guest: ProxmoxGuest): string[] {
+  const idTag = guest.type === "lxc" ? `ct-${guest.vmid}` : `vm-${guest.vmid}`;
+  return [
+    "proxmox",
+    guest.type,
+    guest.node,
+    idTag,
+    ...(guest.enableDocker ? ["docker"] : []),
+  ];
+}
+
 function mergeTags(
   existing: unknown,
   additions: string[],
@@ -701,11 +712,7 @@ async function syncProxmoxHost(
         username,
         connectionType,
         folder: existing?.folder || sourceHostName,
-        tags: mergeTags(
-          existing?.tags,
-          ["proxmox", guest.type, guest.node],
-          ["proxmox-missing"],
-        ),
+        tags: mergeTags(existing?.tags, guestTags(guest), ["proxmox-missing"]),
         proxmoxConfig: JSON.stringify(proxmoxConfig),
         updatedAt: now,
       };

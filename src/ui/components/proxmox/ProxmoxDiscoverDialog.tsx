@@ -166,7 +166,13 @@ export function ProxmoxDiscoverDialog({
         enableRdp: g.connectionType === "rdp",
         enableDocker: g.enableDocker,
         connectionType: g.connectionType,
-        tags: ["proxmox", g.type, g.node],
+        tags: [
+          "proxmox",
+          g.type,
+          g.node,
+          g.type === "lxc" ? `ct-${g.vmid}` : `vm-${g.vmid}`,
+          ...(g.enableDocker ? ["docker"] : []),
+        ],
         proxmoxConfig: {
           source: {
             source: "proxmox",
