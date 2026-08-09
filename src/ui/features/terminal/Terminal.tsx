@@ -2737,7 +2737,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             "ArrowUp",
             "ArrowDown",
           ];
-          if (arrowCodes.includes(e.code)) {
+          if (arrowCodes.includes(e.code) || /^Digit[1-9]$/.test(e.code)) {
             e.stopPropagation();
             globalShortcutHandler.current?.(e);
             return false;

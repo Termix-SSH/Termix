@@ -603,6 +603,18 @@ export function AppShell({
           }
           return;
         }
+
+        // Alt+1..9 — jump directly to the tab at that position
+        const digitMatch = /^Digit([1-9])$/.exec(e.code);
+        if (digitMatch) {
+          const currentTabs = tabsRef.current;
+          const index = Number(digitMatch[1]) - 1;
+          if (index < currentTabs.length) {
+            e.preventDefault();
+            setActiveTabId(currentTabs[index].id);
+          }
+          return;
+        }
       }
 
       // Ctrl+Shift+] / Ctrl+Shift+[ — cycle through open tabs (] = next, [ = previous)

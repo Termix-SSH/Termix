@@ -376,6 +376,10 @@ export function SplitScreenPanel({
               keys: ["Ctrl", "Shift", "["],
               label: t("newUi.sidebar.splitScreen.hotkeysPrevTab"),
             },
+            {
+              keys: ["Alt", "1-9"],
+              label: t("newUi.sidebar.splitScreen.hotkeysJumpTab"),
+            },
           ].map(({ keys, label }) => (
             <div
               key={label}
