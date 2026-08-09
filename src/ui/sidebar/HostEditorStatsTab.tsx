@@ -201,21 +201,16 @@ export function HostStatsTab({
               key={`${mount}-${i}`}
               className="flex items-center gap-2 p-2 bg-muted/20 border border-border group"
             >
-              <span className="text-xs flex-1 font-mono truncate">
-                {mount}
-              </span>
+              <span className="text-xs flex-1 font-mono truncate">{mount}</span>
               <button
                 className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() =>
-                  setField(
-                    "statsConfig",
-                    {
-                      ...form.statsConfig,
-                      excludedMounts: excludedMounts.filter(
-                        (_, idx) => idx !== i,
-                      ),
-                    },
-                  )
+                  setField("statsConfig", {
+                    ...form.statsConfig,
+                    excludedMounts: excludedMounts.filter(
+                      (_, idx) => idx !== i,
+                    ),
+                  })
                 }
               >
                 <Trash2 className="size-3.5" />

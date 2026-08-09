@@ -62,11 +62,7 @@ function runHook(
         family?: number,
       ) => void,
     ) => {
-      cb(
-        error,
-        addresses,
-        typeof addresses === "string" ? 4 : undefined,
-      );
+      cb(error, addresses, typeof addresses === "string" ? 4 : undefined);
     },
   );
 
@@ -76,24 +72,12 @@ function runHook(
   hook("example.invalid", lookupOptions, callback);
 
   return { callback, fakeLookup };
-};
+}
 
 const lookupOptionsCases: Array<[string, LookupOptions, unknown[]]> = [
-  [
-    "all:true",
-    { all: true },
-    ["", 0],
-  ],
-  [
-    "all:false",
-    { all: false },
-    ["", 0],
-  ],
-  [
-    "all omitted",
-    {},
-    ["", 0],
-  ],
+  ["all:true", { all: true }, ["", 0]],
+  ["all:false", { all: false }, ["", 0]],
+  ["all omitted", {}, ["", 0]],
 ];
 
 const publicAddresses: LookupAddress[] = [
@@ -155,53 +139,25 @@ describe("createDnsLookupHook", () => {
   );
 
   it("returns a single lookup result when all is false", () => {
-    const { callback } = runHook(
-      "104.21.52.150",
-      null,
-      { all: false },
-    );
+    const { callback } = runHook("104.21.52.150", null, { all: false });
 
-    expect(callback).toHaveBeenCalledWith(
-      null,
-      "104.21.52.150",
-      4,
-    );
+    expect(callback).toHaveBeenCalledWith(null, "104.21.52.150", 4);
   });
 
   it("returns a single lookup result when all is omitted", () => {
-    const { callback } = runHook(
-      "104.21.52.150",
-      null,
-      {},
-    );
+    const { callback } = runHook("104.21.52.150", null, {});
 
-    expect(callback).toHaveBeenCalledWith(
-      null,
-      "104.21.52.150",
-      4,
-    );
+    expect(callback).toHaveBeenCalledWith(null, "104.21.52.150", 4);
   });
 
   it("returns all lookup results when all is true", () => {
-    const { callback } = runHook(
-      publicAddresses,
-      null,
-      { all: true },
-    );
+    const { callback } = runHook(publicAddresses, null, { all: true });
 
-    expect(callback).toHaveBeenCalledWith(
-      null,
-      publicAddresses,
-      0,
-    );
+    expect(callback).toHaveBeenCalledWith(null, publicAddresses, 0);
   });
 
   it("rejects invalid single lookup results with a DNS lookup error", () => {
-    const { callback } = runHook(
-      undefined,
-      null,
-      { all: false },
-    );
+    const { callback } = runHook(undefined, null, { all: false });
 
     expect(callback).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -225,18 +181,13 @@ describe("createDnsLookupHook", () => {
   });
 
   it("propagates a real DNS lookup error untouched", () => {
-    const dnsError = Object.assign(
-      new Error("getaddrinfo ENOTFOUND"),
-      { code: "ENOTFOUND" },
-    );
+    const dnsError = Object.assign(new Error("getaddrinfo ENOTFOUND"), {
+      code: "ENOTFOUND",
+    });
 
     const { callback } = runHook([], dnsError);
 
-    expect(callback).toHaveBeenCalledWith(
-      dnsError,
-      "",
-      0,
-    );
+    expect(callback).toHaveBeenCalledWith(dnsError, "", 0);
   });
 
   it("always asks the underlying resolver for all:true regardless of the caller's option", () => {
