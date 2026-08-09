@@ -23,9 +23,14 @@ interface TailscaleAPIDevice {
   nodeId?: string;
 }
 
-const TAILSCALE_API_BASE = "https://api.tailscale.com/api/v2";
+const DEFAULT_TAILSCALE_API_BASE = "https://api.tailscale.com/api/v2";
 
 const router = Router();
+
+function normalizeApiBase(raw: string | null): string {
+  const trimmed = (raw ?? "").trim().replace(/\/+$/, "");
+  return trimmed || DEFAULT_TAILSCALE_API_BASE;
+}
 
 export function registerTailscaleRoutes(
   app: ExpressRouter,
@@ -56,14 +61,16 @@ export function registerTailscaleRoutes(
    */
   router.get("/devices", authenticateJWT, async (_req, res) => {
     try {
-      const apiKey =
-        (await createCurrentSettingsRepository().get("tailscale_api_key")) ??
-        "";
+      const settingsRepo = createCurrentSettingsRepository();
+      const apiKey = (await settingsRepo.get("tailscale_api_key")) ?? "";
       if (!apiKey) {
         return res.json({ devices: [], hasApiKey: false });
       }
+      const apiBase = normalizeApiBase(
+        await settingsRepo.get("tailscale_api_base_url"),
+      );
 
-      const url = `${TAILSCALE_API_BASE}/tailnet/-/devices?fields=all`;
+      const url = `${apiBase}/tailnet/-/devices?fields=all`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${apiKey}`,

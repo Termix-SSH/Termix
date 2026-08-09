@@ -59,6 +59,8 @@ type GeneralSettingsSectionProps = {
   handleSaveLogLevel: (level: string) => void;
   tailscaleApiKey: string;
   setTailscaleApiKey: Dispatch<SetStateAction<string>>;
+  tailscaleApiBaseUrl: string;
+  setTailscaleApiBaseUrl: Dispatch<SetStateAction<string>>;
   handleSaveTailscaleApiKey: () => void;
 };
 
@@ -101,6 +103,8 @@ export function AdminGeneralSettingsSection({
   handleSaveLogLevel,
   tailscaleApiKey,
   setTailscaleApiKey,
+  tailscaleApiBaseUrl,
+  setTailscaleApiBaseUrl,
   handleSaveTailscaleApiKey,
 }: GeneralSettingsSectionProps) {
   const { t } = useTranslation();
@@ -362,7 +366,7 @@ export function AdminGeneralSettingsSection({
               type="password"
               value={tailscaleApiKey}
               onChange={(e) => setTailscaleApiKey(e.target.value)}
-              placeholder="tskey-api-..."
+              placeholder="tskey-api-... / hskey-api-..."
               className="text-sm"
             />
             <Button
@@ -373,6 +377,20 @@ export function AdminGeneralSettingsSection({
             >
               {t("common.save")}
             </Button>
+          </div>
+          <div className="flex flex-col gap-1.5 mt-1">
+            <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
+              {t("admin.tailscaleApiBaseUrl")}
+            </label>
+            <span className="text-[10px] text-muted-foreground">
+              {t("admin.tailscaleApiBaseUrlDescription")}
+            </span>
+            <Input
+              value={tailscaleApiBaseUrl}
+              onChange={(e) => setTailscaleApiBaseUrl(e.target.value)}
+              placeholder="https://api.tailscale.com/api/v2"
+              className="text-sm"
+            />
           </div>
         </div>
 

@@ -341,17 +341,22 @@ export function registerUserSettingsRoutes(
    *                   description: Masked API key or empty string if not set.
    *                 hasApiKey:
    *                   type: boolean
+   *                 apiBaseUrl:
+   *                   type: string
+   *                   description: Custom control-plane API base URL (e.g. a Headscale instance), or empty string for the Tailscale default.
    */
   router.get("/tailscale-settings", authenticateJWT, async (_req, res) => {
     try {
-      const apiKey =
-        (await createCurrentSettingsRepository().get("tailscale_api_key")) ??
-        "";
+      const settingsRepo = createCurrentSettingsRepository();
+      const apiKey = (await settingsRepo.get("tailscale_api_key")) ?? "";
+      const apiBaseUrl =
+        (await settingsRepo.get("tailscale_api_base_url")) ?? "";
       res.json({
         apiKey: apiKey
           ? `${apiKey.slice(0, 6)}${"*".repeat(Math.max(0, apiKey.length - 6))}`
           : "",
         hasApiKey: !!apiKey,
+        apiBaseUrl,
       });
     } catch (err) {
       authLogger.error("Failed to get Tailscale settings", err);
@@ -376,6 +381,9 @@ export function registerUserSettingsRoutes(
    *             properties:
    *               apiKey:
    *                 type: string
+   *               apiBaseUrl:
+   *                 type: string
+   *                 description: Optional custom control-plane API base URL (e.g. a Headscale instance). Leave empty to use the Tailscale default.
    *     responses:
    *       200:
    *         description: Tailscale settings updated.
@@ -391,11 +399,21 @@ export function registerUserSettingsRoutes(
       if (!actor) {
         return res.status(403).json({ error: "Not authorized" });
       }
-      const { apiKey } = req.body;
+      const { apiKey, apiBaseUrl } = req.body;
       if (typeof apiKey !== "string") {
         return res.status(400).json({ error: "apiKey must be a string" });
       }
-      await createCurrentSettingsRepository().set("tailscale_api_key", apiKey);
+      if (apiBaseUrl !== undefined && typeof apiBaseUrl !== "string") {
+        return res.status(400).json({ error: "apiBaseUrl must be a string" });
+      }
+      const settingsRepo = createCurrentSettingsRepository();
+      await settingsRepo.set("tailscale_api_key", apiKey);
+      if (apiBaseUrl !== undefined) {
+        await settingsRepo.set(
+          "tailscale_api_base_url",
+          apiBaseUrl.trim().replace(/\/+$/, ""),
+        );
+      }
 
       const { ipAddress, userAgent } = getRequestMeta(req);
       await logAudit({

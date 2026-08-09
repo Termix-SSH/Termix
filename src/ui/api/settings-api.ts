@@ -77,6 +77,7 @@ export async function updateSessionTimeout(
 export async function getTailscaleSettings(): Promise<{
   apiKey: string;
   hasApiKey: boolean;
+  apiBaseUrl: string;
 }> {
   try {
     const response = await authApi.get("/users/tailscale-settings");
@@ -88,10 +89,12 @@ export async function getTailscaleSettings(): Promise<{
 
 export async function updateTailscaleSettings(
   apiKey: string,
+  apiBaseUrl?: string,
 ): Promise<{ hasApiKey: boolean }> {
   try {
     const response = await authApi.patch("/users/tailscale-settings", {
       apiKey,
+      apiBaseUrl,
     });
     return response.data;
   } catch (error) {

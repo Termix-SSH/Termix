@@ -131,6 +131,7 @@ export function AdminSettingsPanel({
   const [guacUrl, setGuacUrl] = useState("guacd:4822");
   const [logLevel, setLogLevel] = useState("info");
   const [tailscaleApiKey, setTailscaleApiKey] = useState("");
+  const [tailscaleApiBaseUrl, setTailscaleApiBaseUrl] = useState("");
   const [commandHistoryEnabled, setCommandHistoryEnabled] = useState(true);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
@@ -337,6 +338,7 @@ export function AdminSettingsPanel({
       }
       if (tailscale.status === "fulfilled") {
         setTailscaleApiKey(tailscale.value.apiKey ?? "");
+        setTailscaleApiBaseUrl(tailscale.value.apiBaseUrl ?? "");
       }
       if (cmdHistory.status === "fulfilled") {
         setCommandHistoryEnabled(cmdHistory.value.enabled);
@@ -542,7 +544,7 @@ export function AdminSettingsPanel({
 
   async function handleSaveTailscaleApiKey() {
     try {
-      await updateTailscaleSettings(tailscaleApiKey);
+      await updateTailscaleSettings(tailscaleApiKey, tailscaleApiBaseUrl);
       toast.success(t("admin.tailscaleSettingsSaved"));
     } catch {
       toast.error(t("admin.tailscaleSettingsSaveFailed"));
@@ -968,6 +970,8 @@ export function AdminSettingsPanel({
         handleSaveLogLevel={handleSaveLogLevel}
         tailscaleApiKey={tailscaleApiKey}
         setTailscaleApiKey={setTailscaleApiKey}
+        tailscaleApiBaseUrl={tailscaleApiBaseUrl}
+        setTailscaleApiBaseUrl={setTailscaleApiBaseUrl}
         handleSaveTailscaleApiKey={handleSaveTailscaleApiKey}
       />
 
