@@ -336,17 +336,48 @@ export function Auth({ onLogin }: AuthProps) {
     // Electron). Waiting avoids flashing a login screen the user is about
     // to skip past via auto-login.
     if (desktopAutoSessionDone !== true) return;
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    // Right after a server update/restart (or behind a reverse proxy that's
+    // still warming up), the very first request can transiently fail even
+    // though the backend/database is fine seconds later. A single failure
+    // here used to permanently show the "could not connect to the database"
+    // screen, forcing users to manually reload -- sometimes repeatedly.
+    // Retry a few times with backoff before treating it as a real failure.
+    const maxAttempts = 5;
+    const attempt = (attemptNumber: number) => {
+      getSetupRequired()
+        .then((res) => {
+          if (cancelled) return;
+          if (res.setup_required) {
+            setFirstUser(true);
+            setView("register");
+          }
+          setDbConnectionFailed(false);
+          setDbHealthChecking(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attemptNumber >= maxAttempts) {
+            setDbConnectionFailed(true);
+            setDbHealthChecking(false);
+            return;
+          }
+          const delay = Math.min(500 * 2 ** attemptNumber, 5000);
+          retryTimer = setTimeout(() => {
+            if (!cancelled) attempt(attemptNumber + 1);
+          }, delay);
+        });
+    };
+
     setDbHealthChecking(true);
-    getSetupRequired()
-      .then((res) => {
-        if (res.setup_required) {
-          setFirstUser(true);
-          setView("register");
-        }
-        setDbConnectionFailed(false);
-      })
-      .catch(() => setDbConnectionFailed(true))
-      .finally(() => setDbHealthChecking(false));
+    attempt(0);
+
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
   }, [desktopAutoSessionDone]);
 
   // A cold first launch spawns the embedded backend as a separate process
