@@ -178,6 +178,11 @@ const clientOptions = {
       cursor: "remote",
       width: 1280,
       height: 720,
+      // macOS Screen Sharing negotiates its VNC security type over several
+      // round trips (RFB type 30 -> 33/36/2/35) and can fail the first
+      // attempt; retrying lets guacd's VNC client re-establish instead of
+      // guacd giving up immediately (Support#1063).
+      autoretry: 2,
     },
     telnet: {
       "terminal-type": "xterm-256color",
