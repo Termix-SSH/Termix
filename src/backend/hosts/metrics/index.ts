@@ -1522,8 +1522,9 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
     const existingSession = metricsSessions[sessionKey];
 
     try {
-      const excludedMounts =
-        pollingManager.parseStatsConfig(host.statsConfig).excludedMounts;
+      const excludedMounts = pollingManager.parseStatsConfig(
+        host.statsConfig,
+      ).excludedMounts;
 
       const collectFn = async (client: Client) => {
         const cpu = await collectCpuMetrics(client);

@@ -41,9 +41,7 @@ export function parseDfLines(output: string): DfRow[] {
         parts,
       };
     })
-    .filter(
-      (row) => row.parts.length >= 7 && !PSEUDO_FS_RE.test(row.type),
-    );
+    .filter((row) => row.parts.length >= 7 && !PSEUDO_FS_RE.test(row.type));
 }
 
 // Finds the index of the most-utilized real filesystem in a `df -T -B1`-style

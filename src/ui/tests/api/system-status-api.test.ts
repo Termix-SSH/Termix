@@ -25,9 +25,9 @@ describe("releaseUrlFrom", () => {
   it("returns an empty string when the response carries no release", () => {
     // The badge treats "" as "nothing to link to" and stays an inert span, so
     // a version response without a release must not produce a dead anchor.
-    expect(releaseUrlFrom({ status: "up_to_date", localVersion: "2.6.1" })).toBe(
-      "",
-    );
+    expect(
+      releaseUrlFrom({ status: "up_to_date", localVersion: "2.6.1" }),
+    ).toBe("");
   });
 
   it("returns an empty string when the release carries no URL", () => {
