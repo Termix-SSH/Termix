@@ -1244,6 +1244,33 @@ router.put(
         for (const field of OWNER_PRIVATE_AUTH_FIELDS.ssh) {
           delete sshDataObj[field];
         }
+      } else if (
+        sshDataObj.terminalConfig &&
+        (hostData.terminalConfig as Record<string, unknown> | undefined)
+          ?.sudoPassword === undefined
+      ) {
+        // The editor omits sudoPassword entirely when the user hasn't
+        // touched the field, so preserve whatever is already stored instead
+        // of letting the wholesale terminalConfig replacement below wipe it.
+        const existingHost =
+          await createCurrentHostResolutionRepository().findHostById(
+            Number(hostId),
+            ownerId,
+          );
+        const existingTerminalConfig = existingHost?.terminalConfig
+          ? (JSON.parse(existingHost.terminalConfig as string) as Record<
+              string,
+              unknown
+            >)
+          : undefined;
+        if (existingTerminalConfig?.sudoPassword !== undefined) {
+          const incomingTerminalConfig = JSON.parse(
+            sshDataObj.terminalConfig as string,
+          ) as Record<string, unknown>;
+          incomingTerminalConfig.sudoPassword =
+            existingTerminalConfig.sudoPassword;
+          sshDataObj.terminalConfig = JSON.stringify(incomingTerminalConfig);
+        }
       }
 
       await createCurrentHostRepository().updateEncryptedForUser(

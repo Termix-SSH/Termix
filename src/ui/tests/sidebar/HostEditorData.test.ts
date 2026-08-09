@@ -217,6 +217,52 @@ describe("buildHostEditorPayload auth field isolation", () => {
   });
 });
 
+describe("sudo password persistence indicator", () => {
+  it("seeds a sentinel value when the host reports a saved sudo password", () => {
+    const host = { hasSudoPassword: true } as Host;
+    const form = createHostEditorForm(host);
+
+    expect(form.sudoPassword).toBe("existing_sudo_password");
+  });
+
+  it("omits sudoPassword from the payload when the sentinel is unchanged, so a save doesn't wipe it", () => {
+    const host = { hasSudoPassword: true } as Host;
+    const form = { ...createHostEditorForm(host) };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.sudoPassword).toBeUndefined();
+    expect(JSON.parse(JSON.stringify(tc))).not.toHaveProperty("sudoPassword");
+  });
+
+  it("sends a newly typed sudo password", () => {
+    const host = { hasSudoPassword: true } as Host;
+    const form = {
+      ...createHostEditorForm(host),
+      sudoPassword: "new-sudo-pass",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.sudoPassword).toBe("new-sudo-pass");
+  });
+
+  it("sends null to explicitly clear a saved sudo password", () => {
+    const host = { hasSudoPassword: true } as Host;
+    const form = {
+      ...createHostEditorForm(host),
+      sudoPassword: "",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+    const tc = payload.terminalConfig as Record<string, unknown> | null;
+
+    expect(tc?.sudoPassword).toBeNull();
+  });
+});
+
 describe("RDP/VNC/Telnet password persistence indicator", () => {
   it("seeds a sentinel value when the host reports a saved rdp password", () => {
     const host = {

@@ -656,6 +656,7 @@ export interface TerminalConfig {
   autoMosh: boolean;
   moshCommand: string;
   sudoPasswordAutoFill: boolean;
+  sudoPassword?: string | null;
   keepaliveInterval?: number;
   keepaliveCountMax?: number;
   autoTmux: boolean;

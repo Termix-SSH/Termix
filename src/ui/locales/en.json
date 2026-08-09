@@ -915,6 +915,7 @@
     "sudoPasswordAutoFillShortDesc": "Automatically provide sudo password when prompted",
     "sudoPasswordAutoFillDesc": "Store a sudo password so host metrics, terminal prompts, and others can run privileged commands automatically.",
     "sudoPasswordLabel": "Sudo Password",
+    "sudoPasswordSaved": "Password saved, type to change",
     "environmentVariablesLabel": "Environment Variables",
     "addVariableBtn": "Add Variable",
     "noEnvVars": "No environment variables configured.",

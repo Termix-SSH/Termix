@@ -154,7 +154,9 @@ export function createHostEditorForm(
     autoMosh: host?.terminalConfig?.autoMosh ?? false,
     autoTmux: host?.terminalConfig?.autoTmux ?? false,
     sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
-    sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
+    sudoPassword: host?.hasSudoPassword
+      ? "existing_sudo_password"
+      : (host?.terminalConfig?.sudoPassword ?? ""),
     keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
     keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
     backgroundImage: host?.terminalConfig?.backgroundImage ?? "",
@@ -454,7 +456,10 @@ export function buildHostEditorPayload(
           autoMosh: form.autoMosh,
           autoTmux: form.autoTmux,
           sudoPasswordAutoFill: form.sudoPasswordAutoFill,
-          sudoPassword: form.sudoPassword || null,
+          sudoPassword:
+            form.sudoPassword === "existing_sudo_password"
+              ? undefined
+              : form.sudoPassword || null,
           keepaliveInterval: Number(form.keepaliveInterval),
           keepaliveCountMax: Number(form.keepaliveCountMax),
           environmentVariables: form.environmentVariables,

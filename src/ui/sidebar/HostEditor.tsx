@@ -1041,8 +1041,20 @@ export function HostEditor({
                       </label>
                       <PasswordInput
                         className="h-8 text-xs pr-8"
-                        placeholder="••••••••"
-                        value={form.sudoPassword}
+                        placeholder={
+                          form.sudoPassword === "existing_sudo_password"
+                            ? t("hosts.sudoPasswordSaved")
+                            : "••••••••"
+                        }
+                        value={
+                          form.sudoPassword === "existing_sudo_password"
+                            ? ""
+                            : form.sudoPassword
+                        }
+                        onFocus={() => {
+                          if (form.sudoPassword === "existing_sudo_password")
+                            setField("sudoPassword", "");
+                        }}
                         onChange={(e) =>
                           setField("sudoPassword", e.target.value)
                         }
