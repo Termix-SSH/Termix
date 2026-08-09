@@ -311,6 +311,7 @@ export type Tab = {
     disconnect?: () => void;
     isConnected?: () => boolean;
     sendInput?: (data: string) => void;
+    paste?: (text: string) => void;
     reconnect?: () => void;
     fit?: () => void;
     notifyResize?: () => void;

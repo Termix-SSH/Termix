@@ -41,6 +41,7 @@ import {
 import {
   Box,
   ChevronDown,
+  Clipboard,
   Copy,
   Cpu,
   Database,
@@ -147,6 +148,7 @@ function SnippetFormDialog({
   const [description, setDescription] = useState("");
   const [folder, setFolder] = useState<string | null>(null);
   const [content, setContent] = useState("");
+  const [isNote, setIsNote] = useState(false);
   const [selectedHostIds, setSelectedHostIds] = useState<Set<number>>(
     new Set(),
   );
@@ -165,6 +167,7 @@ function SnippetFormDialog({
       setDescription(snippet?.description ?? "");
       setFolder(snippet?.folder ?? null);
       setContent(snippet?.content ?? "");
+      setIsNote(snippet?.isNote ?? false);
       setSelectedHostIds(new Set(snippet?.hostIds ?? []));
     }
   }, [open, snippet]);
@@ -189,8 +192,11 @@ function SnippetFormDialog({
         description: description.trim() || undefined,
         content: content.trim(),
         folder,
+        isNote,
         hostIds:
-          selectedHostIds.size > 0 ? Array.from(selectedHostIds) : undefined,
+          !isNote && selectedHostIds.size > 0
+            ? Array.from(selectedHostIds)
+            : undefined,
       },
       snippet?.id,
     );
@@ -255,78 +261,109 @@ function SnippetFormDialog({
             />
           </div>
           <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-semibold text-muted-foreground">
+              {t("newUi.sidebar.snippets.typeLabel")}
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setIsNote(false)}
+                className={`flex-1 py-1.5 text-xs border transition-colors ${!isNote ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("newUi.sidebar.snippets.typeCommand")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsNote(true)}
+                className={`flex-1 py-1.5 text-xs border transition-colors ${isNote ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+              >
+                {t("newUi.sidebar.snippets.typeNote")}
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold">
-              {t("newUi.sidebar.snippets.commandLabel")}{" "}
+              {isNote
+                ? t("newUi.sidebar.snippets.noteLabel")
+                : t("newUi.sidebar.snippets.commandLabel")}{" "}
               <span className="text-accent-brand">*</span>
             </label>
             <textarea
-              placeholder={t("newUi.sidebar.snippets.commandPlaceholder")}
+              placeholder={
+                isNote
+                  ? t("newUi.sidebar.snippets.notePlaceholder")
+                  : t("newUi.sidebar.snippets.commandPlaceholder")
+              }
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="w-full h-36 px-3 py-2 text-xs bg-background border border-border text-foreground placeholder:text-muted-foreground resize-none outline-none focus:ring-1 focus:ring-ring font-mono"
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-              <Server className="size-3.5" />
-              {t("newUi.sidebar.snippets.targetHostsLabel")}{" "}
-              <span className="font-normal">
-                ({t("newUi.sidebar.snippets.optional")})
-              </span>
-            </label>
-            <p className="text-xs text-muted-foreground/70">
-              {t("newUi.sidebar.snippets.targetHostsHint")}
-            </p>
-            {availableHosts.length === 0 ? (
-              <span className="text-xs text-muted-foreground/50">
-                {t("newUi.sidebar.snippets.noHostsAvailable")}
-              </span>
-            ) : (
-              <div className="flex flex-col gap-1 max-h-32 overflow-y-auto border border-border p-1.5">
-                {availableHosts.map((host) => {
-                  const selected = selectedHostIds.has(host.id);
-                  return (
-                    <button
-                      key={host.id}
-                      type="button"
-                      onClick={() => toggleHost(host.id)}
-                      className={`flex items-center gap-2 px-2 py-1.5 text-left transition-colors ${
-                        selected
-                          ? "bg-accent-brand/10 text-accent-brand"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      <div
-                        className={`size-3 border-2 flex items-center justify-center shrink-0 transition-colors ${
+          {!isNote && (
+            <div className="flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                <Server className="size-3.5" />
+                {t("newUi.sidebar.snippets.targetHostsLabel")}{" "}
+                <span className="font-normal">
+                  ({t("newUi.sidebar.snippets.optional")})
+                </span>
+              </label>
+              <p className="text-xs text-muted-foreground/70">
+                {t("newUi.sidebar.snippets.targetHostsHint")}
+              </p>
+              {availableHosts.length === 0 ? (
+                <span className="text-xs text-muted-foreground/50">
+                  {t("newUi.sidebar.snippets.noHostsAvailable")}
+                </span>
+              ) : (
+                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto border border-border p-1.5">
+                  {availableHosts.map((host) => {
+                    const selected = selectedHostIds.has(host.id);
+                    return (
+                      <button
+                        key={host.id}
+                        type="button"
+                        onClick={() => toggleHost(host.id)}
+                        className={`flex items-center gap-2 px-2 py-1.5 text-left transition-colors ${
                           selected
-                            ? "border-accent-brand bg-accent-brand"
-                            : "border-border/60"
+                            ? "bg-accent-brand/10 text-accent-brand"
+                            : "text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {selected && <div className="size-1.5 bg-background" />}
-                      </div>
-                      <Server className="size-3 shrink-0 opacity-60" />
-                      <span className="text-xs font-medium truncate flex-1">
-                        {host.name || host.ip}
-                      </span>
-                      <span className="text-xs text-muted-foreground/60 shrink-0">
-                        {host.ip}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {selectedHostIds.size > 0 && (
-              <button
-                type="button"
-                onClick={() => setSelectedHostIds(new Set())}
-                className="text-xs text-muted-foreground hover:text-foreground self-start"
-              >
-                {t("newUi.sidebar.snippets.clearTargetHosts")}
-              </button>
-            )}
-          </div>
+                        <div
+                          className={`size-3 border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            selected
+                              ? "border-accent-brand bg-accent-brand"
+                              : "border-border/60"
+                          }`}
+                        >
+                          {selected && (
+                            <div className="size-1.5 bg-background" />
+                          )}
+                        </div>
+                        <Server className="size-3 shrink-0 opacity-60" />
+                        <span className="text-xs font-medium truncate flex-1">
+                          {host.name || host.ip}
+                        </span>
+                        <span className="text-xs text-muted-foreground/60 shrink-0">
+                          {host.ip}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedHostIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedHostIds(new Set())}
+                  className="text-xs text-muted-foreground hover:text-foreground self-start"
+                >
+                  {t("newUi.sidebar.snippets.clearTargetHosts")}
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-end gap-2 mt-2">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -624,6 +661,7 @@ function mapRawSnippet(s: RawSnippet): Snippet {
     folder: s.folder ?? null,
     order: s.order ?? 0,
     hostIds: parseHostFilter(s.hostFilter),
+    isNote: s.isNote ?? false,
   };
 }
 type RawSnippetFolder = {
@@ -844,7 +882,15 @@ function SnippetCard({
   availableHosts: SSHHost[];
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
-  const hasTargetHosts = (snippet.hostIds?.length ?? 0) > 0;
+  const hasTargetHosts = !snippet.isNote && (snippet.hostIds?.length ?? 0) > 0;
+
+  function sendToTerminal(tab: Tab) {
+    if (snippet.isNote) {
+      tab.terminalRef?.current?.paste?.(snippet.content);
+    } else {
+      tab.terminalRef?.current?.sendInput?.(snippet.content + "\r");
+    }
+  }
 
   function executeRun() {
     if (hasTargetHosts) {
@@ -853,24 +899,32 @@ function SnippetCard({
     }
     const targets = terminalTabs.filter((tab) => selectedTabIds.has(tab.id));
     if (targets.length > 0) {
-      targets.forEach((tab) => {
-        tab.terminalRef?.current?.sendInput?.(snippet.content + "\r");
-      });
+      targets.forEach(sendToTerminal);
       toast.success(
-        t("newUi.sidebar.snippets.runSuccess", {
-          name: snippet.name,
-          count: targets.length,
-        }),
+        t(
+          snippet.isNote
+            ? "newUi.sidebar.snippets.pasteSuccess"
+            : "newUi.sidebar.snippets.runSuccess",
+          {
+            name: snippet.name,
+            count: targets.length,
+          },
+        ),
       );
     } else if (terminalTabs.length > 0) {
       const activeTab =
         terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0];
-      activeTab.terminalRef?.current?.sendInput?.(snippet.content + "\r");
+      sendToTerminal(activeTab);
       toast.success(
-        t("newUi.sidebar.snippets.runSuccess", {
-          name: snippet.name,
-          count: 1,
-        }),
+        t(
+          snippet.isNote
+            ? "newUi.sidebar.snippets.pasteSuccess"
+            : "newUi.sidebar.snippets.runSuccess",
+          {
+            name: snippet.name,
+            count: 1,
+          },
+        ),
       );
     } else {
       toast.error(t("newUi.sidebar.snippets.noTerminalTabsOpen"));
@@ -881,6 +935,10 @@ function SnippetCard({
   }
 
   function handleRun() {
+    if (snippet.isNote) {
+      executeRun();
+      return;
+    }
     onConfirmRun(snippet, executeRun);
   }
 
@@ -921,6 +979,11 @@ function SnippetCard({
               </span>
             )}
           </div>
+          {snippet.isNote && (
+            <span className="shrink-0 mt-0.5 text-[10px] px-1.5 py-0.5 bg-muted/40 text-muted-foreground border border-border">
+              {t("newUi.sidebar.snippets.typeNote")}
+            </span>
+          )}
           {hasTargetHosts && (
             <Zap
               className="size-3 shrink-0 mt-0.5 text-accent-brand/70"
@@ -953,12 +1016,16 @@ function SnippetCard({
           >
             {hasTargetHosts ? (
               <Zap className="size-3" />
+            ) : snippet.isNote ? (
+              <Clipboard className="size-3" />
             ) : (
               <Play className="size-3" />
             )}
             {hasTargetHosts
               ? t("newUi.sidebar.snippets.runOnTargets")
-              : t("newUi.sidebar.snippets.run")}
+              : snippet.isNote
+                ? t("newUi.sidebar.snippets.pasteToTerminal")
+                : t("newUi.sidebar.snippets.run")}
           </Button>
           <Button
             variant="ghost"

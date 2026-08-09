@@ -1,0 +1,1 @@
+ALTER TABLE "snippets" ADD COLUMN "is_note" boolean DEFAULT false NOT NULL;

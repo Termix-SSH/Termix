@@ -575,6 +575,12 @@ router.post(
         return res.status(404).json({ error: "Snippet not found" });
       }
 
+      if (snippet.isNote) {
+        return res
+          .status(400)
+          .json({ error: "Notes cannot be executed on a host" });
+      }
+
       const { Client } = await import("ssh2");
       const repository = createCurrentHostResolutionRepository();
       const host = await repository.findHostById(parseInt(hostId), userId);
@@ -1045,6 +1051,9 @@ router.get(
  *                 type: string
  *               order:
  *                 type: integer
+ *               isNote:
+ *                 type: boolean
+ *                 description: When true, the snippet is a note (copy/paste only, not directly executable on a host).
  *     responses:
  *       201:
  *         description: Snippet created successfully.
@@ -1059,7 +1068,8 @@ router.post(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { name, content, description, folder, order, hostFilter } = req.body;
+    const { name, content, description, folder, order, hostFilter, isNote } =
+      req.body;
 
     if (
       !isNonEmptyString(userId) ||
@@ -1085,6 +1095,7 @@ router.post(
           folder,
           order,
           hostFilter,
+          isNote,
         },
       );
       databaseLogger.info("Command snippet created", {
@@ -1148,6 +1159,9 @@ router.post(
  *                 type: string
  *               order:
  *                 type: integer
+ *               isNote:
+ *                 type: boolean
+ *                 description: When true, the snippet is a note (copy/paste only, not directly executable on a host).
  *     responses:
  *       200:
  *         description: The updated snippet.
