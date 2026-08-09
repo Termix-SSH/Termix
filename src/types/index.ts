@@ -111,7 +111,7 @@ export interface QuickAction {
   snippetId: number;
 }
 
-export interface Host {
+export type Host = {
   id: number;
   name: string;
   ip: string;
@@ -227,6 +227,7 @@ export interface Host {
   updatedAt: string;
 
   sortOrder?: number | null;
+  connectionOrigin?: "local" | "remote" | null;
 
   /** Assigned when a host is opened in a tab; distinguishes duplicate tabs. */
   instanceId?: string;
@@ -246,7 +247,7 @@ export interface Host {
   permissionLevel?: "connect" | "view" | "edit" | "manage";
   sharedExpiresAt?: string;
   ownerUsername?: string;
-}
+};
 
 export interface JumpHostData {
   hostId: number;

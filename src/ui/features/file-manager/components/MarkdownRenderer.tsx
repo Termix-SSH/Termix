@@ -51,8 +51,11 @@ export function MarkdownRenderer({
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        code({ inline, className, children, ...props }) {
+        code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || "");
+          // v9 removed the `inline` flag; a fenced block always carries a
+          // language- class, an inline span never does.
+          const inline = !className;
           return !inline && match ? (
             <SyntaxHighlighter
               style={syntaxTheme}

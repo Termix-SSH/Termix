@@ -987,7 +987,7 @@ function SnippetCard({
           {hasTargetHosts && (
             <Zap
               className="size-3 shrink-0 mt-0.5 text-accent-brand/70"
-              title={t("newUi.sidebar.snippets.hasTargetHosts")}
+              aria-label={t("newUi.sidebar.snippets.hasTargetHosts")}
             />
           )}
         </div>

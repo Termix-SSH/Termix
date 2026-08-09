@@ -241,7 +241,6 @@ export function SSHAuthDialog({
                       allowMultipleSelections: false,
                       highlightSelectionMatches: false,
                       searchKeymap: false,
-                      scrollPastEnd: false,
                     }}
                     extensions={[
                       EditorView.theme({

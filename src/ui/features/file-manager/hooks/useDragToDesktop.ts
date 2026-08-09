@@ -181,7 +181,7 @@ export function useDragToDesktop({ sshSessionId }: UseDragToDesktopProps) {
         const filesData = fileList.map((file, index) => ({
           relativePath: file.name,
           content: responses[index]?.content || "",
-          encoding: "base64",
+          encoding: "base64" as const,
         }));
 
         const tempResult = await window.electronAPI.createTempFolder({

@@ -1,4 +1,5 @@
 import { AxiosError } from "axios";
+import type { TermixAlert } from "@/types";
 import { authApi, handleApiError, markUserAuthenticated } from "@/main-axios";
 import type { AuthResponse } from "@/main-axios";
 
@@ -86,7 +87,7 @@ export async function generateBackupCodes(
 }
 
 export async function getUserAlerts(): Promise<{
-  alerts: Array<Record<string, unknown>>;
+  alerts: TermixAlert[];
 }> {
   try {
     const response = await authApi.get(`/alerts`);
@@ -99,7 +100,7 @@ export async function getUserAlerts(): Promise<{
 
 export async function dismissAlert(
   alertId: string,
-): Promise<Record<string, unknown>> {
+): Promise<ReleasesRSSResponse> {
   try {
     const response = await authApi.post("/alerts/dismiss", { alertId });
     return response.data;
@@ -112,6 +113,31 @@ export async function dismissAlert(
 // ============================================================================
 // UPDATES & RELEASES
 // ============================================================================
+
+export interface ReleaseItem {
+  id: number;
+  title: string;
+  description: string;
+  link: string;
+  pubDate: string;
+  version: string;
+  isPrerelease: boolean;
+  isDraft: boolean;
+  assets: Array<{
+    name: string;
+    size: number;
+    download_count: number;
+    download_url: string;
+  }>;
+}
+
+export interface ReleasesRSSResponse {
+  feed: { title: string; description: string; link: string; updated: string };
+  items: ReleaseItem[];
+  total_count: number;
+  cached: boolean;
+  cache_age?: number;
+}
 
 export async function getReleasesRSS(
   perPage: number = 100,
@@ -126,6 +152,8 @@ export async function getReleasesRSS(
 
 export interface VersionInfo {
   status?: "up_to_date" | "requires_update" | "beta";
+  /** Same value as remoteVersion; the endpoint sends both. */
+  version?: string;
   localVersion?: string;
   remoteVersion?: string;
   latest_release?: {

@@ -359,7 +359,7 @@ export function HostItem({
           onClick={async (e) => {
             e.stopPropagation();
             try {
-              await wakeOnLan(host.id);
+              await wakeOnLan(Number(host.id));
               toast.success(t("hosts.wakeOnLanSuccess", { name: host.name }));
             } catch {
               toast.error(t("hosts.wakeOnLanError"));
