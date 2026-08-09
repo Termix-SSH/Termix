@@ -2906,7 +2906,7 @@
     "sslSaved": "SSL settings saved",
     "sslSaveFailed": "Failed to save SSL settings",
     "sslRequiresDomain": "Domain and email are required",
-    "sslInfoNote": "After issuing a certificate, enable SSL in your environment variables (ENABLE_SSL=true) and restart Termix.",
+    "sslInfoNote": "After issuing or uploading a certificate, set ENABLE_SSL=true (and optionally SSL_PORT, default 8443) in your environment and restart Termix. Termix will then listen for HTTPS directly on that port, in addition to the existing HTTP port.",
     "sslManualOption": "Manual (upload certificate)",
     "sslManualCert": "Certificate (PEM)",
     "sslManualCertPlaceholder": "-----BEGIN CERTIFICATE-----",

@@ -1,5 +1,6 @@
 import express from "express";
 import http from "http";
+import https from "https";
 import bodyParser from "body-parser";
 import multer from "multer";
 import cookieParser from "cookie-parser";
@@ -2033,7 +2034,54 @@ const sslConfig = AutoSSLSetup.getSSLConfig();
 if (sslConfig.enabled) {
   databaseLogger.info(`SSL is enabled`, {
     operation: "ssl_info",
-    nginx_https_port: sslConfig.port,
+    ssl_port: sslConfig.port,
     backend_http_port: HTTP_PORT,
   });
+
+  try {
+    const httpsServer = https.createServer(
+      {
+        cert: fs.readFileSync(sslConfig.certPath),
+        key: fs.readFileSync(sslConfig.keyPath),
+      },
+      app,
+    );
+
+    httpsServer.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        databaseLogger.error(
+          `SSL port ${sslConfig.port} is already in use. Kill the existing process and retry.`,
+          err,
+          {
+            operation: "https_server_port_conflict",
+            port: sslConfig.port,
+          },
+        );
+        return;
+      }
+      databaseLogger.error("HTTPS server error", err, {
+        operation: "https_server_error",
+      });
+    });
+
+    httpsServer.listen(sslConfig.port, () => {
+      databaseLogger.success(
+        `Backend is now also listening for HTTPS directly`,
+        {
+          operation: "https_server_started",
+          port: sslConfig.port,
+        },
+      );
+    });
+  } catch (error) {
+    databaseLogger.error(
+      "Failed to start HTTPS server with configured SSL certificate",
+      error,
+      {
+        operation: "https_server_start_failed",
+        cert_path: sslConfig.certPath,
+        key_path: sslConfig.keyPath,
+      },
+    );
+  }
 }

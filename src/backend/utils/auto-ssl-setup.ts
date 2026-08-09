@@ -224,7 +224,7 @@ IP.3 = 0.0.0.0
     const keyPath = this.KEY_FILE;
 
     const sslEnvVars = {
-      ENABLE_SSL: "false",
+      ENABLE_SSL: "true",
       SSL_PORT: process.env.SSL_PORT || "8443",
       SSL_CERT_PATH: certPath,
       SSL_KEY_PATH: keyPath,
