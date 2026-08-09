@@ -408,6 +408,7 @@ export type Snippet = {
   folder: string | null;
   order: number;
   hostIds?: number[];
+  isNote?: boolean;
 };
 
 export const FOLDER_ICONS = [

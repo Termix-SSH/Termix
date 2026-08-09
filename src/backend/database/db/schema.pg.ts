@@ -436,6 +436,7 @@ export const snippets = pgTable("snippets", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   hostFilter: text("host_filter"),
+  isNote: boolean("is_note").notNull().default(false),
 });
 
 export const snippetFolders = pgTable("snippet_folders", {

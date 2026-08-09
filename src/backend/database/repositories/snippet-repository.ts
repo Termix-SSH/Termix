@@ -26,6 +26,7 @@ export interface NewSnippetInput {
   folder?: string | null;
   order?: number | null;
   hostFilter?: unknown;
+  isNote?: boolean;
 }
 export interface SnippetUpdateInput {
   name?: string;
@@ -34,6 +35,7 @@ export interface SnippetUpdateInput {
   folder?: string | null;
   order?: number;
   hostFilter?: unknown;
+  isNote?: boolean;
 }
 export interface UpdateSnippetResult {
   existing: SnippetRecord;
@@ -169,6 +171,7 @@ export class SnippetRepository {
       folder: input.folder?.trim() || null,
       order,
       hostFilter: input.hostFilter ? JSON.stringify(input.hostFilter) : null,
+      isNote: input.isNote ?? false,
     });
 
     await this.afterWrite();
@@ -191,6 +194,7 @@ export class SnippetRepository {
       folder: string | null;
       order: number;
       hostFilter: string | null;
+      isNote: boolean;
     }> = {
       updatedAt: sql`CURRENT_TIMESTAMP`,
     };
@@ -207,6 +211,7 @@ export class SnippetRepository {
       updateFields.hostFilter = input.hostFilter
         ? JSON.stringify(input.hostFilter)
         : null;
+    if (input.isNote !== undefined) updateFields.isNote = input.isNote;
 
     const rows = await updateReturning(
       this.context,

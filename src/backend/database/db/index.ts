@@ -1247,6 +1247,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("snippets", "folder", "TEXT");
   addColumnIfNotExists("snippets", "order", "INTEGER NOT NULL DEFAULT 0");
   addColumnIfNotExists("snippets", "host_filter", "TEXT");
+  addColumnIfNotExists("snippets", "is_note", "INTEGER NOT NULL DEFAULT 0");
 
   try {
     sqlite

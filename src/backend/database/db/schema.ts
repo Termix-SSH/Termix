@@ -428,6 +428,7 @@ export const snippets = sqliteTable("snippets", {
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
   hostFilter: text("host_filter"),
+  isNote: integer("is_note", { mode: "boolean" }).notNull().default(false),
 });
 
 export const snippetFolders = sqliteTable("snippet_folders", {
