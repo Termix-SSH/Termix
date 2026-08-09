@@ -12,7 +12,7 @@ import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
-import { copyToClipboard } from "@/lib/clipboard";
+import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
@@ -2122,20 +2122,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     async function readTextFromClipboard(): Promise<string> {
-      try {
-        if (window.electronClipboard) {
-          return window.electronClipboard.readText();
-        }
-        if (navigator.clipboard && navigator.clipboard.readText) {
-          return await navigator.clipboard.readText();
-        }
-      } catch {
-        // fall through
-      }
-      if (window.location.protocol !== "https:" && !isElectron()) {
+      const text = await readFromClipboard();
+      if (!text && window.location.protocol !== "https:" && !isElectron()) {
         toast.error(t("terminal.clipboardHttpWarning"));
       }
-      return "";
+      return text;
     }
 
     const handleSelectCommand = useCallback(

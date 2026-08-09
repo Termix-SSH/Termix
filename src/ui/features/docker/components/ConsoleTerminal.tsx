@@ -3,7 +3,7 @@ import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
 import { ClipboardAddon } from "@xterm/addon-clipboard";
 import { RobustClipboardProvider } from "@/lib/clipboard-provider";
-import { copyToClipboard } from "@/lib/clipboard";
+import { copyToClipboard, readFromClipboard } from "@/lib/clipboard";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Button } from "@/components/button.tsx";
 import {
@@ -93,10 +93,7 @@ export function ConsoleTerminal({
     terminal.options.lineHeight = terminalConfig.lineHeight;
 
     const readTextFromClipboard = async (): Promise<string> => {
-      if (window.electronClipboard) {
-        return window.electronClipboard.readText();
-      }
-      return (await navigator.clipboard?.readText?.()) ?? "";
+      return readFromClipboard();
     };
 
     const writeTextToClipboard = async (text: string): Promise<void> => {
