@@ -1350,7 +1350,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
               const strippedData = msg.data.replace(
-                /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g,
+                /\x1b(?:[@-Z\\-_]|\[[0-9:;<=>?!]*[@-~])/g,
                 "",
               );
               maybeOfferPasswordFill(strippedData);

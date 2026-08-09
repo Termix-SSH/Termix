@@ -419,4 +419,23 @@ describe("updateControlStringMode", () => {
     const state = updateControlStringMode(continuation, true);
     expect(state.wasActive).toBe(true);
   });
+
+  it("passes through SGR mouse-tracking reports untouched (issue #1023)", () => {
+    // ESC[<Cb;Cx;CyM is the SGR (1006) mouse-report format. The `<` marker
+    // byte was missing from the parameter-byte character class, so these
+    // sequences weren't recognised as ANSI escapes and their raw digits
+    // leaked onto the screen as visible text inside `screen`/tmux sessions.
+    const report = `${ESC}[<35;191;1M`;
+    expect(highlightTerminalOutput(report)).toBe(report);
+  });
+
+  it("passes through a burst of SGR mouse reports untouched", () => {
+    const burst = `${ESC}[<35;191;1M${ESC}[<35;186;2M${ESC}[<35;46;21M`;
+    expect(highlightTerminalOutput(burst)).toBe(burst);
+  });
+
+  it("treats a chunk ending mid SGR-mouse-report as incomplete", () => {
+    const partial = `foo${ESC}[<35;191`;
+    expect(highlightTerminalOutput(partial)).toBe(partial);
+  });
 });
