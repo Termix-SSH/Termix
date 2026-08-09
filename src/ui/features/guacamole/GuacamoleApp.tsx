@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useImperativeHandle,
 } from "react";
+import type Guacamole from "guacamole-common-js";
 import {
   GuacamoleDisplay,
   type GuacamoleDisplayHandle,
@@ -23,6 +24,7 @@ import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
+import { GuacamoleFileBrowser } from "@/features/guacamole/GuacamoleFileBrowser.tsx";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
 import { PasswordInput } from "@/components/password-input.tsx";
@@ -148,6 +150,20 @@ const GuacamoleAppInner = React.forwardRef<
       : null,
   );
   const displayRef = useRef<GuacamoleDisplayHandle>(null);
+  const [filesystem, setFilesystem] = useState<Guacamole.Object | null>(null);
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(false);
+  const [pendingUploads, setPendingUploads] = useState<File[]>([]);
+
+  const guacConfig = parseGuacamoleConfig(hostConfig.guacamoleConfig);
+  const allowUpload = guacConfig.disableUpload !== true;
+  const allowDownload = guacConfig.disableDownload !== true;
+
+  // A dropped file has nowhere to go until the browser is showing the target
+  // directory, so opening it is part of accepting the drop.
+  const handleDropFiles = useCallback((files: File[]) => {
+    setPendingUploads(files);
+    setFileBrowserOpen(true);
+  }, []);
 
   const resolvedProtocolForConnect = (protocol ??
     hostConfig.connectionType ??
@@ -364,7 +380,6 @@ const GuacamoleAppInner = React.forwardRef<
   }
 
   const resolvedProtocol = resolvedProtocolForConnect;
-  const guacConfig = parseGuacamoleConfig(hostConfig.guacamoleConfig);
   const configuredDpi = readConfiguredDimension(guacConfig.dpi);
   const configuredWidth = readConfiguredDimension(guacConfig.width);
   const configuredHeight = readConfiguredDimension(guacConfig.height);
@@ -411,12 +426,28 @@ const GuacamoleAppInner = React.forwardRef<
         }}
         isVisible={isVisible}
         touchMode={touchMode}
+        allowUpload={allowUpload && filesystem !== null}
         onError={(err) => setConnectionError(err)}
+        onFilesystem={setFilesystem}
+        onDropFiles={handleDropFiles}
       />
+      {filesystem && fileBrowserOpen && (
+        <GuacamoleFileBrowser
+          filesystem={filesystem}
+          allowUpload={allowUpload}
+          allowDownload={allowDownload}
+          pendingUploads={pendingUploads}
+          onPendingUploadsHandled={() => setPendingUploads([])}
+          onClose={() => setFileBrowserOpen(false)}
+        />
+      )}
       <GuacamoleToolbar
         displayRef={displayRef}
         protocol={resolvedProtocol}
         touchMode={touchMode}
+        hasFilesystem={filesystem !== null}
+        fileBrowserOpen={fileBrowserOpen}
+        onToggleFileBrowser={() => setFileBrowserOpen((open) => !open)}
         onTouchModeChange={setTouchMode}
       />
       {shareModalOpen && guacamoleConnectionId && (

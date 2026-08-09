@@ -1684,6 +1684,21 @@
     "credentialPromptDescription": "This host is set to prompt for credentials on connect. They are used for this session only and are not saved.",
     "connect": "Connect",
     "ctrlAltDel": "Ctrl+Alt+Del",
+    "files": {
+      "title": "Drive Files",
+      "parent": "Parent directory",
+      "refresh": "Refresh",
+      "empty": "This folder is empty",
+      "listFailed": "Failed to read this folder",
+      "download": "Download",
+      "downloadFailed": "Failed to download {{name}}",
+      "upload": "Upload files",
+      "uploading": "Uploading {{name}}...",
+      "uploaded": "Uploaded {{name}}",
+      "uploadFailed": "Failed to upload {{name}}",
+      "uploadDisabled": "Uploads are disabled for this connection",
+      "dropToUpload": "Drop files to upload"
+    },
     "toolbar": {
       "ctrlAltDel": "Ctrl+Alt+Del",
       "winL": "Win+L (Lock Screen)",
