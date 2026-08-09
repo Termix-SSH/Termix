@@ -68,6 +68,7 @@ describe("getRequestMeta", () => {
         "user-agent": "TestAgent/1.0",
       },
       ip: "127.0.0.1",
+      socket: {},
     };
     const meta = getRequestMeta(req as never);
     expect(meta.ipAddress).toBe("10.0.0.1");
@@ -78,8 +79,39 @@ describe("getRequestMeta", () => {
     const req = {
       headers: { "user-agent": "Bot/2" },
       ip: "192.168.1.1",
+      socket: {},
     };
     const meta = getRequestMeta(req as never);
     expect(meta.ipAddress).toBe("192.168.1.1");
+  });
+
+  it("splits and trims a forwarded header sent as an array", () => {
+    const req = {
+      headers: {
+        "x-forwarded-for": ["10.0.0.1, 10.0.0.2"],
+        "user-agent": "TestAgent/1.0",
+      },
+      socket: {},
+    };
+    const meta = getRequestMeta(req as never);
+    expect(meta.ipAddress).toBe("10.0.0.1");
+  });
+
+  it("falls back to the socket peer when there is no forwarded header or req.ip", () => {
+    const req = {
+      headers: {},
+      socket: { remoteAddress: "203.0.113.9" },
+    };
+    const meta = getRequestMeta(req as never);
+    expect(meta.ipAddress).toBe("203.0.113.9");
+  });
+
+  it("returns 'unknown' rather than an empty string when no IP info exists", () => {
+    const req = {
+      headers: {},
+      socket: {},
+    };
+    const meta = getRequestMeta(req as never);
+    expect(meta.ipAddress).toBe("unknown");
   });
 });
