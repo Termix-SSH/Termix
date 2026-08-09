@@ -22,12 +22,12 @@ const TMUX_PATH_DIRS = [
 ];
 
 export function withTmuxPath(command: string): string {
-  const script = `PATH=${TMUX_PATH_DIRS.join(":")}:$PATH; export PATH; ${command}`;
+  const script = `PATH=${TMUX_PATH_DIRS.join(":")}:"$PATH"; export PATH; ${command}`;
   return `/bin/sh -c ${shellEscape(script)}`;
 }
 
 export function tmuxCommand(args: string): string {
-  return withTmuxPath(`tmux ${args}`);
+  return withTmuxPath(`tmux -u ${args}`);
 }
 
 /**
