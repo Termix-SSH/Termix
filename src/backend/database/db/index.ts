@@ -1683,6 +1683,40 @@ const migrateSchema = () => {
     }
   }
 
+  // share_ssh_auth arrived with 2.6.1 and defaults to 0, but sharing a host
+  // used to pass the owner's SSH authentication along unconditionally. Every
+  // host shared before the upgrade therefore stopped supplying credentials to
+  // its recipients the moment the column appeared, and they were left with
+  // "No valid authentication method provided".
+  //
+  // Turn it on for hosts that are already shared, which is where the previous
+  // behaviour was in effect and consented to. Hosts nobody has shared keep the
+  // new default; the owner decides when they share one.
+  try {
+    if (getRawSettingValue("share_ssh_auth_backfill_v1") === null) {
+      const backfilled = sqlite
+        .prepare(
+          `UPDATE ssh_data SET share_ssh_auth = 1
+           WHERE share_ssh_auth = 0
+             AND id IN (SELECT DISTINCT host_id FROM host_access)`,
+        )
+        .run();
+
+      if (backfilled.changes > 0) {
+        databaseLogger.info(
+          `Restored shared SSH authentication for ${backfilled.changes} already-shared host(s)`,
+          { operation: "share_ssh_auth_backfill_v1" },
+        );
+      }
+      setRawSettingValue("share_ssh_auth_backfill_v1", "true");
+    }
+  } catch (e) {
+    databaseLogger.warn("Failed to backfill share_ssh_auth", {
+      operation: "share_ssh_auth_backfill_v1",
+      error: e,
+    });
+  }
+
   // Migrate legacy authType="warpgate" hosts to useWarpgate=1 with authType="none"
   try {
     const result = sqlite
