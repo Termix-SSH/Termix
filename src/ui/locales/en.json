@@ -641,6 +641,7 @@
     "upload": "Upload",
     "authentication": "Authentication",
     "password": "Password",
+    "passwordSaved": "Password saved, type to change",
     "key": "Key",
     "credential": "Credential",
     "none": "None",

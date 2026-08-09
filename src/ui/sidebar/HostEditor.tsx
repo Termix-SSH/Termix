@@ -330,8 +330,11 @@ export function HostEditor({
       if (authMethod === "password") {
         data.authType = "password";
         data.password =
-          form.password ||
-          (host?.hasPassword ? await fetchField("password") : null);
+          form.password && form.password !== "existing_password"
+            ? form.password
+            : host?.hasPassword
+              ? await fetchField("password")
+              : null;
       } else {
         const key =
           form.key && form.key !== "existing_key"
@@ -348,7 +351,10 @@ export function HostEditor({
         data.authType = "key";
         data.key = key;
         data.keyPassword = keyPassword;
-        data.password = form.password || null;
+        data.password =
+          form.password && form.password !== "existing_password"
+            ? form.password
+            : null;
       }
 
       if (adminTargetUserId) {
@@ -570,8 +576,20 @@ export function HostEditor({
                         </label>
                         <PasswordInput
                           className="h-8 text-xs pr-8"
-                          placeholder="••••••••"
-                          value={form.password}
+                          placeholder={
+                            form.password === "existing_password"
+                              ? t("hosts.passwordSaved")
+                              : "••••••••"
+                          }
+                          value={
+                            form.password === "existing_password"
+                              ? ""
+                              : form.password
+                          }
+                          onFocus={() => {
+                            if (form.password === "existing_password")
+                              setField("password", "");
+                          }}
                           onChange={(e) => setField("password", e.target.value)}
                         />
                       </div>
@@ -689,8 +707,20 @@ export function HostEditor({
                           </label>
                           <PasswordInput
                             className="h-8 text-xs pr-8"
-                            placeholder="••••••••"
-                            value={form.password}
+                            placeholder={
+                              form.password === "existing_password"
+                                ? t("hosts.passwordSaved")
+                                : "••••••••"
+                            }
+                            value={
+                              form.password === "existing_password"
+                                ? ""
+                                : form.password
+                            }
+                            onFocus={() => {
+                              if (form.password === "existing_password")
+                                setField("password", "");
+                            }}
                             onChange={(e) =>
                               setField("password", e.target.value)
                             }
@@ -853,8 +883,20 @@ export function HostEditor({
                           </label>
                           <PasswordInput
                             className="h-8 text-xs pr-8"
-                            placeholder="••••••••"
-                            value={form.password}
+                            placeholder={
+                              form.password === "existing_password"
+                                ? t("hosts.passwordSaved")
+                                : "••••••••"
+                            }
+                            value={
+                              form.password === "existing_password"
+                                ? ""
+                                : form.password
+                            }
+                            onFocus={() => {
+                              if (form.password === "existing_password")
+                                setField("password", "");
+                            }}
                             onChange={(e) =>
                               setField("password", e.target.value)
                             }

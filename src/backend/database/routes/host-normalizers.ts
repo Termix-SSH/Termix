@@ -273,10 +273,17 @@ export function stripSensitiveFields(
   host: Record<string, unknown>,
 ): Record<string, unknown> {
   const result = { ...host };
+  const terminalConfigForSudo =
+    host.terminalConfig &&
+    typeof host.terminalConfig === "object" &&
+    !Array.isArray(host.terminalConfig)
+      ? (host.terminalConfig as Record<string, unknown>)
+      : undefined;
   result.hasKey = !!host.key;
   result.hasKeyPassword = !!host.keyPassword;
   result.hasPassword = !!host.password;
-  result.hasSudoPassword = !!host.sudoPassword;
+  result.hasSudoPassword =
+    !!host.sudoPassword || !!terminalConfigForSudo?.sudoPassword;
   result.hasRdpPassword = !!host.rdpPassword;
   result.hasVncPassword = !!host.vncPassword;
   result.hasTelnetPassword = !!host.telnetPassword;

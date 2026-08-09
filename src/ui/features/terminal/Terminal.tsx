@@ -480,6 +480,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
     const activityLoggingRef = useRef(false);
     const passwordPromptShownRef = useRef(false);
+    const passwordPromptBufferRef = useRef("");
     const alternateScreenModeRef = useRef(false);
     const controlStringModeRef = useRef(false);
 
@@ -876,9 +877,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }
 
     function maybeOfferPasswordFill(strippedData: string) {
+      // PTY output can split a short prompt like "[sudo] password for user: "
+      // across multiple WebSocket chunks, so match against a rolling buffer
+      // of recent output rather than each chunk in isolation.
+      const buffered = (passwordPromptBufferRef.current + strippedData).slice(
+        -200,
+      );
+      passwordPromptBufferRef.current = buffered;
+
       const passwordPromptPattern =
         /(?:\[sudo\][^\n\r]*:\s*$|sudo:[^\n\r]*password[^\n\r]*required|password for [^\n\r]*:\s*$|Password:\s*$|password:\s*$)/im;
-      if (!passwordPromptPattern.test(strippedData)) return;
+      if (!passwordPromptPattern.test(buffered)) return;
 
       const hasStoredPassword =
         hostConfig.terminalConfig?.sudoPassword ||
@@ -888,7 +897,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       if (!hasStoredPassword || passwordPromptShownRef.current) return;
 
       passwordPromptShownRef.current = true;
-      const isSudoPrompt = /(?:\[sudo\]|sudo:)/i.test(strippedData);
+      passwordPromptBufferRef.current = "";
+      const isSudoPrompt = /(?:\[sudo\]|sudo:)/i.test(buffered);
 
       confirmWithToast(
         t("terminal.passwordPromptFillTitle"),

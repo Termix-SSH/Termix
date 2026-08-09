@@ -485,7 +485,7 @@ router.post(
         success: true,
       });
 
-      res.json(resolvedHost);
+      res.json(stripSensitiveFields(resolvedHost));
       notifyStatsHostUpdated(
         createdHost.id as number,
         req.headers,
@@ -1334,7 +1334,7 @@ router.put(
         success: true,
       });
 
-      res.json(resolvedHost);
+      res.json(stripSensitiveFields(resolvedHost));
       notifyStatsHostUpdated(parseInt(hostId), req.headers, "host_update");
     } catch (err) {
       sshLogger.error("Failed to update SSH host in database", err, {

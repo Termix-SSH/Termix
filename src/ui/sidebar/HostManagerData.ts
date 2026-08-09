@@ -2,8 +2,10 @@ import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, Credential } from "@/types/ui-types";
 
 type RawSSHHost = SSHHostWithStatus & {
+  hasPassword?: boolean;
   hasKey?: boolean;
   hasKeyPassword?: boolean;
+  hasSudoPassword?: boolean;
   hasRdpPassword?: boolean;
   hasVncPassword?: boolean;
   hasTelnetPassword?: boolean;
@@ -39,6 +41,8 @@ function parseJson<T>(v: unknown): T | undefined {
 export function sshHostToHost(h: SSHHostWithStatus): Host {
   const host = h as RawSSHHost;
   const isSshHost = h.connectionType === "ssh" || !h.connectionType;
+  const parsedTerminalConfig = parseJson(h.terminalConfig) as
+    (Host["terminalConfig"] & { sudoPassword?: string }) | undefined;
   return {
     id: String(h.id),
     name: h.name,
@@ -54,6 +58,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     authType: h.authType,
     shareSshAuth: h.shareSshAuth ?? false,
     password: h.password,
+    hasPassword: !!host.hasPassword || !!h.password,
     hasKey: !!host.hasKey || !!(typeof h.key === "string" && h.key),
     hasKeyPassword: !!host.hasKeyPassword || !!h.keyPassword,
     key: typeof h.key === "string" ? h.key : undefined,
@@ -127,7 +132,9 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     })),
     portKnockSequence: parseJson(h.portKnockSequence) ?? [],
     defaultPath: h.defaultPath,
-    terminalConfig: parseJson(h.terminalConfig) as Host["terminalConfig"],
+    terminalConfig: parsedTerminalConfig as Host["terminalConfig"],
+    hasSudoPassword:
+      !!host.hasSudoPassword || !!parsedTerminalConfig?.sudoPassword,
     statsConfig: parseJson(h.statsConfig) as Host["statsConfig"],
     guacamoleConfig: parseJson(h.guacamoleConfig),
     forceKeyboardInteractive: h.forceKeyboardInteractive ?? false,

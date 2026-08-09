@@ -222,6 +222,20 @@ describe("stripSensitiveFields", () => {
     expect(result.hasKey).toBe(false);
   });
 
+  it("detects sudo password stored only in nested terminalConfig", () => {
+    const result = stripSensitiveFields({
+      name: "web",
+      terminalConfig: {
+        theme: "termix",
+        sudoPassword: "nested-only-sudo",
+      },
+    });
+    expect(result.hasSudoPassword).toBe(true);
+    expect(
+      (result.terminalConfig as Record<string, unknown>).sudoPassword,
+    ).toBeUndefined();
+  });
+
   it("strips rdp/vnc/telnet passwords and adds their presence flags", () => {
     const result = stripSensitiveFields({
       name: "rdp-box",
