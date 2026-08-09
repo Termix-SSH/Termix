@@ -1427,6 +1427,15 @@ export function HostEditor({
                     />
                   </SettingRow>
                   <SettingRow
+                    label={t("hosts.macOptionIsMetaLabel")}
+                    description={t("hosts.macOptionIsMetaShortDesc")}
+                  >
+                    <FakeSwitch
+                      checked={form.macOptionIsMeta}
+                      onChange={(v) => setField("macOptionIsMeta", v)}
+                    />
+                  </SettingRow>
+                  <SettingRow
                     label={t("hosts.syntaxHighlightingLabel")}
                     description={t("hosts.syntaxHighlightingDesc")}
                   >

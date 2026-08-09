@@ -2242,6 +2242,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       terminalFontSizeRef.current = config.fontSize;
       terminal.options.fontFamily = fontFamily;
       terminal.options.rightClickSelectsWord = config.rightClickSelectsWord;
+      terminal.options.macOptionIsMeta = config.macOptionIsMeta;
       terminal.options.fastScrollSensitivity = config.fastScrollSensitivity;
       terminal.options.minimumContrastRatio = config.minimumContrastRatio;
       terminal.options.letterSpacing = config.letterSpacing;
@@ -2315,7 +2316,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         fontFamily,
         allowTransparency: true, // MUST be set before open()
         convertEol: false,
-        macOptionIsMeta: true,
+        macOptionIsMeta: config.macOptionIsMeta,
         macOptionClickForcesSelection: false,
         rightClickSelectsWord: config.rightClickSelectsWord,
         fastScrollSensitivity: config.fastScrollSensitivity,

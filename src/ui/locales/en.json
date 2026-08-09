@@ -836,6 +836,8 @@
     "cursorBlinkingDesc": "Enable blinking animation for the terminal cursor",
     "rightClickSelectsWordLabel": "Right-click Selects Word",
     "rightClickSelectsWordShortDesc": "Select the word under cursor on right-click",
+    "macOptionIsMetaLabel": "Option Key Sends Meta",
+    "macOptionIsMetaShortDesc": "Disable to type special characters (like @ or |) with the Option/Alt key on macOS instead of sending Meta",
     "backgroundImageLabel": "Background Image URL",
     "backgroundImageDesc": "Optional URL for a terminal background image",
     "backgroundImageOpacityLabel": "Background Image Opacity",

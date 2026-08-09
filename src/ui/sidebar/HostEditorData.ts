@@ -141,6 +141,7 @@ export function createHostEditorForm(
     bellStyle: (host?.terminalConfig?.bellStyle ?? "none") as
       "none" | "sound" | "visual" | "both",
     rightClickSelectsWord: host?.terminalConfig?.rightClickSelectsWord ?? false,
+    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? true,
     fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ?? "alt") as
       "alt" | "ctrl" | "shift",
     fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
@@ -442,6 +443,7 @@ export function buildHostEditorPayload(
           lineHeight: Number(form.lineHeight),
           bellStyle: form.bellStyle,
           rightClickSelectsWord: form.rightClickSelectsWord,
+          macOptionIsMeta: form.macOptionIsMeta,
           fastScrollModifier: form.fastScrollModifier,
           fastScrollSensitivity: Number(form.fastScrollSensitivity),
           minimumContrastRatio: Number(form.minimumContrastRatio),

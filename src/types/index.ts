@@ -644,6 +644,7 @@ export interface TerminalConfig {
   scrollback: number;
   bellStyle: "none" | "sound" | "visual" | "both";
   rightClickSelectsWord: boolean;
+  macOptionIsMeta: boolean;
   fastScrollModifier: "alt" | "ctrl" | "shift";
   fastScrollSensitivity: number;
   minimumContrastRatio: number;
