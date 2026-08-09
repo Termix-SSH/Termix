@@ -2493,9 +2493,39 @@ async function startC2STunnel(tunnel, index = 0) {
         `[c2s] listening for ${tunnelName} on ${bindHost}:${sourcePort}`,
       );
       setC2STunnelStatus(tunnelName, {
-        connected: true,
-        status: "CONNECTED",
+        connected: false,
+        status: "CONNECTING",
+        reason: "Verifying endpoint SSH connection",
       });
+
+      const verifyTunnel =
+        mode === "dynamic"
+          ? testC2SRelay(
+              { ...tunnel, name: `${tunnelName}::verify`, mode },
+              undefined,
+              undefined,
+            )
+          : testC2SRelay(
+              { ...tunnel, name: `${tunnelName}::verify`, mode },
+              tunnel.targetHost || "127.0.0.1",
+              Number(tunnel.endpointPort),
+            );
+
+      verifyTunnel.then((result) => {
+        if (!c2sTunnelRuntimes.has(tunnelName)) return;
+        if (result.success) {
+          setC2STunnelStatus(tunnelName, {
+            connected: true,
+            status: "CONNECTED",
+          });
+        } else {
+          setC2STunnelError(
+            tunnelName,
+            result.error || "Endpoint SSH connection failed",
+          );
+        }
+      });
+
       resolve({ success: true, tunnelName });
     });
   });
