@@ -429,7 +429,6 @@ function FileManagerContent({
       addLog({
         type: "error",
         message: t("fileManager.sshRequiredForFileManager"),
-        timestamp: new Date().toISOString(),
       });
       setIsLoading(false);
       return;

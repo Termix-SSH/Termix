@@ -492,12 +492,21 @@ export async function uploadSSHFile(
   }
 }
 
+export interface DownloadedSSHFile {
+  /** base64-encoded file contents */
+  content: string;
+  fileName: string;
+  size: number;
+  mimeType: string;
+  path: string;
+}
+
 export async function downloadSSHFile(
   sessionId: string,
   filePath: string,
   hostId?: number,
   userId?: string,
-): Promise<Record<string, unknown>> {
+): Promise<DownloadedSSHFile> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
       "/ssh/downloadFile",

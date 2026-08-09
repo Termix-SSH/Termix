@@ -135,7 +135,7 @@ function hostToSSHHost(h: Host): SSHHost {
     syncId: h.syncId ?? null,
     createdAt: "",
     updatedAt: "",
-  } as SSHHost;
+  } as unknown as SSHHost;
 }
 
 function EmptyState({

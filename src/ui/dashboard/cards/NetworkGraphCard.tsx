@@ -495,9 +495,13 @@ export function NetworkGraphCard({
     (cy: cytoscape.Core) => {
       cyRef.current = cy;
       if (embedded) {
-        cy.nodes().forEach((n) => n.ungrabify());
+        cy.nodes().forEach((n) => {
+          n.ungrabify();
+        });
       } else {
-        cy.nodes().forEach((n) => n.grabify());
+        cy.nodes().forEach((n) => {
+          n.grabify();
+        });
       }
       applyStyle(cy);
 

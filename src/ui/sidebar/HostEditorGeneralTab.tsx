@@ -1,4 +1,5 @@
 import React from "react";
+import type { ProxyNode } from "@/types/index";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
@@ -599,7 +600,10 @@ export function HostEditorGeneralTab({
                             value={node.type}
                             onChange={(e) => {
                               const u = [...form.socks5ProxyChain];
-                              u[ni] = { ...u[ni], type: e.target.value };
+                              u[ni] = {
+                                ...u[ni],
+                                type: e.target.value as ProxyNode["type"],
+                              };
                               setField("socks5ProxyChain", u);
                             }}
                           >

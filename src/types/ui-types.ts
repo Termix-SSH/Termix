@@ -1,5 +1,6 @@
 import type { GuacamoleConfig } from "./guacamole-config.js";
 import type { TerminalConfig } from "./index.js";
+import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
 export type {
@@ -51,6 +52,10 @@ export type Host = {
 
   enableTerminal: boolean;
   enableCommandHistory: boolean;
+  enableSessionLogging?: boolean;
+  allowSessionSharing?: boolean;
+  /** Stable identity across a desktop/server sync pair. */
+  syncId?: string | null;
   terminalConfig?: TerminalConfig;
 
   useSocks5?: boolean;
@@ -62,11 +67,12 @@ export type Host = {
   socks5ProxyChain?: {
     host: string;
     port: number;
-    type: 4 | 5 | "http" | string;
+    type: 4 | 5 | "http" | "socks4" | "socks5";
     username?: string;
     password?: string;
   }[];
-  jumpHosts?: { hostId: string }[];
+  /** hostid is a legacy lowercase spelling still present in stored rows. */
+  jumpHosts?: { hostId: string; hostid?: string }[];
   portKnockSequence?: {
     port: number;
     protocol: "tcp" | "udp";
@@ -117,16 +123,7 @@ export type Host = {
     };
   } | null;
 
-  statsConfig?: {
-    statusCheckEnabled: boolean;
-    statusCheckInterval: number;
-    useGlobalStatusInterval: boolean;
-    metricsEnabled: boolean;
-    metricsInterval: number;
-    useGlobalMetricsInterval: boolean;
-    enabledWidgets: string[];
-    excludedMounts?: string[];
-  };
+  statsConfig?: StatsConfig;
   quickActions: { name: string; snippetId: string }[];
 
   enableSsh: boolean;

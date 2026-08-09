@@ -26,6 +26,7 @@ import {
 import { Kbd } from "@/components/kbd";
 import { VersionBadge } from "@/components/version-badge";
 import { DASHBOARD_CARDS } from "@/lib/theme";
+import { CONNECTION_STATES } from "@/types/index";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
@@ -901,6 +902,7 @@ function CardItem({
             onOpenSingletonTab={onOpenSingletonTab}
             hosts={hosts}
             onOpenTab={onOpenTab}
+            isAdmin={isAdmin}
           />
         )}
         {slot.id === "host_status" && (
@@ -908,7 +910,6 @@ function CardItem({
             hosts={hosts}
             hostMetrics={hostMetrics}
             onOpenTab={onOpenTab}
-            isAdmin={isAdmin}
             statusLoading={statusLoading}
           />
         )}
@@ -1410,7 +1411,7 @@ export function DashboardTab({
     getTunnelStatuses()
       .then((statuses) => {
         const active = Object.values(statuses ?? {}).filter(
-          (s) => s?.status === "CONNECTED",
+          (s) => s?.status === CONNECTION_STATES.CONNECTED,
         ).length;
         setActiveTunnelCount(active);
       })
@@ -1738,6 +1739,7 @@ export function DashboardTab({
                   onOpenSingletonTab={onOpenSingletonTab}
                   hosts={hosts}
                   onOpenTab={onOpenTab}
+                  isAdmin={isAdmin}
                 />
               )}
               {slot.id === "host_status" && (
@@ -1745,7 +1747,6 @@ export function DashboardTab({
                   hosts={statusCheckHosts}
                   hostMetrics={hostMetrics}
                   onOpenTab={onOpenTab}
-                  isAdmin={isAdmin}
                   statusLoading={statusLoading}
                 />
               )}

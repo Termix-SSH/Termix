@@ -9,6 +9,9 @@ export interface NetworkTopologyNode {
     tags?: string[];
     parent?: string;
     color?: string;
+    /** Absent on nodes; callers tell nodes from edges by testing these. */
+    source?: undefined;
+    target?: undefined;
   };
   position?: { x: number; y: number };
 }
@@ -18,6 +21,8 @@ export interface NetworkTopologyEdge {
     id?: string;
     source: string;
     target: string;
+    label?: undefined;
+    ip?: undefined;
   };
 }
 

@@ -357,10 +357,16 @@ export async function validateKeyPair(
   }
 }
 
+export interface GeneratedPublicKey {
+  success?: boolean;
+  publicKey?: string;
+  error?: string;
+}
+
 export async function generatePublicKeyFromPrivate(
   privateKey: string,
   keyPassword?: string,
-): Promise<Record<string, unknown>> {
+): Promise<GeneratedPublicKey> {
   try {
     const response = await authApi.post("/credentials/generate-public-key", {
       privateKey,
@@ -372,11 +378,23 @@ export async function generatePublicKeyFromPrivate(
   }
 }
 
+export interface GeneratedKeyPair {
+  success: boolean;
+  privateKey?: string;
+  publicKey?: string;
+  keyType?: string;
+  format?: string;
+  algorithm?: string;
+  keySize?: number;
+  curve?: string;
+  error?: string;
+}
+
 export async function generateKeyPair(
   keyType: "ssh-ed25519" | "ssh-rsa" | "ecdsa-sha2-nistp256",
   keySize?: number,
   passphrase?: string,
-): Promise<Record<string, unknown>> {
+): Promise<GeneratedKeyPair> {
   try {
     const response = await authApi.post("/credentials/generate-key-pair", {
       keyType,

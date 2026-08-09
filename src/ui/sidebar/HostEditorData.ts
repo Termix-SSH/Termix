@@ -425,7 +425,9 @@ export function buildHostEditorPayload(
       form.telnetPassword !== "existing_telnet_password"
         ? form.telnetPassword || null
         : null,
-    jumpHosts: form.jumpHosts,
+    // The editor keeps ids as strings; the API and every backend lookup take
+    // a number, and a string id does not compare equal on Postgres/MySQL.
+    jumpHosts: form.jumpHosts.map((j) => ({ hostId: Number(j.hostId) })),
     portKnockSequence: form.portKnockSequence,
     tunnelConnections: form.serverTunnels,
     quickActions: form.quickActions.map((a) => ({
