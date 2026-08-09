@@ -486,6 +486,7 @@
     "upToDate": "App is Up to Date",
     "currentVersion": "You are running version {{version}}",
     "updateAvailable": "Update Available",
+    "updateLinkLabel": "Update available — open the release notes on GitHub",
     "newVersionAvailable": "A new version is available! You are running {{current}}, but {{latest}} is available.",
     "betaVersion": "Beta Version",
     "betaVersionDesc": "You are running {{current}}, which is newer than the latest stable release {{latest}}.",

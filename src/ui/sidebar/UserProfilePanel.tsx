@@ -14,6 +14,7 @@ import {
   enableTOTP,
   disableTOTP,
   getVersionInfo,
+  releaseUrlFrom,
   getUserRoles,
   saveUserPreferences,
   getUserPreferences,
@@ -36,6 +37,7 @@ import { shouldForceLocalPreferenceStorage } from "@/settings/remote-sync-state"
 import { C2STunnelPresetManager } from "@/user/C2STunnelPresetManager";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
+import { VersionBadge } from "@/components/version-badge";
 import {
   Dialog,
   DialogContent,
@@ -486,6 +488,7 @@ export function UserProfilePanel({
   const [versionStatus, setVersionStatus] = useState<
     "up_to_date" | "requires_update" | "beta"
   >("up_to_date");
+  const [releaseUrl, setReleaseUrl] = useState("");
   const [isOidc, setIsOidc] = useState(false);
   const [isDualAuth, setIsDualAuth] = useState(false);
 
@@ -684,6 +687,7 @@ export function UserProfilePanel({
       .then((info) => {
         setVersion(info.localVersion);
         setVersionStatus(info.status ?? "up_to_date");
+        setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});
   }, [t]);
@@ -1431,21 +1435,7 @@ export function UserProfilePanel({
               <span className="text-sm font-bold text-accent-brand">
                 {version ? `v${version}` : "—"}
               </span>
-              <span
-                className={`text-[10px] px-1.5 py-0.5 font-semibold leading-none ${
-                  versionStatus === "beta"
-                    ? "bg-blue-500/20 text-blue-400"
-                    : versionStatus === "requires_update"
-                      ? "bg-yellow-500/20 text-yellow-400"
-                      : "bg-accent-brand/20 text-accent-brand"
-                }`}
-              >
-                {versionStatus === "beta"
-                  ? t("dashboard.beta").toUpperCase()
-                  : versionStatus === "requires_update"
-                    ? t("dashboard.updateAvailable").toUpperCase()
-                    : t("dashboardTab.stable")}
-              </span>
+              <VersionBadge status={versionStatus} releaseUrl={releaseUrl} />
             </div>
           </div>
 

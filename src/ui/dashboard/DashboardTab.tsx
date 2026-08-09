@@ -24,12 +24,14 @@ import {
   Zap,
 } from "lucide-react";
 import { Kbd } from "@/components/kbd";
+import { VersionBadge } from "@/components/version-badge";
 import { DASHBOARD_CARDS } from "@/lib/theme";
 import type { DashboardCardId, TabType, Host } from "@/types/ui-types";
 import {
   getSSHHosts,
   getUptime,
   getVersionInfo,
+  releaseUrlFrom,
   getDatabaseHealth,
   getRecentActivity,
   getTunnelStatuses,
@@ -130,28 +132,18 @@ function StatsBarCard({
   uptimeFormatted,
   versionText,
   versionStatus,
+  releaseUrl,
   dbHealth,
 }: {
   hosts: Host[];
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta";
+  releaseUrl: string;
   dbHealth: "healthy" | "error";
 }) {
   const { t } = useTranslation();
   const online = hosts.filter((h) => h.online).length;
-  const statusLabel =
-    versionStatus === "beta"
-      ? t("dashboard.beta").toUpperCase()
-      : versionStatus === "requires_update"
-        ? t("dashboard.updateAvailable").toUpperCase()
-        : t("dashboardTab.stable");
-  const statusColor =
-    versionStatus === "beta"
-      ? "bg-blue-500/20 text-blue-400"
-      : versionStatus === "requires_update"
-        ? "bg-yellow-500/20 text-yellow-400"
-        : "bg-accent-brand/20 text-accent-brand";
   return (
     <Card className="grid grid-cols-4 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
@@ -161,11 +153,11 @@ function StatsBarCard({
         <span className="text-xl font-bold text-accent-brand leading-none">
           {versionText || "—"}
         </span>
-        <span
-          className={`text-[10px] px-1.5 py-0.5 w-fit font-semibold leading-none ${statusColor}`}
-        >
-          {statusLabel}
-        </span>
+        <VersionBadge
+          status={versionStatus}
+          releaseUrl={releaseUrl}
+          className="w-fit"
+        />
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
@@ -792,6 +784,7 @@ function CardItem({
   uptimeFormatted,
   versionText,
   versionStatus,
+  releaseUrl,
   dbHealth,
   credentialCount,
   activeTunnelCount,
@@ -822,6 +815,7 @@ function CardItem({
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta";
+  releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
   activeTunnelCount: number;
@@ -890,6 +884,7 @@ function CardItem({
             uptimeFormatted={uptimeFormatted}
             versionText={versionText}
             versionStatus={versionStatus}
+            releaseUrl={releaseUrl}
             dbHealth={dbHealth}
           />
         )}
@@ -1048,6 +1043,7 @@ type PanelColumnProps = {
   uptimeFormatted: string;
   versionText: string;
   versionStatus: "up_to_date" | "requires_update" | "beta";
+  releaseUrl: string;
   dbHealth: "healthy" | "error";
   credentialCount: number;
   activeTunnelCount: number;
@@ -1080,6 +1076,7 @@ function PanelColumn({
   uptimeFormatted,
   versionText,
   versionStatus,
+  releaseUrl,
   dbHealth,
   credentialCount,
   activeTunnelCount,
@@ -1138,6 +1135,7 @@ function PanelColumn({
             uptimeFormatted={uptimeFormatted}
             versionText={versionText}
             versionStatus={versionStatus}
+            releaseUrl={releaseUrl}
             dbHealth={dbHealth}
             credentialCount={credentialCount}
             activeTunnelCount={activeTunnelCount}
@@ -1288,6 +1286,7 @@ export function DashboardTab({
   const [versionStatus, setVersionStatus] = useState<
     "up_to_date" | "requires_update" | "beta"
   >("up_to_date");
+  const [releaseUrl, setReleaseUrl] = useState("");
   const [dbHealth, setDbHealth] = useState<"healthy" | "error">("healthy");
   const [credentialCount, setCredentialCount] = useState(0);
   const [activeTunnelCount, setActiveTunnelCount] = useState(0);
@@ -1380,6 +1379,7 @@ export function DashboardTab({
       .then((info) => {
         setVersionText(info.localVersion ?? "");
         setVersionStatus(info.status ?? "up_to_date");
+        setReleaseUrl(releaseUrlFrom(info));
       })
       .catch(() => {});
     getDatabaseHealth()
@@ -1606,6 +1606,7 @@ export function DashboardTab({
     uptimeFormatted,
     versionText,
     versionStatus,
+    releaseUrl,
     dbHealth,
     credentialCount,
     activeTunnelCount,
@@ -1720,6 +1721,7 @@ export function DashboardTab({
                   uptimeFormatted={uptimeFormatted}
                   versionText={versionText}
                   versionStatus={versionStatus}
+                  releaseUrl={releaseUrl}
                   dbHealth={dbHealth}
                 />
               )}

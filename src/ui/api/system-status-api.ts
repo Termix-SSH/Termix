@@ -124,9 +124,35 @@ export async function getReleasesRSS(
   }
 }
 
-export async function getVersionInfo(
-  checkRemote = true,
-): Promise<Record<string, unknown>> {
+export interface VersionInfo {
+  status?: "up_to_date" | "requires_update" | "beta";
+  localVersion?: string;
+  remoteVersion?: string;
+  latest_release?: {
+    tag_name?: string;
+    name?: string;
+    published_at?: string;
+    html_url?: string;
+    body?: string;
+  };
+  cached?: boolean;
+  cache_age?: number;
+  // Callers reach for fields beyond the ones above -- SystemOverviewWidget
+  // reads `updateAvailable`, which this endpoint does not in fact return --
+  // so keep the index signature the previous `Record<string, unknown>` gave
+  // them. Typing those reads out of existence is a separate change.
+  [key: string]: unknown;
+}
+
+// Where the release page lives inside a version response. Both surfaces that
+// render a version badge read it, and an empty string is what they treat as
+// "no link to offer", so keep the shape in one place rather than repeating the
+// optional chain at each call site.
+export function releaseUrlFrom(info: VersionInfo | null | undefined): string {
+  return info?.latest_release?.html_url ?? "";
+}
+
+export async function getVersionInfo(checkRemote = true): Promise<VersionInfo> {
   try {
     const response = await authApi.get(
       `/version${checkRemote ? "" : "?checkRemote=false"}`,
