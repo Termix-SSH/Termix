@@ -16,12 +16,27 @@ describe("tmux command path handling", () => {
   });
 
   it("shell-escapes embedded single quotes in wrapped commands", () => {
-    const command = withTmuxPath(`printf '%s' "can't"`);
-
-    expect(execFileSync("/bin/sh", ["-c", command], { encoding: "utf8" })).toBe(
-      "can't",
+    // Asserted as a string so the escaping rule is covered everywhere. The
+    // round-trip below proves it against a real parser, but only where one
+    // exists -- see the note there.
+    expect(withTmuxPath(`printf '%s' "can't"`)).toBe(
+      "/bin/sh -c 'PATH=/opt/homebrew/bin:/usr/local/bin:/opt/bin:/usr/pkg/bin:\"$PATH\"; export PATH; printf '\\''%s'\\'' \"can'\\''t\"'",
     );
   });
+
+  // /bin/sh is not on Windows, and Windows is a supported platform for the
+  // desktop app -- contributors run `npm test` there. CI is ubuntu-only, so it
+  // would never notice this failing.
+  it.skipIf(process.platform === "win32")(
+    "produces a command a real shell parses back to the original",
+    () => {
+      const command = withTmuxPath(`printf '%s' "can't"`);
+
+      expect(
+        execFileSync("/bin/sh", ["-c", command], { encoding: "utf8" }),
+      ).toBe("can't");
+    },
+  );
 
   it("runs every tmux invocation in UTF-8 mode through the path wrapper", () => {
     expect(tmuxCommand("list-sessions")).toBe(
