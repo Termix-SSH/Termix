@@ -2682,6 +2682,7 @@
     "duration": "Duration",
     "viewLog": "View log",
     "downloadLog": "Download",
+    "downloadAsText": "Download as text",
     "deleteLog": "Delete",
     "confirmDelete": "Delete this session log?",
     "confirmDeleteDesc": "This action cannot be undone.",

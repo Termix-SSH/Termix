@@ -15,6 +15,7 @@ import {
   Copy,
   Download,
   Eye,
+  FileText,
   Loader2,
   Save,
   ScrollText,
@@ -32,6 +33,10 @@ import {
   type SessionLogRecord,
 } from "@/api/session-log-api";
 import { SessionRecordingPlayer } from "@/features/session-recording/SessionRecordingPlayer";
+import {
+  asciicastToPlainText,
+  parseAsciicast,
+} from "@/features/session-recording/asciicast";
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null) return "--";
@@ -78,6 +83,20 @@ function buildFilename(log: SessionLogRecord): string {
   return `${host}_${y}-${m}-${day}_${h}-${min}-${s}.${extension}`;
 }
 
+function buildTextFilename(log: SessionLogRecord): string {
+  return buildFilename(log).replace(/\.(cast|guac|log)$/, ".txt");
+}
+
+async function extractPlainText(
+  log: SessionLogRecord,
+  blob: Blob,
+): Promise<string | null> {
+  if (log.format === "guacamole") return null;
+  const source = await blob.text();
+  if (log.format === "text") return source;
+  return asciicastToPlainText(parseAsciicast(source));
+}
+
 function SectionHeader({ label, count }: { label: string; count: number }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 border-b border-border/60 bg-muted/20">
@@ -95,13 +114,16 @@ function LogRow({
   log,
   onView,
   onDownload,
+  onDownloadText,
   onDelete,
 }: {
   log: SessionLogRecord;
   onView: () => void;
   onDownload: () => void;
+  onDownloadText: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const hostLabel = log.hostName ?? log.hostIp ?? `Host ${log.hostId}`;
 
   return (
@@ -139,6 +161,21 @@ function LogRow({
             </TooltipTrigger>
             <TooltipContent side="left">View log</TooltipContent>
           </Tooltip>
+          {log.format === "asciicast" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={onDownloadText}
+                  className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
+                >
+                  <FileText className="size-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                {t("sessionLogs.downloadAsText")}
+              </TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
@@ -175,6 +212,7 @@ export function SessionLogsPanel() {
   const [viewLog, setViewLog] = useState<SessionLogRecord | null>(null);
   const [viewContent, setViewContent] = useState<string>("");
   const [viewBlob, setViewBlob] = useState<Blob | null>(null);
+  const [viewText, setViewText] = useState<string | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SessionLogRecord | null>(
     null,
@@ -238,12 +276,17 @@ export function SessionLogsPanel() {
     setViewLog(log);
     setViewContent("");
     setViewBlob(null);
+    setViewText(null);
     setViewLoading(true);
     try {
       if (log.format === "text") {
-        setViewContent(await getSessionLogContent(log.id));
+        const text = await getSessionLogContent(log.id);
+        setViewContent(text);
+        setViewText(text);
       } else {
-        setViewBlob(await getSessionLogBlob(log.id));
+        const blob = await getSessionLogBlob(log.id);
+        setViewBlob(blob);
+        setViewText(await extractPlainText(log, blob));
       }
     } catch {
       toast.error(t("sessionLogs.loadError"));
@@ -252,15 +295,37 @@ export function SessionLogsPanel() {
     }
   };
 
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleDownload = async (log: SessionLogRecord) => {
     try {
-      const blob = await getSessionLogBlob(log.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = buildFilename(log);
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(await getSessionLogBlob(log.id), buildFilename(log));
+    } catch {
+      toast.error(t("sessionLogs.loadError"));
+    }
+  };
+
+  const handleDownloadText = async (log: SessionLogRecord) => {
+    try {
+      const text =
+        log.id === viewLog?.id && viewText != null
+          ? viewText
+          : await extractPlainText(log, await getSessionLogBlob(log.id));
+      if (text == null) {
+        toast.error(t("sessionLogs.loadError"));
+        return;
+      }
+      downloadBlob(
+        new Blob([text], { type: "text/plain" }),
+        buildTextFilename(log),
+      );
     } catch {
       toast.error(t("sessionLogs.loadError"));
     }
@@ -281,8 +346,8 @@ export function SessionLogsPanel() {
   };
 
   const handleCopy = async () => {
-    if (!viewContent) return;
-    const ok = await copyToClipboard(viewContent);
+    if (!viewText) return;
+    const ok = await copyToClipboard(viewText);
     if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
@@ -329,7 +394,7 @@ export function SessionLogsPanel() {
           </div>
           <TooltipProvider>
             <div className="flex items-center gap-0.5 shrink-0">
-              {viewLog.format === "text" && (
+              {viewText != null && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -347,6 +412,21 @@ export function SessionLogsPanel() {
                     {copied
                       ? t("sessionLogs.copied")
                       : t("sessionLogs.copyContent")}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {viewLog.format === "asciicast" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleDownloadText(viewLog)}
+                      className="size-6 flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-colors"
+                    >
+                      <FileText className="size-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    {t("sessionLogs.downloadAsText")}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -470,6 +550,7 @@ export function SessionLogsPanel() {
                     log={log}
                     onView={() => handleView(log)}
                     onDownload={() => handleDownload(log)}
+                    onDownloadText={() => handleDownloadText(log)}
                     onDelete={() => setDeleteTarget(log)}
                   />
                 ))}
