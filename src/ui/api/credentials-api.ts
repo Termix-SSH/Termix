@@ -1,6 +1,7 @@
 import { authApi, handleApiError, sshHostApi } from "@/main-axios";
 import type { SSHFolder } from "@/types/index";
 import { sshLogger } from "@/lib/frontend-logger";
+import { getCachedSSHFolders, invalidateSSHFoldersCache } from "@/lib/hosts-request-cache";
 
 export async function getCredentials(): Promise<
   Record<string, unknown>[] | Record<string, unknown>
@@ -174,6 +175,7 @@ export async function renameFolder(
       oldName,
       newName,
     });
+    invalidateSSHFoldersCache();
     return response.data;
   } catch (error) {
     handleApiError(error, "rename folder");
@@ -186,14 +188,17 @@ export async function getSSHFolders(): Promise<SSHFolder[]> {
       operation: "fetch_ssh_folders",
     });
 
-    const response = await authApi.get("/host/folders");
+    const folders = await getCachedSSHFolders(async () => {
+      const response = await authApi.get("/host/folders");
+      return response.data;
+    });
 
     sshLogger.success("SSH folders fetched successfully", {
       operation: "fetch_ssh_folders",
-      count: response.data.length,
+      count: folders.length,
     });
 
-    return response.data;
+    return folders;
   } catch (error) {
     sshLogger.error("Failed to fetch SSH folders", error, {
       operation: "fetch_ssh_folders",
@@ -224,6 +229,8 @@ export async function updateFolderMetadata(
       icon,
       credentialId,
     });
+
+    invalidateSSHFoldersCache();
 
     sshLogger.success("Folder metadata updated successfully", {
       operation: "update_folder_metadata",
@@ -266,6 +273,8 @@ export async function deleteAllHostsInFolder(
       `/host/folders/${encodeURIComponent(folderName)}/hosts`,
     );
 
+    invalidateSSHFoldersCache();
+
     sshLogger.success("All hosts in folder deleted successfully", {
       operation: "delete_folder_hosts",
       folderName,
@@ -292,6 +301,7 @@ export async function renameCredentialFolder(
       oldName,
       newName,
     });
+    invalidateSSHFoldersCache();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "rename credential folder");
