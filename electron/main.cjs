@@ -18,10 +18,32 @@ const os = require("os");
 const https = require("https");
 const http = require("http");
 const net = require("net");
+const tls = require("tls");
+const zlib = require("zlib");
 const { URL } = require("url");
 const { fork, spawn } = require("child_process");
 const WebSocket = require("ws");
 const remoteSync = require("./remote-sync.cjs");
+
+// The main process's Node.js networking (the `https`/`http` modules used by
+// httpFetch below, and the global `fetch` used by remote-sync.cjs) only
+// trusts Node's bundled Mozilla CA list by default, not the OS/system trust
+// store. Chromium (the renderer, i.e. the web app and the login iframe) uses
+// the OS trust store instead, so a certificate that's valid in-browser --
+// e.g. one issued by a reverse proxy's internal/corporate CA, or a system
+// CA installed via Keychain/certmgr -- can still fail main-process requests
+// with UNABLE_TO_VERIFY_LEAF_SIGNATURE. Merge the system store in so remote
+// sync and the connection health check see the same trust as the browser.
+try {
+  if (typeof tls.setDefaultCACertificates === "function") {
+    tls.setDefaultCACertificates([
+      ...tls.getCACertificates("default"),
+      ...tls.getCACertificates("system"),
+    ]);
+  }
+} catch (error) {
+  console.error("Failed to merge system CA certificates:", error);
+}
 
 // Portable mode: if a `.portable` marker exists next to the executable,
 // store all data in a `data` folder beside the exe instead of %APPDATA%.
@@ -479,9 +501,31 @@ function httpFetch(url, options = {}) {
     };
 
     const req = client.request(url, requestOptions, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => {
+      const chunks = [];
+      // Reverse proxies (nginx and friends) commonly gzip/deflate/br-compress
+      // responses regardless of client Accept-Encoding. Unlike browser fetch,
+      // Node's http/https modules never auto-decompress, so an unhandled
+      // content-encoding here silently turns the body into garbage bytes.
+      let stream = res;
+      const encoding = (res.headers["content-encoding"] || "")
+        .toLowerCase()
+        .trim();
+      try {
+        if (encoding === "gzip" || encoding === "x-gzip") {
+          stream = res.pipe(zlib.createGunzip());
+        } else if (encoding === "br") {
+          stream = res.pipe(zlib.createBrotliDecompress());
+        } else if (encoding === "deflate") {
+          stream = res.pipe(zlib.createInflate());
+        }
+      } catch (decompressError) {
+        reject(decompressError);
+        return;
+      }
+
+      stream.on("data", (chunk) => chunks.push(chunk));
+      stream.on("end", () => {
+        const data = Buffer.concat(chunks).toString("utf8");
         resolve({
           ok: res.statusCode >= 200 && res.statusCode < 300,
           status: res.statusCode,
@@ -489,6 +533,7 @@ function httpFetch(url, options = {}) {
           json: () => Promise.resolve(JSON.parse(data)),
         });
       });
+      stream.on("error", reject);
     });
 
     req.on("error", reject);
