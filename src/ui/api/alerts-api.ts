@@ -4,7 +4,7 @@ export interface NotificationChannel {
   id: number;
   userId: string;
   name: string;
-  type: "webhook" | "ntfy";
+  type: "webhook" | "ntfy" | "discord";
   config: string;
   enabled: boolean;
   createdAt: string;
@@ -69,8 +69,19 @@ export async function getNotificationChannels(): Promise<
   return res.data;
 }
 
+export type NotificationChannelPayload = Partial<
+  Omit<NotificationChannel, "config">
+> & {
+  // When creating/updating the channel the UI may pass a parsed object
+  // for `config` (e.g., { url, username }) — the backend stores it as
+  // a JSON string. Accept either a string or any structured object here.
+  // Use `unknown` to allow the component-local config types to be passed
+  // without importing them into this module.
+  config: string | unknown;
+};
+
 export async function createNotificationChannel(
-  data: Partial<NotificationChannel>,
+  data: NotificationChannelPayload,
 ): Promise<NotificationChannel> {
   const res = await rbacApi.post("/notification-channels", data);
   return res.data;
@@ -78,7 +89,7 @@ export async function createNotificationChannel(
 
 export async function updateNotificationChannel(
   id: number,
-  data: Partial<NotificationChannel>,
+  data: NotificationChannelPayload,
 ): Promise<NotificationChannel> {
   const res = await rbacApi.put(`/notification-channels/${id}`, data);
   return res.data;
