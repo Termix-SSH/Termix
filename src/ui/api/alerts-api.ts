@@ -100,7 +100,11 @@ export async function deleteNotificationChannel(id: number): Promise<void> {
 }
 
 export async function testNotificationChannel(id: number): Promise<void> {
-  await rbacApi.post(`/notification-channels/${id}/test`);
+  const res = await rbacApi.post(`/notification-channels/${id}/test`);
+  const data = res.data as { success?: boolean; error?: string };
+  if (data && data.success === false) {
+    throw new Error(data.error || "Test notification failed");
+  }
 }
 
 function mapRule(r: Record<string, unknown>): AlertRule {

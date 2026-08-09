@@ -3805,6 +3805,7 @@
     "test": "Test",
     "testSent": "Test notification sent",
     "testFailed": "Test notification failed",
+    "testFailedWithReason": "Test notification failed: {{reason}}",
     "addRule": "Add Alert Rule",
     "editRule": "Edit Alert Rule",
     "ruleName": "Rule Name",
