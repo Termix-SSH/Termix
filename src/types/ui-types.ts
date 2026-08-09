@@ -1,3 +1,5 @@
+import type { GuacamoleConfig } from "./guacamole-config.js";
+import type { TerminalConfig } from "./index.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
 export type {
@@ -49,35 +51,7 @@ export type Host = {
 
   enableTerminal: boolean;
   enableCommandHistory: boolean;
-  terminalConfig?: {
-    cursorBlink: boolean;
-    cursorStyle: "block" | "underline" | "bar";
-    fontSize: number;
-    fontFamily: string;
-    letterSpacing: number;
-    lineHeight: number;
-    theme: string;
-    scrollback: number;
-    bellStyle: "none" | "sound" | "visual" | "both";
-    rightClickSelectsWord: boolean;
-    macOptionIsMeta: boolean;
-    fastScrollModifier: "alt" | "ctrl" | "shift";
-    fastScrollSensitivity: number;
-    minimumContrastRatio: number;
-    backspaceMode: "normal" | "control-h";
-    agentForwarding: boolean;
-    autoMosh: boolean;
-    moshCommand: string;
-    autoTmux: boolean;
-    sudoPasswordAutoFill: boolean;
-    sudoPassword?: string;
-    keepaliveInterval?: number;
-    keepaliveCountMax?: number;
-    environmentVariables: { key: string; value: string }[];
-    startupSnippetId?: number | null;
-    linkClickBehavior?: "confirm" | "direct";
-    agentSocketPath?: string;
-  };
+  terminalConfig?: TerminalConfig;
 
   useSocks5?: boolean;
   socks5Host?: string;
@@ -186,7 +160,7 @@ export type Host = {
   telnetPassword?: string;
   hasTelnetPassword?: boolean;
 
-  guacamoleConfig?: Record<string, unknown>;
+  guacamoleConfig?: GuacamoleConfig;
   forceKeyboardInteractive?: boolean;
 
   isShared?: boolean;

@@ -487,20 +487,26 @@ export function HostManager({
                 setActiveCredentialTab("general");
               }}
               onSave={(saved) => {
+                // The save endpoints are typed as an untyped record; these are
+                // the fields this view reads back off the response.
+                const result = saved as Partial<Credential> & {
+                  id: number | string;
+                  authType?: string;
+                };
                 setCredentials((prev) => {
-                  const idx = prev.findIndex((c) => c.id === String(saved.id));
+                  const idx = prev.findIndex((c) => c.id === String(result.id));
                   const updated: Credential = {
-                    id: String(saved.id),
-                    name: saved.name,
-                    username: saved.username ?? "",
-                    type: saved.authType === "key" ? "key" : "password",
-                    value: saved.value,
-                    password: saved.password,
-                    publicKey: saved.publicKey,
-                    passphrase: saved.passphrase,
-                    description: saved.description,
-                    folder: saved.folder ?? "",
-                    tags: saved.tags ?? [],
+                    id: String(result.id),
+                    name: result.name ?? "",
+                    username: result.username ?? "",
+                    type: result.authType === "key" ? "key" : "password",
+                    value: result.value,
+                    password: result.password,
+                    publicKey: result.publicKey,
+                    passphrase: result.passphrase,
+                    description: result.description,
+                    folder: result.folder ?? "",
+                    tags: result.tags ?? [],
                   };
                   if (idx >= 0) {
                     const next = [...prev];

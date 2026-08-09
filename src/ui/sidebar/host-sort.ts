@@ -57,26 +57,31 @@ export function sortHostTree(
       return a.name.localeCompare(b.name);
     }
 
-    if (pinnedFirst && !!a.pin !== !!b.pin) return b.pin ? 1 : -1;
+    // The three branches above return for every combination involving a
+    // folder, so both sides are hosts from here on.
+    const hostA = a as Host;
+    const hostB = b as Host;
+
+    if (pinnedFirst && !!hostA.pin !== !!hostB.pin) return hostB.pin ? 1 : -1;
 
     switch (key) {
       case "name-asc":
-        return a.name.localeCompare(b.name);
+        return hostA.name.localeCompare(hostB.name);
       case "name-desc":
-        return b.name.localeCompare(a.name);
+        return hostB.name.localeCompare(hostA.name);
       case "ip-asc":
-        return a.ip.localeCompare(b.ip);
+        return hostA.ip.localeCompare(hostB.ip);
       case "ip-desc":
-        return b.ip.localeCompare(a.ip);
+        return hostB.ip.localeCompare(hostA.ip);
       case "status-online":
-        return Number(b.online) - Number(a.online);
+        return Number(hostB.online) - Number(hostA.online);
       case "status-offline":
-        return Number(a.online) - Number(b.online);
+        return Number(hostA.online) - Number(hostB.online);
       case "manual": {
-        const aOrder = a.sortOrder;
-        const bOrder = b.sortOrder;
+        const aOrder = hostA.sortOrder;
+        const bOrder = hostB.sortOrder;
         if (aOrder == null && bOrder == null)
-          return a.name.localeCompare(b.name);
+          return hostA.name.localeCompare(hostB.name);
         if (aOrder == null) return 1;
         if (bOrder == null) return -1;
         return aOrder - bOrder;

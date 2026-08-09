@@ -1,4 +1,5 @@
 import axios from "axios";
+import { asHttpError } from "@/lib/http-error";
 import {
   authApi,
   fileManagerApi,
@@ -9,7 +10,7 @@ import {
 } from "@/main-axios";
 import { resolveConnectionOrigin } from "@/lib/connection-origin";
 import { fileLogger } from "@/lib/frontend-logger";
-import type { SSHHost } from "@/types/index";
+import type { FileItem, SSHHost } from "@/types/index";
 
 type ApiConnectionLog = {
   type: "info" | "success" | "warning" | "error";
@@ -31,6 +32,22 @@ type ConnectErrorResponse = {
   status?: string;
   reason?: string;
 };
+
+/**
+ * The interactive-auth branches /ssh/connect can take before a session exists.
+ * Callers switch on these, so they cannot stay behind Record<string, unknown>.
+ */
+export interface SSHConnectResult {
+  success?: boolean;
+  status?: string;
+  reason?: "timeout" | "no_keyboard" | "auth_failed";
+  requires_totp?: boolean;
+  requires_warpgate?: boolean;
+  sessionId?: string;
+  prompt?: string;
+  url?: string;
+  securityKey?: string;
+}
 
 function buildFileManagerUrl(path: string): string {
   const baseURL = String(fileManagerApi.defaults.baseURL || "");
@@ -80,7 +97,7 @@ export async function connectSSH(
     socks5ProxyChain?: unknown;
     jumpHosts?: Array<{ hostId: number }>;
   },
-): Promise<Record<string, unknown>> {
+): Promise<SSHConnectResult> {
   try {
     const response = await getFileManagerApiForSession(sessionId).post(
       "/ssh/connect",
@@ -280,7 +297,7 @@ export async function keepSSHAlive(
 export async function listSSHFiles(
   sessionId: string,
   path: string,
-): Promise<{ files: unknown[]; path: string }> {
+): Promise<{ files: FileItem[]; path: string }> {
   try {
     const response = await getFileManagerApiForSession(sessionId).get(
       "/ssh/listFiles",
@@ -338,14 +355,15 @@ export async function readSSHFile(
     );
     return response.data;
   } catch (error: unknown) {
-    if (error.response?.status === 404) {
+    const httpError = asHttpError(error);
+    if (httpError.response?.status === 404) {
       const customError = new Error("File not found");
       (
         customError as Error & { response?: unknown; isFileNotFound?: boolean }
-      ).response = error.response;
+      ).response = httpError.response;
       (
         customError as Error & { response?: unknown; isFileNotFound?: boolean }
-      ).isFileNotFound = error.response.data?.fileNotFound || true;
+      ).isFileNotFound = httpError.response.data?.fileNotFound || true;
       throw customError;
     }
     handleApiError(error, "read SSH file");

@@ -1,4 +1,9 @@
-import axios, { AxiosError, type AxiosInstance } from "axios";
+import axios, {
+  AxiosError,
+  type AxiosInstance,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from "axios";
 import { toast } from "sonner";
 import { getBasePath } from "@/lib/base-path";
 import { isElectron } from "@/lib/electron";
@@ -55,6 +60,7 @@ import {
   type LogContext,
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
+import { asHttpError } from "@/lib/http-error";
 
 export type ServerStatus = {
   status: "online" | "offline";
@@ -414,7 +420,7 @@ function createApiInstance(
     withCredentials: true,
   });
 
-  instance.interceptors.request.use((config: AxiosRequestConfig) => {
+  instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     const startTime = performance.now();
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -633,8 +639,7 @@ function createApiInstance(
           userWasAuthenticated = false;
         }
       } else if (!isSilentRetry) {
-        const wasAuthenticated = userWasAuthenticated;
-        dbHealthMonitor.reportDatabaseError(error, wasAuthenticated);
+        dbHealthMonitor.reportDatabaseError(error);
       }
 
       return Promise.reject(error);
@@ -667,7 +672,7 @@ const apiHost =
   import.meta.env.VITE_API_HOST ||
   (typeof window !== "undefined" ? window.location.hostname : "localhost");
 
-interface AxiosRequestConfigExtended extends AxiosRequestConfig {
+interface AxiosRequestConfigExtended extends InternalAxiosRequestConfig {
   startTime?: number;
   requestId?: string;
   __silentRetry?: boolean;
@@ -677,7 +682,7 @@ interface AxiosErrorExtended extends AxiosError {
   config?: AxiosRequestConfigExtended;
 }
 
-export async function checkElectronUpdate(): Promise<{
+export interface ElectronUpdateCheckResult {
   success: boolean;
   status?: "up_to_date" | "requires_update" | "beta";
   localVersion?: string;
@@ -692,19 +697,22 @@ export async function checkElectronUpdate(): Promise<{
   cached?: boolean;
   cache_age?: number;
   error?: string;
-}> {
+}
+
+export async function checkElectronUpdate(): Promise<ElectronUpdateCheckResult> {
   if (!isElectron())
     return { success: false, error: "Not in Electron environment" };
 
   try {
-    const result = await (
+    const result = (await (
       window as Window &
         typeof globalThis & {
           IS_ELECTRON?: boolean;
-          electronAPI?: unknown;
+          electronAPI?: { invoke?: (channel: string) => Promise<unknown> };
         }
-    ).electronAPI?.invoke("check-electron-update");
-    return result;
+    ).electronAPI?.invoke?.("check-electron-update")) as
+      ElectronUpdateCheckResult | undefined;
+    return result ?? { success: false, error: "Update check failed" };
   } catch (error) {
     console.error("Failed to check Electron update:", error);
     return { success: false, error: "Update check failed" };
@@ -755,31 +763,34 @@ function createRemoteOriginApiInstance(path: string): AxiosInstance {
     timeout: 30000,
   });
 
-  instance.interceptors.request.use(async (config: AxiosRequestConfig) => {
-    const [remoteConfig, remoteJwt] = await Promise.all([
-      window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
-        serverUrl?: string;
-      } | null>,
-      window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
-        string | null
-      >,
-    ]);
+  instance.interceptors.request.use(
+    async (config: InternalAxiosRequestConfig) => {
+      const [remoteConfig, remoteJwt] = await Promise.all([
+        window.electronAPI?.invoke?.("get-remote-sync-config") as Promise<{
+          serverUrl?: string;
+        } | null>,
+        window.electronAPI?.invoke?.("get-remote-sync-jwt") as Promise<
+          string | null
+        >,
+      ]);
 
-    const baseUrl = (remoteConfig?.serverUrl || "").replace(/\/$/, "");
-    config.baseURL = baseUrl
-      ? `${baseUrl}${path}`
-      : "http://no-server-configured";
+      const baseUrl = (remoteConfig?.serverUrl || "").replace(/\/$/, "");
+      config.baseURL = baseUrl
+        ? `${baseUrl}${path}`
+        : "http://no-server-configured";
 
-    if (config.headers.set) {
-      config.headers.set("X-Electron-App", "true");
-      if (remoteJwt) config.headers.set("Authorization", `Bearer ${remoteJwt}`);
-    } else {
-      config.headers["X-Electron-App"] = "true";
-      if (remoteJwt) config.headers["Authorization"] = `Bearer ${remoteJwt}`;
-    }
+      if (config.headers.set) {
+        config.headers.set("X-Electron-App", "true");
+        if (remoteJwt)
+          config.headers.set("Authorization", `Bearer ${remoteJwt}`);
+      } else {
+        config.headers["X-Electron-App"] = "true";
+        if (remoteJwt) config.headers["Authorization"] = `Bearer ${remoteJwt}`;
+      }
 
-    return config;
-  });
+      return config;
+    },
+  );
 
   return instance;
 }
@@ -1788,9 +1799,10 @@ export async function getOIDCConfig(): Promise<Record<string, unknown>> {
     const response = await authApi.get("/users/oidc-config");
     return response.data;
   } catch (error: unknown) {
+    const httpError = asHttpError(error);
     console.warn(
       "Failed to fetch OIDC config:",
-      error.response?.data?.error || error.message,
+      httpError.response?.data?.error || httpError.message,
     );
     return null;
   }

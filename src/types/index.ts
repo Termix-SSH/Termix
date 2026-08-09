@@ -1,3 +1,4 @@
+import type { GuacamoleConfig } from "./guacamole-config.js";
 import type { Client } from "ssh2";
 import type { Request } from "express";
 import type { RefObject } from "react";
@@ -188,7 +189,7 @@ export interface Host {
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  guacamoleConfig?: string | Record<string, unknown>;
+  guacamoleConfig?: string | GuacamoleConfig;
   dockerConfig?: Record<string, unknown> | null;
 
   enableSsh?: boolean;
@@ -320,7 +321,7 @@ export interface HostData {
   domain?: string;
   security?: string;
   ignoreCert?: boolean;
-  guacamoleConfig?: Record<string, unknown> | null;
+  guacamoleConfig?: GuacamoleConfig | null;
   dockerConfig?: Record<string, unknown> | null;
 
   enableSsh?: boolean;
@@ -678,9 +679,10 @@ export interface TerminalConfig {
   customThemeColors?: {
     background: string;
     foreground: string;
-    cursor: string;
-    cursorAccent: string;
-    selectionBackground: string;
+    cursor?: string;
+    cursorAccent?: string;
+    selectionBackground?: string;
+    selectionForeground?: string;
     black: string;
     red: string;
     green: string;

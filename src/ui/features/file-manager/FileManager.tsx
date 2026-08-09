@@ -6,6 +6,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { asHttpError } from "@/lib/http-error";
 import { cn } from "@/lib/utils.ts";
 import { FileManagerGrid } from "./FileManagerGrid.tsx";
 import { FileManagerSidebar } from "./FileManagerSidebar.tsx";
@@ -1339,9 +1340,10 @@ function FileManagerContent({
         });
       }
     } catch (error: unknown) {
+      const httpError = asHttpError(error);
       toast.error(
-        error?.response?.data?.error ||
-          error?.message ||
+        httpError.response?.data?.error ||
+          httpError.message ||
           t("fileManager.failedToResolveSymlink"),
       );
     }

@@ -122,7 +122,7 @@ function buildRailButtons(
   // Filter out hidden items, then collapse consecutive/leading/trailing separators
   const filtered = all.filter((item) => {
     if (item.kind === "separator") return true;
-    if (item.kind === "tab") return !hidden.has(item.tabType);
+    if ("tabType" in item) return !hidden.has(item.tabType);
     return !hidden.has(item.view);
   });
 
@@ -339,7 +339,7 @@ export function AppRail({
               className="mx-auto h-px bg-border my-0.5 shrink-0 transition-[width] duration-200"
               style={{ width: railExpanded ? "calc(100% - 16px)" : 20 }}
             />
-          ) : item.kind === "tab" ? (
+          ) : "tabType" in item ? (
             <button
               key={item.tabType}
               onClick={() => onOpenTab?.(item.tabType)}
