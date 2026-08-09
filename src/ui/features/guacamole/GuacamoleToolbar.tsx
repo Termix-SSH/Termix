@@ -13,6 +13,7 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsLeftRight,
+  FolderOpen,
   Touchpad,
   MousePointer,
 } from "lucide-react";
@@ -33,6 +34,9 @@ interface GuacamoleToolbarProps {
   displayRef: React.RefObject<GuacamoleDisplayHandle>;
   protocol: "rdp" | "vnc" | "telnet";
   touchMode?: GuacamoleTouchMode | null;
+  hasFilesystem?: boolean;
+  fileBrowserOpen?: boolean;
+  onToggleFileBrowser?: () => void;
   onTouchModeChange?: (mode: GuacamoleTouchMode) => void;
 }
 
@@ -115,6 +119,9 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
   displayRef,
   protocol,
   touchMode,
+  hasFilesystem = false,
+  fileBrowserOpen = false,
+  onToggleFileBrowser,
   onTouchModeChange,
 }) => {
   const { t } = useTranslation();
@@ -326,6 +333,20 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                       : t("guacamole.toolbar.switchToTouch")}
                   </TooltipContent>
                 </Tooltip>
+              </>
+            )}
+
+            {/* Drive files — only once guacd reports a redirected filesystem */}
+            {hasFilesystem && onToggleFileBrowser && (
+              <>
+                <div className={SEP} />
+                <TipIconBtn
+                  tooltip={t("guacamole.files.title")}
+                  onClick={onToggleFileBrowser}
+                  className={cn(fileBrowserOpen && "bg-muted text-foreground")}
+                >
+                  <FolderOpen className="size-3.5" />
+                </TipIconBtn>
               </>
             )}
 

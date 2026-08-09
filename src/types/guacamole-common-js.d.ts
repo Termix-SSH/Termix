@@ -17,6 +17,22 @@ declare module "guacamole-common-js" {
       onfile:
         | ((stream: InputStream, mimetype: string, filename: string) => void)
         | null;
+      onfilesystem: ((filesystem: Object, name: string) => void) | null;
+    }
+
+    // Mirrors Guacamole.Object: a named collection of streams. Within this
+    // namespace `Object` refers to this class, not the global one.
+    class Object {
+      static readonly ROOT_STREAM: string;
+      static readonly STREAM_INDEX_MIMETYPE: string;
+      readonly index: number;
+      requestInputStream(
+        name: string,
+        bodyCallback?: (stream: InputStream, mimetype: string) => void,
+      ): void;
+      createOutputStream(mimetype: string, name: string): OutputStream;
+      onbody: ((stream: InputStream, mimetype: string) => void) | null;
+      onundefine: (() => void) | null;
     }
 
     class AudioPlayer {
@@ -191,6 +207,16 @@ declare module "guacamole-common-js" {
       getLength(): number;
       onprogress: ((length: number) => void) | null;
       onend: (() => void) | null;
+    }
+
+    class BlobWriter {
+      constructor(stream: OutputStream);
+      sendBlob(blob: Blob): void;
+      sendEnd(): void;
+      onack: ((status: Status) => void) | null;
+      onerror: ((blob: Blob, offset: number, error: Status) => void) | null;
+      onprogress: ((blob: Blob, offset: number) => void) | null;
+      oncomplete: ((blob: Blob) => void) | null;
     }
   }
 
