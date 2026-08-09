@@ -882,6 +882,28 @@ export function AppShell({
     };
   }, [loadHosts]);
 
+  // The Electron main process runs remote sync (pull/push hosts and
+  // credentials with a connected Termix server) on its own timer, entirely
+  // outside any renderer-initiated action, so nothing normally dispatches
+  // the termix:hosts-changed / termix:credentials-changed events that
+  // panels rely on to refetch. Without this, newly-synced hosts/credentials
+  // only show up after a manual refresh or app restart.
+  useEffect(() => {
+    if (!isElectron()) return;
+    let wasSyncing = false;
+    const unsubscribe = window.electronAPI?.onRemoteSyncStatusChanged?.(
+      (status: { syncing: boolean; lastError: string | null }) => {
+        const justFinished = wasSyncing && !status.syncing && !status.lastError;
+        wasSyncing = status.syncing;
+        if (justFinished) {
+          window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+          window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
+        }
+      },
+    );
+    return () => unsubscribe?.();
+  }, []);
+
   // Sync tab host data when allHosts updates (e.g. after editing terminal theme in host settings)
   useEffect(() => {
     if (allHosts.length === 0) return;
