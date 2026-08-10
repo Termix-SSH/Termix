@@ -14,6 +14,7 @@ describe("C2STunnelPresetManager tunnel normalization", () => {
       localAddress: " 127.0.0.2 ",
       remoteAddress: " 10.10.0.25 ",
       sourceHostId: 42,
+      sourceHostSyncId: "host-sync-42",
       sourcePort: 8080,
       endpointPort: 5432,
       maxRetries: 3,
@@ -29,8 +30,33 @@ describe("C2STunnelPresetManager tunnel normalization", () => {
       bindHost: "127.0.0.2",
       targetHost: "10.10.0.25",
       sourceHostId: 42,
+      sourceHostSyncId: "host-sync-42",
       sourcePort: 8080,
       endpointPort: 5432,
+    });
+  });
+
+  it("preserves source host sync identity for cross-device C2S presets", () => {
+    const tunnel = normalizeClientTunnel({
+      scope: "c2s",
+      mode: "local",
+      tunnelType: "local",
+      localAddress: "127.0.0.1",
+      remoteAddress: "10.0.0.25",
+      sourceHostId: 5,
+      sourceHostSyncId: "shared-host-sync-id",
+      sourcePort: 8080,
+      endpointPort: 80,
+      maxRetries: 3,
+      retryInterval: 10,
+      autoStart: false,
+    });
+
+    const saved = stripClientTunnelDiagnostics(tunnel);
+
+    expect(saved).toMatchObject({
+      sourceHostId: 5,
+      sourceHostSyncId: "shared-host-sync-id",
     });
   });
 

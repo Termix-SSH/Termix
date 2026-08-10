@@ -160,33 +160,22 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const [openTunnels, setOpenTunnels] = React.useState<Set<number>>(new Set());
   const isElectron =
     typeof window !== "undefined" && window.electronAPI?.isElectron === true;
-  const getCurrentAuthToken = React.useCallback(() => {
-    try {
-      return localStorage.getItem("jwt") || "";
-    } catch {
-      return "";
-    }
-  }, []);
-  const handleC2SSessionExpired = React.useCallback(
+  const handleC2SRemoteAuthError = React.useCallback(
     (result: { code?: string; error?: string }) => {
       const error = result.error || "";
       const isExpired =
+        result.code === "REMOTE_SESSION_EXPIRED" ||
         result.code === "SESSION_EXPIRED" ||
         error === "Termix session expired. Please log in again." ||
+        error ===
+          "Remote Termix session expired. Reconnect Remote Sync and try again." ||
         error === "Authentication required";
 
       if (!isExpired) return false;
 
-      try {
-        localStorage.removeItem("jwt");
-        localStorage.removeItem("termix_auth");
-      } catch {
-        // localStorage may be unavailable in restricted contexts.
-      }
-
-      window.electronAPI?.clearSessionCookies?.().catch(() => {});
-      toast.warning("Session expired. Please log in again.");
-      window.dispatchEvent(new Event("termix:logout"));
+      toast.warning(
+        "Remote Sync session expired. Reconnect Remote Sync and try again.",
+      );
       return true;
     },
     [],
@@ -287,6 +276,27 @@ export function C2STunnelPresetManager(): React.ReactElement {
     [getEndpointName, t],
   );
 
+  const withSourceHostIdentity = React.useCallback(
+    (tunnel: ClientTunnel): ClientTunnel => {
+      const normalized = normalizeClientTunnel(tunnel);
+      const host = sshHosts.find(
+        (item) =>
+          item.id === normalized.sourceHostId ||
+          (normalized.sourceHostSyncId &&
+            item.syncId === normalized.sourceHostSyncId),
+      );
+      if (!host) return normalized;
+      return normalizeClientTunnel({
+        ...normalized,
+        sourceHostId: host.id,
+        sourceHostSyncId: host.syncId || normalized.sourceHostSyncId,
+        sourceHostName: host.name || normalized.sourceHostName,
+        endpointHost: host.name || normalized.endpointHost,
+      });
+    },
+    [sshHosts],
+  );
+
   const getLocalAddressPlaceholder = React.useCallback(
     (mode: string) => {
       if (mode === "remote") return t("placeholders.localTargetHost");
@@ -361,7 +371,23 @@ export function C2STunnelPresetManager(): React.ReactElement {
     const normalizedConfig = Array.isArray(config)
       ? (config as TunnelConnection[])
           .filter((tunnel) => tunnel.scope === "c2s")
-          .map(normalizeClientTunnel)
+          .map((tunnel) => {
+            const normalized = normalizeClientTunnel(tunnel);
+            const host = nextHosts.find(
+              (item) =>
+                item.id === normalized.sourceHostId ||
+                (normalized.sourceHostSyncId &&
+                  item.syncId === normalized.sourceHostSyncId),
+            );
+            if (!host) return normalized;
+            return normalizeClientTunnel({
+              ...normalized,
+              sourceHostId: host.id,
+              sourceHostSyncId: host.syncId || normalized.sourceHostSyncId,
+              sourceHostName: host.name || normalized.sourceHostName,
+              endpointHost: host.name || normalized.endpointHost,
+            });
+          })
       : [];
     setLocalConfig(normalizedConfig);
     setSavedLocalConfig(normalizedConfig);
@@ -406,14 +432,14 @@ export function C2STunnelPresetManager(): React.ReactElement {
           previous?.reason !== status.reason);
       if (hasFailureDetail) {
         const message = status.reason || t("tunnels.manualControlError");
-        if (handleC2SSessionExpired({ error: message })) {
+        if (handleC2SRemoteAuthError({ error: message })) {
           continue;
         }
         toast.error(message, { id: `client-tunnel-error-${tunnelName}` });
       }
     }
     previousTunnelStatusesRef.current = tunnelStatuses;
-  }, [handleC2SSessionExpired, t, tunnelStatuses]);
+  }, [handleC2SRemoteAuthError, t, tunnelStatuses]);
 
   const validateLocalConfig = (config: ClientTunnel[]) => {
     const autoStartListeners = new Set<string>();
@@ -462,7 +488,9 @@ export function C2STunnelPresetManager(): React.ReactElement {
   };
 
   const saveLocalConfig = async (config: ClientTunnel[]) => {
-    const normalizedConfig = config.map(normalizeClientTunnel);
+    const normalizedConfig = config.map((tunnel) =>
+      withSourceHostIdentity(tunnel),
+    );
     const validationError = validateLocalConfig(normalizedConfig);
     if (validationError) throw new Error(validationError);
     const result =
@@ -491,6 +519,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
     if (!host) return;
     updateTunnel(index, {
       sourceHostId: host.id,
+      sourceHostSyncId: host.syncId || undefined,
       sourceHostName: host.name,
       endpointHost: host.name,
       endpointPort: 22,
@@ -524,7 +553,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const handleTunnelTest = async (tunnel: ClientTunnel, index: number) => {
     const tunnelName = getTunnelName(tunnel, index);
     const normalizedTunnel = {
-      ...normalizeClientTunnel(tunnel),
+      ...withSourceHostIdentity(tunnel),
       name: tunnelName,
     };
     const validationError = validateLocalConfig([normalizedTunnel]);
@@ -538,9 +567,8 @@ export function C2STunnelPresetManager(): React.ReactElement {
       const result = await window.electronAPI.testC2STunnel(
         normalizedTunnel,
         index,
-        getCurrentAuthToken(),
       );
-      if (!result.success && handleC2SSessionExpired(result)) {
+      if (!result.success && handleC2SRemoteAuthError(result)) {
         return;
       }
       if (!result.success)
@@ -563,7 +591,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const handleTunnelStart = async (tunnel: ClientTunnel, index: number) => {
     const tunnelName = getTunnelName(tunnel, index);
     const normalizedTunnel = {
-      ...normalizeClientTunnel(tunnel),
+      ...withSourceHostIdentity(tunnel),
       name: tunnelName,
     };
     const validationError = validateLocalConfig([normalizedTunnel]);
@@ -577,9 +605,8 @@ export function C2STunnelPresetManager(): React.ReactElement {
       const result = await window.electronAPI.startC2STunnel(
         normalizedTunnel,
         index,
-        getCurrentAuthToken(),
       );
-      if (!result.success && handleC2SSessionExpired(result)) {
+      if (!result.success && handleC2SRemoteAuthError(result)) {
         return;
       }
       if (!result.success)
@@ -627,10 +654,13 @@ export function C2STunnelPresetManager(): React.ReactElement {
   const handleSavePreset = async () => {
     if (!presetName.trim()) return;
     try {
-      await saveLocalConfig(localConfig);
+      const normalizedConfig = localConfig.map((tunnel) =>
+        withSourceHostIdentity(tunnel),
+      );
+      await saveLocalConfig(normalizedConfig);
       await createC2STunnelPreset({
         name: presetName.trim(),
-        config: localConfig.map(stripClientTunnelDiagnostics),
+        config: normalizedConfig.map(stripClientTunnelDiagnostics),
       });
       await refreshPresets();
       toast.success(t("profile.c2sPresetSaved"));

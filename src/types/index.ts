@@ -111,6 +111,7 @@ export interface QuickAction {
 
 export interface Host {
   id: number;
+  syncId?: string | null;
   name: string;
   ip: string;
   port: number;
@@ -437,6 +438,7 @@ export interface TunnelConnection {
   remoteAddress?: string;
   bindHost?: string;
   sourceHostId?: number;
+  sourceHostSyncId?: string;
   sourceHostName?: string;
   sourcePort: number;
   endpointPort: number;
@@ -465,6 +467,7 @@ export interface TunnelConfig {
   targetHost?: string;
 
   sourceHostId: number;
+  sourceHostSyncId?: string;
   tunnelIndex: number;
 
   requestingUserId?: string;

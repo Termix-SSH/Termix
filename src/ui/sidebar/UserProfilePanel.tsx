@@ -2545,7 +2545,7 @@ export function UserProfilePanel({
         id="ai"
         label={t("newUi.sidebar.userProfile.sectionAi")}
         icon={<Zap className="size-3.5" />}
-        open={openSection === "ai"}
+        open={openSections.has("ai")}
         onToggle={() => toggle("ai")}
       >
         <div className="flex flex-col gap-3 pt-3">

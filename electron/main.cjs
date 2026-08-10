@@ -853,7 +853,7 @@ function buildAiAgentMessages(session, payload = {}) {
     {
       role: "system",
       content:
-        "You are Termix Agent Mode. You help operate an already-open SSH terminal session through Termix. You never receive SSH credentials and cannot open your own SSH connection. Return strict JSON only. Choose exactly one action: {\"type\":\"run_command\",\"command\":\"single shell command\",\"message\":\"why\"}, {\"type\":\"ask_user\",\"message\":\"question\"}, or {\"type\":\"final_answer\",\"message\":\"summary\"}. Commands must be a single non-interactive shell line and must not include markdown.",
+        'You are Termix Agent Mode. You help operate an already-open SSH terminal session through Termix. You never receive SSH credentials and cannot open your own SSH connection. Return strict JSON only. Choose exactly one action: {"type":"run_command","command":"single shell command","message":"why"}, {"type":"ask_user","message":"question"}, or {"type":"final_answer","message":"summary"}. Commands must be a single non-interactive shell line and must not include markdown.',
     },
     {
       role: "user",
@@ -863,9 +863,8 @@ function buildAiAgentMessages(session, payload = {}) {
 }
 
 function validateAiAgentAction(value) {
-  const action = value?.action && typeof value.action === "object"
-    ? value.action
-    : value;
+  const action =
+    value?.action && typeof value.action === "object" ? value.action : value;
   const type = String(action?.type || "").trim();
 
   if (type === "run_command") {
@@ -879,8 +878,7 @@ function validateAiAgentAction(value) {
     return {
       type,
       command,
-      message:
-        typeof action.message === "string" ? action.message.trim() : "",
+      message: typeof action.message === "string" ? action.message.trim() : "",
       warnings: allWarnings,
       risky: allWarnings.length > 0,
     };
@@ -2211,14 +2209,17 @@ function getC2SRelayUrl() {
   return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
-const C2S_SESSION_EXPIRED_ERROR = "Termix session expired. Please log in again.";
+const C2S_REMOTE_SESSION_EXPIRED_ERROR =
+  "Remote Termix session expired. Reconnect Remote Sync and try again.";
 
 function normalizeC2SAuthToken(authToken) {
   return typeof authToken === "string" ? authToken.trim() : "";
 }
 
 function isC2SAuthError(message) {
-  const value = String(message || "").trim().toLowerCase();
+  const value = String(message || "")
+    .trim()
+    .toLowerCase();
   return (
     value === "authentication required" ||
     value === "missing authentication token" ||
@@ -2230,7 +2231,7 @@ function isC2SAuthError(message) {
 
 function normalizeC2SErrorMessage(message, fallback = "Client tunnel failed") {
   const value = message || fallback;
-  return isC2SAuthError(value) ? C2S_SESSION_EXPIRED_ERROR : value;
+  return isC2SAuthError(value) ? C2S_REMOTE_SESSION_EXPIRED_ERROR : value;
 }
 
 function createC2SFailure(message, fallback) {
@@ -2238,28 +2239,28 @@ function createC2SFailure(message, fallback) {
   return {
     success: false,
     error,
-    ...(error === C2S_SESSION_EXPIRED_ERROR
-      ? { code: "SESSION_EXPIRED" }
+    ...(error === C2S_REMOTE_SESSION_EXPIRED_ERROR
+      ? { code: "REMOTE_SESSION_EXPIRED" }
       : {}),
   };
 }
 
-async function getC2SRelayHeaders(relayUrl, authToken) {
+async function getC2SRelayHeaders(relayUrl) {
   const headers = { "X-Electron-App": "true" };
 
-  const currentToken = normalizeC2SAuthToken(authToken);
-  if (currentToken) {
-    headers.Cookie = `jwt=${encodeURIComponent(currentToken)}`;
-    return headers;
-  }
-
   const remoteSyncJwt = remoteSync.getRemoteSyncJwt();
-  if (remoteSyncJwt) {
+  if (remoteSyncJwt && !remoteSync.isJwtExpiredOrExpiringSoon(remoteSyncJwt)) {
     headers.Authorization = `Bearer ${remoteSyncJwt}`;
     return headers;
   }
 
-  if (!mainWindow?.webContents?.session) return headers;
+  if (remoteSyncJwt) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+
+  if (!mainWindow?.webContents?.session) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
 
   const cookieUrl = relayUrl
     .replace(/^ws:/, "http:")
@@ -2269,7 +2270,9 @@ async function getC2SRelayHeaders(relayUrl, authToken) {
     name: "jwt",
   });
   const jwt = cookies[0]?.value;
-  if (!jwt) return headers;
+  if (!jwt) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
 
   headers.Cookie = `jwt=${encodeURIComponent(jwt)}`;
   return headers;
@@ -2469,10 +2472,7 @@ async function openC2SRelay(
           "Relay rejected the client tunnel",
         );
         logToFile("[c2s] relay error:", relayError);
-        setC2STunnelError(
-          tunnelName,
-          relayError,
-        );
+        setC2STunnelError(tunnelName, relayError);
         cleanup();
       }
     } catch (error) {
@@ -2672,8 +2672,18 @@ function handleC2SLocalConnection(tunnel, socket, authToken) {
   const tunnelName = tunnel.name || getC2STunnelName(tunnel);
   const targetHost = getC2SRemoteAddress(tunnel);
   const targetPort = Number(tunnel.endpointPort);
-  openC2SRelay(tunnel, targetHost, targetPort, socket, undefined, authToken).catch((error) => {
-    const message = normalizeC2SErrorMessage(error.message, "Local relay failed");
+  openC2SRelay(
+    tunnel,
+    targetHost,
+    targetPort,
+    socket,
+    undefined,
+    authToken,
+  ).catch((error) => {
+    const message = normalizeC2SErrorMessage(
+      error.message,
+      "Local relay failed",
+    );
     logToFile("[c2s] local relay failed:", message);
     setC2STunnelError(tunnelName, message);
     socket.destroy();
@@ -3400,7 +3410,10 @@ ipcMain.handle("continue-terminal-agent-session", async (_event, payload) => {
     const session = terminalAgentSessions.get(sessionId);
     if (!session) throw new Error("Agent session not found");
 
-    if (typeof payload?.observation === "string" && payload.observation.trim()) {
+    if (
+      typeof payload?.observation === "string" &&
+      payload.observation.trim()
+    ) {
       session.history.push({
         role: "terminal",
         text: redactAiText(payload.observation).slice(-AI_MAX_CONTEXT_LENGTH),

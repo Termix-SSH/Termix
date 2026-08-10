@@ -49,6 +49,9 @@ export function ElectronLoginForm({
       setIsAuthenticating(true);
 
       try {
+        if (targetPurpose === "remoteSync" && !token) {
+          throw new Error("Remote Sync authentication did not return a token.");
+        }
         if (token) {
           if (targetPurpose === "remoteSync") {
             await window.electronAPI?.invoke?.("save-remote-sync-jwt", token);

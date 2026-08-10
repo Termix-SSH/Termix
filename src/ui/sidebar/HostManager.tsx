@@ -188,9 +188,13 @@ export function HostManager({
     reloadLinkedIds();
 
     window.addEventListener("termix:hosts-changed", reloadHosts);
+    window.addEventListener("ssh-hosts:changed", reloadHosts);
+    window.addEventListener("hosts:refresh", reloadHosts);
     window.addEventListener("termix:credentials-changed", reloadCredentials);
     return () => {
       window.removeEventListener("termix:hosts-changed", reloadHosts);
+      window.removeEventListener("ssh-hosts:changed", reloadHosts);
+      window.removeEventListener("hosts:refresh", reloadHosts);
       window.removeEventListener(
         "termix:credentials-changed",
         reloadCredentials,

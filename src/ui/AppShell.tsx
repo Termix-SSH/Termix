@@ -204,7 +204,7 @@ export function AppShell({
   onLogout,
 }: {
   username: string;
-  onLogout: () => void;
+  onLogout: (options?: { manual?: boolean }) => void;
 }) {
   const { t, i18n } = useTranslation();
   const { setTheme } = useTheme();
@@ -652,7 +652,12 @@ export function AppShell({
   }, []);
 
   useEffect(() => {
-    const handle = () => onLogout();
+    const handle = (event: Event) => {
+      const manual =
+        event instanceof CustomEvent &&
+        (event.detail as { manual?: boolean } | undefined)?.manual === true;
+      onLogout(manual ? { manual: true } : undefined);
+    };
     window.addEventListener("termix:logout", handle);
     return () => window.removeEventListener("termix:logout", handle);
   }, [onLogout]);

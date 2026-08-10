@@ -1811,10 +1811,10 @@ export type DesktopAutoSessionOutcome =
 
 /**
  * Electron-only, non-iframed local login: exchanges the embedded backend's
- * single auto-provisioned local user for a session without ever showing a
- * login form. Only succeeds when exactly one user exists locally (a synced
- * or otherwise multi-user install never satisfies this, and falls through
- * to a normal login screen instead).
+ * auto-provisioned local user for a session without ever showing a login
+ * form. If the local database contains multiple users, the backend
+ * deterministically chooses the admin account, or the earliest registered
+ * account if no admin exists.
  */
 export async function requestDesktopAutoSession(): Promise<DesktopAutoSessionOutcome> {
   if (desktopAutoSessionRequest) return desktopAutoSessionRequest;

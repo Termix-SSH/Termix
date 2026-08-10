@@ -87,6 +87,19 @@ export class HostResolutionRepository {
     return this.decryptOne("ssh_data", rows[0], userId);
   }
 
+  async findHostIdBySyncIdForUser(
+    syncId: string,
+    userId: string,
+  ): Promise<number | null> {
+    const rows = await this.context.drizzle
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(and(eq(hosts.syncId, syncId), eq(hosts.userId, userId)))
+      .limit(1);
+
+    return rows[0]?.id ?? null;
+  }
+
   async findHostUpdateState(
     hostId: number,
   ): Promise<HostUpdateStateRecord | null> {

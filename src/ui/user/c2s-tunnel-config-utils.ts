@@ -5,6 +5,7 @@ export type ClientTunnel = TunnelConnection & {
   remoteAddress: string;
   bindHost: string;
   sourceHostId?: number;
+  sourceHostSyncId?: string;
   sourceHostName?: string;
   displayName?: string;
   lastStartedAt?: string;
@@ -37,6 +38,7 @@ export function normalizeClientTunnel(
     targetHost: remoteAddress,
     sourcePort: Number(tunnel.sourcePort) || 8080,
     endpointPort: Number(tunnel.endpointPort) || 22,
+    sourceHostSyncId: metadata.sourceHostSyncId,
     endpointHost: tunnel.endpointHost || tunnel.sourceHostName || "",
     maxRetries: Number(tunnel.maxRetries) || 3,
     retryInterval: Number(tunnel.retryInterval) || 10,

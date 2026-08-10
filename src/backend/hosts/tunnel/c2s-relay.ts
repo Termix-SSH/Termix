@@ -41,9 +41,23 @@ async function resolveC2STunnelSource(
     throw new Error("Endpoint SSH host is required");
   }
 
+  let sourceHostId = tunnelConfig.sourceHostId;
+  if (tunnelConfig.sourceHostSyncId) {
+    const { createCurrentHostResolutionRepository } =
+      await import("../../database/repositories/factory.js");
+    const syncedHostId =
+      await createCurrentHostResolutionRepository().findHostIdBySyncIdForUser(
+        tunnelConfig.sourceHostSyncId,
+        userId,
+      );
+    if (syncedHostId) {
+      sourceHostId = syncedHostId;
+    }
+  }
+
   const accessInfo = await permissionManager.canAccessHost(
     userId,
-    tunnelConfig.sourceHostId,
+    sourceHostId,
     "connect",
   );
   if (!accessInfo.hasAccess) {
@@ -51,7 +65,7 @@ async function resolveC2STunnelSource(
   }
 
   const { resolveHostById } = await import("../host-resolver.js");
-  const resolvedHost = await resolveHostById(tunnelConfig.sourceHostId, userId);
+  const resolvedHost = await resolveHostById(sourceHostId, userId);
   if (!resolvedHost) {
     throw new Error("Endpoint SSH host not found");
   }
@@ -76,7 +90,8 @@ async function resolveC2STunnelSource(
     remoteAddress,
     bindHost: localAddress,
     targetHost: remoteAddress,
-    sourceHostId: resolvedHost.id || tunnelConfig.sourceHostId,
+    sourceHostId: resolvedHost.id || sourceHostId,
+    sourceHostSyncId: tunnelConfig.sourceHostSyncId,
     tunnelIndex: tunnelConfig.tunnelIndex || 0,
     requestingUserId: userId,
     hostName:
