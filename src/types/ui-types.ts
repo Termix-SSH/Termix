@@ -102,6 +102,7 @@ export type Host = {
   } | null;
   enableProxmox: boolean;
   enableTmuxMonitor: boolean;
+  enableTerminalToolbar: boolean;
   proxmoxConfig?: {
     defaultCredentialId: number | null;
     defaultAuthType?: string;

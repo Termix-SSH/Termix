@@ -16,29 +16,3 @@ export function imageExtensionForFormat(
 ): string | undefined {
   return format ? IMAGE_FORMAT_EXTENSIONS[format] : undefined;
 }
-
-export const IMAGE_FILENAME_PATTERN = /^[0-9a-f-]{36}\.[a-z0-9]+$/i;
-
-export function isImageFilename(filename: string): boolean {
-  return IMAGE_FILENAME_PATTERN.test(filename);
-}
-
-export function isExpiredImage(
-  modifiedAtMs: number,
-  nowMs: number,
-  ttlMs: number,
-): boolean {
-  return nowMs - modifiedAtMs > ttlMs;
-}
-
-export function exceedsImageStorageLimit(
-  fileCount: number,
-  totalBytes: number,
-  incomingBytes: number,
-  maxFileCount: number,
-  maxStorageBytes: number,
-): boolean {
-  return (
-    fileCount >= maxFileCount || totalBytes + incomingBytes > maxStorageBytes
-  );
-}

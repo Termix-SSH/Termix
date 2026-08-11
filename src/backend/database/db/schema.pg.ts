@@ -194,6 +194,9 @@ export const hosts = pgTable("ssh_data", {
   enableTmuxMonitor: boolean("enable_tmux_monitor")
     .notNull()
     .default(false),
+  enableTerminalToolbar: boolean("enable_terminal_toolbar")
+    .notNull()
+    .default(true),
   showTerminalInSidebar: boolean("show_terminal_in_sidebar")
     .notNull()
     .default(true),

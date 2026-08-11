@@ -1,0 +1,1 @@
+ALTER TABLE `ssh_data` ADD `enable_terminal_toolbar` integer DEFAULT true NOT NULL;

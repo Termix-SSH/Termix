@@ -86,6 +86,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     enableProxmox: h.enableProxmox ?? false,
     enableProxmoxStats: h.enableProxmoxStats ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false,
+    enableTerminalToolbar: h.enableTerminalToolbar ?? true,
     proxmoxConfig: h.proxmoxConfig ?? null,
     proxmoxStatsConfig: h.proxmoxStatsConfig ?? null,
     enableRdp: h.enableRdp != null ? h.enableRdp : h.connectionType === "rdp",

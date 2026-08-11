@@ -960,6 +960,8 @@
     "containerRuntimePodman": "Podman",
     "enableTmuxMonitor": "Enable Tmux Monitor",
     "enableTmuxMonitorDesc": "Show this host in the Tmux Monitor and add its tmux actions to the sidebar",
+    "enableTerminalToolbar": "Enable Terminal Toolbar",
+    "enableTerminalToolbarDesc": "Show a quick-access toolbar docked to the active terminal for this host's tools and live stats",
     "tabProxmox": "Proxmox",
     "proxmoxIntegration": "Proxmox Integration",
     "enableProxmox": "Enable Proxmox",
@@ -3724,6 +3726,29 @@
         "themeGruvbox": "Gruvbox"
       }
     }
+  },
+  "terminalToolbar": {
+    "title": "Terminal Toolbar",
+    "expand": "Expand toolbar",
+    "collapse": "Collapse toolbar",
+    "dense": "Icons only",
+    "labeled": "Labeled",
+    "expanded": "Show live stats",
+    "cycleDensity": "Change toolbar density",
+    "cpu": "CPU",
+    "memory": "Memory",
+    "disk": "Disk",
+    "statsUnavailable": "Live stats unavailable",
+    "tmuxDetach": "Detach tmux session",
+    "uploadImage": "Upload image",
+    "uploadingImage": "Uploading...",
+    "pasteImage": "Paste image from clipboard",
+    "openFiles": "Open Files",
+    "openDocker": "Open Docker",
+    "openTunnel": "Open Tunnel",
+    "openHostMetrics": "Open Host Metrics",
+    "openProxmoxStats": "Open Proxmox Stats",
+    "openTmuxMonitor": "Open Tmux Monitor"
   },
   "tmuxMonitor": {
     "title": "Tmux Monitor",

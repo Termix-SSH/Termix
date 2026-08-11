@@ -1063,6 +1063,11 @@ const migrateSchema = () => {
     "enable_tmux_monitor",
     "INTEGER NOT NULL DEFAULT 0",
   );
+  addColumnIfNotExists(
+    "ssh_data",
+    "enable_terminal_toolbar",
+    "INTEGER NOT NULL DEFAULT 1",
+  );
 
   addColumnIfNotExists("ssh_data", "connection_type", 'TEXT NOT NULL DEFAULT "ssh"');
   addColumnIfNotExists("ssh_data", "domain", "TEXT");

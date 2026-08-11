@@ -227,6 +227,8 @@ export function registerHostBulkRoutes(
           simpleUpdates.enableDocker = updates.enableDocker;
         if (typeof updates.enableTmuxMonitor === "boolean")
           simpleUpdates.enableTmuxMonitor = updates.enableTmuxMonitor;
+        if (typeof updates.enableTerminalToolbar === "boolean")
+          simpleUpdates.enableTerminalToolbar = updates.enableTerminalToolbar;
         // Disabling Proxmox is a plain flag flip; enabling is handled per-host
         // below so each host can default to its own stored credential.
         if (updates.enableProxmox === false)
@@ -631,6 +633,7 @@ export function registerHostBulkRoutes(
             enableDocker: hostData.enableDocker || false,
             enableProxmox: hostData.enableProxmox || false,
             enableTmuxMonitor: hostData.enableTmuxMonitor || false,
+            enableTerminalToolbar: hostData.enableTerminalToolbar !== false,
             showTerminalInSidebar: hostData.showTerminalInSidebar ? 1 : 0,
             showFileManagerInSidebar: hostData.showFileManagerInSidebar ? 1 : 0,
             showTunnelInSidebar: hostData.showTunnelInSidebar ? 1 : 0,
@@ -899,6 +902,7 @@ export function registerHostBulkRoutes(
             enableDocker: false,
             enableProxmox: false,
             enableTmuxMonitor: false,
+            enableTerminalToolbar: true,
             showTerminalInSidebar: 0,
             showFileManagerInSidebar: 0,
             showTunnelInSidebar: 0,

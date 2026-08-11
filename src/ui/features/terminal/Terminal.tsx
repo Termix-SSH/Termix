@@ -64,11 +64,13 @@ import {
 import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
-import { Save, ImagePlus, ClipboardPaste } from "lucide-react";
+import { Save } from "lucide-react";
 import { authApi } from "@/main-axios.ts";
 import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
+import { TerminalToolbar } from "./TerminalToolbar.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
+import type { Host, TabType } from "@/types/ui-types";
 import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
@@ -107,6 +109,11 @@ interface SSHTerminalProps {
   disableAutoFocus?: boolean;
   isQuickConnect?: boolean;
   onSaveQuickConnect?: () => Promise<void>;
+  /** Full host record, used to drive the context-aware terminal toolbar. */
+  host?: Host;
+  onOpenTab?: (type: TabType) => void;
+  /** False when this terminal sits in an unfocused split pane. */
+  isFocusedPane?: boolean;
 }
 
 const ALTERNATE_SCREEN_SEQUENCE = /\x1b\[\?(47|1047|1049)([hl])/g;
@@ -142,6 +149,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       disableAutoFocus = false,
       isQuickConnect = false,
       onSaveQuickConnect,
+      host,
+      onOpenTab,
+      isFocusedPane = true,
     },
     ref,
   ) {
@@ -3145,25 +3155,23 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       try {
         const form = new FormData();
         form.append("image", file);
+        form.append("instanceId", hostConfig.instanceId ?? "");
         const response = await authApi.post("/terminal/image-upload", form, {
           headers: { "Content-Type": undefined },
         });
         const { shellPath } = response.data as {
           shellPath: string;
         };
-        const prompt = `Please inspect this image: ${shellPath}`;
-        const promptInserted =
+        const pathInserted =
           webSocketRef.current?.readyState === WebSocket.OPEN;
-        if (promptInserted) {
+        if (pathInserted) {
           webSocketRef.current?.send(
-            JSON.stringify({ type: "input", data: prompt }),
+            JSON.stringify({ type: "input", data: shellPath }),
           );
-        }
-        if (promptInserted) {
-          toast.success(`Image saved and prompt inserted: ${shellPath}`);
+          toast.success(`Image uploaded: ${shellPath}`);
         } else {
           toast.warning(
-            `Image saved, but the terminal prompt was not available: ${shellPath}`,
+            `Image uploaded, but the terminal was not available to paste it: ${shellPath}`,
           );
         }
       } catch (error) {
@@ -3274,52 +3282,24 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }}
         />
 
-        {isConnected && (
-          <div className="absolute top-2 right-2 z-[110] flex max-w-[calc(100%-1rem)] flex-wrap items-center justify-end gap-1 rounded bg-black/60 p-1 text-xs text-white/80">
-            <button
-              type="button"
-              disabled={!isTmuxAttached}
-              onClick={() => {
-                if (webSocketRef.current?.readyState === WebSocket.OPEN) {
-                  webSocketRef.current.send(
-                    JSON.stringify({ type: "tmux_detach" }),
-                  );
-                }
-              }}
-              title={t("terminal.tmuxDetach")}
-              className="inline-flex h-7 items-center rounded px-2 text-white/70 transition-colors hover:bg-black/80 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              tmux:detach
-            </button>
-            <label
-              title="Upload an image file and insert a review prompt into the active terminal agent"
-              className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded px-2 hover:bg-black/80 hover:text-white"
-            >
-              <ImagePlus className="size-3.5" />
-              {isImageUploading ? "uploading..." : "upload image"}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={isImageUploading}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  event.target.value = "";
-                  if (file) void handleImageUpload(file);
-                }}
-              />
-            </label>
-            <button
-              type="button"
-              title="Read an image from the browser clipboard and insert a review prompt into the active terminal agent"
-              className="inline-flex h-7 items-center gap-1.5 rounded px-2 hover:bg-black/80 hover:text-white disabled:opacity-50"
-              disabled={isImageUploading}
-              onClick={() => void handleClipboardImage()}
-            >
-              <ClipboardPaste className="size-3.5" />
-              paste image
-            </button>
-          </div>
+        {host && host.enableTerminalToolbar !== false && (
+          <TerminalToolbar
+            host={host}
+            isConnected={isConnected}
+            isTmuxAttached={isTmuxAttached}
+            onTmuxDetach={() => {
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(
+                  JSON.stringify({ type: "tmux_detach" }),
+                );
+              }
+            }}
+            isImageUploading={isImageUploading}
+            onUploadImage={(file) => void handleImageUpload(file)}
+            onPasteImage={() => void handleClipboardImage()}
+            onOpenTab={onOpenTab}
+            isFocused={isFocusedPane}
+          />
         )}
 
         {isQuickConnect &&

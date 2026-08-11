@@ -1,19 +1,13 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
-import fs from "fs/promises";
-import path from "path";
 import multer from "multer";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
-import {
-  exceedsImageStorageLimit,
-  imageExtensionForFormat,
-  isExpiredImage,
-  isImageFilename,
-} from "./terminal-image-utils.js";
+import { imageExtensionForFormat } from "./terminal-image-utils.js";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
+import { sessionManager } from "../../hosts/terminal/session-manager.js";
 import {
   createCurrentCommandHistoryRepository,
   createCurrentHostResolutionRepository,
@@ -71,90 +65,46 @@ function handleImageUploadMiddleware(
     });
   });
 }
-const imageDir = process.env.TERMIX_IMAGE_DIR
-  ? path.resolve(process.env.TERMIX_IMAGE_DIR)
-  : path.join(process.env.DATA_DIR || "./db/data", "termix-image-v0");
-const configuredImageTtlMs = Number.parseInt(
-  process.env.TERMIX_IMAGE_TTL_MS || "3600000",
-  10,
-);
-const imageTtlMs = Number.isFinite(configuredImageTtlMs)
-  ? Math.max(0, configuredImageTtlMs)
-  : 3600000;
-const configuredMaxImageCount = Number.parseInt(
-  process.env.TERMIX_MAX_IMAGE_COUNT || "100",
-  10,
-);
-const maxImageCount = Number.isFinite(configuredMaxImageCount)
-  ? Math.max(1, configuredMaxImageCount)
-  : 100;
-const configuredMaxImageStorageBytes = Number.parseInt(
-  process.env.TERMIX_MAX_IMAGE_STORAGE_BYTES || "5368709120",
-  10,
-);
-const maxImageStorageBytes = Number.isFinite(configuredMaxImageStorageBytes)
-  ? Math.max(1_048_576, configuredMaxImageStorageBytes)
-  : 5_368_709_120;
-let imageStorageQueue = Promise.resolve();
+// Remote directory (on the SSH host the terminal is connected to) that
+// uploaded/pasted images are written into. Always POSIX-style: this is a
+// path on the remote shell, not on the Termix backend's own filesystem.
+const REMOTE_IMAGE_DIR = "/tmp/termix-images";
 
-function withImageStorageLock<T>(operation: () => Promise<T>): Promise<T> {
-  const result = imageStorageQueue.then(operation, operation);
-  imageStorageQueue = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
+function findTerminalSession(userId: string, instanceId: string) {
+  return sessionManager
+    .getUserSessions(userId)
+    .find(
+      (session) =>
+        (session.attachedTabInstanceId ?? session.tabInstanceId) ===
+          instanceId && session.isConnected,
+    );
 }
 
-async function cleanupExpiredImages(): Promise<void> {
-  const entries = await fs
-    .readdir(imageDir, { withFileTypes: true })
-    .catch(() => []);
-  const now = Date.now();
-  await Promise.all(
-    entries
-      .filter((entry) => entry.isFile() && isImageFilename(entry.name))
-      .map(async (entry) => {
-        const filePath = path.join(imageDir, entry.name);
-        const stat = await fs.stat(filePath).catch(() => null);
-        if (stat && isExpiredImage(stat.mtimeMs, now, imageTtlMs)) {
-          await fs.unlink(filePath).catch(() => undefined);
-        }
-      }),
-  );
+function sftpMkdir(
+  sftp: import("ssh2").SFTPWrapper,
+  dir: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    sftp.mkdir(dir, (err) => {
+      // EEXIST (or a bare "Failure" from some SFTP servers when the
+      // directory already exists) is not a real failure here.
+      if (err && !/exist/i.test(err.message)) return reject(err);
+      resolve();
+    });
+  });
 }
 
-async function getActiveImageStorageUsage(): Promise<{
-  fileCount: number;
-  totalBytes: number;
-}> {
-  const entries = await fs
-    .readdir(imageDir, { withFileTypes: true })
-    .catch(() => []);
-  const now = Date.now();
-  const stats = await Promise.all(
-    entries
-      .filter((entry) => entry.isFile() && isImageFilename(entry.name))
-      .map(async (entry) => {
-        const stat = await fs
-          .stat(path.join(imageDir, entry.name))
-          .catch(() => null);
-        return stat && !isExpiredImage(stat.mtimeMs, now, imageTtlMs)
-          ? stat
-          : null;
-      }),
-  );
-
-  return stats.reduce(
-    (usage, stat) => {
-      if (stat) {
-        usage.fileCount += 1;
-        usage.totalBytes += stat.size;
-      }
-      return usage;
-    },
-    { fileCount: 0, totalBytes: 0 },
-  );
+function sftpWriteFile(
+  sftp: import("ssh2").SFTPWrapper,
+  remotePath: string,
+  data: Buffer,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const stream = sftp.createWriteStream(remotePath);
+    stream.on("error", reject);
+    stream.on("close", resolve);
+    stream.end(data);
+  });
 }
 
 router.post(
@@ -163,12 +113,28 @@ router.post(
   requireDataAccess,
   handleImageUploadMiddleware,
   async (req: Request, res: Response) => {
+    const userId = (req as AuthenticatedRequest).userId;
+    const instanceId = req.body?.instanceId;
     if (!req.file) {
       return res.status(400).json({
         error: "Image required",
         code: "IMAGE_FILE_MISSING",
       });
     }
+    if (!isNonEmptyString(userId) || !isNonEmptyString(instanceId)) {
+      return res.status(400).json({
+        error: "Missing terminal session",
+        code: "IMAGE_SESSION_MISSING",
+      });
+    }
+    const session = findTerminalSession(userId, instanceId);
+    if (!session || !session.sshConn) {
+      return res.status(409).json({
+        error: "Terminal is not connected",
+        code: "IMAGE_TERMINAL_NOT_CONNECTED",
+      });
+    }
+
     let normalizedImage: Buffer;
     try {
       const source = sharp(req.file.buffer, {
@@ -195,36 +161,36 @@ router.post(
         code: "IMAGE_DECODE_FAILED",
       });
     }
-    const stored = await withImageStorageLock(async () => {
-      await cleanupExpiredImages();
-      const usage = await getActiveImageStorageUsage();
-      if (
-        exceedsImageStorageLimit(
-          usage.fileCount,
-          usage.totalBytes,
-          normalizedImage.length,
-          maxImageCount,
-          maxImageStorageBytes,
-        )
-      ) {
-        return false;
-      }
-      const id = randomUUID();
-      const filename = `${id}.png`;
-      await fs.mkdir(imageDir, { recursive: true });
-      await fs.writeFile(path.join(imageDir, filename), normalizedImage);
-      return { filename, id };
-    });
-    if (!stored) {
-      return res.status(507).json({ error: "Image storage limit reached" });
+
+    const id = randomUUID();
+    const filename = `${id}.png`;
+    const remotePath = `${REMOTE_IMAGE_DIR}/${filename}`;
+
+    try {
+      const sftp = await new Promise<import("ssh2").SFTPWrapper>(
+        (resolve, reject) => {
+          session.sshConn!.sftp((err, sftp) => {
+            if (err) return reject(err);
+            resolve(sftp);
+          });
+        },
+      );
+      await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
+      await sftpWriteFile(sftp, remotePath, normalizedImage);
+    } catch (error) {
+      databaseLogger.warn("Image upload failed to write to remote host", {
+        operation: "terminal_image_upload_sftp_failed",
+        userId,
+        instanceId,
+        reason: error instanceof Error ? error.message : "unknown",
+      });
+      return res.status(502).json({
+        error: "Failed to write image to the remote host",
+        code: "IMAGE_REMOTE_WRITE_FAILED",
+      });
     }
-    const hostPath =
-      process.env.TERMIX_IMAGE_HOST_PATH || "/tmp/termix-image-v0";
-    res.json({
-      id: stored.id,
-      filename: stored.filename,
-      shellPath: path.join(hostPath, stored.filename),
-    });
+
+    res.json({ id, filename, shellPath: remotePath });
   },
 );
 

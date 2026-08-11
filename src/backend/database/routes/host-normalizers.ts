@@ -154,6 +154,7 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   enableDocker?: unknown;
   enableProxmox?: unknown;
   enableTmuxMonitor?: unknown;
+  enableTerminalToolbar?: unknown;
   showTerminalInSidebar?: unknown;
   showFileManagerInSidebar?: unknown;
   showTunnelInSidebar?: unknown;
@@ -333,6 +334,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableProxmox",
   "enableProxmoxStats",
   "enableTmuxMonitor",
+  "enableTerminalToolbar",
   "showTerminalInSidebar",
   "showFileManagerInSidebar",
   "showTunnelInSidebar",
@@ -429,6 +431,7 @@ export function transformHostResponse(
     enableProxmox: !!host.enableProxmox,
     enableProxmoxStats: !!host.enableProxmoxStats,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
+    enableTerminalToolbar: host.enableTerminalToolbar !== false,
     showTerminalInSidebar: !!host.showTerminalInSidebar,
     showFileManagerInSidebar: !!host.showFileManagerInSidebar,
     showTunnelInSidebar: !!host.showTunnelInSidebar,

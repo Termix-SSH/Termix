@@ -36,6 +36,13 @@
       "when": 1786423595034,
       "tag": "0004_great_victor_mancha",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786428084849,
+      "tag": "0005_loose_captain_marvel",
+      "breakpoints": true
     }
   ]
 }

@@ -1262,6 +1262,7 @@ export function AppShell({
       enableProxmox: false,
       enableProxmoxStats: false,
       enableTmuxMonitor: false,
+      enableTerminalToolbar: false,
       enableSsh: false,
       enableRdp: false,
       enableVnc: false,
@@ -1834,6 +1835,7 @@ export function AppShell({
                   enableProxmox: false,
                   enableProxmoxStats: false,
                   enableTmuxMonitor: false,
+                  enableTerminalToolbar: false,
                   enableSsh: false,
                   enableRdp: false,
                   enableVnc: false,
@@ -2131,6 +2133,9 @@ export function AppShell({
                     const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
                     const inPane = paneIdx !== -1;
                     const activeInline = !inPane && tab.id === activeTabId;
+                    const isFocusedPane = inPane
+                      ? paneIdx === (focusedPaneIndex ?? 0)
+                      : activeInline;
                     return createPortal(
                       renderTabContent(
                         tab,
@@ -2159,6 +2164,7 @@ export function AppShell({
                           }),
                         renameTab,
                         saveQuickConnectHost,
+                        isFocusedPane,
                       ),
                       tabNode,
                       tab.id,
