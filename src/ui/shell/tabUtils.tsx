@@ -5,7 +5,9 @@ import {
   HardDrive,
   LayoutDashboard,
   LayoutGrid,
+  MessagesSquare,
   Monitor,
+  MousePointerClick,
   Network,
   Server,
   Settings,
@@ -185,9 +187,9 @@ export function tabIcon(type: TabType) {
     case "rdp":
       return <Monitor className="size-3.5" />;
     case "vnc":
-      return <Monitor className="size-3.5" />;
+      return <MousePointerClick className="size-3.5" />;
     case "telnet":
-      return <Terminal className="size-3.5" />;
+      return <MessagesSquare className="size-3.5" />;
     case "host-metrics":
       return <Server className="size-3.5" />;
     case "proxmox-stats":

@@ -630,7 +630,7 @@ export function HostItem({
                     toast.success(t("hosts.telnetUrlCopied"));
                   }}
                 >
-                  <Terminal className="size-3.5 mr-2" />
+                  <MessagesSquare className="size-3.5 mr-2" />
                   {t("hosts.copyTelnetUrlAction")}
                 </DropdownMenuItem>
               )}
