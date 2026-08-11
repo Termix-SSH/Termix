@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Command as CommandPrimitive } from "cmdk";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Kbd } from "@/components/kbd";
@@ -227,13 +228,13 @@ export function CommandPalette({
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <Command className="rounded-none">
+        <Command className="rounded-none" shouldFilter={false} loop>
           <div className="flex items-center border-b border-border px-4 py-1">
             <Search className="size-4 text-muted-foreground mr-3" />
-            <input
+            <CommandPrimitive.Input
               ref={inputRef}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onValueChange={setSearch}
               placeholder={t("commandPalette.searchPlaceholder")}
               className="flex-1 h-12 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
@@ -250,6 +251,7 @@ export function CommandPalette({
               className="px-2"
             >
               <CommandItem
+                value="quick-action-add-host"
                 onSelect={() =>
                   handleAction(() =>
                     onOpenTab(
@@ -275,6 +277,7 @@ export function CommandPalette({
               </CommandItem>
 
               <CommandItem
+                value="quick-action-admin-settings"
                 onSelect={() => handleAction(() => onOpenTab("admin-settings"))}
                 className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
               >
@@ -292,6 +295,7 @@ export function CommandPalette({
               </CommandItem>
 
               <CommandItem
+                value="quick-action-user-profile"
                 onSelect={() => handleAction(() => onOpenTab("user-profile"))}
                 className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
               >
@@ -308,25 +312,8 @@ export function CommandPalette({
                 </div>
               </CommandItem>
 
-              {/* --- tmux-monitor --- */}
               <CommandItem
-                onSelect={() => handleAction(() => onOpenTab("tmux_monitor"))}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
-              >
-                <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
-                  <Layers className="size-4 text-accent-brand" />
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="text-sm font-semibold">
-                    {t("commandPalette.tmuxMonitor")}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {t("commandPalette.tmuxMonitorDesc")}
-                  </span>
-                </div>
-              </CommandItem>
-
-              <CommandItem
+                value="quick-action-add-credential"
                 onSelect={() =>
                   handleAction(() =>
                     onOpenTab(
@@ -362,6 +349,7 @@ export function CommandPalette({
                   {filteredSnippets.map((snippet) => (
                     <CommandItem
                       key={snippet.id}
+                      value={`snippet-${snippet.id}`}
                       onSelect={() => {
                         if (!activeTargetTab) return;
                         handleAction(() =>
@@ -409,6 +397,7 @@ export function CommandPalette({
                   {recentActivity.map((item) => (
                     <CommandItem
                       key={item.id}
+                      value={`recent-activity-${item.id}`}
                       onSelect={() =>
                         handleAction(() =>
                           onOpenTab(
@@ -461,6 +450,7 @@ export function CommandPalette({
                       {groupHosts.map((host, i) => (
                         <CommandItem
                           key={i}
+                          value={`host-${host.id}`}
                           onSelect={() =>
                             handleAction(() => {
                               const type = host.enableSsh
@@ -619,6 +609,7 @@ export function CommandPalette({
             <CommandGroup heading={t("commandPalette.links")} className="px-2">
               <div className="grid grid-cols-3 gap-1">
                 <CommandItem
+                  value="link-github"
                   onSelect={() =>
                     window.open(
                       "https://github.com/Termix-SSH/Termix",
@@ -631,6 +622,7 @@ export function CommandPalette({
                   <span className="text-sm font-medium">GitHub</span>
                 </CommandItem>
                 <CommandItem
+                  value="link-discord"
                   onSelect={() =>
                     window.open(
                       "https://discord.com/invite/jVQGdvHDrf",
@@ -643,6 +635,7 @@ export function CommandPalette({
                   <span className="text-sm font-medium">Discord</span>
                 </CommandItem>
                 <CommandItem
+                  value="link-support"
                   onSelect={() =>
                     window.open(
                       "https://github.com/Termix-SSH/Support/issues/new",
