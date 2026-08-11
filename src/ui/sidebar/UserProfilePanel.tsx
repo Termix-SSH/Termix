@@ -618,10 +618,13 @@ export function UserProfilePanel({
   const [expandAppRailOnHover, setExpandAppRailOnHover] = useState(() =>
     readRailPreference("expandAppRailOnHover"),
   );
-  const [foldersCollapsed, setFoldersCollapsed] = useState(
+  // Read values are unused now that the Snippets settings UI lives in
+  // SnippetsPanel.tsx; the setters still back the cloud-sync/reset/snapshot
+  // machinery for these two localStorage-backed prefs below.
+  const [_foldersCollapsed, setFoldersCollapsed] = useState(
     () => localStorage.getItem("defaultSnippetFoldersCollapsed") !== "false",
   );
-  const [confirmSnippetExecution, setConfirmSnippetExecution] = useState(
+  const [_confirmSnippetExecution, setConfirmSnippetExecution] = useState(
     () => localStorage.getItem("confirmSnippetExecution") === "true",
   );
   const [disableUpdateCheck, setDisableUpdateCheck] = useState(
@@ -1889,46 +1892,6 @@ export function UserProfilePanel({
                 />
               </div>
             ))}
-          </div>
-
-          <div className="flex flex-col gap-1 border-t border-border pt-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
-              {t("newUi.sidebar.userProfile.settingsSnippets")}
-            </span>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.foldersCollapsed")}
-              description={t("newUi.sidebar.userProfile.foldersCollapsedDesc")}
-            >
-              <FakeSwitch
-                checked={foldersCollapsed}
-                onChange={(v) => {
-                  setFoldersCollapsed(v);
-                  localStorage.setItem(
-                    "defaultSnippetFoldersCollapsed",
-                    v.toString(),
-                  );
-                  window.dispatchEvent(
-                    new Event("defaultSnippetFoldersCollapsedChanged"),
-                  );
-                  if (storageMode === "cloud")
-                    saveToCloud({ foldersCollapsed: v });
-                }}
-              />
-            </SettingRow>
-            <SettingRow
-              label={t("newUi.sidebar.userProfile.confirmExecution")}
-              description={t("newUi.sidebar.userProfile.confirmExecutionDesc")}
-            >
-              <FakeSwitch
-                checked={confirmSnippetExecution}
-                onChange={(v) => {
-                  setConfirmSnippetExecution(v);
-                  localStorage.setItem("confirmSnippetExecution", v.toString());
-                  if (storageMode === "cloud")
-                    saveToCloud({ confirmSnippetExecution: v });
-                }}
-              />
-            </SettingRow>
           </div>
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">

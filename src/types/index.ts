@@ -954,39 +954,8 @@ export interface FolderStats {
   }>;
 }
 
-// ============================================================================
-// SNIPPETS TYPES
-// ============================================================================
-
-export interface Snippet {
-  id: number;
-  userId: string;
-  name: string;
-  content: string;
-  description?: string;
-  folder?: string;
-  order?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface SnippetData {
-  name: string;
-  content: string;
-  description?: string;
-  folder?: string;
-  order?: number;
-}
-
-export interface SnippetFolder {
-  id: number;
-  userId: string;
-  name: string;
-  color?: string;
-  icon?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// Snippet, SnippetFolder types live in ui-types.ts (the shape actually used
+// by SnippetsPanel.tsx); this file's older definitions were unused and removed.
 
 // ============================================================================
 // BACKEND TYPES

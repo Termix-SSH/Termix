@@ -81,7 +81,12 @@ import {
   parseCustomKeybindings,
 } from "@/api/open-tabs-api";
 import { findMatchingKeybinding } from "@/lib/keybinding-match";
-import { dispatchKeybindingAction } from "@/lib/keybinding-dispatch";
+import {
+  dispatchKeybindingAction,
+  sendRawToSocket,
+} from "@/lib/keybinding-dispatch";
+import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
+import type { Snippet } from "@/types/ui-types";
 import type { CustomKeybinding } from "@/types/keybindings";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
@@ -191,6 +196,11 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const cachedSnippetsRef = useRef<{ id: number; content: string }[] | null>(
       null,
     );
+    const [pendingKeybindingSnippet, setPendingKeybindingSnippet] = useState<{
+      id: string;
+      content: string;
+      appendEnter: boolean;
+    } | null>(null);
     const resizeTimeout = useRef<NodeJS.Timeout | null>(null);
     const wasDisconnectedBySSH = useRef(false);
     const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -2686,6 +2696,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               writeTextToClipboard,
               readTextFromClipboard,
               getSnippetById,
+              hostContext: {
+                ip: hostConfig.ip,
+                username: hostConfig.username,
+                port: hostConfig.port,
+                name: hostConfig.name,
+              },
+              onSnippetNeedsInputs: (snippet) =>
+                setPendingKeybindingSnippet({
+                  ...snippet,
+                  appendEnter: matched.action.appendEnter !== false,
+                }),
             });
             return false;
           }
@@ -3603,6 +3624,51 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               updateConnectionError(t("terminal.hostKeyRejected"));
             }}
             backgroundColor={backgroundColor}
+          />
+        )}
+
+        {pendingKeybindingSnippet && (
+          <SnippetVariablesDialog
+            snippet={
+              {
+                id: 0,
+                name: t("newUi.sidebar.keybindings.actionRunSnippet"),
+                content: pendingKeybindingSnippet.content,
+                folder: null,
+                order: 0,
+              } as Snippet
+            }
+            host={{
+              ip: hostConfig.ip,
+              username: hostConfig.username,
+              port: hostConfig.port,
+              name: hostConfig.name,
+            }}
+            onCancel={() => setPendingKeybindingSnippet(null)}
+            onConfirm={(resolvedContent) => {
+              const appendEnter = pendingKeybindingSnippet.appendEnter;
+              setPendingKeybindingSnippet(null);
+              const send = () =>
+                sendRawToSocket(
+                  webSocketRef,
+                  resolvedContent + (appendEnter ? "\r" : ""),
+                );
+              const shouldConfirm =
+                localStorage.getItem("confirmSnippetExecution") === "true";
+              if (shouldConfirm) {
+                confirmWithToast(
+                  t("newUi.sidebar.snippets.confirmRunMessage", {
+                    name: t("newUi.sidebar.keybindings.actionRunSnippet"),
+                  }),
+                  send,
+                  t("newUi.sidebar.snippets.confirmRunButton"),
+                  t("newUi.sidebar.snippets.cancel"),
+                  { confirmOnEnter: true, duration: 6000 },
+                );
+              } else {
+                send();
+              }
+            }}
           />
         )}
 

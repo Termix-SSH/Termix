@@ -86,11 +86,13 @@ export async function deleteSnippet(
 export async function executeSnippet(
   snippetId: number,
   hostId: number,
+  inputValues?: Record<string, string>,
 ): Promise<{ success: boolean; output: string; error?: string }> {
   try {
     const response = await authApi.post("/snippets/execute", {
       snippetId,
       hostId,
+      ...(inputValues ? { inputValues } : {}),
     });
     return response.data;
   } catch (error) {

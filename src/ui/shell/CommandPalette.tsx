@@ -32,15 +32,24 @@ import {
   Clock,
   Folder,
   Pencil,
+  Play,
+  Clipboard,
 } from "lucide-react";
-import { getRecentActivity, type RecentActivityItem } from "@/main-axios";
-import type { Host, TabType } from "@/types/ui-types";
+import {
+  getRecentActivity,
+  getSnippets,
+  type RecentActivityItem,
+} from "@/main-axios";
+import type { Host, TabType, Tab, Snippet } from "@/types/ui-types";
 import { canEditHost } from "@/sidebar/host-permissions";
+import { useSnippetRunner } from "@/hooks/use-snippet-runner.tsx";
 
 interface CommandPaletteProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   hosts: Host[];
+  terminalTabs?: Tab[];
+  activeTabId?: string;
   onOpenTab: (type: TabType, label?: string, pendingEvent?: string) => void;
 }
 
@@ -113,6 +122,8 @@ export function CommandPalette({
   isOpen,
   setIsOpen,
   hosts,
+  terminalTabs = [],
+  activeTabId = "",
   onOpenTab,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
@@ -121,6 +132,8 @@ export function CommandPalette({
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
     [],
   );
+  const [snippets, setSnippets] = useState<Snippet[]>([]);
+  const { runSnippet, dialog: runSnippetDialog } = useSnippetRunner();
 
   useEffect(() => {
     if (isOpen) {
@@ -128,6 +141,9 @@ export function CommandPalette({
       setSearch("");
       getRecentActivity(5)
         .then(setRecentActivity)
+        .catch(() => {});
+      getSnippets()
+        .then((data) => setSnippets((data ?? []) as unknown as Snippet[]))
         .catch(() => {});
     }
   }, [isOpen]);
@@ -174,13 +190,29 @@ export function CommandPalette({
     groupedHosts.push({ folder, hosts: fhosts });
   }
 
+  const filteredSnippets = search.trim()
+    ? snippets.filter((s) => {
+        const query = search.toLowerCase();
+        return (
+          s.name.toLowerCase().includes(query) ||
+          s.content.toLowerCase().includes(query)
+        );
+      })
+    : [];
+
+  const activeTargetTab =
+    terminalTabs.find((tab) => tab.id === activeTabId) ?? terminalTabs[0];
+
   const handleAction = (action: () => void) => {
     action();
     setIsOpen(false);
   };
   const showHostResultsFirst = search.trim().length > 0;
 
-  if (!isOpen) return null;
+  // Closing the palette unmounts this component (AppShell only renders it
+  // while commandPaletteOpen is true), so keep rendering just the variables
+  // dialog after close if a snippet run is still pending its inputs.
+  if (!isOpen) return runSnippetDialog;
 
   return (
     <div
@@ -319,6 +351,53 @@ export function CommandPalette({
                 </div>
               </CommandItem>
             </CommandGroup>
+
+            {filteredSnippets.length > 0 && (
+              <>
+                <CommandSeparator className="my-2" />
+                <CommandGroup
+                  heading={t("commandPalette.snippets")}
+                  className="px-2"
+                >
+                  {filteredSnippets.map((snippet) => (
+                    <CommandItem
+                      key={snippet.id}
+                      onSelect={() => {
+                        if (!activeTargetTab) return;
+                        handleAction(() =>
+                          runSnippet(snippet, [activeTargetTab]),
+                        );
+                      }}
+                      className={cn(
+                        "group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer",
+                        !activeTargetTab && "pointer-events-none opacity-50",
+                      )}
+                    >
+                      <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors shrink-0">
+                        {snippet.isNote ? (
+                          <Clipboard className="size-4 text-accent-brand" />
+                        ) : (
+                          <Play className="size-4 text-accent-brand" />
+                        )}
+                      </div>
+                      <div className="flex flex-col flex-1 min-w-0">
+                        <span className="text-sm font-semibold truncate">
+                          {snippet.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate font-mono">
+                          {snippet.content}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground/60 shrink-0">
+                        {activeTargetTab
+                          ? t("commandPalette.runSnippetDesc")
+                          : t("newUi.sidebar.snippets.noTerminalTabsOpen")}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
 
             {recentActivity.length > 0 && (
               <>
@@ -599,6 +678,8 @@ export function CommandPalette({
           </div>
         </Command>
       </div>
+
+      {runSnippetDialog}
     </div>
   );
 }

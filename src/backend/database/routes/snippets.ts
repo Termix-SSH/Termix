@@ -8,6 +8,7 @@ import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import {
   createSnippetExecutionResult,
   getSnippetExecutionTimeoutMs,
+  resolveSnippetCommand,
 } from "./snippets-execution.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
@@ -539,6 +540,15 @@ router.put(
  *                 type: integer
  *               hostId:
  *                 type: integer
+ *               inputValues:
+ *                 type: object
+ *                 description: >
+ *                   Optional resolved values for $INPUT_n placeholders in the
+ *                   snippet content, keyed by "INPUT_n". Host variables
+ *                   ($HOST, $USER, $PORT, $NAME) are resolved server-side per
+ *                   target host and do not need to be passed here.
+ *                 additionalProperties:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Snippet executed successfully.
@@ -555,7 +565,7 @@ router.post(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { snippetId, hostId } = req.body;
+    const { snippetId, hostId, inputValues } = req.body;
 
     if (!isNonEmptyString(userId) || !snippetId || !hostId) {
       authLogger.warn("Invalid snippet execution request", {
@@ -613,6 +623,17 @@ router.post(
       let output = "";
       let errorOutput = "";
 
+      const resolvedCommand = resolveSnippetCommand(
+        snippet.content,
+        {
+          ip: host.ip,
+          username: host.username,
+          port: host.port,
+          name: host.name,
+        },
+        inputValues && typeof inputValues === "object" ? inputValues : {},
+      );
+
       const executePromise = new Promise<{
         success: boolean;
         output: string;
@@ -622,7 +643,7 @@ router.post(
         let timeout: NodeJS.Timeout | undefined;
 
         conn.on("ready", () => {
-          conn.exec(snippet.content, (err, stream) => {
+          conn.exec(resolvedCommand, (err, stream) => {
             if (err) {
               clearTimeout(timeout);
               conn.end();

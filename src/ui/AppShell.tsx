@@ -1752,6 +1752,9 @@ export function AppShell({
             <SnippetsPanel
               terminalTabs={terminalTabs}
               activeTabId={activeTabId}
+              storageMode={
+                userPrefs.storageMode === "cloud" ? "cloud" : "local"
+              }
             />
           </div>
         )}
@@ -2209,6 +2212,8 @@ export function AppShell({
             isOpen={commandPaletteOpen}
             setIsOpen={setCommandPaletteOpen}
             hosts={allHosts}
+            terminalTabs={terminalTabs}
+            activeTabId={activeTabId}
             onOpenTab={(type, label, pendingEvent) => {
               if (
                 [

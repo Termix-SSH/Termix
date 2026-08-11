@@ -9,11 +9,16 @@ import {
   stopMetricsPolling,
   submitMetricsTOTP,
   executeSnippet,
+  getSnippets,
   logActivity,
   sendMetricsHeartbeat,
   getSSHHosts,
   type ServerMetrics,
 } from "@/main-axios.ts";
+import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
+import { useConfirmation } from "@/hooks/use-confirmation.ts";
+import { hasSnippetInputs } from "@/lib/snippet-variables.ts";
+import type { Snippet } from "@/types/ui-types.ts";
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { useTabsSafe } from "@/shell/TabContext.tsx";
 import { useTranslation } from "react-i18next";
@@ -125,9 +130,15 @@ function HostMetricsInner({
     null,
   );
   const [editMode, setEditMode] = React.useState(false);
+  const [runningAction, setRunningAction] = React.useState<{
+    action: QuickAction;
+    snippet: Snippet;
+  } | null>(null);
+  const { confirmWithToast } = useConfirmation();
 
   const activityLoggedRef = React.useRef(false);
   const activityLoggingRef = React.useRef(false);
+  const snippetsCacheRef = React.useRef<Snippet[] | null>(null);
 
   const statsConfig = React.useMemo(
     () => parseStatsConfig(currentHostConfig?.statsConfig),
@@ -490,6 +501,95 @@ function HostMetricsInner({
     }
   };
 
+  async function executeQuickAction(
+    action: QuickAction,
+    inputValues: Record<string, string>,
+  ) {
+    if (!currentHostConfig) return;
+    setExecutingActions((prev) => new Set(prev).add(action.snippetId));
+    toast.loading(
+      t("hostMetrics.executingQuickAction", { name: action.name }),
+      {
+        id: `quick-action-${action.snippetId}`,
+      },
+    );
+    try {
+      const result = await executeSnippet(
+        action.snippetId,
+        currentHostConfig.id,
+        Object.keys(inputValues).length > 0 ? inputValues : undefined,
+      );
+      if (result.success) {
+        toast.success(
+          t("hostMetrics.quickActionSuccess", { name: action.name }),
+          {
+            id: `quick-action-${action.snippetId}`,
+            description: result.output?.substring(0, 200),
+            duration: 5000,
+          },
+        );
+      } else {
+        toast.error(t("hostMetrics.quickActionFailed", { name: action.name }), {
+          id: `quick-action-${action.snippetId}`,
+          description: result.error || result.output,
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      toast.error(t("hostMetrics.quickActionError", { name: action.name }), {
+        id: `quick-action-${action.snippetId}`,
+        description: error instanceof Error ? error.message : "Unknown error",
+        duration: 5000,
+      });
+    } finally {
+      setExecutingActions((prev) => {
+        const next = new Set(prev);
+        next.delete(action.snippetId);
+        return next;
+      });
+    }
+  }
+
+  function runQuickActionWithConfirm(
+    action: QuickAction,
+    inputValues: Record<string, string>,
+  ) {
+    const shouldConfirm =
+      localStorage.getItem("confirmSnippetExecution") === "true";
+    const run = () => void executeQuickAction(action, inputValues);
+    if (!shouldConfirm) {
+      run();
+      return;
+    }
+    confirmWithToast(
+      t("newUi.sidebar.snippets.confirmRunMessage", { name: action.name }),
+      run,
+      t("newUi.sidebar.snippets.confirmRunButton"),
+      t("newUi.sidebar.snippets.cancel"),
+      { confirmOnEnter: true, duration: 6000 },
+    );
+  }
+
+  async function runQuickAction(action: QuickAction) {
+    if (!currentHostConfig) return;
+    try {
+      if (!snippetsCacheRef.current) {
+        snippetsCacheRef.current =
+          (await getSnippets()) as unknown as Snippet[];
+      }
+      const snippet = snippetsCacheRef.current?.find(
+        (s) => s.id === action.snippetId,
+      );
+      if (snippet && hasSnippetInputs(snippet.content)) {
+        setRunningAction({ action, snippet });
+        return;
+      }
+    } catch {
+      // fall through and run with no inputs if the snippet lookup fails
+    }
+    runQuickActionWithConfirm(action, {});
+  }
+
   const showCards =
     metricsEnabled && metricsRetry.status === "connected" && metrics;
   const showOffline =
@@ -531,71 +631,7 @@ function HostMetricsInner({
                                   size="sm"
                                   className="h-8 text-xs font-semibold"
                                   disabled={isExecuting}
-                                  onClick={async () => {
-                                    if (!currentHostConfig) return;
-                                    setExecutingActions((prev) =>
-                                      new Set(prev).add(action.snippetId),
-                                    );
-                                    toast.loading(
-                                      t("hostMetrics.executingQuickAction", {
-                                        name: action.name,
-                                      }),
-                                      {
-                                        id: `quick-action-${action.snippetId}`,
-                                      },
-                                    );
-                                    try {
-                                      const result = await executeSnippet(
-                                        action.snippetId,
-                                        currentHostConfig.id,
-                                      );
-                                      if (result.success) {
-                                        toast.success(
-                                          t("hostMetrics.quickActionSuccess", {
-                                            name: action.name,
-                                          }),
-                                          {
-                                            id: `quick-action-${action.snippetId}`,
-                                            description:
-                                              result.output?.substring(0, 200),
-                                            duration: 5000,
-                                          },
-                                        );
-                                      } else {
-                                        toast.error(
-                                          t("hostMetrics.quickActionFailed", {
-                                            name: action.name,
-                                          }),
-                                          {
-                                            id: `quick-action-${action.snippetId}`,
-                                            description:
-                                              result.error || result.output,
-                                            duration: 5000,
-                                          },
-                                        );
-                                      }
-                                    } catch (error) {
-                                      toast.error(
-                                        t("hostMetrics.quickActionError", {
-                                          name: action.name,
-                                        }),
-                                        {
-                                          id: `quick-action-${action.snippetId}`,
-                                          description:
-                                            error instanceof Error
-                                              ? error.message
-                                              : "Unknown error",
-                                          duration: 5000,
-                                        },
-                                      );
-                                    } finally {
-                                      setExecutingActions((prev) => {
-                                        const next = new Set(prev);
-                                        next.delete(action.snippetId);
-                                        return next;
-                                      });
-                                    }
-                                  }}
+                                  onClick={() => void runQuickAction(action)}
                                 >
                                   {isExecuting ? (
                                     <>
@@ -732,6 +768,28 @@ function HostMetricsInner({
         onCancel={handleTOTPCancel}
         backgroundColor="var(--bg-canvas)"
       />
+
+      {runningAction && (
+        <SnippetVariablesDialog
+          snippet={runningAction.snippet}
+          host={
+            currentHostConfig
+              ? {
+                  ip: currentHostConfig.ip,
+                  username: currentHostConfig.username,
+                  port: currentHostConfig.port,
+                  name: currentHostConfig.name,
+                }
+              : null
+          }
+          onCancel={() => setRunningAction(null)}
+          onConfirm={(_resolvedContent, inputValues) => {
+            const action = runningAction.action;
+            setRunningAction(null);
+            runQuickActionWithConfirm(action, inputValues);
+          }}
+        />
+      )}
     </div>
   );
 }
