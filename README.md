@@ -69,7 +69,7 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 <td width="50%" valign="top">
 
 **SSH Terminal Access:**
-Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
+Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components. The context-aware [terminal toolbar and image handoff](./docs/terminal-toolbar-image-handoff.md) make it easy to detach tmux sessions, open host tools, and upload or paste images into a terminal.
 
 </td>
 <td width="50%" valign="top">
