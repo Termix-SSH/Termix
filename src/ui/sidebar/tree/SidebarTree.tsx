@@ -111,7 +111,15 @@ export function SidebarTree({
     openTrayHostId,
     setOpenTrayHostId,
     toggleSelect,
+    toggleSelectMany,
   } = useSidebarSelection();
+  // Selection mode can be toggled off from outside this component (e.g. the
+  // topbar button in HostsPanel), which has no way to reach into this
+  // component's own selectedHostIds state -- clear it here instead so stale
+  // selections don't stay visually highlighted after leaving selection mode.
+  useEffect(() => {
+    if (!selectionMode) setSelectedHostIds(new Set());
+  }, [selectionMode, setSelectedHostIds]);
   const [confirmDialog, setConfirmDialog] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
@@ -705,6 +713,11 @@ export function SidebarTree({
                       selectionMode={selectionMode}
                       selectedHostIds={selectedHostIds}
                       onToggleSelect={toggleSelect}
+                      onToggleSelectFolder={(f) =>
+                        toggleSelectMany(
+                          collectAllHosts(f.children).map((h) => h.id),
+                        )
+                      }
                       openMenuHostId={openMenuHostId}
                       onMenuOpenChange={setOpenMenuHostId}
                       openTrayHostId={openTrayHostId}

@@ -20,6 +20,20 @@ export function useSidebarSelection() {
     });
   }
 
+  /** Selects every host id, or deselects them if they're all already selected. */
+  function toggleSelectMany(ids: string[]) {
+    setSelectedHostIds((prev) => {
+      const allSelected = ids.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) {
+        for (const id of ids) next.delete(id);
+      } else {
+        for (const id of ids) next.add(id);
+      }
+      return next;
+    });
+  }
+
   return {
     selectedHostIds,
     setSelectedHostIds,
@@ -28,5 +42,6 @@ export function useSidebarSelection() {
     openTrayHostId,
     setOpenTrayHostId,
     toggleSelect,
+    toggleSelectMany,
   };
 }

@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { ChevronRight, Check } from "lucide-react";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type {
   HostDensity,
@@ -47,6 +48,7 @@ export function FolderItem({
   selectionMode,
   selectedHostIds,
   onToggleSelect,
+  onToggleSelectFolder,
   openMenuHostId,
   onMenuOpenChange,
   openTrayHostId,
@@ -88,6 +90,7 @@ export function FolderItem({
   selectionMode: boolean;
   selectedHostIds: Set<string>;
   onToggleSelect: (id: string) => void;
+  onToggleSelectFolder: (folder: HostFolder) => void;
   openMenuHostId: string | null;
   onMenuOpenChange: (hostId: string | null) => void;
   openTrayHostId: string | null;
@@ -116,6 +119,7 @@ export function FolderItem({
   reorderHoverEdge?: "before" | "after" | null;
   onReorderHoverChange?: (edge: "before" | "after" | null) => void;
 }) {
+  const { t } = useTranslation();
   const { getStatus, initialLoadComplete } = useServerStatus();
   const { total } = folderHostCount(folder);
   const online = initialLoadComplete
@@ -140,6 +144,10 @@ export function FolderItem({
   const pathSegments = isGroup ? [] : folderPath.split(" / ");
   const breadcrumb =
     pathSegments.length > 1 ? pathSegments.slice(0, -1).join(" / ") : null;
+  const folderHosts = collectAllHosts(folder.children);
+  const folderSelected =
+    folderHosts.length > 0 &&
+    folderHosts.every((h) => selectedHostIds.has(h.id));
 
   return (
     <div
@@ -203,6 +211,24 @@ export function FolderItem({
         <ChevronRight
           className={`size-3.5 shrink-0 text-muted-foreground/60 transition-transform ${isOpen ? "rotate-90" : ""}`}
         />
+        {selectionMode && !isGroup && folderHosts.length > 0 && (
+          <div
+            role="checkbox"
+            aria-checked={folderSelected}
+            title={
+              folderSelected
+                ? t("hosts.deselectFolder")
+                : t("hosts.selectFolder")
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSelectFolder(folder);
+            }}
+            className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${folderSelected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+          >
+            {folderSelected && <Check className="size-2 text-background" />}
+          </div>
+        )}
         <FolderIconEl
           icon={folder.icon ?? "folder"}
           className={`size-4 shrink-0 ${folder.color ? "" : isOpen ? "text-accent-brand" : "text-muted-foreground/70"}`}
@@ -261,6 +287,7 @@ export function FolderItem({
                 selectionMode={selectionMode}
                 selectedHostIds={selectedHostIds}
                 onToggleSelect={onToggleSelect}
+                onToggleSelectFolder={onToggleSelectFolder}
                 openMenuHostId={openMenuHostId}
                 onMenuOpenChange={onMenuOpenChange}
                 openTrayHostId={openTrayHostId}

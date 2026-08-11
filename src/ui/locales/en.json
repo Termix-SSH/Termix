@@ -1144,6 +1144,8 @@
     "openAllSessions": "Open all sessions",
     "editFolder": "Edit folder",
     "deleteFolder": "Delete folder",
+    "selectFolder": "Select all hosts in folder",
+    "deselectFolder": "Deselect all hosts in folder",
     "folderSaved": "Folder saved",
     "failedToSaveFolder": "Failed to save folder",
     "folderDeleted": "Deleted folder \"{{name}}\"",

@@ -701,10 +701,12 @@ export function HostItem({
         onReorderHoverChange?.(null);
       }}
       style={depthStyle}
-      className={`group relative flex items-stretch cursor-pointer select-none border-l-2 transition-colors hover:bg-muted/50 ${
+      className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/50 ${
         selected
-          ? "border-l-accent-brand bg-accent-brand/[0.07]"
-          : `border-l-transparent ${stripeIndex % 2 === 1 ? "bg-muted/15" : ""}`
+          ? "bg-accent-brand/[0.07]"
+          : stripeIndex % 2 === 1
+            ? "bg-muted/15"
+            : ""
       } ${isMenuOpen ? "bg-muted/50" : ""}`}
       onClick={(e) => {
         if (selectionMode) {
