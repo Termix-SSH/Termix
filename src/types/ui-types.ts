@@ -122,6 +122,12 @@ export type Host = {
       errors: string[];
     };
   } | null;
+  enableProxmoxStats: boolean;
+  proxmoxStatsConfig?: {
+    nodeName?: string | null;
+    pollInterval?: number;
+    enabledCards?: string[];
+  } | null;
 
   statsConfig?: StatsConfig;
   quickActions: { name: string; snippetId: string }[];
@@ -223,6 +229,7 @@ export type TabType =
   | "vnc"
   | "telnet"
   | "host-metrics"
+  | "proxmox-stats"
   | "files"
   | "host-manager"
   | "user-profile"

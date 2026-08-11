@@ -47,6 +47,9 @@ import { registerHostMetricsSettingsRoutes } from "./settings-routes.js";
 import { registerHostMetricsViewerRoutes } from "./viewer-routes.js";
 import { registerHostMetricsPreferencesRoutes } from "./preferences-routes.js";
 import { registerHostMetricsHistoryRoutes } from "./history-routes.js";
+import { registerProxmoxStatsRoutes } from "./proxmox-stats-routes.js";
+import { registerProxmoxStatsHistoryRoutes } from "./proxmox-stats-history-routes.js";
+import { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
 import { AlertEngine } from "./alert-engine.js";
 import { registerManagerRoutes } from "./managers/index.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
@@ -106,6 +109,8 @@ interface SSHHostWithCredentials {
   tunnelConnections: unknown[];
   jumpHosts?: Array<{ hostId: number }>;
   statsConfig?: string | StatsConfig;
+  enableProxmoxStats?: boolean;
+  proxmoxStatsConfig?: unknown;
   createdAt: string;
   updatedAt: string;
   userId: string;
@@ -1452,6 +1457,13 @@ async function withSshConnection<T>(
   return withConnection(key, factory, fn);
 }
 
+const proxmoxPollingManager = new ProxmoxPollingManager<SSHHostWithCredentials>(
+  {
+    fetchHostById,
+    withSshConnection,
+  },
+);
+
 async function collectMetrics(host: SSHHostWithCredentials): Promise<{
   cpu: {
     percent: number | null;
@@ -2790,6 +2802,40 @@ registerHostMetricsHistoryRoutes(app, {
     (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
 });
 
+registerHostMetricsViewerRoutes<
+  SSHHostWithCredentials,
+  { metricsEnabled: boolean }
+>(app, {
+  fetchHostById,
+  // Proxmox Stats viewers are gated by enableProxmoxStats + host-type support,
+  // not the Host Metrics statsConfig - fold both checks in here since
+  // supportsMetrics receives the full host, unlike parseStatsConfig below.
+  supportsMetrics: (host: SSHHostWithCredentials) =>
+    supportsMetrics(host) && host.enableProxmoxStats === true,
+  parseStatsConfig: () => ({ metricsEnabled: true }),
+  updateHeartbeat: (viewerSessionId) =>
+    proxmoxPollingManager.updateHeartbeat(viewerSessionId),
+  registerViewer: (hostId, viewerSessionId, userId) =>
+    proxmoxPollingManager.registerViewer(hostId, viewerSessionId, userId),
+  unregisterViewer: (hostId, viewerSessionId) =>
+    proxmoxPollingManager.unregisterViewer(hostId, viewerSessionId),
+  pathPrefix: "proxmox-stats",
+});
+
+registerProxmoxStatsRoutes(app, {
+  validateHostId,
+  fetchHostById,
+  canAccessHost: async (userId, hostId, level) =>
+    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
+  pollingManager: proxmoxPollingManager,
+});
+
+registerProxmoxStatsHistoryRoutes(app, {
+  validateHostId,
+  canAccessHost: async (userId, hostId, level) =>
+    (await permissionManager.canAccessHost(userId, hostId, level)).hasAccess,
+});
+
 registerManagerRoutes(app, {
   validateHostId,
   runOnHost: async (hostId, userId, level, fn) => {
@@ -2820,12 +2866,14 @@ registerManagerRoutes(app, {
 
 process.on("SIGINT", () => {
   pollingManager.destroy();
+  proxmoxPollingManager.destroy();
   connectionPool.destroy();
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
   pollingManager.destroy();
+  proxmoxPollingManager.destroy();
   connectionPool.destroy();
   process.exit(0);
 });

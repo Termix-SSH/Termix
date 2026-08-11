@@ -1590,6 +1590,16 @@ export {
 } from "@/api/host-metrics-api";
 
 export {
+  getProxmoxStats,
+  startProxmoxStatsPolling,
+  stopProxmoxStatsPolling,
+  sendProxmoxStatsHeartbeat,
+  getProxmoxStatsHistory,
+  type ProxmoxStatsHistoryRow,
+  type ProxmoxStatsHistoryResponse,
+} from "@/api/proxmox-stats-api";
+
+export {
   getHostSidebarPreferences,
   saveHostSidebarPreferences,
 } from "@/api/host-sidebar-preferences-api";

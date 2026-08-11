@@ -208,6 +208,10 @@ export const hosts = sqliteTable("ssh_data", {
     .notNull()
     .default(false),
   proxmoxConfig: text("proxmox_config"),
+  enableProxmoxStats: integer("enable_proxmox_stats", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  proxmoxStatsConfig: text("proxmox_stats_config"),
   terminalConfig: text("terminal_config"),
   quickActions: text("quick_actions"),
   notes: text("notes"),
@@ -1008,6 +1012,27 @@ export const hostMetricsPreferences = sqliteTable(
   ],
 );
 
+export const proxmoxStatsPreferences = sqliteTable(
+  "proxmox_stats_preferences",
+  {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  hostId: integer("host_id").notNull().references(() => hosts.id, { onDelete: "cascade" }),
+  // JSON-encoded ProxmoxStatsLayout. Layout has no secrets, so it is stored as
+  // plain JSON (no field-level encryption), same convention as hostMetricsPreferences.layout.
+  layout: text("layout").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_proxmox_stats_prefs_user_host").on(table.userId, table.hostId),
+  ],
+);
+
 export const hostSidebarPreferences = sqliteTable("host_sidebar_preferences", {
   userId: text("user_id")
     .primaryKey()
@@ -1199,6 +1224,23 @@ export const hostMetricsHistory = sqliteTable("host_metrics_history", {
   netTxBytes: integer("net_tx_bytes"),
 });
 // --- metrics-history end ---
+
+// --- proxmox-node-history begin ---
+export const proxmoxNodeHistory = sqliteTable("proxmox_node_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  hostId: integer("host_id")
+    .notNull()
+    .references(() => hosts.id, { onDelete: "cascade" }),
+  ts: text("ts")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  cpuPercent: real("cpu_percent"),
+  memPercent: real("mem_percent"),
+  diskPercent: real("disk_percent"),
+  netRxBytes: integer("net_rx_bytes"),
+  netTxBytes: integer("net_tx_bytes"),
+});
+// --- proxmox-node-history end ---
 
 // --- alerts begin ---
 export const alertRules = sqliteTable("alert_rules", {

@@ -284,6 +284,105 @@ describe("sudo password persistence indicator", () => {
   });
 });
 
+describe("Proxmox / Proxmox Stats independent toggles", () => {
+  it("defaults enableProxmoxStats to false with sane pollInterval/nodeName defaults", () => {
+    const form = createHostEditorForm(null);
+
+    expect(form.enableProxmoxStats).toBe(false);
+    expect(form.proxmoxStatsConfig).toEqual({
+      pollInterval: 60,
+      nodeName: null,
+    });
+    expect(form.enableProxmox).toBe(false);
+  });
+
+  it("seeds both configs independently from an existing host", () => {
+    const host = {
+      enableProxmox: true,
+      proxmoxConfig: { windowsPatterns: "win", dockerPatterns: "docker" },
+      enableProxmoxStats: true,
+      proxmoxStatsConfig: { pollInterval: 30, nodeName: "pve-custom" },
+    } as unknown as Host;
+
+    const form = createHostEditorForm(host);
+
+    expect(form.enableProxmox).toBe(true);
+    expect(form.enableProxmoxStats).toBe(true);
+    expect(form.proxmoxStatsConfig).toEqual({
+      pollInterval: 30,
+      nodeName: "pve-custom",
+    });
+  });
+
+  it("nulls proxmoxStatsConfig in the payload when enableProxmoxStats is off, regardless of enableProxmox", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      enableProxmox: true,
+      proxmoxConfig: {
+        defaultCredentialId: null,
+        defaultAuthType: "password",
+        windowsPatterns: "win",
+        dockerPatterns: "docker",
+        preferredPrefixes: "",
+      },
+      enableProxmoxStats: false,
+      proxmoxStatsConfig: { pollInterval: 45, nodeName: "leftover" },
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+
+    expect(payload.enableProxmox).toBe(true);
+    expect(payload.proxmoxConfig).not.toBeNull();
+    expect(payload.enableProxmoxStats).toBe(false);
+    expect(payload.proxmoxStatsConfig).toBeNull();
+  });
+
+  it("keeps proxmoxConfig null in the payload when enableProxmox is off, even though enableProxmoxStats is on", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      enableProxmox: false,
+      enableProxmoxStats: true,
+      proxmoxStatsConfig: { pollInterval: 90, nodeName: "pve1" },
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+
+    expect(payload.enableProxmox).toBe(false);
+    expect(payload.proxmoxConfig).toBeNull();
+    expect(payload.enableProxmoxStats).toBe(true);
+    expect(payload.proxmoxStatsConfig).toEqual({
+      pollInterval: 90,
+      nodeName: "pve1",
+    });
+  });
+
+  it("sends both configs when both toggles are on", () => {
+    const form = {
+      ...createHostEditorForm(null),
+      enableProxmox: true,
+      proxmoxConfig: {
+        defaultCredentialId: null,
+        defaultAuthType: "password",
+        windowsPatterns: "win",
+        dockerPatterns: "docker",
+        preferredPrefixes: "",
+      },
+      enableProxmoxStats: true,
+      proxmoxStatsConfig: { pollInterval: 60, nodeName: null },
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+
+    expect(payload.enableProxmox).toBe(true);
+    expect(payload.proxmoxConfig).not.toBeNull();
+    expect(payload.enableProxmoxStats).toBe(true);
+    expect(payload.proxmoxStatsConfig).toEqual({
+      pollInterval: 60,
+      nodeName: null,
+    });
+  });
+});
+
 describe("RDP/VNC/Telnet password persistence indicator", () => {
   it("seeds a sentinel value when the host reports a saved rdp password", () => {
     const host = {

@@ -72,6 +72,12 @@ export type SSHAuthType =
 
 export type GuacamoleAuthType = "password" | "credential";
 
+export interface ProxmoxStatsConfig {
+  nodeName?: string | null;
+  pollInterval?: number;
+  enabledCards?: string[];
+}
+
 export interface ProxmoxConfig {
   defaultCredentialId: number | null;
   defaultAuthType?: string;
@@ -158,6 +164,8 @@ export type Host = {
   enableTmuxMonitor: boolean;
   allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | null;
+  enableProxmoxStats: boolean;
+  proxmoxStatsConfig?: ProxmoxStatsConfig | null;
   showTerminalInSidebar: boolean;
   showFileManagerInSidebar: boolean;
   showTunnelInSidebar: boolean;
@@ -311,6 +319,8 @@ export interface HostData {
   enableTmuxMonitor?: boolean;
   allowSessionSharing?: boolean;
   proxmoxConfig?: ProxmoxConfig | Record<string, unknown> | null;
+  enableProxmoxStats?: boolean;
+  proxmoxStatsConfig?: ProxmoxStatsConfig | Record<string, unknown> | null;
   showTerminalInSidebar?: boolean;
   showFileManagerInSidebar?: boolean;
   showTunnelInSidebar?: boolean;

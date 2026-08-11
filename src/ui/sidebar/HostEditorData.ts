@@ -122,6 +122,11 @@ export function createHostEditorForm(
       syncIntervalMinutes: 15,
       markMissingGuests: true,
     },
+    enableProxmoxStats: host?.enableProxmoxStats ?? false,
+    proxmoxStatsConfig: host?.proxmoxStatsConfig ?? {
+      pollInterval: 60,
+      nodeName: null as string | null,
+    },
     enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
@@ -349,6 +354,10 @@ export function buildHostEditorPayload(
     allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
     proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
+    enableProxmoxStats: form.enableProxmoxStats,
+    proxmoxStatsConfig: form.enableProxmoxStats
+      ? form.proxmoxStatsConfig
+      : null,
     defaultPath: form.defaultPath || "/",
     useSocks5: form.useSocks5,
     socks5Host:

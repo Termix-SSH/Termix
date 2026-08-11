@@ -17,6 +17,7 @@ import {
   FolderSearch,
   Box,
   Globe,
+  HardDrive,
   Plus,
   MessagesSquare,
   LifeBuoy,
@@ -95,6 +96,11 @@ function getSshActions(host: Host): {
       type: "host-metrics",
       icon: Activity,
       label: "Host Metrics",
+    },
+    host.enableProxmoxStats === true && {
+      type: "proxmox-stats",
+      icon: HardDrive,
+      label: "Proxmox Stats",
     },
   ].filter(Boolean) as {
     type: TabType;

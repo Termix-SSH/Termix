@@ -38,6 +38,11 @@ const HostMetricsApp = lazy(() =>
     default: m.default,
   })),
 );
+const ProxmoxStatsApp = lazy(() =>
+  import("@/features/proxmox-stats/ProxmoxStatsApp").then((m) => ({
+    default: m.default,
+  })),
+);
 const DockerApp = lazy(() =>
   import("@/features/docker/DockerApp").then((m) => ({ default: m.default })),
 );
@@ -101,6 +106,8 @@ function FullscreenApp() {
     case "host-metrics":
     case "server-stats":
       return <HostMetricsApp hostId={hostId || undefined} />;
+    case "proxmox-stats":
+      return <ProxmoxStatsApp hostId={hostId || undefined} />;
     case "docker":
       return <DockerApp hostId={hostId || undefined} />;
     case "rdp":

@@ -33,6 +33,7 @@ export function createQuickConnectHost(input: QuickConnectInput): Host {
     enableTunnel: true,
     enableDocker: true,
     enableProxmox: false,
+    enableProxmoxStats: false,
     enableTmuxMonitor: false,
     enableSsh: true,
     enableRdp: false,

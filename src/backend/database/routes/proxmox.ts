@@ -10,6 +10,7 @@ import { SSHHostKeyVerifier } from "../../hosts/host-key-verifier.js";
 import { resolveHostById } from "../../hosts/host-resolver.js";
 import { createJumpHostChain } from "../../hosts/jump-host-chain.js";
 import { resolveProxmoxImportAuth } from "./proxmox-import-auth.js";
+import { isSafeNodeName } from "../../hosts/proxmox-shared.js";
 
 const router = express.Router();
 const proxmoxLogger = logger;
@@ -23,14 +24,6 @@ const authenticateJWT = authManager.createAuthMiddleware();
 const requireDataAccess = authManager.createDataAccessMiddleware();
 
 // Helpers
-
-// Proxmox node names are restricted to [a-zA-Z0-9-] by PVE itself,
-// but we validate defensively before using in a shell command.
-const SAFE_NODE_RE = /^[a-zA-Z0-9._-]{1,64}$/;
-
-function isSafeNodeName(name: string): boolean {
-  return SAFE_NODE_RE.test(name);
-}
 
 function execCommand(
   client: SSHClient,

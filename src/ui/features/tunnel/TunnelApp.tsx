@@ -27,6 +27,7 @@ function sshHostToMinimalHost(h: SSHHost): Host {
     enableTerminal: h.enableTerminal ?? false,
     enableCommandHistory: h.enableCommandHistory ?? false,
     enableProxmox: h.enableProxmox ?? false,
+    enableProxmoxStats: h.enableProxmoxStats ?? false,
     enableTmuxMonitor: h.enableTmuxMonitor ?? false,
     enableTunnel: h.enableTunnel ?? false,
     enableFileManager: h.enableFileManager ?? false,

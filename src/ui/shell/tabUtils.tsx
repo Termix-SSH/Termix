@@ -2,6 +2,7 @@
 import {
   Box,
   FolderSearch,
+  HardDrive,
   LayoutDashboard,
   LayoutGrid,
   Monitor,
@@ -57,6 +58,11 @@ const DockerManager = lazy(() =>
 const HostMetricsTab = lazy(() =>
   import("@/features/host-metrics/HostMetricsTab").then((m) => ({
     default: m.HostMetricsTab,
+  })),
+);
+const ProxmoxStatsTab = lazy(() =>
+  import("@/features/proxmox-stats/ProxmoxStatsTab").then((m) => ({
+    default: m.ProxmoxStatsTab,
   })),
 );
 const TmuxMonitor = lazy(() =>
@@ -184,6 +190,8 @@ export function tabIcon(type: TabType) {
       return <Terminal className="size-3.5" />;
     case "host-metrics":
       return <Server className="size-3.5" />;
+    case "proxmox-stats":
+      return <HardDrive className="size-3.5" />;
     case "files":
       return <FolderSearch className="size-3.5" />;
     case "host-manager":
@@ -372,6 +380,24 @@ export function renderTabContent(
         );
       return withTabSuspense(
         <HostMetricsTab
+          hostConfig={hostToSSHHost(host)}
+          title={label}
+          isVisible={isVisible}
+          isTopbarOpen={false}
+          embedded={true}
+        />,
+      );
+
+    case "proxmox-stats":
+      if (!host)
+        return (
+          <EmptyState
+            icon={HardDrive}
+            messageKey="proxmoxStats.noHostSelected"
+          />
+        );
+      return withTabSuspense(
+        <ProxmoxStatsTab
           hostConfig={hostToSSHHost(host)}
           title={label}
           isVisible={isVisible}

@@ -199,6 +199,8 @@ router.post(
       statsConfig,
       dockerConfig,
       proxmoxConfig,
+      enableProxmoxStats,
+      proxmoxStatsConfig,
       terminalConfig,
       forceKeyboardInteractive,
       domain,
@@ -325,6 +327,12 @@ router.post(
         ? typeof proxmoxConfig === "string"
           ? proxmoxConfig
           : JSON.stringify(proxmoxConfig)
+        : null,
+      enableProxmoxStats: enableProxmoxStats ? 1 : 0,
+      proxmoxStatsConfig: proxmoxStatsConfig
+        ? typeof proxmoxStatsConfig === "string"
+          ? proxmoxStatsConfig
+          : JSON.stringify(proxmoxStatsConfig)
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -710,6 +718,7 @@ router.post(
         enableFileManager: true,
         enableDocker: false,
         enableProxmox: false,
+        enableProxmoxStats: false,
         enableTmuxMonitor: false,
         showTerminalInSidebar: true,
         showFileManagerInSidebar: false,
@@ -850,6 +859,8 @@ router.put(
       statsConfig,
       dockerConfig,
       proxmoxConfig,
+      enableProxmoxStats,
+      proxmoxStatsConfig,
       terminalConfig,
       forceKeyboardInteractive,
       domain,
@@ -973,6 +984,12 @@ router.put(
         ? typeof proxmoxConfig === "string"
           ? proxmoxConfig
           : JSON.stringify(proxmoxConfig)
+        : null,
+      enableProxmoxStats: enableProxmoxStats ? 1 : 0,
+      proxmoxStatsConfig: proxmoxStatsConfig
+        ? typeof proxmoxStatsConfig === "string"
+          ? proxmoxStatsConfig
+          : JSON.stringify(proxmoxStatsConfig)
         : null,
       terminalConfig: terminalConfig
         ? typeof terminalConfig === "string"
@@ -1803,6 +1820,7 @@ router.get(
             scpLegacy: !!resolvedHost.scpLegacy,
             enableDocker: !!resolvedHost.enableDocker,
             enableProxmox: !!resolvedHost.enableProxmox,
+            enableProxmoxStats: !!resolvedHost.enableProxmoxStats,
             enableTmuxMonitor: !!resolvedHost.enableTmuxMonitor,
             showTerminalInSidebar: !!resolvedHost.showTerminalInSidebar,
             showFileManagerInSidebar: !!resolvedHost.showFileManagerInSidebar,
@@ -1828,6 +1846,9 @@ router.get(
               : null,
             proxmoxConfig: resolvedHost.proxmoxConfig
               ? JSON.parse(resolvedHost.proxmoxConfig as string)
+              : null,
+            proxmoxStatsConfig: resolvedHost.proxmoxStatsConfig
+              ? JSON.parse(resolvedHost.proxmoxStatsConfig as string)
               : null,
             terminalConfig: resolvedHost.terminalConfig
               ? JSON.parse(resolvedHost.terminalConfig as string)

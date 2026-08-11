@@ -10,6 +10,7 @@ import {
   CopyPlus,
   Cpu,
   FolderSearch,
+  HardDrive,
   Key,
   KeyRound,
   Layers, // --- tmux-monitor ---
@@ -117,6 +118,11 @@ export function getSshActions(
       type: "host-metrics" as TabType,
       icon: Server,
       label: "Host Metrics",
+    },
+    host.enableProxmoxStats === true && {
+      type: "proxmox-stats" as TabType,
+      icon: HardDrive,
+      label: "Proxmox Stats",
     },
     // --- tmux-monitor --- opt-in per host, off by default
     host.enableSsh &&
@@ -554,6 +560,20 @@ export function HostItem({
                 >
                   <Server className="size-3.5 mr-2" />
                   {t("hosts.copyHostMetricsUrlAction")}
+                </DropdownMenuItem>
+              )}
+              {host.enableSsh && host.enableProxmoxStats === true && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    writeClipboardText(
+                      `${window.location.origin}?view=proxmox-stats&hostId=${host.id}`,
+                    );
+                    toast.success(t("hosts.proxmoxStatsUrlCopied"));
+                  }}
+                >
+                  <HardDrive className="size-3.5 mr-2" />
+                  {t("hosts.copyProxmoxStatsUrlAction")}
                 </DropdownMenuItem>
               )}
               {host.enableSsh &&

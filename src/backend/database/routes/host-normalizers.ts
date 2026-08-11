@@ -167,6 +167,8 @@ export type NormalizedImportedHost = Record<string, unknown> & {
   statsConfig?: unknown;
   dockerConfig?: unknown;
   proxmoxConfig?: unknown;
+  enableProxmoxStats?: unknown;
+  proxmoxStatsConfig?: unknown;
   terminalConfig?: unknown;
   forceKeyboardInteractive?: unknown;
   notes?: unknown;
@@ -329,6 +331,7 @@ const CONNECT_LEVEL_FIELDS = new Set([
   "enableFileManager",
   "enableDocker",
   "enableProxmox",
+  "enableProxmoxStats",
   "enableTmuxMonitor",
   "showTerminalInSidebar",
   "showFileManagerInSidebar",
@@ -424,6 +427,7 @@ export function transformHostResponse(
     enableFileManager: host.enableFileManager !== false,
     enableDocker: !!host.enableDocker,
     enableProxmox: !!host.enableProxmox,
+    enableProxmoxStats: !!host.enableProxmoxStats,
     enableTmuxMonitor: !!host.enableTmuxMonitor,
     showTerminalInSidebar: !!host.showTerminalInSidebar,
     showFileManagerInSidebar: !!host.showFileManagerInSidebar,
@@ -475,6 +479,9 @@ export function transformHostResponse(
       : undefined,
     proxmoxConfig: host.proxmoxConfig
       ? JSON.parse(host.proxmoxConfig as string)
+      : undefined,
+    proxmoxStatsConfig: host.proxmoxStatsConfig
+      ? JSON.parse(host.proxmoxStatsConfig as string)
       : undefined,
     forceKeyboardInteractive: host.forceKeyboardInteractive === "true",
     useWarpgate: !!host.useWarpgate,

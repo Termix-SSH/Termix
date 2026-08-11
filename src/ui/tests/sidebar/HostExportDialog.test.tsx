@@ -52,6 +52,7 @@ function sshHost(
     enableFileManager: false,
     enableDocker: false,
     enableProxmox: false,
+    enableProxmoxStats: false,
     enableTmuxMonitor: false,
     showTerminalInSidebar: true,
     showFileManagerInSidebar: false,

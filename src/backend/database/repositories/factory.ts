@@ -19,6 +19,7 @@ import { HostFolderRepository } from "./host-folder-repository.js";
 import { HostHealthRepository } from "./host-health-repository.js";
 import { HostMetricsHistoryRepository } from "./host-metrics-history-repository.js";
 import { HostMetricsPreferenceRepository } from "./host-metrics-preference-repository.js";
+import { ProxmoxNodeHistoryRepository } from "./proxmox-node-history-repository.js";
 import { HostRepository } from "./host-repository.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
 import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repository.js";
@@ -231,6 +232,13 @@ export function createCurrentHostMetricsPreferenceRepository(): HostMetricsPrefe
     createCurrentRepositoryWriteHook(
       "host_metrics_preference_repository_write",
     ),
+  );
+}
+
+export function createCurrentProxmoxNodeHistoryRepository(): ProxmoxNodeHistoryRepository {
+  return new ProxmoxNodeHistoryRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("proxmox_node_history_repository_write"),
   );
 }
 

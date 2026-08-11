@@ -379,7 +379,7 @@ class RemoteSyncEngine {
       text.includes("<body>");
     if (looksLikeHtml) {
       const err = new Error(
-        "The reverse proxy in front of this server is blocking sync traffic with its own login page. Reconnecting won't fix this -- the proxy needs to let Termix's API requests through (e.g. an SSO bypass rule for the sync API, or a non-proxied hostname/port for it).",
+        "The reverse proxy in front of this server is blocking sync traffic with its own login page. Reconnecting won't fix this. The proxy needs to let Termix's API requests through (e.g. an SSO bypass rule for the sync API, or a non-proxied hostname/port for it).",
       );
       err.proxyBlocked = true;
       throw err;
