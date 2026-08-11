@@ -55,13 +55,12 @@ import { useCommandHistory } from "@/features/terminal/command-history/CommandHi
 import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import {
   ConnectionLogProvider,
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { Save } from "lucide-react";
@@ -160,7 +159,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const commandHistoryContext = useCommandHistory();
     const { confirmWithToast } = useConfirmation();
     const { theme: appTheme } = useTheme();
-    const { addLog, isExpanded: isConnectionLogExpanded } = useConnectionLog();
+    const { addLog } = useConnectionLog();
 
     const savedTheme = localStorage.getItem(
       `terminal_theme_host_${hostConfig.id}`,
@@ -3335,54 +3334,45 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             </Button>
           )}
 
-        <SimpleLoader
-          visible={isConnecting && !isConnectionLogExpanded}
+        <ConnectionScreen
+          status={
+            showDisconnectedOverlay
+              ? "disconnected"
+              : isConnecting
+                ? "connecting"
+                : hasConnectionError
+                  ? "error"
+                  : "connected"
+          }
           message={t("terminal.connecting")}
           backgroundColor={backgroundColor}
-        />
-
-        {showDisconnectedOverlay && !isConnecting && (
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-[120]"
-            style={{ backgroundColor }}
-          >
-            <p className="text-sm text-muted-foreground">
-              {t("terminal.connectionLost")}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => {
-                  setShowDisconnectedOverlay(false);
-                  isUnmountingRef.current = false;
-                  shouldNotReconnectRef.current = false;
-                  isReconnectingRef.current = false;
-                  isConnectingRef.current = false;
-                  reconnectAttempts.current = 0;
-                  wasDisconnectedBySSH.current = false;
-                  wasConnectedRef.current = false;
-                  updateConnectionError(null);
-                  if (terminal) {
-                    terminal.clear();
-                    connectToHost(terminal.cols, terminal.rows);
-                  }
-                }}
-              >
-                {t("terminal.reconnect")}
+          attempt={reconnectAttempts.current}
+          maxAttempts={maxReconnectAttempts}
+          disconnectedMessage={t("terminal.connectionLost")}
+          retryLabel={t("terminal.reconnect")}
+          onManualRetry={() => {
+            setShowDisconnectedOverlay(false);
+            isUnmountingRef.current = false;
+            shouldNotReconnectRef.current = false;
+            isReconnectingRef.current = false;
+            isConnectingRef.current = false;
+            reconnectAttempts.current = 0;
+            wasDisconnectedBySSH.current = false;
+            wasConnectedRef.current = false;
+            updateConnectionError(null);
+            if (terminal) {
+              terminal.clear();
+              connectToHost(terminal.cols, terminal.rows);
+            }
+          }}
+          extraActions={
+            onClose && (
+              <Button variant="outline" onClick={onClose}>
+                {t("terminal.closeTab")}
               </Button>
-              {onClose && (
-                <Button variant="outline" onClick={onClose}>
-                  {t("terminal.closeTab")}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        <ConnectionLog
-          isConnecting={isConnecting}
-          isConnected={isConnected}
-          hasConnectionError={hasConnectionError && !showDisconnectedOverlay}
-          position={hasConnectionError ? "top" : "bottom"}
+            )
+          }
+          logPosition={hasConnectionError ? "top" : "bottom"}
         />
 
         <TOTPDialog

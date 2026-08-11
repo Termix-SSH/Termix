@@ -25,7 +25,13 @@ export type ConnectionStage =
   | "tunnel_connected"
   | "sftp_connecting"
   | "sftp_auth"
-  | "sftp_connected";
+  | "sftp_connected"
+  | "guac_token"
+  | "guac_guacd"
+  | "guac_connecting"
+  | "guac_handshake"
+  | "guac_ready"
+  | "guac_disconnected";
 
 export type LogEntry = {
   id: string;

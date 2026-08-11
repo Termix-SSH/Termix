@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { HostMetricsTab } from "@/features/host-metrics/HostMetricsTab.tsx";
 import { FullScreenAppWrapper } from "@/features/FullScreenAppWrapper.tsx";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 
 interface HostMetricsAppProps {
   hostId?: string;
@@ -11,26 +12,25 @@ const HostMetricsApp: React.FC<HostMetricsAppProps> = ({ hostId }) => {
   const { t } = useTranslation();
   return (
     <FullScreenAppWrapper hostId={hostId}>
-      {(hostConfig, loading) => {
-        if (loading) {
+      {(hostConfig, phase) => {
+        if (phase === "loading") {
           return (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
-                <p className="text-muted-foreground">
-                  {t("hosts.loadingHost")}
-                </p>
-              </div>
+            <div className="relative h-full w-full">
+              <ConnectionScreen
+                status="connecting"
+                message={t("hosts.loadingHost")}
+              />
             </div>
           );
         }
 
         if (!hostConfig) {
           return (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
-                <p className="mb-4 text-red-500">{t("hosts.hostNotFound")}</p>
-              </div>
+            <div className="relative h-full w-full">
+              <ConnectionScreen
+                status="disconnected"
+                message={t("hosts.hostNotFound")}
+              />
             </div>
           );
         }

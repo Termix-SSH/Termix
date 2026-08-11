@@ -1,4 +1,10 @@
 {
+  "connection": {
+    "retryingIn": "Retrying in {{seconds}}s ({{attempt}}/{{max}})",
+    "retryingNow": "Retrying... ({{attempt}}/{{max}})",
+    "disconnected": "Unable to connect",
+    "reconnect": "Reconnect"
+  },
   "termixId": {
     "title": "Termix ID",
     "loadFailed": "Failed to load Termix ID",

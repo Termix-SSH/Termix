@@ -11,13 +11,18 @@ import {
 import type { ProxmoxStatsSnapshot } from "@/types/proxmox";
 import type { ProxmoxStatsConfig } from "@/types";
 import { useTranslation } from "react-i18next";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { RefreshCw, Server } from "lucide-react";
 import { NodeSummaryStrip } from "./NodeSummaryStrip";
 import { GuestTable } from "./GuestTable";
 import { NodeNetworkCard } from "./cards/NodeNetworkCard";
 import { StoragePoolsCard } from "./cards/StoragePoolsCard";
 import { ClusterHealthCard } from "./cards/ClusterHealthCard";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/ssh/connection-log/ConnectionLogContext.tsx";
+import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 
 const HISTORY_LEN = 30;
 const DEFAULT_POLL_INTERVAL = 60;
@@ -61,7 +66,15 @@ function parseProxmoxStatsConfig(
   }
 }
 
-export function ProxmoxStatsTab({
+export function ProxmoxStatsTab(props: ProxmoxStatsProps): React.ReactElement {
+  return (
+    <ConnectionLogProvider>
+      <ProxmoxStatsInner {...props} />
+    </ConnectionLogProvider>
+  );
+}
+
+function ProxmoxStatsInner({
   hostConfig,
   title,
   isVisible = true,
@@ -69,6 +82,7 @@ export function ProxmoxStatsTab({
   embedded = false,
 }: ProxmoxStatsProps): React.ReactElement {
   const { t } = useTranslation();
+  const { addLog, clearLogs } = useConnectionLog();
 
   const [snapshot, setSnapshot] = React.useState<ProxmoxStatsSnapshot | null>(
     null,
@@ -79,14 +93,11 @@ export function ProxmoxStatsTab({
     disk: [],
   });
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
-  const [isLoading, setIsLoading] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [isPageVisible, setIsPageVisible] = React.useState(!document.hidden);
   const [viewerSessionId, setViewerSessionId] = React.useState<string | null>(
     null,
   );
-  const [hasConnectionError, setHasConnectionError] = React.useState(false);
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
   const statsConfig = React.useMemo(
     () => parseProxmoxStatsConfig(currentHostConfig?.proxmoxStatsConfig),
@@ -146,113 +157,112 @@ export function ProxmoxStatsTab({
     });
   }, []);
 
+  const notEnabled = currentHostConfig?.enableProxmoxStats !== true;
+  const pollingIdRef = React.useRef<number | undefined>(undefined);
+
+  const fetchSnapshot = React.useCallback(async (): Promise<void> => {
+    if (!currentHostConfig?.id) return;
+
+    addLog({
+      type: "info",
+      stage: "stats_connecting",
+      message: t("proxmoxStats.connecting"),
+    });
+
+    const result = await startProxmoxStatsPolling(currentHostConfig.id);
+    if (result.viewerSessionId) setViewerSessionId(result.viewerSessionId);
+
+    addLog({
+      type: "info",
+      stage: "stats_polling",
+      message: t("proxmoxStats.connecting"),
+    });
+
+    const data = await getProxmoxStats(currentHostConfig.id);
+    if (!data) {
+      throw new Error(t("proxmoxStats.connectionFailed"));
+    }
+
+    setSnapshot(data);
+    addLog({
+      type: "success",
+      stage: "connected",
+      message: t("terminal.connected"),
+    });
+
+    const intervalMs =
+      (statsConfig.pollInterval ?? DEFAULT_POLL_INTERVAL) * 1000;
+    pollingIdRef.current = window.setInterval(async () => {
+      try {
+        const next = await getProxmoxStats(currentHostConfig.id);
+        if (next) {
+          setSnapshot(next);
+          pushHistory(next);
+        }
+      } catch {
+        /* keep prior */
+      }
+    }, intervalMs);
+  }, [currentHostConfig?.id, statsConfig.pollInterval, addLog, t, pushHistory]);
+
+  const retry = useConnectionRetry({
+    connect: async () => {
+      try {
+        await fetchSnapshot();
+        retry.markConnected();
+      } catch (error: unknown) {
+        addLog({
+          type: "error",
+          stage: "error",
+          message:
+            error instanceof Error
+              ? error.message
+              : t("proxmoxStats.connectionFailed"),
+        });
+        retry.markFailed();
+      }
+    },
+    enabled: isActuallyVisible && !notEnabled && !!currentHostConfig?.id,
+    autoStart: false,
+  });
+
+  const retryRef = React.useRef(retry);
+  retryRef.current = retry;
+
   React.useEffect(() => {
-    const enabled = currentHostConfig?.enableProxmoxStats === true;
-    if (!enabled || !currentHostConfig?.id) return;
+    if (notEnabled || !currentHostConfig?.id) return;
 
     let cancelled = false;
-    let pollingId: number | undefined;
-    if (isActuallyVisible && !snapshot) setIsLoading(true);
-    else if (!isActuallyVisible) setIsLoading(false);
-
-    const start = async () => {
-      if (cancelled) return;
-      const hadSnapshot = snapshot !== null;
-      if (!hadSnapshot) setIsLoading(true);
-      setHasConnectionError(false);
-      setErrorMessage(null);
-
-      try {
-        const result = await startProxmoxStatsPolling(currentHostConfig.id);
-        if (cancelled) return;
-        if (result.viewerSessionId) setViewerSessionId(result.viewerSessionId);
-
-        let retry = 0;
-        let data: ProxmoxStatsSnapshot | null = null;
-        const maxRetries = 30;
-        while (retry < maxRetries && !cancelled) {
-          try {
-            data = await getProxmoxStats(currentHostConfig.id);
-            if (data) break;
-          } catch {
-            // non-404 error - keep retrying
-          }
-          retry++;
-          if (retry < maxRetries && !cancelled) {
-            await new Promise((r) => setTimeout(r, 3000));
-          }
-        }
-        if (cancelled) return;
-
-        if (data) {
-          setSnapshot(data);
-          if (!hadSnapshot) setIsLoading(false);
-        } else {
-          throw new Error(t("proxmoxStats.connectionFailed"));
-        }
-
-        const intervalMs =
-          (statsConfig.pollInterval ?? DEFAULT_POLL_INTERVAL) * 1000;
-        pollingId = window.setInterval(async () => {
-          if (cancelled) return;
-          try {
-            const next = await getProxmoxStats(currentHostConfig.id);
-            if (!cancelled && next) {
-              setSnapshot(next);
-              pushHistory(next);
-            }
-          } catch {
-            /* keep prior */
-          }
-        }, intervalMs);
-      } catch (error: unknown) {
-        if (cancelled) return;
-        setIsLoading(false);
-        setHasConnectionError(true);
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : t("proxmoxStats.connectionFailed"),
-        );
-      }
-    };
-
-    const stop = async () => {
-      if (pollingId) {
-        window.clearInterval(pollingId);
-        pollingId = undefined;
-      }
-      if (currentHostConfig?.id) {
-        await stopProxmoxStatsPolling(
-          currentHostConfig.id,
-          viewerSessionId || undefined,
-        ).catch(() => {});
-      }
-    };
-
     const debounce = setTimeout(() => {
-      if (isActuallyVisible) {
-        if (!hasConnectionError) start();
-      } else {
-        stop();
+      if (isActuallyVisible && !cancelled) {
+        clearLogs();
+        retryRef.current.reset();
+        retryRef.current.retryNow();
+      } else if (!isActuallyVisible) {
+        if (pollingIdRef.current) {
+          window.clearInterval(pollingIdRef.current);
+          pollingIdRef.current = undefined;
+        }
+        if (currentHostConfig?.id) {
+          stopProxmoxStatsPolling(currentHostConfig.id, undefined).catch(
+            () => {},
+          );
+        }
       }
     }, 500);
 
     return () => {
       cancelled = true;
       clearTimeout(debounce);
-      if (pollingId) window.clearInterval(pollingId);
+      if (pollingIdRef.current) {
+        window.clearInterval(pollingIdRef.current);
+        pollingIdRef.current = undefined;
+      }
       if (currentHostConfig?.id) {
         stopProxmoxStatsPolling(currentHostConfig.id).catch(() => {});
       }
     };
-  }, [
-    currentHostConfig?.id,
-    currentHostConfig?.enableProxmoxStats,
-    isActuallyVisible,
-    statsConfig.pollInterval,
-    hasConnectionError,
-  ]);
+  }, [currentHostConfig?.id, notEnabled, isActuallyVisible]);
 
   const wrapperStyle: React.CSSProperties = embedded
     ? { opacity: isVisible ? 1 : 0, height: "100%", width: "100%" }
@@ -264,9 +274,8 @@ export function ProxmoxStatsTab({
 
   const handleRefresh = async () => {
     if (!currentHostConfig?.id) return;
-    if (hasConnectionError) {
-      setHasConnectionError(false);
-      setErrorMessage(null);
+    if (retry.status !== "connected") {
+      retry.retryNow();
       return;
     }
     try {
@@ -281,9 +290,7 @@ export function ProxmoxStatsTab({
     }
   };
 
-  const notEnabled = currentHostConfig?.enableProxmoxStats !== true;
-  const showContent =
-    !notEnabled && !isLoading && snapshot && !hasConnectionError;
+  const showContent = !notEnabled && retry.status === "connected" && snapshot;
 
   return (
     <div
@@ -291,7 +298,7 @@ export function ProxmoxStatsTab({
       className="relative flex flex-col overflow-hidden"
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {!isLoading && !hasConnectionError && !notEnabled && (
+        {retry.status === "connected" && !notEnabled && (
           <div className="mx-3 mt-3 flex shrink-0 items-center justify-between border border-border bg-card px-3 py-3">
             <div className="flex items-center gap-3">
               <div className="flex size-10 shrink-0 items-center justify-center border border-border bg-muted">
@@ -314,42 +321,6 @@ export function ProxmoxStatsTab({
           </div>
         )}
 
-        {notEnabled && (
-          <div className="flex flex-1 items-center justify-center py-20">
-            <div className="text-center opacity-40">
-              <Server className="mx-auto mb-4 size-16" />
-              <p className="text-xl font-bold uppercase tracking-widest">
-                {t("proxmoxStats.noHostSelected")}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {hasConnectionError && !notEnabled && (
-          <div className="flex flex-1 items-center justify-center py-20">
-            <div className="text-center opacity-70">
-              <Server className="mx-auto mb-4 size-16" />
-              <p className="text-xl font-bold uppercase tracking-widest">
-                {t("proxmoxStats.connectionFailed")}
-              </p>
-              {errorMessage && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {errorMessage}
-                </p>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={handleRefresh}
-              >
-                <RefreshCw className="mr-2 size-3.5" />
-                {t("proxmoxStats.refresh")}
-              </Button>
-            </div>
-          </div>
-        )}
-
         {showContent && (
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pb-3 pt-3">
             <div className="shrink-0">
@@ -368,12 +339,24 @@ export function ProxmoxStatsTab({
           </div>
         )}
 
-        {!notEnabled && (
-          <SimpleLoader
-            visible={isLoading && !snapshot}
-            message={t("proxmoxStats.connecting")}
-          />
-        )}
+        <ConnectionScreen
+          status={notEnabled ? "connected" : retry.status}
+          message={t("proxmoxStats.connecting")}
+          attempt={retry.attempt}
+          maxAttempts={retry.maxAttempts}
+          nextRetryInMs={retry.nextRetryInMs}
+          onManualRetry={retry.retryNow}
+          emptyState={
+            notEnabled ? (
+              <div className="text-center opacity-40">
+                <Server className="mx-auto mb-4 size-16" />
+                <p className="text-xl font-bold uppercase tracking-widest">
+                  {t("proxmoxStats.noHostSelected")}
+                </p>
+              </div>
+            ) : undefined
+          }
+        />
       </div>
     </div>
   );

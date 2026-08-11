@@ -34,8 +34,9 @@ import {
   ConnectionLogProvider,
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+import { ConnectionLogPanel } from "@/components/connection/ConnectionLogPanel.tsx";
+import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import {
   listSSHFiles,
@@ -98,11 +99,7 @@ function FileManagerContent({
     [t],
   );
   const { confirmWithToast } = useConfirmation();
-  const {
-    addLog,
-    clearLogs,
-    isExpanded: isConnectionLogExpanded,
-  } = useConnectionLog();
+  const { addLog, clearLogs } = useConnectionLog();
 
   const [currentHost] = useState<SSHHost | null>(initialHost || null);
   const [currentPath, setCurrentPath] = useState(
@@ -265,13 +262,31 @@ function FileManagerContent({
         stage: "connection",
         message: errorMessage,
       });
+      connectRetryRef.current?.markFailed();
     },
     [addLog],
   );
 
+  const connectRetry = useConnectionRetry({
+    connect: () => {
+      void initializeSSHConnection();
+    },
+    enabled:
+      !!currentHost &&
+      !sshSessionId &&
+      !totpRequired &&
+      !warpgateRequired &&
+      !showAuthDialog &&
+      !showPassphraseDialog,
+    autoStart: false,
+  });
+  const connectRetryRef = useRef(connectRetry);
+  connectRetryRef.current = connectRetry;
+
   useEffect(() => {
     if (currentHost) {
-      initializeSSHConnection();
+      connectRetryRef.current.reset();
+      connectRetryRef.current.retryNow();
     }
   }, [currentHost]);
 
@@ -497,6 +512,7 @@ function FileManagerContent({
       }
 
       setSshSessionId(sessionId);
+      connectRetryRef.current.markConnected();
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
@@ -2169,6 +2185,7 @@ function FileManagerContent({
         setTotpPrompt("");
         setSshSessionId(totpSessionId);
         setTotpSessionId(null);
+        connectRetryRef.current.markConnected();
 
         try {
           const response = await listSSHFiles(totpSessionId, currentPath);
@@ -2213,6 +2230,7 @@ function FileManagerContent({
         setWarpgateSecurityKey("");
         setSshSessionId(warpgateSessionId);
         setWarpgateSessionId(null);
+        connectRetryRef.current.markConnected();
 
         try {
           const response = await listSSHFiles(warpgateSessionId, currentPath);
@@ -2310,6 +2328,7 @@ function FileManagerContent({
       }
 
       setSshSessionId(sessionId);
+      connectRetryRef.current.markConnected();
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
@@ -2394,6 +2413,7 @@ function FileManagerContent({
       }
 
       setSshSessionId(sessionId);
+      connectRetryRef.current.markConnected();
 
       try {
         const response = await listSSHFiles(sessionId, currentPath);
@@ -2873,17 +2893,14 @@ function FileManagerContent({
   if ((isLoading || isReconnecting) && !sshSessionId) {
     return (
       <div className="h-full w-full flex flex-col bg-background relative">
-        <div className="flex-1 overflow-hidden min-h-0 relative">
-          <SimpleLoader
-            visible={!isConnectionLogExpanded}
-            message={t("fileManager.connecting")}
-          />
-        </div>
-        <ConnectionLog
-          isConnecting={isLoading || isReconnecting}
-          isConnected={false}
-          hasConnectionError={hasConnectionError}
-          position={hasConnectionError ? "top" : "bottom"}
+        <ConnectionScreen
+          status={isReconnecting ? "connecting" : connectRetry.status}
+          message={t("fileManager.connecting")}
+          attempt={connectRetry.attempt}
+          maxAttempts={connectRetry.maxAttempts}
+          nextRetryInMs={connectRetry.nextRetryInMs}
+          onManualRetry={connectRetry.retryNow}
+          logPosition={hasConnectionError ? "top" : "bottom"}
         />
       </div>
     );
@@ -2891,12 +2908,7 @@ function FileManagerContent({
 
   return (
     <div className="h-full flex flex-col bg-background relative overflow-hidden isolate">
-      <div
-        className="h-full w-full flex flex-col min-h-0"
-        style={{
-          visibility: isConnectionLogExpanded ? "hidden" : "visible",
-        }}
-      >
+      <div className="h-full w-full flex flex-col min-h-0">
         <FileManagerToolbar
           t={t}
           currentPath={currentPath}
@@ -3116,9 +3128,9 @@ function FileManagerContent({
         setPendingSudoOperation={setPendingSudoOperation}
         handleSudoPasswordSubmit={handleSudoPasswordSubmit}
       />
-      <ConnectionLog
+      <ConnectionLogPanel
         isConnecting={isReconnecting || isLoading}
-        isConnected={!!sshSessionId}
+        isConnected={!!sshSessionId && !isReconnecting}
         hasConnectionError={hasConnectionError}
         position={hasConnectionError ? "top" : "bottom"}
       />

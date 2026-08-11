@@ -22,7 +22,6 @@ import { readConfiguredDimension } from "@/features/guacamole/guacamole-display-
 import { parseGuacamoleConfig } from "@/api/guacamole-api";
 import { resolveConnectionOrigin } from "@/lib/connection-origin.ts";
 import { useTranslation } from "react-i18next";
-import { AlertCircle, RefreshCw } from "lucide-react";
 import { GuacamoleToolbar } from "@/features/guacamole/GuacamoleToolbar.tsx";
 import { GuacamoleFileBrowser } from "@/features/guacamole/GuacamoleFileBrowser.tsx";
 import { Button } from "@/components/button.tsx";
@@ -35,7 +34,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/dialog.tsx";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+import {
+  ConnectionLogProvider,
+  useConnectionLog,
+} from "@/ssh/connection-log/ConnectionLogContext.tsx";
+import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { SSHHost } from "@/types";
 
@@ -76,41 +80,34 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
     if (loading) {
       return (
         <div className="relative w-full h-full">
-          <SimpleLoader visible={true} message={t("common.loading")} />
+          <ConnectionScreen status="connecting" message={t("common.loading")} />
         </div>
       );
     }
 
     if (!hostConfig || !hostId) {
       return (
-        <div
-          className="flex flex-col items-center justify-center h-full gap-4"
-          style={{ backgroundColor: "var(--bg-base)" }}
-        >
-          <AlertCircle
-            className="size-10"
-            style={{ color: "var(--foreground)" }}
+        <div className="relative w-full h-full">
+          <ConnectionScreen
+            status="disconnected"
+            message={t("guacamole.hostNotFound")}
           />
-          <span
-            className="text-sm font-semibold"
-            style={{ color: "var(--foreground)" }}
-          >
-            {t("guacamole.hostNotFound")}
-          </span>
         </div>
       );
     }
 
     return (
-      <GuacamoleAppInner
-        hostId={parseInt(hostId, 10)}
-        hostConfig={hostConfig}
-        hostName={hostConfig.name || hostConfig.ip || String(hostId)}
-        tabId={tabId}
-        protocol={protocol}
-        isVisible={isVisible}
-        ref={ref}
-      />
+      <ConnectionLogProvider>
+        <GuacamoleAppInner
+          hostId={parseInt(hostId, 10)}
+          hostConfig={hostConfig}
+          hostName={hostConfig.name || hostConfig.ip || String(hostId)}
+          tabId={tabId}
+          protocol={protocol}
+          isVisible={isVisible}
+          ref={ref}
+        />
+      </ConnectionLogProvider>
     );
   },
 );
@@ -135,6 +132,7 @@ const GuacamoleAppInner = React.forwardRef<
   ref,
 ) {
   const { t } = useTranslation();
+  const { addLog, clearLogs } = useConnectionLog();
   const [token, setToken] = useState<string | null>(null);
   const [guacamoleConnectionId, setGuacamoleConnectionId] = useState<
     string | null
@@ -142,7 +140,7 @@ const GuacamoleAppInner = React.forwardRef<
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
+  const [isDisplayReady, setIsDisplayReady] = useState(false);
   const [touchMode, setTouchMode] = useState<GuacamoleTouchMode | null>(() =>
     typeof window !== "undefined" &&
     (navigator.maxTouchPoints > 0 || "ontouchstart" in window)
@@ -186,79 +184,110 @@ const GuacamoleAppInner = React.forwardRef<
     canShare: () => guacamoleConnectionId !== null,
   }));
 
+  const fetchToken = useCallback(async (): Promise<void> => {
+    setToken(null);
+    setGuacamoleConnectionId(null);
+    setError(null);
+
+    if (isElectron()) {
+      const origin = await resolveConnectionOrigin({
+        connectionType: resolvedProtocolForConnect,
+      });
+      if (origin === "remote") {
+        const remoteConfig = (await window.electronAPI?.invoke?.(
+          "get-remote-sync-config",
+        )) as { serverUrl?: string } | null;
+        if (!remoteConfig?.serverUrl) {
+          throw new Error(t("errors.remoteServerRequired"));
+        }
+      }
+    }
+
+    addLog({
+      type: "info",
+      stage: "guac_guacd",
+      message: t("guacamole.connecting", {
+        type: resolvedProtocolForConnect.toUpperCase(),
+      }),
+    });
+    const status = await getGuacdStatus();
+    if (status.guacd.status !== "connected") {
+      throw new Error(t("guacamole.guacdUnavailable"));
+    }
+
+    addLog({
+      type: "info",
+      stage: "guac_token",
+      message: t("guacamole.connecting", {
+        type: resolvedProtocolForConnect.toUpperCase(),
+      }),
+    });
+    const result = await getGuacamoleTokenFromHost(
+      hostId,
+      protocol,
+      promptedCredentials ?? undefined,
+    );
+    if (result) {
+      setToken(result.token);
+      setGuacamoleConnectionId(result.guacamoleConnectionId ?? null);
+      logActivity(resolvedProtocolForConnect, hostId, hostName).catch(() => {});
+    }
+  }, [
+    hostId,
+    hostName,
+    protocol,
+    promptedCredentials,
+    resolvedProtocolForConnect,
+    addLog,
+    t,
+  ]);
+
+  const tokenRetry = useConnectionRetry({
+    connect: async () => {
+      try {
+        await fetchToken();
+        tokenRetryRef.current.markConnected();
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : t("guacamole.failedToConnect");
+        setError(message || t("guacamole.failedToConnect"));
+        addLog({ type: "error", stage: "error", message });
+        tokenRetryRef.current.markFailed();
+      }
+    },
+    enabled: !needsCredentialPrompt || !!promptedCredentials,
+    autoStart: false,
+  });
+  const tokenRetryRef = useRef(tokenRetry);
+  tokenRetryRef.current = tokenRetry;
+
   useEffect(() => {
     if (needsCredentialPrompt && !promptedCredentials) {
       setPromptOpen(true);
       return;
     }
-
-    setToken(null);
-    setGuacamoleConnectionId(null);
-    setError(null);
-
-    (async () => {
-      if (isElectron()) {
-        const origin = await resolveConnectionOrigin({
-          connectionType: resolvedProtocolForConnect,
-        });
-        if (origin === "remote") {
-          const remoteConfig = (await window.electronAPI?.invoke?.(
-            "get-remote-sync-config",
-          )) as { serverUrl?: string } | null;
-          if (!remoteConfig?.serverUrl) {
-            setError(t("errors.remoteServerRequired"));
-            return;
-          }
-        }
-      }
-
-      try {
-        const status = await getGuacdStatus();
-        if (status.guacd.status !== "connected") {
-          setError(t("guacamole.guacdUnavailable"));
-          return;
-        }
-        const result = await getGuacamoleTokenFromHost(
-          hostId,
-          protocol,
-          promptedCredentials ?? undefined,
-        );
-        if (result) {
-          setToken(result.token);
-          setGuacamoleConnectionId(result.guacamoleConnectionId ?? null);
-          logActivity(resolvedProtocolForConnect, hostId, hostName).catch(
-            () => {},
-          );
-        }
-      } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("guacamole.failedToConnect");
-        setError(message || t("guacamole.failedToConnect"));
-      }
-    })();
-  }, [
-    hostId,
-    hostName,
-    protocol,
-    retryCount,
-    t,
-    needsCredentialPrompt,
-    promptedCredentials,
-    resolvedProtocolForConnect,
-  ]);
+    clearLogs();
+    tokenRetryRef.current.reset();
+    tokenRetryRef.current.retryNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hostId, protocol, needsCredentialPrompt, promptedCredentials]);
 
   const handleReconnect = useCallback(() => {
     setConnectionError(null);
     setError(null);
     setToken(null);
+    setIsDisplayReady(false);
     if (needsCredentialPrompt) {
       setPromptedCredentials(null);
       setPromptUsername("");
       setPromptPassword("");
       setPromptOpen(true);
+      return;
     }
-    setRetryCount((c) => c + 1);
-  }, [needsCredentialPrompt]);
+    clearLogs();
+    tokenRetryRef.current.reset();
+    tokenRetryRef.current.retryNow();
+  }, [needsCredentialPrompt, clearLogs]);
 
   useEffect(() => {
     if (!tabId) return;
@@ -332,41 +361,11 @@ const GuacamoleAppInner = React.forwardRef<
     );
   }
 
-  if (error) {
-    return (
-      <div
-        className="flex flex-col items-center justify-center h-full gap-4"
-        style={{ backgroundColor: "var(--bg-base)" }}
-      >
-        <AlertCircle
-          className="size-10"
-          style={{ color: "var(--foreground)" }}
-        />
-        <p
-          className="text-sm font-semibold"
-          style={{ color: "var(--foreground)" }}
-        >
-          {t("guacamole.connectionFailed")}
-        </p>
-        <p
-          className="text-xs max-w-xs text-center"
-          style={{ color: "var(--foreground-secondary)" }}
-        >
-          {error}
-        </p>
-        <Button variant="outline" size="sm" onClick={handleReconnect}>
-          <RefreshCw className="size-4 mr-2" />
-          {t("guacamole.retry")}
-        </Button>
-      </div>
-    );
-  }
-
-  if (!token) {
+  if (error || !token) {
     return (
       <div className="relative w-full h-full">
-        <SimpleLoader
-          visible={true}
+        <ConnectionScreen
+          status={error ? tokenRetry.status : "connecting"}
           message={t("guacamole.connecting", {
             type: (
               protocol ||
@@ -374,6 +373,11 @@ const GuacamoleAppInner = React.forwardRef<
               "remote"
             ).toUpperCase(),
           })}
+          attempt={tokenRetry.attempt}
+          maxAttempts={tokenRetry.maxAttempts}
+          nextRetryInMs={tokenRetry.nextRetryInMs}
+          onManualRetry={handleReconnect}
+          retryLabel={t("guacamole.retry")}
         />
       </div>
     );
@@ -386,32 +390,16 @@ const GuacamoleAppInner = React.forwardRef<
 
   return (
     <div className="relative w-full h-full">
-      {connectionError && (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-4 z-50"
-          style={{ backgroundColor: "var(--bg-base)" }}
-        >
-          <AlertCircle
-            className="size-10"
-            style={{ color: "var(--foreground)" }}
-          />
-          <p
-            className="text-sm font-semibold"
-            style={{ color: "var(--foreground)" }}
-          >
-            {t("guacamole.connectionFailed")}
-          </p>
-          <p
-            className="text-xs max-w-xs text-center"
-            style={{ color: "var(--foreground-secondary)" }}
-          >
-            {connectionError}
-          </p>
-          <Button variant="outline" size="sm" onClick={handleReconnect}>
-            <RefreshCw className="size-4 mr-2" />
-            {t("guacamole.reconnect")}
-          </Button>
-        </div>
+      {(!isDisplayReady || connectionError) && (
+        <ConnectionScreen
+          status={connectionError ? "disconnected" : "connecting"}
+          message={t("guacamole.connecting", {
+            type: resolvedProtocol.toUpperCase(),
+          })}
+          onManualRetry={handleReconnect}
+          retryLabel={t("guacamole.reconnect")}
+          className="z-50"
+        />
       )}
       <GuacamoleDisplay
         key={`${token}-${touchMode}`}
@@ -427,7 +415,20 @@ const GuacamoleAppInner = React.forwardRef<
         isVisible={isVisible}
         touchMode={touchMode}
         allowUpload={allowUpload && filesystem !== null}
-        onError={(err) => setConnectionError(err)}
+        onConnect={() => setIsDisplayReady(true)}
+        onError={(err) => {
+          setConnectionError(err);
+          addLog({ type: "error", stage: "error", message: err });
+        }}
+        onStageChange={(stage) =>
+          addLog({
+            type: "info",
+            stage,
+            message: t("guacamole.connecting", {
+              type: resolvedProtocol.toUpperCase(),
+            }),
+          })
+        }
         onFilesystem={setFilesystem}
         onDropFiles={handleDropFiles}
       />

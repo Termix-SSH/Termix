@@ -11,7 +11,6 @@ import Guacamole from "guacamole-common-js";
 import { Upload } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getGuacamoleToken, isElectron } from "@/main-axios.ts";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { getBasePath } from "@/lib/base-path.ts";
 import { buildGuacamoleWebSocketBaseUrl } from "./guacamole-websocket-url.ts";
 import {
@@ -25,6 +24,8 @@ import {
 } from "./guacamole-clipboard.ts";
 import { getGuacamoleDisplaySize } from "./guacamole-display-size.ts";
 import { bindPointerInput } from "./guacamole-pointer.ts";
+import { guacStateToStage } from "@/components/connection/connection-status.ts";
+import type { ConnectionStage } from "@/types/connection-log.ts";
 
 export type GuacamoleConnectionType = "rdp" | "vnc" | "telnet";
 
@@ -64,6 +65,7 @@ interface GuacamoleDisplayProps {
   onError?: (error: string) => void;
   onFilesystem?: (filesystem: Guacamole.Object | null) => void;
   onDropFiles?: (files: File[]) => void;
+  onStageChange?: (stage: ConnectionStage) => void;
 }
 
 const isDev = import.meta.env.DEV;
@@ -82,6 +84,7 @@ export const GuacamoleDisplay = forwardRef<
     onError,
     onFilesystem,
     onDropFiles,
+    onStageChange,
   },
   ref,
 ) {
@@ -99,6 +102,8 @@ export const GuacamoleDisplay = forwardRef<
   // rebuilding the connect callback whenever the parent re-renders.
   const onFilesystemRef = useRef(onFilesystem);
   onFilesystemRef.current = onFilesystem;
+  const onStageChangeRef = useRef(onStageChange);
+  onStageChangeRef.current = onStageChange;
   const keyboardRef = useRef<Guacamole.Keyboard | null>(null);
   const scaleRef = useRef<number>(1);
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -488,6 +493,7 @@ export const GuacamoleDisplay = forwardRef<
 
     client.onstatechange = (state: number) => {
       if (!isMountedRef.current || clientRef.current !== client) return;
+      onStageChangeRef.current?.(guacStateToStage(state));
       switch (state) {
         case 0:
           break;
@@ -798,14 +804,6 @@ export const GuacamoleDisplay = forwardRef<
     [canDropFiles, onDropFiles],
   );
 
-  const connectingMessage = t("guacamole.connecting", {
-    type: (
-      connectionConfig.protocol ||
-      connectionConfig.type ||
-      "remote"
-    ).toUpperCase(),
-  });
-
   return (
     <div
       ref={containerRef}
@@ -833,11 +831,6 @@ export const GuacamoleDisplay = forwardRef<
           </div>
         </div>
       )}
-
-      <SimpleLoader
-        visible={!isReady && !hasError}
-        message={connectingMessage}
-      />
     </div>
   );
 });

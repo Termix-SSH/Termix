@@ -26,7 +26,6 @@ import {
   logActivity,
   getSSHHosts,
 } from "@/main-axios.ts";
-import { SimpleLoader } from "@/lib/SimpleLoader.tsx";
 import { ContainerList } from "./components/ContainerList.tsx";
 import { ContainerDetail } from "./components/ContainerDetail.tsx";
 import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
@@ -37,7 +36,8 @@ import {
   ConnectionLogProvider,
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
-import { ConnectionLog } from "@/ssh/connection-log/ConnectionLog.tsx";
+import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
+import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import type { LogEntry } from "@/types/connection-log.ts";
 
 interface DockerManagerProps {
@@ -65,12 +65,7 @@ function DockerManagerInner({
   onClose,
 }: DockerManagerProps): React.ReactElement {
   const { t } = useTranslation();
-  const {
-    addLog,
-    setLogs,
-    clearLogs,
-    isExpanded: isConnectionLogExpanded,
-  } = useConnectionLog();
+  const { addLog, setLogs, clearLogs } = useConnectionLog();
   const { currentTab, removeTab } = useTabsSafe();
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
@@ -100,7 +95,6 @@ function DockerManagerInner({
   const [authReason, setAuthReason] = React.useState<
     "no_keyboard" | "auth_failed" | "timeout"
   >("no_keyboard");
-  const [hasConnectionError, setHasConnectionError] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [retryCount, setRetryCount] = React.useState(0);
@@ -197,7 +191,6 @@ function DockerManagerInner({
       }
 
       setIsConnecting(true);
-      setHasConnectionError(false);
       clearLogs();
       const sid = `docker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -245,7 +238,6 @@ function DockerManagerInner({
         setIsValidating(false);
 
         if (!validation.available) {
-          setHasConnectionError(true);
           addLog({
             type: "error",
             stage: "validation",
@@ -254,15 +246,16 @@ function DockerManagerInner({
               ? `Error code: ${validation.code}`
               : undefined,
           });
+          dockerConnectRetryRef.current.markFailed();
         } else {
           logDockerActivity();
           setTimeout(() => clearLogs(), 1000);
+          dockerConnectRetryRef.current.markConnected();
         }
       } catch (error) {
         const dockerError = error as DockerConnectionError;
         setIsConnecting(false);
         setIsValidating(false);
-        setHasConnectionError(true);
 
         if (Array.isArray(dockerError.connectionLogs)) {
           setLogs(dockerError.connectionLogs);
@@ -273,6 +266,7 @@ function DockerManagerInner({
             message: dockerError.message || t("docker.connectionFailed"),
           });
         }
+        dockerConnectRetryRef.current.markFailed();
       } finally {
         setIsConnecting(false);
       }
@@ -377,7 +371,6 @@ function DockerManagerInner({
         setIsValidating(false);
 
         if (!validation.available) {
-          setHasConnectionError(true);
           addLog({
             type: "error",
             stage: "validation",
@@ -386,18 +379,20 @@ function DockerManagerInner({
               ? `Error code: ${validation.code}`
               : undefined,
           });
+          dockerConnectRetryRef.current.markFailed();
         } else {
           logDockerActivity();
+          dockerConnectRetryRef.current.markConnected();
         }
       }
     } catch (error) {
       console.error("TOTP verification failed:", error);
-      setHasConnectionError(true);
       addLog({
         type: "error",
         stage: "auth",
         message: t("docker.totpVerificationFailed"),
       });
+      dockerConnectRetryRef.current.markFailed();
     } finally {
       setIsConnecting(false);
     }
@@ -433,7 +428,6 @@ function DockerManagerInner({
         setIsValidating(false);
 
         if (!validation.available) {
-          setHasConnectionError(true);
           addLog({
             type: "error",
             stage: "validation",
@@ -442,18 +436,20 @@ function DockerManagerInner({
               ? `Error code: ${validation.code}`
               : undefined,
           });
+          dockerConnectRetryRef.current.markFailed();
         } else {
           logDockerActivity();
+          dockerConnectRetryRef.current.markConnected();
         }
       }
     } catch (error) {
       console.error("Warpgate verification failed:", error);
-      setHasConnectionError(true);
       addLog({
         type: "error",
         stage: "auth",
         message: t("docker.warpgateVerificationFailed"),
       });
+      dockerConnectRetryRef.current.markFailed();
     } finally {
       setIsConnecting(false);
     }
@@ -533,19 +529,20 @@ function DockerManagerInner({
       setIsValidating(false);
 
       if (!validation.available) {
-        setHasConnectionError(true);
+        dockerConnectRetryRef.current.markFailed();
       } else {
         logDockerActivity();
+        dockerConnectRetryRef.current.markConnected();
       }
     } catch (error) {
       setIsConnecting(false);
       setIsValidating(false);
-      setHasConnectionError(true);
       addLog({
         type: "error",
         stage: "connection",
         message: error?.message || t("docker.connectionFailed"),
       });
+      dockerConnectRetryRef.current.markFailed();
     } finally {
       setIsConnecting(false);
     }
@@ -560,11 +557,24 @@ function DockerManagerInner({
   const handleRetry = () => {
     initializingRef.current = false;
     setSessionId(null);
-    setHasConnectionError(false);
     setDockerValidation(null);
     clearLogs();
     setRetryCount((c) => c + 1);
   };
+
+  const dockerConnectRetry = useConnectionRetry({
+    connect: () => {
+      handleRetry();
+    },
+    enabled:
+      !!currentHostConfig?.enableDocker &&
+      !totpRequired &&
+      !warpgateRequired &&
+      !showAuthDialog,
+    autoStart: false,
+  });
+  const dockerConnectRetryRef = React.useRef(dockerConnectRetry);
+  dockerConnectRetryRef.current = dockerConnectRetry;
 
   const topMarginPx = isTopbarOpen ? 74 : 16;
   const leftMarginPx = 8;
@@ -616,53 +626,32 @@ function DockerManagerInner({
   if (isConnecting || isValidating) {
     return (
       <div style={wrapperStyle} className={`${containerClass} relative`}>
-        <div className="h-full w-full flex flex-col">
-          <div className="flex-1 overflow-hidden min-h-0 relative">
-            <SimpleLoader
-              visible={!isConnectionLogExpanded}
-              message={
-                isValidating ? t("docker.validating") : t("docker.connecting")
-              }
-            />
-          </div>
-        </div>
-        <ConnectionLog
-          isConnecting={isConnecting}
-          isConnected={!!sessionId && !!dockerValidation?.available}
-          hasConnectionError={hasConnectionError}
-          position={hasConnectionError ? "top" : "bottom"}
+        <ConnectionScreen
+          status={dockerConnectRetry.status}
+          message={
+            isValidating ? t("docker.validating") : t("docker.connecting")
+          }
+          attempt={dockerConnectRetry.attempt}
+          maxAttempts={dockerConnectRetry.maxAttempts}
+          nextRetryInMs={dockerConnectRetry.nextRetryInMs}
+          onManualRetry={dockerConnectRetry.retryNow}
         />
       </div>
     );
   }
 
   if (dockerValidation && !dockerValidation.available) {
-    const isError =
-      hasConnectionError || (!!dockerValidation && !dockerValidation.available);
     return (
       <div style={wrapperStyle} className={`${containerClass} relative`}>
-        {!isConnectionLogExpanded && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
-            <Box className="size-12 opacity-20" />
-            <p className="text-sm text-muted-foreground opacity-60">
-              {t("docker.connectionFailed")}
-            </p>
-            <Button
-              variant="outline"
-              size="default"
-              onClick={handleRetry}
-              className="gap-2 font-semibold"
-            >
-              <RefreshCw className="size-3.5" />
-              {t("terminal.retry")}
-            </Button>
-          </div>
-        )}
-        <ConnectionLog
-          isConnecting={isConnecting}
-          isConnected={!!sessionId && !!dockerValidation?.available}
-          hasConnectionError={isError}
-          position={isError ? "top" : "bottom"}
+        <ConnectionScreen
+          status={dockerConnectRetry.status}
+          message={t("docker.connectionFailed")}
+          attempt={dockerConnectRetry.attempt}
+          maxAttempts={dockerConnectRetry.maxAttempts}
+          nextRetryInMs={dockerConnectRetry.nextRetryInMs}
+          onManualRetry={dockerConnectRetry.retryNow}
+          retryLabel={t("terminal.retry")}
+          logPosition="top"
         />
       </div>
     );
@@ -670,17 +659,7 @@ function DockerManagerInner({
 
   return (
     <div style={wrapperStyle} className={`${containerClass} relative`}>
-      <div
-        className="h-full w-full flex flex-col flex-1 min-h-0 overflow-hidden"
-        style={{
-          visibility:
-            (hasConnectionError ||
-              (!!dockerValidation && !dockerValidation.available)) &&
-            isConnectionLogExpanded
-              ? "hidden"
-              : "visible",
-        }}
-      >
+      <div className="h-full w-full flex flex-col flex-1 min-h-0 overflow-hidden">
         {viewMode === "detail" &&
         sessionId &&
         selectedContainer &&
@@ -817,40 +796,15 @@ function DockerManagerInner({
           }}
         />
       )}
-      <SimpleLoader
-        visible={isConnecting && !isConnectionLogExpanded}
+      <ConnectionScreen
+        status={dockerConnectRetry.status}
         message={t("docker.connecting")}
-      />
-      {hasConnectionError && !isConnectionLogExpanded && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10">
-          <Box className="size-12 opacity-20" />
-          <p className="text-sm text-muted-foreground opacity-60">
-            {t("docker.connectionFailed")}
-          </p>
-          <Button
-            variant="outline"
-            size="default"
-            onClick={handleRetry}
-            className="gap-2 font-semibold"
-          >
-            <RefreshCw className="size-3.5" />
-            {t("terminal.retry")}
-          </Button>
-        </div>
-      )}
-      <ConnectionLog
-        isConnecting={isConnecting}
-        isConnected={!!sessionId && !!dockerValidation?.available}
-        hasConnectionError={
-          hasConnectionError ||
-          (!!dockerValidation && !dockerValidation.available)
-        }
-        position={
-          hasConnectionError ||
-          (!!dockerValidation && !dockerValidation.available)
-            ? "top"
-            : "bottom"
-        }
+        attempt={dockerConnectRetry.attempt}
+        maxAttempts={dockerConnectRetry.maxAttempts}
+        nextRetryInMs={dockerConnectRetry.nextRetryInMs}
+        onManualRetry={dockerConnectRetry.retryNow}
+        retryLabel={t("terminal.retry")}
+        logPosition="top"
       />
     </div>
   );
