@@ -5,7 +5,13 @@ import { useTranslation } from "react-i18next";
 import { Separator } from "@/components/separator";
 import { Button } from "@/components/button";
 import { Sheet, SheetContent } from "@/components/sheet";
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+} from "lucide-react";
 import {
   useState,
   useRef,
@@ -1927,7 +1933,7 @@ export function AppShell({
             title="Reset width"
             onClick={() => setSidebarWidth(291)}
           >
-            <Maximize2 className="size-3.5" />
+            <RotateCcw className="size-3.5" />
           </Button>
         </>
       )}
