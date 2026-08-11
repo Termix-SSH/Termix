@@ -1,7 +1,11 @@
 import { authApi, handleApiError, sshHostApi } from "@/main-axios";
 import type { SSHFolder } from "@/types/index";
 import { sshLogger } from "@/lib/frontend-logger";
-import { getCachedSSHFolders, invalidateSSHFoldersCache } from "@/lib/hosts-request-cache";
+import {
+  getCachedSSHFolders,
+  invalidateSSHFoldersCache,
+  invalidateHostsAndStatusCaches,
+} from "@/lib/hosts-request-cache";
 
 export async function getCredentials(): Promise<
   Record<string, unknown>[] | Record<string, unknown>
@@ -273,7 +277,7 @@ export async function deleteAllHostsInFolder(
       `/host/folders/${encodeURIComponent(folderName)}/hosts`,
     );
 
-    invalidateSSHFoldersCache();
+    invalidateHostsAndStatusCaches();
 
     sshLogger.success("All hosts in folder deleted successfully", {
       operation: "delete_folder_hosts",
