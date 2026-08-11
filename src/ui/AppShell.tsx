@@ -65,6 +65,9 @@ const SshToolsPanel = lazy(() =>
 const SnippetsPanel = lazy(() =>
   import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
 );
+const FleetsPanel = lazy(() =>
+  import("@/sidebar/FleetsPanel").then((m) => ({ default: m.FleetsPanel })),
+);
 const HistoryPanel = lazy(() =>
   import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
 );
@@ -439,6 +442,7 @@ export function AppShell({
     serial: t("nav.serial"),
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
+    fleets: t("nav.fleets"),
     history: "History",
     "session-logs": t("nav.sessionLogs"),
     "split-screen": "Split Screen",
@@ -1302,6 +1306,7 @@ export function AppShell({
       type: TabType,
       pendingEvent?: string,
       host?: Host,
+      fleetId?: number,
     ) {
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
@@ -1343,13 +1348,23 @@ export function AppShell({
         network_graph: t("nav.networkGraph"),
         tmux_monitor: t("nav.tmuxMonitor"), // --- tmux-monitor ---
         homepage: t("nav.homepage"),
+        "fleet-inventory": t("nav.fleets"),
       };
+      const label = singletonLabels[type] ?? type;
       setTabs((prev) => {
         const existing = prev.find((t) => t.id === id);
         if (existing) {
           // --- tmux-monitor --- refocusing with a host preselects it
-          if (!host) return prev;
-          return prev.map((t) => (t.id === id ? { ...t, host } : t));
+          if (!host && fleetId === undefined) return prev;
+          return prev.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  ...(host ? { host } : {}),
+                  ...(fleetId !== undefined ? { fleetId } : {}),
+                }
+              : t,
+          );
         }
         return [
           ...prev,
@@ -1357,9 +1372,10 @@ export function AppShell({
             id,
             instanceId: id,
             type,
-            label: singletonLabels[type] ?? type,
+            label,
             openedAt: Date.now(),
             ...(host ? { host } : {}), // --- tmux-monitor ---
+            ...(fleetId !== undefined ? { fleetId } : {}),
           },
         ];
       });
@@ -1369,7 +1385,7 @@ export function AppShell({
           id,
           tabType: type,
           hostId: null,
-          label: singletonLabels[type] ?? type,
+          label,
           tabOrder: 0,
         }).catch(() => {});
       }
@@ -1758,6 +1774,17 @@ export function AppShell({
             />
           </div>
         )}
+
+        <div
+          className={`flex flex-col flex-1 min-h-0 ${railView === "fleets" ? "" : "hidden"}`}
+        >
+          <FleetsPanel
+            active={railView === "fleets"}
+            onOpenFleetInventory={(fleetId) =>
+              openSingletonTab("fleet-inventory", undefined, undefined, fleetId)
+            }
+          />
+        </div>
 
         {railView === "history" && (
           <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">

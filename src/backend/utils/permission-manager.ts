@@ -16,7 +16,7 @@ const SHARE_PERMISSION_LEVELS = ["connect", "view", "edit", "manage"] as const;
 
 type SharePermissionLevel = (typeof SHARE_PERMISSION_LEVELS)[number];
 
-type HostAction = SharePermissionLevel | "delete";
+export type HostAction = SharePermissionLevel | "delete";
 
 const LEVEL_RANK: Record<SharePermissionLevel, number> = {
   connect: 1,
@@ -416,5 +416,4 @@ export type {
   HostAccessInfo,
   PermissionCheckResult,
   SharePermissionLevel,
-  HostAction,
 };

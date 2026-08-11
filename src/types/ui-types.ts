@@ -240,7 +240,8 @@ export type TabType =
   | "network_graph"
   | "tmux_monitor" // --- tmux-monitor ---
   | "serial"
-  | "homepage";
+  | "homepage"
+  | "fleet-inventory";
 
 export type SerialConfig = {
   path: string;
@@ -287,6 +288,8 @@ export type Tab = {
   initialFilePath?: string;
   /** Directory to open a Files tab into, distinct from initialFilePath (a specific file to open in an editor window). */
   initialPath?: string;
+  /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
+  fleetId?: number;
   serialConfig?: SerialConfig;
   terminalRef?: import("react").RefObject<{
     disconnect?: () => void;

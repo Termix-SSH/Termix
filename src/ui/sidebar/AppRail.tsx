@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bell,
+  Boxes,
   Check,
   Clock,
   Fingerprint,
@@ -36,7 +37,8 @@ export type RailView =
   | "session-logs"
   | "user-profile"
   | "admin-settings"
-  | "alerts";
+  | "alerts"
+  | "fleets";
 
 export type HideableRailView =
   | Exclude<RailView, "user-profile" | "admin-settings">
@@ -94,6 +96,8 @@ function buildRailButtons(
     { view: "ssh-tools", icon: <Hammer size={16} />, title: t("nav.sshTools") },
     { kind: "separator" },
     { view: "snippets", icon: <Play size={16} />, title: t("nav.snippets") },
+    { kind: "separator" },
+    { view: "fleets", icon: <Boxes size={16} />, title: t("nav.fleets") },
     { kind: "separator" },
     { view: "history", icon: <Clock size={16} />, title: t("nav.history") },
     { kind: "separator" },

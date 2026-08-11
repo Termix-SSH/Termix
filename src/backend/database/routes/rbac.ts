@@ -41,11 +41,13 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function isSharePermissionLevel(value: unknown): value is SharePermissionLevel {
+export function isSharePermissionLevel(
+  value: unknown,
+): value is SharePermissionLevel {
   return SHARE_PERMISSION_LEVELS.includes(value as SharePermissionLevel);
 }
 
-function expiryFromDuration(durationHours: unknown): string | null {
+export function expiryFromDuration(durationHours: unknown): string | null {
   if (durationHours && typeof durationHours === "number" && durationHours > 0) {
     const expiryDate = new Date();
     expiryDate.setTime(expiryDate.getTime() + durationHours * 60 * 60 * 1000);
@@ -67,12 +69,12 @@ async function canManageHostSharing(
   return { allowed: access.hasAccess, isOwner: access.isOwner };
 }
 
-interface ShareTarget {
+export interface ShareTarget {
   type: "user" | "role";
   id: string | number;
 }
 
-function parseShareTargets(
+export function parseShareTargets(
   body: Record<string, unknown>,
 ): ShareTarget[] | null {
   const rawTargets = body.targets;

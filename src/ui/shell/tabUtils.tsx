@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import {
   Box,
+  Boxes,
   FolderSearch,
   HardDrive,
   LayoutDashboard,
@@ -100,6 +101,11 @@ const NetworkGraphCard = lazy(() =>
 const Serial = lazy(() =>
   import("@/features/serial/Serial").then((m) => ({
     default: m.Serial,
+  })),
+);
+const FleetInventoryTab = lazy(() =>
+  import("@/sidebar/FleetInventoryTab").then((m) => ({
+    default: m.FleetInventoryTab,
   })),
 );
 
@@ -215,6 +221,8 @@ export function tabIcon(type: TabType) {
       return <Usb className="size-3.5" />;
     case "homepage":
       return <LayoutGrid className="size-3.5" />;
+    case "fleet-inventory":
+      return <Boxes className="size-3.5" />;
   }
 }
 
@@ -469,6 +477,11 @@ export function renderTabContent(
 
     case "homepage":
       return withTabSuspense(<HomepageCanvas />);
+
+    case "fleet-inventory":
+      return withTabSuspense(
+        <FleetInventoryTab fleetId={tab.fleetId} isVisible={isVisible} />,
+      );
 
     case "host-manager":
     case "user-profile":

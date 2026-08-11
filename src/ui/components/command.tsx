@@ -84,7 +84,7 @@ const CommandItem = React.forwardRef<
     ref={ref}
     onClick={onSelect}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-muted hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors",
+      "relative flex cursor-default select-none items-center rounded-none px-2 py-1.5 text-sm outline-none hover:bg-muted hover:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 transition-colors",
       className,
     )}
     {...props}

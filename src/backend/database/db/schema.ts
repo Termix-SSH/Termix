@@ -1344,6 +1344,76 @@ export const homepageLayouts = sqliteTable("homepage_layouts", {
 });
 // --- homepage end ---
 
+// --- fleets begin ---
+export const fleets = sqliteTable("fleets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  color: text("color"),
+  icon: text("icon"),
+  // JSON array of { tag: string } rules, unioned with static fleetMembers at
+  // resolution time. Kept to tag-equality matching for v1.
+  tagRules: text("tag_rules"),
+  syncId: text("sync_id").unique(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const fleetMembers = sqliteTable(
+  "fleet_members",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    fleetId: integer("fleet_id")
+      .notNull()
+      .references(() => fleets.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    addedAt: text("added_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_fleet_members_fleet_host").on(table.fleetId, table.hostId),
+  ],
+);
+
+// Latest-only inventory snapshot per host, overwritten on each refresh - no
+// historical log, matching the "latest snapshot only" scope decision.
+export const fleetInventory = sqliteTable(
+  "fleet_inventory",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    osPrettyName: text("os_pretty_name"),
+    kernel: text("kernel"),
+    architecture: text("architecture"),
+    hostname: text("hostname"),
+    uptimeSeconds: integer("uptime_seconds"),
+    ip: text("ip"),
+    packageManager: text("package_manager"),
+    collectedAt: text("collected_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_fleet_inventory_host").on(table.hostId, table.userId),
+  ],
+);
+// --- fleets end ---
+
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync
 // pair (embedded desktop backend <-> connected remote server) learns about

@@ -49,6 +49,7 @@ import {
 import {
   Activity,
   AlertCircle,
+  Boxes,
   CheckCircle2,
   ChevronDown,
   Clock,
@@ -1845,6 +1846,11 @@ export function UserProfilePanel({
                   id: "snippets",
                   icon: <Play size={12} />,
                   label: t("nav.snippets"),
+                },
+                {
+                  id: "fleets",
+                  icon: <Boxes size={12} />,
+                  label: t("nav.fleets"),
                 },
                 {
                   id: "history",

@@ -2341,6 +2341,87 @@ const migrateSchema = () => {
   }
   // --- homepage end ---
 
+  // --- fleets begin ---
+  try {
+    sqlite.prepare("SELECT id FROM fleets LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS fleets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          color TEXT,
+          icon TEXT,
+          tag_rules TEXT,
+          sync_id TEXT UNIQUE,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create fleets table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM fleet_members LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS fleet_members (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          fleet_id INTEGER NOT NULL REFERENCES fleets(id) ON DELETE CASCADE,
+          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
+          added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      sqlite.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_fleet_members_fleet_host ON fleet_members(fleet_id, host_id)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create fleet_members table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM fleet_inventory LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS fleet_inventory (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          host_id INTEGER NOT NULL REFERENCES ssh_data(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          os_pretty_name TEXT,
+          kernel TEXT,
+          architecture TEXT,
+          hostname TEXT,
+          uptime_seconds INTEGER,
+          ip TEXT,
+          package_manager TEXT,
+          collected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      sqlite.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_fleet_inventory_host ON fleet_inventory(host_id, user_id)",
+      );
+    } catch (createError) {
+      databaseLogger.warn("Failed to create fleet_inventory table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- fleets end ---
+
   // --- sync begin ---
   // Stable per-row identity used to match rows across two independently-
   // seeded databases (the embedded desktop backend and a connected remote
