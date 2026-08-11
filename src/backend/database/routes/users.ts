@@ -40,6 +40,7 @@ import {
 } from "./user-oidc-utils.js";
 import { registerUserApiKeyRoutes } from "./user-api-key-routes.js";
 import { registerUserSettingsRoutes } from "./user-settings-routes.js";
+import { registerTouchInputSettingsRoutes } from "./touch-input-settings-routes.js";
 import { registerAcmeSSLRoutes } from "./acme-ssl-routes.js";
 import { registerUserTotpRoutes } from "./user-totp-routes.js";
 import { registerUserWebAuthnRoutes } from "./user-webauthn-routes.js";
@@ -2786,6 +2787,7 @@ registerUserOidcAccountRoutes(router, {
 });
 
 registerUserSettingsRoutes(router, authenticateJWT);
+registerTouchInputSettingsRoutes(router, authenticateJWT);
 registerAcmeSSLRoutes(router, authenticateJWT);
 
 registerUserApiKeyRoutes(router, requireAdmin);

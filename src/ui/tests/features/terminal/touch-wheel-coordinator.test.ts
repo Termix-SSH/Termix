@@ -3,6 +3,7 @@ import {
   installTouchWheelCoordinator,
   TouchWheelCoordinator,
 } from "../../../features/terminal/touch-wheel-coordinator";
+import { TOUCH_INPUT_DEFAULTS } from "@/types/touch-input-settings";
 
 const point = (clientY: number, clientX = 10) => ({ clientX, clientY });
 
@@ -43,6 +44,20 @@ const createTiming = (momentumAllowed = true) => {
 };
 
 describe("TouchWheelCoordinator", () => {
+  it("consumes configured drag and wheel limits", () => {
+    const emit = vi.fn();
+    const coordinator = new TouchWheelCoordinator(emit, 2, 3, undefined, {
+      ...TOUCH_INPUT_DEFAULTS,
+      dragThresholdPx: 2,
+      maxWheelDeltaPx: 3,
+    });
+    coordinator.start(point(20));
+    coordinator.move(point(10));
+    expect(emit.mock.calls.map(([event]) => event.deltaY)).toEqual([
+      3, 3, 3, 1,
+    ]);
+  });
+
   it("accumulates the drag threshold and preserves delta direction", () => {
     const emit = vi.fn();
     const coordinator = new TouchWheelCoordinator(emit);

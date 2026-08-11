@@ -1,3 +1,6 @@
+import type { TouchInputSettings } from "@/types/touch-input-settings";
+import { TOUCH_INPUT_DEFAULTS } from "@/types/touch-input-settings";
+
 export interface TouchWheelPoint {
   clientX: number;
   clientY: number;
@@ -7,19 +10,6 @@ export interface SyntheticWheelInput extends TouchWheelPoint {
   deltaY: number;
   deltaMode: number;
 }
-
-const DEFAULT_DRAG_THRESHOLD_PX = 6;
-const DEFAULT_MAX_WHEEL_DELTA_PX = 120;
-const MOMENTUM_SAMPLE_WINDOW_MS = 100;
-const MOMENTUM_RELEASE_GRACE_MS = 120;
-const MOMENTUM_MIN_VELOCITY_PX_PER_MS = 0.15;
-const MOMENTUM_MAX_VELOCITY_PX_PER_MS = 2.5;
-const MOMENTUM_MAX_DURATION_MS = 1_000;
-const MOMENTUM_MAX_TRAVEL_PX = 720;
-const MOMENTUM_DECAY_TIME_MS = 300;
-const MOMENTUM_PIXELS_PER_TICK = 12;
-const MOMENTUM_MAX_FRAME_MS = 32;
-const MOMENTUM_MAX_TICKS_PER_FRAME = 4;
 
 interface TouchWheelTiming {
   now: () => number;
@@ -54,9 +44,10 @@ export class TouchWheelCoordinator {
 
   constructor(
     private readonly emitWheel: (input: SyntheticWheelInput) => void,
-    private readonly dragThresholdPx = DEFAULT_DRAG_THRESHOLD_PX,
-    private readonly maxWheelDeltaPx = DEFAULT_MAX_WHEEL_DELTA_PX,
+    private readonly dragThresholdPx: number = TOUCH_INPUT_DEFAULTS.dragThresholdPx,
+    private readonly maxWheelDeltaPx: number = TOUCH_INPUT_DEFAULTS.maxWheelDeltaPx,
     private readonly timing: TouchWheelTiming = defaultTiming,
+    private readonly settings: TouchInputSettings = TOUCH_INPUT_DEFAULTS,
   ) {}
 
   start(point: TouchWheelPoint | undefined, time = this.timing.now()): void {
@@ -86,7 +77,8 @@ export class TouchWheelCoordinator {
         endedAt: time,
       });
       this.velocitySamples = this.velocitySamples.filter(
-        (sample) => time - sample.endedAt <= MOMENTUM_SAMPLE_WINDOW_MS,
+        (sample) =>
+          time - sample.endedAt <= this.settings.momentumSampleWindowMs,
       );
     }
     this.lastMoveTime = time;
@@ -109,7 +101,7 @@ export class TouchWheelCoordinator {
     if (
       point &&
       this.timing.momentumAllowed() &&
-      Math.abs(velocity) >= MOMENTUM_MIN_VELOCITY_PX_PER_MS
+      Math.abs(velocity) >= this.settings.minimumVelocityPxPerMs
     ) {
       this.startMomentum(point, velocity, time);
     }
@@ -159,13 +151,14 @@ export class TouchWheelCoordinator {
     const newestSampleTime = this.velocitySamples.at(-1)?.endedAt;
     if (
       newestSampleTime === undefined ||
-      time - newestSampleTime > MOMENTUM_RELEASE_GRACE_MS
+      time - newestSampleTime > this.settings.releaseGracePeriodMs
     ) {
       return 0;
     }
     const samples = this.velocitySamples.filter(
       (sample) =>
-        newestSampleTime - sample.endedAt <= MOMENTUM_SAMPLE_WINDOW_MS,
+        newestSampleTime - sample.endedAt <=
+        this.settings.momentumSampleWindowMs,
     );
     const duration = samples.reduce(
       (total, sample) => total + sample.durationMs,
@@ -177,8 +170,8 @@ export class TouchWheelCoordinator {
       0,
     );
     return Math.max(
-      -MOMENTUM_MAX_VELOCITY_PX_PER_MS,
-      Math.min(MOMENTUM_MAX_VELOCITY_PX_PER_MS, distance / duration),
+      -this.settings.maximumVelocityPxPerMs,
+      Math.min(this.settings.maximumVelocityPxPerMs, distance / duration),
     );
   }
 
@@ -198,23 +191,23 @@ export class TouchWheelCoordinator {
       }
 
       const elapsed = Math.max(0, time - startedAt);
-      const remainingTravel = MOMENTUM_MAX_TRAVEL_PX - travelled;
-      if (elapsed > MOMENTUM_MAX_DURATION_MS || remainingTravel <= 0) {
+      const remainingTravel = this.settings.maximumTravelPx - travelled;
+      if (elapsed > this.settings.maximumDurationMs || remainingTravel <= 0) {
         this.momentumFrame = undefined;
         return;
       }
 
       const duration = Math.min(
         Math.max(0, time - lastTime),
-        MOMENTUM_MAX_FRAME_MS,
+        this.settings.maximumFrameIntervalMs,
       );
       if (duration > 0) {
         const frameStart = Math.max(0, elapsed - duration);
         const distance =
           Math.abs(initialVelocity) *
-          MOMENTUM_DECAY_TIME_MS *
-          (Math.exp(-frameStart / MOMENTUM_DECAY_TIME_MS) -
-            Math.exp(-elapsed / MOMENTUM_DECAY_TIME_MS));
+          this.settings.decayTimeMs *
+          (Math.exp(-frameStart / this.settings.decayTimeMs) -
+            Math.exp(-elapsed / this.settings.decayTimeMs));
         const deltaY =
           Math.sign(initialVelocity) * Math.min(distance, remainingTravel);
         this.flushMomentum(point, deltaY);
@@ -223,8 +216,8 @@ export class TouchWheelCoordinator {
 
       lastTime = time;
       if (
-        elapsed < MOMENTUM_MAX_DURATION_MS &&
-        travelled < MOMENTUM_MAX_TRAVEL_PX
+        elapsed < this.settings.maximumDurationMs &&
+        travelled < this.settings.maximumTravelPx
       ) {
         this.momentumFrame = this.timing.requestFrame(step);
       } else {
@@ -238,9 +231,12 @@ export class TouchWheelCoordinator {
   private flushMomentum(point: TouchWheelPoint, deltaY: number): void {
     this.momentumRemainderY += deltaY;
     const availableTicks = Math.trunc(
-      Math.abs(this.momentumRemainderY) / MOMENTUM_PIXELS_PER_TICK,
+      Math.abs(this.momentumRemainderY) / this.settings.pixelsPerTick,
     );
-    const tickCount = Math.min(availableTicks, MOMENTUM_MAX_TICKS_PER_FRAME);
+    const tickCount = Math.min(
+      availableTicks,
+      this.settings.maximumTicksPerFrame,
+    );
     const direction = Math.sign(this.momentumRemainderY);
     for (let index = 0; index < tickCount; index++) {
       this.emitWheel({
@@ -249,7 +245,8 @@ export class TouchWheelCoordinator {
         deltaMode: WheelEvent.DOM_DELTA_LINE,
       });
     }
-    this.momentumRemainderY -= direction * tickCount * MOMENTUM_PIXELS_PER_TICK;
+    this.momentumRemainderY -=
+      direction * tickCount * this.settings.pixelsPerTick;
   }
 
   private stopMomentum(): void {
@@ -264,7 +261,9 @@ export class TouchWheelCoordinator {
 export function installTouchWheelCoordinator(
   terminalElement: HTMLElement,
   momentumAllowed: () => boolean = () => true,
+  settings: TouchInputSettings = TOUCH_INPUT_DEFAULTS,
 ): () => void {
+  if (!settings.enabled) return () => {};
   const wheelElement = terminalElement.querySelector<HTMLElement>(
     ".xterm-scrollable-element",
   );
@@ -284,14 +283,16 @@ export function installTouchWheelCoordinator(
         }),
       );
     },
-    DEFAULT_DRAG_THRESHOLD_PX,
-    DEFAULT_MAX_WHEEL_DELTA_PX,
+    settings.dragThresholdPx,
+    settings.maxWheelDeltaPx,
     {
       ...defaultTiming,
       momentumAllowed: () =>
+        settings.momentumEnabled &&
         momentumAllowed() &&
         !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
     },
+    settings,
   );
 
   const getSingleTouch = (event: TouchEvent): Touch | undefined =>
