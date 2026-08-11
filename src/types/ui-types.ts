@@ -285,6 +285,8 @@ export type Tab = {
   joinSharedSessionId?: string | null;
   joinShareId?: string | null;
   initialFilePath?: string;
+  /** Directory to open a Files tab into, distinct from initialFilePath (a specific file to open in an editor window). */
+  initialPath?: string;
   serialConfig?: SerialConfig;
   terminalRef?: import("react").RefObject<{
     disconnect?: () => void;

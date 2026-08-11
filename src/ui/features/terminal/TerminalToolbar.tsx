@@ -151,6 +151,8 @@ interface TerminalToolbarProps {
   onUploadImage: (file: File) => void;
   onPasteImage: () => void;
   onOpenTab?: (type: TabType) => void;
+  /** Opens Files at the terminal's current working directory, when known. */
+  onOpenFiles?: () => void;
   isFocused: boolean;
 }
 
@@ -163,6 +165,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   onUploadImage,
   onPasteImage,
   onOpenTab,
+  onOpenFiles,
   isFocused,
 }) => {
   const { t } = useTranslation();
@@ -305,7 +308,11 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                   <TipBtn
                     key={action.type}
                     tooltip={action.label}
-                    onClick={() => onOpenTab?.(action.type)}
+                    onClick={() =>
+                      action.type === "files" && onOpenFiles
+                        ? onOpenFiles()
+                        : onOpenTab?.(action.type)
+                    }
                     className={
                       effectiveDensity === "icon" ? "px-1.5" : undefined
                     }

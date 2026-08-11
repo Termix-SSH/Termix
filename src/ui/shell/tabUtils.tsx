@@ -361,6 +361,7 @@ export function renderTabContent(
         <FileManager
           initialHost={hostToSSHHost(host)}
           initialFilePath={tab.initialFilePath}
+          initialPath={tab.initialPath}
           isVisible={isVisible}
           onOpenTerminalTab={
             onOpenTerminalTab

@@ -3298,6 +3298,13 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             onUploadImage={(file) => void handleImageUpload(file)}
             onPasteImage={() => void handleClipboardImage()}
             onOpenTab={onOpenTab}
+            onOpenFiles={() => {
+              if (webSocketRef.current?.readyState === WebSocket.OPEN) {
+                webSocketRef.current.send(JSON.stringify({ type: "get_cwd" }));
+              } else {
+                onOpenFileManager?.("/");
+              }
+            }}
             isFocused={isFocusedPane}
           />
         )}

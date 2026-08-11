@@ -1118,6 +1118,7 @@ export function AppShell({
       restoredSessionId: string | null;
       savedLabel?: string;
       initialFilePath?: string;
+      initialPath?: string;
       serialConfig?: SerialConfig;
       joinSharedSessionId?: string | null;
       joinShareId?: string | null;
@@ -1136,6 +1137,7 @@ export function AppShell({
     let finalLabel = host.name;
     const savedLabel = restore?.savedLabel;
     const initialFilePath = restore?.initialFilePath;
+    const initialPath = restore?.initialPath;
     const serialConfig = restore?.serialConfig;
     const joinSharedSessionId = restore?.joinSharedSessionId ?? null;
     const joinShareId = restore?.joinShareId ?? null;
@@ -1163,6 +1165,7 @@ export function AppShell({
             joinSharedSessionId,
             joinShareId,
             initialFilePath,
+            initialPath,
             serialConfig,
           },
         ];
@@ -1197,6 +1200,7 @@ export function AppShell({
           joinSharedSessionId,
           joinShareId,
           initialFilePath,
+          initialPath,
           serialConfig,
         },
       ];
@@ -2152,7 +2156,15 @@ export function AppShell({
                             restoredSessionId: null,
                             initialFilePath: filePath,
                           }),
-                        (host, _path) => openTab(host, "files"),
+                        (host, path) =>
+                          openTab(host, "files", {
+                            instanceId:
+                              typeof crypto.randomUUID === "function"
+                                ? crypto.randomUUID()
+                                : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+                            restoredSessionId: null,
+                            initialPath: path,
+                          }),
                         (host, path) =>
                           openTab(host, "terminal", {
                             instanceId:
