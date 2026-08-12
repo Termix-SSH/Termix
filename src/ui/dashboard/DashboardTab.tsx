@@ -421,7 +421,7 @@ function MetricBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-function HostStatusCard({
+export function HostStatusCard({
   hosts,
   hostMetrics,
   onOpenTab,
@@ -474,23 +474,31 @@ function HostStatusCard({
             <div
               key={i}
               onClick={() => onOpenTab(host, "host-metrics")}
-              className="flex items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
+              className="flex min-w-0 items-center justify-between px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer group/row"
             >
-              <div className="flex items-center gap-2.5">
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
                 <span
                   className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(availability, statusScheme, "dot", statusLoading)}`}
                 />
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-semibold">{host.name}</span>
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex min-w-0 items-center gap-1">
+                    <span
+                      className="truncate text-xs font-semibold"
+                      title={host.name}
+                    >
+                      {host.name}
+                    </span>
                     <ExternalLink className="size-2.5 text-muted-foreground/0 group-hover/row:text-muted-foreground/60 transition-colors shrink-0" />
                   </div>
-                  <span className="text-[10px] text-muted-foreground font-mono">
+                  <span
+                    className="truncate text-[10px] text-muted-foreground font-mono"
+                    title={host.ip}
+                  >
                     {host.ip}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-3">
                 {availability === "online" && hasMetrics ? (
                   <div className="flex items-center gap-3">
                     {cpu !== null && (
