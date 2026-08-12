@@ -136,6 +136,8 @@ function buildNodeSvg(
     statusColor = useRealColors
       ? "rgb(16,185,129)"
       : resolveCssVar("--accent-brand", "rgb(16,185,129)");
+  } else if (status === "reachable") {
+    statusColor = "rgb(251,191,36)";
   } else if (isOffline) {
     statusColor = useRealColors ? "rgb(239,68,68)" : "rgba(16,185,129,0.2)";
   } else {
