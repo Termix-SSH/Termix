@@ -193,6 +193,44 @@ describe("UserRepository and SessionRepository", () => {
     expect(await repo.sessions.findById("session-1")).toBeNull();
   });
 
+  it("persists session activity at most once per minute", async () => {
+    let writeCount = 0;
+    const repo = await createRepositories({
+      onSessionWrite: () => {
+        writeCount += 1;
+      },
+    });
+    await repo.users.create({
+      id: "user-1",
+      username: "user",
+      passwordHash: "hash",
+      isAdmin: false,
+      isOidc: false,
+    });
+    await repo.sessions.create({
+      id: "session-1",
+      userId: "user-1",
+      jwtToken: "token",
+      deviceType: "desktop",
+      deviceInfo: "Firefox",
+      createdAt: "2026-06-26T00:00:00.000Z",
+      expiresAt: "2026-06-27T00:00:00.000Z",
+      lastActiveAt: "2026-06-26T00:00:00.000Z",
+    });
+
+    expect(
+      await repo.sessions.touch("session-1", "2026-06-26T00:00:30.000Z"),
+    ).toBe(false);
+    expect(
+      await repo.sessions.touch("session-1", "2026-06-26T00:01:00.000Z"),
+    ).toBe(true);
+
+    expect(writeCount).toBe(2);
+    expect((await repo.sessions.findById("session-1"))?.lastActiveAt).toBe(
+      "2026-06-26T00:01:00.000Z",
+    );
+  });
+
   it("revokes all user sessions except an optional current session", async () => {
     const repo = await createRepositories();
     await repo.users.create({
