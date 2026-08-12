@@ -61,6 +61,7 @@ import {
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { asHttpError } from "@/lib/http-error";
+import { getDeviceId } from "@/lib/device-id";
 
 export type ServerStatus = {
   status: "online" | "offline";
@@ -445,6 +446,15 @@ function createApiInstance(
 
     if (isDevMode) {
       logger.requestStart(method, fullUrl, context);
+    }
+
+    const deviceId = getDeviceId();
+    if (deviceId) {
+      if (config.headers.set) {
+        config.headers.set("X-Termix-Device-ID", deviceId);
+      } else {
+        config.headers["X-Termix-Device-ID"] = deviceId;
+      }
     }
 
     if (isElectron()) {

@@ -8,6 +8,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
+  getDeviceId,
   parseUserAgent,
   generateDeviceFingerprint,
 } from "../../utils/user-agent-parser.js";
@@ -1643,12 +1644,14 @@ router.post("/login", async (req, res) => {
     );
 
     if (userRecord.totpEnabled) {
-      const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
-
-      const isTrusted = await authManager.isTrustedDevice(
-        userRecord.id,
-        deviceFingerprint,
+      const deviceFingerprint = generateDeviceFingerprint(
+        deviceInfo,
+        getDeviceId(req),
       );
+
+      const isTrusted = deviceFingerprint
+        ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
+        : false;
 
       if (isTrusted) {
         authLogger.info("TOTP bypassed for trusted device", {

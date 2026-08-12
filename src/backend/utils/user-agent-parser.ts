@@ -250,17 +250,21 @@ function parseMacVersion(userAgent: string): string {
   return "macOS";
 }
 
-/**
- * Generate a stable device fingerprint based on device type, browser, and OS.
- * Ignores minor version numbers to handle browser auto-updates.
- */
-export function generateDeviceFingerprint(deviceInfo: DeviceInfo): string {
-  const fingerprintString =
-    deviceInfo.type === "desktop" || deviceInfo.type === "mobile"
-      ? `${deviceInfo.type}|${deviceInfo.browser}|${deviceInfo.os}`
-      : `${deviceInfo.type}|${deviceInfo.browser} ${
-          deviceInfo.version.split(".")[0]
-        }|${deviceInfo.os}`;
+/** Return the installation-scoped identifier used for trusted-device checks. */
+export function getDeviceId(req: Request): string | null {
+  const value = req.headers["x-termix-device-id"];
+  if (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value)) return null;
+  return value;
+}
 
-  return crypto.createHash("sha256").update(fingerprintString).digest("hex");
+/** Bind a trusted-device record to one client installation and platform. */
+export function generateDeviceFingerprint(
+  deviceInfo: DeviceInfo,
+  deviceId: string | null,
+): string | null {
+  if (!deviceId) return null;
+  return crypto
+    .createHash("sha256")
+    .update(`${deviceInfo.type}|${deviceId}`)
+    .digest("hex");
 }

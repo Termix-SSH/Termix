@@ -18,6 +18,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import {
   generateDeviceFingerprint,
+  getDeviceId,
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
 import {
@@ -487,11 +488,13 @@ export function registerUserWebAuthnRoutes(
       );
 
       if (userRecord.totpEnabled) {
-        const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
-        const isTrusted = await authManager.isTrustedDevice(
-          userRecord.id,
-          deviceFingerprint,
+        const deviceFingerprint = generateDeviceFingerprint(
+          deviceInfo,
+          getDeviceId(req),
         );
+        const isTrusted = deviceFingerprint
+          ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
+          : false;
 
         if (!isTrusted) {
           const tempToken = await authManager.generateJWTToken(userRecord.id, {
