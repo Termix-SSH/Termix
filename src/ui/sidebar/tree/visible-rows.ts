@@ -13,12 +13,22 @@ export function hostMatchesQuery(host: Host, query: string) {
   );
 }
 
+/** Key used in the openFolders/openSet expand-state Set for a host's own children row. */
+export function hostExpandKey(host: Host): string {
+  return `host:${host.id}`;
+}
+
+function hostHasMatch(host: Host, query: string): boolean {
+  if (hostMatchesQuery(host, query)) return true;
+  return (host.childHosts ?? []).some((child) => hostHasMatch(child, query));
+}
+
 export function folderHasMatch(folder: HostFolder, query: string): boolean {
   for (const child of folder.children) {
     if (isFolder(child)) {
       if (folderHasMatch(child, query)) return true;
     } else {
-      if (hostMatchesQuery(child, query)) return true;
+      if (hostHasMatch(child, query)) return true;
     }
   }
   return false;
@@ -26,12 +36,38 @@ export function folderHasMatch(folder: HostFolder, query: string): boolean {
 
 export type VirtualRow = { item: Host | HostFolder; depth: number };
 
+function collectVisibleHostRows(
+  host: Host,
+  query: string,
+  closedHostParents: Set<string>,
+  out: VirtualRow[],
+  depth: number,
+): void {
+  if (!query || hostMatchesQuery(host, query) || hostHasMatch(host, query)) {
+    out.push({ item: host, depth });
+  } else {
+    return;
+  }
+  const childHosts = host.childHosts ?? [];
+  if (childHosts.length === 0) return;
+  // Sub-host parents default to expanded (opposite of folders): a host that
+  // just got reparented shouldn't seem to disappear because its new parent
+  // row starts closed. closedHostParents tracks the opposite of openFolders
+  // -- parents the user has explicitly collapsed.
+  const isOpen = query ? true : !closedHostParents.has(hostExpandKey(host));
+  if (!isOpen) return;
+  for (const child of childHosts) {
+    collectVisibleHostRows(child, query, closedHostParents, out, depth + 1);
+  }
+}
+
 export function collectVisibleRows(
   children: (Host | HostFolder)[],
   query: string,
   openSet: Set<string>,
   out: VirtualRow[] = [],
   depth = 0,
+  closedHostParents: Set<string> = new Set(),
 ): VirtualRow[] {
   for (const child of children) {
     if (isFolder(child)) {
@@ -40,10 +76,16 @@ export function collectVisibleRows(
       out.push({ item: child, depth });
       const childOpen = query ? true : openSet.has(child.path ?? child.name);
       if (childOpen)
-        collectVisibleRows(child.children, query, openSet, out, depth + 1);
+        collectVisibleRows(
+          child.children,
+          query,
+          openSet,
+          out,
+          depth + 1,
+          closedHostParents,
+        );
     } else {
-      if (!query || hostMatchesQuery(child, query))
-        out.push({ item: child, depth });
+      collectVisibleHostRows(child, query, closedHostParents, out, depth);
     }
   }
   return out;
@@ -56,6 +98,9 @@ export function collectAllHosts(children: (Host | HostFolder)[]): Host[] {
       out.push(...collectAllHosts(child.children));
     } else {
       out.push(child);
+      if (child.childHosts && child.childHosts.length > 0) {
+        out.push(...collectAllHosts(child.childHosts));
+      }
     }
   }
   return out;

@@ -6,6 +6,7 @@ import {
   createCurrentHostRepository,
   createCurrentHostResolutionRepository,
 } from "../repositories/factory.js";
+import { validateParentHostId } from "./host-parent-validation.js";
 import {
   isNonEmptyString,
   isValidPort,
@@ -154,6 +155,13 @@ export function registerHostBulkRoutes(
    *                   type: number
    *               updates:
    *                 type: object
+   *                 description: Partial fields to apply. Setting folder clears parentHostId and vice versa, since a host is either in a folder or nested under a parent host.
+   *                 properties:
+   *                   folder:
+   *                     type: string
+   *                   parentHostId:
+   *                     type: integer
+   *                     nullable: true
    *     responses:
    *       200:
    *         description: Bulk update completed.
@@ -215,8 +223,39 @@ export function registerHostBulkRoutes(
 
         const simpleUpdates: Record<string, unknown> = {};
         if (typeof updates.pin === "boolean") simpleUpdates.pin = updates.pin;
-        if (typeof updates.folder === "string")
+        if (typeof updates.folder === "string") {
           simpleUpdates.folder = updates.folder || null;
+          // Folder placement and parent-host placement are mutually
+          // exclusive -- assigning a folder (including moving to root, an
+          // empty folder) clears any parent host, matching the single-host
+          // update route's behavior.
+          simpleUpdates.parentHostId = null;
+        }
+        if (updates.parentHostId !== undefined) {
+          if (updates.parentHostId === null) {
+            simpleUpdates.parentHostId = null;
+          } else {
+            const numericParentHostId = Number(updates.parentHostId);
+            if (!Number.isInteger(numericParentHostId)) {
+              return res.status(400).json({ error: "Invalid parent host" });
+            }
+            // A bulk move can only ever target one parent host at a time
+            // (the caller drags a selection onto one drop target), so every
+            // id in the batch is checked against the same candidate parent.
+            for (const id of ownedIds) {
+              const parentError = await validateParentHostId(
+                userId,
+                id,
+                numericParentHostId,
+              );
+              if (parentError) {
+                return res.status(400).json({ error: parentError });
+              }
+            }
+            simpleUpdates.parentHostId = numericParentHostId;
+            simpleUpdates.folder = null;
+          }
+        }
         if (typeof updates.enableTerminal === "boolean")
           simpleUpdates.enableTerminal = updates.enableTerminal;
         if (typeof updates.enableTunnel === "boolean")

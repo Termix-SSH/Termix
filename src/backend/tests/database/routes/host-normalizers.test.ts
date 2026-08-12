@@ -332,6 +332,7 @@ describe("sanitizeHostForRecipient", () => {
     port: 22,
     username: "root",
     folder: "servers",
+    parentHostId: 17,
     tags: ["linux"],
     notes: "secret runbook",
     quickActions: [{ name: "restart", snippetId: "1" }],
@@ -371,6 +372,21 @@ describe("sanitizeHostForRecipient", () => {
     // view keeps configuration fields
     expect(result.notes).toBe("secret runbook");
     expect(result.quickActions).toEqual(sharedHost.quickActions);
+  });
+
+  it("never exposes parentHostId to a recipient, at any permission level", () => {
+    // A recipient generally can't see (or share-permission on) the owner's
+    // parent host row, so sub-host tree structure is never leaked -- a
+    // shared host always renders at root for its recipient.
+    expect(
+      sanitizeHostForRecipient({ ...sharedHost }, "view").parentHostId,
+    ).toBeUndefined();
+    expect(
+      sanitizeHostForRecipient({ ...sharedHost }, "manage").parentHostId,
+    ).toBeUndefined();
+    expect(
+      sanitizeHostForRecipient({ ...sharedHost }, "connect").parentHostId,
+    ).toBeUndefined();
   });
 
   it("reduces connect-level hosts to connection essentials", () => {

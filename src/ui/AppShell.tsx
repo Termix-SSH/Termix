@@ -144,61 +144,15 @@ import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
 import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
-import type { SSHHostWithStatus } from "@/main-axios";
 import { ServerStatusProvider } from "@/lib/ServerStatusContext";
 import { TransferMonitor } from "@/features/file-manager/TransferMonitor.tsx";
 import { sshHostToHost } from "@/sidebar/HostManagerData";
 import { resolveHostTabType } from "@/lib/host-connection-tabs";
 import { changeAppLanguage, consumeLoginLanguage } from "@/i18n/i18n";
 import { quickConnectHostToPayload } from "@/sidebar/quick-connect-host";
+import { buildHostTree } from "@/sidebar/build-host-tree";
 
-function buildHostTree(
-  hosts: SSHHostWithStatus[],
-  folderMeta?: Map<
-    string,
-    { color?: string; icon?: string; credentialId?: number | null }
-  >,
-): HostFolder {
-  const root: HostFolder = { name: "root", children: [] };
-  const folderMap = new Map<string, HostFolder>();
-  const getOrCreateFolder = (path: string): HostFolder => {
-    if (folderMap.has(path)) return folderMap.get(path)!;
-    const parts = path.split(" / ");
-    let current = root;
-    let accumulated = "";
-    for (const part of parts) {
-      accumulated = accumulated ? `${accumulated} / ${part}` : part;
-      if (!folderMap.has(accumulated)) {
-        const meta = folderMeta?.get(accumulated);
-        const folder: HostFolder = {
-          name: part,
-          path: accumulated,
-          color: meta?.color,
-          icon: meta?.icon,
-          credentialId: meta?.credentialId ?? null,
-          children: [],
-        };
-        folderMap.set(accumulated, folder);
-        current.children.push(folder);
-      }
-      current = folderMap.get(accumulated)!;
-    }
-    return current;
-  };
-  // Surface empty folders (created but with no hosts yet) so they stay visible.
-  if (folderMeta) {
-    for (const path of folderMeta.keys()) getOrCreateFolder(path);
-  }
-  for (const h of hosts) {
-    const host = sshHostToHost(h);
-    if (h.folder) {
-      getOrCreateFolder(h.folder).children.push(host);
-    } else {
-      root.children.push(host);
-    }
-  }
-  return root;
-}
+export { buildHostTree } from "@/sidebar/build-host-tree";
 export { tabIcon, renderTabContent } from "@/shell/tabUtils";
 
 // ─── AppShell ────────────────────────────────────────────────────────────────

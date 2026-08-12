@@ -59,6 +59,7 @@ import {
   collectVisibleRows,
   collectAllHosts,
   collectAllFolderPaths,
+  hostExpandKey,
 } from "./visible-rows";
 import { useSidebarSelection } from "./hooks/useSidebarSelection";
 import { useSidebarDragState } from "./hooks/useSidebarDragState";
@@ -103,6 +104,29 @@ export function SidebarTree({
       return new Set();
     }
   });
+  // Sub-host parents default to expanded (unlike folders, which default
+  // collapsed) -- a host reparented under another shouldn't seem to vanish
+  // just because its new parent row starts closed. This tracks the opposite:
+  // parents the user has explicitly collapsed.
+  const [closedHostParents, setClosedHostParents] = useState<Set<string>>(
+    () => {
+      try {
+        const saved = localStorage.getItem("hostClosedParents");
+        return saved ? new Set<string>(JSON.parse(saved)) : new Set();
+      } catch {
+        return new Set();
+      }
+    },
+  );
+  function toggleHostParent(key: string) {
+    setClosedHostParents((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      persistClosedHostParents(next);
+      return next;
+    });
+  }
   const {
     selectedHostIds,
     setSelectedHostIds,
@@ -209,6 +233,51 @@ export function SidebarTree({
         t("hosts.movedToFolder", {
           count: movableIds.length,
           folder: targetPath || t("hosts.folderPickerNone"),
+        }),
+      );
+    } catch {
+      toast.error(t("hosts.failedToMoveHosts"));
+    }
+  }
+
+  function isDescendantOfDragged(candidateId: string, draggedIds: string[]) {
+    let current: string | null | undefined = candidateId;
+    const visited = new Set<string>();
+    while (current) {
+      if (draggedIds.includes(current)) return true;
+      if (visited.has(current)) return false;
+      visited.add(current);
+      current = hostsById.get(current)?.parentHostId;
+    }
+    return false;
+  }
+
+  async function handleMoveHostsToParent(hostIds: string[], parentId: string) {
+    setDraggedHostIds(null);
+    const movableIds = hostIds.filter((id) => {
+      const host = hostsById.get(id);
+      return !host || canEditHost(host);
+    });
+    if (movableIds.length === 0) return;
+    if (movableIds.includes(parentId)) return;
+    // A host can't become its own descendant's child -- guard client-side so
+    // the drop just silently no-ops rather than round-tripping to the
+    // backend's own cycle rejection.
+    if (isDescendantOfDragged(parentId, movableIds)) {
+      toast.error(t("hosts.cannotNestUnderDescendant"));
+      return;
+    }
+
+    try {
+      await bulkUpdateSSHHosts(movableIds.map(Number), {
+        parentHostId: Number(parentId),
+      });
+      window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      const parentHost = hostsById.get(parentId);
+      toast.success(
+        t("hosts.movedToParent", {
+          count: movableIds.length,
+          parent: parentHost?.name ?? parentId,
         }),
       );
     } catch {
@@ -388,11 +457,20 @@ export function SidebarTree({
       const next = new Set(collectAllFolderPaths(children));
       persistOpenFolders(next);
       setOpenFolders(next);
+      persistClosedHostParents(new Set());
+      setClosedHostParents(new Set());
     };
     const collapseAll = () => {
       const next = new Set<string>();
       persistOpenFolders(next);
       setOpenFolders(next);
+      const closedHosts = new Set(
+        collectAllHosts(children)
+          .filter((h) => h.childHosts && h.childHosts.length > 0)
+          .map((h) => hostExpandKey(h)),
+      );
+      persistClosedHostParents(closedHosts);
+      setClosedHostParents(closedHosts);
     };
     window.addEventListener("hosts:create-folder", openCreate);
     window.addEventListener("hosts:expand-all", expandAll);
@@ -407,6 +485,14 @@ export function SidebarTree({
   function persistOpenFolders(next: Set<string>) {
     try {
       localStorage.setItem("hostOpenFolders", JSON.stringify([...next]));
+    } catch {
+      // ignore quota/serialization failures
+    }
+  }
+
+  function persistClosedHostParents(next: Set<string>) {
+    try {
+      localStorage.setItem("hostClosedParents", JSON.stringify([...next]));
     } catch {
       // ignore quota/serialization failures
     }
@@ -448,6 +534,7 @@ export function SidebarTree({
         port: host.port,
         username: host.username,
         folder: host.folder,
+        parentHostId: host.parentHostId ? Number(host.parentHostId) : null,
         tags: host.tags ?? [],
         pin: host.pin ?? false,
         notes: host.notes,
@@ -519,7 +606,14 @@ export function SidebarTree({
   const allHosts = collectAllHosts(children);
   const allFolderPaths = collectAllFolderPaths(children);
 
-  const visibleRows = collectVisibleRows(children, query, openFolders);
+  const visibleRows = collectVisibleRows(
+    children,
+    query,
+    openFolders,
+    [],
+    0,
+    closedHostParents,
+  );
   const parentRef = useRef<HTMLDivElement>(null);
 
   const isTouchOnly =
@@ -615,6 +709,7 @@ export function SidebarTree({
   }, [
     virtualizer,
     openFolders,
+    closedHostParents,
     openTrayHostId,
     openMenuHostId,
     query,
@@ -815,6 +910,16 @@ export function SidebarTree({
                         setReorderHoverKey(edge ? `host:${item.id}` : null);
                         setReorderHoverEdge(edge);
                       }}
+                      isExpanded={!closedHostParents.has(hostExpandKey(item))}
+                      onToggleExpand={
+                        item.childHosts && item.childHosts.length > 0
+                          ? () => toggleHostParent(hostExpandKey(item))
+                          : undefined
+                      }
+                      draggedHostIds={draggedHostIds}
+                      onDropChildHosts={(ids) =>
+                        handleMoveHostsToParent(ids, item.id)
+                      }
                     />
                   )}
                 </div>

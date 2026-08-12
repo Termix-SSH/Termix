@@ -16,6 +16,7 @@ import {
   boolean,
   doublePrecision,
   uniqueIndex,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -136,6 +137,12 @@ export const hosts = pgTable("ssh_data", {
   port: integer("port").notNull(),
   username: text("username").notNull(),
   folder: text("folder"),
+  // Sub-host nesting: a host acting as an organizational parent for other
+  // hosts, mutually exclusive with folder (see host route validation).
+  parentHostId: integer("parent_host_id").references(
+    (): AnyPgColumn => hosts.id,
+    { onDelete: "set null" },
+  ),
   tags: text("tags"),
   pin: boolean("pin").notNull().default(false),
   // Manual drag-to-reorder position within a folder. Null means the host has

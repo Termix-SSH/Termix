@@ -15,6 +15,7 @@ import {
   boolean,
   double,
   uniqueIndex,
+  type AnyMySqlColumn,
 } from "drizzle-orm/mysql-core";
 import { sql } from "drizzle-orm";
 
@@ -135,6 +136,12 @@ export const hosts = mysqlTable("ssh_data", {
   port: int("port").notNull(),
   username: text("username").notNull(),
   folder: text("folder"),
+  // Sub-host nesting: a host acting as an organizational parent for other
+  // hosts, mutually exclusive with folder (see host route validation).
+  parentHostId: int("parent_host_id").references(
+    (): AnyMySqlColumn => hosts.id,
+    { onDelete: "set null" },
+  ),
   tags: text("tags"),
   pin: boolean("pin").notNull().default(false),
   // Manual drag-to-reorder position within a folder. Null means the host has

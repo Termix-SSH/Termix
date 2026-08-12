@@ -16,6 +16,15 @@ export type Host = {
   ip: string;
   port: number;
   folder: string;
+  /** Sub-host nesting: the id of the host this one is organized under, if any. */
+  parentHostId?: string | null;
+  /**
+   * Sub-hosts nested under this host, populated client-side by buildHostTree.
+   * A host with children still renders and behaves as a normal, connectable
+   * HostItem row -- this only adds an expand/collapse chevron for its nested
+   * children, it never wraps the host in a synthetic folder node.
+   */
+  childHosts?: Host[];
   online: boolean;
   cpu: number | null;
   ram: number | null;

@@ -197,6 +197,8 @@ describe("HostResolutionRepository", () => {
       telnetCredentialId: null,
       vaultProfileId: null,
       authType: "password",
+      parentHostId: null,
+      folder: null,
     });
     await expect(repository.findHostUpdateState(999)).resolves.toBeNull();
     expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();

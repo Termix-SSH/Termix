@@ -76,3 +76,52 @@ describe("collectVisibleRows", () => {
     ).toEqual(["prod", "db", "postgres"]);
   });
 });
+
+describe("collectVisibleRows with sub-host nesting", () => {
+  function hostWithChildren(
+    id: string,
+    name: string,
+    childHosts?: Host[],
+  ): Host {
+    return { ...host(id, name), childHosts } as Host;
+  }
+
+  it("shows a parent host's children by default, unlike folders", () => {
+    const tree: (Host | HostFolder)[] = [
+      hostWithChildren("1", "Zeus", [host("2", "vm1")]),
+    ];
+    const rows = collectVisibleRows(tree, "", new Set());
+    expect(rows.map((r) => r.item.name)).toEqual(["Zeus", "vm1"]);
+    expect(rows[1].depth).toBe(1);
+  });
+
+  it("hides children once the parent is explicitly collapsed", () => {
+    const tree: (Host | HostFolder)[] = [
+      hostWithChildren("1", "Zeus", [host("2", "vm1")]),
+    ];
+    const rows = collectVisibleRows(
+      tree,
+      "",
+      new Set(),
+      [],
+      0,
+      new Set(["host:1"]),
+    );
+    expect(rows.map((r) => r.item.name)).toEqual(["Zeus"]);
+  });
+
+  it("always shows children while searching, regardless of collapsed state", () => {
+    const tree: (Host | HostFolder)[] = [
+      hostWithChildren("1", "Zeus", [host("2", "vm1")]),
+    ];
+    const rows = collectVisibleRows(
+      tree,
+      "vm1",
+      new Set(),
+      [],
+      0,
+      new Set(["host:1"]),
+    );
+    expect(rows.map((r) => r.item.name)).toEqual(["Zeus", "vm1"]);
+  });
+});

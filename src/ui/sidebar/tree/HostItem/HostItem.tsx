@@ -211,6 +211,10 @@ export function HostItem({
   isReorderHovered = false,
   reorderHoverEdge = null,
   onReorderHoverChange,
+  isExpanded = false,
+  onToggleExpand,
+  draggedHostIds = null,
+  onDropChildHosts,
 }: {
   host: Host;
   onOpenTab: (type: TabType) => void;
@@ -247,6 +251,14 @@ export function HostItem({
   isReorderHovered?: boolean;
   reorderHoverEdge?: "before" | "after" | null;
   onReorderHoverChange?: (edge: "before" | "after" | null) => void;
+  /** Whether this host's sub-host children are currently shown. */
+  isExpanded?: boolean;
+  /** Present only when this host has sub-hosts nested under it. */
+  onToggleExpand?: () => void;
+  /** ids of the host(s) currently being dragged, if any -- mirrors FolderItem's drop-target wiring. */
+  draggedHostIds?: string[] | null;
+  /** Present when this row can accept a dragged host/selection to become its parent. */
+  onDropChildHosts?: (hostIds: string[]) => void;
 }) {
   const { t } = useTranslation();
   // Shared hosts expose actions matching the recipient's permission level.
@@ -272,9 +284,15 @@ export function HostItem({
   const showSudoPasswordCopy = !host.isShared && canCopyHostSudoPassword(host);
   const canOverrideAuth = canOverrideHostAuth(host, "ssh");
   const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
+  const [parentDragOver, setParentDragOver] = useState(false);
   const tokens = HOST_ITEM_DENSITY_TOKENS[density];
   const isCompact = density === "compact";
   const reorderEdge = isReorderHovered ? reorderHoverEdge : null;
+  const acceptsChildDrop =
+    !reorderMode &&
+    !!onDropChildHosts &&
+    !!draggedHostIds &&
+    !draggedHostIds.includes(host.id);
 
   async function handleCopyPassword(
     e: MouseEvent,
@@ -683,22 +701,43 @@ export function HostItem({
       }}
       onDragEnd={() => {
         onReorderHoverChange?.(null);
+        setParentDragOver(false);
         onDragEnd?.();
       }}
       onDragOver={(e) => {
-        if (!reorderMode || !onReorderDrop) return;
-        e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
-        onReorderHoverChange?.(
-          e.clientY - rect.top < rect.height / 2 ? "before" : "after",
-        );
+        if (reorderMode && onReorderDrop) {
+          e.preventDefault();
+          const rect = e.currentTarget.getBoundingClientRect();
+          onReorderHoverChange?.(
+            e.clientY - rect.top < rect.height / 2 ? "before" : "after",
+          );
+          return;
+        }
+        if (acceptsChildDrop) {
+          e.preventDefault();
+          e.stopPropagation();
+          setParentDragOver(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (acceptsChildDrop && e.currentTarget === e.target) {
+          setParentDragOver(false);
+        }
       }}
       onDrop={(e) => {
-        if (!reorderMode || !onReorderDrop || !reorderEdge) return;
-        e.preventDefault();
-        e.stopPropagation();
-        onReorderDrop(reorderEdge);
-        onReorderHoverChange?.(null);
+        if (reorderMode && onReorderDrop && reorderEdge) {
+          e.preventDefault();
+          e.stopPropagation();
+          onReorderDrop(reorderEdge);
+          onReorderHoverChange?.(null);
+          return;
+        }
+        if (acceptsChildDrop && draggedHostIds) {
+          e.preventDefault();
+          e.stopPropagation();
+          setParentDragOver(false);
+          onDropChildHosts?.(draggedHostIds);
+        }
       }}
       style={depthStyle}
       className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/50 ${
@@ -707,7 +746,7 @@ export function HostItem({
           : stripeIndex % 2 === 1
             ? "bg-muted/15"
             : ""
-      } ${isMenuOpen ? "bg-muted/50" : ""}`}
+      } ${isMenuOpen ? "bg-muted/50" : ""} ${parentDragOver ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10" : ""}`}
       onClick={(e) => {
         if (selectionMode) {
           onToggleSelect?.();
@@ -755,6 +794,25 @@ export function HostItem({
       >
         {/* Name row */}
         <div className="flex items-center gap-1.5 min-w-0">
+          {onToggleExpand && (
+            <button
+              type="button"
+              title={
+                isExpanded
+                  ? t("hosts.collapseSubHosts")
+                  : t("hosts.expandSubHosts")
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
+              className="flex items-center justify-center size-3.5 shrink-0 text-muted-foreground/60 hover:text-foreground"
+            >
+              <ChevronRight
+                className={`size-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+              />
+            </button>
+          )}
           {selectionMode && (
             <div
               className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${selected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}

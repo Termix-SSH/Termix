@@ -368,6 +368,10 @@ export function sanitizeHostForRecipient(
   const stripped = stripSensitiveFields(host);
   delete stripped.credentialId;
   delete stripped.overrideCredentialUsername;
+  // Sub-host nesting is per-owner tree structure; a recipient generally
+  // can't see (or share permission on) the parent host row, so a shared
+  // host always renders at root rather than leaking another host's id.
+  delete stripped.parentHostId;
   if (
     stripped.terminalConfig &&
     typeof stripped.terminalConfig === "object" &&

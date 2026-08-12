@@ -39,6 +39,7 @@ import {
   stripSensitiveFields,
   transformHostResponse,
 } from "./host-normalizers.js";
+import { validateParentHostId } from "./host-parent-validation.js";
 import { registerHostOpksshRoutes } from "./host-opkssh-routes.js";
 import { registerHostFolderRoutes } from "./host-folder-routes.js";
 import { registerHostFileManagerBookmarkRoutes } from "./host-file-manager-bookmark-routes.js";
@@ -162,6 +163,7 @@ router.post(
       connectionType,
       name,
       folder,
+      parentHostId,
       tags,
       ip,
       port,
@@ -267,6 +269,23 @@ router.post(
       return res.status(400).json({ error: "Invalid SSH data" });
     }
 
+    let validatedParentHostId: number | null = null;
+    if (parentHostId !== undefined && parentHostId !== null) {
+      const numericParentHostId = Number(parentHostId);
+      if (!Number.isInteger(numericParentHostId)) {
+        return res.status(400).json({ error: "Invalid parent host" });
+      }
+      const parentError = await validateParentHostId(
+        userId,
+        null,
+        numericParentHostId,
+      );
+      if (parentError) {
+        return res.status(400).json({ error: parentError });
+      }
+      validatedParentHostId = numericParentHostId;
+    }
+
     const effectiveConnectionType = connectionType || "ssh";
     const effectiveAuthType =
       authType ||
@@ -280,7 +299,10 @@ router.post(
       userId: userId,
       connectionType: effectiveConnectionType,
       name: effectiveName,
-      folder: folder || null,
+      // A host is either placed in a folder or nested under a parent host,
+      // never both -- setting one clears the other.
+      folder: validatedParentHostId ? null : folder || null,
+      parentHostId: validatedParentHostId,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
       port,
@@ -825,6 +847,7 @@ router.put(
       connectionType,
       name,
       folder,
+      parentHostId,
       tags,
       ip,
       port,
@@ -932,6 +955,27 @@ router.put(
       return res.status(400).json({ error: "Invalid SSH data" });
     }
 
+    let validatedParentHostId: number | null | undefined = undefined;
+    if (parentHostId !== undefined) {
+      if (parentHostId === null) {
+        validatedParentHostId = null;
+      } else {
+        const numericParentHostId = Number(parentHostId);
+        if (!Number.isInteger(numericParentHostId)) {
+          return res.status(400).json({ error: "Invalid parent host" });
+        }
+        const parentError = await validateParentHostId(
+          userId,
+          Number(hostId),
+          numericParentHostId,
+        );
+        if (parentError) {
+          return res.status(400).json({ error: parentError });
+        }
+        validatedParentHostId = numericParentHostId;
+      }
+    }
+
     const effectiveAuthType = authType || authMethod;
     const effectiveUsername =
       username || rdpUser || vncUser || telnetUser || "";
@@ -940,7 +984,10 @@ router.put(
     const sshDataObj: Record<string, unknown> = {
       connectionType: connectionType || "ssh",
       name: effectiveName,
-      folder,
+      // A host is either placed in a folder or nested under a parent host,
+      // never both. When the caller is assigning a parent, clear folder;
+      // when the caller is assigning a folder, clear parentHostId.
+      folder: validatedParentHostId ? null : folder,
       tags: Array.isArray(tags) ? tags.join(",") : tags || "",
       ip,
       port,
@@ -1121,6 +1168,15 @@ router.put(
     if (rdpPassword) sshDataObj.rdpPassword = rdpPassword;
     if (vncPassword) sshDataObj.vncPassword = vncPassword;
     if (telnetPassword) sshDataObj.telnetPassword = telnetPassword;
+
+    if (validatedParentHostId !== undefined) {
+      sshDataObj.parentHostId = validatedParentHostId;
+    } else if (folder !== undefined) {
+      // Caller is assigning a folder (including clearing it back to root)
+      // without touching parentHostId -- folder placement replaces
+      // parent-host placement either way.
+      sshDataObj.parentHostId = null;
+    }
 
     try {
       const accessInfo = await permissionManager.canAccessHost(

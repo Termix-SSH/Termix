@@ -4,6 +4,7 @@ import {
   integer,
   real,
   uniqueIndex,
+  type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
@@ -126,6 +127,12 @@ export const hosts = sqliteTable("ssh_data", {
   port: integer("port").notNull(),
   username: text("username").notNull(),
   folder: text("folder"),
+  // Sub-host nesting: a host acting as an organizational parent for other
+  // hosts, mutually exclusive with folder (see host route validation).
+  parentHostId: integer("parent_host_id").references(
+    (): AnySQLiteColumn => hosts.id,
+    { onDelete: "set null" },
+  ),
   tags: text("tags"),
   pin: integer("pin", { mode: "boolean" }).notNull().default(false),
   // Manual drag-to-reorder position within a folder. Null means the host has

@@ -288,6 +288,8 @@ export interface HostData {
   port: number;
   username: string;
   folder?: string;
+  /** Sub-host nesting: mutually exclusive with folder. */
+  parentHostId?: number | string | null;
   tags?: string[];
   pin?: boolean;
   authType:

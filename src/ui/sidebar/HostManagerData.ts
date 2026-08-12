@@ -50,6 +50,10 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     ip: h.ip,
     port: h.port,
     folder: h.folder ?? "",
+    parentHostId:
+      (h as { parentHostId?: number | string | null }).parentHostId != null
+        ? String((h as { parentHostId?: number | string }).parentHostId)
+        : null,
     online: h.status === "online",
     cpu: null,
     ram: null,

@@ -20,6 +20,8 @@ export interface HostUpdateStateRecord {
   telnetCredentialId: number | null;
   vaultProfileId: number | null;
   authType: string;
+  parentHostId: number | null;
+  folder: string | null;
 }
 export interface HostListAccessEntry {
   hostId: number;
@@ -117,12 +119,28 @@ export class HostResolutionRepository {
         telnetCredentialId: hosts.telnetCredentialId,
         vaultProfileId: hosts.vaultProfileId,
         authType: hosts.authType,
+        parentHostId: hosts.parentHostId,
+        folder: hosts.folder,
       })
       .from(hosts)
       .where(eq(hosts.id, hostId))
       .limit(1);
 
     return rows[0] ?? null;
+  }
+
+  /**
+   * Minimal (id, parentHostId) rows for every host a user owns, used to walk
+   * ancestor chains when validating a sub-host parent assignment for cycles.
+   * No decryption needed -- parentHostId is a plain, unencrypted integer.
+   */
+  async listOwnHostParentLinks(
+    userId: string,
+  ): Promise<{ id: number; parentHostId: number | null }[]> {
+    return this.context.drizzle
+      .select({ id: hosts.id, parentHostId: hosts.parentHostId })
+      .from(hosts)
+      .where(eq(hosts.userId, userId));
   }
 
   async findHostsByUserId(userId: string): Promise<HostResolutionHostRecord[]> {
