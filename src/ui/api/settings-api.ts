@@ -1,3 +1,4 @@
+import axios from "axios";
 import { authApi, handleApiError, statsApi } from "@/main-axios";
 
 // GLOBAL MONITORING SETTINGS
@@ -112,12 +113,29 @@ export async function getTailscaleDevices(): Promise<{
     lastSeen: string;
   }>;
   hasApiKey: boolean;
+  error?: string;
 }> {
   try {
     const response = await authApi.get("/tailscale/devices");
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data;
+      if (
+        data &&
+        typeof data === "object" &&
+        "hasApiKey" in data &&
+        typeof data.hasApiKey === "boolean"
+      ) {
+        return data as {
+          devices: [];
+          hasApiKey: boolean;
+          error?: string;
+        };
+      }
+    }
     handleApiError(error, "fetch Tailscale devices");
+    throw error;
   }
 }
 

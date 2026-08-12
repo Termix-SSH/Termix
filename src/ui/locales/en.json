@@ -857,6 +857,7 @@
     "tailscaleNoApiKey": "No Tailscale API key configured. Add one in Admin Settings to enable device discovery.",
     "tailscaleDocsLink": "View docs",
     "tailscaleLoadingDevices": "Loading devices...",
+    "tailscaleDeviceLoadFailed": "Failed to load Tailscale devices. Check the API URL and network connection.",
     "tailscaleNoDevices": "No devices found in your tailnet.",
     "tailscaleDeviceAutoFill": "Selecting a device will auto-fill the host IP address.",
     "forceKeyboardInteractiveLabel": "Force Keyboard Interactive",

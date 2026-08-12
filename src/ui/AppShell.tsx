@@ -236,13 +236,9 @@ export function AppShell({
   const [hostsLoading, setHostsLoading] = useState(true);
   const [allHosts, setAllHosts] = useState<Host[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  // Remote sync is not yet configurable (added in a later phase), so this
-  // is always false for now -- admin/user-management UI stays hidden until
-  // the desktop app is connected to a remote Termix server, since a
-  // standalone local install has exactly one implicit user and nothing to
-  // administer.
-  const [isRemoteSyncConnected] = useState(false);
-  const showMultiUserUI = isAdmin && (!isElectron() || isRemoteSyncConnected);
+  // The standalone desktop backend still owns system settings such as the
+  // Tailscale API key, even though it has only one implicit user.
+  const showAdminUI = isAdmin;
   const [userId, setUserId] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -2095,7 +2091,7 @@ export function AppShell({
           </div>
         )}
 
-        {railView === "admin-settings" && showMultiUserUI && (
+        {railView === "admin-settings" && showAdminUI && (
           <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
             <AdminSettingsPanel
               onEditingChange={setSidebarEditing}
@@ -2209,7 +2205,7 @@ export function AppShell({
               sidebarOpen={sidebarOpen}
               splitMode={splitMode}
               username={username}
-              isAdmin={showMultiUserUI}
+              isAdmin={showAdminUI}
               onRailClick={handleRailClick}
               onOpenTab={openSingletonTab}
               onLogout={onLogout}

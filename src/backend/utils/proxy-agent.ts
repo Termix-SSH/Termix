@@ -1,5 +1,12 @@
-import { ProxyAgent } from "undici";
+import { Agent, ProxyAgent } from "undici";
 import type { Dispatcher } from "undici-types";
+
+const directAgent = new Agent({
+  connect: {
+    autoSelectFamily: true,
+    autoSelectFamilyAttemptTimeout: 250,
+  },
+});
 
 export function getProxyAgent(targetUrl?: string): Dispatcher | undefined {
   const proxyUrl =
@@ -27,4 +34,8 @@ export function getProxyAgent(targetUrl?: string): Dispatcher | undefined {
   }
 
   return new ProxyAgent(proxyUrl) as unknown as Dispatcher;
+}
+
+export function getFetchDispatcher(targetUrl: string): Dispatcher {
+  return getProxyAgent(targetUrl) ?? (directAgent as unknown as Dispatcher);
 }

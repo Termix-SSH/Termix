@@ -144,6 +144,7 @@ export function HostEditor({
   >([]);
   const [tailscaleHasApiKey, setTailscaleHasApiKey] = useState(false);
   const [tailscaleLoading, setTailscaleLoading] = useState(false);
+  const [tailscaleDeviceError, setTailscaleDeviceError] = useState(false);
   const [connectingTunnel, setConnectingTunnel] = useState<number | null>(null);
   const [isOidcUser, setIsOidcUser] = useState(false);
   const [vaultProfiles, setVaultProfiles] = useState<VaultProfile[]>([]);
@@ -267,12 +268,14 @@ export function HostEditor({
   useEffect(() => {
     if (form.authType !== "tailscale") return;
     setTailscaleLoading(true);
+    setTailscaleDeviceError(false);
     getTailscaleDevices()
       .then((res) => {
         setTailscaleDevices(res?.devices ?? []);
         setTailscaleHasApiKey(res?.hasApiKey ?? false);
+        setTailscaleDeviceError(!!res?.error);
       })
-      .catch(() => {})
+      .catch(() => setTailscaleDeviceError(true))
       .finally(() => setTailscaleLoading(false));
   }, [form.authType]);
 
@@ -965,13 +968,17 @@ export function HostEditor({
                           {t("hosts.tailscaleDocsLink")}
                         </a>
                       </div>
-                      {!tailscaleHasApiKey && !tailscaleLoading ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          {t("hosts.tailscaleNoApiKey")}
-                        </p>
-                      ) : tailscaleLoading ? (
+                      {tailscaleLoading ? (
                         <p className="text-[10px] text-muted-foreground">
                           {t("hosts.tailscaleLoadingDevices")}
+                        </p>
+                      ) : tailscaleDeviceError ? (
+                        <p className="text-[10px] text-destructive">
+                          {t("hosts.tailscaleDeviceLoadFailed")}
+                        </p>
+                      ) : !tailscaleHasApiKey ? (
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("hosts.tailscaleNoApiKey")}
                         </p>
                       ) : tailscaleDevices.length === 0 ? (
                         <p className="text-[10px] text-muted-foreground">

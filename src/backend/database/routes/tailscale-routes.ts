@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { RequestHandler, Router as ExpressRouter } from "express";
 import { apiLogger } from "../../utils/logger.js";
-import { getProxyAgent } from "../../utils/proxy-agent.js";
+import { getFetchDispatcher } from "../../utils/proxy-agent.js";
 import { createCurrentSettingsRepository } from "../repositories/factory.js";
 
 interface TailscaleDevice {
@@ -76,7 +76,7 @@ export function registerTailscaleRoutes(
           Authorization: `Bearer ${apiKey}`,
           "User-Agent": "Termix/1.0",
         },
-        dispatcher: getProxyAgent(url),
+        dispatcher: getFetchDispatcher(url),
       });
 
       if (!response.ok) {
@@ -85,13 +85,17 @@ export function registerTailscaleRoutes(
           status: response.status,
         });
         if (response.status === 401 || response.status === 403) {
-          return res
-            .status(401)
-            .json({ error: "Invalid Tailscale API key", devices: [] });
+          return res.status(401).json({
+            error: "Invalid Tailscale API key",
+            devices: [],
+            hasApiKey: true,
+          });
         }
-        return res
-          .status(502)
-          .json({ error: "Tailscale API error", devices: [] });
+        return res.status(502).json({
+          error: "Tailscale API error",
+          devices: [],
+          hasApiKey: true,
+        });
       }
 
       const data = (await response.json()) as { devices: TailscaleAPIDevice[] };
@@ -110,9 +114,11 @@ export function registerTailscaleRoutes(
       apiLogger.error("Failed to fetch Tailscale devices", err, {
         operation: "tailscale_devices",
       });
-      res
-        .status(500)
-        .json({ error: "Failed to fetch Tailscale devices", devices: [] });
+      res.status(500).json({
+        error: "Failed to fetch Tailscale devices",
+        devices: [],
+        hasApiKey: true,
+      });
     }
   });
 
