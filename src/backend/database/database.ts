@@ -30,6 +30,7 @@ import vaultRoutes from "./routes/vault.js";
 import alertRulesRoutes from "./routes/alert-rules-routes.js";
 import syncRoutes from "./routes/sync.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
+import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -73,6 +74,7 @@ app.set("trust proxy", true);
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 
 type SettingData = {

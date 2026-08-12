@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ConcurrentLimiter,
   HostPollCache,
+  metricsConcurrencyFor,
 } from "../../../hosts/metrics/state.js";
 
 describe("ConcurrentLimiter", () => {
@@ -50,6 +51,161 @@ describe("ConcurrentLimiter", () => {
 
   it("rejects invalid maxConcurrent", () => {
     expect(() => new ConcurrentLimiter(0)).toThrow(/maxConcurrent/);
+  });
+
+  describe("setLimit", () => {
+    it("releases queued waiters as soon as the ceiling is raised", async () => {
+      const limiter = new ConcurrentLimiter(1);
+      let running = 0;
+      let peak = 0;
+      const release: Array<() => void> = [];
+
+      const job = () =>
+        limiter.run(async () => {
+          running += 1;
+          peak = Math.max(peak, running);
+          await new Promise<void>((r) => release.push(r));
+          running -= 1;
+        });
+
+      const jobs = [job(), job(), job(), job()];
+      await new Promise((r) => setTimeout(r, 10));
+      expect(peak).toBe(1);
+      expect(limiter.pendingCount).toBe(3);
+
+      // Widening must drain the backlog without waiting for the running job.
+      limiter.setLimit(4);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(peak).toBe(4);
+      expect(limiter.pendingCount).toBe(0);
+
+      release.forEach((fn) => fn());
+      await Promise.all(jobs);
+      expect(limiter.activeCount).toBe(0);
+    });
+
+    it("does not over-release beyond the new ceiling", async () => {
+      const limiter = new ConcurrentLimiter(1);
+      let running = 0;
+      let peak = 0;
+      const release: Array<() => void> = [];
+      // Later waves of woken jobs enqueue their own resolvers, so draining has
+      // to keep going until nothing is left rather than flushing a snapshot.
+      const drain = async () => {
+        while (release.length > 0) {
+          release.splice(0).forEach((fn) => fn());
+          await new Promise((r) => setTimeout(r, 5));
+        }
+      };
+
+      const job = () =>
+        limiter.run(async () => {
+          running += 1;
+          peak = Math.max(peak, running);
+          await new Promise<void>((r) => release.push(r));
+          running -= 1;
+        });
+
+      const jobs = [job(), job(), job(), job(), job()];
+      await new Promise((r) => setTimeout(r, 10));
+
+      limiter.setLimit(3);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(peak).toBe(3);
+      expect(limiter.pendingCount).toBe(2);
+
+      await drain();
+      await Promise.all(jobs);
+      expect(limiter.activeCount).toBe(0);
+      expect(limiter.pendingCount).toBe(0);
+    });
+
+    it("lets running work finish when the ceiling shrinks", async () => {
+      const limiter = new ConcurrentLimiter(4);
+      let running = 0;
+      let peak = 0;
+      const release: Array<() => void> = [];
+      const drain = async () => {
+        while (release.length > 0) {
+          release.splice(0).forEach((fn) => fn());
+          await new Promise((r) => setTimeout(r, 5));
+        }
+      };
+
+      const job = () =>
+        limiter.run(async () => {
+          running += 1;
+          peak = Math.max(peak, running);
+          await new Promise<void>((r) => release.push(r));
+          running -= 1;
+        });
+
+      const jobs = [job(), job(), job(), job(), job(), job()];
+      await new Promise((r) => setTimeout(r, 10));
+      expect(peak).toBe(4);
+
+      // Shrinking never kills in-flight work; it applies to later releases.
+      limiter.setLimit(2);
+      expect(limiter.activeCount).toBe(4);
+
+      await drain();
+      await Promise.all(jobs);
+      expect(limiter.activeCount).toBe(0);
+      expect(limiter.pendingCount).toBe(0);
+      // The two queued jobs ran only after the shrink, so they never pushed
+      // occupancy back up to the old width.
+      expect(peak).toBe(4);
+    });
+
+    it("rejects an invalid new limit", () => {
+      const limiter = new ConcurrentLimiter(2);
+      expect(() => limiter.setLimit(0)).toThrow(/maxConcurrent/);
+      expect(limiter.limit).toBe(2);
+    });
+  });
+});
+
+describe("metricsConcurrencyFor", () => {
+  it("keeps a floor for small installs", () => {
+    expect(metricsConcurrencyFor(0, {})).toBe(5);
+    expect(metricsConcurrencyFor(1, {})).toBe(5);
+    expect(metricsConcurrencyFor(60, {})).toBe(5);
+  });
+
+  it("scales up with the fleet", () => {
+    expect(metricsConcurrencyFor(200, {})).toBe(10);
+    expect(metricsConcurrencyFor(500, {})).toBe(25);
+  });
+
+  it("caps so a huge fleet cannot exhaust the host", () => {
+    expect(metricsConcurrencyFor(100000, {})).toBe(50);
+  });
+
+  it("lets an operator override the sizing", () => {
+    expect(metricsConcurrencyFor(1000, { METRICS_POLL_CONCURRENCY: "8" })).toBe(
+      8,
+    );
+  });
+
+  it("still caps an oversized override", () => {
+    expect(
+      metricsConcurrencyFor(10, { METRICS_POLL_CONCURRENCY: "9999" }),
+    ).toBe(50);
+  });
+
+  it("ignores a nonsense override", () => {
+    expect(
+      metricsConcurrencyFor(500, { METRICS_POLL_CONCURRENCY: "abc" }),
+    ).toBe(25);
+  });
+
+  it("sweeps 500 hosts inside a 30s interval, which the old fixed 5 could not", () => {
+    const POLL_MS = 400;
+    const hosts = 500;
+    const sweepAt = (c: number) => Math.ceil(hosts / c) * POLL_MS;
+
+    expect(sweepAt(5)).toBeGreaterThan(30_000);
+    expect(sweepAt(metricsConcurrencyFor(hosts, {}))).toBeLessThan(30_000);
   });
 });
 

@@ -49,6 +49,19 @@ export function auditMaxEntries(env: NodeJS.ProcessEnv = process.env): number {
 }
 
 export class AuditLogRepository {
+  /**
+   * Cached row count backing the cap check. Static because the factory builds
+   * a repository per call, so a per-instance count would never survive to be
+   * reused. Null means "unknown, re-read" — which is also how any path that
+   * deletes rows invalidates it.
+   */
+  private static cachedCount: number | null = null;
+
+  /** Drops the cached count so a test starts from a known state. */
+  static resetPruneThrottleForTests(): void {
+    AuditLogRepository.cachedCount = null;
+  }
+
   constructor(
     private readonly context: DatabaseContext,
     private readonly onWrite?: () => void | Promise<void>,
@@ -56,7 +69,7 @@ export class AuditLogRepository {
 
   async create(entry: NewAuditLogRecord): Promise<void> {
     await this.context.drizzle.insert(auditLogs).values(entry);
-    await this.pruneIfNeeded();
+    await this.pruneIfDue();
     await this.afterWrite();
   }
 
@@ -140,6 +153,8 @@ export class AuditLogRepository {
   }
 
   async deleteByUserId(userId: string): Promise<number> {
+    // Row count changed outside the insert path; force a re-read.
+    AuditLogRepository.cachedCount = null;
     const result = await this.context.drizzle
       .delete(auditLogs)
       .where(eq(auditLogs.userId, userId));
@@ -172,9 +187,73 @@ export class AuditLogRepository {
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
-  private async pruneIfNeeded(): Promise<void> {
+  /**
+   * Keeps the two prune passes off the per-write hot path without letting the
+   * row cap go unenforced.
+   *
+   * Both passes used to run inline on every insert: a retention DELETE plus a
+   * COUNT over the whole table, thousands of times an hour on a busy install,
+   * almost always to find nothing to do — and audit writes sit in the request
+   * path of the actions they record.
+   *
+   * They are split by what they cost and what they guarantee. Retention is
+   * time-based, so nothing is lost by checking it on an interval. The row cap
+   * is a disk-space guard that has to react to inserts, so it is still checked
+   * on the write that crosses it — but against a cached count, so the common
+   * case is an integer compare rather than a COUNT.
+   */
+  private async pruneIfDue(): Promise<void> {
+    try {
+      // Retention only costs anything on installs that configure it, and the
+      // DELETE is driven by idx_audit_logs_timestamp, so it stays on the write
+      // path where its "nothing older than N days survives" guarantee holds.
+      await this.pruneExpired();
+      await this.pruneOverflowIfOverCap();
+    } catch (error) {
+      // Pruning is maintenance; never fail the write that triggered it.
+      databaseLogger.warn("Audit log prune failed", {
+        operation: "audit_prune_failed",
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Enforces the cap using a cached row count, so a steady stream of writes
+   * costs one COUNT to prime and then nothing until the cap is next reached.
+   */
+  private async pruneOverflowIfOverCap(): Promise<void> {
+    const max = auditMaxEntries();
+
+    if (AuditLogRepository.cachedCount === null) {
+      AuditLogRepository.cachedCount = await this.countAll();
+    } else {
+      AuditLogRepository.cachedCount += 1;
+    }
+
+    if (AuditLogRepository.cachedCount < max) return;
+
+    // At the cap: re-read for real, since the cached value can drift if rows
+    // were deleted by another path (user deletion, manual cleanup).
+    AuditLogRepository.cachedCount = await this.countAll();
+    if (AuditLogRepository.cachedCount < max) return;
+
+    await this.pruneOverflow();
+    AuditLogRepository.cachedCount = await this.countAll();
+  }
+
+  private async countAll(): Promise<number> {
+    const result = await this.context.drizzle
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(auditLogs);
+    return countValue(result[0]?.count);
+  }
+
+  /** Runs the prune regardless of the interval. Exposed for tests and startup. */
+  async pruneNow(): Promise<void> {
     await this.pruneExpired();
     await this.pruneOverflow();
+    AuditLogRepository.cachedCount = null;
   }
 
   /** Drops entries past the configured retention window. */

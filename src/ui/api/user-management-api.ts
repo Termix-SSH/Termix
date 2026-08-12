@@ -4,9 +4,25 @@ import type { UserInfo } from "@/main-axios";
 // USER MANAGEMENT
 // ============================================================================
 
-export async function getUserList(): Promise<{ users: UserInfo[] }> {
+export type UserListOptions = {
+  /** Case-insensitive username substring filter. */
+  search?: string;
+  /** Page size. Omit to fetch every user (what the share pickers want). */
+  limit?: number;
+  offset?: number;
+};
+
+export async function getUserList(
+  options: UserListOptions = {},
+): Promise<{ users: UserInfo[]; total?: number }> {
   try {
-    const response = await authApi.get("/users/list");
+    const response = await authApi.get("/users/list", {
+      params: {
+        ...(options.search ? { search: options.search } : {}),
+        ...(options.limit ? { limit: options.limit } : {}),
+        ...(options.offset ? { offset: options.offset } : {}),
+      },
+    });
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch user list");

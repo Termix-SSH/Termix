@@ -218,6 +218,22 @@ export class HostResolutionRepository {
     return rows[0]?.ownerId ?? null;
   }
 
+  /**
+   * Ids of the hosts this user owns, as a set.
+   *
+   * Callers that need to check ownership of many hosts at once (the status
+   * poll being the hot one) would otherwise issue isHostOwnedByUser per host,
+   * which is a query each and repeats on every poll.
+   */
+  async listOwnedHostIds(userId: string): Promise<Set<number>> {
+    const rows = await this.context.drizzle
+      .select({ id: hosts.id })
+      .from(hosts)
+      .where(eq(hosts.userId, userId));
+
+    return new Set(rows.map((row) => row.id));
+  }
+
   async isHostOwnedByUser(hostId: number, userId: string): Promise<boolean> {
     const rows = await this.context.drizzle
       .select({ id: hosts.id })
@@ -345,6 +361,43 @@ export class HostResolutionRepository {
       .limit(1);
 
     return this.decryptOne("ssh_credentials", rows[0], userId);
+  }
+
+  /**
+   * Batch form of findCredentialByIdForUser.
+   *
+   * The host list resolves a credential for every host it returns; issued one
+   * id at a time that is a query and a decrypt per host, which is the dominant
+   * cost of the list once an install has more than a few hundred of them.
+   */
+  async listCredentialsByIdsForUser(
+    credentialIds: number[],
+    userId: string,
+  ): Promise<Map<number, HostResolutionCredentialRecord>> {
+    const unique = Array.from(new Set(credentialIds));
+    if (unique.length === 0) return new Map();
+
+    const rows = await this.context.drizzle
+      .select()
+      .from(sshCredentials)
+      .where(
+        and(
+          inArray(sshCredentials.id, unique),
+          eq(sshCredentials.userId, userId),
+        ),
+      );
+
+    const userDataKey = DataCrypto.getUserDataKey(userId);
+    if (!userDataKey) return new Map();
+
+    const byId = new Map<number, HostResolutionCredentialRecord>();
+    for (const row of rows) {
+      byId.set(
+        row.id,
+        DataCrypto.decryptRecord("ssh_credentials", row, userId, userDataKey),
+      );
+    }
+    return byId;
   }
 
   async findCredentialByIdForOwnerDecryptedAs(

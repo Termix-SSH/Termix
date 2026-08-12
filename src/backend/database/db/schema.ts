@@ -3,6 +3,7 @@ import {
   text,
   integer,
   real,
+  index,
   uniqueIndex,
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
@@ -60,25 +61,33 @@ export const ssoProviders = sqliteTable("sso_providers", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const sessions = sqliteTable("sessions", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  jwtToken: text("jwt_token").notNull(),
-  deviceType: text("device_type").notNull(),
-  deviceInfo: text("device_info").notNull(),
-  oidcSub: text("oidc_sub"),
-  oidcSid: text("oidc_sid"),
-  ssoProviderId: integer("sso_provider_id"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
-  lastActiveAt: text("last_active_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const sessions = sqliteTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    jwtToken: text("jwt_token").notNull(),
+    deviceType: text("device_type").notNull(),
+    deviceInfo: text("device_info").notNull(),
+    oidcSub: text("oidc_sub"),
+    oidcSid: text("oidc_sid"),
+    ssoProviderId: integer("sso_provider_id"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+    lastActiveAt: text("last_active_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Listing a user's devices, and the startup sweep of expired rows.
+  (table) => [
+    index("idx_sessions_user_id").on(table.userId),
+    index("idx_sessions_expires_at").on(table.expiresAt),
+  ],
+);
 
 export const trustedDevices = sqliteTable("trusted_devices", {
   id: text("id").primaryKey(),
@@ -116,185 +125,198 @@ export const webauthnCredentials = sqliteTable("webauthn_credentials", {
   lastUsedAt: text("last_used_at"),
 });
 
-export const hosts = sqliteTable("ssh_data", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  connectionType: text("connection_type").notNull().default("ssh"),
-  name: text("name"),
-  ip: text("ip").notNull(),
-  port: integer("port").notNull(),
-  username: text("username").notNull(),
-  folder: text("folder"),
-  // Sub-host nesting: a host acting as an organizational parent for other
-  // hosts, mutually exclusive with folder (see host route validation).
-  parentHostId: integer("parent_host_id").references(
-    (): AnySQLiteColumn => hosts.id,
-    { onDelete: "set null" },
-  ),
-  tags: text("tags"),
-  pin: integer("pin", { mode: "boolean" }).notNull().default(false),
-  // Manual drag-to-reorder position within a folder. Null means the host has
-  // never been manually reordered; falls back to name sort in that case.
-  sortOrder: integer("sort_order"),
-  authType: text("auth_type").notNull(),
-  useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
-  shareSshAuth: integer("share_ssh_auth", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  forceKeyboardInteractive: text("force_keyboard_interactive"),
+export const hosts = sqliteTable(
+  "ssh_data",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    connectionType: text("connection_type").notNull().default("ssh"),
+    name: text("name"),
+    ip: text("ip").notNull(),
+    port: integer("port").notNull(),
+    username: text("username").notNull(),
+    folder: text("folder"),
+    // Sub-host nesting: a host acting as an organizational parent for other
+    // hosts, mutually exclusive with folder (see host route validation).
+    parentHostId: integer("parent_host_id").references(
+      (): AnySQLiteColumn => hosts.id,
+      { onDelete: "set null" },
+    ),
+    tags: text("tags"),
+    pin: integer("pin", { mode: "boolean" }).notNull().default(false),
+    // Manual drag-to-reorder position within a folder. Null means the host has
+    // never been manually reordered; falls back to name sort in that case.
+    sortOrder: integer("sort_order"),
+    authType: text("auth_type").notNull(),
+    useWarpgate: integer("use_warpgate", { mode: "boolean" }).notNull().default(false),
+    shareSshAuth: integer("share_ssh_auth", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    forceKeyboardInteractive: text("force_keyboard_interactive"),
 
-  password: text("password"),
-  key: text("key", { length: 8192 }),
-  keyPassword: text("key_password"),
-  keyType: text("key_type"),
-  sudoPassword: text("sudo_password"),
+    password: text("password"),
+    key: text("key", { length: 8192 }),
+    keyPassword: text("key_password"),
+    keyType: text("key_type"),
+    sudoPassword: text("sudo_password"),
 
-  autostartPassword: text("autostart_password"),
-  autostartKey: text("autostart_key", { length: 8192 }),
-  autostartKeyPassword: text("autostart_key_password"),
+    autostartPassword: text("autostart_password"),
+    autostartKey: text("autostart_key", { length: 8192 }),
+    autostartKeyPassword: text("autostart_key_password"),
 
-  credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-  overrideCredentialUsername: integer("override_credential_username", {
-    mode: "boolean",
-  }),
-  // When authType is "vault", the host authenticates via a Vault SSH signer
-  // profile (shared settings, no secrets). The signing certificate is obtained
-  // per-user at connect time via an interactive Vault OIDC flow.
-  vaultProfileId: integer("vault_profile_id").references(
-    () => vaultProfiles.id,
-    { onDelete: "set null" },
-  ),
-  enableTerminal: integer("enable_terminal", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  allowSessionSharing: integer("allow_session_sharing", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  enableCommandHistory: integer("enable_command_history", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  enableTunnel: integer("enable_tunnel", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  tunnelConnections: text("tunnel_connections"),
-  jumpHosts: text("jump_hosts"),
-  enableFileManager: integer("enable_file_manager", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  scpLegacy: integer("scp_legacy", { mode: "boolean" }).notNull().default(false),
-  enableDocker: integer("enable_docker", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  enableTerminalToolbar: integer("enable_terminal_toolbar", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  showFileManagerInSidebar: integer("show_file_manager_in_sidebar", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  showTunnelInSidebar: integer("show_tunnel_in_sidebar", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  showDockerInSidebar: integer("show_docker_in_sidebar", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  showServerStatsInSidebar: integer("show_server_stats_in_sidebar", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  defaultPath: text("default_path"),
-  statsConfig: text("stats_config"),
-  dockerConfig: text("docker_config"),
-  enableProxmox: integer("enable_proxmox", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  proxmoxConfig: text("proxmox_config"),
-  enableProxmoxStats: integer("enable_proxmox_stats", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  proxmoxStatsConfig: text("proxmox_stats_config"),
-  terminalConfig: text("terminal_config"),
-  quickActions: text("quick_actions"),
-  notes: text("notes"),
-  enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
-  enableRdp: integer("enable_rdp", { mode: "boolean" }).notNull().default(false),
-  enableVnc: integer("enable_vnc", { mode: "boolean" }).notNull().default(false),
-  enableTelnet: integer("enable_telnet", { mode: "boolean" }).notNull().default(false),
+    credentialId: integer("credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    overrideCredentialUsername: integer("override_credential_username", {
+      mode: "boolean",
+    }),
+    // When authType is "vault", the host authenticates via a Vault SSH signer
+    // profile (shared settings, no secrets). The signing certificate is obtained
+    // per-user at connect time via an interactive Vault OIDC flow.
+    vaultProfileId: integer("vault_profile_id").references(
+      () => vaultProfiles.id,
+      { onDelete: "set null" },
+    ),
+    enableTerminal: integer("enable_terminal", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    enableSessionLogging: integer("enable_session_logging", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    allowSessionSharing: integer("allow_session_sharing", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    enableCommandHistory: integer("enable_command_history", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    enableTunnel: integer("enable_tunnel", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    tunnelConnections: text("tunnel_connections"),
+    jumpHosts: text("jump_hosts"),
+    enableFileManager: integer("enable_file_manager", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    scpLegacy: integer("scp_legacy", { mode: "boolean" }).notNull().default(false),
+    enableDocker: integer("enable_docker", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    enableTmuxMonitor: integer("enable_tmux_monitor", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    enableTerminalToolbar: integer("enable_terminal_toolbar", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    showTerminalInSidebar: integer("show_terminal_in_sidebar", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    showFileManagerInSidebar: integer("show_file_manager_in_sidebar", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    showTunnelInSidebar: integer("show_tunnel_in_sidebar", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    showDockerInSidebar: integer("show_docker_in_sidebar", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    showServerStatsInSidebar: integer("show_server_stats_in_sidebar", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    defaultPath: text("default_path"),
+    statsConfig: text("stats_config"),
+    dockerConfig: text("docker_config"),
+    enableProxmox: integer("enable_proxmox", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    proxmoxConfig: text("proxmox_config"),
+    enableProxmoxStats: integer("enable_proxmox_stats", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    proxmoxStatsConfig: text("proxmox_stats_config"),
+    terminalConfig: text("terminal_config"),
+    quickActions: text("quick_actions"),
+    notes: text("notes"),
+    enableSsh: integer("enable_ssh", { mode: "boolean" }).notNull().default(true),
+    enableRdp: integer("enable_rdp", { mode: "boolean" }).notNull().default(false),
+    enableVnc: integer("enable_vnc", { mode: "boolean" }).notNull().default(false),
+    enableTelnet: integer("enable_telnet", { mode: "boolean" }).notNull().default(false),
 
-  sshPort: integer("ssh_port").default(22),
-  rdpPort: integer("rdp_port").default(3389),
-  vncPort: integer("vnc_port").default(5900),
-  telnetPort: integer("telnet_port").default(23),
+    sshPort: integer("ssh_port").default(22),
+    rdpPort: integer("rdp_port").default(3389),
+    vncPort: integer("vnc_port").default(5900),
+    telnetPort: integer("telnet_port").default(23),
 
-  rdpCredentialId: integer("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-  rdpUser: text("rdp_user"),
-  rdpPassword: text("rdp_password"),
-  rdpDomain: text("rdp_domain"),
-  rdpSecurity: text("rdp_security"),
-  rdpIgnoreCert: integer("rdp_ignore_cert", { mode: "boolean" }).default(false),
+    rdpCredentialId: integer("rdp_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    rdpUser: text("rdp_user"),
+    rdpPassword: text("rdp_password"),
+    rdpDomain: text("rdp_domain"),
+    rdpSecurity: text("rdp_security"),
+    rdpIgnoreCert: integer("rdp_ignore_cert", { mode: "boolean" }).default(false),
 
-  vncCredentialId: integer("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
-  vncPassword: text("vnc_password"),
-  vncUser: text("vnc_user"),
+    vncCredentialId: integer("vnc_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    vncPassword: text("vnc_password"),
+    vncUser: text("vnc_user"),
 
-  telnetUser: text("telnet_user"),
-  telnetPassword: text("telnet_password"),
-  telnetCredentialId: integer("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
+    telnetUser: text("telnet_user"),
+    telnetPassword: text("telnet_password"),
+    telnetCredentialId: integer("telnet_credential_id").references(() => sshCredentials.id, { onDelete: "set null" }),
 
-  rdpAuthType: text("rdp_auth_type"),
-  vncAuthType: text("vnc_auth_type"),
-  telnetAuthType: text("telnet_auth_type"),
+    rdpAuthType: text("rdp_auth_type"),
+    vncAuthType: text("vnc_auth_type"),
+    telnetAuthType: text("telnet_auth_type"),
 
-  domain: text("domain"),
-  security: text("security"),
-  ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
-  guacamoleConfig: text("guacamole_config"),
+    domain: text("domain"),
+    security: text("security"),
+    ignoreCert: integer("ignore_cert", { mode: "boolean" }).default(false),
+    guacamoleConfig: text("guacamole_config"),
 
-  useSocks5: integer("use_socks5", { mode: "boolean" }),
-  socks5Host: text("socks5_host"),
-  socks5Port: integer("socks5_port"),
-  socks5Username: text("socks5_username"),
-  socks5Password: text("socks5_password"),
-  socks5ProxyChain: text("socks5_proxy_chain"),
+    useSocks5: integer("use_socks5", { mode: "boolean" }),
+    socks5Host: text("socks5_host"),
+    socks5Port: integer("socks5_port"),
+    socks5Username: text("socks5_username"),
+    socks5Password: text("socks5_password"),
+    socks5ProxyChain: text("socks5_proxy_chain"),
 
-  // null = use the desktop app's global default; "local" | "remote" pins
-  // this specific host's SSH/Docker-console/Serial connections to originate
-  // from the embedded local backend or a connected remote sync server.
-  // Ignored for rdp/vnc/telnet, which always require the remote server.
-  connectionOrigin: text("connection_origin"),
+    // null = use the desktop app's global default; "local" | "remote" pins
+    // this specific host's SSH/Docker-console/Serial connections to originate
+    // from the embedded local backend or a connected remote sync server.
+    // Ignored for rdp/vnc/telnet, which always require the remote server.
+    connectionOrigin: text("connection_origin"),
 
-  macAddress: text("mac_address"),
-  wolBroadcastAddress: text("wol_broadcast_address"),
-  portKnockSequence: text("port_knock_sequence"),
+    macAddress: text("mac_address"),
+    wolBroadcastAddress: text("wol_broadcast_address"),
+    portKnockSequence: text("port_knock_sequence"),
 
-  hostKeyFingerprint: text("host_key_fingerprint"),
-  hostKeyType: text("host_key_type"),
-  hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
-  hostKeyFirstSeen: text("host_key_first_seen"),
-  hostKeyLastVerified: text("host_key_last_verified"),
-  hostKeyChangedCount: integer("host_key_changed_count").default(0),
+    hostKeyFingerprint: text("host_key_fingerprint"),
+    hostKeyType: text("host_key_type"),
+    hostKeyAlgorithm: text("host_key_algorithm").default("sha256"),
+    hostKeyFirstSeen: text("host_key_first_seen"),
+    hostKeyLastVerified: text("host_key_last_verified"),
+    hostKeyChangedCount: integer("host_key_changed_count").default(0),
 
-  // Stable identity used to match this row across two independently-seeded
-  // databases (the embedded backend and a connected remote server) during
-  // sync -- local autoincrement ids collide across instances.
-  syncId: text("sync_id").unique(),
+    // Stable identity used to match this row across two independently-seeded
+    // databases (the embedded backend and a connected remote server) during
+    // sync -- local autoincrement ids collide across instances.
+    syncId: text("sync_id").unique(),
 
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Every host read is scoped by owner, so user_id carries the host list.
+  //
+  // `folder` is deliberately not indexed: on Postgres/MySQL an indexed text
+  // column is generated as varchar(255), and folder holds a joined nested path
+  // with no length cap, so indexing it would truncate deep hierarchies.
+  (table) => [
+    index("idx_ssh_data_user_id").on(table.userId),
+    index("idx_ssh_data_parent_host").on(table.parentHostId),
+    index("idx_ssh_data_credential").on(table.credentialId),
+  ],
+);
 
 export const fileManagerRecent = sqliteTable("file_manager_recent", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -569,33 +591,44 @@ export const networkTopology = sqliteTable("network_topology", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const hostAccess = sqliteTable("host_access", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
+export const hostAccess = sqliteTable(
+  "host_access",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
 
-  userId: text("user_id")
-    .references(() => users.id, { onDelete: "cascade" }),
-  roleId: integer("role_id")
-    .references(() => roles.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id")
+      .references(() => roles.id, { onDelete: "cascade" }),
 
-  grantedBy: text("granted_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
-  permissionLevel: text("permission_level")
-    .notNull()
-    .default("connect"),
+    permissionLevel: text("permission_level")
+      .notNull()
+      .default("connect"),
 
-  expiresAt: text("expires_at"),
+    expiresAt: text("expires_at"),
 
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  lastAccessedAt: text("last_accessed_at"),
-  accessCount: integer("access_count").notNull().default(0),
-});
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    lastAccessedAt: text("last_accessed_at"),
+    accessCount: integer("access_count").notNull().default(0),
+  },
+  // Resolved on every host list request and every permission check, so all
+  // three lookup shapes (by grantee, by role, by host) need to be indexed.
+  (table) => [
+    index("idx_host_access_user_id").on(table.userId),
+    index("idx_host_access_role_id").on(table.roleId),
+    index("idx_host_access_host_id").on(table.hostId),
+    index("idx_host_access_expires_at").on(table.expiresAt),
+  ],
+);
 
 export const sharedHostAuthOverrides = sqliteTable(
   "shared_host_auth_overrides",
@@ -719,30 +752,42 @@ export const userRoles = sqliteTable(
   (table) => [uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId)],
 );
 
-export const auditLogs = sqliteTable("audit_logs", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const auditLogs = sqliteTable(
+  "audit_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
 
-  // Nullable on purpose: the trail outlives the account, and username keeps the
-  // entry attributable once the reference is gone.
-  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-  username: text("username").notNull(),
+    // Nullable on purpose: the trail outlives the account, and username keeps the
+    // entry attributable once the reference is gone.
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    username: text("username").notNull(),
 
-  action: text("action").notNull(),
-  resourceType: text("resource_type").notNull(),
-  resourceId: text("resource_id"),
-  resourceName: text("resource_name"),
+    action: text("action").notNull(),
+    resourceType: text("resource_type").notNull(),
+    resourceId: text("resource_id"),
+    resourceName: text("resource_name"),
 
-  details: text("details"),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
+    details: text("details"),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
 
-  success: integer("success", { mode: "boolean" }).notNull(),
-  errorMessage: text("error_message"),
+    success: integer("success", { mode: "boolean" }).notNull(),
+    errorMessage: text("error_message"),
 
-  timestamp: text("timestamp")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    timestamp: text("timestamp")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // This table only grows, and is always read newest-first with an optional
+  // filter. Each composite leads with the filtered column so the same index
+  // also satisfies the ORDER BY.
+  (table) => [
+    index("idx_audit_logs_timestamp").on(table.timestamp),
+    index("idx_audit_logs_user_ts").on(table.userId, table.timestamp),
+    index("idx_audit_logs_action_ts").on(table.action, table.timestamp),
+    index("idx_audit_logs_resource_ts").on(table.resourceType, table.timestamp),
+  ],
+);
 
 export const sessionRecordings = sqliteTable("session_recordings", {
   id: integer("id").primaryKey({ autoIncrement: true }),

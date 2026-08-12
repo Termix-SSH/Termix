@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import { WebSocketServer } from "ws";
 
@@ -25,6 +26,7 @@ import { initializeAutoStartTunnels } from "./manager.js";
 const authManager = AuthManager.getInstance();
 
 const app = express();
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
 app.use(express.json());

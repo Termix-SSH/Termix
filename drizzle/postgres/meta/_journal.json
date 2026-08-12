@@ -64,6 +64,13 @@
       "when": 1786498679719,
       "tag": "0008_bright_miss_america",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786509724258,
+      "tag": "0009_spicy_the_leader",
+      "breakpoints": true
     }
   ]
 }

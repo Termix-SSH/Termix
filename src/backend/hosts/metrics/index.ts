@@ -1,6 +1,7 @@
 import express from "express";
 import net from "net";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
@@ -76,6 +77,7 @@ import {
   hostPollCache,
   metricsCache,
   metricsPollLimiter,
+  metricsConcurrencyFor,
   pollingBackoff,
   requestQueue,
   statusPollLimiter,
@@ -195,6 +197,30 @@ class PollingManager {
     this.viewerCleanupInterval = setInterval(() => {
       this.cleanupInactiveViewers();
     }, 60000);
+  }
+
+  /**
+   * Keeps poll concurrency matched to how many hosts are actually being
+   * polled, so a sweep still finishes inside its interval as a fleet grows.
+   */
+  private syncPollConcurrency(): void {
+    const metricsHosts = Array.from(this.pollingConfigs.values()).filter(
+      (config) => config.statsConfig.metricsEnabled,
+    ).length;
+
+    const target = metricsConcurrencyFor(metricsHosts);
+    if (target === metricsPollLimiter.limit) return;
+
+    const previous = metricsPollLimiter.limit;
+    metricsPollLimiter.setLimit(target);
+    statsLogger.info(
+      `Metrics poll concurrency ${previous} -> ${target} for ${metricsHosts} host(s)`,
+      {
+        operation: "metrics_concurrency_resize",
+        hosts: metricsHosts,
+        concurrency: target,
+      },
+    );
   }
 
   /** Spread timers so N hosts do not fire on the same wall-clock second. */
@@ -383,6 +409,7 @@ class PollingManager {
 
     if (!isTcpPingEnabled(statsConfig) && !statsConfig.metricsEnabled) {
       this.pollingConfigs.delete(host.id);
+      this.syncPollConcurrency();
       this.statusStore.delete(host.id);
       this.metricsStore.delete(host.id);
       return;
@@ -453,6 +480,8 @@ class PollingManager {
     }
 
     this.pollingConfigs.set(host.id, config);
+
+    this.syncPollConcurrency();
   }
 
   private async pollHostStatus(
@@ -650,6 +679,8 @@ class PollingManager {
       }
 
       this.pollingConfigs.delete(hostId);
+
+      this.syncPollConcurrency();
       if (clearData) {
         this.statusStore.delete(hostId);
         this.metricsStore.delete(hostId);
@@ -845,6 +876,7 @@ function validateHostId(
 }
 
 const app = express();
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));
@@ -1772,10 +1804,18 @@ app.get("/status", async (req, res) => {
     await pollingManager.initializePolling(userId);
   }
 
+  // One batched permission resolution for the whole fleet; this endpoint is
+  // polled every few seconds, and a per-host check made it linear in host
+  // count against the database.
+  const entries = Array.from(pollingManager.getAllStatuses().entries());
+  const allowed = await permissionManager.filterAccessibleHostIds(
+    userId,
+    entries.map(([id]) => id),
+  );
+
   const result: Record<number, StatusEntry> = {};
-  for (const [id, entry] of pollingManager.getAllStatuses().entries()) {
-    const access = await permissionManager.canAccessHost(userId, id, "connect");
-    if (access.hasAccess) {
+  for (const [id, entry] of entries) {
+    if (allowed.has(id)) {
       result[id] = entry;
     }
   }

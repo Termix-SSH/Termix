@@ -5,6 +5,7 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
@@ -109,6 +110,7 @@ function assertResolvedHost(
 
 const app = express();
 
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
 app.use(express.json({ limit: "1gb" }));

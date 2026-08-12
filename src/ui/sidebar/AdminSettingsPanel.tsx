@@ -108,6 +108,8 @@ function apiErrorMessage(error: unknown, fallback: string) {
   return (error as ApiErrorLike).response?.data?.error || fallback;
 }
 
+const USERS_PAGE_SIZE = 25;
+
 export function AdminSettingsPanel({
   onEditingChange,
   onOpenHostTab,
@@ -216,18 +218,31 @@ export function AdminSettingsPanel({
   const [manualUploading, setManualUploading] = useState(false);
 
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [userPage, setUserPage] = useState(0);
+  const [userTotal, setUserTotal] = useState(0);
   const [sessions, setSessions] = useState<AdminSession[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
 
   useEffect(() => {
-    loadUsers();
     loadSessions();
     loadRoles();
     loadApiKeys();
     loadGeneralSettings();
     loadSSOProviders();
   }, []);
+
+  // Debounced so typing in the search box does not fire a request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(loadUsers, userSearch ? 250 : 0);
+    return () => clearTimeout(timer);
+  }, [userSearch, userPage]);
+
+  // A new search term starts again from the first page.
+  useEffect(() => {
+    setUserPage(0);
+  }, [userSearch]);
 
   useEffect(() => {
     onEditingChange?.(manageUser !== null);
@@ -246,8 +261,14 @@ export function AdminSettingsPanel({
   }, [editUserOpen, editUserTarget]);
 
   function loadUsers() {
-    getUserList()
-      .then(({ users: u }) =>
+    // Paged server-side so an install with thousands of accounts does not
+    // ship the whole directory to render one screen of it.
+    getUserList({
+      search: userSearch.trim() || undefined,
+      limit: USERS_PAGE_SIZE,
+      offset: userPage * USERS_PAGE_SIZE,
+    })
+      .then(({ users: u, total }) => {
         setUsers(
           u.map((user) => ({
             id: user.userId,
@@ -258,8 +279,9 @@ export function AdminSettingsPanel({
             dataUnlocked: user.data_unlocked,
             totpEnabled: user.totp_enabled,
           })),
-        ),
-      )
+        );
+        setUserTotal(total ?? u.length);
+      })
       .catch(() => {});
   }
 
@@ -1006,6 +1028,12 @@ export function AdminSettingsPanel({
         setUnlinkAccountTarget={setUnlinkAccountTarget}
         setUnlinkAccountOpen={setUnlinkAccountOpen}
         onManageUser={setManageUser}
+        search={userSearch}
+        onSearchChange={setUserSearch}
+        page={userPage}
+        pageSize={USERS_PAGE_SIZE}
+        total={userTotal}
+        onPageChange={setUserPage}
       />
 
       <AdminSessionsSection

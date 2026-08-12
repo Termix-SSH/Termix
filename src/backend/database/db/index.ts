@@ -13,6 +13,7 @@ import {
 } from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
+import { createPerformanceIndexes } from "./performance-indexes.js";
 import {
   assertDataDirIsNotMisconfigured,
   DataDirMisconfiguredError,
@@ -2554,6 +2555,9 @@ const migrateSchema = () => {
   // Audit trails and session recordings used to be deleted along with the user
   // they referenced, which defeats the point of keeping them.
   migrateAuditRetention(sqlite);
+
+  // Runs last so every table and column added above already exists.
+  createPerformanceIndexes(sqlite);
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",

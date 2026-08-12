@@ -258,7 +258,7 @@ export class ConcurrentLimiter {
   private active = 0;
   private readonly waiters: Array<() => void> = [];
 
-  constructor(private readonly maxConcurrent: number) {
+  constructor(private maxConcurrent: number) {
     if (maxConcurrent < 1) {
       throw new Error("maxConcurrent must be >= 1");
     }
@@ -272,11 +272,55 @@ export class ConcurrentLimiter {
     return this.waiters.length;
   }
 
+  get limit(): number {
+    return this.maxConcurrent;
+  }
+
+  /**
+   * Changes the ceiling at runtime.
+   *
+   * Raising it wakes the waiters the new headroom allows, so a queue that built
+   * up under the old limit drains at once instead of one job at a time as
+   * running work finishes. Lowering it never interrupts work already running;
+   * the new limit simply applies from the next release onward.
+   */
+  setLimit(maxConcurrent: number): void {
+    if (maxConcurrent < 1) {
+      throw new Error("maxConcurrent must be >= 1");
+    }
+    this.maxConcurrent = maxConcurrent;
+    this.releaseWaiters();
+  }
+
+  /**
+   * Wakes as many queued callers as there is now room for.
+   *
+   * `woken` counts callers that have been resumed but have not yet reached the
+   * `active += 1` on the far side of their await. Without it the occupancy
+   * looks lower than it really is for a microtask, and the loop would release
+   * past the ceiling.
+   */
+  private releaseWaiters(): void {
+    while (
+      this.active + this.woken < this.maxConcurrent &&
+      this.waiters.length > 0
+    ) {
+      this.woken += 1;
+      this.waiters.shift()!();
+    }
+  }
+
+  private woken = 0;
+
   async run<T>(fn: () => Promise<T>): Promise<T> {
-    if (this.active >= this.maxConcurrent) {
+    // Queue behind anything already woken, so a caller arriving mid-handoff
+    // cannot jump the queue and push occupancy past the ceiling.
+    if (this.active + this.woken >= this.maxConcurrent) {
       await new Promise<void>((resolve) => {
         this.waiters.push(resolve);
       });
+      // Resumed by a slot handoff; that reservation is now consumed.
+      this.woken = Math.max(0, this.woken - 1);
     }
 
     this.active += 1;
@@ -284,10 +328,40 @@ export class ConcurrentLimiter {
       return await fn();
     } finally {
       this.active -= 1;
-      const next = this.waiters.shift();
-      if (next) next();
+      this.releaseWaiters();
     }
   }
+}
+
+/**
+ * How many metrics polls may run at once for a given number of polled hosts.
+ *
+ * A metrics poll is an SSH exec, so this cannot simply be unbounded — but the
+ * old fixed ceiling of 5 meant a sweep of 500 hosts took ~40s against a 30s
+ * interval, so polling fell permanently behind and a host could wait over a
+ * minute for a "30 second" metric. Scaling with the fleet keeps a sweep inside
+ * its interval; the cap keeps file descriptors and CPU bounded.
+ */
+export const METRICS_CONCURRENCY_ENV = "METRICS_POLL_CONCURRENCY";
+const MIN_METRICS_CONCURRENCY = 5;
+const MAX_METRICS_CONCURRENCY = 50;
+/** Aim to spend about a twentieth of the interval per sweep wave. */
+const HOSTS_PER_WORKER = 20;
+
+export function metricsConcurrencyFor(
+  hostCount: number,
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const override = Number(env[METRICS_CONCURRENCY_ENV]);
+  if (Number.isFinite(override) && override >= 1) {
+    return Math.min(Math.floor(override), MAX_METRICS_CONCURRENCY);
+  }
+
+  const scaled = Math.ceil(Math.max(0, hostCount) / HOSTS_PER_WORKER);
+  return Math.min(
+    Math.max(scaled, MIN_METRICS_CONCURRENCY),
+    MAX_METRICS_CONCURRENCY,
+  );
 }
 
 /** Short-lived host snapshots for polling — avoids decrypting host rows every tick. */
