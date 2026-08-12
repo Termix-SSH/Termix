@@ -1,9 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  canStartInitialMetrics,
   ConcurrentLimiter,
   HostPollCache,
   metricsConcurrencyFor,
 } from "../../../hosts/metrics/state.js";
+
+describe("initial metrics admission", () => {
+  it("requires both an active viewer and a confirmed online status", () => {
+    expect(canStartInitialMetrics("online", true)).toBe(true);
+    expect(canStartInitialMetrics("offline", true)).toBe(false);
+    expect(canStartInitialMetrics(undefined, true)).toBe(false);
+    expect(canStartInitialMetrics("online", false)).toBe(false);
+    expect(canStartInitialMetrics(undefined, true, false)).toBe(true);
+  });
+});
 
 describe("ConcurrentLimiter", () => {
   it("never exceeds max concurrent runners", async () => {
