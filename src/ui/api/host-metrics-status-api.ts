@@ -4,9 +4,12 @@ import {
   statsApi,
   getRemoteStatsApi,
   isElectron,
+  sshHostApi,
 } from "@/main-axios";
 import type { ServerMetrics, ServerStatus } from "@/main-axios";
 import { getCachedServerStatuses } from "@/lib/hosts-request-cache";
+import { resolveConnectionOrigin } from "@/lib/connection-origin";
+import type { SSHHost } from "@/types/index";
 
 // Metrics collection/viewer registration below (startMetricsPolling,
 // registerMetricsViewer, etc.) is NOT origin-routed: the backend that
@@ -100,6 +103,26 @@ export async function getAllServerStatuses(): Promise<
   return getCachedServerStatuses(async () => {
     let lastError: unknown = null;
     let localStatuses: Record<number, ServerStatus> = {};
+    let localHostIds: number[] | null = null;
+
+    if (isElectron()) {
+      try {
+        const response = await sshHostApi.get<SSHHost[]>("/db/host");
+        const defaultOrigin = await resolveConnectionOrigin({
+          connectionType: "ssh",
+          connectionOrigin: null,
+        });
+        localHostIds = (response.data || [])
+          .filter(
+            (host) => (host.connectionOrigin ?? defaultOrigin) === "local",
+          )
+          .map((host) => host.id);
+      } catch {
+        // A host-list failure must not start local probes for hosts whose
+        // configured origin may be remote.
+        localHostIds = [];
+      }
+    }
 
     for (let i = 0; i < STATUS_RETRY_SCHEDULE.length; i++) {
       const { timeoutMs, pauseAfterMs } = STATUS_RETRY_SCHEDULE[i];
@@ -108,6 +131,9 @@ export async function getAllServerStatuses(): Promise<
       try {
         const response = await statsApi.get("/status", {
           timeout: timeoutMs,
+          ...(localHostIds === null
+            ? {}
+            : { params: { hostIds: localHostIds.join(",") } }),
           // Silence per-attempt interceptor logging & health-monitor side
           // effects on all attempts except the final one, so background
           // blips don't look like real outages.
