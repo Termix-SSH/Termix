@@ -38,13 +38,36 @@ export function registerUserAdminRoutes(
    * @openapi
    * /users/list:
    *   get:
-   *     summary: List all users
-   *     description: Retrieves a list of all users in the system.
+   *     summary: List users
+   *     description: >
+   *       Retrieves users in the system. Without `limit` the full list is
+   *       returned, which is what the sharing pickers rely on. Pass `limit`
+   *       (and optionally `offset`/`search`) to page through large directories.
    *     tags:
    *       - Users
+   *     parameters:
+   *       - in: query
+   *         name: search
+   *         required: false
+   *         schema:
+   *           type: string
+   *         description: Case-insensitive username substring filter.
+   *       - in: query
+   *         name: limit
+   *         required: false
+   *         schema:
+   *           type: integer
+   *           maximum: 500
+   *         description: Page size. Omit to return every user.
+   *       - in: query
+   *         name: offset
+   *         required: false
+   *         schema:
+   *           type: integer
+   *         description: Number of users to skip. Requires `limit`.
    *     responses:
    *       200:
-   *         description: A list of users.
+   *         description: A list of users, with the total matching count.
    *       403:
    *         description: Not authorized.
    *       500:
@@ -56,10 +79,36 @@ export function registerUserAdminRoutes(
       const requester = await userRepository.findById(
         (req as AuthenticatedRequest).userId,
       );
-      const allUsers = await userRepository.listAll();
+
+      const query = req.query ?? {};
+      const search =
+        typeof query.search === "string" ? query.search : undefined;
+      const rawLimit = Number(query.limit);
+      // Paging is opt-in: the share pickers fetch the whole list and filter it
+      // client-side, so a request without ?limit keeps the original behaviour.
+      const paginated = Number.isFinite(rawLimit) && rawLimit > 0;
+      const limit = paginated ? Math.min(Math.floor(rawLimit), 500) : 0;
+      const rawOffset = Number(query.offset);
+      const offset =
+        Number.isFinite(rawOffset) && rawOffset > 0 ? Math.floor(rawOffset) : 0;
+
+      let pageUsers: UserRecord[];
+      let total: number;
+      if (paginated) {
+        const page = await userRepository.listPage({ search, limit, offset });
+        pageUsers = page.users;
+        total = page.total;
+      } else {
+        const all = await userRepository.listAll();
+        const term = search?.trim().toLowerCase();
+        pageUsers = term
+          ? all.filter((u) => u.username?.toLowerCase().includes(term))
+          : all;
+        total = pageUsers.length;
+      }
 
       res.json({
-        users: allUsers.map((u) => ({
+        users: pageUsers.map((u) => ({
           userId: u.id,
           username: u.username,
           is_admin: u.isAdmin,
@@ -74,6 +123,8 @@ export function registerUserAdminRoutes(
               }
             : {}),
         })),
+        total,
+        ...(paginated ? { limit, offset } : {}),
       });
     } catch (err) {
       authLogger.error("Failed to list users", err);

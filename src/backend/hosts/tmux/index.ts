@@ -2,6 +2,7 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
@@ -326,6 +327,7 @@ async function collectPaneMetrics(
 const app = express();
 const authManager = AuthManager.getInstance();
 
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
 app.use(express.json({ limit: "1mb" }));

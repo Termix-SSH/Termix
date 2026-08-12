@@ -1,16 +1,6 @@
-import React, { useState } from "react";
-import {
-  Clock,
-  Hammer,
-  KeyRound,
-  LayoutPanelLeft,
-  MoreHorizontal,
-  Play,
-  Server,
-  Settings,
-  User,
-  Zap,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { LogOut, MoreHorizontal, Settings, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,42 +9,19 @@ import {
   DropdownMenuSeparator,
 } from "@/components/dropdown-menu";
 import type { RailView } from "@/sidebar/AppRail";
+import { RAIL_ITEMS } from "@/sidebar/rail-items";
 import type { SplitMode } from "@/types/ui-types";
 
-const PRIMARY_ITEMS: {
-  view: RailView;
-  icon: React.ReactNode;
-  title: string;
-}[] = [
-  { view: "hosts", icon: <Server className="size-5" />, title: "Hosts" },
-  { view: "quick-connect", icon: <Zap className="size-5" />, title: "Connect" },
-  {
-    view: "ssh-tools",
-    icon: <Hammer className="size-5" />,
-    title: "SSH Tools",
-  },
-  { view: "snippets", icon: <Play className="size-5" />, title: "Snippets" },
-];
-
-const MORE_ITEMS: { view: RailView; icon: React.ReactNode; title: string }[] = [
-  {
-    view: "credentials",
-    icon: <KeyRound className="size-4" />,
-    title: "Credentials",
-  },
-  { view: "history", icon: <Clock className="size-4" />, title: "History" },
-  {
-    view: "split-screen",
-    icon: <LayoutPanelLeft className="size-4" />,
-    title: "Split Screen",
-  },
-  { view: "user-profile", icon: <User className="size-4" />, title: "Profile" },
-  {
-    view: "admin-settings",
-    icon: <Settings className="size-4" />,
-    title: "Admin",
-  },
-];
+function readHiddenRailTabs(): Set<string> {
+  try {
+    const raw = localStorage.getItem("hiddenRailTabs");
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? new Set(parsed.map(String)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
 
 export function MobileBottomBar({
   railView,
@@ -67,23 +34,60 @@ export function MobileBottomBar({
   splitMode: SplitMode;
   onRailClick: (view: RailView) => void;
 }) {
+  const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreActive = MORE_ITEMS.some((i) => i.view === railView) && sidebarOpen;
+  const [hidden, setHidden] = useState<Set<string>>(readHiddenRailTabs);
+
+  // The rail's visibility toggles apply on mobile too; this used to ignore
+  // them, so hiding a tab did nothing on a phone.
+  useEffect(() => {
+    const handler = () => setHidden(readHiddenRailTabs());
+    window.addEventListener("hiddenRailTabsChanged", handler);
+    return () => window.removeEventListener("hiddenRailTabsChanged", handler);
+  }, []);
+
+  const { primaryItems, moreItems } = useMemo(() => {
+    // Tab-opening entries (network graph) have no sidebar panel to show here.
+    const visible = RAIL_ITEMS.filter(
+      (item) => item.kind !== "tab" && !hidden.has(item.id),
+    );
+    const preferred = visible.filter((item) => item.mobilePrimary);
+    // Keep four primary slots filled even when the user hides the defaults,
+    // so the bar never collapses to just "More".
+    const primary = [
+      ...preferred,
+      ...visible.filter((item) => !item.mobilePrimary),
+    ].slice(0, 4);
+    const primaryIds = new Set(primary.map((item) => item.id));
+    return {
+      primaryItems: primary,
+      moreItems: visible.filter((item) => !primaryIds.has(item.id)),
+    };
+  }, [hidden]);
+
+  const moreActive =
+    sidebarOpen &&
+    (moreItems.some((item) => item.id === railView) ||
+      railView === "user-profile" ||
+      railView === "admin-settings");
 
   return (
     <div className="md:hidden flex items-stretch shrink-0 bg-sidebar border-t border-border safe-bottom">
-      {PRIMARY_ITEMS.map((item) => {
-        const active = sidebarOpen && railView === item.view;
-        const hasDot = item.view === "split-screen" && splitMode !== "none";
+      {primaryItems.map((item) => {
+        const active = sidebarOpen && railView === item.id;
+        const hasDot = item.id === "split-screen" && splitMode !== "none";
+        const Icon = item.icon;
         return (
           <button
-            key={item.view}
-            onClick={() => onRailClick(item.view)}
+            key={item.id}
+            onClick={() => onRailClick(item.id as RailView)}
             className={`relative flex flex-col items-center justify-center flex-1 gap-0.5 py-2 min-h-[56px] transition-colors text-[10px] font-medium
               ${active ? "text-accent-brand" : "text-muted-foreground"}`}
           >
-            {item.icon}
-            <span>{item.title}</span>
+            <Icon className="size-5" />
+            <span className="max-w-full truncate px-0.5">
+              {t(item.labelKey)}
+            </span>
             {hasDot && (
               <span className="absolute top-1.5 right-[calc(50%-10px)] size-1.5 rounded-full bg-accent-brand" />
             )}
@@ -98,54 +102,69 @@ export function MobileBottomBar({
               ${moreActive ? "text-accent-brand" : "text-muted-foreground"}`}
           >
             <MoreHorizontal className="size-5" />
-            <span>More</span>
+            <span>{t("common.more")}</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           side="top"
           align="end"
-          className="mb-1 min-w-[180px]"
+          className="mb-1 min-w-[180px] max-h-[60vh] overflow-y-auto"
         >
-          {MORE_ITEMS.map((item, i) => {
-            const active = sidebarOpen && railView === item.view;
-            if (item.view === "user-profile" && i > 0) {
-              return (
-                <React.Fragment key={item.view}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => {
-                      onRailClick(item.view);
-                      setMoreOpen(false);
-                    }}
-                    className={active ? "text-accent-brand" : ""}
-                  >
-                    {item.icon}
-                    {item.title}
-                  </DropdownMenuItem>
-                </React.Fragment>
-              );
-            }
+          {moreItems.map((item) => {
+            const active = sidebarOpen && railView === item.id;
+            const Icon = item.icon;
             return (
               <DropdownMenuItem
-                key={item.view}
+                key={item.id}
                 onClick={() => {
-                  onRailClick(item.view);
+                  onRailClick(item.id as RailView);
                   setMoreOpen(false);
                 }}
                 className={active ? "text-accent-brand" : ""}
               >
-                {item.icon}
-                {item.title}
+                <Icon className="size-4" />
+                {t(item.labelKey)}
               </DropdownMenuItem>
             );
           })}
+
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => {
+              onRailClick("user-profile");
+              setMoreOpen(false);
+            }}
+            className={
+              sidebarOpen && railView === "user-profile"
+                ? "text-accent-brand"
+                : ""
+            }
+          >
+            <User className="size-4" />
+            {t("nav.userProfile")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => {
+              onRailClick("admin-settings");
+              setMoreOpen(false);
+            }}
+            className={
+              sidebarOpen && railView === "admin-settings"
+                ? "text-accent-brand"
+                : ""
+            }
+          >
+            <Settings className="size-4" />
+            {t("nav.admin")}
+          </DropdownMenuItem>
+
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
             onClick={() => window.dispatchEvent(new Event("termix:logout"))}
           >
-            <KeyRound className="size-4" />
-            Logout
+            <LogOut className="size-4" />
+            {t("common.logout")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

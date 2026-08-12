@@ -26,6 +26,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { AppRail } from "@/sidebar/AppRail";
 import type { RailView } from "@/sidebar/AppRail";
+import { railItemLabel } from "@/sidebar/rail-items";
+import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
+import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { SplitView, defaultSizes } from "@/shell/SplitView";
 import type { RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
@@ -242,9 +245,45 @@ export function AppShell({
   const showMultiUserUI = isAdmin && (!isElectron() || isRemoteSyncConnected);
   const [userId, setUserId] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingHasHosts, setOnboardingHasHosts] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
+
+  // First-run onboarding. The backend hands accounts that predate this feature
+  // an already-completed state, so only genuinely new users are interrupted.
+  const uiPrefs = useUiPreferencesContext();
+  const onboardingPending =
+    !!uiPrefs?.loaded && uiPrefs.preferences.onboarding.completedVersion === 0;
+
+  useEffect(() => {
+    if (!username || !onboardingPending) return;
+    let cancelled = false;
+    getSSHHosts()
+      .then((hosts) => {
+        if (!cancelled) setOnboardingHasHosts((hosts?.length ?? 0) > 0);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setShowOnboarding(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [username, onboardingPending]);
+
+  // "Run setup again" from settings.
+  useEffect(() => {
+    const handler = () => {
+      getSSHHosts()
+        .then((hosts) => setOnboardingHasHosts((hosts?.length ?? 0) > 0))
+        .catch(() => {})
+        .finally(() => setShowOnboarding(true));
+    };
+    window.addEventListener("termix:open-onboarding", handler);
+    return () => window.removeEventListener("termix:open-onboarding", handler);
+  }, []);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
@@ -426,24 +465,9 @@ export function AppShell({
     [],
   );
 
-  const sidebarTitle: Record<RailView, string> = {
-    hosts: "Hosts",
-    credentials: "Credentials",
-    "termix-id": t("nav.termixId"),
-    "quick-connect": "Quick Connect",
-    serial: t("nav.serial"),
-    "ssh-tools": "SSH Tools",
-    snippets: "Snippets",
-    fleets: t("nav.fleets"),
-    workspaces: t("nav.workspaces"),
-    history: "History",
-    "session-logs": t("nav.sessionLogs"),
-    "split-screen": "Split Screen",
-    connections: t("nav.connections"),
-    "user-profile": "User Profile",
-    "admin-settings": "Admin Settings",
-    alerts: t("nav.alerts"),
-  };
+  // Titles come from the shared rail definitions so they stay translated and
+  // in step with the rail itself.
+  const sidebarTitle = (view: RailView): string => railItemLabel(view, t);
 
   // Double-shift opens command palette
   useEffect(() => {
@@ -2096,7 +2120,7 @@ export function AppShell({
   const sidebarHeader = (
     <div className="flex flex-row items-center border-b border-border h-12.5 shrink-0">
       <span className="flex-1 text-base font-bold tracking-tight text-foreground px-3">
-        {sidebarTitle[railView]}
+        {sidebarTitle(railView)}
       </span>
       {!isMobile && (
         <>
@@ -2420,8 +2444,19 @@ export function AppShell({
       <Suspense fallback={null}>
         <AlertManager userId={userId} loggedIn={!!username} />
       </Suspense>
+      <OnboardingDialog
+        open={showOnboarding}
+        context={{ hasHosts: onboardingHasHosts }}
+        onClose={() => setShowOnboarding(false)}
+        onAddHost={() => {
+          setShowOnboarding(false);
+          setRailView("hosts");
+          setSidebarOpen(true);
+          window.dispatchEvent(new CustomEvent("host-manager:add-host"));
+        }}
+      />
       <DonationReminderModal
-        open={showDonationModal}
+        open={showDonationModal && !showOnboarding}
         onDismiss={handleDismissDonationModal}
       />
     </ServerStatusProvider>

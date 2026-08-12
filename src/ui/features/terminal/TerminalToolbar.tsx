@@ -186,6 +186,15 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
   }, [density]);
 
+  // Picking an interface preset seeds this key, so pick the new value up
+  // without needing the tab to remount.
+  useEffect(() => {
+    const handler = () => setDensity(readStoredDensity());
+    window.addEventListener("terminalToolbarDensityChanged", handler);
+    return () =>
+      window.removeEventListener("terminalToolbarDensityChanged", handler);
+  }, []);
+
   const hostId = host?.id ? Number(host.id) : null;
 
   useEffect(() => {

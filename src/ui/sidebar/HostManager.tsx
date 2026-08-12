@@ -8,7 +8,8 @@ import React, {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/button";
-import { ArrowLeft, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, Search, X } from "lucide-react";
+import { useUiPreference } from "@/contexts/UiPreferencesContext";
 import { toast } from "sonner";
 import {
   getSSHHosts,
@@ -94,6 +95,10 @@ export function HostManager({
     enableVnc: false,
     enableTelnet: false,
   });
+  const simpleEditor = useUiPreference("hostEditor", "mode") === "simple";
+  // Expanding advanced is a per-session choice; fixing one host's SSH options
+  // shouldn't quietly move the whole app off the Simple preset.
+  const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
   const hostsRef = useRef<Host[]>([]);
   useEffect(() => {
     hostsRef.current = hosts;
@@ -349,20 +354,37 @@ export function HostManager({
   // Editor view: full-width with top tab bar instead of side nav
   const renderEditorView = () => {
     const isHost = !!editingHost;
+    // Simple mode keeps General and SSH -- between them they hold everything
+    // needed to reach a host (name, address, username, auth) -- and hides the
+    // other protocol tabs plus the seven SSH sub-tabs. Nothing is lost:
+    // createHostEditorForm still materializes every field with its default and
+    // buildHostEditorPayload still serializes all of them, so hiding a tab
+    // hides its inputs, not its values.
+    const collapseAdvanced = isHost && simpleEditor && !showAdvancedEditor;
     const tabs = isHost
       ? makeHostTabs(t).filter((tab) => {
           if (tab.id === "general") return true;
           if (tab.id === "ssh") return editingProtocols.enableSsh;
+          if (collapseAdvanced) return false;
           if (tab.id === "rdp") return editingProtocols.enableRdp;
           if (tab.id === "vnc") return editingProtocols.enableVnc;
           if (tab.id === "telnet") return editingProtocols.enableTelnet;
           return false;
         })
       : makeCredentialTabs(t);
-    const activeTab = isHost ? activeHostTab : activeCredentialTab;
+    // Collapsing while on a now-hidden tab would leave nothing selected. The
+    // SSH group collapses to its own "ssh" tab, everything else to General.
+    const hostTabVisible = tabs.some((tab) => tab.id === activeHostTab);
+    const effectiveHostTab = hostTabVisible
+      ? activeHostTab
+      : collapseAdvanced && SSH_GROUP_TABS.has(activeHostTab as never)
+        ? "ssh"
+        : "general";
+    const activeTab = isHost ? effectiveHostTab : activeCredentialTab;
     const setActiveTab = isHost ? setActiveHostTab : setActiveCredentialTab;
     const showSshSubTabs =
       isHost &&
+      !collapseAdvanced &&
       editingProtocols.enableSsh &&
       SSH_GROUP_TABS.has(activeHostTab as never);
     const sshSubTabs = makeHostSshSubTabs(t);
@@ -427,6 +449,22 @@ export function HostManager({
               variant="secondary"
             />
           )}
+          {isHost && simpleEditor && (
+            <button
+              onClick={() => {
+                if (showAdvancedEditor) setActiveHostTab("general");
+                setShowAdvancedEditor(!showAdvancedEditor);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors border-t border-border/50"
+            >
+              <ChevronDown
+                className={`size-3 transition-transform ${showAdvancedEditor ? "rotate-180" : ""}`}
+              />
+              {showAdvancedEditor
+                ? t("hosts.hideAdvancedSettings")
+                : t("hosts.showAdvancedSettings")}
+            </button>
+          )}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3">
           {isHost ? (
@@ -435,7 +473,8 @@ export function HostManager({
                 editingHost === "new" ? "new-host" : (editingHost as Host).id
               }
               host={editingHost === "new" ? null : (editingHost as Host)}
-              activeTab={activeHostTab}
+              activeTab={effectiveHostTab}
+              simpleMode={collapseAdvanced}
               onBack={() => {
                 setEditingHost(null);
                 setActiveHostTab("general");

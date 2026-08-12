@@ -376,4 +376,72 @@ describe("HostResolutionRepository", () => {
       repository.findFolderCredentialId("user-1", ""),
     ).resolves.toBeNull();
   });
+
+  describe("listCredentialsByIdsForUser", () => {
+    it("returns the owner's credentials keyed by id", async () => {
+      const repository = await createRepository();
+      vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(
+        Buffer.from("key") as never,
+      );
+
+      const byId = await repository.listCredentialsByIdsForUser([7], "user-1");
+
+      expect(byId.get(7)).toMatchObject({ id: 7, username: "root" });
+      expect(DataCrypto.decryptRecord).toHaveBeenCalledWith(
+        "ssh_credentials",
+        expect.objectContaining({ id: 7 }),
+        "user-1",
+        expect.anything(),
+      );
+    });
+
+    it("excludes credentials belonging to another user", async () => {
+      const repository = await createRepository();
+      vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(
+        Buffer.from("key") as never,
+      );
+
+      const byId = await repository.listCredentialsByIdsForUser(
+        [7, 8],
+        "user-1",
+      );
+
+      expect(byId.has(7)).toBe(true);
+      // 8 belongs to user-2 and must not leak into user-1's result.
+      expect(byId.has(8)).toBe(false);
+    });
+
+    it("issues no query and decrypts nothing for an empty id list", async () => {
+      const repository = await createRepository();
+
+      const byId = await repository.listCredentialsByIdsForUser([], "user-1");
+
+      expect(byId.size).toBe(0);
+      expect(DataCrypto.decryptRecord).not.toHaveBeenCalled();
+    });
+
+    it("de-duplicates repeated ids so shared credentials decrypt once", async () => {
+      const repository = await createRepository();
+      vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(
+        Buffer.from("key") as never,
+      );
+
+      const byId = await repository.listCredentialsByIdsForUser(
+        [7, 7, 7],
+        "user-1",
+      );
+
+      expect(byId.size).toBe(1);
+      expect(DataCrypto.decryptRecord).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns nothing when the user's data key is unavailable", async () => {
+      const repository = await createRepository();
+      vi.mocked(DataCrypto.getUserDataKey).mockReturnValue(null as never);
+
+      const byId = await repository.listCredentialsByIdsForUser([7], "user-1");
+
+      expect(byId.size).toBe(0);
+    });
+  });
 });

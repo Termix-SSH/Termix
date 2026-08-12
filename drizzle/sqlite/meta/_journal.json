@@ -43,6 +43,20 @@
       "when": 1786498679199,
       "tag": "0005_thin_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1786515116491,
+      "tag": "0006_nebulous_demogoblin",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786519423219,
+      "tag": "0007_complex_nebula",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,22 @@ import {
   setGlobalLogLevel,
 } from "./utils/logger.js";
 
+/**
+ * host:port from DATABASE_URL for the startup log. Parsed rather than printed
+ * so the password the URL also carries never reaches the logs.
+ */
+function describeDatabaseHost(): string {
+  const raw = process.env.DATABASE_URL?.trim();
+  if (!raw) return "unknown";
+
+  try {
+    const { host } = new URL(raw);
+    return host || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
   const { createCurrentUserRepository, createCurrentRoleRepository } =
     await import("./database/repositories/factory.js");
@@ -142,7 +158,24 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
     await systemCrypto.initializeEncryptionKey();
     await systemCrypto.initializeInternalAuthToken();
 
-    ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
+    const { needsExplicitPersist, resolveDatabaseDialect } =
+      await import("./database/db/dialect.js");
+    const databaseDialect = resolveDatabaseDialect();
+
+    // The pre-upgrade backup copies the SQLite file, so there is nothing for it
+    // to do on a client-server engine. Say so rather than no-op silently:
+    // backups are the operator's own responsibility there.
+    if (needsExplicitPersist(databaseDialect)) {
+      ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
+    } else {
+      systemLogger.info(
+        `Skipping pre-upgrade backup on ${databaseDialect} - back up the database yourself`,
+        {
+          operation: "backend_init_db_backup_skipped",
+          dialect: databaseDialect,
+        },
+      );
+    }
 
     await AutoSSLSetup.initialize();
     systemLogger.success("SSL setup completed", {
@@ -152,8 +185,15 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
 
     const dbModule = await import("./database/db/index.js");
     await dbModule.initializeDatabase();
-    systemLogger.success("Database initialized", {
+    // Naming the engine makes a misconfiguration obvious: without it, a bad
+    // DATABASE_DIALECT silently falls back to SQLite and looks like data loss.
+    systemLogger.success(`Database initialized (${databaseDialect})`, {
       operation: "backend_init_db",
+      dialect: databaseDialect,
+      // Host only, never the credentials the URL also carries.
+      ...(needsExplicitPersist(databaseDialect)
+        ? {}
+        : { host: describeDatabaseHost() }),
     });
 
     const { UserKeyManager } = await import("./utils/user-keys.js");
@@ -266,15 +306,20 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       systemLogger.info(`Received ${signal}, initiating graceful shutdown...`, {
         operation: "shutdown",
       });
-      try {
-        await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
-        systemLogger.info("Database saved to disk before exit", {
-          operation: "shutdown_db_saved",
-        });
-      } catch (error) {
-        systemLogger.error("Failed to save database during shutdown", error, {
-          operation: "shutdown_db_save_failed",
-        });
+      // Only SQLite has anything to flush. On a client-server engine the writes
+      // committed as they happened, so there is no file to save and claiming
+      // otherwise in the log would be untrue.
+      if (needsExplicitPersist(databaseDialect)) {
+        try {
+          await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
+          systemLogger.info("Database saved to disk before exit", {
+            operation: "shutdown_db_saved",
+          });
+        } catch (error) {
+          systemLogger.error("Failed to save database during shutdown", error, {
+            operation: "shutdown_db_save_failed",
+          });
+        }
       }
       process.exit(0);
     };

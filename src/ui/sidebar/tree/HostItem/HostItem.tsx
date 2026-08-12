@@ -72,8 +72,16 @@ export function statusCheckEnabled(host: Host): boolean {
   return host.statsConfig?.statusCheckEnabled !== false;
 }
 
-export function buildStatusTooltip(host: Host, online: boolean): string {
-  const statusLabel = online ? "Online" : "Offline";
+export function buildStatusTooltip(
+  host: Host,
+  status: "online" | "reachable" | "offline",
+): string {
+  const statusLabel =
+    status === "online"
+      ? "Available"
+      : status === "reachable"
+        ? "Reachable, not authenticated"
+        : "Offline";
   if (!statusCheckEnabled(host)) return "Monitoring disabled";
   const protocols: string[] = [];
   if (host.enableSsh) protocols.push("SSH");
@@ -206,6 +214,9 @@ export function HostItem({
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
+  showResourceBars = true,
+  showStatusStripes = true,
+  rowActions = "full",
   reorderMode = false,
   onReorderDrop,
   isReorderHovered = false,
@@ -239,6 +250,12 @@ export function HostItem({
   density?: HostDensity;
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
+  /** Preset-driven: hides the CPU/RAM bars without changing density. */
+  showResourceBars?: boolean;
+  /** Preset-driven: hides the per-row status color stripe. */
+  showStatusStripes?: boolean;
+  /** "essential" trims the row's management actions to the common few. */
+  rowActions?: "essential" | "full";
   /** When true (manual sort mode), show above/below drop zones for reordering. */
   reorderMode?: boolean;
   onReorderDrop?: (position: "before" | "after") => void;
@@ -273,7 +290,17 @@ export function HostItem({
   const statusLoading = !initialLoadComplete && statusCheckOn;
   // Per-host subscription — status polls only re-render rows that flipped.
   const liveStatus = useHostStatus(Number(host.id), statusCheckOn);
-  const isOnline = liveStatus != null ? liveStatus === "online" : host.online;
+  const availability =
+    liveStatus === "online" ||
+    liveStatus === "reachable" ||
+    liveStatus === "offline"
+      ? liveStatus
+      : host.status === "reachable"
+        ? "reachable"
+        : host.online
+          ? "online"
+          : "offline";
+  const isOnline = availability === "online";
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const alwaysShowTray = trayTrigger === "always";
@@ -285,7 +312,14 @@ export function HostItem({
   const canOverrideAuth = canOverrideHostAuth(host, "ssh");
   const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
   const [parentDragOver, setParentDragOver] = useState(false);
-  const tokens = HOST_ITEM_DENSITY_TOKENS[density];
+  // Density decides the base shape; the preset can only take rows away, never
+  // add them, so a row's real height stays <= the virtualizer's fixed estimate.
+  const densityTokens = HOST_ITEM_DENSITY_TOKENS[density];
+  const tokens = {
+    ...densityTokens,
+    showTagsRow: densityTokens.showTagsRow && showTags,
+    showResourceRow: densityTokens.showResourceRow && showResourceBars,
+  };
   const isCompact = density === "compact";
   const reorderEdge = isReorderHovered ? reorderHoverEdge : null;
   const acceptsChildDrop =
@@ -397,9 +431,14 @@ export function HostItem({
     </>
   );
 
+  // "essential" only trims buttons that the overflow menu also offers, so no
+  // action becomes unreachable. Share and Proxmox discover have no menu entry,
+  // so they always stay on the row.
+  const essentialActions = rowActions === "essential";
+
   const managementButtons = (
     <>
-      {showPasswordCopy && (
+      {!essentialActions && showPasswordCopy && (
         <button
           title={t("nav.copyPassword")}
           onClick={(e) => handleCopyPassword(e, "password")}
@@ -408,7 +447,7 @@ export function HostItem({
           <Key className="size-3.5" />
         </button>
       )}
-      {showSudoPasswordCopy && (
+      {!essentialActions && showSudoPasswordCopy && (
         <button
           title={t("nav.copySudoPassword")}
           onClick={(e) => handleCopyPassword(e, "sudoPassword")}
@@ -785,9 +824,11 @@ export function HostItem({
         />
       )}
       {/* Status stripe */}
-      <div
-        className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(isOnline, statusScheme, "stripe", statusLoading)}`}
-      />
+      {showStatusStripes && (
+        <div
+          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(availability, statusScheme, "stripe", statusLoading)}`}
+        />
+      )}
 
       <div
         className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-1"}`}
@@ -830,7 +871,7 @@ export function HostItem({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {buildStatusTooltip(host, isOnline)}
+                {buildStatusTooltip(host, availability)}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

@@ -17,6 +17,7 @@ import {
   createCurrentHostRepository,
   createCurrentHostSidebarPreferenceRepository,
   createCurrentCredentialSidebarPreferenceRepository,
+  createCurrentUiPreferenceRepository,
   createCurrentNetworkTopologyRepository,
   createCurrentOpksshTokenRepository,
   createCurrentOpenTabRepository,
@@ -83,6 +84,7 @@ export async function deleteUserAndRelatedData(userId: string): Promise<void> {
     await createCurrentCredentialSidebarPreferenceRepository().deleteByUserId(
       userId,
     );
+    await createCurrentUiPreferenceRepository().deleteByUserId(userId);
     await createCurrentHostRepository().deleteByUserId(userId);
     await createCurrentCredentialRepository().deleteByUserId(userId);
 

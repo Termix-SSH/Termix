@@ -13,6 +13,7 @@ import {
 } from "../../utils/shared-host-auth-override-migration.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { migrateAuditRetention } from "../../utils/audit-retention-migration.js";
+import { createPerformanceIndexes } from "./performance-indexes.js";
 import {
   assertDataDirIsNotMisconfigured,
   DataDirMisconfiguredError,
@@ -649,6 +650,13 @@ async function initializeCompleteDatabase(): Promise<void> {
     );
 
     CREATE TABLE IF NOT EXISTS credential_sidebar_preferences (
+        user_id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS ui_preferences (
         user_id TEXT PRIMARY KEY,
         data TEXT NOT NULL,
         updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -2554,6 +2562,9 @@ const migrateSchema = () => {
   // Audit trails and session recordings used to be deleted along with the user
   // they referenced, which defeats the point of keeping them.
   migrateAuditRetention(sqlite);
+
+  // Runs last so every table and column added above already exists.
+  createPerformanceIndexes(sqlite);
 
   databaseLogger.success("Schema migration completed", {
     operation: "schema_migration",

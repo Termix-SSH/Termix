@@ -26,6 +26,7 @@ import { HostRepository } from "./host-repository.js";
 import { HostResolutionRepository } from "./host-resolution-repository.js";
 import { HostSidebarPreferenceRepository } from "./host-sidebar-preference-repository.js";
 import { CredentialSidebarPreferenceRepository } from "./credential-sidebar-preference-repository.js";
+import { UiPreferenceRepository } from "./ui-preference-repository.js";
 import { NetworkTopologyRepository } from "./network-topology-repository.js";
 import { OpenTabRepository } from "./open-tab-repository.js";
 import { OpksshTokenRepository } from "./opkssh-token-repository.js";
@@ -288,6 +289,13 @@ export function createCurrentCredentialSidebarPreferenceRepository(): Credential
     createCurrentRepositoryWriteHook(
       "credential_sidebar_preference_repository_write",
     ),
+  );
+}
+
+export function createCurrentUiPreferenceRepository(): UiPreferenceRepository {
+  return new UiPreferenceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("ui_preference_repository_write"),
   );
 }
 

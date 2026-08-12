@@ -26,6 +26,7 @@ export type Host = {
    */
   childHosts?: Host[];
   online: boolean;
+  status?: "online" | "reachable" | "offline" | "unknown";
   cpu: number | null;
   ram: number | null;
   lastAccess: string;

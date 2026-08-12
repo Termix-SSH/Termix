@@ -61,14 +61,15 @@ import {
 } from "@/lib/frontend-logger";
 import { dbHealthMonitor } from "@/lib/db-health-monitor";
 import { asHttpError } from "@/lib/http-error";
+import { getDeviceId } from "@/lib/device-id";
 
 export type ServerStatus = {
-  status: "online" | "offline";
+  status: "online" | "reachable" | "offline";
   lastChecked: string;
 };
 
 export type SSHHostWithStatus = SSHHost & {
-  status: "online" | "offline" | "unknown";
+  status: "online" | "reachable" | "offline" | "unknown";
 };
 
 interface CpuMetrics {
@@ -445,6 +446,15 @@ function createApiInstance(
 
     if (isDevMode) {
       logger.requestStart(method, fullUrl, context);
+    }
+
+    const deviceId = getDeviceId();
+    if (deviceId) {
+      if (config.headers.set) {
+        config.headers.set("X-Termix-Device-ID", deviceId);
+      } else {
+        config.headers["X-Termix-Device-ID"] = deviceId;
+      }
     }
 
     if (isElectron()) {
@@ -1608,6 +1618,8 @@ export {
   getCredentialSidebarPreferences,
   saveCredentialSidebarPreferences,
 } from "@/api/credential-sidebar-preferences-api";
+
+export { getUiPreferences, saveUiPreferences } from "@/api/ui-preferences-api";
 
 export {
   getGlobalMonitoringSettings,

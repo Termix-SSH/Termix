@@ -2,30 +2,17 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Bell,
-  Boxes,
   Check,
-  Clock,
-  Fingerprint,
-  Hammer,
-  KeyRound,
-  LayoutPanelLeft,
-  LayoutTemplate,
   LogOut,
-  Network,
-  Play,
-  Plug,
-  ScrollText,
-  Server,
   Settings,
   SlidersHorizontal,
-  Usb,
   User,
-  Zap,
 } from "lucide-react";
 import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { getAlertFirings } from "@/api/alerts-api";
 import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
+import { RAIL_ITEMS } from "./rail-items";
 
 export type RailView =
   | "hosts"
@@ -63,73 +50,26 @@ function buildRailButtons(
   t: (key: string) => string,
   hidden: Set<string>,
 ): RailItem[] {
-  const all: RailItem[] = [
-    { view: "hosts", icon: <Server size={16} />, title: t("nav.hosts") },
-    {
-      view: "credentials",
-      icon: <KeyRound size={16} />,
-      title: t("nav.credentials"),
-    },
-    { kind: "separator" },
-    {
-      view: "termix-id",
-      icon: <Fingerprint size={16} />,
-      title: t("nav.termixId"),
-    },
-    { kind: "separator" },
-    {
-      view: "connections",
-      icon: <Plug size={16} />,
-      title: t("nav.connections"),
-    },
-    { kind: "separator" },
-    {
-      view: "quick-connect",
-      icon: <Zap size={16} />,
-      title: t("nav.quickConnect"),
-    },
-    { kind: "separator" },
-    {
-      view: "serial",
-      icon: <Usb size={16} />,
-      title: t("nav.serial"),
-    },
-    { kind: "separator" },
-    { view: "ssh-tools", icon: <Hammer size={16} />, title: t("nav.sshTools") },
-    { kind: "separator" },
-    { view: "snippets", icon: <Play size={16} />, title: t("nav.snippets") },
-    { kind: "separator" },
-    { view: "fleets", icon: <Boxes size={16} />, title: t("nav.fleets") },
-    { kind: "separator" },
-    { view: "history", icon: <Clock size={16} />, title: t("nav.history") },
-    { kind: "separator" },
-    {
-      view: "session-logs",
-      icon: <ScrollText size={16} />,
-      title: t("nav.sessionLogs"),
-    },
-    { kind: "separator" },
-    {
-      view: "split-screen",
-      icon: <LayoutPanelLeft size={16} />,
-      title: t("nav.splitScreen"),
-      dot: splitMode !== "none",
-    },
-    { kind: "separator" },
-    {
-      view: "workspaces",
-      icon: <LayoutTemplate size={16} />,
-      title: t("nav.workspaces"),
-    },
-    { kind: "separator" },
-    {
-      kind: "tab",
-      tabType: "network_graph" as TabType,
-      icon: <Network size={16} />,
-      title: t("nav.networkGraph"),
-    },
-    { kind: "separator" },
-  ];
+  const all: RailItem[] = [];
+  for (const item of RAIL_ITEMS) {
+    const Icon = item.icon;
+    if (item.kind === "tab") {
+      all.push({
+        kind: "tab",
+        tabType: item.id as TabType,
+        icon: <Icon size={16} />,
+        title: t(item.labelKey),
+      });
+    } else {
+      all.push({
+        view: item.id as RailView,
+        icon: <Icon size={16} />,
+        title: t(item.labelKey),
+        dot: item.id === "split-screen" ? splitMode !== "none" : undefined,
+      });
+    }
+    if (item.separatorAfter) all.push({ kind: "separator" });
+  }
 
   // Filter out hidden items, then collapse consecutive/leading/trailing separators
   const filtered = all.filter((item) => {

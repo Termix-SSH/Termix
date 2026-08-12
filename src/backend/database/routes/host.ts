@@ -57,7 +57,10 @@ import {
   getAuditUsername,
   getRequestMeta,
 } from "../../utils/audit-logger.js";
-import type { HostResolutionHostRecord } from "../repositories/host-resolution-repository.js";
+import type {
+  HostResolutionCredentialRecord,
+  HostResolutionHostRecord,
+} from "../repositories/host-resolution-repository.js";
 import {
   requiresPersonalHostAuthentication,
   resolveRecipientSharedHostAuthentication,
@@ -1501,21 +1504,33 @@ router.get(
         }
       }
 
+      // One lookup for every owner rather than one per shared host.
       const ownerUsernames = new Map<string, string>();
-      const userRepository = createCurrentUserRepository();
-      for (const sharedHost of sharedHosts) {
-        const ownerId = sharedHost.userId as string;
-        if (!ownerUsernames.has(ownerId)) {
-          try {
-            const owner = await userRepository.findById(ownerId);
-            ownerUsernames.set(ownerId, owner?.username ?? "");
-          } catch {
-            ownerUsernames.set(ownerId, "");
+      const ownerIds = Array.from(
+        new Set(sharedHosts.map((host) => host.userId as string)),
+      );
+      if (ownerIds.length > 0) {
+        try {
+          const owners =
+            await createCurrentUserRepository().listByIds(ownerIds);
+          for (const owner of owners) {
+            ownerUsernames.set(owner.id, owner.username ?? "");
           }
+        } catch {
+          // Falls through to an undefined ownerUsername below.
         }
       }
 
       const data = [...decryptedOwnHosts, ...sharedHosts];
+
+      // Own hosts all resolve against the caller's own credentials, so they can
+      // be fetched and decrypted in one batch instead of once per host.
+      const ownCredentialIds = decryptedOwnHosts
+        .map((host) => host.credentialId)
+        .filter((id): id is number => typeof id === "number");
+      const credentialsById = await createCurrentHostResolutionRepository()
+        .listCredentialsByIdsForUser(ownCredentialIds, userId)
+        .catch(() => new Map<number, HostResolutionCredentialRecord>());
 
       const result = await Promise.all(
         data.map(async (row: Record<string, unknown>) => {
@@ -1530,7 +1545,8 @@ router.get(
           };
 
           const resolved =
-            (await resolveHostCredentials(baseHost, userId)) || baseHost;
+            (await resolveHostCredentials(baseHost, userId, credentialsById)) ||
+            baseHost;
           return resolved;
         }),
       );
@@ -2407,6 +2423,12 @@ registerHostCommandHistoryRoutes(router, authenticateJWT);
 async function resolveHostCredentials(
   host: Record<string, unknown>,
   requestingUserId?: string,
+  /**
+   * Credentials already fetched for this request, keyed by id. The host list
+   * preloads them in one query; single-host callers omit it and fall back to
+   * fetching the one credential they need.
+   */
+  preloadedCredentials?: Map<number, HostResolutionCredentialRecord>,
 ): Promise<Record<string, unknown>> {
   try {
     const ownerId = (host.ownerId || host.userId) as string | undefined;
@@ -2536,10 +2558,11 @@ async function resolveHostCredentials(
       const credentialOwnerId = (host.ownerId || host.userId) as string;
 
       const credential =
-        await createCurrentHostResolutionRepository().findCredentialByIdForUser(
+        preloadedCredentials?.get(credentialId) ??
+        (await createCurrentHostResolutionRepository().findCredentialByIdForUser(
           credentialId,
           credentialOwnerId,
-        );
+        ));
 
       if (credential) {
         const resolvedHost: Record<string, unknown> = {

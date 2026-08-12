@@ -122,6 +122,16 @@ function FileManagerContent({
     const saved = localStorage.getItem("fileManagerViewMode");
     return saved === "grid" || saved === "list" ? saved : "grid";
   });
+  // Picking an interface preset seeds this key from another part of the app.
+  useEffect(() => {
+    const handler = () => {
+      const saved = localStorage.getItem("fileManagerViewMode");
+      if (saved === "grid" || saved === "list") setViewMode(saved);
+    };
+    window.addEventListener("fileManagerViewModeChanged", handler);
+    return () =>
+      window.removeEventListener("fileManagerViewModeChanged", handler);
+  }, []);
   const [sortBy, setSortBy] = useState<"name" | "modified" | "size">(() => {
     const saved = localStorage.getItem("fileManagerSortBy");
     return saved === "name" || saved === "modified" || saved === "size"

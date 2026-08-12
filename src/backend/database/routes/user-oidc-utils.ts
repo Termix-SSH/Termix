@@ -205,6 +205,22 @@ export function extractOidcGroups(
   return [];
 }
 
+/**
+ * OIDC providers may return group claims in the ID token, userinfo response,
+ * or both. Keep every verified source authoritative instead of letting a
+ * sparse userinfo payload overwrite claims from the ID token.
+ */
+export function extractOidcGroupsFromSources(
+  sources: Record<string, unknown>[],
+  groupClaim?: string,
+): string[] {
+  return [
+    ...new Set(
+      sources.flatMap((source) => extractOidcGroups(source, groupClaim)),
+    ),
+  ];
+}
+
 export function isOIDCUserAllowed(
   allowedUsers: string,
   identifier: string,

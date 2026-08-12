@@ -70,8 +70,12 @@ class PermissionManager {
       });
     }, 60 * 1000);
 
+    // Entries expire on read against their own timestamp, so this sweep only
+    // has to drop ones nobody has come back for. Flushing the whole map on a
+    // timer instead expired every active user at the same instant, so each
+    // sweep was followed by a burst of simultaneous role lookups.
     setInterval(() => {
-      this.clearPermissionCache();
+      this.evictExpiredPermissions();
     }, this.CACHE_TTL);
   }
 
@@ -92,8 +96,13 @@ class PermissionManager {
     }
   }
 
-  private clearPermissionCache(): void {
-    this.permissionCache.clear();
+  private evictExpiredPermissions(): void {
+    const now = Date.now();
+    for (const [userId, entry] of this.permissionCache) {
+      if (now - entry.timestamp >= this.CACHE_TTL) {
+        this.permissionCache.delete(userId);
+      }
+    }
   }
 
   invalidateUserPermissionCache(userId: string): void {
@@ -265,6 +274,55 @@ class PermissionManager {
         isOwner: false,
         isShared: false,
       };
+    }
+  }
+
+  /**
+   * The subset of `hostIds` this user may reach, resolved in a fixed number of
+   * queries instead of one call per host.
+   *
+   * canAccessHost costs between one and four queries, so filtering a list with
+   * it is linear in host count — and the status poll does exactly that every
+   * few seconds for the whole fleet. This answers the same question for many
+   * hosts at once using the same three rules, in the same order: owner, then
+   * an unexpired grant, then admin bypass.
+   *
+   * Deliberately limited to read-style checks. It does not touch grant
+   * timestamps the way `canAccessHost(..., "connect")` does, because this is
+   * used for visibility filtering rather than for opening a connection.
+   */
+  async filterAccessibleHostIds(
+    userId: string,
+    hostIds: number[],
+  ): Promise<Set<number>> {
+    if (hostIds.length === 0) return new Set();
+
+    try {
+      if (await this.isAdmin(userId)) {
+        return new Set(hostIds);
+      }
+
+      const owned =
+        await createCurrentHostResolutionRepository().listOwnedHostIds(userId);
+
+      const roleIds =
+        await createCurrentRoleRepository().listUserRoleIds(userId);
+      const grants =
+        await createCurrentRbacAccessRepository().listVisibleHostAccessEntries(
+          userId,
+          roleIds,
+        );
+      const granted = new Set(grants.map((grant) => grant.hostId));
+
+      return new Set(hostIds.filter((id) => owned.has(id) || granted.has(id)));
+    } catch (error) {
+      databaseLogger.error("Failed to filter accessible hosts", error, {
+        operation: "filter_accessible_hosts",
+        userId,
+      });
+      // Fail closed: showing nothing is safer than showing another
+      // tenant's hosts.
+      return new Set();
     }
   }
 

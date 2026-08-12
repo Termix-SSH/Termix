@@ -47,6 +47,7 @@ import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../../utils/alert-trigger.js";
 import { getClientIp } from "../../utils/request-origin.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
+import { resolveSshKeepalive } from "../ssh-keepalive.js";
 import {
   hostAddressMismatch,
   HOST_ADDRESS_MISMATCH_MESSAGE,
@@ -2761,6 +2762,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
     const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
+    const keepalive = resolveSshKeepalive(
+      hostKeepaliveInterval,
+      hostKeepaliveCountMax,
+      30000,
+      5,
+    );
 
     // Pre-fetch the stored host key before connect so the verifier callback
     // runs synchronously during SSH key exchange, avoiding LoginGraceTime
@@ -2772,14 +2779,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       port,
       username,
       tryKeyboard: resolvedCredentials.authType !== "tailscale",
-      keepaliveInterval:
-        typeof hostKeepaliveInterval === "number"
-          ? Math.max(5000, hostKeepaliveInterval * 1000)
-          : 30000,
-      keepaliveCountMax:
-        typeof hostKeepaliveCountMax === "number"
-          ? Math.max(1, hostKeepaliveCountMax)
-          : 5,
+      ...keepalive,
       readyTimeout:
         resolvedCredentials.authType === "tailscale"
           ? TAILSCALE_CHECK_TIMEOUT_MS

@@ -8,6 +8,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import {
+  getDeviceId,
   parseUserAgent,
   generateDeviceFingerprint,
 } from "../../utils/user-agent-parser.js";
@@ -30,7 +31,7 @@ import {
   isOIDCUserAllowed,
   OIDCTokenFormatError,
   verifyOIDCToken,
-  extractOidcGroups,
+  extractOidcGroupsFromSources,
   parseOidcRoleMap,
   resolveOidcMappedRoles,
   loadProviderConfig,
@@ -1015,6 +1016,7 @@ router.get("/oidc/callback", async (req, res) => {
     await deleteOIDCStateSettings(state);
 
     let userInfo: Record<string, unknown> = null;
+    const oidcClaimSources: Record<string, unknown>[] = [];
     const userInfoUrls: string[] = [];
 
     const normalizedIssuerUrl = config.issuer_url.endsWith("/")
@@ -1070,6 +1072,7 @@ router.get("/oidc/callback", async (req, res) => {
           });
           return res.status(401).json({ error: "Invalid OIDC token nonce" });
         }
+        oidcClaimSources.push(userInfo);
       } catch (error) {
         // A token we cannot parse as a JWS carries no claims we could trust, so
         // fall through to the userinfo endpoint instead of failing the login.
@@ -1103,6 +1106,7 @@ router.get("/oidc/callback", async (req, res) => {
               string,
               unknown
             >;
+            oidcClaimSources.push(fetchedUserInfo);
             userInfo = { ...userInfo, ...fetchedUserInfo };
             break;
           } else {
@@ -1307,8 +1311,8 @@ router.get("/oidc/callback", async (req, res) => {
 
     // Sync admin status based on OIDC group membership
     if (config.admin_group) {
-      const groups = extractOidcGroups(
-        userInfo as Record<string, unknown>,
+      const groups = extractOidcGroupsFromSources(
+        oidcClaimSources,
         config.group_claim,
       );
 
@@ -1370,8 +1374,8 @@ router.get("/oidc/callback", async (req, res) => {
       );
 
       if (roleMap.size > 0) {
-        const groups = extractOidcGroups(
-          userInfo as Record<string, unknown>,
+        const groups = extractOidcGroupsFromSources(
+          oidcClaimSources,
           config.group_claim,
         );
         const { desired, managed } = resolveOidcMappedRoles(groups, roleMap);
@@ -1644,12 +1648,14 @@ router.post("/login", async (req, res) => {
     );
 
     if (userRecord.totpEnabled) {
-      const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
-
-      const isTrusted = await authManager.isTrustedDevice(
-        userRecord.id,
-        deviceFingerprint,
+      const deviceFingerprint = generateDeviceFingerprint(
+        deviceInfo,
+        getDeviceId(req),
       );
+
+      const isTrusted = deviceFingerprint
+        ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
+        : false;
 
       if (isTrusted) {
         authLogger.info("TOTP bypassed for trusted device", {

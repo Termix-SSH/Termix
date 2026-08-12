@@ -15,6 +15,7 @@ const {
   isOIDCUserAllowed,
   getOIDCConfigFromEnv,
   extractOidcGroups,
+  extractOidcGroupsFromSources,
   validateLogoutTokenClaims,
   parseOidcRoleMap,
   resolveOidcMappedRoles,
@@ -342,6 +343,35 @@ describe("extractOidcGroups", () => {
 
   it("returns an empty array when no groups are present", () => {
     expect(extractOidcGroups({})).toEqual([]);
+  });
+});
+
+describe("extractOidcGroupsFromSources", () => {
+  it("preserves ID token groups when userinfo omits them", () => {
+    expect(
+      extractOidcGroupsFromSources([
+        { groups: ["admins", "users"] },
+        { sub: "user-1", name: "Example User" },
+      ]),
+    ).toEqual(["admins", "users"]);
+  });
+
+  it("combines and deduplicates groups from both verified sources", () => {
+    expect(
+      extractOidcGroupsFromSources([
+        { roles: ["users", "operators"] },
+        { roles: ["operators", "admins"] },
+      ]),
+    ).toEqual(["users", "operators", "admins"]);
+  });
+
+  it("supports a configured group claim across sources", () => {
+    expect(
+      extractOidcGroupsFromSources(
+        [{ custom_groups: ["admins"] }, { custom_groups: ["users"] }],
+        "custom_groups",
+      ),
+    ).toEqual(["admins", "users"]);
   });
 });
 

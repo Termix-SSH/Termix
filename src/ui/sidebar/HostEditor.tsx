@@ -84,6 +84,10 @@ import {
 import { HostStatsTab } from "./HostEditorStatsTab";
 import { VaultProfileManager } from "./VaultProfileManager";
 import { findHostByTunnelEndpoint } from "@/features/tunnel/tunnel-endpoints";
+import {
+  toCredentialOption,
+  type CredentialOption,
+} from "./quick-created-credential";
 
 export function HostEditor({
   host,
@@ -96,9 +100,12 @@ export function HostEditor({
   hosts,
   credentials,
   adminTargetUserId,
+  simpleMode = false,
 }: {
   host: Host | null;
   activeTab: string;
+  /** Collapses the General tab to the fields needed to reach a host. */
+  simpleMode?: boolean;
   onBack: () => void;
   onSave: (saved: SSHHost) => void;
   protocols: HostProtocols;
@@ -145,6 +152,8 @@ export function HostEditor({
   const [creatingQuickCredential, setCreatingQuickCredential] = useState(false);
   const [showQuickCredentialDialog, setShowQuickCredentialDialog] =
     useState(false);
+  const [quickCreatedCredential, setQuickCreatedCredential] =
+    useState<CredentialOption | null>(null);
   const [savedThemes, setSavedThemes] = useState<SavedCustomTheme[]>([]);
   const [savingTheme, setSavingTheme] = useState(false);
 
@@ -295,7 +304,14 @@ export function HostEditor({
   };
 
   const authMethod = form.authType;
-  const selectedCredential = credentials.find(
+  const availableCredentials =
+    quickCreatedCredential &&
+    !credentials.some(
+      (credential) => credential.id === quickCreatedCredential.id,
+    )
+      ? [...credentials, quickCreatedCredential]
+      : credentials;
+  const selectedCredential = availableCredentials.find(
     (c) => c.id === form.credentialId,
   );
 
@@ -358,11 +374,18 @@ export function HostEditor({
             : null;
       }
 
-      if (adminTargetUserId) {
-        await adminCreateUserCredential(adminTargetUserId, data);
-      } else {
-        await createCredential(data);
-      }
+      const created = adminTargetUserId
+        ? await adminCreateUserCredential(adminTargetUserId, data)
+        : await createCredential(data);
+      const credential = toCredentialOption(created);
+      if (!credential) throw new Error(t("hosts.failedToSaveCredential"));
+
+      setQuickCreatedCredential(credential);
+      setForm((current) => ({
+        ...current,
+        authType: "credential",
+        credentialId: credential.id,
+      }));
       toast.success(t("hosts.credentialCreated"));
       if (!adminTargetUserId) {
         window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
@@ -441,6 +464,7 @@ export function HostEditor({
               handleProtocolToggle={handleProtocolToggle}
               hosts={hosts}
               host={host}
+              simpleMode={simpleMode}
             />
           )}
 
@@ -833,7 +857,7 @@ export function HostEditor({
                               const newId = e.target.value;
                               setField("credentialId", newId);
                               if (!form.overrideCredentialUsername) {
-                                const cred = credentials.find(
+                                const cred = availableCredentials.find(
                                   (c) => c.id === newId,
                                 );
                                 if (cred?.username)
@@ -845,7 +869,7 @@ export function HostEditor({
                             <option value="">
                               {t("hosts.selectACredential")}
                             </option>
-                            {credentials.map((c) => (
+                            {availableCredentials.map((c) => (
                               <option key={c.id} value={c.id}>
                                 {c.username
                                   ? `${c.name} (${c.username})`
@@ -2371,7 +2395,7 @@ export function HostEditor({
               setField={setField}
               setGuacField={setGuacField}
               host={host}
-              credentials={credentials}
+              credentials={availableCredentials}
             />
           )}
 
@@ -2381,7 +2405,7 @@ export function HostEditor({
               setField={setField}
               setGuacField={setGuacField}
               host={host}
-              credentials={credentials}
+              credentials={availableCredentials}
             />
           )}
 
@@ -2391,7 +2415,7 @@ export function HostEditor({
               setField={setField}
               setGuacField={setGuacField}
               host={host}
-              credentials={credentials}
+              credentials={availableCredentials}
             />
           )}
         </div>

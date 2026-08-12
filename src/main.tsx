@@ -14,6 +14,7 @@ import { installElectronWheelZoomGuard } from "@/lib/electron-wheel-zoom";
 import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
+import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
@@ -359,7 +360,9 @@ function App() {
           }}
         >
           <Suspense fallback={null}>
-            <AppShell username={authUsername} onLogout={handleLogout} />
+            <UiPreferencesProvider>
+              <AppShell username={authUsername} onLogout={handleLogout} />
+            </UiPreferencesProvider>
           </Suspense>
         </div>
       )}
@@ -402,7 +405,9 @@ function RootApp() {
   if (isFullscreen) {
     return (
       <Suspense fallback={null}>
-        <FullscreenAppGate />
+        <UiPreferencesProvider>
+          <FullscreenAppGate />
+        </UiPreferencesProvider>
       </Suspense>
     );
   }
