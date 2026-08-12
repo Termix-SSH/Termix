@@ -60,6 +60,7 @@ import { createJumpHostChain } from "../jump-host-chain.js";
 import { resolveHostById } from "../host-resolver.js";
 import {
   isTcpPingEnabled,
+  parseStatusHostIds,
   supportsMetrics,
   tcpPingThroughJumpHost,
 } from "./helpers.js";
@@ -799,6 +800,24 @@ class PollingManager {
 
     for (const host of hosts) {
       await this.startPollingForHost(host, { statusOnly: true });
+    }
+  }
+
+  async reconcileStatusPolling(
+    userId: string,
+    allowedHostIds: Set<number>,
+  ): Promise<void> {
+    const hosts = await fetchAllHosts(userId);
+
+    for (const host of hosts) {
+      if (allowedHostIds.has(host.id)) {
+        if (!this.pollingConfigs.has(host.id)) {
+          await this.startPollingForHost(host, { statusOnly: true });
+        }
+        continue;
+      }
+
+      this.stopPollingForHost(host.id, true);
     }
   }
 
@@ -1887,8 +1906,10 @@ app.get("/status", async (req, res) => {
     });
   }
 
-  const statuses = pollingManager.getAllStatuses();
-  if (statuses.size === 0) {
+  const requestedHostIds = parseStatusHostIds(req.query.hostIds);
+  if (requestedHostIds !== null) {
+    await pollingManager.reconcileStatusPolling(userId, requestedHostIds);
+  } else if (pollingManager.getAllStatuses().size === 0) {
     await pollingManager.initializePolling(userId);
   }
 
@@ -1903,7 +1924,10 @@ app.get("/status", async (req, res) => {
 
   const result: Record<number, StatusEntry> = {};
   for (const [id, entry] of entries) {
-    if (allowed.has(id)) {
+    if (
+      allowed.has(id) &&
+      (requestedHostIds === null || requestedHostIds.has(id))
+    ) {
       result[id] = entry;
     }
   }

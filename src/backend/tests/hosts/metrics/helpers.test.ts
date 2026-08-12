@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
   supportsMetrics,
   isTcpPingEnabled,
+  parseStatusHostIds,
   tcpPingThroughJumpHost,
 } from "../../../hosts/metrics/helpers.js";
 import { createConnectionLog } from "../../../hosts/connection-log.js";
@@ -50,6 +51,17 @@ describe("isTcpPingEnabled", () => {
     expect(
       isTcpPingEnabled({ statusCheckEnabled: true, disableTcpPing: true }),
     ).toBe(false);
+  });
+});
+
+describe("parseStatusHostIds", () => {
+  it("distinguishes an unrestricted request from an empty host set", () => {
+    expect(parseStatusHostIds(undefined)).toBeNull();
+    expect(parseStatusHostIds("")).toEqual(new Set());
+  });
+
+  it("keeps only valid positive host IDs", () => {
+    expect(parseStatusHostIds("7,2,7,-1,nope,1.5")).toEqual(new Set([7, 2]));
   });
 });
 
