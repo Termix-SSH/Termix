@@ -23,7 +23,10 @@ export class OIDCTokenFormatError extends Error {
 }
 
 function normalizeIssuer(url: string): string {
-  return url.trim().replace(/\/+$/, "");
+  return url
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/\.well-known\/openid-configuration$/, "");
 }
 
 export type OIDCConfig = {
@@ -276,14 +279,12 @@ export async function verifyOIDCToken(
   }
 
   const fetchOptions = buildFetchOptions(caCert);
-  const normalizedIssuerUrl = issuerUrl.endsWith("/")
-    ? issuerUrl.slice(0, -1)
-    : issuerUrl;
+  const configuredIssuerUrl = issuerUrl.trim().replace(/\/+$/, "");
+  const normalizedIssuerUrl = normalizeIssuer(issuerUrl);
   const possibleIssuers = [
-    issuerUrl,
     normalizedIssuerUrl,
-    issuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
     normalizedIssuerUrl.replace(/\/application\/o\/[^/]+$/, ""),
+    ...(configuredIssuerUrl === normalizedIssuerUrl ? [issuerUrl] : []),
   ];
 
   const jwksUrls = [
