@@ -50,6 +50,7 @@ import {
 import { registerFileListingRoutes } from "./list-routes.js";
 import { registerFileOperationRoutes } from "./operation-routes.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import { resolveSshKeepalive } from "../ssh-keepalive.js";
 import {
   hostAddressMismatch,
   HostAddressMismatchError,
@@ -957,19 +958,18 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   }
 
   const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(hostId);
+  const keepalive = resolveSshKeepalive(
+    hostKeepaliveInterval,
+    hostKeepaliveCountMax,
+    60000,
+    5,
+  );
   const config: Record<string, unknown> = {
     host: resolvedIp?.replace(/^\[|\]$/g, "") || resolvedIp,
     port: resolvedPort,
     username: resolvedUsername,
     tryKeyboard: true,
-    keepaliveInterval:
-      typeof hostKeepaliveInterval === "number"
-        ? Math.max(5000, hostKeepaliveInterval * 1000)
-        : 60000,
-    keepaliveCountMax:
-      typeof hostKeepaliveCountMax === "number"
-        ? Math.max(1, hostKeepaliveCountMax)
-        : 5,
+    ...keepalive,
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
