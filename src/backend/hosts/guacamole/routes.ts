@@ -21,7 +21,7 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
-import { buildRdpSettings } from "./rdp-settings.js";
+import { buildRdpSettings, resolveRdpDomain } from "./rdp-settings.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -473,8 +473,13 @@ router.post(
           username = "";
           password = "";
       }
-      const domain =
+      const storedDomain =
         (host.rdpDomain as string) || (host.domain as string) || "";
+      const domain = resolveRdpDomain(
+        rdpAuthTypeForConnect,
+        req.body?.promptedDomain,
+        storedDomain,
+      );
 
       // Establish SSH tunnel if jump hosts are configured
       let jumpHosts: Array<{ hostId: number }> = [];

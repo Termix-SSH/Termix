@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildRdpSettings } from "../../../hosts/guacamole/rdp-settings.js";
+import {
+  buildRdpSettings,
+  resolveRdpDomain,
+} from "../../../hosts/guacamole/rdp-settings.js";
 
 describe("buildRdpSettings", () => {
   it("keeps saved RDP settings authoritative over stale advanced config", () => {
@@ -37,5 +40,15 @@ describe("buildRdpSettings", () => {
         guacdOverrides: {},
       }).security,
     ).toBe("tls");
+  });
+
+  it("uses the prompted domain for prompt-on-connect authentication", () => {
+    expect(resolveRdpDomain("none", "EXAMPLE", "OLD")).toBe("EXAMPLE");
+    expect(resolveRdpDomain("none", "", "OLD")).toBe("");
+  });
+
+  it("keeps the stored domain for saved authentication", () => {
+    expect(resolveRdpDomain("direct", "EXAMPLE", "SAVED")).toBe("SAVED");
+    expect(resolveRdpDomain("none", undefined, "SAVED")).toBe("SAVED");
   });
 });

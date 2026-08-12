@@ -180,7 +180,11 @@ export async function getGuacamoleToken(
 export async function getGuacamoleTokenFromHost(
   hostId: number,
   protocol?: "rdp" | "vnc" | "telnet",
-  promptedCredentials?: { username?: string; password?: string },
+  promptedCredentials?: {
+    username?: string;
+    password?: string;
+    domain?: string;
+  },
 ): Promise<GuacamoleTokenResponse> {
   try {
     const response = await guacamoleApi().post(
@@ -192,6 +196,9 @@ export async function getGuacamoleTokenFromHost(
           : {}),
         ...(promptedCredentials?.password
           ? { promptedPassword: promptedCredentials.password }
+          : {}),
+        ...(promptedCredentials
+          ? { promptedDomain: promptedCredentials.domain ?? "" }
           : {}),
       },
     );

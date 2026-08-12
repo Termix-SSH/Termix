@@ -116,7 +116,7 @@ interface GuacamoleAppInnerProps {
   hostId: number;
   hostConfig: Pick<
     SSHHost,
-    "connectionType" | "guacamoleConfig" | "rdpAuthType"
+    "connectionType" | "domain" | "guacamoleConfig" | "rdpAuthType"
   >;
   hostName: string;
   tabId?: string;
@@ -172,10 +172,12 @@ const GuacamoleAppInner = React.forwardRef<
   const [promptedCredentials, setPromptedCredentials] = useState<{
     username: string;
     password: string;
+    domain: string;
   } | null>(null);
   const [promptOpen, setPromptOpen] = useState(needsCredentialPrompt);
   const [promptUsername, setPromptUsername] = useState("");
   const [promptPassword, setPromptPassword] = useState("");
+  const [promptDomain, setPromptDomain] = useState(hostConfig.domain ?? "");
 
   useImperativeHandle(ref, () => ({
     disconnect: () => displayRef.current?.disconnect(),
@@ -281,13 +283,14 @@ const GuacamoleAppInner = React.forwardRef<
       setPromptedCredentials(null);
       setPromptUsername("");
       setPromptPassword("");
+      setPromptDomain(hostConfig.domain ?? "");
       setPromptOpen(true);
       return;
     }
     clearLogs();
     tokenRetryRef.current.reset();
     tokenRetryRef.current.retryNow();
-  }, [needsCredentialPrompt, clearLogs]);
+  }, [needsCredentialPrompt, hostConfig.domain, clearLogs]);
 
   useEffect(() => {
     if (!tabId) return;
@@ -324,6 +327,7 @@ const GuacamoleAppInner = React.forwardRef<
               setPromptedCredentials({
                 username: promptUsername,
                 password: promptPassword,
+                domain: promptDomain,
               });
               setPromptOpen(false);
             }}
@@ -337,6 +341,16 @@ const GuacamoleAppInner = React.forwardRef<
                 placeholder="Administrator"
                 value={promptUsername}
                 onChange={(e) => setPromptUsername(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold">
+                {t("hosts.guac.domain")}
+              </label>
+              <Input
+                placeholder="WORKGROUP"
+                value={promptDomain}
+                onChange={(e) => setPromptDomain(e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1.5">
