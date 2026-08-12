@@ -11,6 +11,7 @@ import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
 import {
   generateDeviceFingerprint,
+  getDeviceId,
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
 import {
@@ -627,18 +628,23 @@ export function registerUserTotpRoutes(
       const deviceInfo = parseUserAgent(req);
 
       if (rememberMe) {
-        const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
-        await authManager.addTrustedDevice(
-          userRecord.id,
-          deviceFingerprint,
-          deviceInfo.type,
-          deviceInfo.deviceInfo,
+        const deviceFingerprint = generateDeviceFingerprint(
+          deviceInfo,
+          getDeviceId(req),
         );
-        authLogger.info("Device automatically trusted via Remember Me", {
-          operation: "totp_auto_trust",
-          userId: userRecord.id,
-          deviceType: deviceInfo.type,
-        });
+        if (deviceFingerprint) {
+          await authManager.addTrustedDevice(
+            userRecord.id,
+            deviceFingerprint,
+            deviceInfo.type,
+            deviceInfo.deviceInfo,
+          );
+          authLogger.info("Device automatically trusted via Remember Me", {
+            operation: "totp_auto_trust",
+            userId: userRecord.id,
+            deviceType: deviceInfo.type,
+          });
+        }
       }
 
       const token = await authManager.generateJWTToken(userRecord.id, {
