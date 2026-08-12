@@ -44,7 +44,7 @@ const MODIFIER_KEYSYMS = {
   ctrl: 0xffe3,
   alt: 0xffe9,
   shift: 0xffe1,
-  win: 0xff67,
+  win: 0xffeb,
 } as const;
 
 const FKEY_KEYSYMS = Array.from({ length: 12 }, (_, i) => 0xffbe + i);
@@ -362,13 +362,13 @@ export const GuacamoleToolbar: React.FC<GuacamoleToolbarProps> = ({
                 </TipBtn>
                 <TipBtn
                   tooltip={t("guacamole.toolbar.winL")}
-                  onClick={() => sendCombo(0xff67, 0x006c)}
+                  onClick={() => sendCombo(MODIFIER_KEYSYMS.win, 0x006c)}
                 >
                   Win+L
                 </TipBtn>
                 <TipBtn
                   tooltip={t("guacamole.toolbar.winKey")}
-                  onClick={() => sendCombo(0xff67)}
+                  onClick={() => sendCombo(MODIFIER_KEYSYMS.win)}
                 >
                   Win
                 </TipBtn>
