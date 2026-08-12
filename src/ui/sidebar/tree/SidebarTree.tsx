@@ -713,11 +713,11 @@ export function SidebarTree({
     },
   });
 
-  // Fixed heights mean estimateSize already IS the real size, so there is
-  // nothing for measureElement/ResizeObserver to correct -- but the
-  // virtualizer still needs telling when a row's height classification
-  // changes (tray opened/closed, tree reshaped, density/trigger changed),
-  // since it otherwise keeps using the size it last computed for that key.
+  // Fixed heights mean estimateSize already IS the real size. Do not attach
+  // measureElement here: its index-based ResizeObserver measurements can be
+  // reused for a different row after a deletion and override the fixed size.
+  // The virtualizer still needs telling when a row's height classification
+  // changes (tray opened/closed, tree reshaped, density/trigger changed).
   useLayoutEffect(() => {
     virtualizer.measure();
   }, [
@@ -818,8 +818,6 @@ export function SidebarTree({
               return (
                 <div
                   key={vItem.key}
-                  data-index={vItem.index}
-                  ref={virtualizer.measureElement}
                   className="absolute top-0 left-0 w-full"
                   style={{
                     transform: `translateY(${vItem.start}px)`,
