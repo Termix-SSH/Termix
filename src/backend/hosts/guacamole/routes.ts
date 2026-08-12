@@ -21,6 +21,7 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
+import { buildRdpSettings } from "./rdp-settings.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -618,22 +619,22 @@ router.post(
             hostname,
             username,
             password,
-            {
+            buildRdpSettings({
               port,
               domain,
               security:
                 (host.rdpSecurity as string) ||
                 (host.security as string) ||
                 undefined,
-              "ignore-cert":
+              ignoreCert:
                 host.rdpIgnoreCert !== undefined
                   ? !!host.rdpIgnoreCert
                   : host.ignoreCert !== undefined
                     ? !!host.ignoreCert
                     : true,
-              ...guacConfig,
-              ...guacdOverrides,
-            },
+              guacConfig,
+              guacdOverrides,
+            }),
             recordingMetadata,
             termixMeta,
           );
