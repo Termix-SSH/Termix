@@ -1427,6 +1427,33 @@ export const fleetInventory = pgTable(
 );
 // --- fleets end ---
 
+// --- workspaces begin ---
+export const userWorkspaces = pgTable("user_workspaces", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id", { length: 255 })
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  color: text("color"),
+  icon: text("icon"),
+  // "manual" | "last_session" - exactly one last_session row per user.
+  kind: text("kind").notNull().default("manual"),
+  isDefault: boolean("is_default")
+    .notNull()
+    .default(false),
+  // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
+  payload: text("payload").notNull().default("{}"),
+  syncId: varchar("sync_id", { length: 255 }).unique(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  lastUsedAt: text("last_used_at"),
+});
+// --- workspaces end ---
+
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync
 // pair (embedded desktop backend <-> connected remote server) learns about

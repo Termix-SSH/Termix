@@ -26,7 +26,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { AppRail } from "@/sidebar/AppRail";
 import type { RailView } from "@/sidebar/AppRail";
-import { SplitView } from "@/shell/SplitView";
+import { SplitView, defaultSizes } from "@/shell/SplitView";
+import type { RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
 
@@ -67,6 +68,11 @@ const SnippetsPanel = lazy(() =>
 );
 const FleetsPanel = lazy(() =>
   import("@/sidebar/FleetsPanel").then((m) => ({ default: m.FleetsPanel })),
+);
+const WorkspacesPanel = lazy(() =>
+  import("@/sidebar/WorkspacesPanel").then((m) => ({
+    default: m.WorkspacesPanel,
+  })),
 );
 const HistoryPanel = lazy(() =>
   import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
@@ -119,6 +125,8 @@ import type {
   ThemeId,
   FontSizeId,
   SerialConfig,
+  Workspace,
+  WorkspacePayload,
 } from "@/types/ui-types";
 import { applyAccentColor, applyFontSize, PANE_COUNTS } from "@/lib/theme";
 import { globalShortcutHandler } from "@/lib/global-shortcut-handler";
@@ -140,6 +148,16 @@ import {
   type UserPreferences,
   type OpenTabRecord,
 } from "@/main-axios";
+import {
+  listWorkspaces,
+  applyWorkspaceServer,
+  saveLastSessionWorkspace,
+} from "@/api/workspaces-api";
+import {
+  buildWorkspacePayload as buildWorkspacePayloadUtil,
+  remapSlotIds,
+  resolveWorkspaceTabTarget,
+} from "@/shell/workspaceUtils";
 import { DonationReminderModal } from "@/user/DonationReminderModal.tsx";
 import { RemoteSyncBanner } from "@/components/RemoteSyncBanner.tsx";
 import { MigrationNoticeDialog } from "@/components/MigrationNoticeDialog.tsx";
@@ -198,6 +216,18 @@ export function AppShell({
   useEffect(() => {
     paneTabIdsRef.current = paneTabIds;
   }, [paneTabIds]);
+  const [rowSizes, setRowSizes] = useState<number[]>(
+    () => defaultSizes("none").rowSizes,
+  );
+  const [rowColSizes, setRowColSizes] = useState<RowColSizes>(
+    () => defaultSizes("none").rowColSizes,
+  );
+  const changeSplitMode = useCallback((mode: SplitMode) => {
+    setSplitMode(mode);
+    const d = defaultSizes(mode);
+    setRowSizes(d.rowSizes);
+    setRowColSizes(d.rowColSizes);
+  }, []);
   const [focusedPaneIndex, setFocusedPaneIndex] = useState<number | null>(null);
   const [realHostTree, setRealHostTree] = useState<HostFolder | null>(null);
   const [hostsLoading, setHostsLoading] = useState(true);
@@ -250,6 +280,14 @@ export function AppShell({
     });
     localStorage.setItem("termix_paneInstanceIds", JSON.stringify(instanceIds));
   }, [paneTabIds, tabs]);
+
+  useEffect(() => {
+    if (!paneLayoutRestoredRef.current) return;
+    localStorage.setItem(
+      "termix_paneSizes",
+      JSON.stringify({ rowSizes, rowColSizes }),
+    );
+  }, [rowSizes, rowColSizes]);
 
   const isMobile = useIsMobile();
   const isSettingsView =
@@ -397,6 +435,7 @@ export function AppShell({
     "ssh-tools": "SSH Tools",
     snippets: "Snippets",
     fleets: t("nav.fleets"),
+    workspaces: t("nav.workspaces"),
     history: "History",
     "session-logs": t("nav.sessionLogs"),
     "split-screen": "Split Screen",
@@ -438,7 +477,7 @@ export function AppShell({
         e.preventDefault();
         if (splitModeRef.current !== "none") {
           splitModeRef.current = "none";
-          setSplitMode("none");
+          changeSplitMode("none");
           setPaneTabIds(Array(6).fill(null));
         } else {
           const mode = "2-way";
@@ -456,7 +495,7 @@ export function AppShell({
               slot++;
             }
           }
-          setSplitMode(mode);
+          changeSplitMode(mode);
           setPaneTabIds(next);
         }
         return;
@@ -467,7 +506,7 @@ export function AppShell({
         e.preventDefault();
         if (splitModeRef.current !== "none") {
           splitModeRef.current = "none";
-          setSplitMode("none");
+          changeSplitMode("none");
           setPaneTabIds(Array(6).fill(null));
         } else {
           const mode = "3-way-horizontal";
@@ -485,7 +524,7 @@ export function AppShell({
               slot++;
             }
           }
-          setSplitMode(mode);
+          changeSplitMode(mode);
           setPaneTabIds(next);
         }
         return;
@@ -916,6 +955,85 @@ export function AppShell({
     "tunnel",
   ];
 
+  function buildWorkspacePayload(): WorkspacePayload {
+    return buildWorkspacePayloadUtil({
+      tabs,
+      activeTabId,
+      splitMode,
+      paneTabIds,
+      rowSizes,
+      rowColSizes,
+    });
+  }
+
+  async function applyWorkspace(workspace: Workspace) {
+    // Tear down the current arrangement the same way an individual tab close does.
+    for (const tab of [...tabsRef.current]) {
+      doCloseTab(tab.id);
+    }
+
+    const slotIdToNewTabId = new Map<string, string>();
+    const skippedTabs: string[] = [];
+
+    for (const snapshot of workspace.payload.tabs) {
+      const target = resolveWorkspaceTabTarget(snapshot, allHosts);
+
+      if (target.kind === "skip") {
+        skippedTabs.push(snapshot.hostNameSnapshot || snapshot.label);
+        continue;
+      }
+
+      if (target.kind === "serial" && snapshot.serialConfig) {
+        const newTabId = openSerialTab(snapshot.serialConfig);
+        slotIdToNewTabId.set(snapshot.slotId, newTabId);
+        continue;
+      }
+
+      if (target.kind === "singleton") {
+        openSingletonTab(
+          snapshot.type,
+          undefined,
+          target.host,
+          snapshot.fleetId,
+        );
+        slotIdToNewTabId.set(snapshot.slotId, snapshot.type);
+        continue;
+      }
+
+      if (target.kind === "host") {
+        const newTabId = openTab(target.host, snapshot.type, {
+          instanceId: crypto.randomUUID(),
+          restoredSessionId: null,
+          savedLabel: snapshot.customLabel ?? snapshot.label,
+          initialFilePath: snapshot.initialFilePath,
+          initialPath: snapshot.initialPath,
+        });
+        slotIdToNewTabId.set(snapshot.slotId, newTabId);
+      }
+    }
+
+    setPaneTabIds(remapSlotIds(workspace.payload.paneTabIds, slotIdToNewTabId));
+    setSplitMode(workspace.payload.splitMode);
+    setRowSizes(workspace.payload.rowSizes);
+    setRowColSizes(workspace.payload.rowColSizes);
+
+    const activeId = workspace.payload.activeSlotId
+      ? (slotIdToNewTabId.get(workspace.payload.activeSlotId) ?? "dashboard")
+      : "dashboard";
+    setActiveTabId(activeId);
+
+    if (skippedTabs.length > 0) {
+      toast.warning(
+        t("newUi.sidebar.workspaces.tabsSkipped", {
+          count: skippedTabs.length,
+          names: skippedTabs.join(", "),
+        }),
+      );
+    }
+
+    applyWorkspaceServer(workspace.id).catch(() => {});
+  }
+
   // On load: always read saved tabs from DB so background sessions are preserved across refreshes.
   // If reopenTabsOnLogin is on, also restore them as open tabs in the tab bar.
   const tabRestoreAttemptedRef = useRef(false);
@@ -1016,6 +1134,33 @@ export function AppShell({
     loadSavedTabs();
   }, [hostsLoaded, userPrefsLoaded]);
 
+  // If reopenTabsOnLogin didn't already restore anything (off, or on but
+  // nothing to restore), auto-apply the user's default workspace if they set
+  // one. Runs once, after the open-tabs restore above has had its chance —
+  // that path wins when both would otherwise fire, since it's more granular
+  // and live-session-aware than a workspace snapshot.
+  const defaultWorkspaceAttemptedRef = useRef(false);
+  useEffect(() => {
+    if (!tabsReady || defaultWorkspaceAttemptedRef.current) return;
+    defaultWorkspaceAttemptedRef.current = true;
+
+    const hasPersistentTabs = tabs.some((t) =>
+      PERSISTENT_TAB_TYPES.includes(t.type),
+    );
+    if (userPrefs.reopenTabsOnLogin && hasPersistentTabs) return;
+
+    listWorkspaces()
+      .then((workspaces) => {
+        const defaultWorkspace = workspaces.find(
+          (w) => w.kind === "manual" && w.isDefault,
+        );
+        if (defaultWorkspace) {
+          applyWorkspace(defaultWorkspace);
+        }
+      })
+      .catch(() => {});
+  }, [tabsReady]);
+
   // Restore split-screen pane assignments once tabs are settled. Saved assignments are
   // keyed by instanceId (stable across reloads) and remapped to the live tab.id here,
   // since tab.id is regenerated every time a tab is (re)opened.
@@ -1035,10 +1180,23 @@ export function AppShell({
       });
       if (restored.some((id) => id != null)) {
         setPaneTabIds(restored);
+        try {
+          const savedSizes = JSON.parse(
+            localStorage.getItem("termix_paneSizes") ?? "null",
+          ) as { rowSizes?: number[]; rowColSizes?: RowColSizes } | null;
+          if (Array.isArray(savedSizes?.rowSizes)) {
+            setRowSizes(savedSizes.rowSizes);
+          }
+          if (Array.isArray(savedSizes?.rowColSizes)) {
+            setRowColSizes(savedSizes.rowColSizes);
+          }
+        } catch {
+          // silently fail
+        }
       } else {
         // None of the saved panes could be restored (e.g. reopen-tabs-on-login
         // is disabled), so drop back to a single view instead of an empty split.
-        setSplitMode("none");
+        changeSplitMode("none");
       }
     } catch {
       // silently fail
@@ -1071,6 +1229,27 @@ export function AppShell({
         clearTimeout(orderSyncTimeoutRef.current);
     };
   }, [tabs, tabsReady]);
+
+  // Debounced "Last Session" auto-save: keeps an implicit workspace snapshot
+  // current so the arrangement can always be recovered, even if the user never
+  // manually saves one. Never auto-applied on login — see the default-workspace
+  // effect above, which only considers kind === "manual" rows.
+  const lastSessionSaveTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
+  useEffect(() => {
+    if (!tabsReady) return;
+    if (lastSessionSaveTimeoutRef.current)
+      clearTimeout(lastSessionSaveTimeoutRef.current);
+    lastSessionSaveTimeoutRef.current = setTimeout(() => {
+      saveLastSessionWorkspace(buildWorkspacePayload()).catch(() => {});
+    }, 2000);
+
+    return () => {
+      if (lastSessionSaveTimeoutRef.current)
+        clearTimeout(lastSessionSaveTimeoutRef.current);
+    };
+  }, [tabs, paneTabIds, splitMode, rowSizes, rowColSizes, tabsReady]);
 
   // ─── Tab management ──────────────────────────────────────────────────────
 
@@ -1180,6 +1359,8 @@ export function AppShell({
         tabOrder: 0,
       }).catch(() => {});
     }
+
+    return tabId;
   }, []);
 
   function connectHost(host: Host, preferredType?: TabType) {
@@ -1207,7 +1388,7 @@ export function AppShell({
     [loadHosts, t],
   );
 
-  function openSerialTab(config: SerialConfig) {
+  function openSerialTab(config: SerialConfig): string {
     const pseudoHost: Host = {
       id: `serial-${Date.now()}`,
       name: config.path
@@ -1246,7 +1427,7 @@ export function AppShell({
       typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
-    openTab(pseudoHost, "serial", {
+    return openTab(pseudoHost, "serial", {
       instanceId,
       restoredSessionId: null,
       serialConfig: config,
@@ -1494,7 +1675,7 @@ export function AppShell({
   }
 
   function splitTabQuick(tabId: string, mode: SplitMode) {
-    setSplitMode(mode);
+    changeSplitMode(mode);
     setPaneTabIds(() => {
       const count = PANE_COUNTS[mode];
       const next: (string | null)[] = Array(6).fill(null);
@@ -1754,10 +1935,20 @@ export function AppShell({
             <SplitScreenPanel
               tabs={tabs}
               splitMode={splitMode}
-              setSplitMode={setSplitMode}
+              setSplitMode={changeSplitMode}
               paneTabIds={paneTabIds}
               setPaneTabIds={setPaneTabIds}
               onAssignPane={assignPane}
+            />
+          </div>
+        )}
+
+        {railView === "workspaces" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <WorkspacesPanel
+              active={railView === "workspaces"}
+              currentPayload={buildWorkspacePayload}
+              onApplyWorkspace={applyWorkspace}
             />
           </div>
         )}
@@ -2095,6 +2286,11 @@ export function AppShell({
                       tabs={tabs}
                       paneTabIds={paneTabIds}
                       splitMode={splitMode}
+                      rowSizes={rowSizes}
+                      rowColSizes={rowColSizes}
+                      onRowSizesChange={setRowSizes}
+                      onRowColSizesChange={setRowColSizes}
+                      onReset={() => changeSplitMode(splitMode)}
                       focusedPaneIndex={focusedPaneIndex}
                       onTerminalResize={resizeAllTerminals}
                       onPaneContentRef={onPaneContentRef}

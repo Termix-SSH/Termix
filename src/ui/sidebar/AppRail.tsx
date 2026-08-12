@@ -9,6 +9,7 @@ import {
   Hammer,
   KeyRound,
   LayoutPanelLeft,
+  LayoutTemplate,
   LogOut,
   Network,
   Play,
@@ -38,7 +39,8 @@ export type RailView =
   | "user-profile"
   | "admin-settings"
   | "alerts"
-  | "fleets";
+  | "fleets"
+  | "workspaces";
 
 export type HideableRailView =
   | Exclude<RailView, "user-profile" | "admin-settings">
@@ -112,6 +114,12 @@ function buildRailButtons(
       icon: <LayoutPanelLeft size={16} />,
       title: t("nav.splitScreen"),
       dot: splitMode !== "none",
+    },
+    { kind: "separator" },
+    {
+      view: "workspaces",
+      icon: <LayoutTemplate size={16} />,
+      title: t("nav.workspaces"),
     },
     { kind: "separator" },
     {

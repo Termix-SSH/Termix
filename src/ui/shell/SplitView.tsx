@@ -4,11 +4,11 @@ import { splitDragState, notifyDragEnd } from "@/lib/splitDragging";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, SplitMode } from "@/types/ui-types";
 
-// ─── useSplitSizes ────────────────────────────────────────────────────────────
+// ─── useSplitDrag ─────────────────────────────────────────────────────────────
 
-type RowColSizes = number[][];
+export type RowColSizes = number[][];
 
-function defaultSizes(mode: SplitMode): {
+export function defaultSizes(mode: SplitMode): {
   rowSizes: number[];
   rowColSizes: RowColSizes;
 } {
@@ -48,23 +48,18 @@ function defaultSizes(mode: SplitMode): {
   }
 }
 
-function useSplitSizes(splitMode: SplitMode) {
-  const init = defaultSizes(splitMode);
-  const [rowSizes, setRowSizes] = useState(init.rowSizes);
-  const [rowColSizes, setRowColSizes] = useState<RowColSizes>(init.rowColSizes);
+function useSplitDrag(
+  rowSizes: number[],
+  rowColSizes: RowColSizes,
+  onRowSizesChange: (sizes: number[]) => void,
+  onRowColSizesChange: (sizes: RowColSizes) => void,
+  onReset?: () => void,
+) {
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const d = defaultSizes(splitMode);
-    setRowSizes(d.rowSizes);
-    setRowColSizes(d.rowColSizes);
-  }, [splitMode]);
-
   function reset() {
-    const d = defaultSizes(splitMode);
-    setRowSizes(d.rowSizes);
-    setRowColSizes(d.rowColSizes);
+    onReset?.();
   }
 
   function startDrag() {
@@ -91,12 +86,10 @@ function useSplitSizes(splitMode: SplitMode) {
         10,
         Math.min(a + b - 10, a + ((ev.clientY - startY) / totalH) * 100),
       );
-      setRowSizes((prev) => {
-        const n = [...prev];
-        n[rowIdx] = na;
-        n[rowIdx + 1] = a + b - na;
-        return n;
-      });
+      const n = [...rowSizes];
+      n[rowIdx] = na;
+      n[rowIdx + 1] = a + b - na;
+      onRowSizesChange(n);
     }
     function onUp() {
       endDrag();
@@ -123,12 +116,10 @@ function useSplitSizes(splitMode: SplitMode) {
           a + ((ev.touches[0].clientY - startY) / totalH) * 100,
         ),
       );
-      setRowSizes((prev) => {
-        const n = [...prev];
-        n[rowIdx] = na;
-        n[rowIdx + 1] = a + b - na;
-        return n;
-      });
+      const n = [...rowSizes];
+      n[rowIdx] = na;
+      n[rowIdx + 1] = a + b - na;
+      onRowSizesChange(n);
     }
     function onUp() {
       endDrag();
@@ -154,12 +145,10 @@ function useSplitSizes(splitMode: SplitMode) {
         10,
         Math.min(a + b - 10, a + ((ev.clientX - startX) / totalW) * 100),
       );
-      setRowColSizes((prev) => {
-        const next = prev.map((r) => [...r]);
-        next[rowIdx][colIdx] = na;
-        next[rowIdx][colIdx + 1] = a + b - na;
-        return next;
-      });
+      const next = rowColSizes.map((r) => [...r]);
+      next[rowIdx][colIdx] = na;
+      next[rowIdx][colIdx + 1] = a + b - na;
+      onRowColSizesChange(next);
     }
     function onUp() {
       endDrag();
@@ -191,12 +180,10 @@ function useSplitSizes(splitMode: SplitMode) {
           a + ((ev.touches[0].clientX - startX) / totalW) * 100,
         ),
       );
-      setRowColSizes((prev) => {
-        const next = prev.map((r) => [...r]);
-        next[rowIdx][colIdx] = na;
-        next[rowIdx][colIdx + 1] = a + b - na;
-        return next;
-      });
+      const next = rowColSizes.map((r) => [...r]);
+      next[rowIdx][colIdx] = na;
+      next[rowIdx][colIdx + 1] = a + b - na;
+      onRowColSizesChange(next);
     }
     function onUp() {
       endDrag();
@@ -208,8 +195,6 @@ function useSplitSizes(splitMode: SplitMode) {
   }
 
   return {
-    rowSizes,
-    rowColSizes,
     isDragging,
     containerRef,
     reset,
@@ -463,6 +448,11 @@ export const SplitView = memo(function SplitView({
   tabs,
   paneTabIds,
   splitMode,
+  rowSizes,
+  rowColSizes,
+  onRowSizesChange,
+  onRowColSizesChange,
+  onReset,
   focusedPaneIndex,
   onTerminalResize,
   onPaneContentRef,
@@ -472,6 +462,11 @@ export const SplitView = memo(function SplitView({
   tabs: Tab[];
   paneTabIds: (string | null)[];
   splitMode: SplitMode;
+  rowSizes: number[];
+  rowColSizes: RowColSizes;
+  onRowSizesChange: (sizes: number[]) => void;
+  onRowColSizesChange: (sizes: RowColSizes) => void;
+  onReset?: () => void;
   focusedPaneIndex?: number | null;
   onTerminalResize?: () => void;
   onPaneContentRef?: (paneIndex: number, el: HTMLDivElement | null) => void;
@@ -479,8 +474,6 @@ export const SplitView = memo(function SplitView({
   onAssignPane?: (paneIndex: number, tabId: string) => void;
 }) {
   const {
-    rowSizes,
-    rowColSizes,
     isDragging,
     containerRef,
     reset,
@@ -488,7 +481,13 @@ export const SplitView = memo(function SplitView({
     onRowDividerTouch,
     onColDivider,
     onColDividerTouch,
-  } = useSplitSizes(splitMode);
+  } = useSplitDrag(
+    rowSizes,
+    rowColSizes,
+    onRowSizesChange,
+    onRowColSizesChange,
+    onReset,
+  );
 
   useEffect(() => {
     if (!isDragging) {

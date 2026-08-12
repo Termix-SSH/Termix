@@ -1421,6 +1421,33 @@ export const fleetInventory = sqliteTable(
 );
 // --- fleets end ---
 
+// --- workspaces begin ---
+export const userWorkspaces = sqliteTable("user_workspaces", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  color: text("color"),
+  icon: text("icon"),
+  // "manual" | "last_session" - exactly one last_session row per user.
+  kind: text("kind").notNull().default("manual"),
+  isDefault: integer("is_default", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
+  payload: text("payload").notNull().default("{}"),
+  syncId: text("sync_id").unique(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
+  lastUsedAt: text("last_used_at"),
+});
+// --- workspaces end ---
+
 // --- sync begin ---
 // Records a delete for a synced entity type so the other side of a sync
 // pair (embedded desktop backend <-> connected remote server) learns about

@@ -57,6 +57,13 @@
       "when": 1786487750371,
       "tag": "0007_orange_mandrill",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786498679719,
+      "tag": "0008_bright_miss_america",
+      "breakpoints": true
     }
   ]
 }

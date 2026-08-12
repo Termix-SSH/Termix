@@ -57,6 +57,13 @@
       "when": 1786487754919,
       "tag": "0007_aspiring_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1786498680274,
+      "tag": "0008_lame_nighthawk",
+      "breakpoints": true
     }
   ]
 }

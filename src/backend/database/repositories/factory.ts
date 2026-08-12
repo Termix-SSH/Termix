@@ -52,6 +52,7 @@ import { UserPreferenceRepository } from "./user-preference-repository.js";
 import { UserRepository } from "./user-repository.js";
 import { VaultProfileRepository } from "./vault-profile-repository.js";
 import { VaultTokenRepository } from "./vault-token-repository.js";
+import { WorkspaceRepository } from "./workspace-repository.js";
 
 /**
  * The context every repository runs against.
@@ -461,6 +462,13 @@ export function createCurrentVaultTokenRepository(): VaultTokenRepository {
   return new VaultTokenRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("vault_token_repository_write"),
+  );
+}
+
+export function createCurrentWorkspaceRepository(): WorkspaceRepository {
+  return new WorkspaceRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("workspace_repository_write"),
   );
 }
 

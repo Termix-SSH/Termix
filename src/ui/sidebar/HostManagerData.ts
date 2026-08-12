@@ -59,6 +59,7 @@ export function sshHostToHost(h: SSHHostWithStatus): Host {
     ram: null,
     lastAccess: "",
     tags: h.tags ?? [],
+    syncId: h.syncId ?? null,
     authType: h.authType,
     shareSshAuth: h.shareSshAuth ?? false,
     password: h.password,

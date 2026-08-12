@@ -61,6 +61,7 @@ import {
   Hammer,
   KeyRound,
   LayoutPanelLeft,
+  LayoutTemplate,
   Network,
   Palette,
   Play,
@@ -1866,6 +1867,11 @@ export function UserProfilePanel({
                   id: "split-screen",
                   icon: <LayoutPanelLeft size={12} />,
                   label: t("nav.splitScreen"),
+                },
+                {
+                  id: "workspaces",
+                  icon: <LayoutTemplate size={12} />,
+                  label: t("nav.workspaces"),
                 },
                 {
                   id: "network_graph",

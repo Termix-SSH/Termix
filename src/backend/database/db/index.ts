@@ -2423,6 +2423,36 @@ const migrateSchema = () => {
   }
   // --- fleets end ---
 
+  // --- workspaces begin ---
+  try {
+    sqlite.prepare("SELECT id FROM user_workspaces LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS user_workspaces (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          color TEXT,
+          icon TEXT,
+          kind TEXT NOT NULL DEFAULT 'manual',
+          is_default INTEGER NOT NULL DEFAULT 0,
+          payload TEXT NOT NULL DEFAULT '{}',
+          sync_id TEXT UNIQUE,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          last_used_at TEXT
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create user_workspaces table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- workspaces end ---
+
   // --- sync begin ---
   // Stable per-row identity used to match rows across two independently-
   // seeded databases (the embedded desktop backend and a connected remote

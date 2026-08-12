@@ -396,6 +396,52 @@ export type ToolsTab = "ssh-tools" | "snippets" | "history" | "split-screen";
 export type SplitMode =
   "none" | "2-way" | "3-way" | "3-way-horizontal" | "4-way" | "5-way" | "6-way";
 
+export type WorkspaceTabSnapshot = {
+  /** Stable key within the saved tab list, not the live Tab.id (which is regenerated on every open). */
+  slotId: string;
+  type: TabType;
+  /** Set for host-bound tab types, resolved by Host.syncId on apply. Never set for "serial". */
+  hostSyncId?: string | null;
+  /** Denormalized snapshot for display and graceful-skip messaging if the host is later deleted. */
+  hostNameSnapshot?: string | null;
+  label: string;
+  customLabel?: string;
+  initialFilePath?: string;
+  initialPath?: string;
+  fleetId?: number;
+  /** Only present when type === "serial". Fully self-contained, no host resolution needed. */
+  serialConfig?: SerialConfig;
+};
+
+export type WorkspacePayload = {
+  version: 1;
+  tabs: WorkspaceTabSnapshot[];
+  activeSlotId: string | null;
+  splitMode: SplitMode;
+  /** Indexed identically to AppShell's paneTabIds (length 6), holding slotId instead of a live Tab.id. */
+  paneTabIds: (string | null)[];
+  rowSizes: number[];
+  rowColSizes: number[][];
+};
+
+export type WorkspaceKind = "manual" | "last_session";
+
+export type Workspace = {
+  id: number;
+  userId: string;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  kind: WorkspaceKind;
+  isDefault: boolean;
+  payload: WorkspacePayload;
+  syncId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastUsedAt: string | null;
+  tabCount: number;
+};
+
 export type Snippet = {
   id: number;
   name: string;
