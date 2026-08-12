@@ -54,8 +54,10 @@ export function getStatusClasses(
   // accent scheme
   if (variant === "dot")
     return online ? "bg-accent-brand" : "bg-muted-foreground/25";
+  // Offline keeps a faint neutral line rather than nothing, so the stripe
+  // column stays visible instead of blending into the background.
   if (variant === "stripe")
-    return online ? "bg-accent-brand" : "bg-transparent";
+    return online ? "bg-accent-brand" : "bg-muted-foreground/20";
   // badge
   return online
     ? "border-accent-brand/40 text-accent-brand bg-accent-brand/10"

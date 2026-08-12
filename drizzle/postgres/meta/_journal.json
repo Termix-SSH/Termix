@@ -71,6 +71,13 @@
       "when": 1786509724258,
       "tag": "0009_spicy_the_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786515117043,
+      "tag": "0010_nasty_mordo",
+      "breakpoints": true
     }
   ]
 }

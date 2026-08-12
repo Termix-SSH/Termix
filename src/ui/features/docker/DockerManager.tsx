@@ -32,6 +32,7 @@ import { TOTPDialog } from "@/ssh/dialogs/TOTPDialog.tsx";
 import { SSHAuthDialog } from "@/ssh/dialogs/SSHAuthDialog.tsx";
 import { WarpgateDialog } from "@/ssh/dialogs/WarpgateDialog.tsx";
 import { useTabsSafe } from "@/shell/TabContext.tsx";
+import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
 import {
   ConnectionLogProvider,
   useConnectionLog,
@@ -67,6 +68,7 @@ function DockerManagerInner({
   const { t } = useTranslation();
   const { addLog, setLogs, clearLogs } = useConnectionLog();
   const { currentTab, removeTab } = useTabsSafe();
+  const dockerPrefs = useAreaPreferences("docker");
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [containers, setContainers] = React.useState<DockerContainer[]>([]);
@@ -77,7 +79,11 @@ function DockerManagerInner({
   const [dockerValidation, setDockerValidation] =
     React.useState<DockerValidation | null>(null);
   const [isValidating, setIsValidating] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<"list" | "detail">("list");
+  // Initial view follows the interface preset; switching it afterwards is a
+  // per-session choice, same as before.
+  const [viewMode, setViewMode] = React.useState<"list" | "detail">(
+    dockerPrefs.viewMode,
+  );
   const [isLoadingContainers, setIsLoadingContainers] = React.useState(false);
   const [hasLoadedContainersOnce, setHasLoadedContainersOnce] =
     React.useState(false);

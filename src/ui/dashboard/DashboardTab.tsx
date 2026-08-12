@@ -1222,6 +1222,25 @@ export function DashboardTab({
     return DEFAULT_SLOTS;
   });
 
+  // Picking an interface preset rewrites the stored layout from the settings
+  // panel, so pick it up without waiting for a remount.
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const saved = localStorage.getItem("dashboardTab.slots");
+        if (!saved) return;
+        const parsed = JSON.parse(saved) as CardSlot[];
+        setSlots(
+          parsed.map((s, i) => ({ key: s.key ?? `${s.id}_${i}`, ...s })),
+        );
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener("dashboardSlotsChanged", handler);
+    return () => window.removeEventListener("dashboardSlotsChanged", handler);
+  }, []);
+
   const [homepageLinkCopied, setHomepageLinkCopied] = useState(false);
 
   const handleCopyHomepageLink = () => {

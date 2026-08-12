@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
 import {
   Box,
   Boxes,
@@ -17,9 +18,12 @@ import {
   FolderSearch,
   Loader2,
   Network,
+  Plus,
   Server,
   Terminal,
 } from "lucide-react";
+import { Button } from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,6 +100,10 @@ export function SidebarTree({
   showTags?: boolean;
 }) {
   const { t } = useTranslation();
+  // Knobs with no other owner come straight from the interface preset; the
+  // ones above still come from the host sidebar preferences blob.
+  const { showResourceBars, showStatusStripes, rowActions } =
+    useAreaPreferences("hostList");
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem("hostOpenFolders");
@@ -655,6 +663,12 @@ export function SidebarTree({
   // Opening the management row from actionsOnly's closed state (which
   // already includes the connection row).
   const ACTIONS_ONLY_OPEN_ROW_HEIGHT = isCompactDensity ? 79.25 : 104.75;
+  // Hiding the resource bars only ever makes a row shorter than the height
+  // reserved for it, which the existing shapes already tolerate: the bars are
+  // conditional on the host being online with CPU/RAM data, so an offline host
+  // has always rendered short of ALWAYS_ROW_HEIGHT. Simple therefore pairs
+  // showResourceBars:false with trayTrigger:"actionsOnly", whose measured
+  // height excludes the resource/management row to begin with.
 
   const rowHeight = useCallback(
     (index: number) => {
@@ -716,6 +730,8 @@ export function SidebarTree({
     visibleRows.length,
     density,
     trayTrigger,
+    showTags,
+    showResourceBars,
   ]);
 
   if (loading) {
@@ -766,12 +782,30 @@ export function SidebarTree({
         }}
       >
         {visibleRows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-            <Server className="size-8 text-muted-foreground/20 mb-2" />
-            <span className="text-sm font-semibold text-muted-foreground/60">
-              {query ? t("hosts.noHostsMatchSearch") : t("hosts.noHostsYet")}
-            </span>
-          </div>
+          <EmptyState
+            className="py-12"
+            icon={Server}
+            title={
+              query ? t("hosts.noHostsMatchSearch") : t("hosts.noHostsYet")
+            }
+            hint={query ? undefined : t("hosts.noHostsYetHint")}
+            action={
+              query ? undefined : (
+                <Button
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent("host-manager:add-host"),
+                    )
+                  }
+                >
+                  <Plus className="size-3" />
+                  {t("hosts.addHost")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <div
             className="relative w-full"
@@ -900,6 +934,9 @@ export function SidebarTree({
                       density={density}
                       trayTrigger={trayTrigger}
                       showTags={showTags}
+                      showResourceBars={showResourceBars}
+                      showStatusStripes={showStatusStripes}
+                      rowActions={rowActions}
                       reorderMode={reorderMode}
                       onReorderDrop={(position) =>
                         handleReorderDrop(`host:${item.id}`, position)

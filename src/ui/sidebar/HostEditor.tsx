@@ -96,9 +96,12 @@ export function HostEditor({
   hosts,
   credentials,
   adminTargetUserId,
+  simpleMode = false,
 }: {
   host: Host | null;
   activeTab: string;
+  /** Collapses the General tab to the fields needed to reach a host. */
+  simpleMode?: boolean;
   onBack: () => void;
   onSave: (saved: SSHHost) => void;
   protocols: HostProtocols;
@@ -441,6 +444,7 @@ export function HostEditor({
               handleProtocolToggle={handleProtocolToggle}
               hosts={hosts}
               host={host}
+              simpleMode={simpleMode}
             />
           )}
 

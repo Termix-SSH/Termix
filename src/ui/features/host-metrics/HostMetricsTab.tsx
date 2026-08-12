@@ -16,6 +16,7 @@ import {
   type ServerMetrics,
 } from "@/main-axios.ts";
 import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
+import { useAreaPreferences } from "@/contexts/UiPreferencesContext";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
 import { hasSnippetInputs } from "@/lib/snippet-variables.ts";
 import type { Snippet } from "@/types/ui-types.ts";
@@ -150,10 +151,17 @@ function HostMetricsInner({
   const hostId = currentHostConfig?.id ?? null;
   const { layout, setLayout } = useHostMetricsPreferences(hostId);
 
+  const metricsPrefs = useAreaPreferences("hostMetrics");
+
   const effectiveLayout: HostMetricsLayout = React.useMemo(() => {
+    // A saved layout is user-authored, so the preset never rewrites it -- it
+    // only decides the shape of the first layout a host gets.
     if (layout) return layout;
-    return defaultLayoutFromWidgets(statsConfig.enabledWidgets ?? []);
-  }, [layout, statsConfig.enabledWidgets]);
+    return defaultLayoutFromWidgets(
+      statsConfig.enabledWidgets ?? [],
+      metricsPrefs.columns,
+    );
+  }, [layout, statsConfig.enabledWidgets, metricsPrefs.columns]);
 
   // Only render/keep cards that are implemented (metric cards in Phase A).
   const visibleSlots = React.useMemo(

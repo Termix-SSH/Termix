@@ -49,37 +49,29 @@ import {
 import {
   Activity,
   AlertCircle,
-  Boxes,
   CheckCircle2,
   ChevronDown,
-  Clock,
   Copy,
   Database,
   Eye,
   EyeOff,
-  Fingerprint,
-  Hammer,
   KeyRound,
-  LayoutPanelLeft,
   LayoutTemplate,
   Network,
   Palette,
-  Play,
-  Plug,
   Plus,
   RotateCcw,
-  ScrollText,
-  Server,
   Shield,
   ShieldCheck,
   Trash2,
   Type,
-  Usb,
   User,
   X,
-  Zap,
 } from "lucide-react";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
+import { RAIL_ITEMS } from "./rail-items";
+import { InterfacePresetSettings } from "./InterfacePresetSettings";
+import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { KeybindingsDialog } from "./KeybindingsDialog";
 import {
   ACCENT_PRESET_COLORS,
@@ -94,7 +86,13 @@ import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 
 type UserProfileSection =
-  "account" | "appearance" | "security" | "api-keys" | "data" | "c2s-tunnels";
+  | "account"
+  | "interface"
+  | "appearance"
+  | "security"
+  | "api-keys"
+  | "data"
+  | "c2s-tunnels";
 
 const THEMES: { id: ThemeId; preview: string }[] = [
   { id: "system", preview: "auto" },
@@ -614,6 +612,7 @@ export function UserProfilePanel({
   // colors) now lives in the dedicated Customize Sidebar panel opened from
   // the Hosts toolbar, not here -- resetToDefaults still needs write access.
   const { update: updateSidebarPrefs } = useHostSidebarPreferences();
+  const uiPrefs = useUiPreferencesContext();
   const [pinAppRail, setPinAppRail] = useState(() =>
     readRailPreference("pinAppRail"),
   );
@@ -738,6 +737,13 @@ export function UserProfilePanel({
         "confirmTabClose",
         "hiddenRailTabs",
         "statusColorScheme",
+        "uiPreferences",
+        // Layout/view keys that were never snapshotted, so switching to cloud
+        // and back silently reset them.
+        "dashboardTab.slots",
+        "dashboardTab.mainWidthPct",
+        "termix-terminal-toolbar-density",
+        "fileManagerViewMode",
       ];
       const snap: Record<string, string | null> = { __theme: theme };
       for (const key of SNAPSHOT_KEYS) snap[key] = localStorage.getItem(key);
@@ -877,6 +883,9 @@ export function UserProfilePanel({
     setHiddenRailTabs(new Set());
     localStorage.removeItem("hiddenRailTabs");
     window.dispatchEvent(new CustomEvent("hiddenRailTabsChanged"));
+    // Back to the preset that matches the pre-preset UI, with nothing pinned.
+    uiPrefs?.setPreset("balanced");
+    uiPrefs?.clearAllOverrides();
     if (storageMode === "cloud") {
       saveToCloud({
         theme: "system",
@@ -1504,6 +1513,23 @@ export function UserProfilePanel({
         </div>
       </AccordionSection>
 
+      {/* Interface */}
+      <AccordionSection
+        id="interface"
+        label={t("newUi.sidebar.userProfile.sectionInterface")}
+        icon={<LayoutTemplate size={13} />}
+        open={openSections.has("interface")}
+        onToggle={() => toggle("interface")}
+      >
+        <div className="flex flex-col gap-4 pt-3">
+          <InterfacePresetSettings
+            onRunSetupAgain={() =>
+              window.dispatchEvent(new Event("termix:open-onboarding"))
+            }
+          />
+        </div>
+      </AccordionSection>
+
       {/* Appearance */}
       <AccordionSection
         id="appearance"
@@ -1806,87 +1832,16 @@ export function UserProfilePanel({
             <p className="text-[10px] text-muted-foreground mb-2">
               {t("newUi.sidebar.userProfile.navigationTabsDesc")}
             </p>
-            {(
-              [
-                {
-                  id: "hosts",
-                  icon: <Server size={12} />,
-                  label: t("nav.hosts"),
-                },
-                {
-                  id: "credentials",
-                  icon: <KeyRound size={12} />,
-                  label: t("nav.credentials"),
-                },
-                {
-                  id: "termix-id",
-                  icon: <Fingerprint size={12} />,
-                  label: t("nav.termixId"),
-                },
-                {
-                  id: "connections",
-                  icon: <Plug size={12} />,
-                  label: t("nav.connections"),
-                },
-                {
-                  id: "quick-connect",
-                  icon: <Zap size={12} />,
-                  label: t("nav.quickConnect"),
-                },
-                {
-                  id: "serial",
-                  icon: <Usb size={12} />,
-                  label: t("nav.serial"),
-                },
-                {
-                  id: "ssh-tools",
-                  icon: <Hammer size={12} />,
-                  label: t("nav.sshTools"),
-                },
-                {
-                  id: "snippets",
-                  icon: <Play size={12} />,
-                  label: t("nav.snippets"),
-                },
-                {
-                  id: "fleets",
-                  icon: <Boxes size={12} />,
-                  label: t("nav.fleets"),
-                },
-                {
-                  id: "history",
-                  icon: <Clock size={12} />,
-                  label: t("nav.history"),
-                },
-                {
-                  id: "session-logs",
-                  icon: <ScrollText size={12} />,
-                  label: t("nav.sessionLogs"),
-                },
-                {
-                  id: "split-screen",
-                  icon: <LayoutPanelLeft size={12} />,
-                  label: t("nav.splitScreen"),
-                },
-                {
-                  id: "workspaces",
-                  icon: <LayoutTemplate size={12} />,
-                  label: t("nav.workspaces"),
-                },
-                {
-                  id: "network_graph",
-                  icon: <Network size={12} />,
-                  label: t("nav.networkGraph"),
-                },
-              ] as { id: string; icon: React.ReactNode; label: string }[]
-            ).map((tab) => (
+            {RAIL_ITEMS.map((tab) => (
               <div
                 key={tab.id}
                 className="flex items-center justify-between py-1.5"
               >
                 <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <span className="text-muted-foreground">{tab.icon}</span>
-                  {tab.label}
+                  <span className="text-muted-foreground">
+                    <tab.icon size={12} />
+                  </span>
+                  {t(tab.labelKey)}
                 </span>
                 <FakeSwitch
                   checked={!hiddenRailTabs.has(tab.id)}

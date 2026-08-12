@@ -1120,6 +1120,19 @@ export const credentialSidebarPreferences = mysqlTable(
   },
 );
 
+export const uiPreferences = mysqlTable("ui_preferences", {
+  userId: varchar("user_id", { length: 255 })
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  // JSON-encoded UiPreferences (preset + per-area overrides + onboarding
+  // state). No secrets in this blob, same convention as
+  // hostSidebarPreferences.data.
+  data: text("data").notNull(),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(CURRENT_TIMESTAMP)`),
+});
+
 export const hostHealthChecks = mysqlTable(
   "host_health_checks",
   {

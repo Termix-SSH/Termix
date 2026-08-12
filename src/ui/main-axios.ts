@@ -1609,6 +1609,8 @@ export {
   saveCredentialSidebarPreferences,
 } from "@/api/credential-sidebar-preferences-api";
 
+export { getUiPreferences, saveUiPreferences } from "@/api/ui-preferences-api";
+
 export {
   getGlobalMonitoringSettings,
   updateGlobalMonitoringSettings,
