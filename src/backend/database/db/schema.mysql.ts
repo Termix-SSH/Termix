@@ -98,22 +98,26 @@ export const sessions = mysqlTable(
   ],
 );
 
-export const trustedDevices = mysqlTable("trusted_devices", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  deviceFingerprint: text("device_fingerprint").notNull(),
-  deviceType: text("device_type").notNull(),
-  deviceInfo: text("device_info").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  expiresAt: varchar("expires_at", { length: 255 }).notNull(),
-  lastUsedAt: text("last_used_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const trustedDevices = mysqlTable(
+  "trusted_devices",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    deviceFingerprint: text("device_fingerprint").notNull(),
+    deviceType: text("device_type").notNull(),
+    deviceInfo: text("device_info").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    expiresAt: varchar("expires_at", { length: 255 }).notNull(),
+    lastUsedAt: text("last_used_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [index("idx_trusted_devices_user_id").on(table.userId)],
+);
 
 export const webauthnCredentials = mysqlTable("webauthn_credentials", {
   id: varchar("id", { length: 255 }).primaryKey(),
@@ -325,81 +329,110 @@ export const hosts = mysqlTable(
   ],
 );
 
-export const fileManagerRecent = mysqlTable("file_manager_recent", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  path: text("path").notNull(),
-  lastOpened: text("last_opened")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const fileManagerRecent = mysqlTable(
+  "file_manager_recent",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    path: text("path").notNull(),
+    lastOpened: text("last_opened")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  // Every file manager surface is read for one user on one host at a time.
+  (table) => [
+    index("idx_file_manager_recent_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const fileManagerPinned = mysqlTable("file_manager_pinned", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  path: text("path").notNull(),
-  pinnedAt: text("pinned_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const fileManagerPinned = mysqlTable(
+  "file_manager_pinned",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    path: text("path").notNull(),
+    pinnedAt: text("pinned_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_file_manager_pinned_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const fileManagerShortcuts = mysqlTable("file_manager_shortcuts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  path: text("path").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const fileManagerShortcuts = mysqlTable(
+  "file_manager_shortcuts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    path: text("path").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_file_manager_shortcuts_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const transferRecent = mysqlTable("transfer_recent", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  sourceHostId: int("source_host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  destHostId: int("dest_host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  destPath: text("dest_path").notNull(),
-  destPathLabel: text("dest_path_label").notNull(),
-  lastUsed: text("last_used")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const transferRecent = mysqlTable(
+  "transfer_recent",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceHostId: int("source_host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    destHostId: int("dest_host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    destPath: text("dest_path").notNull(),
+    destPathLabel: text("dest_path_label").notNull(),
+    lastUsed: text("last_used")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [index("idx_transfer_recent_user").on(table.userId)],
+);
 
-export const dismissedAlerts = mysqlTable("dismissed_alerts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  alertId: text("alert_id").notNull(),
-  dismissedAt: text("dismissed_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const dismissedAlerts = mysqlTable(
+  "dismissed_alerts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    alertId: text("alert_id").notNull(),
+    dismissedAt: text("dismissed_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [index("idx_dismissed_alerts_user_id").on(table.userId)],
+);
 
-export const sshCredentials = mysqlTable("ssh_credentials", {
+export const sshCredentials = mysqlTable(
+  "ssh_credentials",
+  {
   id: int("id").autoincrement().primaryKey(),
   userId: varchar("user_id", { length: 255 })
     .notNull()
@@ -435,44 +468,57 @@ export const sshCredentials = mysqlTable("ssh_credentials", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(CURRENT_TIMESTAMP)`),
-});
+  },
+  (table) => [index("idx_ssh_credentials_user_id").on(table.userId)],
+);
 
-export const sshCredentialUsage = mysqlTable("ssh_credential_usage", {
-  id: int("id").autoincrement().primaryKey(),
-  credentialId: int("credential_id")
-    .notNull()
-    .references(() => sshCredentials.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  usedAt: text("used_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const sshCredentialUsage = mysqlTable(
+  "ssh_credential_usage",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    credentialId: int("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    usedAt: text("used_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_ssh_credential_usage_credential").on(table.credentialId),
+    index("idx_ssh_credential_usage_user").on(table.userId),
+  ],
+);
 
-export const snippets = mysqlTable("snippets", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  content: text("content").notNull(),
-  description: text("description"),
-  folder: text("folder"),
-  order: int("order").notNull().default(0),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  hostFilter: text("host_filter"),
-  isNote: boolean("is_note").notNull().default(false),
-});
+export const snippets = mysqlTable(
+  "snippets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    content: text("content").notNull(),
+    description: text("description"),
+    folder: text("folder"),
+    order: int("order").notNull().default(0),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    hostFilter: text("host_filter"),
+    isNote: boolean("is_note").notNull().default(false),
+  },
+  (table) => [index("idx_snippets_user_id").on(table.userId)],
+);
 
 export const snippetFolders = mysqlTable("snippet_folders", {
   id: int("id").autoincrement().primaryKey(),
@@ -508,81 +554,107 @@ export const c2sTunnelPresets = mysqlTable("c2s_tunnel_presets", {
     .default(sql`(CURRENT_TIMESTAMP)`),
 });
 
-export const snippetAccess = mysqlTable("snippet_access", {
-  id: int("id").autoincrement().primaryKey(),
-  snippetId: int("snippet_id")
-    .notNull()
-    .references(() => snippets.id, { onDelete: "cascade" }),
+export const snippetAccess = mysqlTable(
+  "snippet_access",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    snippetId: int("snippet_id")
+      .notNull()
+      .references(() => snippets.id, { onDelete: "cascade" }),
 
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
-  roleId: int("role_id").references(() => roles.id, {
-    onDelete: "cascade",
-  }),
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "cascade" }),
+    roleId: int("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
 
-  grantedBy: varchar("granted_by", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: varchar("granted_by", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
-  permissionLevel: text("permission_level").notNull().default("view"),
+    permissionLevel: text("permission_level").notNull().default("view"),
 
-  expiresAt: varchar("expires_at", { length: 255 }),
+    expiresAt: varchar("expires_at", { length: 255 }),
 
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  // Same three lookup shapes as host_access: by grantee, by role, by snippet.
+  (table) => [
+    index("idx_snippet_access_user_id").on(table.userId),
+    index("idx_snippet_access_snippet_id").on(table.snippetId),
+    index("idx_snippet_access_role_id").on(table.roleId),
+  ],
+);
 
-export const sshFolders = mysqlTable("ssh_folders", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  credentialId: int("credential_id").references(() => sshCredentials.id, {
-    onDelete: "set null",
-  }),
-  // Manual drag-to-reorder position among sibling folders. Null falls back
-  // to name sort, same convention as hosts.sortOrder.
-  sortOrder: int("sort_order"),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const sshFolders = mysqlTable(
+  "ssh_folders",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    color: text("color"),
+    icon: text("icon"),
+    credentialId: int("credential_id").references(() => sshCredentials.id, {
+      onDelete: "set null",
+    }),
+    // Manual drag-to-reorder position among sibling folders. Null falls back
+    // to name sort, same convention as hosts.sortOrder.
+    sortOrder: int("sort_order"),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [index("idx_ssh_folders_user_id").on(table.userId)],
+);
 
-export const recentActivity = mysqlTable("recent_activity", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  hostName: text("host_name"),
-  timestamp: varchar("timestamp", { length: 255 })
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const recentActivity = mysqlTable(
+  "recent_activity",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    hostName: text("host_name"),
+    timestamp: varchar("timestamp", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  // Always read newest-first for one user, so timestamp follows user_id.
+  (table) => [
+    index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
+  ],
+);
 
-export const commandHistory = mysqlTable("command_history", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  command: text("command").notNull(),
-  executedAt: text("executed_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const commandHistory = mysqlTable(
+  "command_history",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    command: text("command").notNull(),
+    executedAt: text("executed_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    index("idx_command_history_user_host").on(table.userId, table.hostId),
+  ],
+);
 
 export const networkTopology = mysqlTable("network_topology", {
   id: int("id").autoincrement().primaryKey(),
@@ -756,7 +828,13 @@ export const userRoles = mysqlTable(
   // Declared inline in the production DDL as UNIQUE(...), but never here,
   // so the generated Postgres and MySQL schemas allowed duplicates the
   // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId)],
+  //
+  // The unique pair already serves lookups by user, since user_id leads it.
+  // Listing a role's members starts from role_id, which it cannot serve.
+  (table) => [
+    uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId),
+    index("idx_user_roles_role_id").on(table.roleId),
+  ],
 );
 
 export const auditLogs = mysqlTable(
@@ -796,39 +874,51 @@ export const auditLogs = mysqlTable(
   ],
 );
 
-export const sessionRecordings = mysqlTable("session_recordings", {
-  id: int("id").autoincrement().primaryKey(),
+export const sessionRecordings = mysqlTable(
+  "session_recordings",
+  {
+    id: int("id").autoincrement().primaryKey(),
 
-  hostId: int("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  // Nullable on purpose: a recording is evidence about the host as much as the
-  // person, so it outlives the account. username keeps it attributable.
-  userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
-  username: text("username"),
-  accessId: int("access_id").references(() => hostAccess.id, {
-    onDelete: "set null",
-  }),
+    hostId: int("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    // Nullable on purpose: a recording is evidence about the host as much as the
+    // person, so it outlives the account. username keeps it attributable.
+    userId: varchar("user_id", { length: 255 }).references(() => users.id, { onDelete: "set null" }),
+    username: text("username"),
+    accessId: int("access_id").references(() => hostAccess.id, {
+      onDelete: "set null",
+    }),
 
-  startedAt: text("started_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  endedAt: text("ended_at"),
-  duration: int("duration"),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    endedAt: text("ended_at"),
+    duration: int("duration"),
 
-  commands: text("commands"),
-  dangerousActions: text("dangerous_actions"),
+    commands: text("commands"),
+    dangerousActions: text("dangerous_actions"),
 
-  recordingPath: text("recording_path"),
-  protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
-  format: text("format").notNull().default("text"),
+    recordingPath: text("recording_path"),
+    protocol: varchar("protocol", { length: 255 }).notNull().default("ssh"),
+    format: text("format").notNull().default("text"),
 
-  terminatedByOwner: boolean("terminated_by_owner")
-    .default(false),
-  terminationReason: text("termination_reason"),
-});
+    terminatedByOwner: boolean("terminated_by_owner").default(false),
+    terminationReason: text("termination_reason"),
+  },
+  // Listed newest-first per user, and audited per host.
+  (table) => [
+    index("idx_session_recordings_user_started").on(
+      table.userId,
+      table.startedAt,
+    ),
+    index("idx_session_recordings_host").on(table.hostId),
+  ],
+);
 
-export const sessionShares = mysqlTable("session_shares", {
+export const sessionShares = mysqlTable(
+  "session_shares",
+  {
   id: varchar("id", { length: 255 }).primaryKey(),
 
   hostId: int("host_id")
@@ -843,7 +933,7 @@ export const sessionShares = mysqlTable("session_shares", {
   // Live-session binding: TerminalSessionManager's session.id for SSH, or
   // guacd's own guacamoleConnectionId for rdp/vnc/telnet. Neither is a DB
   // row (process-local, in-memory) so this intentionally has no FK.
-  sessionId: text("session_id").notNull(),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
   tabInstanceId: text("tab_instance_id"),
 
   shareType: text("share_type").notNull(), // "link" | "user"
@@ -862,7 +952,13 @@ export const sessionShares = mysqlTable("session_shares", {
 
   lastJoinedAt: text("last_joined_at"),
   joinCount: int("join_count").notNull().default(0),
-});
+  },
+  // Resolved from the live session on join, and listed per host.
+  (table) => [
+    index("idx_session_shares_session_id").on(table.sessionId),
+    index("idx_session_shares_host_id").on(table.hostId),
+  ],
+);
 
 export const sessionShareParticipants = mysqlTable(
   "session_share_participants",
@@ -980,37 +1076,47 @@ export const vaultTokens = mysqlTable(
   (table) => [uniqueIndex("idx_vault_tokens_user_profile").on(table.userId, table.profileId)],
 );
 
-export const apiKeys = mysqlTable("api_keys", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  tokenHash: text("token_hash").notNull(),
-  tokenPrefix: text("token_prefix").notNull(),
-  createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  expiresAt: varchar("expires_at", { length: 255 }),
-  lastUsedAt: text("last_used_at"),
-  isActive: boolean("is_active").notNull().default(true),
-});
+export const apiKeys = mysqlTable(
+  "api_keys",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    tokenHash: text("token_hash").notNull(),
+    tokenPrefix: text("token_prefix").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+    expiresAt: varchar("expires_at", { length: 255 }),
+    lastUsedAt: text("last_used_at"),
+    isActive: boolean("is_active").notNull().default(true),
+  },
+  (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
 
-export const userOpenTabs = mysqlTable("user_open_tabs", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  tabType: text("tab_type").notNull(),
-  hostId: int("host_id").references(() => hosts.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
-  tabOrder: int("tab_order").notNull().default(0),
-  backendSessionId: text("backend_session_id"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const userOpenTabs = mysqlTable(
+  "user_open_tabs",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tabType: text("tab_type").notNull(),
+    hostId: int("host_id").references(() => hosts.id, {
+      onDelete: "cascade",
+    }),
+    label: text("label").notNull(),
+    tabOrder: int("tab_order").notNull().default(0),
+    backendSessionId: text("backend_session_id"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [index("idx_user_open_tabs_user_id").on(table.userId)],
+);
 
 export const userPreferences = mysqlTable("user_preferences", {
   userId: varchar("user_id", { length: 255 })
@@ -1360,45 +1466,59 @@ export const alertRuleChannels = mysqlTable("alert_rule_channels", {
     .references(() => notificationChannels.id, { onDelete: "cascade" }),
 });
 
-export const alertFirings = mysqlTable("alert_firings", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  ruleId: int("rule_id")
-    .notNull()
-    .references(() => alertRules.id, { onDelete: "cascade" }),
-  hostId: int("host_id").notNull(),
-  hostName: text("host_name").notNull(),
-  firedAt: text("fired_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  resolvedAt: text("resolved_at"),
-  value: double("value"),
-  message: text("message").notNull(),
-  severity: text("severity").notNull().default("warning"),
-  acknowledged: boolean("acknowledged").notNull().default(false),
-});
+export const alertFirings = mysqlTable(
+  "alert_firings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ruleId: int("rule_id")
+      .notNull()
+      .references(() => alertRules.id, { onDelete: "cascade" }),
+    hostId: int("host_id").notNull(),
+    hostName: text("host_name").notNull(),
+    firedAt: varchar("fired_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    resolvedAt: text("resolved_at"),
+    value: double("value"),
+    message: text("message").notNull(),
+    severity: text("severity").notNull().default("warning"),
+    acknowledged: boolean("acknowledged")
+      .notNull()
+      .default(false),
+  },
+  // A rule's history is read newest-first; host_id is filtered on its own.
+  (table) => [
+    index("idx_alert_firings_rule").on(table.ruleId, table.firedAt),
+    index("idx_alert_firings_host").on(table.hostId),
+  ],
+);
 // --- alerts end ---
 
 // --- homepage begin ---
-export const homepageItems = mysqlTable("homepage_items", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  typeId: text("type_id").notNull(),
-  title: text("title"),
-  config: text("config").notNull().default("{}"),
-  folderId: int("folder_id"),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-});
+export const homepageItems = mysqlTable(
+  "homepage_items",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    typeId: text("type_id").notNull(),
+    title: text("title"),
+    config: text("config").notNull().default("{}"),
+    folderId: int("folder_id"),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [index("idx_homepage_items_user_id").on(table.userId)],
+);
 
 export const homepageLayouts = mysqlTable("homepage_layouts", {
   id: int("id").autoincrement().primaryKey(),
@@ -1450,8 +1570,11 @@ export const fleetMembers = mysqlTable(
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
+  // fleet_id leads the unique pair, so listing a fleet's hosts is already
+  // served. Finding the fleets a host belongs to starts from host_id.
   (table) => [
     uniqueIndex("idx_fleet_members_fleet_host").on(table.fleetId, table.hostId),
+    index("idx_fleet_members_host").on(table.hostId),
   ],
 );
 
@@ -1478,37 +1601,43 @@ export const fleetInventory = mysqlTable(
       .notNull()
       .default(sql`(CURRENT_TIMESTAMP)`),
   },
+  // host_id leads the unique pair; a user's whole inventory is read by user_id.
   (table) => [
     uniqueIndex("idx_fleet_inventory_host").on(table.hostId, table.userId),
+    index("idx_fleet_inventory_user").on(table.userId),
   ],
 );
 // --- fleets end ---
 
 // --- workspaces begin ---
-export const userWorkspaces = mysqlTable("user_workspaces", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: varchar("user_id", { length: 255 })
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar("name", { length: 255 }).notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  // "manual" | "last_session" - exactly one last_session row per user.
-  kind: text("kind").notNull().default("manual"),
-  isDefault: boolean("is_default")
-    .notNull()
-    .default(false),
-  // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
-  payload: text("payload").notNull().default("{}"),
-  syncId: varchar("sync_id", { length: 255 }).unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`(CURRENT_TIMESTAMP)`),
-  lastUsedAt: text("last_used_at"),
-});
+export const userWorkspaces = mysqlTable(
+  "user_workspaces",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    color: text("color"),
+    icon: text("icon"),
+    // "manual" | "last_session" - exactly one last_session row per user.
+    kind: text("kind").notNull().default("manual"),
+    isDefault: boolean("is_default")
+      .notNull()
+      .default(false),
+    // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
+    payload: text("payload").notNull().default("{}"),
+    syncId: varchar("sync_id", { length: 255 }).unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    lastUsedAt: text("last_used_at"),
+  },
+  (table) => [index("idx_user_workspaces_user_id").on(table.userId)],
+);
 // --- workspaces end ---
 
 // --- sync begin ---

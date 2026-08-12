@@ -89,22 +89,26 @@ export const sessions = sqliteTable(
   ],
 );
 
-export const trustedDevices = sqliteTable("trusted_devices", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  deviceFingerprint: text("device_fingerprint").notNull(),
-  deviceType: text("device_type").notNull(),
-  deviceInfo: text("device_info").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at").notNull(),
-  lastUsedAt: text("last_used_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const trustedDevices = sqliteTable(
+  "trusted_devices",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    deviceFingerprint: text("device_fingerprint").notNull(),
+    deviceType: text("device_type").notNull(),
+    deviceInfo: text("device_info").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at").notNull(),
+    lastUsedAt: text("last_used_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_trusted_devices_user_id").on(table.userId)],
+);
 
 export const webauthnCredentials = sqliteTable("webauthn_credentials", {
   id: text("id").primaryKey(),
@@ -318,81 +322,110 @@ export const hosts = sqliteTable(
   ],
 );
 
-export const fileManagerRecent = sqliteTable("file_manager_recent", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  path: text("path").notNull(),
-  lastOpened: text("last_opened")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const fileManagerRecent = sqliteTable(
+  "file_manager_recent",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    path: text("path").notNull(),
+    lastOpened: text("last_opened")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Every file manager surface is read for one user on one host at a time.
+  (table) => [
+    index("idx_file_manager_recent_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const fileManagerPinned = sqliteTable("file_manager_pinned", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  path: text("path").notNull(),
-  pinnedAt: text("pinned_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const fileManagerPinned = sqliteTable(
+  "file_manager_pinned",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    path: text("path").notNull(),
+    pinnedAt: text("pinned_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_file_manager_pinned_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const fileManagerShortcuts = sqliteTable("file_manager_shortcuts", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  path: text("path").notNull(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const fileManagerShortcuts = sqliteTable(
+  "file_manager_shortcuts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    path: text("path").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_file_manager_shortcuts_user").on(table.userId, table.hostId),
+  ],
+);
 
-export const transferRecent = sqliteTable("transfer_recent", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  sourceHostId: integer("source_host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  destHostId: integer("dest_host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  destPath: text("dest_path").notNull(),
-  destPathLabel: text("dest_path_label").notNull(),
-  lastUsed: text("last_used")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const transferRecent = sqliteTable(
+  "transfer_recent",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    sourceHostId: integer("source_host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    destHostId: integer("dest_host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    destPath: text("dest_path").notNull(),
+    destPathLabel: text("dest_path_label").notNull(),
+    lastUsed: text("last_used")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_transfer_recent_user").on(table.userId)],
+);
 
-export const dismissedAlerts = sqliteTable("dismissed_alerts", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  alertId: text("alert_id").notNull(),
-  dismissedAt: text("dismissed_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const dismissedAlerts = sqliteTable(
+  "dismissed_alerts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    alertId: text("alert_id").notNull(),
+    dismissedAt: text("dismissed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_dismissed_alerts_user_id").on(table.userId)],
+);
 
-export const sshCredentials = sqliteTable("ssh_credentials", {
+export const sshCredentials = sqliteTable(
+  "ssh_credentials",
+  {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")
     .notNull()
@@ -428,44 +461,57 @@ export const sshCredentials = sqliteTable("ssh_credentials", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
-});
+  },
+  (table) => [index("idx_ssh_credentials_user_id").on(table.userId)],
+);
 
-export const sshCredentialUsage = sqliteTable("ssh_credential_usage", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  credentialId: integer("credential_id")
-    .notNull()
-    .references(() => sshCredentials.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  usedAt: text("used_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const sshCredentialUsage = sqliteTable(
+  "ssh_credential_usage",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    credentialId: integer("credential_id")
+      .notNull()
+      .references(() => sshCredentials.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    usedAt: text("used_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ssh_credential_usage_credential").on(table.credentialId),
+    index("idx_ssh_credential_usage_user").on(table.userId),
+  ],
+);
 
-export const snippets = sqliteTable("snippets", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  content: text("content").notNull(),
-  description: text("description"),
-  folder: text("folder"),
-  order: integer("order").notNull().default(0),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  hostFilter: text("host_filter"),
-  isNote: integer("is_note", { mode: "boolean" }).notNull().default(false),
-});
+export const snippets = sqliteTable(
+  "snippets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    content: text("content").notNull(),
+    description: text("description"),
+    folder: text("folder"),
+    order: integer("order").notNull().default(0),
+    syncId: text("sync_id").unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    hostFilter: text("host_filter"),
+    isNote: integer("is_note", { mode: "boolean" }).notNull().default(false),
+  },
+  (table) => [index("idx_snippets_user_id").on(table.userId)],
+);
 
 export const snippetFolders = sqliteTable("snippet_folders", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -501,81 +547,107 @@ export const c2sTunnelPresets = sqliteTable("c2s_tunnel_presets", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const snippetAccess = sqliteTable("snippet_access", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  snippetId: integer("snippet_id")
-    .notNull()
-    .references(() => snippets.id, { onDelete: "cascade" }),
+export const snippetAccess = sqliteTable(
+  "snippet_access",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    snippetId: integer("snippet_id")
+      .notNull()
+      .references(() => snippets.id, { onDelete: "cascade" }),
 
-  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
-  roleId: integer("role_id").references(() => roles.id, {
-    onDelete: "cascade",
-  }),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    roleId: integer("role_id").references(() => roles.id, {
+      onDelete: "cascade",
+    }),
 
-  grantedBy: text("granted_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: text("granted_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
 
-  permissionLevel: text("permission_level").notNull().default("view"),
+    permissionLevel: text("permission_level").notNull().default("view"),
 
-  expiresAt: text("expires_at"),
+    expiresAt: text("expires_at"),
 
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Same three lookup shapes as host_access: by grantee, by role, by snippet.
+  (table) => [
+    index("idx_snippet_access_user_id").on(table.userId),
+    index("idx_snippet_access_snippet_id").on(table.snippetId),
+    index("idx_snippet_access_role_id").on(table.roleId),
+  ],
+);
 
-export const sshFolders = sqliteTable("ssh_folders", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  credentialId: integer("credential_id").references(() => sshCredentials.id, {
-    onDelete: "set null",
-  }),
-  // Manual drag-to-reorder position among sibling folders. Null falls back
-  // to name sort, same convention as hosts.sortOrder.
-  sortOrder: integer("sort_order"),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const sshFolders = sqliteTable(
+  "ssh_folders",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color"),
+    icon: text("icon"),
+    credentialId: integer("credential_id").references(() => sshCredentials.id, {
+      onDelete: "set null",
+    }),
+    // Manual drag-to-reorder position among sibling folders. Null falls back
+    // to name sort, same convention as hosts.sortOrder.
+    sortOrder: integer("sort_order"),
+    syncId: text("sync_id").unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_ssh_folders_user_id").on(table.userId)],
+);
 
-export const recentActivity = sqliteTable("recent_activity", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  hostName: text("host_name"),
-  timestamp: text("timestamp")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const recentActivity = sqliteTable(
+  "recent_activity",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    hostName: text("host_name"),
+    timestamp: text("timestamp")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // Always read newest-first for one user, so timestamp follows user_id.
+  (table) => [
+    index("idx_recent_activity_user_ts").on(table.userId, table.timestamp),
+  ],
+);
 
-export const commandHistory = sqliteTable("command_history", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  command: text("command").notNull(),
-  executedAt: text("executed_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const commandHistory = sqliteTable(
+  "command_history",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    command: text("command").notNull(),
+    executedAt: text("executed_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_command_history_user_host").on(table.userId, table.hostId),
+  ],
+);
 
 export const networkTopology = sqliteTable("network_topology", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -749,7 +821,13 @@ export const userRoles = sqliteTable(
   // Declared inline in the production DDL as UNIQUE(...), but never here,
   // so the generated Postgres and MySQL schemas allowed duplicates the
   // SQLite deployment forbids — and the upsert had nothing to conflict on.
-  (table) => [uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId)],
+  //
+  // The unique pair already serves lookups by user, since user_id leads it.
+  // Listing a role's members starts from role_id, which it cannot serve.
+  (table) => [
+    uniqueIndex("idx_user_roles_user_role").on(table.userId, table.roleId),
+    index("idx_user_roles_role_id").on(table.roleId),
+  ],
 );
 
 export const auditLogs = sqliteTable(
@@ -789,39 +867,53 @@ export const auditLogs = sqliteTable(
   ],
 );
 
-export const sessionRecordings = sqliteTable("session_recordings", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
+export const sessionRecordings = sqliteTable(
+  "session_recordings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
 
-  hostId: integer("host_id")
-    .notNull()
-    .references(() => hosts.id, { onDelete: "cascade" }),
-  // Nullable on purpose: a recording is evidence about the host as much as the
-  // person, so it outlives the account. username keeps it attributable.
-  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
-  username: text("username"),
-  accessId: integer("access_id").references(() => hostAccess.id, {
-    onDelete: "set null",
-  }),
+    hostId: integer("host_id")
+      .notNull()
+      .references(() => hosts.id, { onDelete: "cascade" }),
+    // Nullable on purpose: a recording is evidence about the host as much as the
+    // person, so it outlives the account. username keeps it attributable.
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    username: text("username"),
+    accessId: integer("access_id").references(() => hostAccess.id, {
+      onDelete: "set null",
+    }),
 
-  startedAt: text("started_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  endedAt: text("ended_at"),
-  duration: integer("duration"),
+    startedAt: text("started_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    endedAt: text("ended_at"),
+    duration: integer("duration"),
 
-  commands: text("commands"),
-  dangerousActions: text("dangerous_actions"),
+    commands: text("commands"),
+    dangerousActions: text("dangerous_actions"),
 
-  recordingPath: text("recording_path"),
-  protocol: text("protocol").notNull().default("ssh"),
-  format: text("format").notNull().default("text"),
+    recordingPath: text("recording_path"),
+    protocol: text("protocol").notNull().default("ssh"),
+    format: text("format").notNull().default("text"),
 
-  terminatedByOwner: integer("terminated_by_owner", { mode: "boolean" })
-    .default(false),
-  terminationReason: text("termination_reason"),
-});
+    terminatedByOwner: integer("terminated_by_owner", {
+      mode: "boolean",
+    }).default(false),
+    terminationReason: text("termination_reason"),
+  },
+  // Listed newest-first per user, and audited per host.
+  (table) => [
+    index("idx_session_recordings_user_started").on(
+      table.userId,
+      table.startedAt,
+    ),
+    index("idx_session_recordings_host").on(table.hostId),
+  ],
+);
 
-export const sessionShares = sqliteTable("session_shares", {
+export const sessionShares = sqliteTable(
+  "session_shares",
+  {
   id: text("id").primaryKey(),
 
   hostId: integer("host_id")
@@ -855,7 +947,13 @@ export const sessionShares = sqliteTable("session_shares", {
 
   lastJoinedAt: text("last_joined_at"),
   joinCount: integer("join_count").notNull().default(0),
-});
+  },
+  // Resolved from the live session on join, and listed per host.
+  (table) => [
+    index("idx_session_shares_session_id").on(table.sessionId),
+    index("idx_session_shares_host_id").on(table.hostId),
+  ],
+);
 
 export const sessionShareParticipants = sqliteTable(
   "session_share_participants",
@@ -973,37 +1071,47 @@ export const vaultTokens = sqliteTable(
   (table) => [uniqueIndex("idx_vault_tokens_user_profile").on(table.userId, table.profileId)],
 );
 
-export const apiKeys = sqliteTable("api_keys", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  tokenHash: text("token_hash").notNull(),
-  tokenPrefix: text("token_prefix").notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  expiresAt: text("expires_at"),
-  lastUsedAt: text("last_used_at"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-});
+export const apiKeys = sqliteTable(
+  "api_keys",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    tokenPrefix: text("token_prefix").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    expiresAt: text("expires_at"),
+    lastUsedAt: text("last_used_at"),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  },
+  (table) => [index("idx_api_keys_user_id").on(table.userId)],
+);
 
-export const userOpenTabs = sqliteTable("user_open_tabs", {
-  id: text("id").primaryKey(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  tabType: text("tab_type").notNull(),
-  hostId: integer("host_id").references(() => hosts.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
-  tabOrder: integer("tab_order").notNull().default(0),
-  backendSessionId: text("backend_session_id"),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const userOpenTabs = sqliteTable(
+  "user_open_tabs",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tabType: text("tab_type").notNull(),
+    hostId: integer("host_id").references(() => hosts.id, {
+      onDelete: "cascade",
+    }),
+    label: text("label").notNull(),
+    tabOrder: integer("tab_order").notNull().default(0),
+    backendSessionId: text("backend_session_id"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_user_open_tabs_user_id").on(table.userId)],
+);
 
 export const userPreferences = sqliteTable("user_preferences", {
   userId: text("user_id")
@@ -1355,45 +1463,59 @@ export const alertRuleChannels = sqliteTable("alert_rule_channels", {
     .references(() => notificationChannels.id, { onDelete: "cascade" }),
 });
 
-export const alertFirings = sqliteTable("alert_firings", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  ruleId: integer("rule_id")
-    .notNull()
-    .references(() => alertRules.id, { onDelete: "cascade" }),
-  hostId: integer("host_id").notNull(),
-  hostName: text("host_name").notNull(),
-  firedAt: text("fired_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  resolvedAt: text("resolved_at"),
-  value: real("value"),
-  message: text("message").notNull(),
-  severity: text("severity").notNull().default("warning"),
-  acknowledged: integer("acknowledged", { mode: "boolean" }).notNull().default(false),
-});
+export const alertFirings = sqliteTable(
+  "alert_firings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ruleId: integer("rule_id")
+      .notNull()
+      .references(() => alertRules.id, { onDelete: "cascade" }),
+    hostId: integer("host_id").notNull(),
+    hostName: text("host_name").notNull(),
+    firedAt: text("fired_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    resolvedAt: text("resolved_at"),
+    value: real("value"),
+    message: text("message").notNull(),
+    severity: text("severity").notNull().default("warning"),
+    acknowledged: integer("acknowledged", { mode: "boolean" })
+      .notNull()
+      .default(false),
+  },
+  // A rule's history is read newest-first; host_id is filtered on its own.
+  (table) => [
+    index("idx_alert_firings_rule").on(table.ruleId, table.firedAt),
+    index("idx_alert_firings_host").on(table.hostId),
+  ],
+);
 // --- alerts end ---
 
 // --- homepage begin ---
-export const homepageItems = sqliteTable("homepage_items", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  typeId: text("type_id").notNull(),
-  title: text("title"),
-  config: text("config").notNull().default("{}"),
-  folderId: integer("folder_id"),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-});
+export const homepageItems = sqliteTable(
+  "homepage_items",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    typeId: text("type_id").notNull(),
+    title: text("title"),
+    config: text("config").notNull().default("{}"),
+    folderId: integer("folder_id"),
+    syncId: text("sync_id").unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("idx_homepage_items_user_id").on(table.userId)],
+);
 
 export const homepageLayouts = sqliteTable("homepage_layouts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -1445,8 +1567,11 @@ export const fleetMembers = sqliteTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
+  // fleet_id leads the unique pair, so listing a fleet's hosts is already
+  // served. Finding the fleets a host belongs to starts from host_id.
   (table) => [
     uniqueIndex("idx_fleet_members_fleet_host").on(table.fleetId, table.hostId),
+    index("idx_fleet_members_host").on(table.hostId),
   ],
 );
 
@@ -1473,37 +1598,43 @@ export const fleetInventory = sqliteTable(
       .notNull()
       .default(sql`CURRENT_TIMESTAMP`),
   },
+  // host_id leads the unique pair; a user's whole inventory is read by user_id.
   (table) => [
     uniqueIndex("idx_fleet_inventory_host").on(table.hostId, table.userId),
+    index("idx_fleet_inventory_user").on(table.userId),
   ],
 );
 // --- fleets end ---
 
 // --- workspaces begin ---
-export const userWorkspaces = sqliteTable("user_workspaces", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  color: text("color"),
-  icon: text("icon"),
-  // "manual" | "last_session" - exactly one last_session row per user.
-  kind: text("kind").notNull().default("manual"),
-  isDefault: integer("is_default", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
-  payload: text("payload").notNull().default("{}"),
-  syncId: text("sync_id").unique(),
-  createdAt: text("created_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at")
-    .notNull()
-    .default(sql`CURRENT_TIMESTAMP`),
-  lastUsedAt: text("last_used_at"),
-});
+export const userWorkspaces = sqliteTable(
+  "user_workspaces",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color"),
+    icon: text("icon"),
+    // "manual" | "last_session" - exactly one last_session row per user.
+    kind: text("kind").notNull().default("manual"),
+    isDefault: integer("is_default", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    // JSON-encoded WorkspacePayload: tabs, splitMode, paneTabIds, rowSizes, rowColSizes
+    payload: text("payload").notNull().default("{}"),
+    syncId: text("sync_id").unique(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    lastUsedAt: text("last_used_at"),
+  },
+  (table) => [index("idx_user_workspaces_user_id").on(table.userId)],
+);
 // --- workspaces end ---
 
 // --- sync begin ---
