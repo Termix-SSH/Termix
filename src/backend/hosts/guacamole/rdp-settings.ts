@@ -24,3 +24,13 @@ export function buildRdpSettings({
     ...guacdOverrides,
   };
 }
+
+export function resolveRdpDomain(
+  authType: string | null,
+  promptedDomain: unknown,
+  storedDomain: string,
+): string {
+  return authType === "none" && typeof promptedDomain === "string"
+    ? promptedDomain
+    : storedDomain;
+}
