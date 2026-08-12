@@ -95,6 +95,14 @@ import {
 } from "./AdminUserDialogs";
 import { AdminUserManagePanel } from "./AdminUserManagePanel";
 import type { Host } from "@/types/ui-types";
+import type { TouchInputSettings } from "@/types/touch-input-settings";
+import { TOUCH_INPUT_DEFAULTS } from "@/types/touch-input-settings";
+import {
+  getTouchInputSettings,
+  updateTouchInputSettings,
+} from "@/api/touch-input-settings-api";
+import { cacheTouchInputSettings } from "@/features/terminal/touch-input-settings-store";
+import { AdminTouchInputSection } from "./AdminTouchInputSection";
 
 type ApiErrorLike = {
   response?: {
@@ -140,6 +148,8 @@ export function AdminSettingsPanel({
   const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
     useState(true);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
+  const [touchInputSettings, setTouchInputSettings] =
+    useState<TouchInputSettings>({ ...TOUCH_INPUT_DEFAULTS });
 
   // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
@@ -319,6 +329,7 @@ export function AdminSettingsPanel({
         cmdHistory,
         analytics,
         sessionSharingEnabled,
+        touchInput,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -333,6 +344,7 @@ export function AdminSettingsPanel({
         getCommandHistoryEnabled(),
         getAnalyticsEnabled(),
         getSessionSharingGloballyEnabled(),
+        getTouchInputSettings(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -371,6 +383,10 @@ export function AdminSettingsPanel({
       }
       if (sessionSharingEnabled.status === "fulfilled") {
         setSessionSharingGloballyEnabled(sessionSharingEnabled.value.enabled);
+      }
+      if (touchInput.status === "fulfilled") {
+        setTouchInputSettings(touchInput.value);
+        cacheTouchInputSettings(touchInput.value);
       }
     } catch {
       // non-fatal
@@ -500,6 +516,23 @@ export function AdminSettingsPanel({
       setSessionSharingGloballyEnabled(!newVal);
       toast.error(t("admin.updateSessionSharingFailed"));
     }
+  }
+
+  async function saveTouchInputSettings(settings = touchInputSettings) {
+    try {
+      const saved = await updateTouchInputSettings(settings);
+      setTouchInputSettings(saved);
+      cacheTouchInputSettings(saved);
+      toast.success(t("admin.touchSaved"));
+    } catch {
+      toast.error(t("admin.touchSaveFailed"));
+    }
+  }
+
+  function resetTouchInputSettings() {
+    const defaults = { ...TOUCH_INPUT_DEFAULTS };
+    setTouchInputSettings(defaults);
+    void saveTouchInputSettings(defaults);
   }
 
   async function handleSaveSessionTimeout() {
@@ -1123,6 +1156,15 @@ export function AdminSettingsPanel({
         open={openSections.has("audit-log")}
         onToggle={() => toggle("audit-log")}
         users={users}
+      />
+
+      <AdminTouchInputSection
+        open={openSections.has("touch-input")}
+        onToggle={() => toggle("touch-input")}
+        settings={touchInputSettings}
+        setSettings={setTouchInputSettings}
+        onSave={() => void saveTouchInputSettings()}
+        onReset={resetTouchInputSettings}
       />
 
       <AdminCreateUserDialog

@@ -76,6 +76,7 @@ import {
 } from "./terminal-font-zoom.ts";
 import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
+import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -2468,7 +2469,17 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       // Send one-finger drags through xterm's real wheel DOM path. This keeps
       // scrollback, alternate-buffer/tmux, mouse reporting and wheel remainder
       // handling identical to desktop wheel input.
-      const disposeTouchWheel = installTouchWheelCoordinator(xtermRef.current);
+      let disposeTouchWheel = () => {};
+      let touchWheelDisposed = false;
+      loadTouchInputSettings().then((settings) => {
+        if (!touchWheelDisposed && xtermRef.current) {
+          disposeTouchWheel = installTouchWheelCoordinator(
+            xtermRef.current,
+            undefined,
+            settings,
+          );
+        }
+      });
       const element = xtermRef.current;
       const handleContextMenu = (e: MouseEvent) => {
         if (e.ctrlKey && onOpenFileManager) {
@@ -2573,6 +2584,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       resizeObserver.observe(observeTarget);
 
       return () => {
+        touchWheelDisposed = true;
         isFittingRef.current = false;
         resizeObserver.disconnect();
         clipboardProvider.dispose();

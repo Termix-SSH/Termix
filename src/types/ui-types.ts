@@ -378,7 +378,8 @@ export type AdminSection =
   | "database"
   | "api-keys"
   | "audit-log"
-  | "ssl";
+  | "ssl"
+  | "touch-input";
 export type AccentColorId = string;
 export type ThemeId =
   | "dark"
