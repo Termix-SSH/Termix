@@ -64,12 +64,12 @@ import { asHttpError } from "@/lib/http-error";
 import { getDeviceId } from "@/lib/device-id";
 
 export type ServerStatus = {
-  status: "online" | "offline";
+  status: "online" | "reachable" | "offline";
   lastChecked: string;
 };
 
 export type SSHHostWithStatus = SSHHost & {
-  status: "online" | "offline" | "unknown";
+  status: "online" | "reachable" | "offline" | "unknown";
 };
 
 interface CpuMetrics {

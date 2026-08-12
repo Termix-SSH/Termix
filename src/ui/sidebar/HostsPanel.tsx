@@ -125,7 +125,9 @@ function hostPassesFilters(host: Host, filters: FilterState): boolean {
   if (filters.status.length > 0) {
     const ok =
       (filters.status.includes("online") && host.online) ||
-      (filters.status.includes("offline") && !host.online) ||
+      (filters.status.includes("offline") &&
+        host.status !== "reachable" &&
+        !host.online) ||
       (filters.status.includes("pinned") && !!host.pin);
     if (!ok) return false;
   }

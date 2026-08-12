@@ -144,7 +144,7 @@ function StatsBarCard({
   dbHealth: "healthy" | "error";
 }) {
   const { t } = useTranslation();
-  const online = hosts.filter((h) => h.online).length;
+  const online = hosts.filter((h) => h.status === "online").length;
   return (
     <Card className="grid grid-cols-4 divide-x divide-border overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
@@ -182,7 +182,9 @@ function StatsBarCard({
       </div>
       <div className="flex flex-col justify-center px-4 py-2 gap-1">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">
-          {t("dashboardTab.hostsOnline")}
+          {t("dashboardTab.hostsAvailable", {
+            defaultValue: "Hosts Available",
+          })}
         </span>
         <div className="flex items-baseline gap-1">
           <span className="text-xl font-bold leading-none">{online}</span>
@@ -435,7 +437,7 @@ function HostStatusCard({
 }) {
   const { t } = useTranslation();
   const statusScheme = useStatusColorScheme();
-  const online = hosts.filter((h) => h.online).length;
+  const online = hosts.filter((h) => h.status === "online").length;
   return (
     <Card className="flex flex-col overflow-hidden w-full h-full py-0 gap-0">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
@@ -446,7 +448,8 @@ function HostStatusCard({
           </span>
         </div>
         <span className="text-xs text-muted-foreground">
-          {online}/{hosts.length} {t("dashboardTab.onlineLower")}
+          {online}/{hosts.length}{" "}
+          {t("dashboardTab.availableLower", { defaultValue: "Available" })}
         </span>
       </div>
       <div className="flex flex-col overflow-auto flex-1">
@@ -456,6 +459,12 @@ function HostStatusCard({
           </div>
         )}
         {hosts.map((host, i) => {
+          const availability =
+            host.status && host.status !== "unknown"
+              ? host.status
+              : host.online
+                ? "online"
+                : "offline";
           const metrics = hostMetrics.get(host.id);
           const cpu = metrics?.cpu ?? null;
           const ram = metrics?.ram ?? null;
@@ -469,7 +478,7 @@ function HostStatusCard({
             >
               <div className="flex items-center gap-2.5">
                 <span
-                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(host.online, statusScheme, "dot", statusLoading)}`}
+                  className={`size-1.5 rounded-full shrink-0 ${getStatusClasses(availability, statusScheme, "dot", statusLoading)}`}
                 />
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1">
@@ -482,7 +491,7 @@ function HostStatusCard({
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                {host.online && hasMetrics ? (
+                {availability === "online" && hasMetrics ? (
                   <div className="flex items-center gap-3">
                     {cpu !== null && (
                       <MetricBar label={t("dashboard.cpu")} value={cpu} />
@@ -508,13 +517,19 @@ function HostStatusCard({
                   </div>
                 )}
                 <span
-                  className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(host.online, statusScheme, "badge", statusLoading)}`}
+                  className={`text-[10px] px-2 py-0.5 font-semibold border ${getStatusClasses(availability, statusScheme, "badge", statusLoading)}`}
                 >
                   {statusLoading
                     ? t("dashboardTab.checking")
-                    : host.online
-                      ? t("dashboardTab.online")
-                      : t("dashboardTab.offline")}
+                    : availability === "online"
+                      ? t("dashboardTab.available", {
+                          defaultValue: "AVAILABLE",
+                        })
+                      : availability === "reachable"
+                        ? t("dashboardTab.reachable", {
+                            defaultValue: "REACHABLE",
+                          })
+                        : t("dashboardTab.offline")}
                 </span>
               </div>
             </div>

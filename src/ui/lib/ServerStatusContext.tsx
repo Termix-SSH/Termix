@@ -125,7 +125,10 @@ export function ServerStatusProvider({
             const id = parseInt(idStr, 10);
             if (!isNaN(id)) {
               const status =
-                statusData?.status === "online" ? "online" : "offline";
+                statusData?.status === "online" ||
+                statusData?.status === "reachable"
+                  ? statusData.status
+                  : "offline";
               newStatuses.set(id, {
                 status,
                 lastChecked: statusData?.lastChecked || now,

@@ -72,8 +72,16 @@ export function statusCheckEnabled(host: Host): boolean {
   return host.statsConfig?.statusCheckEnabled !== false;
 }
 
-export function buildStatusTooltip(host: Host, online: boolean): string {
-  const statusLabel = online ? "Online" : "Offline";
+export function buildStatusTooltip(
+  host: Host,
+  status: "online" | "reachable" | "offline",
+): string {
+  const statusLabel =
+    status === "online"
+      ? "Available"
+      : status === "reachable"
+        ? "Reachable, not authenticated"
+        : "Offline";
   if (!statusCheckEnabled(host)) return "Monitoring disabled";
   const protocols: string[] = [];
   if (host.enableSsh) protocols.push("SSH");
@@ -282,7 +290,17 @@ export function HostItem({
   const statusLoading = !initialLoadComplete && statusCheckOn;
   // Per-host subscription — status polls only re-render rows that flipped.
   const liveStatus = useHostStatus(Number(host.id), statusCheckOn);
-  const isOnline = liveStatus != null ? liveStatus === "online" : host.online;
+  const availability =
+    liveStatus === "online" ||
+    liveStatus === "reachable" ||
+    liveStatus === "offline"
+      ? liveStatus
+      : host.status === "reachable"
+        ? "reachable"
+        : host.online
+          ? "online"
+          : "offline";
+  const isOnline = availability === "online";
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
   const alwaysShowTray = trayTrigger === "always";
@@ -808,7 +826,7 @@ export function HostItem({
       {/* Status stripe */}
       {showStatusStripes && (
         <div
-          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(isOnline, statusScheme, "stripe", statusLoading)}`}
+          className={`w-[3px] shrink-0 transition-colors ${getStatusClasses(availability, statusScheme, "stripe", statusLoading)}`}
         />
       )}
 
@@ -853,7 +871,7 @@ export function HostItem({
                 </span>
               </TooltipTrigger>
               <TooltipContent side="right">
-                {buildStatusTooltip(host, isOnline)}
+                {buildStatusTooltip(host, availability)}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

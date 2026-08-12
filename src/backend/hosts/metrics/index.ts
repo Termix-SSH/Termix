@@ -63,6 +63,11 @@ import {
   supportsMetrics,
   tcpPingThroughJumpHost,
 } from "./helpers.js";
+import {
+  type HostStatus,
+  statusAfterAuthentication,
+  statusAfterReachabilityCheck,
+} from "./host-status.js";
 import { createConnectionLog } from "../connection-log.js";
 import {
   cleanupMetricsSession,
@@ -85,8 +90,6 @@ import {
 
 const authManager = AuthManager.getInstance();
 const permissionManager = PermissionManager.getInstance();
-
-type HostStatus = "online" | "offline";
 
 interface SSHHostWithCredentials {
   id: number;
@@ -520,7 +523,10 @@ class PollingManager {
         isOnline = await tcpPing(refreshedHost.ip, pingPort, 5000);
       }
       const statusEntry: StatusEntry = {
-        status: isOnline ? "online" : "offline",
+        status: statusAfterReachabilityCheck(
+          isOnline,
+          this.statusStore.get(refreshedHost.id)?.status,
+        ),
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
@@ -571,8 +577,19 @@ class PollingManager {
       return;
     }
 
+    let authenticated = false;
     try {
-      const metrics = await collectMetrics(refreshedHost);
+      const metrics = await collectMetrics(refreshedHost, () => {
+        authenticated = true;
+        this.statusStore.set(refreshedHost.id, {
+          status: statusAfterAuthentication(true),
+          lastChecked: new Date().toISOString(),
+        });
+      });
+      this.statusStore.set(refreshedHost.id, {
+        status: statusAfterAuthentication(true),
+        lastChecked: new Date().toISOString(),
+      });
       this.metricsStore.set(refreshedHost.id, {
         data: metrics,
         timestamp: Date.now(),
@@ -584,6 +601,15 @@ class PollingManager {
       pollingBackoff.reset(refreshedHost.id);
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
+      if (!authenticated) {
+        this.statusStore.set(refreshedHost.id, {
+          status: statusAfterAuthentication(
+            false,
+            this.statusStore.get(refreshedHost.id)?.status,
+          ),
+          lastChecked: new Date().toISOString(),
+        });
+      }
       const isAuthError =
         error instanceof Error &&
         (error.message.includes("authentication") ||
@@ -752,7 +778,11 @@ class PollingManager {
     for (const [hostId, config] of this.pollingConfigs.entries()) {
       const status = this.statusStore.get(hostId);
 
-      if (!status || status.status === "online") {
+      if (
+        !status ||
+        status.status === "online" ||
+        status.status === "reachable"
+      ) {
         hostsToRefresh.push({
           host: config.host,
           viewerUserId: config.viewerUserId,
@@ -1496,7 +1526,10 @@ const proxmoxPollingManager = new ProxmoxPollingManager<SSHHostWithCredentials>(
   },
 );
 
-async function collectMetrics(host: SSHHostWithCredentials): Promise<{
+async function collectMetrics(
+  host: SSHHostWithCredentials,
+  onAuthenticated?: () => void,
+): Promise<{
   cpu: {
     percent: number | null;
     cores: number | null;
@@ -1556,6 +1589,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
 
   const cached = metricsCache.get(host.id);
   if (cached) {
+    onAuthenticated?.();
     return cached as ReturnType<typeof collectMetrics> extends Promise<infer T>
       ? T
       : never;
@@ -1571,6 +1605,7 @@ async function collectMetrics(host: SSHHostWithCredentials): Promise<{
       ).excludedMounts;
 
       const collectFn = async (client: Client) => {
+        onAuthenticated?.();
         const cpu = await collectCpuMetrics(client);
         const memory = await collectMemoryMetrics(client);
         const disk = await collectDiskMetrics(client, excludedMounts);
