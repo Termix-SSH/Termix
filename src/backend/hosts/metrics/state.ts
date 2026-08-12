@@ -408,11 +408,14 @@ export const metricsPollLimiter = new ConcurrentLimiter(5);
 export const initialMetricsPollLimiter = new ConcurrentLimiter(2);
 
 export function canStartInitialMetrics(
-  status: "online" | "offline" | undefined,
+  status: HostStatus | undefined,
   hasViewers: boolean,
   statusCheckEnabled = true,
 ): boolean {
-  return hasViewers && (!statusCheckEnabled || status === "online");
+  return (
+    hasViewers &&
+    (!statusCheckEnabled || status === "reachable" || status === "online")
+  );
 }
 export const hostPollCache = new HostPollCache(30_000);
 
@@ -420,3 +423,4 @@ export const requestQueue = new RequestQueue();
 export const metricsCache = new MetricsCache();
 export const authFailureTracker = new AuthFailureTracker();
 export const pollingBackoff = new PollingBackoff();
+import type { HostStatus } from "./host-status.js";

@@ -9,6 +9,7 @@ import {
 describe("initial metrics admission", () => {
   it("requires both an active viewer and a confirmed online status", () => {
     expect(canStartInitialMetrics("online", true)).toBe(true);
+    expect(canStartInitialMetrics("reachable", true)).toBe(true);
     expect(canStartInitialMetrics("offline", true)).toBe(false);
     expect(canStartInitialMetrics(undefined, true)).toBe(false);
     expect(canStartInitialMetrics("online", false)).toBe(false);
