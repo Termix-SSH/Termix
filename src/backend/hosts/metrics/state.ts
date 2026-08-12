@@ -404,9 +404,23 @@ export class HostPollCache<THost extends { id: number } = { id: number }> {
 export const statusPollLimiter = new ConcurrentLimiter(20);
 /** SSH metrics execs are expensive; keep concurrency tight. */
 export const metricsPollLimiter = new ConcurrentLimiter(5);
+/** Viewer registration is bursty; admit only two first samples at a time. */
+export const initialMetricsPollLimiter = new ConcurrentLimiter(2);
+
+export function canStartInitialMetrics(
+  status: HostStatus | undefined,
+  hasViewers: boolean,
+  statusCheckEnabled = true,
+): boolean {
+  return (
+    hasViewers &&
+    (!statusCheckEnabled || status === "reachable" || status === "online")
+  );
+}
 export const hostPollCache = new HostPollCache(30_000);
 
 export const requestQueue = new RequestQueue();
 export const metricsCache = new MetricsCache();
 export const authFailureTracker = new AuthFailureTracker();
 export const pollingBackoff = new PollingBackoff();
+import type { HostStatus } from "./host-status.js";

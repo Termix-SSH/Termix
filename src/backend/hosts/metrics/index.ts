@@ -79,7 +79,9 @@ import {
 } from "./sessions.js";
 import {
   authFailureTracker,
+  canStartInitialMetrics,
   hostPollCache,
+  initialMetricsPollLimiter,
   metricsCache,
   metricsPollLimiter,
   metricsConcurrencyFor,
@@ -195,6 +197,7 @@ class PollingManager {
   /** Skip stacking another status/metrics poll while one is already running. */
   private statusInFlight = new Set<number>();
   private metricsInFlight = new Set<number>();
+  private initialMetricsRequested = new Set<number>();
 
   constructor() {
     this.viewerCleanupInterval = setInterval(() => {
@@ -298,6 +301,54 @@ class PollingManager {
       })
       .finally(() => {
         this.metricsInFlight.delete(host.id);
+      });
+  }
+
+  private scheduleInitialMetricsPoll(
+    host: SSHHostWithCredentials,
+    viewerUserId?: string,
+  ): void {
+    if (
+      this.metricsStore.has(host.id) ||
+      this.initialMetricsRequested.has(host.id)
+    ) {
+      return;
+    }
+
+    this.initialMetricsRequested.add(host.id);
+    void initialMetricsPollLimiter
+      .run(async () => {
+        if (
+          !canStartInitialMetrics(
+            this.statusStore.get(host.id)?.status,
+            this.activeViewers.has(host.id),
+            isTcpPingEnabled(
+              this.pollingConfigs.get(host.id)?.statsConfig ??
+                this.parseStatsConfig(host.statsConfig),
+            ),
+          )
+        ) {
+          return;
+        }
+        if (this.metricsInFlight.has(host.id)) return;
+
+        this.metricsInFlight.add(host.id);
+        try {
+          await metricsPollLimiter.run(() =>
+            this.pollHostMetrics(host, viewerUserId),
+          );
+        } finally {
+          this.metricsInFlight.delete(host.id);
+        }
+      })
+      .catch((err) => {
+        statsLogger.error("Initial metrics polling failed", err, {
+          operation: "initial_metrics_poll_unhandled",
+          hostId: host.id,
+        });
+      })
+      .finally(() => {
+        this.initialMetricsRequested.delete(host.id);
       });
   }
 
@@ -423,6 +474,7 @@ class PollingManager {
       statsConfig,
       viewerUserId,
     };
+    this.pollingConfigs.set(host.id, config);
 
     if (isTcpPingEnabled(statsConfig)) {
       const intervalMs = this.intervalWithJitter(
@@ -448,21 +500,18 @@ class PollingManager {
         host.id,
       );
 
-      // First sample still awaited (gated) so callers can rely on a warm cache.
-      if (!this.metricsInFlight.has(host.id)) {
-        this.metricsInFlight.add(host.id);
-        try {
-          await metricsPollLimiter.run(() =>
-            this.pollHostMetrics(host, viewerUserId),
-          );
-        } catch (err) {
-          statsLogger.error("Metrics polling failed", err, {
-            operation: "metrics_poll_unhandled",
-            hostId: host.id,
-          });
-        } finally {
-          this.metricsInFlight.delete(host.id);
-        }
+      // Viewer registration can arrive for an entire fleet at once. Only
+      // collect the first heavy SSH sample after the cheap status probe has
+      // confirmed the host is reachable; the status completion path below
+      // starts it when the result was not already cached.
+      if (
+        canStartInitialMetrics(
+          this.statusStore.get(host.id)?.status,
+          this.activeViewers.has(host.id),
+          isTcpPingEnabled(statsConfig),
+        )
+      ) {
+        this.scheduleInitialMetricsPoll(host, viewerUserId);
       }
 
       config.metricsTimer = setInterval(() => {
@@ -481,8 +530,6 @@ class PollingManager {
     } else {
       this.metricsStore.delete(host.id);
     }
-
-    this.pollingConfigs.set(host.id, config);
 
     this.syncPollConcurrency();
   }
@@ -530,6 +577,12 @@ class PollingManager {
         lastChecked: new Date().toISOString(),
       };
       this.statusStore.set(refreshedHost.id, statusEntry);
+      if (isOnline && this.activeViewers.has(refreshedHost.id)) {
+        const config = this.pollingConfigs.get(refreshedHost.id);
+        if (config?.statsConfig.metricsEnabled) {
+          this.scheduleInitialMetricsPoll(config.host, config.viewerUserId);
+        }
+      }
       AlertEngine.getInstance()
         .evaluateStatus(refreshedHost.id, isOnline)
         .catch(() => {});
