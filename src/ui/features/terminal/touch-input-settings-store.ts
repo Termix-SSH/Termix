@@ -1,6 +1,5 @@
 import { getTouchInputSettings } from "@/api/touch-input-settings-api";
-import type { TouchInputSettings } from "@/types/touch-input-settings";
-import { TOUCH_INPUT_DEFAULTS } from "@/types/touch-input-settings";
+import { TOUCH_INPUT_DEFAULTS, type TouchInputSettings } from "@/types/touch-input-settings";
 
 let cached: TouchInputSettings | undefined;
 let pending: Promise<TouchInputSettings> | undefined;

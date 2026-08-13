@@ -1,7 +1,6 @@
 import { getErrorMessage } from "./utils/error-message.js";
 import dotenv from "dotenv";
-import { promises as fs } from "fs";
-import { readFileSync } from "fs";
+import { promises as fs, readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";

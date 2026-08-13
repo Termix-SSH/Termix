@@ -1,6 +1,5 @@
 import { getErrorMessage } from "./error-message.js";
-import { SocksClient } from "socks";
-import type { SocksClientOptions } from "socks";
+import { SocksClient, type SocksClientOptions } from "socks";
 import net from "net";
 import dns from "dns/promises";
 import { sshLogger } from "./logger.js";

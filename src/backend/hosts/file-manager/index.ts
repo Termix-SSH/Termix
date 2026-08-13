@@ -14,7 +14,7 @@ import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { fileLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import type { AuthenticatedRequest, ProxyNode } from "../../../types/index.js";
+import { type AuthenticatedRequest, type ProxyNode, type SSHHost } from "../../../types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -25,7 +25,6 @@ import type {
 } from "../../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { resolveHostById } from "../host-resolver.js";
-import type { SSHHost } from "../../../types/index.js";
 import {
   startHostTransfer,
   getTransferStatus,

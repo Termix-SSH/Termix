@@ -1,12 +1,10 @@
 import GuacamoleLite from "guacamole-lite";
 import { guacLogger } from "../../utils/logger.js";
-import { GuacamoleTokenService } from "./token-service.js";
-import { getCurrentSettingValue } from "../../database/repositories/factory.js";
+import { GuacamoleTokenService, type GuacamoleRecordingMetadata } from "./token-service.js";
+import { createCurrentSessionRecordingRepository, getCurrentSettingValue } from "../../database/repositories/factory.js";
 import { resolveGuacdOptions } from "../../utils/guacd-config.js";
 import fs from "fs";
 import path from "path";
-import { createCurrentSessionRecordingRepository } from "../../database/repositories/factory.js";
-import type { GuacamoleRecordingMetadata } from "./token-service.js";
 
 const tokenService = GuacamoleTokenService.getInstance();
 

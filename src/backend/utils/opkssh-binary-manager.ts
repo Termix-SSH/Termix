@@ -1,7 +1,6 @@
 import { getErrorMessage } from "./error-message.js";
-import { promises as fs } from "fs";
+import { createWriteStream, promises as fs } from "fs";
 import path from "path";
-import { createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
 import { systemLogger } from "./logger.js";
 

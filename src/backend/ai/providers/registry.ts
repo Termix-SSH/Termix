@@ -2,8 +2,7 @@ import { anthropicAdapter } from "./anthropic.js";
 import { geminiAdapter } from "./gemini.js";
 import { ollamaAdapter } from "./ollama.js";
 import { openAiAdapter } from "./openai.js";
-import type { AiProviderType, ProviderAdapter } from "./types.js";
-import { AiProviderError } from "./types.js";
+import { AiProviderError, type AiProviderType, type ProviderAdapter } from "./types.js";
 
 /**
  * openai_compatible reuses the OpenAI adapter: OpenRouter, Groq, Mistral,

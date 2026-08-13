@@ -1,5 +1,4 @@
-import type { Request, Response } from "express";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import https from "https";
 import http from "http";
 import { homepageLogger } from "../../utils/logger.js";

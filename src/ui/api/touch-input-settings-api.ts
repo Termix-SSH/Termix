@@ -1,6 +1,5 @@
 import { authApi, handleApiError } from "@/main-axios";
-import type { TouchInputSettings } from "@/types/touch-input-settings";
-import { normalizeTouchInputSettings } from "@/types/touch-input-settings";
+import { normalizeTouchInputSettings, type TouchInputSettings } from "@/types/touch-input-settings";
 
 export async function getTouchInputSettings(): Promise<TouchInputSettings> {
   try {

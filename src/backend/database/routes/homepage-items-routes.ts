@@ -1,11 +1,10 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import { homepageLogger } from "../../utils/logger.js";
 import {
   createCurrentHomepageItemRepository,
   createCurrentSyncTombstoneRepository,
 } from "../repositories/factory.js";
-import express from "express";
 
 export const homepageItemsRouter = express.Router();
 

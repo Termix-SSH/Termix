@@ -14,12 +14,11 @@ import { resolveHostById } from "../host-resolver.js";
 import { createConnectionLog } from "../connection-log.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import type { AuthenticatedRequest } from "../../../types/index.js";
+import { type AuthenticatedRequest, type ProxyNode, type SSHHost } from "../../../types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
 } from "../../utils/socks5-helper.js";
-import type { SSHHost, ProxyNode } from "../../../types/index.js";
 import type {
   LogEntry,
   ConnectionStage,

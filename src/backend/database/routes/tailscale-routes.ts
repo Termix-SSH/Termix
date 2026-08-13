@@ -1,5 +1,4 @@
-import { Router } from "express";
-import type { RequestHandler, Router as ExpressRouter } from "express";
+import { Router, type RequestHandler, type Router as ExpressRouter } from "express";
 import { apiLogger } from "../../utils/logger.js";
 import { getFetchDispatcher } from "../../utils/proxy-agent.js";
 import { createCurrentSettingsRepository } from "../repositories/factory.js";

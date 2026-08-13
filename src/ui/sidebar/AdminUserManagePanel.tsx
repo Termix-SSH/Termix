@@ -41,9 +41,8 @@ import {
   assignRoleToUser,
   removeRoleFromUser,
 } from "@/main-axios";
-import type { ApiKey, CreatedApiKey, Role, UserRole } from "@/main-axios";
+import { type ApiKey, type CreatedApiKey, type Role, type SSHHostWithStatus, type UserRole } from "@/main-axios";
 import type { Host, Credential } from "@/types/ui-types";
-import type { SSHHostWithStatus } from "@/main-axios";
 import { CredentialEditorView } from "./CredentialEditorView";
 import { HostEditor } from "./HostEditor";
 import { mapCredentials, sshHostToHost } from "./HostManagerData";

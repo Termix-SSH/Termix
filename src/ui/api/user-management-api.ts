@@ -1,5 +1,4 @@
-import { authApi, handleApiError } from "@/main-axios";
-import type { UserInfo } from "@/main-axios";
+import { authApi, handleApiError, type UserInfo } from "@/main-axios";
 
 // USER MANAGEMENT
 // ============================================================================

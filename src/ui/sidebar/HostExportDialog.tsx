@@ -13,8 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/dialog";
-import { exportAllSSHHosts } from "@/main-axios";
-import type { SSHHostWithStatus } from "@/main-axios";
+import { exportAllSSHHosts, type SSHHostWithStatus } from "@/main-axios";
 import { isFolder } from "@/sidebar/SidebarTree";
 import {
   buildExportPayload,

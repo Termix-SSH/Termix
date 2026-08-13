@@ -9,8 +9,7 @@ import {
   createCurrentSnippetRepository,
   createCurrentWorkspaceRepository,
 } from "../../database/repositories/factory.js";
-import type { AiTool } from "./types.js";
-import { num, objectSchema } from "./types.js";
+import { num, objectSchema, type AiTool } from "./types.js";
 
 /**
  * Read tools project explicit fields rather than spreading rows. Redaction runs

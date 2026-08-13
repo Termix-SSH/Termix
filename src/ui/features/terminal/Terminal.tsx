@@ -70,7 +70,7 @@ import { resolveTermixThemeColors } from "./terminal-theme.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import { TerminalToolbar } from "./TerminalToolbar.tsx";
 import type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
-import type { Host, TabType } from "@/types/ui-types";
+import { type Host, type Snippet, type TabType } from "@/types/ui-types";
 import {
   getNextTerminalFontSize,
   getTerminalFontZoomDirection,
@@ -88,7 +88,6 @@ import {
   sendRawToSocket,
 } from "@/lib/keybinding-dispatch";
 import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
-import type { Snippet } from "@/types/ui-types";
 import type { CustomKeybinding } from "@/types/keybindings";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 

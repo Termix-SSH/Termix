@@ -8,8 +8,7 @@ import type {
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
 import { CommandHistoryProvider } from "@/features/terminal/command-history/CommandHistoryContext";
-import { Terminal } from "@/features/terminal/Terminal";
-import type { TerminalHandle } from "@/features/terminal/Terminal";
+import { Terminal, type TerminalHandle } from "@/features/terminal/Terminal";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import type { SSHHostWithStatus } from "@/main-axios";
 import { WidgetTitle } from "./WidgetTitle";

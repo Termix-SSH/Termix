@@ -1,5 +1,4 @@
-import chalk from "chalk";
-import type { ChalkInstance } from "chalk";
+import chalk, { type ChalkInstance } from "chalk";
 
 export type LogLevel = "debug" | "info" | "warn" | "error" | "success";
 

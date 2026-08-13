@@ -1,6 +1,5 @@
 import compression from "compression";
-import type { Request, Response } from "express";
-import type { RequestHandler } from "express";
+import { type Request, type RequestHandler, type Response } from "express";
 
 /**
  * Below this, compressing costs more than it saves.

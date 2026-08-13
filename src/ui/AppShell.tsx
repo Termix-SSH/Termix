@@ -26,8 +26,7 @@ import {
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
-import { AppRail } from "@/sidebar/AppRail";
-import type { RailView } from "@/sidebar/AppRail";
+import { AppRail, type RailView } from "@/sidebar/AppRail";
 import {
   railItemLabel,
   PROMOTABLE_IDS,
@@ -37,8 +36,7 @@ import { MultiPanelHint } from "@/sidebar/MultiPanelHint";
 import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
 import { UI_ONBOARDING_VERSION } from "@/types/ui-preferences";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
-import { SplitView, defaultSizes } from "@/shell/SplitView";
-import type { RowColSizes } from "@/shell/SplitView";
+import { defaultSizes, SplitView, type RowColSizes } from "@/shell/SplitView";
 import { renderTabContent } from "@/shell/tabUtils";
 import { TabBar } from "@/shell/TabBar";
 

@@ -4,8 +4,7 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import { statsLogger } from "../../utils/logger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import type { HostAction } from "../../utils/permission-manager.js";
-import type { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
-import type { ProxmoxStatsPollableHost } from "./proxmox-stats-polling.js";
+import { type ProxmoxPollingManager, type ProxmoxStatsPollableHost } from "./proxmox-stats-polling.js";
 
 const EMPTY_SNAPSHOT = {
   node: {

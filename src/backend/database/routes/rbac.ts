@@ -1,7 +1,6 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Response } from "express";
+import express, { type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { getRequestMeta } from "../../utils/audit-logger.js";

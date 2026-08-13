@@ -1,6 +1,5 @@
 import { statsLogger } from "../../utils/logger.js";
-import { getCurrentSettingValue } from "../../database/repositories/factory.js";
-import { createCurrentProxmoxNodeHistoryRepository } from "../../database/repositories/factory.js";
+import { createCurrentProxmoxNodeHistoryRepository, getCurrentSettingValue } from "../../database/repositories/factory.js";
 import { ConcurrentLimiter } from "./state.js";
 import {
   collectProxmoxStats,

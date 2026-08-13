@@ -1,10 +1,9 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import fs from "fs";
 import path from "path";
 import { apiLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import type { Request, Response } from "express";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import {
   createCurrentSessionRecordingRepository,

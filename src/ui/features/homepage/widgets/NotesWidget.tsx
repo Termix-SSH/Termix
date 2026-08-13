@@ -1,7 +1,6 @@
 import { StickyNote } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
-import type { NotesConfig, WidgetComponentProps } from "@/types/homepage-types";
-import { GRID_SIZE } from "@/types/homepage-types";
+import { GRID_SIZE, type NotesConfig, type WidgetComponentProps } from "@/types/homepage-types";
 import { WidgetTitle } from "./WidgetTitle";
 
 function NotesWidget({ widget, config }: WidgetComponentProps<NotesConfig>) {

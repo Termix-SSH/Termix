@@ -1,8 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
-import { deleteApiKey } from "@/main-axios";
-import type { ApiKey } from "@/main-axios";
+import { deleteApiKey, type ApiKey } from "@/main-axios";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Copy, Network, Plus, RefreshCw, Trash2 } from "lucide-react";

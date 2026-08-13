@@ -1,13 +1,12 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import multer from "multer";
 import JSZip from "jszip";
 import type { Client, SFTPWrapper } from "ssh2";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { PermissionManager } from "../../utils/permission-manager.js";
+import { PermissionManager, type HostAction } from "../../utils/permission-manager.js";
 import {
   isSharePermissionLevel,
   expiryFromDuration,
@@ -35,7 +34,6 @@ import {
 import { buildPackageActionCommand } from "../../hosts/metrics/managers/packages.js";
 import { isValidPackageName } from "../../hosts/metrics/managers/validation.js";
 import { resolveSnippetCommand } from "./snippets-execution.js";
-import type { HostAction } from "../../utils/permission-manager.js";
 
 const router = express.Router();
 

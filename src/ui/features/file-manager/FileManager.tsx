@@ -10,7 +10,7 @@ import React, {
 import { asHttpError } from "@/lib/http-error";
 import { cn } from "@/lib/utils.ts";
 import { FileManagerGrid } from "./FileManagerGrid.tsx";
-import { FileManagerSidebar } from "./FileManagerSidebar.tsx";
+import { FileManagerSidebar, type SidebarItem } from "./FileManagerSidebar.tsx";
 import { FileManagerContextMenu } from "./FileManagerContextMenu.tsx";
 import { useFileSelection } from "./hooks/useFileSelection.ts";
 import { useDragAndDrop } from "./hooks/useDragAndDrop.ts";
@@ -74,7 +74,6 @@ import {
 } from "@/main-axios.ts";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
-import type { SidebarItem } from "./FileManagerSidebar.tsx";
 import type {
   CreateIntent,
   FileManagerProps,
