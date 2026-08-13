@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import { splitDragState, notifyDragEnd } from "@/lib/splitDragging";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, SplitMode } from "@/types/ui-types";
@@ -255,10 +256,12 @@ function PaneHeader({
   tab,
   paneIndex,
   isFocused,
+  onClear,
 }: {
   tab: Tab | null;
   paneIndex: number;
   isFocused: boolean;
+  onClear?: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -278,10 +281,22 @@ function PaneHeader({
             {tabIcon(tab.type)}
           </span>
           <span
-            className={`truncate ${isFocused ? "text-accent-brand font-semibold" : "text-foreground"}`}
+            className={`truncate flex-1 ${isFocused ? "text-accent-brand font-semibold" : "text-foreground"}`}
           >
             {tab.type === "dashboard" ? "Dashboard" : tab.label}
           </span>
+          <button
+            type="button"
+            title={t("terminal.split.removeFromSplit")}
+            aria-label={t("terminal.split.removeFromSplit")}
+            className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClear?.();
+            }}
+          >
+            <X className="size-3" />
+          </button>
         </>
       ) : (
         <span className="opacity-40">
@@ -351,7 +366,12 @@ const Pane = memo(function Pane({
         if (tabId) onAssignPane?.(paneIndex, tabId);
       }}
     >
-      <PaneHeader tab={tab} paneIndex={paneIndex} isFocused={isFocused} />
+      <PaneHeader
+        tab={tab}
+        paneIndex={paneIndex}
+        isFocused={isFocused}
+        onClear={tab ? () => onAssignPane?.(paneIndex, "") : undefined}
+      />
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {tab ? (
           <div ref={contentRef} className="absolute inset-0" />

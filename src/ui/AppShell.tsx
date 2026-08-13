@@ -1144,15 +1144,38 @@ export function AppShell({
       }
     }
 
-    setPaneTabIds(remapSlotIds(workspace.payload.paneTabIds, slotIdToNewTabId));
-    setSplitMode(workspace.payload.splitMode);
-    setRowSizes(workspace.payload.rowSizes);
-    setRowColSizes(workspace.payload.rowColSizes);
+    const restoredPaneIds = remapSlotIds(
+      workspace.payload.paneTabIds,
+      slotIdToNewTabId,
+    );
+    let restoredSplitTabId: string | null = null;
+    if (
+      workspace.payload.splitMode !== "none" &&
+      restoredPaneIds.some(Boolean)
+    ) {
+      const instanceId = crypto.randomUUID();
+      restoredSplitTabId = `split-${instanceId}`;
+      const splitTab: Tab = {
+        id: restoredSplitTabId,
+        instanceId,
+        type: "split-screen",
+        label: workspace.name,
+        openedAt: Date.now(),
+        splitConfig: createSplitConfig(
+          workspace.payload.splitMode,
+          restoredPaneIds,
+          workspace.payload,
+        ),
+      };
+      setTabs((prev) =>
+        assignTabsToSplit([...prev, splitTab], splitTab.id, restoredPaneIds),
+      );
+    }
 
     const activeId = workspace.payload.activeSlotId
       ? (slotIdToNewTabId.get(workspace.payload.activeSlotId) ?? "dashboard")
       : "dashboard";
-    setActiveTabId(activeId);
+    setActiveTabId(restoredSplitTabId ?? activeId);
 
     // Older payloads predate the sidebar field, so leave the docks alone then.
     const sidebar = workspace.payload.sidebar;
@@ -1974,7 +1997,7 @@ export function AppShell({
   function assignPane(paneIndex: number, tabId: string) {
     setPaneTabIds((prev) => {
       const next = prev.map((p) => (p === tabId ? null : p));
-      next[paneIndex] = tabId;
+      next[paneIndex] = tabId || null;
       return next;
     });
   }
