@@ -260,7 +260,8 @@ export type TabType =
   | "history"
   | "ssh-tools"
   | "automations"
-  | "ai";
+  | "ai"
+  | "split-screen";
 
 export type SerialConfig = {
   path: string;
@@ -310,6 +311,10 @@ export type Tab = {
   /** Which fleet a fleet-inventory tab is currently showing (singleton tab, re-targeted on reopen). */
   fleetId?: number;
   serialConfig?: SerialConfig;
+  /** Present only on a split-screen container tab. Pane ids reference live child tabs. */
+  splitConfig?: SplitTabConfig;
+  /** Hides this session from the top-level tab bar while it belongs to a split tab. */
+  parentSplitTabId?: string;
   terminalRef?: import("react").RefObject<{
     disconnect?: () => void;
     isConnected?: () => boolean;
@@ -406,6 +411,13 @@ export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
 export type ToolsTab = "ssh-tools" | "snippets" | "history" | "split-screen";
 export type SplitMode =
   "none" | "2-way" | "3-way" | "3-way-horizontal" | "4-way" | "5-way" | "6-way";
+
+export type SplitTabConfig = {
+  mode: Exclude<SplitMode, "none">;
+  paneTabIds: (string | null)[];
+  rowSizes: number[];
+  rowColSizes: number[][];
+};
 
 export type WorkspaceTabSnapshot = {
   /** Stable key within the saved tab list, not the live Tab.id (which is regenerated on every open). */
