@@ -3,12 +3,6 @@ import type { TerminalConfig } from "./index.js";
 import type { StatsConfig } from "./stats-widgets.js";
 import type { HostAuthOverrides } from "./auth-protocols.js";
 
-export type {
-  AuthOverrideProtocol,
-  HostAuthOverrideState,
-  HostAuthOverrides,
-} from "./auth-protocols.js";
-
 export type Host = {
   id: string;
   name: string;
@@ -270,28 +264,6 @@ export type SerialConfig = {
   parity: "none" | "even" | "odd";
 };
 
-export type TunnelStatusValue =
-  | "CONNECTED"
-  | "CONNECTING"
-  | "DISCONNECTING"
-  | "DISCONNECTED"
-  | "ERROR"
-  | "WAITING";
-export type TunnelMode = "local" | "remote" | "dynamic";
-
-export type Tunnel = {
-  id: string;
-  hostId: string;
-  sourcePort: number;
-  endpointHost: string;
-  endpointPort: number;
-  status: TunnelStatusValue;
-  mode: TunnelMode;
-  reason?: string;
-  retryCount?: number;
-  maxRetries?: number;
-};
-
 export type Tab = {
   id: string;
   instanceId: string;
@@ -325,20 +297,6 @@ export type Tab = {
   } | null>;
 };
 
-export type DockerContainerStatus =
-  "running" | "exited" | "paused" | "created" | "restarting";
-
-export type DockerContainer = {
-  id: string;
-  name: string;
-  image: string;
-  status: DockerContainerStatus;
-  cpu: number;
-  memory: string;
-  ports: string[];
-  created: string;
-};
-
 export type DashboardCardId =
   | "stats_bar"
   | "counters_bar"
@@ -356,27 +314,6 @@ export type DashboardCardConfig = {
   defaultEnabled: boolean;
 };
 
-export type CardColSpan = "full" | "wide" | "half" | "narrow";
-export type CardRowSize = "short" | "medium" | "tall" | "flex";
-
-export type CardLayoutConfig = {
-  id: DashboardCardId;
-  colSpan: CardColSpan;
-  rowSize: CardRowSize;
-  order: number;
-};
-
-export type LayoutPresetId = "default" | "compact" | "focus" | "wide";
-
-export type LayoutPreset = {
-  id: LayoutPresetId;
-  label: string;
-  description: string;
-  cards: CardLayoutConfig[];
-};
-
-export type UserProfileSection =
-  "account" | "appearance" | "security" | "api-keys";
 export type AdminSection =
   | "general"
   | "sso"
@@ -389,7 +326,6 @@ export type AdminSection =
   | "audit-log"
   | "ssl"
   | "touch-input";
-export type AccentColorId = string;
 export type ThemeId =
   | "dark"
   | "light"
@@ -498,9 +434,4 @@ export type SnippetFolder = {
   open: boolean;
 };
 
-export type HistoryEntry = {
-  id: number;
-  command: string;
-  host: string;
-  time: string;
-};
+

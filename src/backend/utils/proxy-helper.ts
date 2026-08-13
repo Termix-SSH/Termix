@@ -29,7 +29,7 @@ export interface SOCKS5Config {
   socks5ProxyChain?: ProxyNode[];
 }
 
-export async function createProxyConnection(
+export async function createSocks5Connection(
   targetHost: string,
   targetPort: number,
   socks5Config: SOCKS5Config,
@@ -56,7 +56,6 @@ export async function createProxyConnection(
   return null;
 }
 
-export const createSocks5Connection = createProxyConnection;
 
 async function createSingleProxyConnection(
   targetHost: string,
