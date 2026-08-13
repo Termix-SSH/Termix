@@ -358,7 +358,10 @@ export function buildHostEditorPayload(
     enableTerminalToolbar: form.enableTerminalToolbar,
     allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
-    proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
+    proxmoxConfig:
+      form.enableProxmox || form.proxmoxConfig?.source
+        ? form.proxmoxConfig
+        : null,
     enableProxmoxStats: form.enableProxmoxStats,
     proxmoxStatsConfig: form.enableProxmoxStats
       ? form.proxmoxStatsConfig

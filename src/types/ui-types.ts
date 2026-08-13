@@ -114,6 +114,16 @@ export type Host = {
   enableTmuxMonitor: boolean;
   enableTerminalToolbar: boolean;
   proxmoxConfig?: {
+    source?: {
+      source: "proxmox";
+      sourceHostId: number;
+      node: string;
+      vmid: number;
+      type: "qemu" | "lxc";
+      lastSeenAt?: string;
+      lastStatus?: string;
+      missingSince?: string | null;
+    };
     defaultCredentialId: number | null;
     defaultAuthType?: string;
     windowsPatterns: string;
