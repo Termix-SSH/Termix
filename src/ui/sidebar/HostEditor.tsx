@@ -527,9 +527,16 @@ export function HostEditor({
                 >
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      {t("hosts.authMethod")}
+                      {t("hosts.authenticationMethod")}
                     </label>
-                    <div className="flex flex-wrap gap-2">
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.authenticationMethodDesc")}
+                    </p>
+                    <div
+                      className="flex flex-wrap gap-2"
+                      role="radiogroup"
+                      aria-label={t("hosts.authenticationMethod")}
+                    >
                       {[
                         "password",
                         "key",
@@ -542,6 +549,9 @@ export function HostEditor({
                       ].map((m) => (
                         <button
                           key={m}
+                          type="button"
+                          role="radio"
+                          aria-checked={authMethod === m}
                           disabled={lockAuthReferences}
                           title={
                             lockAuthReferences
@@ -1036,7 +1046,7 @@ export function HostEditor({
                         {t("hosts.agentLabel")}
                       </span>
                       <p className="text-[10px] text-muted-foreground">
-                        {t("hosts.agentDesc")}
+                        {t("hosts.agentAuthenticationDesc")}
                       </p>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">

@@ -1705,6 +1705,20 @@ export async function loginUser(
   }
 }
 
+export async function requestTrustedProxyLogin(): Promise<{
+  enabled: boolean;
+  success?: boolean;
+  username?: string;
+  userId?: string;
+  is_admin?: boolean;
+  token?: string;
+}> {
+  const response = await authApi.post("/users/proxy-login");
+  if (response.data.token) localStorage.setItem("jwt", response.data.token);
+  if (response.data.success) markUserAuthenticated();
+  return response.data;
+}
+
 export async function logoutUser(): Promise<{
   success: boolean;
   message: string;

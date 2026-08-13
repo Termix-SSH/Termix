@@ -9,6 +9,7 @@ import { FieldCrypto } from "../../utils/field-crypto.js";
 import { LazyFieldEncryption } from "../../utils/lazy-field-encryption.js";
 import { authLogger } from "../../utils/logger.js";
 import { loginRateLimiter } from "../../utils/login-rate-limiter.js";
+import { isTrustedProxyAuthEnabled } from "../../utils/trusted-proxy-auth.js";
 import {
   generateDeviceFingerprint,
   getDeviceId,
@@ -183,6 +184,11 @@ export function registerUserTotpRoutes(
    *         description: Failed to enable TOTP.
    */
   router.post("/totp/enable", authenticateJWT, async (req, res) => {
+    if (isTrustedProxyAuthEnabled()) {
+      return res.status(409).json({
+        error: "TOTP is disabled while trusted proxy authentication is enabled",
+      });
+    }
     const userId = (req as AuthenticatedRequest).userId;
     const sessionId = (req as AuthenticatedRequest).sessionId;
     const { totp_code } = req.body;
