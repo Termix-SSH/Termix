@@ -375,18 +375,6 @@ export function parsePublicKey(publicKeyData: string): PublicKeyInfo {
   }
 }
 
-export function detectKeyType(privateKeyData: string): string {
-  try {
-    const parsedKey = ssh2Utils.parseKey(privateKeyData);
-    if (parsedKey instanceof Error) {
-      return "unknown";
-    }
-    return parsedKey.type || "unknown";
-  } catch {
-    return "unknown";
-  }
-}
-
 export function getFriendlyKeyTypeName(keyType: string): string {
   const keyTypeMap: Record<string, string> = {
     "ssh-rsa": "RSA",
