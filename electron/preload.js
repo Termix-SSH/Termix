@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+  getPlatform: () => ipcRenderer.invoke("get-platform"),
+  openNativeRdp: (options) => ipcRenderer.invoke("open-native-rdp", options),
 
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   isElectron: true,
