@@ -58,13 +58,29 @@ import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
   createCurrentRoleRepository,
+  createCurrentSsoProviderRepository,
   createCurrentUserRepository,
 } from "../repositories/factory.js";
 import type { UserRecord } from "../repositories/user-repository.js";
+import {
+  getTrustedProxyAuthConfig,
+  isTrustedProxyAddress,
+  isTrustedProxyAuthEnabled,
+  resolveTrustedProxyRoles,
+} from "../../utils/trusted-proxy-auth.js";
 
 const authManager = AuthManager.getInstance();
 
 const router = express.Router();
+
+router.use((req, res, next) => {
+  if (isTrustedProxyAuthEnabled() && req.path.startsWith("/oidc")) {
+    return res.status(409).json({
+      error: "OIDC is disabled while trusted proxy authentication is enabled",
+    });
+  }
+  next();
+});
 
 async function syncSharedCredentialsForUserRoles(
   userId: string,
@@ -1558,7 +1574,179 @@ router.get("/oidc/callback", async (req, res) => {
  *       500:
  *         description: Login failed.
  */
+router.post("/proxy-login", async (req, res) => {
+  let config;
+  try {
+    config = getTrustedProxyAuthConfig();
+  } catch (error) {
+    authLogger.error(
+      "Invalid trusted proxy authentication configuration",
+      error,
+    );
+    return res
+      .status(503)
+      .json({ error: "Proxy authentication is misconfigured" });
+  }
+  if (!config.enabled) return res.json({ enabled: false });
+
+  const sourceAddress = req.socket.remoteAddress;
+  try {
+    if (!isTrustedProxyAddress(sourceAddress, config.trustedProxies)) {
+      authLogger.warn(
+        "Rejected proxy authentication from an untrusted source",
+        {
+          operation: "trusted_proxy_auth_rejected",
+          sourceAddress,
+        },
+      );
+      return res.status(403).json({ error: "Untrusted authentication proxy" });
+    }
+  } catch (error) {
+    authLogger.error("Invalid trusted proxy allowlist", error);
+    return res
+      .status(503)
+      .json({ error: "Proxy authentication is misconfigured" });
+  }
+
+  const usernameValue = req.headers[config.usernameHeader];
+  const roleValue = req.headers[config.roleHeader];
+  const username = Array.isArray(usernameValue)
+    ? usernameValue[0]
+    : usernameValue;
+  const roleHeader = Array.isArray(roleValue) ? roleValue[0] : roleValue;
+  if (!isNonEmptyString(username) || !isNonEmptyString(roleHeader)) {
+    return res
+      .status(401)
+      .json({ error: "Proxy authentication headers are missing" });
+  }
+
+  const mappedRoles = resolveTrustedProxyRoles(roleHeader, config.roleMap);
+  if (!mappedRoles) {
+    return res.status(403).json({ error: "Proxy role is not mapped" });
+  }
+
+  try {
+    const [legacyOidc, enabledProviders, userRecord] = await Promise.all([
+      createCurrentSettingsRepository().get("oidc_config"),
+      createCurrentSsoProviderRepository().listEnabled(),
+      createCurrentUserRepository().findByUsername(username),
+    ]);
+    const hasOidc =
+      Boolean(getOIDCConfigFromEnv() || legacyOidc) ||
+      enabledProviders.some((provider) =>
+        ["oidc", "github", "google"].includes(provider.type),
+      );
+    if (hasOidc) {
+      return res
+        .status(409)
+        .json({ error: "Proxy authentication cannot be used with OIDC" });
+    }
+    if (!userRecord) {
+      return res.status(403).json({ error: "Proxy user must already exist" });
+    }
+    if (userRecord.isOidc || userRecord.totpEnabled) {
+      return res.status(409).json({
+        error: "Proxy authentication cannot be used with OIDC or TOTP users",
+      });
+    }
+
+    const roleRepository = createCurrentRoleRepository();
+    const managedRoles = new Set([...config.roleMap.values()].flat());
+    for (const roleName of managedRoles) {
+      if (!(await roleRepository.findRoleByName(roleName))) {
+        authLogger.error("Trusted proxy role map references a missing role", {
+          operation: "trusted_proxy_auth_missing_role",
+          roleName,
+        });
+        return res
+          .status(503)
+          .json({ error: "Proxy role mapping is misconfigured" });
+      }
+    }
+
+    const currentRoles = await roleRepository.listUserRoles(userRecord.id);
+    const currentNames = new Set(currentRoles.map((role) => role.roleName));
+    for (const roleName of mappedRoles) {
+      if (!currentNames.has(roleName)) {
+        await roleRepository.assignRoleNameToUser({
+          userId: userRecord.id,
+          roleName,
+          grantedBy: userRecord.id,
+        });
+      }
+    }
+    for (const role of currentRoles) {
+      if (
+        managedRoles.has(role.roleName) &&
+        !mappedRoles.includes(role.roleName)
+      ) {
+        await roleRepository.removeRoleFromUser(userRecord.id, role.roleId);
+      }
+    }
+    PermissionManager.getInstance().invalidateUserPermissionCache(
+      userRecord.id,
+    );
+
+    const deviceInfo = parseUserAgent(req);
+    if (
+      !(await authManager.authenticateWebAuthnUser(
+        userRecord.id,
+        deviceInfo.type,
+      ))
+    ) {
+      return res
+        .status(409)
+        .json({ error: "User encryption data is unavailable" });
+    }
+    await syncSharedCredentialsForUserRoles(
+      userRecord.id,
+      "trusted_proxy_login_role_shared_credentials",
+    );
+    const token = await authManager.generateJWTToken(userRecord.id, {
+      deviceType: deviceInfo.type,
+      deviceInfo: deviceInfo.deviceInfo,
+    });
+    const payload = await authManager.verifyJWTToken(token);
+    const { ipAddress, userAgent } = getRequestMeta(req);
+    await logAudit({
+      userId: userRecord.id,
+      username: userRecord.username,
+      action: "trusted_proxy_login",
+      resourceType: "session",
+      ipAddress,
+      userAgent,
+      success: true,
+    });
+    authLogger.success("Trusted proxy login successful", {
+      operation: "trusted_proxy_login",
+      userId: userRecord.id,
+      sessionId: payload?.sessionId,
+      mappedRoles,
+    });
+
+    return res
+      .cookie("jwt", token, authManager.getSecureCookieOptions(req))
+      .json({
+        enabled: true,
+        success: true,
+        username: userRecord.username,
+        userId: userRecord.id,
+        is_admin: !!userRecord.isAdmin,
+        ...(isNativeAppRequest(req) ? { token } : {}),
+      });
+  } catch (error) {
+    authLogger.error("Trusted proxy login failed", error);
+    return res.status(500).json({ error: "Proxy authentication failed" });
+  }
+});
+
 router.post("/login", async (req, res) => {
+  if (isTrustedProxyAuthEnabled()) {
+    return res.status(403).json({
+      error:
+        "Password login is disabled while trusted proxy authentication is enabled",
+    });
+  }
   const { username, password, rememberMe } = req.body;
   const clientIp = req.ip || req.socket.remoteAddress || "unknown";
   authLogger.info("User login request received", {
