@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { X } from "lucide-react";
 import { splitDragState, notifyDragEnd } from "@/lib/splitDragging";
 import { tabIcon } from "@/shell/tabUtils";
 import type { Tab, SplitMode } from "@/types/ui-types";
@@ -15,6 +16,8 @@ export function defaultSizes(mode: SplitMode): {
   switch (mode) {
     case "2-way":
       return { rowSizes: [100], rowColSizes: [[50, 50]] };
+    case "2-way-horizontal":
+      return { rowSizes: [50, 50], rowColSizes: [[100], [100]] };
     case "3-way":
       return { rowSizes: [50, 50], rowColSizes: [[50, 50], [100]] };
     case "3-way-horizontal":
@@ -253,10 +256,12 @@ function PaneHeader({
   tab,
   paneIndex,
   isFocused,
+  onClear,
 }: {
   tab: Tab | null;
   paneIndex: number;
   isFocused: boolean;
+  onClear?: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -276,10 +281,22 @@ function PaneHeader({
             {tabIcon(tab.type)}
           </span>
           <span
-            className={`truncate ${isFocused ? "text-accent-brand font-semibold" : "text-foreground"}`}
+            className={`truncate flex-1 ${isFocused ? "text-accent-brand font-semibold" : "text-foreground"}`}
           >
             {tab.type === "dashboard" ? "Dashboard" : tab.label}
           </span>
+          <button
+            type="button"
+            title={t("terminal.split.removeFromSplit")}
+            aria-label={t("terminal.split.removeFromSplit")}
+            className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClear?.();
+            }}
+          >
+            <X className="size-3" />
+          </button>
         </>
       ) : (
         <span className="opacity-40">
@@ -349,7 +366,12 @@ const Pane = memo(function Pane({
         if (tabId) onAssignPane?.(paneIndex, tabId);
       }}
     >
-      <PaneHeader tab={tab} paneIndex={paneIndex} isFocused={isFocused} />
+      <PaneHeader
+        tab={tab}
+        paneIndex={paneIndex}
+        isFocused={isFocused}
+        onClear={tab ? () => onAssignPane?.(paneIndex, "") : undefined}
+      />
       <div className="flex-1 min-h-0 overflow-hidden relative">
         {tab ? (
           <div ref={contentRef} className="absolute inset-0" />
@@ -531,6 +553,45 @@ export const SplitView = memo(function SplitView({
           onPaneClick={onPaneClick}
           onAssignPane={onAssignPane}
         />
+      )}
+
+      {splitMode === "2-way-horizontal" && (
+        <div className="flex flex-col w-full h-full min-h-0">
+          <Row
+            rowIdx={0}
+            paneIndices={[0]}
+            rowHeight={rowSizes[0]}
+            colWidths={rowColSizes[0] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
+          />
+          <RowDivider
+            onMouseDown={(e) => onRowDivider(e, 0)}
+            onTouchStart={(e) => onRowDividerTouch(e, 0)}
+          />
+          <Row
+            rowIdx={1}
+            paneIndices={[1]}
+            rowHeight={rowSizes[1]}
+            colWidths={rowColSizes[1] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
+          />
+        </div>
       )}
 
       {splitMode === "3-way" && (

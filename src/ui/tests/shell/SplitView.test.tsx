@@ -34,6 +34,13 @@ describe("defaultSizes", () => {
     });
   });
 
+  it("returns stacked defaults for a horizontal 2-way layout", () => {
+    expect(defaultSizes("2-way-horizontal")).toEqual({
+      rowSizes: [50, 50],
+      rowColSizes: [[100], [100]],
+    });
+  });
+
   it("returns a single full pane for 'none'", () => {
     expect(defaultSizes("none")).toEqual({
       rowSizes: [100],
@@ -84,6 +91,25 @@ describe("SplitView - controlled rowSizes/rowColSizes", () => {
 
     fireEvent.click(screen.getByTitle("Reset to equal split"));
     expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  it("releases a session from its pane from the pane header", () => {
+    const onAssignPane = vi.fn();
+    render(
+      <SplitView
+        tabs={[makeTab({ id: "t1" })]}
+        paneTabIds={["t1", null, null, null, null, null]}
+        splitMode="2-way"
+        rowSizes={[100]}
+        rowColSizes={[[50, 50]]}
+        onRowSizesChange={() => {}}
+        onRowColSizesChange={() => {}}
+        onAssignPane={onAssignPane}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("terminal.split.removeFromSplit"));
+    expect(onAssignPane).toHaveBeenCalledWith(0, "");
   });
 
   it("does not mutate rowSizes/rowColSizes props locally - reflects prop changes on rerender", () => {
