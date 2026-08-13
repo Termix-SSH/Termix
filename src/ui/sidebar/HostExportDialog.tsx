@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Download, Search } from "lucide-react";
@@ -12,8 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/dialog";
-import { exportAllSSHHosts } from "@/main-axios";
-import type { SSHHostWithStatus } from "@/main-axios";
+import { exportAllSSHHosts, type SSHHostWithStatus } from "@/main-axios";
 import { isFolder } from "@/sidebar/SidebarTree";
 import {
   buildExportPayload,
@@ -126,7 +126,7 @@ export function HostExportDialog({
       .catch((err: unknown) => {
         if (cancelled) return;
         setRaw(null);
-        const message = err instanceof Error ? err.message : "";
+        const message = getErrorMessage(err, "");
         toast.error(message || t("hosts.export.fetchFailed"));
       })
       .finally(() => {

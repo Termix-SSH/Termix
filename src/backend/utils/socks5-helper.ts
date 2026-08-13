@@ -1,6 +1,5 @@
 export {
   createSocks5Connection,
-  createProxyConnection,
   createHttpConnectConnection,
   createMixedProxyChainConnection,
   testProxyConnectivity,

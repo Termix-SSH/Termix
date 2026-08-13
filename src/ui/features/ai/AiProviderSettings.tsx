@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -155,9 +156,7 @@ export function AiProviderSettings({
       onChanged(created.id);
       onAdded?.();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("ai.providerSaveFailed"),
-      );
+      toast.error(getErrorMessage(error, t("ai.providerSaveFailed")));
     } finally {
       setSaving(false);
     }
@@ -168,9 +167,7 @@ export function AiProviderSettings({
       await deleteAiProvider(id);
       onChanged();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("ai.providerDeleteFailed"),
-      );
+      toast.error(getErrorMessage(error, t("ai.providerDeleteFailed")));
     }
   }
 

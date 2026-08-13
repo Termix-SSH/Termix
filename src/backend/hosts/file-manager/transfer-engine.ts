@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { randomUUID } from "crypto";
 import { networkInterfaces } from "os";
 import { performance } from "node:perf_hooks";
@@ -1694,8 +1695,7 @@ async function runFastSftpCopySegmentedSequential(
           throw err;
         }
 
-        const message =
-          err instanceof Error ? err.message : "Segment transfer failed";
+        const message = getErrorMessage(err, "Segment transfer failed");
         const recoverable =
           options.reconnect &&
           isRecoverableTransferError(err) &&
@@ -1987,8 +1987,7 @@ async function runFastSftpCopySegmentedParallel(
           throw err;
         }
 
-        const message =
-          err instanceof Error ? err.message : "Segment transfer failed";
+        const message = getErrorMessage(err, "Segment transfer failed");
         const recoverable =
           isRecoverableTransferError(err) &&
           attempts < SFTP_PARALLEL_SEGMENT_MAX_ATTEMPTS;
@@ -2255,7 +2254,7 @@ async function pipelinedSftpFile(
             const reset = await resetDedicatedTransferSessions(
               options.reconnect,
               attempts,
-              err instanceof Error ? err.message : "copy failed",
+              getErrorMessage(err, "copy failed"),
             );
             sftpSource = reset.sourceSftp;
             sftpDest = reset.destSftp;
@@ -3023,7 +3022,7 @@ async function runTransfer(
     }
 
     const current = activeTransfers.get(transferId);
-    const message = err instanceof Error ? err.message : "Transfer failed";
+    const message = getErrorMessage(err, "Transfer failed");
 
     if (
       sourcePaths.length === 1 &&

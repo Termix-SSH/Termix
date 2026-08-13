@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import ssh2Pkg, {
   type Client as SSHClientType,
@@ -511,8 +512,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           connectData.hostConfig.userId = userId;
         }
         handleConnectToHost(connectData).catch((error) => {
-          const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
+          const errMsg = getErrorMessage(error);
           if (
             errMsg.includes("Cannot parse privateKey") &&
             errMsg.includes("no passphrase")
@@ -965,8 +965,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         };
 
         handleConnectToHost(reconnectData).catch((error) => {
-          const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
+          const errMsg = getErrorMessage(error);
           if (
             errMsg.includes("Cannot parse privateKey") &&
             errMsg.includes("no passphrase")
@@ -1106,7 +1105,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               type: "error",
               message:
                 "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+                getErrorMessage(error),
             }),
           );
         });
@@ -1152,10 +1151,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
             JSON.stringify({
               type: "vault_error",
               hostId: vaultData.hostId,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to start Vault authentication",
+              error: getErrorMessage(
+                error,
+                "Failed to start Vault authentication",
+              ),
             }),
           );
         }
@@ -1213,7 +1212,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               type: "error",
               message:
                 "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+                getErrorMessage(error),
             }),
           );
         });
@@ -1586,7 +1585,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve server-side host data for ${id}`, {
           operation: "ssh_host_data",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1627,7 +1626,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve host credentials for ${id}`, {
           operation: "ssh_credentials",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     } else if (credentialId && id && userId) {
@@ -1652,7 +1651,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           operation: "ssh_credentials",
           hostId: id,
           credentialId,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1697,8 +1696,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
         }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
+        const message = getErrorMessage(error);
         sshLogger.error("SSH hostname resolution failed", error, {
           operation: "terminal_dns_resolve",
           hostId: id,
@@ -2284,8 +2282,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   operation: "activity_log_error",
                   userId: hostConfig.userId,
                   hostId: id,
-                  error:
-                    error instanceof Error ? error.message : "Unknown error",
+                  error: getErrorMessage(error),
                 });
               }
             })();
@@ -2891,18 +2888,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
               operation: "ca_cert_auth_setup_failed",
               userId,
               hostId: id,
-              error:
-                certError instanceof Error
-                  ? certError.message
-                  : String(certError),
+              error: getErrorMessage(certError, String(certError)),
             });
           }
         }
       } catch (keyError) {
-        const message =
-          keyError instanceof Error
-            ? keyError.message
-            : "Invalid private key format";
+        const message = getErrorMessage(keyError, "Invalid private key format");
         sshLogger.error("SSH key format error: " + message);
         ws.send(
           JSON.stringify({
@@ -2961,10 +2952,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           JSON.stringify({
             type: "error",
             message:
-              "OPKSSH authentication failed: " +
-              (opksshError instanceof Error
-                ? opksshError.message
-                : "Unknown error"),
+              "OPKSSH authentication failed: " + getErrorMessage(opksshError),
           }),
         );
         return;
@@ -3016,9 +3004,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             type: "error",
             message:
               "Vault SSH signer authentication failed: " +
-              (vaultError instanceof Error
-                ? vaultError.message
-                : "Unknown error"),
+              getErrorMessage(vaultError),
           }),
         );
         return;
@@ -3167,7 +3153,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             type: "error",
             message:
               "Cloudflare tunnel connection failed: " +
-              (cfError instanceof Error ? cfError.message : "Unknown error"),
+              getErrorMessage(cfError),
           }),
         );
         cleanupAuthState(connectionTimeout);
@@ -3277,11 +3263,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message:
-              "Proxy connection failed: " +
-              (proxyError instanceof Error
-                ? proxyError.message
-                : "Unknown error"),
+            message: "Proxy connection failed: " + getErrorMessage(proxyError),
           }),
         );
         if (currentSessionId) {

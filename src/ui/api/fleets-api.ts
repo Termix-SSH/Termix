@@ -145,28 +145,6 @@ export async function removeFleetMember(
   }
 }
 
-export async function shareFleet(
-  fleetId: number,
-  shareData: {
-    targets: Array<{ type: "user" | "role"; id: string | number }>;
-    permissionLevel?: "connect" | "view" | "edit" | "manage";
-    durationHours?: number;
-  },
-): Promise<{
-  success: boolean;
-  permissionLevel: string;
-  expiresAt: string | null;
-  hostsShared: number;
-  hostsTotal: number;
-}> {
-  try {
-    const response = await authApi.post(`/fleets/${fleetId}/share`, shareData);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "share fleet");
-  }
-}
-
 export async function runFleetCommand(
   fleetId: number,
   command: string,

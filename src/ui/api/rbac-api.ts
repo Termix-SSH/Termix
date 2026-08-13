@@ -1,5 +1,10 @@
-import { handleApiError, rbacApi } from "@/main-axios";
-import type { AccessRecord, Role, UserRole } from "@/main-axios";
+import {
+  handleApiError,
+  rbacApi,
+  type AccessRecord,
+  type Role,
+  type UserRole,
+} from "@/main-axios";
 import type { AuthOverrideProtocol } from "@/types/auth-protocols";
 
 export async function getRoles(): Promise<{ roles: Role[] }> {

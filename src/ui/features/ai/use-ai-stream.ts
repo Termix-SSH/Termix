@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { useCallback, useRef, useState } from "react";
 import { authApi } from "@/main-axios";
 import type { AiProposal } from "@/api/ai-api";
@@ -206,10 +207,7 @@ export function useAiStream() {
         setState((prev) => ({
           ...prev,
           streaming: false,
-          error:
-            error instanceof Error
-              ? error.message
-              : "The assistant stopped unexpectedly",
+          error: getErrorMessage(error, "The assistant stopped unexpectedly"),
         }));
       } finally {
         abortRef.current = null;

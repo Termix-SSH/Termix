@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../../utils/error-message.js";
 import type { Request, Response } from "express";
 import type { Client } from "ssh2";
 import type { AuthenticatedRequest } from "../../../../types/index.js";
@@ -54,7 +55,7 @@ export function managerHandler(
         error: error instanceof Error ? error.message : String(error),
       });
       return res.status(500).json({
-        error: error instanceof Error ? error.message : "Operation failed",
+        error: getErrorMessage(error, "Operation failed"),
       });
     }
   };

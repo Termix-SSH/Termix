@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
@@ -5,8 +6,11 @@ import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Label } from "@/components/label";
 import { Switch } from "@/components/switch";
-import type { AutomationDefinition, Step } from "@/types/automations";
-import { AUTOMATION_DEFINITION_VERSION } from "@/types/automations";
+import {
+  AUTOMATION_DEFINITION_VERSION,
+  type AutomationDefinition,
+  type Step,
+} from "@/types/automations";
 import { StepBlock } from "./StepBlock";
 import { TriggerCard, defaultTrigger } from "./TriggerCard";
 import { newStepId, type AutomationEditorOptions } from "./editor-types";
@@ -196,9 +200,7 @@ export function AutomationEditor({
                 setDefinition(parsed as AutomationDefinition);
                 setJsonError(null);
               } catch (error) {
-                setJsonError(
-                  error instanceof Error ? error.message : String(error),
-                );
+                setJsonError(getErrorMessage(error, String(error)));
               }
             }}
           />

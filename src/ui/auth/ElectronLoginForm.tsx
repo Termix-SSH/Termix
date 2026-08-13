@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/alert.tsx";
 import { useTranslation } from "react-i18next";
@@ -151,8 +152,7 @@ export function ElectronLoginForm({
           typeof event.data.providerId === "number"
             ? event.data.providerId
             : undefined;
-        const error =
-          err instanceof Error ? err.message : t("errors.failedOidcLogin");
+        const error = getErrorMessage(err, t("errors.failedOidcLogin"));
         iframeRef.current?.contentWindow?.postMessage(
           {
             type: "OIDC_SYSTEM_BROWSER_AUTH_RESULT",

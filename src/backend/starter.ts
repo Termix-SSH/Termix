@@ -1,6 +1,6 @@
+import { getErrorMessage } from "./utils/error-message.js";
 import dotenv from "dotenv";
-import { promises as fs } from "fs";
-import { readFileSync } from "fs";
+import { promises as fs, readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
@@ -282,7 +282,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
             "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
             {
               operation: "opkssh_binary_init_failed",
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
               stack: error instanceof Error ? error.stack : undefined,
               platform: process.platform,
               arch: process.arch,
@@ -332,7 +332,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
             "Failed to initialize Guacamole server (guacd may not be available)",
             {
               operation: "guac_init_skip",
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             },
           );
         });

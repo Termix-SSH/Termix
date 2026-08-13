@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Express } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { fileLogger } from "../../utils/logger.js";
@@ -194,8 +195,7 @@ export function registerFileListingRoutes(
             tryFallbackMethod();
           });
       } catch (sftpErr: unknown) {
-        const errMsg =
-          sftpErr instanceof Error ? sftpErr.message : "Unknown error";
+        const errMsg = getErrorMessage(sftpErr);
         fileLogger.warn(`SFTP connection error, trying fallback: ${errMsg}`);
         tryFallbackMethod();
       }
@@ -325,8 +325,7 @@ export function registerFileListingRoutes(
         );
       } catch (execErr: unknown) {
         sshConn.activeOperations--;
-        const errMsg =
-          execErr instanceof Error ? execErr.message : "Unknown error";
+        const errMsg = getErrorMessage(execErr);
         fileLogger.error(`Fallback listFiles exec failed: ${errMsg}`);
         if (!res.headersSent) {
           return res.status(500).json({ error: errMsg });
@@ -455,8 +454,7 @@ export function registerFileListingRoutes(
         });
       } catch (execErr: unknown) {
         sshConn.activeOperations--;
-        const errMsg =
-          execErr instanceof Error ? execErr.message : "Unknown error";
+        const errMsg = getErrorMessage(execErr);
         fileLogger.error(`Sudo listFiles exec failed: ${errMsg}`);
         if (!res.headersSent) {
           return res.status(500).json({ error: errMsg });

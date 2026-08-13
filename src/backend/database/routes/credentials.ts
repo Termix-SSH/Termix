@@ -1,6 +1,6 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { parseSSHKey } from "../../utils/ssh-key-utils.js";
@@ -225,8 +225,7 @@ router.post(
         username,
       });
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to create credential",
+        error: getErrorMessage(err, "Failed to create credential"),
       });
     }
   },
@@ -383,8 +382,7 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to fetch credential",
+        error: getErrorMessage(err, "Failed to fetch credential"),
       });
     }
   },
@@ -557,8 +555,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to update credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to update credential",
+        error: getErrorMessage(err, "Failed to update credential"),
       });
     }
   },
@@ -684,8 +681,7 @@ router.delete(
     } catch (err) {
       authLogger.error("Failed to delete credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to delete credential",
+        error: getErrorMessage(err, "Failed to delete credential"),
       });
     }
   },
@@ -772,10 +768,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to apply credential to host", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to apply credential to host",
+        error: getErrorMessage(err, "Failed to apply credential to host"),
       });
     }
   },
@@ -828,10 +821,7 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch hosts using credential", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to fetch hosts using credential",
+        error: getErrorMessage(err, "Failed to fetch hosts using credential"),
       });
     }
   },

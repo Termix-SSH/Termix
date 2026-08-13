@@ -1,5 +1,5 @@
-import { SocksClient } from "socks";
-import type { SocksClientOptions } from "socks";
+import { getErrorMessage } from "./error-message.js";
+import { SocksClient, type SocksClientOptions } from "socks";
 import net from "net";
 import dns from "dns/promises";
 import { sshLogger } from "./logger.js";
@@ -29,7 +29,7 @@ export interface SOCKS5Config {
   socks5ProxyChain?: ProxyNode[];
 }
 
-export async function createProxyConnection(
+export async function createSocks5Connection(
   targetHost: string,
   targetPort: number,
   socks5Config: SOCKS5Config,
@@ -55,8 +55,6 @@ export async function createProxyConnection(
 
   return null;
 }
-
-export const createSocks5Connection = createProxyConnection;
 
 async function createSingleProxyConnection(
   targetHost: string,
@@ -89,7 +87,7 @@ async function createSingleProxyConnection(
       proxyPort: socks5Config.socks5Port || 1080,
       targetHost,
       targetPort,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorMessage: getErrorMessage(error),
     });
     throw error;
   }
@@ -223,7 +221,7 @@ async function createPureSocksChainConnection(
       chainLength: proxyChain.length,
       targetHost,
       targetPort,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorMessage: getErrorMessage(error),
     });
     throw error;
   }
@@ -287,7 +285,7 @@ async function createHopByHopConnection(
       chainLength: proxyChain.length,
       targetHost,
       targetPort,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorMessage: getErrorMessage(error),
     });
     throw error;
   }

@@ -1,6 +1,6 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import axios from "axios";
 import multer from "multer";
 import { sshLogger, databaseLogger } from "../../utils/logger.js";
@@ -1370,10 +1370,7 @@ router.put(
         sshLogger.warn("Failed to resync shared host secrets after update", {
           operation: "host_update_resync",
           hostId: parseInt(hostId),
-          error:
-            resyncError instanceof Error
-              ? resyncError.message
-              : "Unknown error",
+          error: getErrorMessage(resyncError),
         });
       }
 
@@ -1495,10 +1492,7 @@ router.get(
               operation: "host_fetch_own_decrypt_failed",
               userId,
               hostId: host.id,
-              error:
-                decryptError instanceof Error
-                  ? decryptError.message
-                  : "Unknown error",
+              error: getErrorMessage(decryptError),
             });
           }
         }
@@ -2589,7 +2583,7 @@ async function resolveHostCredentials(
     return { ...host };
   } catch (error) {
     sshLogger.warn(
-      `Failed to resolve credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to resolve credentials for host ${host.id}: ${getErrorMessage(error)}`,
     );
     return host;
   }

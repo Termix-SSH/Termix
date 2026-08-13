@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../../lib/error-message.js";
 import React from "react";
 import { useXTerm } from "react-xtermjs";
 import { FitAddon } from "@xterm/addon-fit";
@@ -473,7 +474,7 @@ function ConsoleTerminalInner({
       });
     } catch (error) {
       setIsConnecting(false);
-      const message = `Failed to connect: ${error instanceof Error ? error.message : "Unknown error"}`;
+      const message = `Failed to connect: ${getErrorMessage(error)}`;
       toast.error(message);
       addLog({ type: "error", stage: "error", message });
       retryRef.current.markFailed();

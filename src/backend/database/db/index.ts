@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import * as schema from "./schema.js";
@@ -130,7 +131,7 @@ async function initializeDatabaseAsync(): Promise<void> {
 
       databaseLogger.error("Failed to initialize memory database", error, {
         operation: "db_memory_init_failed",
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        errorMessage: getErrorMessage(error),
         errorStack: error instanceof Error ? error.stack : undefined,
         encryptedDbExists:
           DatabaseFileEncryption.isEncryptedDatabaseFile(encryptedDbPath),
@@ -154,12 +155,12 @@ async function initializeDatabaseAsync(): Promise<void> {
         databaseLogger.warn("Failed to generate diagnostic information", {
           operation: "db_diagnostic_failed",
           error:
-            diagError instanceof Error ? diagError.message : "Unknown error",
+            getErrorMessage(diagError),
         });
       }
 
       throw new Error(
-        `Database decryption failed: ${error instanceof Error ? error.message : "Unknown error"}. This prevents data loss.`,
+        `Database decryption failed: ${getErrorMessage(error)}. This prevents data loss.`,
         { cause: error },
       );
     }
@@ -916,9 +917,7 @@ const migrateSchema = () => {
       databaseLogger.warn("Failed to backfill users.registered_at", {
         operation: "schema_migration",
         error:
-          backfillError instanceof Error
-            ? backfillError.message
-            : String(backfillError),
+          getErrorMessage(backfillError, String(backfillError)),
       });
     }
   } else {
@@ -932,9 +931,7 @@ const migrateSchema = () => {
         {
           operation: "schema_migration",
           error:
-            backfillError instanceof Error
-              ? backfillError.message
-              : String(backfillError),
+            getErrorMessage(backfillError, String(backfillError)),
         },
       );
     }
@@ -2929,9 +2926,7 @@ async function handlePostInitFileEncryption() {
       databaseLogger.warn("Failed to cleanup old migration files", {
         operation: "migration_cleanup_startup_failed",
         error:
-          cleanupError instanceof Error
-            ? cleanupError.message
-            : "Unknown error",
+          getErrorMessage(cleanupError),
       });
     }
   } catch (error) {
@@ -3018,7 +3013,7 @@ async function cleanupDatabase() {
   } catch (error) {
     databaseLogger.warn("Error closing database connection", {
       operation: "db_close_error",
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: getErrorMessage(error),
     });
   }
 

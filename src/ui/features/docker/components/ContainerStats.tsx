@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../../lib/error-message.js";
 import React from "react";
 import {
   Activity,
@@ -40,9 +41,7 @@ export function ContainerStats({
       const data = await getContainerStats(sessionId, containerId);
       setStats(data);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : t("docker.failedToFetchStats"),
-      );
+      setError(getErrorMessage(err, t("docker.failedToFetchStats")));
     } finally {
       setIsLoading(false);
     }

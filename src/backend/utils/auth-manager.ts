@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { UserKeyManager } from "./user-keys.js";
@@ -193,7 +194,7 @@ class AuthManager {
       databaseLogger.error("Lazy encryption migration failed", error, {
         operation: "lazy_encryption_migration_error",
         userId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -248,7 +249,7 @@ class AuthManager {
         operation: "session_data_key_migrate_failed",
         userId: payload.userId,
         sessionId: payload.sessionId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -391,7 +392,7 @@ class AuthManager {
     } catch (error) {
       databaseLogger.warn("JWT verification failed", {
         operation: "jwt_verify_failed",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
         errorName: error instanceof Error ? error.name : "Unknown",
       });
       return null;
@@ -659,7 +660,7 @@ class AuthManager {
           databaseLogger.warn("Failed to update API key lastUsedAt", {
             operation: "api_key_update_last_used",
             keyId: matchedKey!.id,
-            error: err instanceof Error ? err.message : "Unknown",
+            error: getErrorMessage(err, "Unknown"),
           });
         });
 
@@ -767,7 +768,7 @@ class AuthManager {
               databaseLogger.warn("Failed to update session lastActiveAt", {
                 operation: "session_update_last_active",
                 sessionId: payload.sessionId,
-                error: error instanceof Error ? error.message : "Unknown error",
+                error: getErrorMessage(error),
               });
             });
         } catch (error) {

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React from "react";
 import { Separator } from "@/components/separator.tsx";
@@ -546,7 +547,7 @@ function HostMetricsInner({
     } catch (error) {
       toast.error(t("hostMetrics.quickActionError", { name: action.name }), {
         id: `quick-action-${action.snippetId}`,
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: getErrorMessage(error),
         duration: 5000,
       });
     } finally {

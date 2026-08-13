@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -93,9 +94,7 @@ export function ProposalCard({ proposal, onResolved }: ProposalCardProps) {
       // hundreds of lines, which covered the screen.
       onResolved(proposal.id, "applied", result.summary);
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("ai.proposalApplyFailed"),
-      );
+      toast.error(getErrorMessage(error, t("ai.proposalApplyFailed")));
     } finally {
       setBusy(null);
     }
@@ -107,9 +106,7 @@ export function ProposalCard({ proposal, onResolved }: ProposalCardProps) {
       await rejectAiProposal(proposal.id);
       onResolved(proposal.id, "rejected");
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : t("ai.proposalRejectFailed"),
-      );
+      toast.error(getErrorMessage(error, t("ai.proposalRejectFailed")));
     } finally {
       setBusy(null);
     }

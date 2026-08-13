@@ -537,7 +537,7 @@ export function TabBar({
         (() => {
           const ctxTab = tabs.find((t) => t.id === contextTabId);
           if (!ctxTab) return null;
-          const isInPane = paneTabIds.indexOf(contextTabId) !== -1;
+          const isInPane = paneTabIds.includes(contextTabId);
           const hasEmptySlot =
             isSplit && paneTabIds.slice(0, paneCount).some((p) => p === null);
           return (

@@ -1,5 +1,4 @@
-import type { Request, Response } from "express";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import { and, eq, type SQL } from "drizzle-orm";
 import {
   hosts,

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import { Client, type ConnectConfig } from "ssh2";
 import type { SSHHost } from "../../types/index.js";
 import { SSH_ALGORITHMS } from "../utils/ssh-algorithms.js";
@@ -156,10 +157,7 @@ export function createFleetSshFactory(host: SSHHost): () => Promise<Client> {
         }
       } catch (proxyError) {
         throw new Error(
-          "Proxy connection failed: " +
-            (proxyError instanceof Error
-              ? proxyError.message
-              : "Unknown error"),
+          "Proxy connection failed: " + getErrorMessage(proxyError),
           { cause: proxyError },
         );
       }

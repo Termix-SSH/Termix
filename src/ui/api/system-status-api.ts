@@ -1,7 +1,11 @@
 import { AxiosError } from "axios";
 import type { TermixAlert } from "@/types";
-import { authApi, handleApiError, markUserAuthenticated } from "@/main-axios";
-import type { AuthResponse } from "@/main-axios";
+import {
+  authApi,
+  handleApiError,
+  markUserAuthenticated,
+  type AuthResponse,
+} from "@/main-axios";
 
 // ALERTS
 // ============================================================================

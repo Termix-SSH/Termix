@@ -184,21 +184,6 @@ export function attachOrCreateTmuxSession(
 /**
  * Query the name of the most recently created tmux session via exec channel.
  */
-export async function queryNewestTmuxSession(
-  conn: Client,
-): Promise<string | null> {
-  try {
-    const output = await execCommand(
-      conn,
-      tmuxCommand(
-        `list-sessions -F "#{session_created}:#{session_name}" 2>/dev/null | sort -rn | head -1 | cut -d: -f2-`,
-      ),
-    );
-    return output || null;
-  } catch {
-    return null;
-  }
-}
 
 function shellEscape(s: string): string {
   return "'" + s.replace(/'/g, "'\\''") + "'";

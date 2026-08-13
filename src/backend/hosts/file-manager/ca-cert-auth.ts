@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Client as SSHClient, ConnectConfig } from "ssh2";
 import { fileLogger } from "../../utils/logger.js";
 
@@ -44,7 +45,7 @@ export async function applyCACertIfPresent(
   } catch (certError) {
     fileLogger.warn("CA certificate setup failed, continuing with key only", {
       operation: "sftp_ca_cert_auth_failed",
-      error: certError instanceof Error ? certError.message : "Unknown error",
+      error: getErrorMessage(certError),
     });
   }
 }

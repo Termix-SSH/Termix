@@ -1,9 +1,8 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { nanoid } from "nanoid";
-import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { DatabaseSaveTrigger } from "../../utils/database-save-trigger.js";

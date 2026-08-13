@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { execFileSync } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
@@ -403,7 +404,7 @@ export function registerAcmeSSLRoutes(
         ...(await getAcmeSettings()),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       authLogger.error("ACME certificate request failed", err);
 
       const { ipAddress, userAgent } = getRequestMeta(req);
@@ -562,7 +563,7 @@ export function registerAcmeSSLRoutes(
         ...(await getAcmeSettings()),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       authLogger.error("Manual SSL certificate upload failed", err);
 
       const { ipAddress, userAgent } = getRequestMeta(req);

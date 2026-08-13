@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { WebSocketServer, WebSocket } from "ws";
@@ -709,10 +710,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
             ws.send(
               JSON.stringify({
                 type: "error",
-                message:
-                  error instanceof Error
-                    ? error.message
-                    : "Failed to connect to container",
+                message: getErrorMessage(
+                  error,
+                  "Failed to connect to container",
+                ),
               }),
             );
           }
@@ -774,7 +775,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       ws.send(
         JSON.stringify({
           type: "error",
-          message: error instanceof Error ? error.message : "An error occurred",
+          message: getErrorMessage(error, "An error occurred"),
         }),
       );
     }

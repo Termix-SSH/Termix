@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Express } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { statsLogger } from "../../utils/logger.js";
@@ -157,10 +158,7 @@ export function registerHostMetricsViewerRoutes<
             operation: "register_viewer_lookup",
             hostId,
             userId,
-            error:
-              lookupErr instanceof Error
-                ? lookupErr.message
-                : String(lookupErr),
+            error: getErrorMessage(lookupErr, String(lookupErr)),
           },
         );
       }

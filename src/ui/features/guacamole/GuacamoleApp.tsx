@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import React, {
   useState,
   useEffect,
@@ -250,8 +251,7 @@ const GuacamoleAppInner = React.forwardRef<
         await fetchToken();
         tokenRetryRef.current.markConnected();
       } catch (err: unknown) {
-        const message =
-          err instanceof Error ? err.message : t("guacamole.failedToConnect");
+        const message = getErrorMessage(err, t("guacamole.failedToConnect"));
         setError(message || t("guacamole.failedToConnect"));
         addLog({ type: "error", stage: "error", message });
         tokenRetryRef.current.markFailed();

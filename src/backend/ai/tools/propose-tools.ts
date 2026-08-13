@@ -1,5 +1,4 @@
-import type { AiTool } from "./types.js";
-import { num, objectSchema, proposal, str } from "./types.js";
+import { num, objectSchema, proposal, str, type AiTool } from "./types.js";
 
 /**
  * Propose tools never mutate anything. They return a draft that is stored as a

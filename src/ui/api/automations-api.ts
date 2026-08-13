@@ -81,14 +81,6 @@ export async function listAutomations(): Promise<AutomationRow[]> {
   }
 }
 
-export async function getAutomation(id: number): Promise<AutomationRow> {
-  try {
-    return (await authApi.get(`/automations/${id}`)).data;
-  } catch (error) {
-    throw handleApiError(error, "fetch automation");
-  }
-}
-
 export async function createAutomation(
   input: AutomationInput,
 ): Promise<AutomationRow> {

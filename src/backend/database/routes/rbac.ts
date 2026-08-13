@@ -1,6 +1,6 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Response } from "express";
+import express, { type Response } from "express";
 import { databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { getRequestMeta } from "../../utils/audit-logger.js";
@@ -281,10 +281,7 @@ router.post(
             operation: "rbac_host_share_snapshot_failed",
             hostId,
             accessId: accessGrant.id,
-            error:
-              snapshotError instanceof Error
-                ? snapshotError.message
-                : "Unknown error",
+            error: getErrorMessage(snapshotError),
           });
         }
 
@@ -494,10 +491,7 @@ router.post(
               operation: "rbac_folder_share_snapshot_failed",
               hostId: host.id,
               accessId: accessGrant.id,
-              error:
-                snapshotError instanceof Error
-                  ? snapshotError.message
-                  : "Unknown error",
+              error: getErrorMessage(snapshotError),
             });
           }
         }
@@ -1435,10 +1429,7 @@ router.delete(
             operation: "remove_role_secret_cleanup",
             targetUserId,
             roleId,
-            error:
-              cleanupError instanceof Error
-                ? cleanupError.message
-                : "Unknown error",
+            error: getErrorMessage(cleanupError),
           },
         );
       }

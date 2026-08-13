@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./lib/error-message.js";
 import axios, {
   AxiosError,
   type AxiosInstance,
@@ -1101,7 +1102,7 @@ export function handleApiError(error: unknown, operation: string): never {
     throw error;
   }
 
-  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  const errorMessage = getErrorMessage(error);
   apiLogger.error(
     `Unexpected error during ${operation}: ${errorMessage}`,
     error,
