@@ -6,6 +6,7 @@ import {
   HardDrive,
   LayoutDashboard,
   LayoutGrid,
+  LayoutPanelLeft,
   MessagesSquare,
   Monitor,
   MousePointerClick,
@@ -295,6 +296,8 @@ export function tabIcon(type: TabType) {
       return <Workflow className="size-3.5" />;
     case "ai":
       return <Sparkles className="size-3.5" />;
+    case "split-screen":
+      return <LayoutPanelLeft className="size-3.5" />;
   }
 }
 
@@ -601,6 +604,9 @@ export function renderTabContent(
           <AiPanel />
         </PanelTabFrame>,
       );
+
+    case "split-screen":
+      return null;
 
     case "snippets":
       return withTabSuspense(
