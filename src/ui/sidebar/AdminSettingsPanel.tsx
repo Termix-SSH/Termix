@@ -729,6 +729,9 @@ export function AdminSettingsPanel({
       const result = await requestAcmeCertificate();
       setAcmeSettings(result);
       toast.success(t("admin.sslRequestCertSuccess"));
+      if (result.reloadMessage) {
+        toast.info(result.reloadMessage);
+      }
     } catch (e) {
       toast.error(apiErrorMessage(e, t("admin.sslRequestCertFailed")));
     } finally {
@@ -751,6 +754,9 @@ export function AdminSettingsPanel({
       setManualCertDraft("");
       setManualKeyDraft("");
       toast.success(t("admin.sslManualUploadSuccess"));
+      if (result.reloadMessage) {
+        toast.info(result.reloadMessage);
+      }
     } catch (e) {
       toast.error(apiErrorMessage(e, t("admin.sslManualUploadFailed")));
     } finally {

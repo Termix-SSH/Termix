@@ -3129,7 +3129,7 @@
     "sslSaved": "SSL settings saved",
     "sslSaveFailed": "Failed to save SSL settings",
     "sslRequiresDomain": "Domain and email are required",
-    "sslInfoNote": "After issuing or uploading a certificate, set ENABLE_SSL=true (and optionally SSL_PORT, default 8443) in your environment and restart Termix. Termix will then listen for HTTPS directly on that port, in addition to the existing HTTP port.",
+    "sslInfoNote": "After issuing or uploading a certificate, Termix will automatically enable HTTPS on SSL_PORT (default 8443) in addition to the existing HTTP port. Make sure that port is published/mapped to this container so it is reachable.",
     "sslManualOption": "Manual (upload certificate)",
     "sslManualCert": "Certificate (PEM)",
     "sslManualCertPlaceholder": "-----BEGIN CERTIFICATE-----",

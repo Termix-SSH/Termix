@@ -22,6 +22,14 @@ if [ "$(id -u)" = "0" ]; then
     fi
 fi
 
+DATA_DIR=${DATA_DIR:-/app/data}
+if [ -f "$DATA_DIR/.env" ]; then
+    echo "Loading persisted SSL settings from $DATA_DIR/.env"
+    set -a
+    . "$DATA_DIR/.env"
+    set +a
+fi
+
 export PORT=${PORT:-8080}
 export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
