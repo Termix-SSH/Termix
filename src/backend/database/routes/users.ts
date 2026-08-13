@@ -1,6 +1,7 @@
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { nanoid } from "nanoid";
 import type { Request, Response } from "express";
 import { authLogger } from "../../utils/logger.js";
@@ -135,6 +136,15 @@ async function requireCurrentAdmin(userId: string): Promise<UserRecord | null> {
   return user?.isAdmin ? user : null;
 }
 
+// RFC 7636 PKCE: 43-128 char unreserved-character string.
+function generatePkceCodeVerifier(): string {
+  return crypto.randomBytes(64).toString("base64url");
+}
+
+function generatePkceCodeChallenge(verifier: string): string {
+  return crypto.createHash("sha256").update(verifier).digest("base64url");
+}
+
 async function deleteOIDCStateSettings(state: string): Promise<void> {
   const settingsRepository = createCurrentSettingsRepository();
   await settingsRepository.delete(`oidc_state_${state}`);
@@ -142,6 +152,7 @@ async function deleteOIDCStateSettings(state: string): Promise<void> {
   await settingsRepository.delete(`oidc_frontend_origin_${state}`);
   await settingsRepository.delete(`oidc_remember_me_${state}`);
   await settingsRepository.delete(`oidc_provider_${state}`);
+  await settingsRepository.delete(`oidc_pkce_verifier_${state}`);
 }
 
 const authenticateJWT = authManager.createAuthMiddleware();
@@ -683,6 +694,9 @@ router.get("/oidc/authorize", async (req, res) => {
       frontendOrigin = origin;
     }
 
+    const codeVerifier = generatePkceCodeVerifier();
+    const codeChallenge = generatePkceCodeChallenge(codeVerifier);
+
     const settingsRepository = createCurrentSettingsRepository();
     await settingsRepository.set(`oidc_state_${state}`, nonce);
     await settingsRepository.set(
@@ -697,6 +711,7 @@ router.get("/oidc/authorize", async (req, res) => {
       `oidc_remember_me_${state}`,
       rememberMe === "true" ? "true" : "false",
     );
+    await settingsRepository.set(`oidc_pkce_verifier_${state}`, codeVerifier);
 
     if (providerDbId != null) {
       await settingsRepository.set(
@@ -712,6 +727,8 @@ router.get("/oidc/authorize", async (req, res) => {
     authUrl.searchParams.set("scope", config.scopes);
     authUrl.searchParams.set("state", state);
     authUrl.searchParams.set("nonce", nonce);
+    authUrl.searchParams.set("code_challenge", codeChallenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
 
     res.json({ auth_url: authUrl.toString(), state, nonce });
   } catch (err) {
@@ -750,6 +767,9 @@ router.get("/oidc/callback", async (req, res) => {
   );
   const storedRememberMeValue = await settingsRepository.get(
     `oidc_remember_me_${state}`,
+  );
+  const storedCodeVerifier = await settingsRepository.get(
+    `oidc_pkce_verifier_${state}`,
   );
 
   if (!storedBackendCallback || !storedFrontendOrigin) {
@@ -992,6 +1012,7 @@ router.get("/oidc/callback", async (req, res) => {
         client_secret: config.client_secret,
         code: code,
         redirect_uri: backendCallbackUri,
+        ...(storedCodeVerifier ? { code_verifier: storedCodeVerifier } : {}),
       }),
       ...fetchOptions,
     });
