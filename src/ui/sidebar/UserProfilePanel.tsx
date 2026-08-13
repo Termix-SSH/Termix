@@ -210,7 +210,7 @@ type CreatedProfileApiKey = {
   expiresAt?: string | null;
 };
 
-function NewApiKeyDialog({
+export function NewApiKeyDialog({
   open,
   onOpenChange,
   onAdd,
@@ -224,12 +224,23 @@ function NewApiKeyDialog({
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("");
+  const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  const close = () => {
+    setName("");
+    setExpiry("");
+    setCreatedToken(null);
+    onOpenChange(false);
+  };
 
   const handleCreate = async () => {
     if (!name.trim()) {
       toast.error(t("newUi.sidebar.userProfile.apiKeyNameRequired"));
       return;
     }
+    if (creating) return;
+    setCreating(true);
     try {
       const created = await createApiKey(
         name.trim(),
@@ -237,17 +248,22 @@ function NewApiKeyDialog({
         expiry ? new Date(expiry).toISOString() : undefined,
       );
       onAdd(created);
-      onOpenChange(false);
-      setName("");
-      setExpiry("");
+      setCreatedToken(created.token);
       toast.success(t("newUi.sidebar.userProfile.apiKeyCreated", { name }));
     } catch {
       toast.error(t("newUi.sidebar.userProfile.apiKeyCreateFailed"));
+    } finally {
+      setCreating(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen || !createdToken) onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent className="sm:max-w-md rounded-none border-border bg-card p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-5 pt-5 pb-4 border-b border-border">
           <div className="flex items-center gap-2.5">
@@ -265,53 +281,93 @@ function NewApiKeyDialog({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 px-5 py-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              {t("newUi.sidebar.userProfile.apiKeyNameLabel")}
-            </label>
-            <Input
-              autoFocus
-              placeholder={t("newUi.sidebar.userProfile.apiKeyNamePlaceholder")}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              className="rounded-none bg-muted/50 border-border text-sm h-9"
-            />
+        {createdToken ? (
+          <div className="flex flex-col gap-3 px-5 py-4">
+            <span className="text-xs font-semibold text-accent-brand">
+              {t("newUi.sidebar.userProfile.apiKeyCreatedWarning")}
+            </span>
+            <div className="flex items-center gap-2 border border-border bg-muted/30 px-2 py-2">
+              <code className="min-w-0 flex-1 break-all text-xs text-accent-brand">
+                {createdToken}
+              </code>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 shrink-0"
+                aria-label={t("newUi.sidebar.userProfile.copyApiKey")}
+                onClick={() => {
+                  copyToClipboard(createdToken);
+                  toast.info(t("newUi.sidebar.userProfile.copiedToClipboard"));
+                }}
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            </div>
           </div>
+        ) : (
+          <div className="flex flex-col gap-4 px-5 py-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {t("newUi.sidebar.userProfile.apiKeyNameLabel")}
+              </label>
+              <Input
+                autoFocus
+                placeholder={t(
+                  "newUi.sidebar.userProfile.apiKeyNamePlaceholder",
+                )}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                className="rounded-none bg-muted/50 border-border text-sm h-9"
+              />
+            </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              {t("newUi.sidebar.userProfile.expiryDateLabel")}{" "}
-              <span className="text-muted-foreground/50 normal-case font-medium">
-                ({t("newUi.sidebar.userProfile.optional")})
-              </span>
-            </label>
-            <Input
-              type="date"
-              value={expiry}
-              onChange={(e) => setExpiry(e.target.value)}
-              className="rounded-none bg-muted/50 border-border text-sm h-9"
-            />
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                {t("newUi.sidebar.userProfile.expiryDateLabel")}{" "}
+                <span className="text-muted-foreground/50 normal-case font-medium">
+                  ({t("newUi.sidebar.userProfile.optional")})
+                </span>
+              </label>
+              <Input
+                type="date"
+                value={expiry}
+                onChange={(e) => setExpiry(e.target.value)}
+                className="rounded-none bg-muted/50 border-border text-sm h-9"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
         <DialogFooter className="px-5 py-3 border-t border-border bg-muted/20">
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            className="rounded-none text-[10px] font-bold uppercase tracking-widest"
-          >
-            {t("newUi.sidebar.userProfile.cancel")}
-          </Button>
-          <Button
-            variant="outline"
-            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest gap-1.5"
-            onClick={handleCreate}
-          >
-            <KeyRound className="size-3" />{" "}
-            {t("newUi.sidebar.userProfile.createKey")}
-          </Button>
+          {createdToken ? (
+            <Button
+              variant="outline"
+              className="rounded-none border-accent-brand/40 text-[10px] font-bold uppercase tracking-widest text-accent-brand"
+              onClick={close}
+            >
+              {t("newUi.sidebar.userProfile.done")}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                onClick={close}
+                className="rounded-none text-[10px] font-bold uppercase tracking-widest"
+              >
+                {t("newUi.sidebar.userProfile.cancel")}
+              </Button>
+              <Button
+                variant="outline"
+                className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 rounded-none text-[10px] font-bold uppercase tracking-widest gap-1.5"
+                onClick={handleCreate}
+                disabled={creating}
+              >
+                <KeyRound className="size-3" />{" "}
+                {t("newUi.sidebar.userProfile.createKey")}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
