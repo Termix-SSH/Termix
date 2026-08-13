@@ -112,6 +112,8 @@ export interface UserPreferences {
   disableUpdateCheck?: boolean | null;
   confirmTabClose?: boolean | null;
   hiddenRailTabs?: string | null;
+  aiAssistantEnabled?: boolean | null;
+  aiReadOnlyCommands?: boolean | null;
   compactHostView?: boolean | null;
   statusColorScheme?: string | null;
   customThemes?: string | null;

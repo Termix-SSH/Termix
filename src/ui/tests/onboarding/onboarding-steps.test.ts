@@ -30,17 +30,39 @@ describe("ONBOARDING_STEPS", () => {
   });
 
   it("drops the add-a-host step for accounts that already have hosts", () => {
-    const withHosts = relevantSteps({ hasHosts: true }).map((s) => s.id);
-    const without = relevantSteps({ hasHosts: false }).map((s) => s.id);
+    const withHosts = relevantSteps({
+      hasHosts: true,
+      aiGloballyEnabled: false,
+    }).map((s) => s.id);
+    const without = relevantSteps({
+      hasHosts: false,
+      aiGloballyEnabled: false,
+    }).map((s) => s.id);
     expect(withHosts).not.toContain("first-host");
     expect(without).toContain("first-host");
   });
 
   it("ends on the done step for either kind of account", () => {
     for (const hasHosts of [true, false]) {
-      const ids = relevantSteps({ hasHosts }).map((s) => s.id);
+      const ids = relevantSteps({ hasHosts, aiGloballyEnabled: false }).map(
+        (s) => s.id,
+      );
       expect(ids[ids.length - 1]).toBe("done");
     }
+  });
+
+  it("only offers the AI step when an admin has enabled the assistant", () => {
+    // A user on an instance with AI switched off should never be told the
+    // feature exists, so the step has to disappear rather than render disabled.
+    const off = relevantSteps({
+      hasHosts: true,
+      aiGloballyEnabled: false,
+    }).map((s) => s.id);
+    const on = relevantSteps({ hasHosts: true, aiGloballyEnabled: true }).map(
+      (s) => s.id,
+    );
+    expect(off).not.toContain("ai");
+    expect(on).toContain("ai");
   });
 
   it("tours the feature set after the setup choices", () => {
@@ -93,6 +115,12 @@ describe("onboarding step body translations", () => {
       "featuresIntro",
       "workflowIntro",
       "securityIntro",
+      "aiIntro",
+      "aiEnableTitle",
+      "aiEnableDesc",
+      "aiSkipTitle",
+      "aiSkipDesc",
+      "aiNote",
       "doneDesc",
     ]) {
       expect(lookup(`onboarding.${key}`), key).toBeTypeOf("string");

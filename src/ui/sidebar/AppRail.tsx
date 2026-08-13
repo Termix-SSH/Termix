@@ -29,6 +29,7 @@ export type RailView =
   | "admin-settings"
   | "alerts"
   | "automations"
+  | "ai"
   | "fleets"
   | "workspaces";
 
@@ -221,6 +222,31 @@ export function AppRail({
     };
   }, [menuPos]);
 
+  const [aiEnabled, setAiEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = () => {
+      import("@/api/ai-api")
+        .then(({ getAiStatus }) => getAiStatus())
+        .then((status) => {
+          if (!cancelled)
+            setAiEnabled(status.globallyEnabled && status.enabled);
+        })
+        .catch(() => {
+          if (!cancelled) setAiEnabled(false);
+        });
+    };
+    refresh();
+    // The profile toggle and the onboarding step both fire this, so the entry
+    // appears or disappears without a reload.
+    window.addEventListener("hiddenRailTabsChanged", refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("hiddenRailTabsChanged", refresh);
+    };
+  }, []);
+
   useEffect(() => {
     const handler = () => {
       try {
@@ -268,9 +294,13 @@ export function AppRail({
   }, []);
 
   const railExpanded = pinned || (expandOnHover && hovered);
-  const effectiveHiddenTabs = isRemoteSyncConnected
-    ? hiddenTabs
-    : new Set([...hiddenTabs, "termix-id"]);
+  const effectiveHiddenTabs = new Set([
+    ...hiddenTabs,
+    ...(isRemoteSyncConnected ? [] : ["termix-id"]),
+    // The assistant is hidden until an admin has enabled it instance-wide and
+    // the user has said yes, so someone who declined never sees the entry.
+    ...(aiEnabled ? [] : ["ai"]),
+  ]);
   const railButtons = buildRailButtons(splitMode, t, effectiveHiddenTabs);
 
   const togglePinned = () => {

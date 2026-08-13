@@ -24,6 +24,7 @@ import {
   Play,
   Plug,
   ScrollText,
+  Sparkles,
   Workflow,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
@@ -140,6 +141,12 @@ const SshToolsPanel = lazy(() =>
 const AutomationsPanel = lazy(() =>
   import("@/sidebar/AutomationsPanel").then((m) => ({
     default: m.AutomationsPanel,
+  })),
+);
+
+const AiPanel = lazy(() =>
+  import("@/features/ai/AiPanel").then((m) => ({
+    default: m.AiPanel,
   })),
 );
 
@@ -286,6 +293,8 @@ export function tabIcon(type: TabType) {
       return <Hammer className="size-3.5" />;
     case "automations":
       return <Workflow className="size-3.5" />;
+    case "ai":
+      return <Sparkles className="size-3.5" />;
   }
 }
 
@@ -583,6 +592,13 @@ export function renderTabContent(
       return withTabSuspense(
         <PanelTabFrame>
           <AutomationsPanel active={isVisible} />
+        </PanelTabFrame>,
+      );
+
+    case "ai":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <AiPanel />
         </PanelTabFrame>,
       );
 

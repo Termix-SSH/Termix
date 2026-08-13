@@ -22,7 +22,12 @@ export function FirstHostStep({ onAddHost }: OnboardingStepProps) {
             {t("onboarding.firstHostDesc")}
           </span>
         </div>
-        <Button size="sm" className="h-7 text-[11px]" onClick={onAddHost}>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-[11px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+          onClick={onAddHost}
+        >
           <Plus size={12} />
           {t("onboarding.firstHostAdd")}
         </Button>

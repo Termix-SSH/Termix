@@ -259,7 +259,8 @@ export type TabType =
   | "snippets"
   | "history"
   | "ssh-tools"
-  | "automations";
+  | "automations"
+  | "ai";
 
 export type SerialConfig = {
   path: string;

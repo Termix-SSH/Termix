@@ -90,6 +90,11 @@ const AutomationsPanel = lazy(() =>
     default: m.AutomationsPanel,
   })),
 );
+const AiPanel = lazy(() =>
+  import("@/features/ai/AiPanel").then((m) => ({
+    default: m.AiPanel,
+  })),
+);
 const HistoryPanel = lazy(() =>
   import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
 );
@@ -256,6 +261,7 @@ export function AppShell({
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingHasHosts, setOnboardingHasHosts] = useState(false);
+  const [onboardingAiEnabled, setOnboardingAiEnabled] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
   >([]);
@@ -267,33 +273,44 @@ export function AppShell({
     !!uiPrefs?.loaded &&
     uiPrefs.preferences.onboarding.completedVersion < UI_ONBOARDING_VERSION;
 
+  /**
+   * Both onboarding entry points resolve the same context first: whether the
+   * account has hosts, and whether an admin has enabled the AI assistant. The
+   * AI step is skipped entirely when it is off, so the answer has to be in
+   * before the dialog opens.
+   */
+  const loadOnboardingContext = useCallback(async () => {
+    const [hosts, aiStatus] = await Promise.allSettled([
+      getSSHHosts(),
+      import("@/api/ai-api").then(({ getAiStatus }) => getAiStatus()),
+    ]);
+    if (hosts.status === "fulfilled") {
+      setOnboardingHasHosts((hosts.value?.length ?? 0) > 0);
+    }
+    setOnboardingAiEnabled(
+      aiStatus.status === "fulfilled" ? aiStatus.value.globallyEnabled : false,
+    );
+  }, []);
+
   useEffect(() => {
     if (!username || !onboardingPending) return;
     let cancelled = false;
-    getSSHHosts()
-      .then((hosts) => {
-        if (!cancelled) setOnboardingHasHosts((hosts?.length ?? 0) > 0);
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setShowOnboarding(true);
-      });
+    loadOnboardingContext().finally(() => {
+      if (!cancelled) setShowOnboarding(true);
+    });
     return () => {
       cancelled = true;
     };
-  }, [username, onboardingPending]);
+  }, [username, onboardingPending, loadOnboardingContext]);
 
   // "Run setup again" from settings.
   useEffect(() => {
     const handler = () => {
-      getSSHHosts()
-        .then((hosts) => setOnboardingHasHosts((hosts?.length ?? 0) > 0))
-        .catch(() => {})
-        .finally(() => setShowOnboarding(true));
+      loadOnboardingContext().finally(() => setShowOnboarding(true));
     };
     window.addEventListener("termix:open-onboarding", handler);
     return () => window.removeEventListener("termix:open-onboarding", handler);
-  }, []);
+  }, [loadOnboardingContext]);
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [railView, setRailView] = useState<RailView>("hosts");
@@ -2182,6 +2199,16 @@ export function AppShell({
           </div>
         )}
 
+        {railView === "ai" && (
+          <div className="flex flex-col flex-1 min-h-0">
+            <AiPanel
+              activeTab={
+                tabs.find((tab) => tab.id === activeTabId)?.type ?? null
+              }
+            />
+          </div>
+        )}
+
         {railView === "connections" && (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <ConnectionsPanel
@@ -2326,7 +2353,7 @@ export function AppShell({
   // Sidebar header — shared
   const sidebarHeader = (
     <div className="flex flex-row items-center border-b border-border h-12.5 shrink-0">
-      <span className="flex-1 text-base font-bold tracking-tight text-foreground px-3">
+      <span className="flex-1 min-w-0 whitespace-nowrap text-base font-bold tracking-tight text-foreground px-3">
         {sidebarTitle(railView)}
       </span>
       {!isMobile && PROMOTABLE_IDS.includes(railView) && (
@@ -2335,7 +2362,7 @@ export function AppShell({
           <Button
             variant="ghost"
             size="icon"
-            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            className="h-full w-12.5 border-y-0 border-r-0 border-border rounded-none text-muted-foreground hover:text-foreground"
             title={t("nav.openAsTab")}
             aria-label={t("nav.openAsTab")}
             onClick={() => openSingletonTab(railView as TabType)}
@@ -2350,7 +2377,7 @@ export function AppShell({
           <Button
             variant="ghost"
             size="icon"
-            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            className="h-full w-12.5 border-y-0 border-r-0 border-border rounded-none text-muted-foreground hover:text-foreground"
             title={t("nav.openInRightDock")}
             aria-label={t("nav.openInRightDock")}
             onClick={() => openInRightDock(railView)}
@@ -2673,7 +2700,7 @@ export function AppShell({
               }}
             >
               <div className="flex flex-row items-center border-b border-border h-12.5 shrink-0">
-                <span className="flex-1 text-base font-bold tracking-tight text-foreground px-3">
+                <span className="flex-1 min-w-0 whitespace-nowrap text-base font-bold tracking-tight text-foreground px-3">
                   {sidebarTitle(rightRailView)}
                 </span>
                 <Separator orientation="vertical" />
@@ -2740,7 +2767,10 @@ export function AppShell({
       </Suspense>
       <OnboardingDialog
         open={showOnboarding}
-        context={{ hasHosts: onboardingHasHosts }}
+        context={{
+          hasHosts: onboardingHasHosts,
+          aiGloballyEnabled: onboardingAiEnabled,
+        }}
         onClose={() => setShowOnboarding(false)}
         onAddHost={() => {
           setShowOnboarding(false);

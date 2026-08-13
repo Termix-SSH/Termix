@@ -12,6 +12,7 @@ import {
   ScrollText,
   Server,
   Settings,
+  Sparkles,
   Usb,
   User,
   Workflow,
@@ -110,6 +111,14 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.automations",
     separatorAfter: true,
     promotable: true,
+  },
+  {
+    id: "ai",
+    icon: Sparkles,
+    labelKey: "nav.ai",
+    separatorAfter: true,
+    promotable: true,
+    rightDockable: true,
   },
   {
     id: "history",

@@ -210,7 +210,13 @@ export function InterfacePresetSettings({
             >
               {t("common.cancel")}
             </Button>
-            <Button size="sm" disabled={applying} onClick={confirmPreset}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+              disabled={applying}
+              onClick={confirmPreset}
+            >
               {t("newUi.sidebar.userProfile.presetConfirmApply")}
             </Button>
           </DialogFooter>

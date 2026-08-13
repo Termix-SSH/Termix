@@ -1138,6 +1138,12 @@ export const userPreferences = sqliteTable("user_preferences", {
   disableUpdateCheck: integer("disable_update_check", { mode: "boolean" }),
   confirmTabClose: integer("confirm_tab_close", { mode: "boolean" }),
   hiddenRailTabs: text("hidden_rail_tabs"),
+  // null means the user has not been asked yet; the assistant stays hidden
+  // until this is explicitly true and the admin global is on.
+  aiAssistantEnabled: integer("ai_assistant_enabled", { mode: "boolean" }),
+  // Opt-in to letting the assistant run allowlisted read-only diagnostics
+  // without a per-command approval click.
+  aiReadOnlyCommands: integer("ai_read_only_commands", { mode: "boolean" }),
   compactHostView: integer("compact_host_view", { mode: "boolean" }),
   statusColorScheme: text("status_color_scheme"),
   customThemes: text("custom_themes"),
@@ -1812,3 +1818,118 @@ export const syncTombstones = sqliteTable("sync_tombstones", {
     .default(sql`CURRENT_TIMESTAMP`),
 });
 // --- sync end ---
+
+// --- ai begin ---
+/**
+ * A user's connection to one AI provider. api_key is encrypted at rest via
+ * FieldCrypto; it is never returned to the frontend, which only ever sees
+ * api_key_prefix for display.
+ */
+export const aiProviders = sqliteTable(
+  "ai_providers",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // ollama | anthropic | openai | gemini | openai_compatible
+    providerType: text("provider_type").notNull(),
+    label: text("label").notNull(),
+    // Required for ollama and openai_compatible, optional elsewhere.
+    baseUrl: text("base_url"),
+    apiKey: text("api_key", { length: 8192 }),
+    // First few characters, kept in the clear so the UI can identify a key.
+    apiKeyPrefix: text("api_key_prefix"),
+    defaultModel: text("default_model"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_ai_providers_user_label").on(table.userId, table.label),
+  ],
+);
+
+export const aiConversations = sqliteTable(
+  "ai_conversations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title"),
+    providerId: integer("provider_id"),
+    model: text("model"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ai_conversations_user").on(table.userId, table.updatedAt),
+  ],
+);
+
+export const aiMessages = sqliteTable(
+  "ai_messages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    conversationId: integer("conversation_id")
+      .notNull()
+      .references(() => aiConversations.id, { onDelete: "cascade" }),
+    // user | assistant | tool
+    role: text("role").notNull(),
+    content: text("content").notNull().default(""),
+    // Serialized tool calls and their results for this turn.
+    toolCalls: text("tool_calls"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ai_messages_conversation").on(
+      table.conversationId,
+      table.createdAt,
+    ),
+  ],
+);
+
+/**
+ * A change the assistant wants to make. Nothing here has been applied: the
+ * payload is re-validated against the tool schema at apply time and only then
+ * dispatched through the same repository logic a human action uses.
+ */
+export const aiProposals = sqliteTable(
+  "ai_proposals",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    conversationId: integer("conversation_id")
+      .notNull()
+      .references(() => aiConversations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // The propose_* tool name that produced this.
+    kind: text("kind").notNull(),
+    summary: text("summary"),
+    payload: text("payload").notNull().default("{}"),
+    // pending | applied | rejected | expired
+    status: text("status").notNull().default("pending"),
+    appliedAt: text("applied_at"),
+    resultSummary: text("result_summary"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    index("idx_ai_proposals_user").on(table.userId, table.status),
+    index("idx_ai_proposals_conversation").on(table.conversationId),
+  ],
+);
+// --- ai end ---

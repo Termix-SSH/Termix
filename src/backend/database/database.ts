@@ -29,6 +29,7 @@ import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
 import alertRulesRoutes from "./routes/alert-rules-routes.js";
+import aiRoutes from "../ai/index.js";
 import automationsRoutes from "./routes/automations.js";
 import syncRoutes from "./routes/sync.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
@@ -1766,6 +1767,7 @@ app.use("/vault", vaultRoutes);
 // Before the alert routes, which are mounted at the root and would otherwise
 // have first claim on the path.
 app.use("/automations", automationsRoutes);
+app.use("/ai", aiRoutes);
 app.use("/", alertRulesRoutes);
 app.use("/sync", syncRoutes);
 

@@ -136,7 +136,12 @@ function WorkspaceSaveDialog({
           <Button variant="outline" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={handleSave}
+            disabled={saving}
+          >
             {saving && <Loader2 className="size-3.5 mr-2 animate-spin" />}
             {t("common.save")}
           </Button>
@@ -235,7 +240,12 @@ function WorkspaceRenameDialog({
           <Button variant="outline" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={handleSave}
+            disabled={saving}
+          >
             {saving && <Loader2 className="size-3.5 mr-2 animate-spin" />}
             {t("common.save")}
           </Button>
@@ -495,8 +505,9 @@ export function WorkspacesPanel({
           {t("newUi.sidebar.workspaces.title")}
         </span>
         <Button
+          variant="outline"
           size="sm"
-          className="ml-auto"
+          className="ml-auto border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
           onClick={() => setSaveDialogOpen(true)}
         >
           <Plus className="size-3.5 mr-1.5" />
@@ -613,7 +624,11 @@ export function WorkspacesPanel({
             <Button variant="outline" onClick={() => setApplyTarget(null)}>
               {t("common.cancel")}
             </Button>
-            <Button onClick={confirmApply}>
+            <Button
+              variant="outline"
+              className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+              onClick={confirmApply}
+            >
               {t("newUi.sidebar.workspaces.applyConfirmButton")}
             </Button>
           </DialogFooter>

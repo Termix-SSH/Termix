@@ -856,6 +856,8 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "disable_update_check", "INTEGER");
   addColumnIfNotExists("user_preferences", "confirm_tab_close", "INTEGER");
   addColumnIfNotExists("user_preferences", "hidden_rail_tabs", "TEXT");
+  addColumnIfNotExists("user_preferences", "ai_assistant_enabled", "INTEGER");
+  addColumnIfNotExists("user_preferences", "ai_read_only_commands", "INTEGER");
   addColumnIfNotExists("user_preferences", "compact_host_view", "INTEGER");
   addColumnIfNotExists("user_preferences", "status_color_scheme", "TEXT");
   addColumnIfNotExists("user_preferences", "custom_themes", "TEXT");
@@ -2711,6 +2713,108 @@ const migrateSchema = () => {
     }
   }
   // --- sync end ---
+
+  // --- ai begin ---
+  try {
+    sqlite.prepare("SELECT id FROM ai_providers LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_providers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          provider_type TEXT NOT NULL,
+          label TEXT NOT NULL,
+          base_url TEXT,
+          api_key TEXT,
+          api_key_prefix TEXT,
+          default_model TEXT,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, label)
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_providers table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM ai_conversations LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_conversations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT,
+          provider_id INTEGER,
+          model TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_conversations table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM ai_messages LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_messages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+          role TEXT NOT NULL,
+          content TEXT NOT NULL DEFAULT '',
+          tool_calls TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_messages table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM ai_proposals LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS ai_proposals (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          conversation_id INTEGER NOT NULL REFERENCES ai_conversations(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          kind TEXT NOT NULL,
+          summary TEXT,
+          payload TEXT NOT NULL DEFAULT '{}',
+          status TEXT NOT NULL DEFAULT 'pending',
+          applied_at TEXT,
+          result_summary TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create ai_proposals table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  // --- ai end ---
 
   // Audit trails and session recordings used to be deleted along with the user
   // they referenced, which defeats the point of keeping them.

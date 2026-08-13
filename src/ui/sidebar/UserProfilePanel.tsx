@@ -444,6 +444,8 @@ export function UserProfilePanel({
     storageMode?: string | null;
     commandAutocomplete?: boolean | null;
     commandPaletteEnabled?: boolean | null;
+    aiAssistantEnabled?: boolean | null;
+    aiReadOnlyCommands?: boolean | null;
     showHostTags?: boolean | null;
     hostTrayOnClick?: boolean | null;
     compactHostView?: boolean | null;
@@ -608,11 +610,59 @@ export function UserProfilePanel({
     return v !== null ? v === "true" : true;
   });
   const [keybindingsDialogOpen, setKeybindingsDialogOpen] = useState(false);
+  const [aiAssistantEnabled, setAiAssistantEnabled] = useState(false);
+  const [aiReadOnlyCommands, setAiReadOnlyCommands] = useState(false);
+  // Null until the status call answers; the whole section stays hidden while
+  // unknown so a user who cannot have the feature never sees it mentioned.
+  const [aiGloballyEnabled, setAiGloballyEnabled] = useState<boolean | null>(
+    null,
+  );
   // Sidebar display customization (density, tags, tray trigger, status
   // colors) now lives in the dedicated Customize Sidebar panel opened from
   // the Hosts toolbar, not here -- resetToDefaults still needs write access.
   const { update: updateSidebarPrefs } = useHostSidebarPreferences();
   const uiPrefs = useUiPreferencesContext();
+
+  useEffect(() => {
+    let cancelled = false;
+    import("@/api/ai-api")
+      .then(({ getAiStatus }) => getAiStatus())
+      .then((status) => {
+        if (cancelled) return;
+        setAiGloballyEnabled(status.globallyEnabled);
+        setAiAssistantEnabled(status.enabled);
+        setAiReadOnlyCommands(status.allowReadOnlyCommands);
+      })
+      .catch(() => {
+        if (!cancelled) setAiGloballyEnabled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /**
+   * Turning the assistant off also hides its rail tab, so declining removes
+   * the feature from view entirely rather than leaving an inert entry behind.
+   */
+  const applyAiEnabled = (enabled: boolean) => {
+    setAiAssistantEnabled(enabled);
+
+    const hidden = new Set<string>(
+      JSON.parse(localStorage.getItem("hiddenRailTabs") ?? "[]"),
+    );
+    if (enabled) hidden.delete("ai");
+    else hidden.add("ai");
+
+    const serialized = JSON.stringify([...hidden]);
+    localStorage.setItem("hiddenRailTabs", serialized);
+    setHiddenRailTabs(hidden);
+    window.dispatchEvent(new Event("hiddenRailTabsChanged"));
+
+    if (storageMode === "cloud") {
+      saveToCloud({ aiAssistantEnabled: enabled, hiddenRailTabs: serialized });
+    }
+  };
   const [pinAppRail, setPinAppRail] = useState(() =>
     readRailPreference("pinAppRail"),
   );
@@ -780,6 +830,12 @@ export function UserProfilePanel({
             "commandPaletteShortcutEnabled",
             String(prefs.commandPaletteEnabled),
           );
+        }
+        if (prefs.aiAssistantEnabled != null) {
+          setAiAssistantEnabled(prefs.aiAssistantEnabled);
+        }
+        if (prefs.aiReadOnlyCommands != null) {
+          setAiReadOnlyCommands(prefs.aiReadOnlyCommands);
         }
         // showHostTags/hostTrayOnClick/compactHostView/statusColorScheme are
         // no longer restored here -- useHostSidebarPreferences independently
@@ -1758,6 +1814,34 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
+            {aiGloballyEnabled && (
+              <>
+                <SettingRow
+                  label={t("ai.enableTitle")}
+                  description={t("ai.enableDescription")}
+                >
+                  <FakeSwitch
+                    checked={aiAssistantEnabled}
+                    onChange={applyAiEnabled}
+                  />
+                </SettingRow>
+                {aiAssistantEnabled && (
+                  <SettingRow
+                    label={t("ai.readOnlyCommands")}
+                    description={t("ai.readOnlyCommandsDescription")}
+                  >
+                    <FakeSwitch
+                      checked={aiReadOnlyCommands}
+                      onChange={(v) => {
+                        setAiReadOnlyCommands(v);
+                        if (storageMode === "cloud")
+                          saveToCloud({ aiReadOnlyCommands: v });
+                      }}
+                    />
+                  </SettingRow>
+                )}
+              </>
+            )}
             <SettingRow
               label={t("newUi.sidebar.userProfile.reopenTabsOnLogin")}
               description={t("newUi.sidebar.userProfile.reopenTabsOnLoginDesc")}

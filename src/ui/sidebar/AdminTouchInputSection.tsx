@@ -109,7 +109,7 @@ export function AdminTouchInputSection({
 
         <button
           type="button"
-          className="mt-2 flex items-center gap-2 border-t border-border py-3 text-left text-xs font-semibold text-foreground"
+          className="flex items-center gap-2 py-3 text-left text-xs font-semibold text-foreground"
           onClick={() => setAdvancedOpen((value) => !value)}
         >
           <ChevronDown
@@ -152,7 +152,12 @@ export function AdminTouchInputSection({
           </div>
         )}
         <div className="flex gap-2 border-t border-border pt-3">
-          <Button size="sm" onClick={onSave}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={onSave}
+          >
             {t("common.save")}
           </Button>
           <Button size="sm" variant="outline" onClick={onReset}>

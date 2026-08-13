@@ -442,7 +442,9 @@
 
 @layer base {
   * {
-    @apply outline-none;
+    /* Tailwind v4 defaults border-color to currentColor, so any bare "border"
+       utility picked up the text color and rendered near-white. */
+    @apply border-border outline-none;
     scrollbar-width: thin;
     scrollbar-color: oklch(1 0 0 / 20%) transparent;
   }

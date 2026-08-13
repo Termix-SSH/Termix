@@ -76,7 +76,7 @@ function isNonEmptyString(value: unknown): value is string {
  * Validates a definition before it is stored. The engine treats the stored
  * blob as trusted, so everything it relies on is checked once here.
  */
-function validateDefinition(value: unknown): {
+export function validateDefinition(value: unknown): {
   ok: boolean;
   error?: string;
   definition?: AutomationDefinition;

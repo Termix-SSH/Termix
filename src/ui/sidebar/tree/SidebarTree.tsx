@@ -793,7 +793,8 @@ export function SidebarTree({
               query ? undefined : (
                 <Button
                   size="sm"
-                  className="h-7 text-[11px]"
+                  variant="outline"
+                  className="h-7 text-[11px] border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
                   onClick={() =>
                     window.dispatchEvent(
                       new CustomEvent("host-manager:add-host"),

@@ -19,7 +19,7 @@
 export const UI_PREFERENCES_VERSION = 1;
 
 /** Bump when onboarding gains steps existing users should be shown again. */
-export const UI_ONBOARDING_VERSION = 1;
+export const UI_ONBOARDING_VERSION = 2;
 
 export type UiPreset = "simple" | "balanced" | "advanced" | "custom";
 
@@ -159,6 +159,7 @@ const ALL_HIDEABLE_RAIL_VIEWS = [
   "workspaces",
   "network_graph",
   "homepage",
+  "ai",
 ];
 
 const SIMPLE_HIDDEN_RAIL_TABS = ALL_HIDEABLE_RAIL_VIEWS.filter(

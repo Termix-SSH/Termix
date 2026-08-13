@@ -47,6 +47,10 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
     ],
   },
   {
+    group: "ai",
+    permissions: ["ai.use", "ai.manage_providers", "ai.apply_proposals"],
+  },
+  {
     group: "admin",
     permissions: [
       "admin.users.view",

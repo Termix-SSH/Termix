@@ -32,6 +32,8 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   disableUpdateCheck: row?.disableUpdateCheck ?? null,
   confirmTabClose: row?.confirmTabClose ?? null,
   hiddenRailTabs: row?.hiddenRailTabs ?? null,
+  aiAssistantEnabled: row?.aiAssistantEnabled ?? null,
+  aiReadOnlyCommands: row?.aiReadOnlyCommands ?? null,
   compactHostView: row?.compactHostView ?? null,
   statusColorScheme: row?.statusColorScheme ?? null,
   customThemes: row?.customThemes ?? null,
@@ -205,6 +207,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     disableUpdateCheck,
     confirmTabClose,
     hiddenRailTabs,
+    aiAssistantEnabled,
+    aiReadOnlyCommands,
     customThemes,
     customKeybindings,
   } = req.body as {
@@ -222,6 +226,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     disableUpdateCheck?: boolean | null;
     confirmTabClose?: boolean | null;
     hiddenRailTabs?: string | null;
+    aiAssistantEnabled?: boolean | null;
+    aiReadOnlyCommands?: boolean | null;
     customThemes?: string | null;
     customKeybindings?: string | null;
   };
@@ -317,6 +323,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     confirmSnippetExecution,
     disableUpdateCheck,
     confirmTabClose,
+    aiAssistantEnabled,
+    aiReadOnlyCommands,
   };
   for (const [key, value] of Object.entries(boolFields)) {
     if (value !== undefined && value !== null && typeof value !== "boolean") {
@@ -330,6 +338,10 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (language !== undefined) updates.language = language;
   if (storageMode !== undefined) updates.storageMode = storageMode;
   if (hiddenRailTabs !== undefined) updates.hiddenRailTabs = hiddenRailTabs;
+  if (aiAssistantEnabled !== undefined)
+    updates.aiAssistantEnabled = aiAssistantEnabled;
+  if (aiReadOnlyCommands !== undefined)
+    updates.aiReadOnlyCommands = aiReadOnlyCommands;
   if (commandAutocomplete !== undefined)
     updates.commandAutocomplete = commandAutocomplete;
   if (commandPaletteEnabled !== undefined)

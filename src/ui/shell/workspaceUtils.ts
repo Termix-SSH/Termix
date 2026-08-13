@@ -32,6 +32,7 @@ export const WORKSPACE_CAPTURABLE_TYPES: TabType[] = [
   "history",
   "ssh-tools",
   "automations",
+  "ai",
 ];
 
 export const HOSTLESS_WORKSPACE_TAB_TYPES: TabType[] = [
@@ -48,6 +49,7 @@ export const HOSTLESS_WORKSPACE_TAB_TYPES: TabType[] = [
   "history",
   "ssh-tools",
   "automations",
+  "ai",
 ];
 
 /**

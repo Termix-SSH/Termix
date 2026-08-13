@@ -358,7 +358,8 @@ export function AutomationsPanel({
         <div className="flex items-center gap-2 p-3 border-t border-border shrink-0">
           {webhookToken ? (
             <Button
-              className="rounded-none ml-auto h-9 px-6"
+              variant="outline"
+              className="rounded-none ml-auto h-9 px-6 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
               onClick={closeEditor}
             >
               {t("common.close")}
@@ -373,7 +374,8 @@ export function AutomationsPanel({
                 {t("common.cancel")}
               </Button>
               <Button
-                className="rounded-none ml-auto h-9 px-6"
+                variant="outline"
+                className="rounded-none ml-auto h-9 px-6 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
                 disabled={saving}
                 onClick={save}
               >
@@ -395,9 +397,13 @@ export function AutomationsPanel({
         {(["automations", "runs", "channels"] as PanelTab[]).map((key) => (
           <Button
             key={key}
-            variant={tab === key ? "default" : "ghost"}
+            variant={tab === key ? "outline" : "ghost"}
             size="sm"
-            className="rounded-none h-7 text-xs"
+            className={`rounded-none h-7 text-xs ${
+              tab === key
+                ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand hover:bg-accent-brand/20 hover:text-accent-brand"
+                : ""
+            }`}
             onClick={() => setTab(key)}
           >
             {t(
@@ -412,7 +418,8 @@ export function AutomationsPanel({
           <>
             <Button
               size="sm"
-              className="rounded-none w-full mb-2"
+              variant="outline"
+              className="rounded-none w-full mb-2 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
               onClick={openCreate}
             >
               <Plus size={14} className="mr-1" />
@@ -575,7 +582,8 @@ export function AutomationsPanel({
           <>
             <Button
               size="sm"
-              className="rounded-none w-full mb-2"
+              variant="outline"
+              className="rounded-none w-full mb-2 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
               onClick={() => {
                 setEditingChannel(null);
                 setChannelDialogOpen(true);

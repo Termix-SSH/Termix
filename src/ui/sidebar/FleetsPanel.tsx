@@ -250,7 +250,12 @@ function FleetFormDialog({
           <Button variant="outline" onClick={onClose}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={handleSave}
+            disabled={saving}
+          >
             {saving && <Loader2 className="size-3.5 mr-2 animate-spin" />}
             {t("common.save")}
           </Button>
@@ -354,7 +359,13 @@ function MemberPickerDialog({
         </div>
 
         <DialogFooter>
-          <Button onClick={onClose}>{t("common.close")}</Button>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={onClose}
+          >
+            {t("common.close")}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -436,7 +447,12 @@ function RunCommandTab({ fleetId }: { fleetId: number }) {
           ))}
         </div>
       )}
-      <Button onClick={handleRun} disabled={running} className="self-start">
+      <Button
+        variant="outline"
+        onClick={handleRun}
+        disabled={running}
+        className="self-start border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+      >
         {running ? (
           <Loader2 className="size-3.5 mr-2 animate-spin" />
         ) : (
@@ -549,7 +565,12 @@ function TransferTab({ fleetId }: { fleetId: number }) {
           : t("newUi.sidebar.fleets.pullHint")}
       </span>
 
-      <Button onClick={handleTransfer} disabled={busy} className="self-start">
+      <Button
+        variant="outline"
+        onClick={handleTransfer}
+        disabled={busy}
+        className="self-start border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+      >
         {busy && <Loader2 className="size-3.5 mr-2 animate-spin" />}
         {direction === "push"
           ? t("newUi.sidebar.fleets.push")
@@ -611,10 +632,11 @@ function InventoryTab({ fleetId }: { fleetId: number }) {
   return (
     <div className="flex flex-col gap-3">
       <Button
+        variant="outline"
         onClick={handleRefresh}
         disabled={refreshing}
         size="sm"
-        className="self-start"
+        className="self-start border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
       >
         {refreshing ? (
           <Loader2 className="size-3.5 mr-2 animate-spin" />
@@ -760,7 +782,12 @@ function PackagesTab({ fleetId }: { fleetId: number }) {
         {t("newUi.sidebar.fleets.packageHint")}
       </span>
 
-      <Button onClick={handleRun} disabled={running} className="self-start">
+      <Button
+        variant="outline"
+        onClick={handleRun}
+        disabled={running}
+        className="self-start border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+      >
         {running ? (
           <Loader2 className="size-3.5 mr-2 animate-spin" />
         ) : (
@@ -991,8 +1018,9 @@ export function FleetsPanel({
           {t("newUi.sidebar.fleets.title")}
         </span>
         <Button
+          variant="outline"
           size="sm"
-          className="ml-auto"
+          className="ml-auto border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
           onClick={() => {
             setEditingFleet(null);
             setFormOpen(true);

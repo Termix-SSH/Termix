@@ -48,6 +48,8 @@ class FieldCrypto {
     opkssh_tokens: new Set(["sshCert", "privateKey"]),
     termix_identity_ca: new Set(["privateKey"]),
     vault_tokens: new Set(["sshCert", "privateKey"]),
+    // Third-party AI provider keys are user credentials like any other.
+    ai_providers: new Set(["apiKey"]),
   };
 
   static encryptField(

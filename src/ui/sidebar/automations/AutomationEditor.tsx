@@ -133,17 +133,25 @@ export function AutomationEditor({
 
       <div className="flex gap-1">
         <Button
-          variant={view === "builder" ? "default" : "outline"}
+          variant="outline"
           size="sm"
-          className="rounded-none"
+          className={`rounded-none ${
+            view === "builder"
+              ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand hover:bg-accent-brand/20 hover:text-accent-brand"
+              : "border-border"
+          }`}
           onClick={() => setView("builder")}
         >
           {t(`${base}.viewBuilder`)}
         </Button>
         <Button
-          variant={view === "json" ? "default" : "outline"}
+          variant="outline"
           size="sm"
-          className="rounded-none"
+          className={`rounded-none ${
+            view === "json"
+              ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand hover:bg-accent-brand/20 hover:text-accent-brand"
+              : "border-border"
+          }`}
           onClick={() => {
             setJsonText(JSON.stringify(draft.definition, null, 2));
             setJsonError(null);

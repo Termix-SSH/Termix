@@ -326,7 +326,12 @@ export function HostExportDialog({
           <Button variant="outline" onClick={onClose}>
             {t("hosts.export.cancel")}
           </Button>
-          <Button onClick={handleExport} disabled={!canExport}>
+          <Button
+            variant="outline"
+            className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+            onClick={handleExport}
+            disabled={!canExport}
+          >
             <Download className="size-3.5 mr-2" />
             {t("hosts.export.confirm")}
           </Button>

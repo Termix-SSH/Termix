@@ -382,7 +382,8 @@ export function SSOProviderDialog({
             </Button>
             <Button
               size="sm"
-              className="text-xs bg-accent-brand text-white hover:bg-accent-brand/90"
+              variant="outline"
+              className="text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
               onClick={handleSave}
               disabled={saving}
             >

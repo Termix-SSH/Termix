@@ -6,11 +6,14 @@ import { FeaturesStep } from "./steps/FeaturesStep";
 import { WorkflowStep } from "./steps/WorkflowStep";
 import { SecurityStep } from "./steps/SecurityStep";
 import { FirstHostStep } from "./steps/FirstHostStep";
+import { AiAssistantStep } from "./steps/AiAssistantStep";
 import { DoneStep } from "./steps/DoneStep";
 
 export interface OnboardingContext {
   /** Whether the account already has hosts (imported, synced or shared). */
   hasHosts: boolean;
+  /** Whether an admin has enabled the AI assistant for this instance. */
+  aiGloballyEnabled: boolean;
 }
 
 export interface OnboardingStepProps {
@@ -59,6 +62,14 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "workflow",
     titleKey: "onboarding.workflowTitle",
     Component: WorkflowStep,
+  },
+  {
+    id: "ai",
+    titleKey: "onboarding.aiTitle",
+    Component: AiAssistantStep,
+    // Never shown when the admin has the assistant switched off, so users on
+    // an instance without it are not told about a feature they cannot use.
+    isRelevant: (context) => context.aiGloballyEnabled,
   },
   {
     id: "security",

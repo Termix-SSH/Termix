@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  getAiGloballyEnabled,
+  getAiPrivateEndpoints,
+  setAiGloballyEnabled as setAiGloballyEnabledApi,
+  setAiPrivateEndpoints as setAiPrivateEndpointsApi,
+} from "@/api/ai-api";
+import {
   getUserList,
   getSessions,
   getRoles,
@@ -147,6 +153,8 @@ export function AdminSettingsPanel({
   const [analyticsLocked, setAnalyticsLocked] = useState(false);
   const [sessionSharingGloballyEnabled, setSessionSharingGloballyEnabled] =
     useState(true);
+  const [aiGloballyEnabled, setAiGloballyEnabled] = useState(false);
+  const [aiPrivateEndpoints, setAiPrivateEndpoints] = useState<string[]>([]);
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
   const [touchInputSettings, setTouchInputSettings] =
     useState<TouchInputSettings>({ ...TOUCH_INPUT_DEFAULTS });
@@ -330,6 +338,8 @@ export function AdminSettingsPanel({
         analytics,
         sessionSharingEnabled,
         touchInput,
+        aiEnabled,
+        aiEndpoints,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -345,6 +355,8 @@ export function AdminSettingsPanel({
         getAnalyticsEnabled(),
         getSessionSharingGloballyEnabled(),
         getTouchInputSettings(),
+        getAiGloballyEnabled(),
+        getAiPrivateEndpoints(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -387,6 +399,12 @@ export function AdminSettingsPanel({
       if (touchInput.status === "fulfilled") {
         setTouchInputSettings(touchInput.value);
         cacheTouchInputSettings(touchInput.value);
+      }
+      if (aiEnabled.status === "fulfilled") {
+        setAiGloballyEnabled(aiEnabled.value);
+      }
+      if (aiEndpoints.status === "fulfilled") {
+        setAiPrivateEndpoints(aiEndpoints.value);
       }
     } catch {
       // non-fatal
@@ -515,6 +533,28 @@ export function AdminSettingsPanel({
     } catch {
       setSessionSharingGloballyEnabled(!newVal);
       toast.error(t("admin.updateSessionSharingFailed"));
+    }
+  }
+
+  async function handleToggleAiGloballyEnabled() {
+    const newVal = !aiGloballyEnabled;
+    setAiGloballyEnabled(newVal);
+    try {
+      await setAiGloballyEnabledApi(newVal);
+    } catch {
+      setAiGloballyEnabled(!newVal);
+      toast.error(t("admin.updateAiEnabledFailed"));
+    }
+  }
+
+  async function handleSaveAiPrivateEndpoints(hosts: string[]) {
+    const previous = aiPrivateEndpoints;
+    setAiPrivateEndpoints(hosts);
+    try {
+      setAiPrivateEndpoints(await setAiPrivateEndpointsApi(hosts));
+    } catch {
+      setAiPrivateEndpoints(previous);
+      toast.error(t("admin.updateAiEndpointsFailed"));
     }
   }
 
@@ -991,6 +1031,10 @@ export function AdminSettingsPanel({
         analyticsLocked={analyticsLocked}
         handleToggleAnalytics={handleToggleAnalytics}
         sessionSharingGloballyEnabled={sessionSharingGloballyEnabled}
+        aiGloballyEnabled={aiGloballyEnabled}
+        onToggleAiGloballyEnabled={handleToggleAiGloballyEnabled}
+        aiPrivateEndpoints={aiPrivateEndpoints}
+        onSaveAiPrivateEndpoints={handleSaveAiPrivateEndpoints}
         handleToggleSessionSharingGloballyEnabled={
           handleToggleSessionSharingGloballyEnabled
         }

@@ -643,7 +643,14 @@
     "done_rerun_desc": "Open Settings, go to Interface and choose Run setup to walk through these steps again.",
     "done_docs": "Full documentation",
     "done_docs_desc": "Guides for every feature, including ones not covered here.",
-    "done_docs_link": "Open the docs"
+    "done_docs_link": "Open the docs",
+    "aiTitle": "AI assistant",
+    "aiIntro": "Termix can include an optional AI assistant. You can change this later in your settings.",
+    "aiEnableTitle": "Turn it on",
+    "aiEnableDesc": "Adds an assistant that reads your setup and suggests changes you approve. Needs a provider you supply, such as a local Ollama.",
+    "aiSkipTitle": "Leave it off",
+    "aiSkipDesc": "Termix works as it does now. The assistant stays hidden.",
+    "aiNote": "Nothing is sent anywhere until you add a provider and send a message."
   },
   "nav": {
     "home": "Home",
@@ -700,7 +707,8 @@
     "alerts": "Alerts",
     "serial": "Serial",
     "roleAdministrator": "Administrator",
-    "roleUser": "User"
+    "roleUser": "User",
+    "ai": "AI"
   },
   "hosts": {
     "hosts": "Hosts",
@@ -3453,7 +3461,13 @@
       "saveError": "Failed to save role permissions",
       "save": "Save",
       "saving": "Saving..."
-    }
+    },
+    "aiGloballyEnabled": "AI assistant",
+    "aiGloballyEnabledDesc": "Let users turn on the AI assistant. While this is off, the assistant is hidden and blocked for everyone.",
+    "aiPrivateEndpoints": "Allowed private AI hosts",
+    "aiPrivateEndpointsDesc": "Hosts on your private network that users may point a provider at, such as a self-hosted Ollama. Separate them with commas.",
+    "updateAiEnabledFailed": "Could not update the AI setting",
+    "updateAiEndpointsFailed": "Could not update the allowed hosts"
   },
   "newUi": {
     "sidebar": {
@@ -4351,5 +4365,53 @@
     "channels": "Notification Channels",
     "noChannelsHint": "Add channels in the Channels tab first",
     "ruleSaveFailed": "Failed to save rule"
+  },
+  "ai": {
+    "title": "Assistant",
+    "send": "Send",
+    "stop": "Stop",
+    "save": "Save",
+    "cancel": "Cancel",
+    "running": "running",
+    "approve": "Approve",
+    "reject": "Reject",
+    "inputPlaceholder": "Ask about your servers, or describe a change to propose",
+    "selectProvider": "Select a provider",
+    "providerSettings": "Provider settings",
+    "addProvider": "Add provider",
+    "removeProvider": "Remove provider",
+    "providerType": "Provider",
+    "providerLabel": "Name",
+    "providerLabelPlaceholder": "For example: Local Ollama",
+    "baseUrl": "Server address",
+    "apiKey": "API key",
+    "defaultModel": "Default model",
+    "defaultModelPlaceholder": "For example: llama3.1 or claude-opus-5",
+    "labelRequired": "Give this provider a name",
+    "providerSaveFailed": "Could not save the provider",
+    "providerDeleteFailed": "Could not remove the provider",
+    "privateEndpointHint": "Addresses on your private network need an administrator to allow the host first.",
+    "providerOllama": "Ollama",
+    "providerAnthropic": "Anthropic",
+    "providerOpenai": "OpenAI",
+    "providerGemini": "Google Gemini",
+    "providerOpenaiCompatible": "OpenAI compatible",
+    "toolArguments": "Input",
+    "toolResult": "Result",
+    "statusApplied": "Applied",
+    "statusRejected": "Rejected",
+    "proposalApplied": "Change applied",
+    "proposalApplyFailed": "Could not apply the change",
+    "proposalRejectFailed": "Could not reject the change",
+    "enableTitle": "Enable the AI assistant",
+    "enableDescription": "Let the assistant read your setup and suggest changes for you to approve.",
+    "readOnlyCommands": "Allow read-only diagnostic commands",
+    "readOnlyCommandsDescription": "The assistant may run a short list of safe commands like df and uptime without asking each time. Anything that changes a server is always proposed first.",
+    "modelDetectFailed": "Could not reach the provider, so this is a general list. You can type any model name.",
+    "modelCustom": "Enter a model name",
+    "modelRefresh": "Refresh list",
+    "modelPlaceholder": "Choose or type a model",
+    "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
+    "runCommandTitle": "Run command"
   }
 }
