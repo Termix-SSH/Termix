@@ -155,6 +155,7 @@ interface StatsConfig {
   useGlobalMetricsInterval?: boolean;
   disableTcpPing?: boolean;
   excludedMounts?: string[];
+  monitoredMounts?: Array<{ path: string; label?: string }>;
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
