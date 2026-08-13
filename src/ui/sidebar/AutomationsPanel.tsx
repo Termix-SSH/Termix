@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -235,7 +236,7 @@ export function AutomationsPanel({
       }
       await loadAutomations();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(getErrorMessage(error, String(error)));
     } finally {
       setSaving(false);
     }
@@ -248,7 +249,7 @@ export function AutomationsPanel({
       toast.success(t(`${base}.deleted`));
       await loadAutomations();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(getErrorMessage(error, String(error)));
     }
   }
 
@@ -259,7 +260,7 @@ export function AutomationsPanel({
       await loadAutomations();
       if (tab === "runs") await loadRuns();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(getErrorMessage(error, String(error)));
     }
   }
 
@@ -269,7 +270,7 @@ export function AutomationsPanel({
       await testNotificationChannel(channel.id);
       toast.success(t(`${base}.channelTestSent`));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(getErrorMessage(error, String(error)));
     }
   }
 
@@ -280,7 +281,7 @@ export function AutomationsPanel({
       toast.success(t(`${base}.channelDeleted`));
       await loadOptions();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error));
+      toast.error(getErrorMessage(error, String(error)));
     }
   }
 

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -184,7 +185,7 @@ function WorkspaceRenameDialog({
       onSaved();
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.workspaces.updateFailed"));
     } finally {
       setSaving(false);
@@ -406,7 +407,7 @@ export function WorkspacesPanel({
       const data = await listWorkspaces();
       setWorkspaces(data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.workspaces.loadFailed"));
     }
   }, [t]);
@@ -424,7 +425,7 @@ export function WorkspacesPanel({
       toast.success(t("newUi.sidebar.workspaces.workspaceCreated"));
       loadWorkspaces();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.workspaces.saveFailed"));
       throw error;
     }
@@ -436,7 +437,7 @@ export function WorkspacesPanel({
       toast.success(t("newUi.sidebar.workspaces.workspaceUpdated"));
       loadWorkspaces();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.workspaces.updateFailed"));
     }
   }
@@ -452,7 +453,7 @@ export function WorkspacesPanel({
       toast.success(t("newUi.sidebar.workspaces.workspaceDuplicated"));
       loadWorkspaces();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.workspaces.duplicateFailed"));
     }
   }
@@ -466,7 +467,7 @@ export function WorkspacesPanel({
       }
       loadWorkspaces();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.workspaces.updateFailed"));
     }
   }
@@ -479,7 +480,7 @@ export function WorkspacesPanel({
       setDeleteTarget(null);
       loadWorkspaces();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.workspaces.deleteFailed"));
     }
   }

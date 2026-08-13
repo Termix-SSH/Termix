@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useEffect, useRef, useState } from "react";
 import type { HostData } from "@/types/index";
 import { useTranslation } from "react-i18next";
@@ -463,7 +464,7 @@ export function HostsPanel({
                 toast.success(`Import complete: ${msg}`);
               } catch (err: unknown) {
                 toast.error(
-                  err instanceof Error ? err.message : "Failed to import hosts",
+                  getErrorMessage(err, "Failed to import hosts"),
                 );
               }
             }}
@@ -497,9 +498,7 @@ export function HostsPanel({
                 toast.success(`${t("hosts.importSSHConfig")}: ${msg}`);
               } catch (err: unknown) {
                 toast.error(
-                  err instanceof Error
-                    ? err.message
-                    : "Failed to import SSH config",
+                  getErrorMessage(err, "Failed to import SSH config"),
                 );
               }
             }}

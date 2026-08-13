@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -202,7 +203,7 @@ function ClaimHandle({ onCreated }: { onCreated: () => void }) {
       toast.success(t("termixId.created"));
       onCreated();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("termixId.createFailed"));
+      toast.error(getErrorMessage(e, t("termixId.createFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -311,7 +312,7 @@ function IdentityCard({
       toast.success(t("termixId.deleted"));
       onChanged();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("termixId.deleteFailed"));
+      toast.error(getErrorMessage(e, t("termixId.deleteFailed")));
     } finally {
       setBusy(false);
       setConfirming(false);
@@ -500,7 +501,7 @@ function AddKey({
       setLabel("");
       onAdded();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("termixId.addKeyFailed"));
+      toast.error(getErrorMessage(e, t("termixId.addKeyFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -520,7 +521,7 @@ function AddKey({
       onAdded();
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : t("termixId.generateFailed"),
+        getErrorMessage(e, t("termixId.generateFailed")),
       );
     } finally {
       setGenerating(false);
@@ -534,7 +535,7 @@ function AddKey({
       toast.success(t("termixId.imported"));
       onAdded();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : t("termixId.importFailed"));
+      toast.error(getErrorMessage(e, t("termixId.importFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -637,7 +638,7 @@ function KeyList({
       onChanged();
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : t("termixId.updateKeyFailed"),
+        getErrorMessage(e, t("termixId.updateKeyFailed")),
       );
     }
   }
@@ -649,7 +650,7 @@ function KeyList({
       onChanged();
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : t("termixId.removeKeyFailed"),
+        getErrorMessage(e, t("termixId.removeKeyFailed")),
       );
     }
   }
@@ -662,7 +663,7 @@ function KeyList({
       toast.success(t("termixId.certIssued"));
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : t("termixId.certIssueFailed"),
+        getErrorMessage(e, t("termixId.certIssueFailed")),
       );
     } finally {
       setIssuingId(null);
@@ -772,7 +773,7 @@ function CaCard({
       onChanged();
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : t("termixId.caCreateFailed"),
+        getErrorMessage(e, t("termixId.caCreateFailed")),
       );
     } finally {
       setBusy(false);
@@ -787,7 +788,7 @@ function CaCard({
       onChanged();
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : t("termixId.caRotateFailed"),
+        getErrorMessage(e, t("termixId.caRotateFailed")),
       );
     } finally {
       setBusy(false);
@@ -803,7 +804,7 @@ function CaCard({
       onChanged();
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : t("termixId.caDeleteFailed"),
+        getErrorMessage(e, t("termixId.caDeleteFailed")),
       );
     } finally {
       setBusy(false);

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { toast } from "sonner";
 import type { TFunction } from "i18next";
 import {
@@ -315,7 +316,7 @@ export function beginTransferProgressMonitoring(
     })
     .catch((error: unknown) => {
       const message =
-        error instanceof Error ? error.message : t("fileManager.unknownError");
+        getErrorMessage(error, t("fileManager.unknownError"));
       toast.error(`${t("transfer.transferError")}: ${message}`, {
         id: progressToast,
         className: TOAST_CLASS,

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -1838,7 +1839,7 @@ export function SnippetsPanel({
             hostLabel,
             success: false,
             output: "",
-            error: err instanceof Error ? err.message : String(err),
+            error: getErrorMessage(err, String(err)),
           };
         }
       }),

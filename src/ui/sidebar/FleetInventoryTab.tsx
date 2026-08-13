@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -131,7 +132,7 @@ export function FleetInventoryTab({
       const data = await getFleetInventory(selectedFleetId);
       setEntries(data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.inventoryLoadFailed"));
     } finally {
       setLoading(false);
@@ -161,7 +162,7 @@ export function FleetInventoryTab({
       }
       await loadInventory();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.inventoryRefreshFailed"));
     } finally {
       setRefreshing(false);

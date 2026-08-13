@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -163,7 +164,7 @@ function FleetFormDialog({
       onSaved();
       onClose();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.saveFailed"));
     } finally {
       setSaving(false);
@@ -302,7 +303,7 @@ function MemberPickerDialog({
       }
       onChanged();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.memberUpdateFailed"));
     } finally {
       setBusyId(null);
@@ -410,7 +411,7 @@ function RunCommandTab({ fleetId }: { fleetId: number }) {
         );
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.commandFailed"));
     } finally {
       setRunning(false);
@@ -507,7 +508,7 @@ function TransferTab({ fleetId }: { fleetId: number }) {
       }
       toast.success(t("newUi.sidebar.fleets.transferComplete"));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.transferFailed"));
     } finally {
       setBusy(false);
@@ -594,7 +595,7 @@ function InventoryTab({ fleetId }: { fleetId: number }) {
       const data = await getFleetInventory(fleetId);
       setEntries(data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.inventoryLoadFailed"));
     } finally {
       setLoading(false);
@@ -622,7 +623,7 @@ function InventoryTab({ fleetId }: { fleetId: number }) {
       }
       await load();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.inventoryRefreshFailed"));
     } finally {
       setRefreshing(false);
@@ -734,7 +735,7 @@ function PackagesTab({ fleetId }: { fleetId: number }) {
         );
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.commandFailed"));
     } finally {
       setRunning(false);
@@ -828,7 +829,7 @@ function FleetDetail({
       const data = await getFleetMembers(fleet.id);
       setMembers(data);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.membersLoadFailed"));
     } finally {
       setLoadingMembers(false);
@@ -959,7 +960,7 @@ export function FleetsPanel({
         prev ? (data.find((f) => f.id === prev.id) ?? null) : null,
       );
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.loadFailed"));
     }
   }, [t]);
@@ -974,7 +975,7 @@ export function FleetsPanel({
         setAllHosts(hosts as unknown as SSHHost[]);
       })
       .catch((error: unknown) => {
-        const message = error instanceof Error ? error.message : "";
+        const message = getErrorMessage(error, "");
         toast.error(message || t("newUi.sidebar.fleets.loadFailed"));
       })
       .finally(() => setLoading(false));
@@ -989,7 +990,7 @@ export function FleetsPanel({
       setDeleteTarget(null);
       loadFleets();
     } catch (error) {
-      const message = error instanceof Error ? error.message : "";
+      const message = getErrorMessage(error, "");
       toast.error(message || t("newUi.sidebar.fleets.deleteFailed"));
     }
   }

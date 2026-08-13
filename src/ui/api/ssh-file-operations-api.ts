@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import axios from "axios";
 import { asHttpError } from "@/lib/http-error";
 import {
@@ -896,7 +897,7 @@ export async function ensureSSHSessionForHost(
 
     return { state: "ready", sessionId };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Connection failed";
+    const message = getErrorMessage(err, "Connection failed");
     return { state: "error", error: message };
   }
 }

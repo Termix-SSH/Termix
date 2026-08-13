@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus } from "lucide-react";
@@ -197,7 +198,7 @@ export function AutomationEditor({
                 setJsonError(null);
               } catch (error) {
                 setJsonError(
-                  error instanceof Error ? error.message : String(error),
+                  getErrorMessage(error, String(error)),
                 );
               }
             }}

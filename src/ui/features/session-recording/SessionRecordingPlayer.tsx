@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { Terminal } from "@xterm/xterm";
@@ -139,7 +140,7 @@ function AsciicastPlayer({ blob }: { blob: Blob }) {
         renderAt(0);
       })
       .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : String(reason)),
+        setError(getErrorMessage(reason, String(reason))),
       );
 
     return () => {

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import type React from "react";
 import {
   useEffect,
@@ -244,7 +245,7 @@ export const GuacamoleDisplay = forwardRef<
         return { url: wsBase, query: params.toString() };
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
+          getErrorMessage(error);
         onError?.(errorMessage);
         return null;
       }
@@ -617,7 +618,7 @@ export const GuacamoleDisplay = forwardRef<
       setIsReady(false);
       setHasError(true);
       onError?.(
-        error instanceof Error ? error.message : t("guacamole.connectionError"),
+        getErrorMessage(error, t("guacamole.connectionError")),
       );
     }
   }, [

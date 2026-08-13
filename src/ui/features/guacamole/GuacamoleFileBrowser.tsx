@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Guacamole from "guacamole-common-js";
 import { useTranslation } from "react-i18next";
@@ -55,7 +56,7 @@ export function GuacamoleFileBrowser({
       } catch (err) {
         setEntries([]);
         setError(
-          err instanceof Error ? err.message : t("guacamole.files.listFailed"),
+          getErrorMessage(err, t("guacamole.files.listFailed")),
         );
       } finally {
         setLoading(false);

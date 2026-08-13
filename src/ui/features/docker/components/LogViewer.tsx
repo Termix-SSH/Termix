@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../../lib/error-message.js";
 import React from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
@@ -77,7 +78,7 @@ export function LogViewer({
       setRawLogs(data.logs.split("\n").filter(Boolean));
     } catch (error) {
       toast.error(
-        `Failed to fetch logs: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to fetch logs: ${getErrorMessage(error)}`,
       );
     } finally {
       setIsLoading(false);
@@ -120,7 +121,7 @@ export function LogViewer({
       toast.success(t("docker.logsDownloaded"));
     } catch (error) {
       toast.error(
-        `Failed to download logs: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to download logs: ${getErrorMessage(error)}`,
       );
     } finally {
       setIsDownloading(false);

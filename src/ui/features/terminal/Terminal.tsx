@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import {
   useEffect,
@@ -3274,7 +3275,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         toast.error("No image found in the clipboard");
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Clipboard read failed",
+          getErrorMessage(error, "Clipboard read failed"),
         );
       } finally {
         setIsImageUploading(false);

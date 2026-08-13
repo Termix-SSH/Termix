@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import React from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
@@ -484,7 +485,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
       toast.success(t("tunnels.localSaved"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("tunnels.localSaveError"),
+        getErrorMessage(error, t("tunnels.localSaveError")),
       );
     }
   };
@@ -529,7 +530,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
       toast.success(t("tunnels.tunnelTestSucceeded"));
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : t("tunnels.tunnelTestFailed");
+        getErrorMessage(error, t("tunnels.tunnelTestFailed"));
       setTunnelMetadata(index, { lastError: message });
       toast.error(message);
     } finally {
@@ -609,7 +610,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
       toast.success(t("profile.c2sPresetSaved"));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : t("tunnels.localSaveError"),
+        getErrorMessage(error, t("tunnels.localSaveError")),
       );
     }
   };

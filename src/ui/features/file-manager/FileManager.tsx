@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../lib/error-message.js";
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, {
   useState,
@@ -590,7 +591,7 @@ function FileManagerContent({
       handleCloseWithError(
         t("fileManager.failedToConnect") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          (getErrorMessage(error, String(error))),
       );
     } finally {
       setIsLoading(false);
@@ -1665,7 +1666,7 @@ function FileManagerContent({
                     ? t("fileManager.copy")
                     : t("fileManager.move"),
                 name: file.name,
-                error: error instanceof Error ? error.message : String(error),
+                error: getErrorMessage(error, String(error)),
               }),
             );
           }
@@ -1760,7 +1761,7 @@ function FileManagerContent({
       }
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.pasteFailed")}: ${errorMessage}`);
     }
   }
@@ -1788,7 +1789,7 @@ function FileManagerContent({
       handleRefreshDirectory();
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.extractFailed")}: ${errorMessage}`);
     }
   }
@@ -1832,7 +1833,7 @@ function FileManagerContent({
       clearSelection();
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
     }
   }
@@ -1944,7 +1945,7 @@ function FileManagerContent({
                   t("fileManager.deleteCopiedFileFailed", {
                     name: copiedFile.targetName,
                     error:
-                      error instanceof Error ? error.message : String(error),
+                      getErrorMessage(error, String(error)),
                   }),
                 );
               }
@@ -1987,7 +1988,7 @@ function FileManagerContent({
                   t("fileManager.moveBackFileFailed", {
                     name: movedFile.targetName,
                     error:
-                      error instanceof Error ? error.message : String(error),
+                      getErrorMessage(error, String(error)),
                   }),
                 );
               }
@@ -2021,7 +2022,7 @@ function FileManagerContent({
       handleRefreshDirectory();
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : String(error);
+        getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.undoOperationFailed")}: ${errorMessage}`);
       console.error("Undo failed:", error);
     }
@@ -2360,7 +2361,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.failedToConnect") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          (getErrorMessage(error, String(error))),
       );
     } finally {
       setIsLoading(false);
@@ -2509,7 +2510,7 @@ function FileManagerContent({
           toast.error(
             t("fileManager.moveFileFailed", { name: file.name }) +
               ": " +
-              (error instanceof Error ? error.message : String(error)),
+              (getErrorMessage(error, String(error))),
           );
         }
       }
@@ -2555,7 +2556,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.moveOperationFailed") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          (getErrorMessage(error, String(error))),
       );
     }
   }
@@ -2632,7 +2633,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.dragFailed") +
           ": " +
-          (error instanceof Error ? error.message : String(error)),
+          (getErrorMessage(error, String(error))),
       );
     }
   }
