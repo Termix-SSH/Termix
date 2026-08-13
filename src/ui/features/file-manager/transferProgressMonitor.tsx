@@ -315,8 +315,7 @@ export function beginTransferProgressMonitoring(
       return finalStatus;
     })
     .catch((error: unknown) => {
-      const message =
-        getErrorMessage(error, t("fileManager.unknownError"));
+      const message = getErrorMessage(error, t("fileManager.unknownError"));
       toast.error(`${t("transfer.transferError")}: ${message}`, {
         id: progressToast,
         className: TOAST_CLASS,

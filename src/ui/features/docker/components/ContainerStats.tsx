@@ -41,9 +41,7 @@ export function ContainerStats({
       const data = await getContainerStats(sessionId, containerId);
       setStats(data);
     } catch (err) {
-      setError(
-        getErrorMessage(err, t("docker.failedToFetchStats")),
-      );
+      setError(getErrorMessage(err, t("docker.failedToFetchStats")));
     } finally {
       setIsLoading(false);
     }

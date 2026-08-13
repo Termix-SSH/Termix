@@ -56,7 +56,6 @@ export async function createSocks5Connection(
   return null;
 }
 
-
 async function createSingleProxyConnection(
   targetHost: string,
   targetPort: number,

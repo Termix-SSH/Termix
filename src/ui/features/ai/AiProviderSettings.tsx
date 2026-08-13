@@ -156,9 +156,7 @@ export function AiProviderSettings({
       onChanged(created.id);
       onAdded?.();
     } catch (error) {
-      toast.error(
-        getErrorMessage(error, t("ai.providerSaveFailed")),
-      );
+      toast.error(getErrorMessage(error, t("ai.providerSaveFailed")));
     } finally {
       setSaving(false);
     }
@@ -169,9 +167,7 @@ export function AiProviderSettings({
       await deleteAiProvider(id);
       onChanged();
     } catch (error) {
-      toast.error(
-        getErrorMessage(error, t("ai.providerDeleteFailed")),
-      );
+      toast.error(getErrorMessage(error, t("ai.providerDeleteFailed")));
     }
   }
 

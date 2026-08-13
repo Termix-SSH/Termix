@@ -60,7 +60,6 @@ export async function registerWebAuthnCredential(
   }
 }
 
-
 export async function deleteWebAuthnCredential(
   credentialId: string,
 ): Promise<{ success: boolean }> {

@@ -70,4 +70,3 @@ export async function saveHomepageLayout(
     throw handleApiError(error, "save homepage layout");
   }
 }
-

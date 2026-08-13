@@ -1370,8 +1370,7 @@ router.put(
         sshLogger.warn("Failed to resync shared host secrets after update", {
           operation: "host_update_resync",
           hostId: parseInt(hostId),
-          error:
-            getErrorMessage(resyncError),
+          error: getErrorMessage(resyncError),
         });
       }
 
@@ -1493,8 +1492,7 @@ router.get(
               operation: "host_fetch_own_decrypt_failed",
               userId,
               hostId: host.id,
-              error:
-                getErrorMessage(decryptError),
+              error: getErrorMessage(decryptError),
             });
           }
         }

@@ -1,6 +1,10 @@
 import type { ComponentType, ReactNode } from "react";
 import type { ServerMetrics } from "@/main-axios";
-import { defaultColSpanFor, defaultHeightFor, type HostMetricsCardId } from "@/types/host-metrics";
+import {
+  defaultColSpanFor,
+  defaultHeightFor,
+  type HostMetricsCardId,
+} from "@/types/host-metrics";
 import { CpuCard } from "./CpuCard";
 import { MemoryCard } from "./MemoryCard";
 import { DiskCard } from "./DiskCard";

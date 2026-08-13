@@ -1695,8 +1695,7 @@ async function runFastSftpCopySegmentedSequential(
           throw err;
         }
 
-        const message =
-          getErrorMessage(err, "Segment transfer failed");
+        const message = getErrorMessage(err, "Segment transfer failed");
         const recoverable =
           options.reconnect &&
           isRecoverableTransferError(err) &&
@@ -1988,8 +1987,7 @@ async function runFastSftpCopySegmentedParallel(
           throw err;
         }
 
-        const message =
-          getErrorMessage(err, "Segment transfer failed");
+        const message = getErrorMessage(err, "Segment transfer failed");
         const recoverable =
           isRecoverableTransferError(err) &&
           attempts < SFTP_PARALLEL_SEGMENT_MAX_ATTEMPTS;

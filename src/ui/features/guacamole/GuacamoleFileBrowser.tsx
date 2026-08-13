@@ -55,9 +55,7 @@ export function GuacamoleFileBrowser({
         setEntries(await listDirectory(filesystem, target));
       } catch (err) {
         setEntries([]);
-        setError(
-          getErrorMessage(err, t("guacamole.files.listFailed")),
-        );
+        setError(getErrorMessage(err, t("guacamole.files.listFailed")));
       } finally {
         setLoading(false);
       }

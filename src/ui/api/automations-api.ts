@@ -81,7 +81,6 @@ export async function listAutomations(): Promise<AutomationRow[]> {
   }
 }
 
-
 export async function createAutomation(
   input: AutomationInput,
 ): Promise<AutomationRow> {

@@ -368,8 +368,7 @@ export function parsePublicKey(publicKeyData: string): PublicKeyInfo {
       publicKey: publicKeyData,
       keyType: "unknown",
       success: false,
-      error:
-        getErrorMessage(error, "Unknown error parsing public key"),
+      error: getErrorMessage(error, "Unknown error parsing public key"),
     };
   }
 }
@@ -468,8 +467,7 @@ export function validateKeyPair(
       isValid: false,
       privateKeyType: "unknown",
       publicKeyType: "unknown",
-      error:
-        getErrorMessage(error, "Unknown error during validation"),
+      error: getErrorMessage(error, "Unknown error during validation"),
     };
   }
 }

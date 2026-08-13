@@ -1,6 +1,10 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express, { type NextFunction, type Request, type Response } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import multer from "multer";
 import { randomUUID } from "crypto";
 import sharp from "sharp";

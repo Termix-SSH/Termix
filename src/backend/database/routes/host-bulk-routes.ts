@@ -786,9 +786,7 @@ export function registerHostBulkRoutes(
           }
         } catch (error) {
           results.failed++;
-          results.errors.push(
-            `Host ${i + 1}: ${getErrorMessage(error)}`,
-          );
+          results.errors.push(`Host ${i + 1}: ${getErrorMessage(error)}`);
         }
       }
 

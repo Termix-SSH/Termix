@@ -251,8 +251,7 @@ const GuacamoleAppInner = React.forwardRef<
         await fetchToken();
         tokenRetryRef.current.markConnected();
       } catch (err: unknown) {
-        const message =
-          getErrorMessage(err, t("guacamole.failedToConnect"));
+        const message = getErrorMessage(err, t("guacamole.failedToConnect"));
         setError(message || t("guacamole.failedToConnect"));
         addLog({ type: "error", stage: "error", message });
         tokenRetryRef.current.markFailed();

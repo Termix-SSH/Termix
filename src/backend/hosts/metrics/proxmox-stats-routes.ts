@@ -4,7 +4,10 @@ import type { AuthenticatedRequest } from "../../../types/index.js";
 import { statsLogger } from "../../utils/logger.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import type { HostAction } from "../../utils/permission-manager.js";
-import { type ProxmoxPollingManager, type ProxmoxStatsPollableHost } from "./proxmox-stats-polling.js";
+import {
+  type ProxmoxPollingManager,
+  type ProxmoxStatsPollableHost,
+} from "./proxmox-stats-polling.js";
 
 const EMPTY_SNAPSHOT = {
   node: {
@@ -184,8 +187,10 @@ export function registerProxmoxStatsRoutes(
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({
-        error:
-          getErrorMessage(error, "Failed to start proxmox stats collection"),
+        error: getErrorMessage(
+          error,
+          "Failed to start proxmox stats collection",
+        ),
       });
     }
   });
@@ -243,8 +248,10 @@ export function registerProxmoxStatsRoutes(
         error: error instanceof Error ? error.message : String(error),
       });
       res.status(500).json({
-        error:
-          getErrorMessage(error, "Failed to stop proxmox stats collection"),
+        error: getErrorMessage(
+          error,
+          "Failed to stop proxmox stats collection",
+        ),
       });
     }
   });

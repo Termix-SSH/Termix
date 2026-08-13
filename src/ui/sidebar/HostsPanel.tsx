@@ -463,9 +463,7 @@ export function HostsPanel({
                   .join(", ");
                 toast.success(`Import complete: ${msg}`);
               } catch (err: unknown) {
-                toast.error(
-                  getErrorMessage(err, "Failed to import hosts"),
-                );
+                toast.error(getErrorMessage(err, "Failed to import hosts"));
               }
             }}
           />

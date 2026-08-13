@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Clock } from "lucide-react";
 import { registerWidget } from "./WidgetRegistry";
-import { GRID_SIZE, type ClockConfig, type WidgetComponentProps } from "@/types/homepage-types";
+import {
+  GRID_SIZE,
+  type ClockConfig,
+  type WidgetComponentProps,
+} from "@/types/homepage-types";
 import { WidgetTitle } from "./WidgetTitle";
 import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
 

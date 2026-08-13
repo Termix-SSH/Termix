@@ -590,7 +590,7 @@ function FileManagerContent({
       handleCloseWithError(
         t("fileManager.failedToConnect") +
           ": " +
-          (getErrorMessage(error, String(error))),
+          getErrorMessage(error, String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -1759,8 +1759,7 @@ function FileManagerContent({
         setClipboard(null);
       }
     } catch (error: unknown) {
-      const errorMessage =
-        getErrorMessage(error, String(error));
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.pasteFailed")}: ${errorMessage}`);
     }
   }
@@ -1787,8 +1786,7 @@ function FileManagerContent({
 
       handleRefreshDirectory();
     } catch (error: unknown) {
-      const errorMessage =
-        getErrorMessage(error, String(error));
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.extractFailed")}: ${errorMessage}`);
     }
   }
@@ -1831,8 +1829,7 @@ function FileManagerContent({
       handleRefreshDirectory();
       clearSelection();
     } catch (error: unknown) {
-      const errorMessage =
-        getErrorMessage(error, String(error));
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.compressFailed")}: ${errorMessage}`);
     }
   }
@@ -1943,8 +1940,7 @@ function FileManagerContent({
                 toast.error(
                   t("fileManager.deleteCopiedFileFailed", {
                     name: copiedFile.targetName,
-                    error:
-                      getErrorMessage(error, String(error)),
+                    error: getErrorMessage(error, String(error)),
                   }),
                 );
               }
@@ -1986,8 +1982,7 @@ function FileManagerContent({
                 toast.error(
                   t("fileManager.moveBackFileFailed", {
                     name: movedFile.targetName,
-                    error:
-                      getErrorMessage(error, String(error)),
+                    error: getErrorMessage(error, String(error)),
                   }),
                 );
               }
@@ -2020,8 +2015,7 @@ function FileManagerContent({
 
       handleRefreshDirectory();
     } catch (error: unknown) {
-      const errorMessage =
-        getErrorMessage(error, String(error));
+      const errorMessage = getErrorMessage(error, String(error));
       toast.error(`${t("fileManager.undoOperationFailed")}: ${errorMessage}`);
       console.error("Undo failed:", error);
     }
@@ -2360,7 +2354,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.failedToConnect") +
           ": " +
-          (getErrorMessage(error, String(error))),
+          getErrorMessage(error, String(error)),
       );
     } finally {
       setIsLoading(false);
@@ -2509,7 +2503,7 @@ function FileManagerContent({
           toast.error(
             t("fileManager.moveFileFailed", { name: file.name }) +
               ": " +
-              (getErrorMessage(error, String(error))),
+              getErrorMessage(error, String(error)),
           );
         }
       }
@@ -2555,7 +2549,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.moveOperationFailed") +
           ": " +
-          (getErrorMessage(error, String(error))),
+          getErrorMessage(error, String(error)),
       );
     }
   }
@@ -2632,7 +2626,7 @@ function FileManagerContent({
       toast.error(
         t("fileManager.dragFailed") +
           ": " +
-          (getErrorMessage(error, String(error))),
+          getErrorMessage(error, String(error)),
       );
     }
   }

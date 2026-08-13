@@ -70,8 +70,7 @@ export async function* runAgent(
         }
       }
     } catch (error) {
-      const message =
-        getErrorMessage(error, "The provider request failed");
+      const message = getErrorMessage(error, "The provider request failed");
       yield { type: "error", message };
       return;
     }

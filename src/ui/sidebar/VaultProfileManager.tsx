@@ -91,9 +91,7 @@ export function VaultProfileManager({
       setForm(null);
       onChanged();
     } catch (e) {
-      toast.error(
-        getErrorMessage(e, t("hosts.vaultProfileSaveFailed")),
-      );
+      toast.error(getErrorMessage(e, t("hosts.vaultProfileSaveFailed")));
     } finally {
       setSaving(false);
     }
@@ -105,9 +103,7 @@ export function VaultProfileManager({
       toast.success(t("hosts.vaultProfileDeleted"));
       onChanged();
     } catch (e) {
-      toast.error(
-        getErrorMessage(e, t("hosts.vaultProfileDeleteFailed")),
-      );
+      toast.error(getErrorMessage(e, t("hosts.vaultProfileDeleteFailed")));
     }
   };
 

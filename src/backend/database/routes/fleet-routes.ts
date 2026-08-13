@@ -6,7 +6,10 @@ import JSZip from "jszip";
 import type { Client, SFTPWrapper } from "ssh2";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { PermissionManager, type HostAction } from "../../utils/permission-manager.js";
+import {
+  PermissionManager,
+  type HostAction,
+} from "../../utils/permission-manager.js";
 import {
   isSharePermissionLevel,
   expiryFromDuration,
@@ -686,8 +689,7 @@ router.post(
               operation: "fleet_share_snapshot_failed",
               hostId: host.id,
               accessId: accessGrant.id,
-              error:
-                getErrorMessage(snapshotError),
+              error: getErrorMessage(snapshotError),
             });
           }
         }

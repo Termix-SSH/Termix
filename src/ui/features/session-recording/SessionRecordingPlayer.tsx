@@ -139,9 +139,7 @@ function AsciicastPlayer({ blob }: { blob: Blob }) {
         terminal.resize(recording.width, recording.height);
         renderAt(0);
       })
-      .catch((reason) =>
-        setError(getErrorMessage(reason, String(reason))),
-      );
+      .catch((reason) => setError(getErrorMessage(reason, String(reason))));
 
     return () => {
       observer.disconnect();

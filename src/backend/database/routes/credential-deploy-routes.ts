@@ -528,8 +528,7 @@ export function registerCredentialDeployRoutes(
       } catch (error) {
         res.status(500).json({
           success: false,
-          error:
-            getErrorMessage(error, "Failed to deploy SSH key"),
+          error: getErrorMessage(error, "Failed to deploy SSH key"),
         });
       }
     },

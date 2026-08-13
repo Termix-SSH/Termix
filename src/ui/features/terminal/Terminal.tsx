@@ -3273,9 +3273,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         }
         toast.error("No image found in the clipboard");
       } catch (error) {
-        toast.error(
-          getErrorMessage(error, "Clipboard read failed"),
-        );
+        toast.error(getErrorMessage(error, "Clipboard read failed"));
       } finally {
         setIsImageUploading(false);
       }

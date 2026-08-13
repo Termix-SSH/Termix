@@ -41,7 +41,13 @@ import {
   assignRoleToUser,
   removeRoleFromUser,
 } from "@/main-axios";
-import { type ApiKey, type CreatedApiKey, type Role, type SSHHostWithStatus, type UserRole } from "@/main-axios";
+import {
+  type ApiKey,
+  type CreatedApiKey,
+  type Role,
+  type SSHHostWithStatus,
+  type UserRole,
+} from "@/main-axios";
 import type { Host, Credential } from "@/types/ui-types";
 import { CredentialEditorView } from "./CredentialEditorView";
 import { HostEditor } from "./HostEditor";

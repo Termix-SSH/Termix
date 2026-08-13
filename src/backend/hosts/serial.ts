@@ -173,8 +173,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         } catch (err) {
           send({
             type: "error",
-            data:
-              getErrorMessage(err, "Failed to open serial port"),
+            data: getErrorMessage(err, "Failed to open serial port"),
           });
         }
         break;

@@ -207,8 +207,7 @@ export function useAiStream() {
         setState((prev) => ({
           ...prev,
           streaming: false,
-          error:
-            getErrorMessage(error, "The assistant stopped unexpectedly"),
+          error: getErrorMessage(error, "The assistant stopped unexpectedly"),
         }));
       } finally {
         abortRef.current = null;

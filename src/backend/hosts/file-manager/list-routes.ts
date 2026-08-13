@@ -195,8 +195,7 @@ export function registerFileListingRoutes(
             tryFallbackMethod();
           });
       } catch (sftpErr: unknown) {
-        const errMsg =
-          getErrorMessage(sftpErr);
+        const errMsg = getErrorMessage(sftpErr);
         fileLogger.warn(`SFTP connection error, trying fallback: ${errMsg}`);
         tryFallbackMethod();
       }
@@ -326,8 +325,7 @@ export function registerFileListingRoutes(
         );
       } catch (execErr: unknown) {
         sshConn.activeOperations--;
-        const errMsg =
-          getErrorMessage(execErr);
+        const errMsg = getErrorMessage(execErr);
         fileLogger.error(`Fallback listFiles exec failed: ${errMsg}`);
         if (!res.headersSent) {
           return res.status(500).json({ error: errMsg });
@@ -456,8 +454,7 @@ export function registerFileListingRoutes(
         });
       } catch (execErr: unknown) {
         sshConn.activeOperations--;
-        const errMsg =
-          getErrorMessage(execErr);
+        const errMsg = getErrorMessage(execErr);
         fileLogger.error(`Sudo listFiles exec failed: ${errMsg}`);
         if (!res.headersSent) {
           return res.status(500).json({ error: errMsg });

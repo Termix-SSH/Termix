@@ -8,7 +8,10 @@ import type {
   WidgetComponentProps,
 } from "@/types/homepage-types";
 import { GRID_SIZE } from "@/types/homepage-types";
-import { getMetricsHistory, type MetricsHistoryRow } from "@/api/host-metrics-api";
+import {
+  getMetricsHistory,
+  type MetricsHistoryRow,
+} from "@/api/host-metrics-api";
 import { getSSHHosts } from "@/api/ssh-host-management-api";
 import { WidgetTitle } from "./WidgetTitle";
 import { runVisibleInterval } from "../use-visible-interval";

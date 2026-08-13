@@ -446,8 +446,7 @@ router.get(
       res.json({ models });
     } catch (err) {
       // The message can carry the allowlist hint, which the user needs to act on.
-      const message =
-        getErrorMessage(err, "Could not reach the provider");
+      const message = getErrorMessage(err, "Could not reach the provider");
       databaseLogger.warn("Failed to list provider models", {
         operation: "ai_provider_models_failed",
         userId,
@@ -886,8 +885,7 @@ router.post(
 
       res.json({ success: result.ok, summary: result.summary });
     } catch (err) {
-      const message =
-        getErrorMessage(err, "Failed to apply the proposal");
+      const message = getErrorMessage(err, "Failed to apply the proposal");
       databaseLogger.error("Failed to apply AI proposal", err, {
         operation: "ai_proposal_apply_failed",
         userId,

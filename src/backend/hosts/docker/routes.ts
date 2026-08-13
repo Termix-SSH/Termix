@@ -14,7 +14,11 @@ import { resolveHostById } from "../host-resolver.js";
 import { createConnectionLog } from "../connection-log.js";
 import { DataCrypto } from "../../utils/data-crypto.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { type AuthenticatedRequest, type ProxyNode, type SSHHost } from "../../../types/index.js";
+import {
+  type AuthenticatedRequest,
+  type ProxyNode,
+  type SSHHost,
+} from "../../../types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -337,8 +341,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
             operation: "docker_connect",
             sessionId,
             hostId,
-            error:
-              getErrorMessage(opksshError),
+            error: getErrorMessage(opksshError),
           });
           connectionLogs.push(
             createConnectionLog(
@@ -365,8 +368,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
             config.passphrase = resolvedCredentials.keyPassword;
           }
         } catch (error) {
-          const message =
-            getErrorMessage(error, "Invalid private key format");
+          const message = getErrorMessage(error, "Invalid private key format");
           sshLogger.error("SSH key processing error", error, {
             operation: "docker_connect",
             sessionId,
@@ -991,8 +993,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
             responseSent = true;
             return res.status(500).json({
               error:
-                "Jump host connection failed: " +
-                (getErrorMessage(jumpError)),
+                "Jump host connection failed: " + getErrorMessage(jumpError),
               connectionLogs,
             });
           }
@@ -1028,9 +1029,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
           if (!responseSent) {
             responseSent = true;
             return res.status(500).json({
-              error:
-                "Proxy connection failed: " +
-                (getErrorMessage(proxyError)),
+              error: "Proxy connection failed: " + getErrorMessage(proxyError),
               connectionLogs,
             });
           }
@@ -1645,8 +1644,7 @@ export function registerDockerSshRoutes(app: express.Express): void {
           });
         } catch (daemonError) {
           session.activeOperations--;
-          const errorMsg =
-            getErrorMessage(daemonError, "");
+          const errorMsg = getErrorMessage(daemonError, "");
 
           if (errorMsg.includes("Cannot connect to the Docker daemon")) {
             return res.json({

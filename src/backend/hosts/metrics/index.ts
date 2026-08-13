@@ -1470,8 +1470,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
         }
       } catch (proxyError) {
         throw new Error(
-          "Proxy connection failed: " +
-            (getErrorMessage(proxyError)),
+          "Proxy connection failed: " + getErrorMessage(proxyError),
           { cause: proxyError },
         );
       }
@@ -2669,8 +2668,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       ),
     );
     res.status(500).json({
-      error:
-        getErrorMessage(error, "Failed to start metrics collection"),
+      error: getErrorMessage(error, "Failed to start metrics collection"),
       connectionLogs,
     });
   }
@@ -2741,8 +2739,7 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
       error: error instanceof Error ? error.message : String(error),
     });
     res.status(500).json({
-      error:
-        getErrorMessage(error, "Failed to stop metrics collection"),
+      error: getErrorMessage(error, "Failed to stop metrics collection"),
     });
   }
 });

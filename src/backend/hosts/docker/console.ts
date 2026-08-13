@@ -710,8 +710,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
             ws.send(
               JSON.stringify({
                 type: "error",
-                message:
-                  getErrorMessage(error, "Failed to connect to container"),
+                message: getErrorMessage(
+                  error,
+                  "Failed to connect to container",
+                ),
               }),
             );
           }

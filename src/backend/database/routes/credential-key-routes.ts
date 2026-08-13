@@ -55,8 +55,7 @@ function generateSSHKeyPair(
   } catch (error) {
     return {
       success: false,
-      error:
-        getErrorMessage(error, "SSH key generation failed"),
+      error: getErrorMessage(error, "SSH key generation failed"),
     };
   }
 }
@@ -117,8 +116,7 @@ export function registerCredentialKeyRoutes(
       } catch (error) {
         authLogger.error("Failed to detect key type", error);
         res.status(500).json({
-          error:
-            getErrorMessage(error, "Failed to detect key type"),
+          error: getErrorMessage(error, "Failed to detect key type"),
         });
       }
     },
@@ -173,8 +171,7 @@ export function registerCredentialKeyRoutes(
       } catch (error) {
         authLogger.error("Failed to detect public key type", error);
         res.status(500).json({
-          error:
-            getErrorMessage(error, "Failed to detect public key type"),
+          error: getErrorMessage(error, "Failed to detect public key type"),
         });
       }
     },
@@ -242,8 +239,7 @@ export function registerCredentialKeyRoutes(
       } catch (error) {
         authLogger.error("Failed to validate key pair", error);
         res.status(500).json({
-          error:
-            getErrorMessage(error, "Failed to validate key pair"),
+          error: getErrorMessage(error, "Failed to validate key pair"),
         });
       }
     },
@@ -307,8 +303,7 @@ export function registerCredentialKeyRoutes(
         authLogger.error("Failed to generate key pair", error);
         res.status(500).json({
           success: false,
-          error:
-            getErrorMessage(error, "Failed to generate key pair"),
+          error: getErrorMessage(error, "Failed to generate key pair"),
         });
       }
     },
@@ -494,8 +489,7 @@ export function registerCredentialKeyRoutes(
         authLogger.error("Failed to generate public key", error);
         res.status(500).json({
           success: false,
-          error:
-            getErrorMessage(error, "Failed to generate public key"),
+          error: getErrorMessage(error, "Failed to generate public key"),
         });
       }
     },

@@ -1,4 +1,7 @@
-import { TOUCH_INPUT_DEFAULTS, type TouchInputSettings } from "@/types/touch-input-settings";
+import {
+  TOUCH_INPUT_DEFAULTS,
+  type TouchInputSettings,
+} from "@/types/touch-input-settings";
 
 export interface TouchWheelPoint {
   clientX: number;

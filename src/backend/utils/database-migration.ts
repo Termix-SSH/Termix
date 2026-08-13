@@ -118,10 +118,9 @@ export class DatabaseMigration {
         source: this.unencryptedDbPath,
         backup: backupPath,
       });
-      throw new Error(
-        `Backup creation failed: ${getErrorMessage(error)}`,
-        { cause: error },
-      );
+      throw new Error(`Backup creation failed: ${getErrorMessage(error)}`, {
+        cause: error,
+      });
     }
   }
 
@@ -175,8 +174,7 @@ export class DatabaseMigration {
         duration: Date.now() - startTime,
       };
     } catch (error) {
-      const errorMessage =
-        getErrorMessage(error);
+      const errorMessage = getErrorMessage(error);
 
       databaseLogger.error("Database migration failed", error, {
         operation: "migration_failed",

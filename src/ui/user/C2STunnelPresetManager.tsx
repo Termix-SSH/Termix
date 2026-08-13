@@ -484,9 +484,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
       await saveLocalConfig(localConfig);
       toast.success(t("tunnels.localSaved"));
     } catch (error) {
-      toast.error(
-        getErrorMessage(error, t("tunnels.localSaveError")),
-      );
+      toast.error(getErrorMessage(error, t("tunnels.localSaveError")));
     }
   };
 
@@ -529,8 +527,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
       });
       toast.success(t("tunnels.tunnelTestSucceeded"));
     } catch (error) {
-      const message =
-        getErrorMessage(error, t("tunnels.tunnelTestFailed"));
+      const message = getErrorMessage(error, t("tunnels.tunnelTestFailed"));
       setTunnelMetadata(index, { lastError: message });
       toast.error(message);
     } finally {
@@ -609,9 +606,7 @@ export function C2STunnelPresetManager(): React.ReactElement {
       await refreshPresets();
       toast.success(t("profile.c2sPresetSaved"));
     } catch (error) {
-      toast.error(
-        getErrorMessage(error, t("tunnels.localSaveError")),
-      );
+      toast.error(getErrorMessage(error, t("tunnels.localSaveError")));
     }
   };
 

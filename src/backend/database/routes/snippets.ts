@@ -182,8 +182,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to create snippet folder", err);
       res.status(500).json({
-        error:
-          getErrorMessage(err, "Failed to create snippet folder"),
+        error: getErrorMessage(err, "Failed to create snippet folder"),
       });
     }
   },
@@ -267,8 +266,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to update snippet folder metadata", err);
       res.status(500).json({
-        error:
-          getErrorMessage(err, "Failed to update snippet folder metadata"),
+        error: getErrorMessage(err, "Failed to update snippet folder metadata"),
       });
     }
   },
@@ -353,8 +351,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to rename snippet folder", err);
       res.status(500).json({
-        error:
-          getErrorMessage(err, "Failed to rename snippet folder"),
+        error: getErrorMessage(err, "Failed to rename snippet folder"),
       });
     }
   },
@@ -425,8 +422,7 @@ router.delete(
     } catch (err) {
       authLogger.error("Failed to delete snippet folder", err);
       res.status(500).json({
-        error:
-          getErrorMessage(err, "Failed to delete snippet folder"),
+        error: getErrorMessage(err, "Failed to delete snippet folder"),
       });
     }
   },
@@ -506,8 +502,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to reorder snippets", err);
       res.status(500).json({
-        error:
-          getErrorMessage(err, "Failed to reorder snippets"),
+        error: getErrorMessage(err, "Failed to reorder snippets"),
       });
     }
   },

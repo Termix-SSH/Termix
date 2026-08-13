@@ -244,8 +244,7 @@ export const GuacamoleDisplay = forwardRef<
         if (displaySize.dpi) params.set("dpi", String(displaySize.dpi));
         return { url: wsBase, query: params.toString() };
       } catch (error) {
-        const errorMessage =
-          getErrorMessage(error);
+        const errorMessage = getErrorMessage(error);
         onError?.(errorMessage);
         return null;
       }
@@ -617,9 +616,7 @@ export const GuacamoleDisplay = forwardRef<
       if (!isMountedRef.current) return;
       setIsReady(false);
       setHasError(true);
-      onError?.(
-        getErrorMessage(error, t("guacamole.connectionError")),
-      );
+      onError?.(getErrorMessage(error, t("guacamole.connectionError")));
     }
   }, [
     getWebSocketConnection,

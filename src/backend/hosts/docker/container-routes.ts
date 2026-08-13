@@ -152,8 +152,7 @@ export function registerDockerContainerRoutes(
       });
 
       res.status(500).json({
-        error:
-          getErrorMessage(error, "Failed to list containers"),
+        error: getErrorMessage(error, "Failed to list containers"),
       });
     }
   });

@@ -1,4 +1,7 @@
-import { DEFAULT_STEP_TIMEOUT_MS, type Step } from "../../../types/automations.js";
+import {
+  DEFAULT_STEP_TIMEOUT_MS,
+  type Step,
+} from "../../../types/automations.js";
 import { execCommand } from "../../hosts/metrics/widgets/common-utils.js";
 import {
   execElevated,

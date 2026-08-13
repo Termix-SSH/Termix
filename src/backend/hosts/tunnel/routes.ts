@@ -337,8 +337,7 @@ export function registerTunnelRoutes(app: express.Express): void {
                       {
                         operation: "tunnel_endpoint_credential_resolve",
                         endpointHostId: endpointHost.id,
-                        error:
-                          getErrorMessage(credError, "Unknown"),
+                        error: getErrorMessage(credError, "Unknown"),
                       },
                     );
                   }

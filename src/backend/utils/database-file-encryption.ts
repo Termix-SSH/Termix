@@ -73,8 +73,7 @@ class DatabaseFileEncryption {
         databaseLogger.warn("Failed to cleanup old metadata file", {
           operation: "old_meta_cleanup_failed",
           path: metadataPath,
-          error:
-            getErrorMessage(cleanupError),
+          error: getErrorMessage(cleanupError),
         });
       }
 
@@ -88,8 +87,7 @@ class DatabaseFileEncryption {
         databaseLogger.warn("Failed to cleanup temporary files", {
           operation: "temp_file_cleanup_failed",
           tmpPath,
-          error:
-            getErrorMessage(cleanupError),
+          error: getErrorMessage(cleanupError),
         });
       }
 
@@ -181,8 +179,7 @@ class DatabaseFileEncryption {
         databaseLogger.warn("Failed to cleanup temporary files", {
           operation: "temp_file_cleanup_failed",
           tmpPath,
-          error:
-            getErrorMessage(cleanupError),
+          error: getErrorMessage(cleanupError),
         });
       }
 
@@ -307,8 +304,7 @@ class DatabaseFileEncryption {
 
       return decryptedBuffer;
     } catch (error) {
-      const errorMessage =
-        getErrorMessage(error);
+      const errorMessage = getErrorMessage(error);
       const isAuthError =
         errorMessage.includes("Unsupported state") ||
         errorMessage.includes("authenticate data") ||

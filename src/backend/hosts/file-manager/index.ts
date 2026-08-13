@@ -14,7 +14,11 @@ import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { fileLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import { type AuthenticatedRequest, type ProxyNode, type SSHHost } from "../../../types/index.js";
+import {
+  type AuthenticatedRequest,
+  type ProxyNode,
+  type SSHHost,
+} from "../../../types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -1139,8 +1143,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         operation: "file_connect",
         sessionId,
         hostId,
-        error:
-          getErrorMessage(opksshError),
+        error: getErrorMessage(opksshError),
       });
       connectionLogs.push(
         createConnectionLog(
@@ -1865,9 +1868,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         ),
       );
       return res.status(500).json({
-        error:
-          "Proxy connection failed: " +
-          (getErrorMessage(proxyError)),
+        error: "Proxy connection failed: " + getErrorMessage(proxyError),
         connectionLogs,
       });
     }
@@ -3069,8 +3070,7 @@ app.post(
       );
       res.json(result);
     } catch (err) {
-      const message =
-        getErrorMessage(err, "Failed to clean up transfer");
+      const message = getErrorMessage(err, "Failed to clean up transfer");
       const status = message === "Transfer not found" ? 404 : 400;
       res.status(status).json({ error: message });
     }

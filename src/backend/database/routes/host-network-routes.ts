@@ -133,8 +133,7 @@ export function registerHostNetworkRoutes(
           hostId,
         });
         res.status(500).json({
-          error:
-            getErrorMessage(error, "Failed to send WoL packet"),
+          error: getErrorMessage(error, "Failed to send WoL packet"),
         });
       }
     },

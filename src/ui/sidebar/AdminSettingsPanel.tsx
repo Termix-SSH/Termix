@@ -71,7 +71,12 @@ import {
   saveMetricsHistoryRetention,
 } from "@/api/host-metrics-api";
 import type { SSOProvider } from "@/types/index";
-import { type ApiKey, type CreatedApiKey, type Role, type UserRole } from "@/main-axios";
+import {
+  type ApiKey,
+  type CreatedApiKey,
+  type Role,
+  type UserRole,
+} from "@/main-axios";
 import { type AdminSection, type Host } from "@/types/ui-types";
 import {
   AdminRolesSection,
@@ -99,7 +104,10 @@ import {
   AdminUnlinkAccountDialog,
 } from "./AdminUserDialogs";
 import { AdminUserManagePanel } from "./AdminUserManagePanel";
-import { TOUCH_INPUT_DEFAULTS, type TouchInputSettings } from "@/types/touch-input-settings";
+import {
+  TOUCH_INPUT_DEFAULTS,
+  type TouchInputSettings,
+} from "@/types/touch-input-settings";
 import {
   getTouchInputSettings,
   updateTouchInputSettings,

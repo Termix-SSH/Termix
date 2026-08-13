@@ -157,8 +157,7 @@ export function createFleetSshFactory(host: SSHHost): () => Promise<Client> {
         }
       } catch (proxyError) {
         throw new Error(
-          "Proxy connection failed: " +
-            (getErrorMessage(proxyError)),
+          "Proxy connection failed: " + getErrorMessage(proxyError),
           { cause: proxyError },
         );
       }

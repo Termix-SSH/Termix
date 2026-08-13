@@ -1264,8 +1264,7 @@ export async function connectSSHTunnel(
       });
       setupPingInterval(tunnelName);
     } catch (error) {
-      const message =
-        getErrorMessage(error, "Failed to create tunnel");
+      const message = getErrorMessage(error, "Failed to create tunnel");
       const errorType = classifyTunnelError(message);
       tunnelLogger.error("Failed to create managed tunnel", error, {
         operation: "managed_tunnel_create_failed",
@@ -1363,8 +1362,7 @@ export async function connectSSHTunnel(
         resolvedSourceCredentials.keyPassword,
       );
     } catch (error) {
-      const message =
-        getErrorMessage(error, "Invalid SSH key format");
+      const message = getErrorMessage(error, "Invalid SSH key format");
       tunnelLogger.error(
         `Invalid SSH key format for tunnel '${tunnelName}': ${message}`,
         undefined,
@@ -1459,15 +1457,13 @@ export async function connectSSHTunnel(
         hasProxyAuth: !!(
           tunnelConfig.socks5Username && tunnelConfig.socks5Password
         ),
-        errorMessage:
-          getErrorMessage(socks5Error),
+        errorMessage: getErrorMessage(socks5Error),
       });
       broadcastTunnelStatus(tunnelName, {
         connected: false,
         status: CONNECTION_STATES.FAILED,
         reason:
-          "SOCKS5 proxy connection failed: " +
-          (getErrorMessage(socks5Error)),
+          "SOCKS5 proxy connection failed: " + getErrorMessage(socks5Error),
       });
       tunnelConnecting.delete(tunnelName);
       return;
@@ -1486,8 +1482,10 @@ export async function connectSSHTunnel(
     broadcastTunnelStatus(tunnelName, {
       connected: false,
       status: CONNECTION_STATES.FAILED,
-      reason:
-        getErrorMessage(error, "Failed to resolve tunnel source hostname"),
+      reason: getErrorMessage(
+        error,
+        "Failed to resolve tunnel source hostname",
+      ),
     });
     tunnelConnecting.delete(tunnelName);
     return;
@@ -1670,8 +1668,7 @@ export async function killRemoteTunnelByMarker(
           },
         );
         throw new Error(
-          "SOCKS5 proxy connection failed: " +
-            (getErrorMessage(socks5Error)),
+          "SOCKS5 proxy connection failed: " + getErrorMessage(socks5Error),
           { cause: socks5Error },
         );
       }

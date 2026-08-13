@@ -158,8 +158,7 @@ export function registerHostMetricsViewerRoutes<
             operation: "register_viewer_lookup",
             hostId,
             userId,
-            error:
-              getErrorMessage(lookupErr, String(lookupErr)),
+            error: getErrorMessage(lookupErr, String(lookupErr)),
           },
         );
       }

@@ -9,7 +9,12 @@ import {
   DialogTitle,
 } from "@/components/dialog";
 import { toast } from "sonner";
-import { type LDAPProviderConfig, type OIDCProviderConfig, type SSOProvider, type SSOProviderType } from "@/types/index";
+import {
+  type LDAPProviderConfig,
+  type OIDCProviderConfig,
+  type SSOProvider,
+  type SSOProviderType,
+} from "@/types/index";
 import { createSSOProvider, updateSSOProvider } from "@/api/sso-provider-api";
 
 type ApiErrorLike = {

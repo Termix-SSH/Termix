@@ -10,7 +10,10 @@ import type {
   HostResolutionCredentialRecord,
   HostResolutionHostRecord,
 } from "../database/repositories/host-resolution-repository.js";
-import { SharedHostSecretsManager, type SharedSecretData } from "./shared-host-secrets-manager.js";
+import {
+  SharedHostSecretsManager,
+  type SharedSecretData,
+} from "./shared-host-secrets-manager.js";
 
 export type RecipientSharedHostAuthResolution =
   | {

@@ -281,8 +281,7 @@ router.post(
             operation: "rbac_host_share_snapshot_failed",
             hostId,
             accessId: accessGrant.id,
-            error:
-              getErrorMessage(snapshotError),
+            error: getErrorMessage(snapshotError),
           });
         }
 
@@ -492,8 +491,7 @@ router.post(
               operation: "rbac_folder_share_snapshot_failed",
               hostId: host.id,
               accessId: accessGrant.id,
-              error:
-                getErrorMessage(snapshotError),
+              error: getErrorMessage(snapshotError),
             });
           }
         }
@@ -1431,8 +1429,7 @@ router.delete(
             operation: "remove_role_secret_cleanup",
             targetUserId,
             roleId,
-            error:
-              getErrorMessage(cleanupError),
+            error: getErrorMessage(cleanupError),
           },
         );
       }

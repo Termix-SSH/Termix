@@ -1,5 +1,9 @@
 import { useCallback, useRef } from "react";
-import { GRID_SIZE, type CanvasWidget, type ResizeState } from "@/types/homepage-types";
+import {
+  GRID_SIZE,
+  type CanvasWidget,
+  type ResizeState,
+} from "@/types/homepage-types";
 import { snapToGrid } from "./snapToGrid";
 import { getWidgetType } from "../widgets/WidgetRegistry";
 

@@ -152,8 +152,7 @@ export function ElectronLoginForm({
           typeof event.data.providerId === "number"
             ? event.data.providerId
             : undefined;
-        const error =
-          getErrorMessage(err, t("errors.failedOidcLogin"));
+        const error = getErrorMessage(err, t("errors.failedOidcLogin"));
         iframeRef.current?.contentWindow?.postMessage(
           {
             type: "OIDC_SYSTEM_BROWSER_AUTH_RESULT",

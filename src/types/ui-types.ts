@@ -433,5 +433,3 @@ export type SnippetFolder = {
   icon: FolderIconId;
   open: boolean;
 };
-
-
