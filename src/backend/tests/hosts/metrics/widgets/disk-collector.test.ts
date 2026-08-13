@@ -5,6 +5,7 @@ import {
   buildFilesystemList,
   selectPrimaryFilesystem,
   filterExcludedFilesystems,
+  mergeMonitoredFilesystems,
 } from "../../../../hosts/metrics/widgets/disk-collector.js";
 
 describe("parseDfLines", () => {
@@ -179,5 +180,45 @@ describe("filterExcludedFilesystems", () => {
   it("ignores blank/whitespace-only entries", () => {
     const filtered = filterExcludedFilesystems(list, ["  ", ""]);
     expect(filtered).toHaveLength(3);
+  });
+});
+
+describe("mergeMonitoredFilesystems", () => {
+  it("adds an arbitrary path with a user label", () => {
+    const detected = buildFilesystemList(
+      parseDfLines("/dev/sda1 ext4 1000 400 600 40% /\n"),
+      [],
+    );
+    const custom = buildFilesystemList(
+      parseDfLines("/dev/sda1 ext4 1000 400 600 40% /\n"),
+      [],
+    );
+    const result = mergeMonitoredFilesystems(
+      detected,
+      [{ path: "/config", label: "Home Assistant" }],
+      custom,
+    );
+
+    expect(result).toHaveLength(2);
+    expect(result[1]).toMatchObject({
+      mount: "/config",
+      label: "Home Assistant",
+      totalBytes: 1000,
+    });
+  });
+
+  it("labels a path that is already a detected mount", () => {
+    const detected = buildFilesystemList(
+      parseDfLines("/dev/sda1 ext4 1000 400 600 40% /data\n"),
+      [],
+    );
+    const result = mergeMonitoredFilesystems(
+      detected,
+      [{ path: "/data", label: "Media" }],
+      detected,
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].label).toBe("Media");
   });
 });

@@ -34,7 +34,9 @@ export type MetricPath =
   | { path: "uptime.seconds" }
   | { path: "processes.total" }
   | { path: "network.rxBytes"; iface?: string }
-  | { path: "network.txBytes"; iface?: string };
+  | { path: "network.txBytes"; iface?: string }
+  | { path: "network.rxRateBps"; iface?: string }
+  | { path: "network.txRateBps"; iface?: string };
 
 export type Operator =
   | ">"

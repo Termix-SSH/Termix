@@ -31,7 +31,10 @@ export function HostStatsTab({
 }) {
   const { t } = useTranslation();
   const [newMount, setNewMount] = useState("");
+  const [newMonitoredPath, setNewMonitoredPath] = useState("");
+  const [newMonitoredLabel, setNewMonitoredLabel] = useState("");
   const excludedMounts = form.statsConfig.excludedMounts ?? [];
+  const monitoredMounts = form.statsConfig.monitoredMounts ?? [];
 
   const addExcludedMount = () => {
     const value = newMount.trim();
@@ -44,6 +47,20 @@ export function HostStatsTab({
       excludedMounts: [...excludedMounts, value],
     });
     setNewMount("");
+  };
+
+  const addMonitoredMount = () => {
+    const path = newMonitoredPath.trim();
+    if (!path || monitoredMounts.some((entry) => entry.path === path)) return;
+    setField("statsConfig", {
+      ...form.statsConfig,
+      monitoredMounts: [
+        ...monitoredMounts,
+        { path, label: newMonitoredLabel.trim() || undefined },
+      ],
+    });
+    setNewMonitoredPath("");
+    setNewMonitoredLabel("");
   };
 
   return (
@@ -158,6 +175,78 @@ export function HostStatsTab({
                 />
               </SettingRow>
             )}
+        </div>
+      </SectionCard>
+      <SectionCard
+        title={t("hosts.monitoredMountsLabel")}
+        icon={<HardDrive className="size-3.5" />}
+      >
+        <div className="flex flex-col gap-3 py-3">
+          <p className="text-xs text-muted-foreground">
+            {t("hosts.monitoredMountsDesc")}
+          </p>
+          <div className="grid grid-cols-[1fr_0.7fr_auto] gap-2">
+            <Input
+              className="h-7 text-xs"
+              placeholder={t("hosts.monitoredMountPathPlaceholder")}
+              value={newMonitoredPath}
+              onChange={(e) => setNewMonitoredPath(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addMonitoredMount();
+                }
+              }}
+            />
+            <Input
+              className="h-7 text-xs"
+              placeholder={t("hosts.monitoredMountLabelPlaceholder")}
+              value={newMonitoredLabel}
+              onChange={(e) => setNewMonitoredLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addMonitoredMount();
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-[10px]"
+              onClick={addMonitoredMount}
+            >
+              <Plus className="mr-1 size-3" /> {t("hosts.addMonitoredMount")}
+            </Button>
+          </div>
+          {monitoredMounts.map((entry) => (
+            <div
+              key={entry.path}
+              className="flex items-center gap-2 border border-border bg-muted/20 p-2 group"
+            >
+              <span className="min-w-0 flex-1 truncate font-mono text-xs">
+                {entry.path}
+              </span>
+              {entry.label && (
+                <span className="truncate text-xs text-muted-foreground">
+                  {entry.label}
+                </span>
+              )}
+              <button
+                className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                onClick={() =>
+                  setField("statsConfig", {
+                    ...form.statsConfig,
+                    monitoredMounts: monitoredMounts.filter(
+                      (mount) => mount.path !== entry.path,
+                    ),
+                  })
+                }
+              >
+                <Trash2 className="size-3.5" />
+              </button>
+            </div>
+          ))}
         </div>
       </SectionCard>
       <SectionCard

@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useState, type MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Box,
@@ -18,6 +18,7 @@ import {
   MemoryStick,
   MessagesSquare,
   Monitor,
+  MonitorUp,
   MoreHorizontal,
   MousePointerClick,
   Network,
@@ -312,6 +313,15 @@ export function HostItem({
   const canOverrideAuth = canOverrideHostAuth(host, "ssh");
   const [authOverrideOpen, setAuthOverrideOpen] = useState(false);
   const [parentDragOver, setParentDragOver] = useState(false);
+  const [nativeRdpAvailable, setNativeRdpAvailable] = useState(false);
+
+  useEffect(() => {
+    if (!window.electronAPI?.isElectron) return;
+    window.electronAPI
+      .getPlatform()
+      .then((platform) => setNativeRdpAvailable(platform === "win32"))
+      .catch(() => setNativeRdpAvailable(false));
+  }, []);
   // Density decides the base shape; the preset can only take rows away, never
   // add them, so a row's real height stays <= the virtualizer's fixed estimate.
   const densityTokens = HOST_ITEM_DENSITY_TOKENS[density];
@@ -344,6 +354,25 @@ export function HostItem({
       toast.success(t("nav.passwordCopied"));
     } catch {
       toast.error(t("nav.failedToCopyPassword"));
+    }
+  }
+
+  async function handleNativeRdp(e: MouseEvent) {
+    e.stopPropagation();
+    try {
+      const result = await window.electronAPI.openNativeRdp({
+        host: host.ip,
+        port: host.rdpPort ?? 3389,
+        username: host.rdpUser,
+        domain: host.domain,
+      });
+      if (result.success) {
+        toast.success(t("hosts.nativeRdpOpened"));
+      } else {
+        toast.error(result.error || t("hosts.nativeRdpFailed"));
+      }
+    } catch {
+      toast.error(t("hosts.nativeRdpFailed"));
     }
   }
 
@@ -385,6 +414,15 @@ export function HostItem({
           className={trayButtonClass}
         >
           <Monitor className="size-3.5" />
+        </button>
+      )}
+      {host.enableRdp && nativeRdpAvailable && (
+        <button
+          title={t("hosts.openNativeRdp")}
+          onClick={handleNativeRdp}
+          className={trayButtonClass}
+        >
+          <MonitorUp className="size-3.5" />
         </button>
       )}
       {host.enableVnc && (

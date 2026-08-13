@@ -29,6 +29,12 @@ interface DialogResult {
 export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   getPlatform: () => Promise<string>;
+  openNativeRdp: (options: {
+    host: string;
+    port?: number;
+    username?: string;
+    domain?: string;
+  }) => Promise<{ success: boolean; error?: string }>;
   getSetting?: (key: string) => Promise<string | null | undefined>;
   setSetting?: (key: string, value: string) => Promise<void>;
 
