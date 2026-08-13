@@ -356,6 +356,31 @@ describe("Proxmox / Proxmox Stats independent toggles", () => {
     });
   });
 
+  it("preserves the source identity when editing an imported Proxmox guest", () => {
+    const source = {
+      source: "proxmox" as const,
+      sourceHostId: 7,
+      node: "pve1",
+      vmid: 101,
+      type: "qemu" as const,
+      lastSeenAt: "2026-08-14T00:00:00.000Z",
+      lastStatus: "running",
+      missingSince: null,
+    };
+    const form = {
+      ...createHostEditorForm({
+        enableProxmox: false,
+        proxmoxConfig: { source },
+      } as unknown as Host),
+      name: "Edited guest",
+    };
+
+    const payload = buildHostEditorPayload(form, sshOnly);
+
+    expect(payload.enableProxmox).toBe(false);
+    expect(payload.proxmoxConfig).toEqual({ source });
+  });
+
   it("sends both configs when both toggles are on", () => {
     const form = {
       ...createHostEditorForm(null),
