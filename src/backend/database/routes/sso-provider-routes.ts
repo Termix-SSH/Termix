@@ -12,6 +12,11 @@ import {
   decryptSsoConfigSecrets,
   encryptSsoConfigSecrets,
 } from "../../utils/system-secret-crypto.js";
+import { isTrustedProxyAuthEnabled } from "../../utils/trusted-proxy-auth.js";
+
+function isOidcLike(type: SSOProviderType): boolean {
+  return type === "oidc" || type === "github" || type === "google";
+}
 
 const authManager = AuthManager.getInstance();
 
@@ -188,6 +193,12 @@ export function registerSSOProviderRoutes(router: Router): void {
       if (!validTypes.includes(type)) {
         return res.status(400).json({ error: "Invalid provider type" });
       }
+      if (isTrustedProxyAuthEnabled() && enabled && isOidcLike(type)) {
+        return res.status(409).json({
+          error:
+            "OIDC providers cannot be enabled with trusted proxy authentication",
+        });
+      }
 
       const configWithDefaults =
         type === "github" || type === "google"
@@ -316,6 +327,19 @@ export function registerSSOProviderRoutes(router: Router): void {
         displayOrder?: number;
         config?: Record<string, unknown>;
       };
+
+      const effectiveType = type ?? (existing.type as SSOProviderType);
+      const effectiveEnabled = enabled ?? existing.enabled;
+      if (
+        isTrustedProxyAuthEnabled() &&
+        effectiveEnabled &&
+        isOidcLike(effectiveType)
+      ) {
+        return res.status(409).json({
+          error:
+            "OIDC providers cannot be enabled with trusted proxy authentication",
+        });
+      }
 
       let encryptedConfig = existing.config;
       if (rawConfig !== undefined) {

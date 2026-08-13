@@ -14,6 +14,7 @@ import {
   versionLogger,
   setGlobalLogLevel,
 } from "./utils/logger.js";
+import { getTrustedProxyAuthConfig } from "./utils/trusted-proxy-auth.js";
 
 /**
  * host:port from DATABASE_URL for the startup log. Parsed rather than printed
@@ -152,6 +153,8 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       version: version,
     });
 
+    const trustedProxyAuth = getTrustedProxyAuthConfig();
+
     const systemCrypto = SystemCrypto.getInstance();
     await systemCrypto.initializeJWTSecret();
     await systemCrypto.initializeDatabaseKey();
@@ -195,6 +198,41 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
         ? {}
         : { host: describeDatabaseHost() }),
     });
+
+    if (trustedProxyAuth.enabled) {
+      const {
+        createCurrentSettingsRepository,
+        createCurrentSsoProviderRepository,
+        createCurrentUserRepository,
+      } = await import("./database/repositories/factory.js");
+      const [legacyOidc, providers, users] = await Promise.all([
+        createCurrentSettingsRepository().get("oidc_config"),
+        createCurrentSsoProviderRepository().listEnabled(),
+        createCurrentUserRepository().listAll(),
+      ]);
+      const conflictingProvider = providers.some((provider) =>
+        ["oidc", "github", "google"].includes(provider.type),
+      );
+      const conflictingUser = users.some(
+        (user) => user.isOidc || user.totpEnabled,
+      );
+      if (
+        legacyOidc ||
+        process.env.OIDC_CLIENT_ID ||
+        conflictingProvider ||
+        conflictingUser
+      ) {
+        throw new Error(
+          "Trusted proxy authentication cannot start while OIDC or TOTP is enabled",
+        );
+      }
+      systemLogger.info("Trusted proxy authentication enabled", {
+        operation: "trusted_proxy_auth_enabled",
+        usernameHeader: trustedProxyAuth.usernameHeader,
+        roleHeader: trustedProxyAuth.roleHeader,
+        trustedProxyCount: trustedProxyAuth.trustedProxies.length,
+      });
+    }
 
     const { UserKeyManager } = await import("./utils/user-keys.js");
     await UserKeyManager.getInstance().initialize();

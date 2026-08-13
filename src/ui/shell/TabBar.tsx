@@ -593,24 +593,27 @@ export function TabBar({
                 <Pencil className="size-3" />
                 {t("nav.renameTab")}
               </button>
-              <div className="h-px bg-border my-1" />
-              {/* Split submenu */}
-              <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {t("terminal.split.splitTab")}
-              </div>
-              {SPLIT_MODES.filter((m) => m.id !== "none").map((mode) => (
-                <button
-                  key={mode.id}
-                  className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => {
-                    onSplitTab(contextTabId, mode.id);
-                    setContextTabId(null);
-                  }}
-                >
-                  <LayoutPanelLeft className="size-3 text-muted-foreground" />
-                  {mode.label}
-                </button>
-              ))}
+              {ctxTab.type !== "split-screen" && (
+                <>
+                  <div className="h-px bg-border my-1" />
+                  <div className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("terminal.split.splitTab")}
+                  </div>
+                  {SPLIT_MODES.filter((m) => m.id !== "none").map((mode) => (
+                    <button
+                      key={mode.id}
+                      className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => {
+                        onSplitTab(contextTabId, mode.id);
+                        setContextTabId(null);
+                      }}
+                    >
+                      <LayoutPanelLeft className="size-3 text-muted-foreground" />
+                      {mode.label}
+                    </button>
+                  ))}
+                </>
+              )}
               {isSplit && (
                 <>
                   <div className="h-px bg-border my-1" />
