@@ -8,6 +8,7 @@ const { Client, utils: ssh2Utils } = ssh2Pkg;
 import { buildSSHAlgorithms } from "../../utils/ssh-algorithms.js";
 import axios from "axios";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
+import { getErrorMessage } from "../../utils/error-message.js";
 import { sshLogger, authLogger } from "../../utils/logger.js";
 import { logAudit } from "../../utils/audit-logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -512,7 +513,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
         handleConnectToHost(connectData).catch((error) => {
           const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
+            getErrorMessage(error);
           if (
             errMsg.includes("Cannot parse privateKey") &&
             errMsg.includes("no passphrase")
@@ -966,7 +967,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
         handleConnectToHost(reconnectData).catch((error) => {
           const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
+            getErrorMessage(error);
           if (
             errMsg.includes("Cannot parse privateKey") &&
             errMsg.includes("no passphrase")
@@ -1106,7 +1107,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               type: "error",
               message:
                 "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+                (getErrorMessage(error)),
             }),
           );
         });
@@ -1213,7 +1214,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               type: "error",
               message:
                 "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+                (getErrorMessage(error)),
             }),
           );
         });
@@ -1586,7 +1587,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve server-side host data for ${id}`, {
           operation: "ssh_host_data",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1627,7 +1628,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve host credentials for ${id}`, {
           operation: "ssh_credentials",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     } else if (credentialId && id && userId) {
@@ -1652,7 +1653,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           operation: "ssh_credentials",
           hostId: id,
           credentialId,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1698,7 +1699,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         }
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Unknown error";
+          getErrorMessage(error);
         sshLogger.error("SSH hostname resolution failed", error, {
           operation: "terminal_dns_resolve",
           hostId: id,
@@ -2285,7 +2286,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   userId: hostConfig.userId,
                   hostId: id,
                   error:
-                    error instanceof Error ? error.message : "Unknown error",
+                    getErrorMessage(error),
                 });
               }
             })();
