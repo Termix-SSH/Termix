@@ -16,6 +16,12 @@ function getVersionFile(): string {
   return path.join(getBinaryDir(), "version.txt");
 }
 
+function getBundledDir(): string {
+  return (
+    process.env.OPKSSH_BUNDLED_DIR || path.join(process.cwd(), "opkssh-bundled")
+  );
+}
+
 interface GitHubAsset {
   name: string;
   browser_download_url: string;
@@ -50,12 +56,50 @@ export class OPKSSHBinaryManager {
       this.binaryPath = expectedPath;
       return expectedPath;
     } catch {
+      const usedBundled = await this.useBundledBinary(expectedPath);
+      if (usedBundled) {
+        this.binaryPath = expectedPath;
+        return expectedPath;
+      }
+
       systemLogger.info("OPKSSH binary not found, downloading...", {
         operation: "opkssh_binary_download_start",
       });
       await this.downloadBinary();
       this.binaryPath = expectedPath;
       return expectedPath;
+    }
+  }
+
+  private static async useBundledBinary(
+    expectedPath: string,
+  ): Promise<boolean> {
+    const binaryName = this.getBinaryName();
+    const bundledPath = path.join(getBundledDir(), binaryName);
+    const bundledVersionFile = path.join(getBundledDir(), "version.txt");
+
+    try {
+      await fs.access(bundledPath);
+      await fs.mkdir(getBinaryDir(), { recursive: true });
+      await fs.copyFile(bundledPath, expectedPath);
+      await fs.chmod(expectedPath, 0o755);
+
+      try {
+        const bundledVersion = (
+          await fs.readFile(bundledVersionFile, "utf8")
+        ).trim();
+        await fs.writeFile(getVersionFile(), bundledVersion, "utf8");
+      } catch {
+        // Bundled version file is optional
+      }
+
+      systemLogger.info("Using bundled OPKSSH binary", {
+        operation: "opkssh_binary_bundled_used",
+        path: expectedPath,
+      });
+      return true;
+    } catch {
+      return false;
     }
   }
 

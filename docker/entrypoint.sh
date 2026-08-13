@@ -60,8 +60,8 @@ fi
 
 OPKSSH_DIR="${DATA_DIR:-/app/data}/opkssh"
 if [ ! -d "$OPKSSH_DIR" ]; then
-    echo "WARNING: OPKSSH binary directory not found at $OPKSSH_DIR"
-    echo "OPKSSH will be downloaded automatically on first use."
+    echo "OPKSSH binary directory not found at $OPKSSH_DIR"
+    echo "OPKSSH will be installed from the bundled copy on first use (falls back to downloading if unavailable)."
 else
     echo "OPKSSH binary directory found at $OPKSSH_DIR"
 fi
