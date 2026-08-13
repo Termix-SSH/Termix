@@ -152,16 +152,6 @@ export async function revokeSessionShare(
   }
 }
 
-export async function endSessionShareSession(
-  shareId: string,
-): Promise<{ success: true }> {
-  try {
-    const response = await authApi.post(`/session-sharing/${shareId}/end`);
-    return response.data;
-  } catch (error) {
-    throw handleApiError(error, "end shared session");
-  }
-}
 
 // ============================================================================
 // GLOBAL ADMIN TOGGLE

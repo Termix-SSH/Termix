@@ -71,11 +71,3 @@ export async function saveHomepageLayout(
   }
 }
 
-export function getHomepageFaviconUrl(url: string): string {
-  try {
-    const base = (homepageApi.defaults.baseURL ?? "").replace(/\/$/, "");
-    return `${base}/favicon?url=${encodeURIComponent(url)}`;
-  } catch {
-    return "";
-  }
-}
