@@ -223,6 +223,14 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./utils/crypto-migration/private-shared-ssh-auth-migration.js");
     await runPrivateSharedSshAuthMigration();
 
+    const { runChannelConfigEncryptionMigration } =
+      await import("./utils/crypto-migration/channel-config-encryption.js");
+    await runChannelConfigEncryptionMigration();
+
+    const { runAutomationsMigration } =
+      await import("./utils/crypto-migration/automations-migration.js");
+    await runAutomationsMigration();
+
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();
     }
@@ -291,6 +299,11 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
           );
         });
     }
+
+    // After metrics, which the automation triggers and headless polling hook into.
+    const { startAutomationScheduler } =
+      await import("./automations/scheduler.js");
+    startAutomationScheduler();
 
     const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
     startAnalyticsHeartbeat();

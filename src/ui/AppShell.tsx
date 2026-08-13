@@ -77,6 +77,11 @@ const WorkspacesPanel = lazy(() =>
     default: m.WorkspacesPanel,
   })),
 );
+const AutomationsPanel = lazy(() =>
+  import("@/sidebar/AutomationsPanel").then((m) => ({
+    default: m.AutomationsPanel,
+  })),
+);
 const HistoryPanel = lazy(() =>
   import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
 );
@@ -1969,6 +1974,15 @@ export function AppShell({
               active={railView === "workspaces"}
               currentPayload={buildWorkspacePayload}
               onApplyWorkspace={applyWorkspace}
+            />
+          </div>
+        )}
+
+        {railView === "automations" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <AutomationsPanel
+              active={railView === "automations"}
+              onEditingChange={setSidebarEditing}
             />
           </div>
         )}

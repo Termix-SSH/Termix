@@ -1498,6 +1498,165 @@ export const alertFirings = pgTable(
 );
 // --- alerts end ---
 
+// --- automations begin ---
+export const automations = pgTable(
+  "automations",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    enabled: boolean("enabled").notNull().default(true),
+    // The whole trigger + steps graph, shaped by AutomationDefinition. Read and
+    // written as a unit, never queried by its inner structure.
+    definition: text("definition").notNull(),
+    definitionVersion: integer("definition_version").notNull().default(1),
+    concurrencyPolicy: text("concurrency_policy").notNull().default("skip"),
+    maxRunSeconds: integer("max_run_seconds").notNull().default(300),
+    dryRun: boolean("dry_run").notNull().default(false),
+    lastRunAt: text("last_run_at"),
+    lastRunStatus: text("last_run_status"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // The scheduler sweeps enabled automations for one user at a time.
+  (table) => [index("idx_automations_user").on(table.userId, table.enabled)],
+);
+
+/**
+ * Durable per-target trigger state. state_key scopes a trigger to what it is
+ * actually watching ("<hostId>", "<hostId>:/data", "<hostId>:<container>"), so
+ * a sustained-breach window can track one filesystem rather than a whole host.
+ * Living in the database rather than memory means cooldowns and dwell windows
+ * survive a restart.
+ */
+export const automationTriggerState = pgTable(
+  "automation_trigger_state",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    stateKey: varchar("state_key", { length: 255 }).notNull(),
+    breachStartedAt: text("breach_started_at"),
+    lastFiredAt: text("last_fired_at"),
+    lastValue: doublePrecision("last_value"),
+    lastObservedState: text("last_observed_state"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_trigger_state_key").on(
+      table.automationId,
+      table.stateKey,
+    ),
+  ],
+);
+
+export const automationSchedules = pgTable(
+  "automation_schedules",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    cron: text("cron"),
+    intervalSeconds: integer("interval_seconds"),
+    timezone: text("timezone"),
+    nextDueAt: varchar("next_due_at", { length: 255 }),
+    lastTickAt: text("last_tick_at"),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_schedules_automation").on(table.automationId),
+    index("idx_automation_schedules_due").on(table.nextDueAt),
+  ],
+);
+
+export const automationRuns = pgTable(
+  "automation_runs",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    triggerType: text("trigger_type").notNull(),
+    triggerContext: text("trigger_context"),
+    status: text("status").notNull(),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    finishedAt: text("finished_at"),
+    durationMs: integer("duration_ms"),
+    error: text("error"),
+    dryRun: boolean("dry_run").notNull().default(false),
+    // Set when one automation invoked another, so a chain can be traced.
+    parentRunId: integer("parent_run_id"),
+  },
+  (table) => [
+    index("idx_automation_runs_automation").on(
+      table.automationId,
+      table.startedAt,
+    ),
+    index("idx_automation_runs_user").on(table.userId, table.startedAt),
+  ],
+);
+
+export const automationRunSteps = pgTable(
+  "automation_run_steps",
+  {
+    id: serial("id").primaryKey(),
+    runId: integer("run_id")
+      .notNull()
+      .references(() => automationRuns.id, { onDelete: "cascade" }),
+    stepIndex: integer("step_index").notNull(),
+    stepId: text("step_id").notNull(),
+    stepType: text("step_type").notNull(),
+    status: text("status").notNull(),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    finishedAt: text("finished_at"),
+    output: text("output"),
+    error: text("error"),
+    truncated: boolean("truncated")
+      .notNull()
+      .default(false),
+  },
+  (table) => [
+    index("idx_automation_run_steps_run").on(table.runId, table.stepIndex),
+  ],
+);
+
+export const automationChannels = pgTable(
+  "automation_channels",
+  {
+    id: serial("id").primaryKey(),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    channelId: integer("channel_id")
+      .notNull()
+      .references(() => notificationChannels.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_channels_pair").on(
+      table.automationId,
+      table.channelId,
+    ),
+  ],
+);
+// --- automations end ---
+
 // --- homepage begin ---
 export const homepageItems = pgTable(
   "homepage_items",

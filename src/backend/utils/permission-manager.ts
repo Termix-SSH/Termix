@@ -121,10 +121,22 @@ class PermissionManager {
 
       const allPermissions = new Set<string>();
       for (const record of userRoleRecords) {
+        // A role can legitimately have no permissions column yet, and
+        // JSON.parse(null) returns null rather than throwing, which used to
+        // blow up the loop and leave the user with no permissions at all.
+        if (!record.permissions) continue;
+
         try {
-          const permissions = JSON.parse(record.permissions) as string[];
-          for (const perm of permissions) {
-            allPermissions.add(perm);
+          const parsed = JSON.parse(record.permissions) as unknown;
+          if (!Array.isArray(parsed)) {
+            databaseLogger.warn("Role permissions are not a list", {
+              operation: "get_user_permissions",
+              userId,
+            });
+            continue;
+          }
+          for (const perm of parsed) {
+            if (typeof perm === "string") allPermissions.add(perm);
           }
         } catch (parseError) {
           databaseLogger.warn("Failed to parse role permissions", {

@@ -1497,6 +1497,165 @@ export const alertFirings = mysqlTable(
 );
 // --- alerts end ---
 
+// --- automations begin ---
+export const automations = mysqlTable(
+  "automations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    enabled: boolean("enabled").notNull().default(true),
+    // The whole trigger + steps graph, shaped by AutomationDefinition. Read and
+    // written as a unit, never queried by its inner structure.
+    definition: text("definition").notNull(),
+    definitionVersion: int("definition_version").notNull().default(1),
+    concurrencyPolicy: text("concurrency_policy").notNull().default("skip"),
+    maxRunSeconds: int("max_run_seconds").notNull().default(300),
+    dryRun: boolean("dry_run").notNull().default(false),
+    lastRunAt: text("last_run_at"),
+    lastRunStatus: text("last_run_status"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  // The scheduler sweeps enabled automations for one user at a time.
+  (table) => [index("idx_automations_user").on(table.userId, table.enabled)],
+);
+
+/**
+ * Durable per-target trigger state. state_key scopes a trigger to what it is
+ * actually watching ("<hostId>", "<hostId>:/data", "<hostId>:<container>"), so
+ * a sustained-breach window can track one filesystem rather than a whole host.
+ * Living in the database rather than memory means cooldowns and dwell windows
+ * survive a restart.
+ */
+export const automationTriggerState = mysqlTable(
+  "automation_trigger_state",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    automationId: int("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    stateKey: varchar("state_key", { length: 255 }).notNull(),
+    breachStartedAt: text("breach_started_at"),
+    lastFiredAt: text("last_fired_at"),
+    lastValue: double("last_value"),
+    lastObservedState: text("last_observed_state"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_trigger_state_key").on(
+      table.automationId,
+      table.stateKey,
+    ),
+  ],
+);
+
+export const automationSchedules = mysqlTable(
+  "automation_schedules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    automationId: int("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    cron: text("cron"),
+    intervalSeconds: int("interval_seconds"),
+    timezone: text("timezone"),
+    nextDueAt: varchar("next_due_at", { length: 255 }),
+    lastTickAt: text("last_tick_at"),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_schedules_automation").on(table.automationId),
+    index("idx_automation_schedules_due").on(table.nextDueAt),
+  ],
+);
+
+export const automationRuns = mysqlTable(
+  "automation_runs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    automationId: int("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    userId: varchar("user_id", { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    triggerType: text("trigger_type").notNull(),
+    triggerContext: text("trigger_context"),
+    status: text("status").notNull(),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    finishedAt: text("finished_at"),
+    durationMs: int("duration_ms"),
+    error: text("error"),
+    dryRun: boolean("dry_run").notNull().default(false),
+    // Set when one automation invoked another, so a chain can be traced.
+    parentRunId: int("parent_run_id"),
+  },
+  (table) => [
+    index("idx_automation_runs_automation").on(
+      table.automationId,
+      table.startedAt,
+    ),
+    index("idx_automation_runs_user").on(table.userId, table.startedAt),
+  ],
+);
+
+export const automationRunSteps = mysqlTable(
+  "automation_run_steps",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    runId: int("run_id")
+      .notNull()
+      .references(() => automationRuns.id, { onDelete: "cascade" }),
+    stepIndex: int("step_index").notNull(),
+    stepId: text("step_id").notNull(),
+    stepType: text("step_type").notNull(),
+    status: text("status").notNull(),
+    startedAt: varchar("started_at", { length: 255 })
+      .notNull()
+      .default(sql`(CURRENT_TIMESTAMP)`),
+    finishedAt: text("finished_at"),
+    output: text("output"),
+    error: text("error"),
+    truncated: boolean("truncated")
+      .notNull()
+      .default(false),
+  },
+  (table) => [
+    index("idx_automation_run_steps_run").on(table.runId, table.stepIndex),
+  ],
+);
+
+export const automationChannels = mysqlTable(
+  "automation_channels",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    automationId: int("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    channelId: int("channel_id")
+      .notNull()
+      .references(() => notificationChannels.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_channels_pair").on(
+      table.automationId,
+      table.channelId,
+    ),
+  ],
+);
+// --- automations end ---
+
 // --- homepage begin ---
 export const homepageItems = mysqlTable(
   "homepage_items",

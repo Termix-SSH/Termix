@@ -48,6 +48,7 @@ describe("RAIL_ITEMS", () => {
       "ssh-tools",
       "snippets",
       "fleets",
+      "automations",
       "history",
       "session-logs",
       "split-screen",

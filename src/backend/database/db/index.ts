@@ -2291,6 +2291,159 @@ const migrateSchema = () => {
   }
   // --- alerts end ---
 
+  // --- automations begin ---
+  try {
+    sqlite.prepare("SELECT id FROM automations LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          enabled INTEGER NOT NULL DEFAULT 1,
+          definition TEXT NOT NULL,
+          definition_version INTEGER NOT NULL DEFAULT 1,
+          concurrency_policy TEXT NOT NULL DEFAULT 'skip',
+          max_run_seconds INTEGER NOT NULL DEFAULT 300,
+          dry_run INTEGER NOT NULL DEFAULT 0,
+          last_run_at TEXT,
+          last_run_status TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automations table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_trigger_state LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_trigger_state (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          state_key TEXT NOT NULL,
+          breach_started_at TEXT,
+          last_fired_at TEXT,
+          last_value REAL,
+          last_observed_state TEXT,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_trigger_state table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_schedules LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_schedules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          cron TEXT,
+          interval_seconds INTEGER,
+          timezone TEXT,
+          next_due_at TEXT,
+          last_tick_at TEXT
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_schedules table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_runs LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_runs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          trigger_type TEXT NOT NULL,
+          trigger_context TEXT,
+          status TEXT NOT NULL,
+          started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          finished_at TEXT,
+          duration_ms INTEGER,
+          error TEXT,
+          dry_run INTEGER NOT NULL DEFAULT 0,
+          parent_run_id INTEGER
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_runs table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_run_steps LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_run_steps (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          run_id INTEGER NOT NULL REFERENCES automation_runs(id) ON DELETE CASCADE,
+          step_index INTEGER NOT NULL,
+          step_id TEXT NOT NULL,
+          step_type TEXT NOT NULL,
+          status TEXT NOT NULL,
+          started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          finished_at TEXT,
+          output TEXT,
+          error TEXT,
+          truncated INTEGER NOT NULL DEFAULT 0
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_run_steps table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+
+  try {
+    sqlite.prepare("SELECT id FROM automation_channels LIMIT 1").get();
+  } catch {
+    try {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS automation_channels (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          automation_id INTEGER NOT NULL REFERENCES automations(id) ON DELETE CASCADE,
+          channel_id INTEGER NOT NULL REFERENCES notification_channels(id) ON DELETE CASCADE
+        );
+      `);
+    } catch (createError) {
+      databaseLogger.warn("Failed to create automation_channels table", {
+        operation: "schema_migration",
+        error: createError,
+      });
+    }
+  }
+  // --- automations end ---
+
   // Seed default metrics history retention setting
   try {
     ensureRawSettingDefault("metrics_history_retention_days", "7");

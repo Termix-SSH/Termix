@@ -18,6 +18,8 @@ export interface PerformanceIndex {
   name: string;
   table: string;
   columns: string;
+  /** Enforces a constraint as well as serving reads, e.g. one row per key. */
+  unique?: boolean;
 }
 
 export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
@@ -216,6 +218,51 @@ export const PERFORMANCE_INDEXES: PerformanceIndex[] = [
     table: "alert_firings",
     columns: "host_id",
   },
+
+  // Automations.
+  {
+    name: "idx_automations_user",
+    table: "automations",
+    columns: "user_id, enabled",
+  },
+  {
+    name: "idx_automation_trigger_state_key",
+    table: "automation_trigger_state",
+    columns: "automation_id, state_key",
+    unique: true,
+  },
+  {
+    name: "idx_automation_schedules_automation",
+    table: "automation_schedules",
+    columns: "automation_id",
+    unique: true,
+  },
+  {
+    name: "idx_automation_schedules_due",
+    table: "automation_schedules",
+    columns: "next_due_at",
+  },
+  {
+    name: "idx_automation_runs_automation",
+    table: "automation_runs",
+    columns: "automation_id, started_at",
+  },
+  {
+    name: "idx_automation_runs_user",
+    table: "automation_runs",
+    columns: "user_id, started_at",
+  },
+  {
+    name: "idx_automation_run_steps_run",
+    table: "automation_run_steps",
+    columns: "run_id, step_index",
+  },
+  {
+    name: "idx_automation_channels_pair",
+    table: "automation_channels",
+    columns: "automation_id, channel_id",
+    unique: true,
+  },
 ];
 
 interface IndexableDatabase {
@@ -245,7 +292,7 @@ export function createPerformanceIndexes(
   for (const index of indexes) {
     try {
       db.exec(
-        `CREATE INDEX IF NOT EXISTS ${index.name} ON ${index.table}(${index.columns})`,
+        `CREATE ${index.unique ? "UNIQUE " : ""}INDEX IF NOT EXISTS ${index.name} ON ${index.table}(${index.columns})`,
       );
       summary.created++;
     } catch (error) {

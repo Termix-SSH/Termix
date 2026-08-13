@@ -1494,6 +1494,165 @@ export const alertFirings = sqliteTable(
 );
 // --- alerts end ---
 
+// --- automations begin ---
+export const automations = sqliteTable(
+  "automations",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    // The whole trigger + steps graph, shaped by AutomationDefinition. Read and
+    // written as a unit, never queried by its inner structure.
+    definition: text("definition").notNull(),
+    definitionVersion: integer("definition_version").notNull().default(1),
+    concurrencyPolicy: text("concurrency_policy").notNull().default("skip"),
+    maxRunSeconds: integer("max_run_seconds").notNull().default(300),
+    dryRun: integer("dry_run", { mode: "boolean" }).notNull().default(false),
+    lastRunAt: text("last_run_at"),
+    lastRunStatus: text("last_run_status"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  // The scheduler sweeps enabled automations for one user at a time.
+  (table) => [index("idx_automations_user").on(table.userId, table.enabled)],
+);
+
+/**
+ * Durable per-target trigger state. state_key scopes a trigger to what it is
+ * actually watching ("<hostId>", "<hostId>:/data", "<hostId>:<container>"), so
+ * a sustained-breach window can track one filesystem rather than a whole host.
+ * Living in the database rather than memory means cooldowns and dwell windows
+ * survive a restart.
+ */
+export const automationTriggerState = sqliteTable(
+  "automation_trigger_state",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    stateKey: text("state_key").notNull(),
+    breachStartedAt: text("breach_started_at"),
+    lastFiredAt: text("last_fired_at"),
+    lastValue: real("last_value"),
+    lastObservedState: text("last_observed_state"),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_trigger_state_key").on(
+      table.automationId,
+      table.stateKey,
+    ),
+  ],
+);
+
+export const automationSchedules = sqliteTable(
+  "automation_schedules",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    cron: text("cron"),
+    intervalSeconds: integer("interval_seconds"),
+    timezone: text("timezone"),
+    nextDueAt: text("next_due_at"),
+    lastTickAt: text("last_tick_at"),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_schedules_automation").on(table.automationId),
+    index("idx_automation_schedules_due").on(table.nextDueAt),
+  ],
+);
+
+export const automationRuns = sqliteTable(
+  "automation_runs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    triggerType: text("trigger_type").notNull(),
+    triggerContext: text("trigger_context"),
+    status: text("status").notNull(),
+    startedAt: text("started_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    finishedAt: text("finished_at"),
+    durationMs: integer("duration_ms"),
+    error: text("error"),
+    dryRun: integer("dry_run", { mode: "boolean" }).notNull().default(false),
+    // Set when one automation invoked another, so a chain can be traced.
+    parentRunId: integer("parent_run_id"),
+  },
+  (table) => [
+    index("idx_automation_runs_automation").on(
+      table.automationId,
+      table.startedAt,
+    ),
+    index("idx_automation_runs_user").on(table.userId, table.startedAt),
+  ],
+);
+
+export const automationRunSteps = sqliteTable(
+  "automation_run_steps",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    runId: integer("run_id")
+      .notNull()
+      .references(() => automationRuns.id, { onDelete: "cascade" }),
+    stepIndex: integer("step_index").notNull(),
+    stepId: text("step_id").notNull(),
+    stepType: text("step_type").notNull(),
+    status: text("status").notNull(),
+    startedAt: text("started_at")
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    finishedAt: text("finished_at"),
+    output: text("output"),
+    error: text("error"),
+    truncated: integer("truncated", { mode: "boolean" })
+      .notNull()
+      .default(false),
+  },
+  (table) => [
+    index("idx_automation_run_steps_run").on(table.runId, table.stepIndex),
+  ],
+);
+
+export const automationChannels = sqliteTable(
+  "automation_channels",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    automationId: integer("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    channelId: integer("channel_id")
+      .notNull()
+      .references(() => notificationChannels.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("idx_automation_channels_pair").on(
+      table.automationId,
+      table.channelId,
+    ),
+  ],
+);
+// --- automations end ---
+
 // --- homepage begin ---
 export const homepageItems = sqliteTable(
   "homepage_items",

@@ -28,6 +28,16 @@ export const PERMISSION_CATALOG: PermissionCatalogEntry[] = [
     ],
   },
   {
+    group: "automations",
+    permissions: [
+      "automations.view",
+      "automations.create",
+      "automations.edit",
+      "automations.delete",
+      "automations.run",
+    ],
+  },
+  {
     group: "credentials",
     permissions: [
       "credentials.view",

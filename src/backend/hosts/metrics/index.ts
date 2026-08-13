@@ -52,6 +52,10 @@ import { registerProxmoxStatsRoutes } from "./proxmox-stats-routes.js";
 import { registerProxmoxStatsHistoryRoutes } from "./proxmox-stats-history-routes.js";
 import { ProxmoxPollingManager } from "./proxmox-stats-polling.js";
 import { AlertEngine } from "./alert-engine.js";
+import {
+  notifyAutomationMetrics,
+  notifyAutomationStatus,
+} from "./automation-bridge.js";
 import { registerManagerRoutes } from "./managers/index.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import { AccessDeniedError } from "./managers/route-helpers.js";
@@ -587,6 +591,7 @@ class PollingManager {
       AlertEngine.getInstance()
         .evaluateStatus(refreshedHost.id, isOnline)
         .catch(() => {});
+      notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, isOnline);
     } catch {
       const statusEntry: StatusEntry = {
         status: "offline",
@@ -596,6 +601,7 @@ class PollingManager {
       AlertEngine.getInstance()
         .evaluateStatus(refreshedHost.id, false)
         .catch(() => {});
+      notifyAutomationStatus(refreshedHost.id, refreshedHost.userId, false);
     }
   }
 
@@ -652,6 +658,7 @@ class PollingManager {
       AlertEngine.getInstance()
         .evaluateMetrics(refreshedHost.id, metrics)
         .catch(() => {});
+      notifyAutomationMetrics(refreshedHost.id, refreshedHost.userId, metrics);
       pollingBackoff.reset(refreshedHost.id);
       authFailureTracker.reset(refreshedHost.id);
     } catch (error) {
@@ -2916,6 +2923,20 @@ app.post("/metrics/connect-totp", async (req, res) => {
     });
   }
 });
+
+// Lets automations keep metrics flowing for hosts they watch, through the same
+// viewer refcount the UI uses rather than around it.
+import("../../automations/headless-viewer.js")
+  .then(({ setViewerRegistry }) => {
+    setViewerRegistry({
+      registerViewer: (hostId, sessionId, userId) =>
+        pollingManager.registerViewer(hostId, sessionId, userId),
+      unregisterViewer: (hostId, sessionId) =>
+        pollingManager.unregisterViewer(hostId, sessionId),
+      updateHeartbeat: (sessionId) => pollingManager.updateHeartbeat(sessionId),
+    });
+  })
+  .catch(() => {});
 
 registerHostMetricsViewerRoutes(app, {
   fetchHostById,

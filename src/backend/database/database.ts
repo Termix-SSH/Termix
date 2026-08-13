@@ -29,6 +29,7 @@ import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
 import alertRulesRoutes from "./routes/alert-rules-routes.js";
+import automationsRoutes from "./routes/automations.js";
 import syncRoutes from "./routes/sync.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
 import { createCompressionMiddleware } from "../utils/compression-config.js";
@@ -1762,6 +1763,9 @@ app.use("/termix-id", termixIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
 app.use("/vault", vaultRoutes);
+// Before the alert routes, which are mounted at the root and would otherwise
+// have first claim on the path.
+app.use("/automations", automationsRoutes);
 app.use("/", alertRulesRoutes);
 app.use("/sync", syncRoutes);
 

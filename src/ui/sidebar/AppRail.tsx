@@ -26,6 +26,7 @@ export type RailView =
   | "user-profile"
   | "admin-settings"
   | "alerts"
+  | "automations"
   | "fleets"
   | "workspaces";
 

@@ -14,6 +14,7 @@ import {
   Settings,
   Usb,
   User,
+  Workflow,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -87,6 +88,12 @@ export const RAIL_ITEMS: RailItemDef[] = [
     mobilePrimary: true,
   },
   { id: "fleets", icon: Boxes, labelKey: "nav.fleets", separatorAfter: true },
+  {
+    id: "automations",
+    icon: Workflow,
+    labelKey: "nav.automations",
+    separatorAfter: true,
+  },
   { id: "history", icon: Clock, labelKey: "nav.history", separatorAfter: true },
   {
     id: "session-logs",

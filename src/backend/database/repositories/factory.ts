@@ -5,6 +5,7 @@ import { primeSettingsCache, readCachedSetting } from "./settings-cache.js";
 import type { DatabaseContext } from "./database-context.js";
 import { WebauthnCredentialRepository } from "./webauthn-credential-repository.js";
 import { AlertRepository } from "./alert-repository.js";
+import { AutomationRepository } from "./automation-repository.js";
 import { ApiKeyRepository } from "./api-key-repository.js";
 import { AuditLogRepository } from "./audit-log-repository.js";
 import { C2sTunnelPresetRepository } from "./c2s-tunnel-preset-repository.js";
@@ -129,6 +130,13 @@ export function createCurrentAlertRepository(): AlertRepository {
   return new AlertRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("alert_repository_write"),
+  );
+}
+
+export function createCurrentAutomationRepository(): AutomationRepository {
+  return new AutomationRepository(
+    createCurrentRepositoryContext(),
+    createCurrentRepositoryWriteHook("automation_repository_write"),
   );
 }
 
