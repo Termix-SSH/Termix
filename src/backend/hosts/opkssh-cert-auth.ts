@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../utils/error-message.js";
 // SSH certificate authentication workarounds for ssh2.
 // ssh2 doesn't support OpenSSH cert auth natively — this module grafts
 // the certificate onto the parsed key, wraps ECDSA signing to convert
@@ -357,7 +358,7 @@ export async function setupCACertAuth(
   const parsed = passphrase ? parseKey(keyBuf, passphrase) : parseKey(keyBuf);
 
   if (parsed instanceof Error || !parsed) {
-    const errMsg = parsed instanceof Error ? parsed.message : "unknown error";
+    const errMsg = getErrorMessage(parsed, "unknown error");
     throw new Error(`Failed to parse private key for CA cert auth: ${errMsg}`);
   }
   const privKey = (

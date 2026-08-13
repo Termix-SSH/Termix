@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import cookieParser from "cookie-parser";
 import { Client, type ConnectConfig } from "ssh2";
@@ -391,7 +392,7 @@ async function requireHost(
 }
 
 function toErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Unknown error";
+  return getErrorMessage(err);
 }
 
 // Destructive tmux actions terminate processes on the remote host, so they
@@ -432,7 +433,7 @@ type TmuxErrorCode =
   "TMUX_NOT_INSTALLED" | "TMUX_NO_SERVER" | "HOST_UNREACHABLE" | "TMUX_ERROR";
 
 function classifyTmuxError(err: unknown): TmuxErrorCode {
-  const msg = err instanceof Error ? err.message : "";
+  const msg = getErrorMessage(err, "");
   if (/command not found|exited with code 127/i.test(msg))
     return "TMUX_NOT_INSTALLED";
   if (/no server running|lost server/i.test(msg)) return "TMUX_NO_SERVER";

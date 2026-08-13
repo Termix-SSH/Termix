@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import net from "net";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
@@ -404,7 +405,7 @@ class PollingManager {
         parsed = temp as StatsConfig;
       } catch (error) {
         statsLogger.warn(
-          `Failed to parse statsConfig: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Failed to parse statsConfig: ${getErrorMessage(error)}`,
           {
             operation: "parse_stats_config_error",
             statsConfigStr,
@@ -1045,7 +1046,7 @@ async function fetchAllHosts(
         }
       } catch (err) {
         statsLogger.warn(
-          `Failed to resolve credentials for host ${host.id}: ${err instanceof Error ? err.message : "Unknown error"}`,
+          `Failed to resolve credentials for host ${host.id}: ${getErrorMessage(err)}`,
         );
       }
     }
@@ -1237,7 +1238,7 @@ async function resolveHostCredentials(
         }
       } catch (error) {
         statsLogger.warn(
-          `Failed to resolve credential ${host.credentialId} for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Failed to resolve credential ${host.credentialId} for host ${host.id}: ${getErrorMessage(error)}`,
         );
         addLegacyCredentials(baseHost, host);
         if (baseHost.authType === "credential") {
@@ -1255,7 +1256,7 @@ async function resolveHostCredentials(
     return baseHost as unknown as SSHHostWithCredentials;
   } catch (error) {
     statsLogger.error(
-      `Failed to resolve host credentials for host ${host.id}: ${error instanceof Error ? error.message : "Unknown error"}`,
+      `Failed to resolve host credentials for host ${host.id}: ${getErrorMessage(error)}`,
     );
     return undefined;
   }
@@ -1361,7 +1362,7 @@ async function buildSshConfig(
       }
     } catch (keyError) {
       statsLogger.error(
-        `SSH key format error for host ${host.ip}: ${keyError instanceof Error ? keyError.message : "Unknown error"}`,
+        `SSH key format error for host ${host.ip}: ${getErrorMessage(keyError)}`,
       );
       throw new Error(`Invalid SSH key format for host ${host.ip}`, {
         cause: keyError,
@@ -1470,9 +1471,7 @@ function createSshFactory(host: SSHHostWithCredentials): () => Promise<Client> {
       } catch (proxyError) {
         throw new Error(
           "Proxy connection failed: " +
-            (proxyError instanceof Error
-              ? proxyError.message
-              : "Unknown error"),
+            (getErrorMessage(proxyError)),
           { cause: proxyError },
         );
       }
@@ -2597,7 +2596,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
                 createConnectionLog(
                   "error",
                   "proxy",
-                  `Jump host connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  `Jump host connection failed: ${getErrorMessage(error)}`,
                 ),
               );
               reject(error);
@@ -2633,7 +2632,7 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
                 createConnectionLog(
                   "error",
                   "proxy",
-                  `SOCKS5 proxy connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+                  `SOCKS5 proxy connection failed: ${getErrorMessage(error)}`,
                 ),
               );
               reject(error);
@@ -2666,14 +2665,12 @@ app.post("/metrics/start/:id", validateHostId, async (req, res) => {
       createConnectionLog(
         "error",
         "stats_connecting",
-        `Failed to start metrics: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to start metrics: ${getErrorMessage(error)}`,
       ),
     );
     res.status(500).json({
       error:
-        error instanceof Error
-          ? error.message
-          : "Failed to start metrics collection",
+        getErrorMessage(error, "Failed to start metrics collection"),
       connectionLogs,
     });
   }
@@ -2745,9 +2742,7 @@ app.post("/metrics/stop/:id", validateHostId, async (req, res) => {
     });
     res.status(500).json({
       error:
-        error instanceof Error
-          ? error.message
-          : "Failed to stop metrics collection",
+        getErrorMessage(error, "Failed to stop metrics collection"),
     });
   }
 });

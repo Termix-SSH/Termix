@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { Request, Response } from "express";
@@ -183,9 +184,7 @@ router.post(
       authLogger.error("Failed to create snippet folder", err);
       res.status(500).json({
         error:
-          err instanceof Error
-            ? err.message
-            : "Failed to create snippet folder",
+          getErrorMessage(err, "Failed to create snippet folder"),
       });
     }
   },
@@ -270,9 +269,7 @@ router.put(
       authLogger.error("Failed to update snippet folder metadata", err);
       res.status(500).json({
         error:
-          err instanceof Error
-            ? err.message
-            : "Failed to update snippet folder metadata",
+          getErrorMessage(err, "Failed to update snippet folder metadata"),
       });
     }
   },
@@ -358,9 +355,7 @@ router.put(
       authLogger.error("Failed to rename snippet folder", err);
       res.status(500).json({
         error:
-          err instanceof Error
-            ? err.message
-            : "Failed to rename snippet folder",
+          getErrorMessage(err, "Failed to rename snippet folder"),
       });
     }
   },
@@ -432,9 +427,7 @@ router.delete(
       authLogger.error("Failed to delete snippet folder", err);
       res.status(500).json({
         error:
-          err instanceof Error
-            ? err.message
-            : "Failed to delete snippet folder",
+          getErrorMessage(err, "Failed to delete snippet folder"),
       });
     }
   },
@@ -515,7 +508,7 @@ router.put(
       authLogger.error("Failed to reorder snippets", err);
       res.status(500).json({
         error:
-          err instanceof Error ? err.message : "Failed to reorder snippets",
+          getErrorMessage(err, "Failed to reorder snippets"),
       });
     }
   },
@@ -784,7 +777,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to execute snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to execute snippet",
+        error: getErrorMessage(err, "Failed to execute snippet"),
       });
     }
   },
@@ -1041,7 +1034,7 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to fetch snippet",
+        error: getErrorMessage(err, "Failed to fetch snippet"),
       });
     }
   },
@@ -1143,7 +1136,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to create snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to create snippet",
+        error: getErrorMessage(err, "Failed to create snippet"),
       });
     }
   },
@@ -1241,7 +1234,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to update snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to update snippet",
+        error: getErrorMessage(err, "Failed to update snippet"),
       });
     }
   },
@@ -1326,7 +1319,7 @@ router.delete(
     } catch (err) {
       authLogger.error("Failed to delete snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to delete snippet",
+        error: getErrorMessage(err, "Failed to delete snippet"),
       });
     }
   },

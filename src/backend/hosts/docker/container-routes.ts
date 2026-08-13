@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type express from "express";
 import { logger } from "../../utils/logger.js";
 import {
@@ -152,7 +153,7 @@ export function registerDockerContainerRoutes(
 
       res.status(500).json({
         error:
-          error instanceof Error ? error.message : "Failed to list containers",
+          getErrorMessage(error, "Failed to list containers"),
       });
     }
   });
@@ -232,7 +233,7 @@ export function registerDockerContainerRoutes(
     } catch (error) {
       session.activeOperations--;
 
-      const errorMsg = error instanceof Error ? error.message : "";
+      const errorMsg = getErrorMessage(error, "");
       if (errorMsg.includes("No such container")) {
         return res.status(404).json({
           error: "Container not found",
@@ -329,7 +330,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,
@@ -429,7 +430,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,
@@ -529,7 +530,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,
@@ -629,7 +630,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,
@@ -729,7 +730,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,
@@ -838,7 +839,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,
@@ -982,7 +983,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,
@@ -1104,7 +1105,7 @@ export function registerDockerContainerRoutes(
       } catch (error) {
         session.activeOperations--;
 
-        const errorMsg = error instanceof Error ? error.message : "";
+        const errorMsg = getErrorMessage(error, "");
         if (errorMsg.includes("No such container")) {
           return res.status(404).json({
             success: false,

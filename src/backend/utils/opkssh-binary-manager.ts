@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import { promises as fs } from "fs";
 import path from "path";
 import { createWriteStream } from "fs";
@@ -184,7 +185,7 @@ export class OPKSSHBinaryManager {
     } catch (error) {
       systemLogger.warn("Failed to check for OPKSSH updates", {
         operation: "opkssh_update_check_failed",
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
       return false;
     }

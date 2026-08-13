@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sendWakeOnLan, isValidMac } from "../../utils/wake-on-lan.js";
@@ -83,7 +84,7 @@ export function registerHostNetworkRoutes(
         });
         res.status(500).json({
           success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     },
@@ -133,9 +134,7 @@ export function registerHostNetworkRoutes(
         });
         res.status(500).json({
           error:
-            error instanceof Error
-              ? error.message
-              : "Failed to send WoL packet",
+            getErrorMessage(error, "Failed to send WoL packet"),
         });
       }
     },

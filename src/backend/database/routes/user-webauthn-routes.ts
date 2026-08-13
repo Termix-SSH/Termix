@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Request, RequestHandler, Router } from "express";
 import type {
   AuthenticationResponseJSON,
@@ -322,7 +323,7 @@ export function registerUserWebAuthnRoutes(
         authLogger.warn("WebAuthn registration failed", {
           operation: "webauthn_register_verify",
           userId,
-          error: error instanceof Error ? error.message : "Unknown",
+          error: getErrorMessage(error, "Unknown"),
         });
         res.status(400).json({ error: "Passkey registration failed" });
       }
@@ -539,7 +540,7 @@ export function registerUserWebAuthnRoutes(
         operation: "webauthn_auth_verify",
         credentialId: credential.id,
         userId: credential.userId,
-        error: error instanceof Error ? error.message : "Unknown",
+        error: getErrorMessage(error, "Unknown"),
       });
       res.status(401).json({ error: "Passkey authentication failed" });
     }

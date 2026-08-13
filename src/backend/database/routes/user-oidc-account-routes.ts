@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { RequestHandler, Router } from "express";
 import { AuthManager } from "../../utils/auth-manager.js";
@@ -163,7 +164,7 @@ export function registerUserOidcAccountRoutes(
       });
       res.status(500).json({
         error: "Failed to link accounts",
-        details: err instanceof Error ? err.message : "Unknown error",
+        details: getErrorMessage(err),
       });
     }
   });
@@ -297,7 +298,7 @@ export function registerUserOidcAccountRoutes(
         });
         res.status(500).json({
           error: "Failed to unlink OIDC",
-          details: err instanceof Error ? err.message : "Unknown error",
+          details: getErrorMessage(err),
         });
       }
     },

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import ssh2Pkg from "ssh2";
 const ssh2Utils = ssh2Pkg.utils;
 
@@ -337,7 +338,7 @@ export function parseSSHKey(
       // expected - fallback key type detection may fail
     }
 
-    const parserError = error instanceof Error ? error.message : "";
+    const parserError = getErrorMessage(error, "");
     const isPuttyKey = PUTTY_PRIVATE_KEY_RE.test(privateKeyData.trim());
 
     return {
@@ -368,9 +369,7 @@ export function parsePublicKey(publicKeyData: string): PublicKeyInfo {
       keyType: "unknown",
       success: false,
       error:
-        error instanceof Error
-          ? error.message
-          : "Unknown error parsing public key",
+        getErrorMessage(error, "Unknown error parsing public key"),
     };
   }
 }
@@ -470,9 +469,7 @@ export function validateKeyPair(
       privateKeyType: "unknown",
       publicKeyType: "unknown",
       error:
-        error instanceof Error
-          ? error.message
-          : "Unknown error during validation",
+        getErrorMessage(error, "Unknown error during validation"),
     };
   }
 }

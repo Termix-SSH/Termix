@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import express from "express";
 import http from "http";
 import https from "https";
@@ -492,7 +493,7 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to generate RSS format",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1147,7 +1148,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to export user data",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1613,7 +1614,7 @@ app.post(
       });
       res.status(500).json({
         error: "Failed to import SQLite data",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: getErrorMessage(error),
       });
     }
   },
@@ -1674,7 +1675,7 @@ app.post("/database/export/preview", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to generate export preview",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1735,7 +1736,7 @@ app.post("/database/restore", requireAdmin, async (req, res) => {
     });
     res.status(500).json({
       error: "Database restore failed",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1932,7 +1933,7 @@ app.get(
       });
       res.status(500).json({
         error: "Failed to get migration status",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: getErrorMessage(error),
       });
     }
   },
@@ -2010,7 +2011,7 @@ app.get(
       });
       res.status(500).json({
         error: "Failed to get migration history",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: getErrorMessage(error),
       });
     }
   },

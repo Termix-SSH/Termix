@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
@@ -154,7 +155,7 @@ router.post(
         operation: "terminal_image_upload_decode",
         mimeType: req.file.mimetype,
         bytes: req.file.size,
-        reason: error instanceof Error ? error.message : "unknown",
+        reason: getErrorMessage(error, "unknown"),
       });
       return res.status(400).json({
         error: "Invalid image data",
@@ -182,7 +183,7 @@ router.post(
         operation: "terminal_image_upload_sftp_failed",
         userId,
         instanceId,
-        reason: error instanceof Error ? error.message : "unknown",
+        reason: getErrorMessage(error, "unknown"),
       });
       return res.status(502).json({
         error: "Failed to write image to the remote host",
@@ -305,7 +306,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to save command to history", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to save command",
+        error: getErrorMessage(err, "Failed to save command"),
       });
     }
   },
@@ -363,7 +364,7 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch command history", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to fetch history",
+        error: getErrorMessage(err, "Failed to fetch history"),
       });
     }
   },
@@ -427,7 +428,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to delete command from history", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to delete command",
+        error: getErrorMessage(err, "Failed to delete command"),
       });
     }
   },
@@ -486,7 +487,7 @@ router.delete(
     } catch (err) {
       authLogger.error("Failed to clear command history", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to clear history",
+        error: getErrorMessage(err, "Failed to clear history"),
       });
     }
   },
@@ -527,7 +528,7 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch session settings", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to fetch settings",
+        error: getErrorMessage(err, "Failed to fetch settings"),
       });
     }
   },
@@ -597,7 +598,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to save session settings", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to save settings",
+        error: getErrorMessage(err, "Failed to save settings"),
       });
     }
   },

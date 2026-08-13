@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import { SerialPort } from "serialport";
 import { AuthManager } from "../utils/auth-manager.js";
@@ -109,7 +110,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         } catch (err) {
           send({
             type: "error",
-            data: err instanceof Error ? err.message : "Failed to list ports",
+            data: getErrorMessage(err, "Failed to list ports"),
           });
         }
         break;
@@ -173,7 +174,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           send({
             type: "error",
             data:
-              err instanceof Error ? err.message : "Failed to open serial port",
+              getErrorMessage(err, "Failed to open serial port"),
           });
         }
         break;

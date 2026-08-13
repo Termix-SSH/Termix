@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { Request, Response } from "express";
@@ -688,9 +689,7 @@ router.post(
               hostId: host.id,
               accessId: accessGrant.id,
               error:
-                snapshotError instanceof Error
-                  ? snapshotError.message
-                  : "Unknown error",
+                getErrorMessage(snapshotError),
             });
           }
         }
@@ -824,7 +823,7 @@ async function runAcrossFleet(
           hostId: host.id,
           hostName: host.name,
           success: false,
-          error: err instanceof Error ? err.message : "Unknown error",
+          error: getErrorMessage(err),
         } satisfies FleetHostResult;
       }
     }),

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import { getAdapter } from "./providers/registry.js";
 import type {
   ChatMessage,
@@ -70,7 +71,7 @@ export async function* runAgent(
       }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "The provider request failed";
+        getErrorMessage(error, "The provider request failed");
       yield { type: "error", message };
       return;
     }
@@ -144,7 +145,7 @@ async function runTool(call: ToolCall, context: ToolContext): Promise<unknown> {
     return await tool.handler(call.arguments ?? {}, context);
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "The tool failed",
+      error: getErrorMessage(error, "The tool failed"),
     };
   }
 }

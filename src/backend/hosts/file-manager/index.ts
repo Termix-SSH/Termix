@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import {
   logAudit,
@@ -882,7 +883,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
       fileLogger.warn(`Failed to resolve host credentials for ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   } else if (credentialId && hostId && userId) {
@@ -952,7 +953,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         operation: "ssh_credentials",
         hostId,
         credentialId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -1140,13 +1141,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         sessionId,
         hostId,
         error:
-          opksshError instanceof Error ? opksshError.message : "Unknown error",
+          getErrorMessage(opksshError),
       });
       connectionLogs.push(
         createConnectionLog(
           "error",
           "sftp_auth",
-          `OPKSSH authentication failed: ${opksshError instanceof Error ? opksshError.message : "Unknown error"}`,
+          `OPKSSH authentication failed: ${getErrorMessage(opksshError)}`,
         ),
       );
       return res.status(500).json({
@@ -1326,7 +1327,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             operation: "activity_log_error",
             userId,
             hostId,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           });
         }
       })();
@@ -1821,7 +1822,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         createConnectionLog(
           "error",
           "jump",
-          `Jump host error: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Jump host error: ${getErrorMessage(error)}`,
         ),
       );
       return res.status(500).json({
@@ -1861,13 +1862,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         createConnectionLog(
           "error",
           "proxy",
-          `Proxy connection failed: ${proxyError instanceof Error ? proxyError.message : "Unknown error"}`,
+          `Proxy connection failed: ${getErrorMessage(proxyError)}`,
         ),
       );
       return res.status(500).json({
         error:
           "Proxy connection failed: " +
-          (proxyError instanceof Error ? proxyError.message : "Unknown error"),
+          (getErrorMessage(proxyError)),
         connectionLogs,
       });
     }
@@ -2018,7 +2019,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
               operation: "activity_log_error",
               userId: session.userId,
               hostId: session.hostId,
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             });
           }
         })();
@@ -2216,7 +2217,7 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
               operation: "activity_log_error",
               userId: session.userId,
               hostId: session.hostId,
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             });
           }
         })();
@@ -2930,7 +2931,7 @@ app.post("/ssh/file_manager/ssh/transferMethodPreview", async (req, res) => {
       sourcePaths,
     });
     res.status(500).json({
-      error: err instanceof Error ? err.message : "Failed to preview method",
+      error: getErrorMessage(err, "Failed to preview method"),
     });
   }
 });
@@ -3070,7 +3071,7 @@ app.post(
       res.json(result);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to clean up transfer";
+        getErrorMessage(err, "Failed to clean up transfer");
       const status = message === "Transfer not found" ? 404 : 400;
       res.status(status).json({ error: message });
     }

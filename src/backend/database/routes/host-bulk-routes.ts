@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import { sshLogger } from "../../utils/logger.js";
@@ -510,7 +511,7 @@ export function registerHostBulkRoutes(
         }
       } catch (error) {
         results.errors.push(
-          `Credential placeholders: ${error instanceof Error ? error.message : "failed to prepare credential aliases"}`,
+          `Credential placeholders: ${getErrorMessage(error, "failed to prepare credential aliases")}`,
         );
       }
 
@@ -786,7 +787,7 @@ export function registerHostBulkRoutes(
         } catch (error) {
           results.failed++;
           results.errors.push(
-            `Host ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            `Host ${i + 1}: ${getErrorMessage(error)}`,
           );
         }
       }
@@ -993,7 +994,7 @@ export function registerHostBulkRoutes(
         } catch (error) {
           results.failed++;
           results.errors.push(
-            `Host "${parsed[i].name}": ${error instanceof Error ? error.message : "Unknown error"}`,
+            `Host "${parsed[i].name}": ${getErrorMessage(error)}`,
           );
         }
       }

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Request, RequestHandler, Response, Router } from "express";
 import crypto from "crypto";
 import ssh2Pkg from "ssh2";
@@ -55,7 +56,7 @@ function generateSSHKeyPair(
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : "SSH key generation failed",
+        getErrorMessage(error, "SSH key generation failed"),
     };
   }
 }
@@ -117,9 +118,7 @@ export function registerCredentialKeyRoutes(
         authLogger.error("Failed to detect key type", error);
         res.status(500).json({
           error:
-            error instanceof Error
-              ? error.message
-              : "Failed to detect key type",
+            getErrorMessage(error, "Failed to detect key type"),
         });
       }
     },
@@ -175,9 +174,7 @@ export function registerCredentialKeyRoutes(
         authLogger.error("Failed to detect public key type", error);
         res.status(500).json({
           error:
-            error instanceof Error
-              ? error.message
-              : "Failed to detect public key type",
+            getErrorMessage(error, "Failed to detect public key type"),
         });
       }
     },
@@ -246,9 +243,7 @@ export function registerCredentialKeyRoutes(
         authLogger.error("Failed to validate key pair", error);
         res.status(500).json({
           error:
-            error instanceof Error
-              ? error.message
-              : "Failed to validate key pair",
+            getErrorMessage(error, "Failed to validate key pair"),
         });
       }
     },
@@ -313,9 +308,7 @@ export function registerCredentialKeyRoutes(
         res.status(500).json({
           success: false,
           error:
-            error instanceof Error
-              ? error.message
-              : "Failed to generate key pair",
+            getErrorMessage(error, "Failed to generate key pair"),
         });
       }
     },
@@ -502,9 +495,7 @@ export function registerCredentialKeyRoutes(
         res.status(500).json({
           success: false,
           error:
-            error instanceof Error
-              ? error.message
-              : "Failed to generate public key",
+            getErrorMessage(error, "Failed to generate public key"),
         });
       }
     },

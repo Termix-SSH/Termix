@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -73,9 +74,7 @@ class DatabaseFileEncryption {
           operation: "old_meta_cleanup_failed",
           path: metadataPath,
           error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : "Unknown error",
+            getErrorMessage(cleanupError),
         });
       }
 
@@ -90,9 +89,7 @@ class DatabaseFileEncryption {
           operation: "temp_file_cleanup_failed",
           tmpPath,
           error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : "Unknown error",
+            getErrorMessage(cleanupError),
         });
       }
 
@@ -101,7 +98,7 @@ class DatabaseFileEncryption {
         targetPath,
       });
       throw new Error(
-        `Database buffer encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Database buffer encryption failed: ${getErrorMessage(error)}`,
         { cause: error },
       );
     }
@@ -185,9 +182,7 @@ class DatabaseFileEncryption {
           operation: "temp_file_cleanup_failed",
           tmpPath,
           error:
-            cleanupError instanceof Error
-              ? cleanupError.message
-              : "Unknown error",
+            getErrorMessage(cleanupError),
         });
       }
 
@@ -197,7 +192,7 @@ class DatabaseFileEncryption {
         targetPath: encryptedPath,
       });
       throw new Error(
-        `Database file encryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Database file encryption failed: ${getErrorMessage(error)}`,
         { cause: error },
       );
     }
@@ -313,7 +308,7 @@ class DatabaseFileEncryption {
       return decryptedBuffer;
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
+        getErrorMessage(error);
       const isAuthError =
         errorMessage.includes("Unsupported state") ||
         errorMessage.includes("authenticate data") ||
@@ -404,7 +399,7 @@ class DatabaseFileEncryption {
         targetPath: decryptedPath,
       });
       throw new Error(
-        `Database file decryption failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Database file decryption failed: ${getErrorMessage(error)}`,
         { cause: error },
       );
     }
@@ -703,7 +698,7 @@ class DatabaseFileEncryption {
       databaseLogger.warn("Failed to clean up temporary files", {
         operation: "temp_cleanup_failed",
         basePath,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }

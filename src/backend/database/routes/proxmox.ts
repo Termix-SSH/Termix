@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import { Client as SSHClient } from "ssh2";
 import { logger } from "../../utils/logger.js";
@@ -814,7 +815,7 @@ async function syncProxmoxHost(
 
     return result;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = getErrorMessage(error);
     result.errors.push(message);
     await writeSyncStatus(userId, sourceHostId, {
       lastSyncAt: startedAt,
@@ -855,7 +856,7 @@ router.post("/sync", authenticateJWT, requireDataAccess, async (req, res) => {
     const result = await syncProxmoxHost(userId, parsedHostId);
     return res.json(result);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = getErrorMessage(err);
     const status =
       (err as Error & { code?: string; status?: number }).code ===
       "SESSION_EXPIRED"
@@ -1041,7 +1042,7 @@ router.get(
         jumpHosts: discovery.jumpHosts,
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       proxmoxLogger.error("Proxmox discovery (stream) failed", err, {
         operation: "proxmox_discover",
         hostId: parsedHostId,
@@ -1086,7 +1087,7 @@ router.post(
         jumpHosts: discovery.jumpHosts,
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+      const message = getErrorMessage(err);
       proxmoxLogger.error("Proxmox discovery failed", err, {
         operation: "proxmox_discover",
         hostId: parsedHostId,

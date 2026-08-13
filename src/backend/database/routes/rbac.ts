@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { Response } from "express";
@@ -282,9 +283,7 @@ router.post(
             hostId,
             accessId: accessGrant.id,
             error:
-              snapshotError instanceof Error
-                ? snapshotError.message
-                : "Unknown error",
+              getErrorMessage(snapshotError),
           });
         }
 
@@ -495,9 +494,7 @@ router.post(
               hostId: host.id,
               accessId: accessGrant.id,
               error:
-                snapshotError instanceof Error
-                  ? snapshotError.message
-                  : "Unknown error",
+                getErrorMessage(snapshotError),
             });
           }
         }
@@ -1436,9 +1433,7 @@ router.delete(
             targetUserId,
             roleId,
             error:
-              cleanupError instanceof Error
-                ? cleanupError.message
-                : "Unknown error",
+              getErrorMessage(cleanupError),
           },
         );
       }

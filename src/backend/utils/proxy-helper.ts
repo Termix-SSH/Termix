@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import { SocksClient } from "socks";
 import type { SocksClientOptions } from "socks";
 import net from "net";
@@ -88,7 +89,7 @@ async function createSingleProxyConnection(
       proxyPort: socks5Config.socks5Port || 1080,
       targetHost,
       targetPort,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorMessage: getErrorMessage(error),
     });
     throw error;
   }
@@ -222,7 +223,7 @@ async function createPureSocksChainConnection(
       chainLength: proxyChain.length,
       targetHost,
       targetPort,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorMessage: getErrorMessage(error),
     });
     throw error;
   }
@@ -286,7 +287,7 @@ async function createHopByHopConnection(
       chainLength: proxyChain.length,
       targetHost,
       targetPort,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      errorMessage: getErrorMessage(error),
     });
     throw error;
   }

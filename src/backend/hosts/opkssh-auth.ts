@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import { spawn, ChildProcess } from "child_process";
 import { randomUUID } from "crypto";
 import { WebSocket } from "ws";
@@ -519,7 +520,7 @@ export async function startOPKSSHAuth(
       JSON.stringify({
         type: "opkssh_error",
         requestId,
-        error: `Failed to start OPKSSH authentication: ${error instanceof Error ? error.message : "Unknown error"}`,
+        error: `Failed to start OPKSSH authentication: ${getErrorMessage(error)}`,
       }),
     );
     return "";

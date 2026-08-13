@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import express from "express";
 import type { Request, Response } from "express";
@@ -226,7 +227,7 @@ router.post(
       });
       res.status(500).json({
         error:
-          err instanceof Error ? err.message : "Failed to create credential",
+          getErrorMessage(err, "Failed to create credential"),
       });
     }
   },
@@ -384,7 +385,7 @@ router.get(
       authLogger.error("Failed to fetch credential", err);
       res.status(500).json({
         error:
-          err instanceof Error ? err.message : "Failed to fetch credential",
+          getErrorMessage(err, "Failed to fetch credential"),
       });
     }
   },
@@ -558,7 +559,7 @@ router.put(
       authLogger.error("Failed to update credential", err);
       res.status(500).json({
         error:
-          err instanceof Error ? err.message : "Failed to update credential",
+          getErrorMessage(err, "Failed to update credential"),
       });
     }
   },
@@ -685,7 +686,7 @@ router.delete(
       authLogger.error("Failed to delete credential", err);
       res.status(500).json({
         error:
-          err instanceof Error ? err.message : "Failed to delete credential",
+          getErrorMessage(err, "Failed to delete credential"),
       });
     }
   },
@@ -773,9 +774,7 @@ router.post(
       authLogger.error("Failed to apply credential to host", err);
       res.status(500).json({
         error:
-          err instanceof Error
-            ? err.message
-            : "Failed to apply credential to host",
+          getErrorMessage(err, "Failed to apply credential to host"),
       });
     }
   },
@@ -829,9 +828,7 @@ router.get(
       authLogger.error("Failed to fetch hosts using credential", err);
       res.status(500).json({
         error:
-          err instanceof Error
-            ? err.message
-            : "Failed to fetch hosts using credential",
+          getErrorMessage(err, "Failed to fetch hosts using credential"),
       });
     }
   },

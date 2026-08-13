@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import {
   createCurrentHostResolutionRepository,
   createCurrentVaultProfileRepository,
@@ -181,7 +182,7 @@ export async function resolveHostById(
         sshLogger.warn("Failed to resolve folder credential for host", {
           operation: "host_resolver_folder_credential",
           hostId,
-          error: e instanceof Error ? e.message : "Unknown",
+          error: getErrorMessage(e, "Unknown"),
         });
       }
     }
@@ -217,7 +218,7 @@ export async function resolveHostById(
         sshLogger.warn("Failed to resolve credential for host", {
           operation: "host_resolver_credential",
           hostId,
-          error: e instanceof Error ? e.message : "Unknown",
+          error: getErrorMessage(e, "Unknown"),
         });
       }
     }
@@ -243,7 +244,7 @@ export async function resolveHostById(
       sshLogger.warn("Failed to resolve vault profile for host", {
         operation: "host_resolver_vault_profile",
         hostId,
-        error: e instanceof Error ? e.message : "Unknown",
+        error: getErrorMessage(e, "Unknown"),
       });
     }
   }

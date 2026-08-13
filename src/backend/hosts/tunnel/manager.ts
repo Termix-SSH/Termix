@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { type Response } from "express";
 import {
   createServer as createTcpServer,
@@ -80,7 +81,7 @@ export function describeAxiosError(error: unknown): string {
       : error.message;
   }
 
-  return error instanceof Error ? error.message : "Unknown error";
+  return getErrorMessage(error);
 }
 
 export async function fetchInternalHosts(
@@ -492,7 +493,7 @@ export async function handleDisconnect(
           activeTunnels.delete(tunnelName);
           connectSSHTunnel(tunnelConfig, retryCount).catch((error) => {
             tunnelLogger.error(
-              `Failed to connect tunnel ${tunnelConfig.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+              `Failed to connect tunnel ${tunnelConfig.name}: ${getErrorMessage(error)}`,
             );
           });
         }
@@ -966,7 +967,7 @@ export async function connectSSHTunnel(
         operation: "tunnel_connect",
         tunnelName,
         sourceHostId: tunnelConfig.sourceHostId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   } else if (tunnelConfig.sourceCredentialId && effectiveUserId) {
@@ -993,7 +994,7 @@ export async function connectSSHTunnel(
         operation: "tunnel_connect",
         tunnelName,
         credentialId: tunnelConfig.sourceCredentialId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -1034,7 +1035,7 @@ export async function connectSSHTunnel(
       }
     } catch (error) {
       tunnelLogger.warn(
-        `Failed to resolve endpoint credentials for tunnel ${tunnelName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to resolve endpoint credentials for tunnel ${tunnelName}: ${getErrorMessage(error)}`,
       );
     }
   } else if (tunnelConfig.endpointCredentialId) {
@@ -1264,7 +1265,7 @@ export async function connectSSHTunnel(
       setupPingInterval(tunnelName);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to create tunnel";
+        getErrorMessage(error, "Failed to create tunnel");
       const errorType = classifyTunnelError(message);
       tunnelLogger.error("Failed to create managed tunnel", error, {
         operation: "managed_tunnel_create_failed",
@@ -1363,7 +1364,7 @@ export async function connectSSHTunnel(
       );
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Invalid SSH key format";
+        getErrorMessage(error, "Invalid SSH key format");
       tunnelLogger.error(
         `Invalid SSH key format for tunnel '${tunnelName}': ${message}`,
         undefined,
@@ -1459,16 +1460,14 @@ export async function connectSSHTunnel(
           tunnelConfig.socks5Username && tunnelConfig.socks5Password
         ),
         errorMessage:
-          socks5Error instanceof Error ? socks5Error.message : "Unknown error",
+          getErrorMessage(socks5Error),
       });
       broadcastTunnelStatus(tunnelName, {
         connected: false,
         status: CONNECTION_STATES.FAILED,
         reason:
           "SOCKS5 proxy connection failed: " +
-          (socks5Error instanceof Error
-            ? socks5Error.message
-            : "Unknown error"),
+          (getErrorMessage(socks5Error)),
       });
       tunnelConnecting.delete(tunnelName);
       return;
@@ -1488,9 +1487,7 @@ export async function connectSSHTunnel(
       connected: false,
       status: CONNECTION_STATES.FAILED,
       reason:
-        error instanceof Error
-          ? error.message
-          : "Failed to resolve tunnel source hostname",
+        getErrorMessage(error, "Failed to resolve tunnel source hostname"),
     });
     tunnelConnecting.delete(tunnelName);
     return;
@@ -1546,7 +1543,7 @@ export async function killRemoteTunnelByMarker(
       tunnelLogger.warn("Failed to resolve source credentials for cleanup", {
         tunnelName,
         sourceHostId: tunnelConfig.sourceHostId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -1674,9 +1671,7 @@ export async function killRemoteTunnelByMarker(
         );
         throw new Error(
           "SOCKS5 proxy connection failed: " +
-            (socks5Error instanceof Error
-              ? socks5Error.message
-              : "Unknown error"),
+            (getErrorMessage(socks5Error)),
           { cause: socks5Error },
         );
       }
@@ -1891,7 +1886,7 @@ export async function initializeAutoStartTunnels(): Promise<void> {
       setTimeout(() => {
         connectSSHTunnel(tunnelConfig, 0).catch((error) => {
           tunnelLogger.error(
-            `Failed to connect tunnel ${tunnelConfig.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            `Failed to connect tunnel ${tunnelConfig.name}: ${getErrorMessage(error)}`,
           );
         });
       }, 1000);
@@ -1899,7 +1894,7 @@ export async function initializeAutoStartTunnels(): Promise<void> {
   } catch (error) {
     tunnelLogger.error(
       "Failed to initialize auto-start tunnels:",
-      error instanceof Error ? error.message : "Unknown error",
+      getErrorMessage(error),
     );
   }
 }

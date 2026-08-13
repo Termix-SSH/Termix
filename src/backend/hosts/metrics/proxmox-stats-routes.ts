@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Express, RequestHandler } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { statsLogger } from "../../utils/logger.js";
@@ -185,9 +186,7 @@ export function registerProxmoxStatsRoutes(
       });
       res.status(500).json({
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to start proxmox stats collection",
+          getErrorMessage(error, "Failed to start proxmox stats collection"),
       });
     }
   });
@@ -246,9 +245,7 @@ export function registerProxmoxStatsRoutes(
       });
       res.status(500).json({
         error:
-          error instanceof Error
-            ? error.message
-            : "Failed to stop proxmox stats collection",
+          getErrorMessage(error, "Failed to stop proxmox stats collection"),
       });
     }
   });

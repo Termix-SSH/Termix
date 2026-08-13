@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../error-message.js";
 import { DatabaseSaveTrigger } from "../database-save-trigger.js";
 import { databaseLogger } from "../logger.js";
 import {
@@ -119,7 +120,7 @@ export async function runLegacySharedSshAuthOptInMigration(): Promise<LegacyShar
           {
             operation: "legacy_shared_ssh_auth_opt_in_resync_skip",
             hostId: host.id,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           },
         );
       }
