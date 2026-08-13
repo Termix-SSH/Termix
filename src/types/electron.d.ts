@@ -79,6 +79,7 @@ export interface ElectronAPI {
       needsReauth: boolean;
     }) => void,
   ) => () => void;
+  onCloseActiveTab?: (callback: () => void) => () => void;
   clearSessionCookies: () => Promise<void>;
   getSessionCookie: (
     name: string,
