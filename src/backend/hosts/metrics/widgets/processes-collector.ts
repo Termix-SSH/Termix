@@ -23,7 +23,10 @@ export async function collectProcessesMetrics(client: Client): Promise<{
   }> = [];
 
   try {
-    const psOut = await execCommand(client, "ps aux --sort=-%cpu | head -n 11");
+    const psOut = await execCommand(
+      client,
+      "(ps aux --sort=-%cpu 2>/dev/null || ps aux) | head -n 11",
+    );
     const psLines = psOut.stdout
       .split("\n")
       .map((l) => l.trim())

@@ -247,6 +247,7 @@ export function createHostEditorForm(
         "temperature",
       ],
       excludedMounts: [] as string[],
+      monitoredMounts: [] as Array<{ path: string; label?: string }>,
     },
   };
 }

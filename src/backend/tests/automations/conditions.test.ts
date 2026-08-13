@@ -67,6 +67,30 @@ describe("extractMetricValue", () => {
     expect(extractMetricValue(metrics, { path: "network.rxBytes" })).toBe(1000);
   });
 
+  it("extracts per-interface network rates for bandwidth alerts", () => {
+    const rateMetrics = {
+      network: {
+        interfaces: [
+          { name: "eth0", rxRateBps: 1024, txRateBps: 2048 },
+          { name: "eth1", rxRateBps: 4096, txRateBps: 8192 },
+        ],
+      },
+    };
+
+    expect(
+      extractMetricValue(rateMetrics, {
+        path: "network.rxRateBps",
+        iface: "eth1",
+      }),
+    ).toBe(4096);
+    expect(
+      extractMetricValue(rateMetrics, {
+        path: "network.txRateBps",
+        iface: "eth0",
+      }),
+    ).toBe(2048);
+  });
+
   it("returns null for missing metrics rather than throwing", () => {
     expect(extractMetricValue(null, { path: "cpu.percent" })).toBeNull();
     expect(extractMetricValue({}, { path: "cpu.percent" })).toBeNull();

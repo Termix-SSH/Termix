@@ -27,6 +27,8 @@ export interface MetricsSnapshot {
       name?: string;
       rxBytes?: string | number | null;
       txBytes?: string | number | null;
+      rxRateBps?: number | null;
+      txRateBps?: number | null;
     }> | null;
   } | null;
   temperature?: { highestCelsius?: number | null } | null;
@@ -87,6 +89,10 @@ export function extractMetricValue(
       return toNumber(findInterface(metrics, metric.iface)?.rxBytes);
     case "network.txBytes":
       return toNumber(findInterface(metrics, metric.iface)?.txBytes);
+    case "network.rxRateBps":
+      return toNumber(findInterface(metrics, metric.iface)?.rxRateBps);
+    case "network.txRateBps":
+      return toNumber(findInterface(metrics, metric.iface)?.txRateBps);
     default:
       return null;
   }

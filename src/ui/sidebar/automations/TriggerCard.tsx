@@ -28,6 +28,8 @@ const METRIC_PATHS = [
   "temperature.highestCelsius",
   "cpu.load1",
   "processes.total",
+  "network.rxRateBps",
+  "network.txRateBps",
 ];
 
 /** The single trigger at the top of an automation. */
@@ -141,6 +143,27 @@ export function TriggerCard({
                     metric: {
                       ...trigger.metric,
                       mount: e.target.value || undefined,
+                    },
+                  })
+                }
+              />
+            </div>
+          )}
+
+          {trigger.metric?.path.startsWith("network.") && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                {t(`${base}.fields.interface`)}
+              </Label>
+              <Input
+                className="h-8 rounded-none border-border font-mono text-xs"
+                placeholder="eth0"
+                value={trigger.metric.iface ?? ""}
+                onChange={(e) =>
+                  patch({
+                    metric: {
+                      ...trigger.metric,
+                      iface: e.target.value || undefined,
                     },
                   })
                 }
