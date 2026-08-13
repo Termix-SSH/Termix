@@ -92,6 +92,23 @@ export function createCurrentRepositoryWriteHook(
 }
 
 /**
+ * Post-write hook for high-frequency, non-critical writes (telemetry
+ * inserts/cleanup, informational timestamp touches).
+ *
+ * Marks the in-memory database dirty and lets DatabaseSaveTrigger's existing
+ * debounce coalesce the actual serialize+encrypt, instead of forcing one on
+ * every single sample. A lost 2-second window of telemetry on crash is
+ * acceptable; blocking the event loop that serves SSH traffic on every metric
+ * sample is not.
+ */
+export function createCurrentRepositoryLazyWriteHook(
+  reason: string,
+): (() => Promise<void>) | undefined {
+  if (!needsExplicitPersist(resolveDatabaseDialect())) return undefined;
+  return () => DatabaseSaveTrigger.triggerSave(reason);
+}
+
+/**
  * Raw driver handle for the few synchronous call sites that cannot await —
  * getCurrentSettingValue below, and settings reads during startup. Repositories
  * must not use this: they take a DatabaseContext, which is drizzle-only.
@@ -256,7 +273,9 @@ export function createCurrentHostHealthRepository(): HostHealthRepository {
 export function createCurrentHostMetricsHistoryRepository(): HostMetricsHistoryRepository {
   return new HostMetricsHistoryRepository(
     createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("host_metrics_history_repository_write"),
+    createCurrentRepositoryLazyWriteHook(
+      "host_metrics_history_repository_write",
+    ),
   );
 }
 
@@ -272,7 +291,9 @@ export function createCurrentHostMetricsPreferenceRepository(): HostMetricsPrefe
 export function createCurrentProxmoxNodeHistoryRepository(): ProxmoxNodeHistoryRepository {
   return new ProxmoxNodeHistoryRepository(
     createCurrentRepositoryContext(),
-    createCurrentRepositoryWriteHook("proxmox_node_history_repository_write"),
+    createCurrentRepositoryLazyWriteHook(
+      "proxmox_node_history_repository_write",
+    ),
   );
 }
 
@@ -287,6 +308,9 @@ export function createCurrentHostResolutionRepository(): HostResolutionRepositor
   return new HostResolutionRepository(
     createCurrentRepositoryContext(),
     createCurrentRepositoryWriteHook("host_resolution_repository_write"),
+    createCurrentRepositoryLazyWriteHook(
+      "host_resolution_repository_lazy_write",
+    ),
   );
 }
 

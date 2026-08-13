@@ -61,6 +61,11 @@ export class HostResolutionRepository {
   constructor(
     private readonly context: DatabaseContext,
     private readonly onWrite?: () => void | Promise<void>,
+    // Informational only -- touchHostKeyLastVerified fires on every SSH
+    // connect and does not need an immediate encrypted-file rewrite the way
+    // storeHostKey/updateHostKey do. Keeping it separate from onWrite lets
+    // those two stay on the immediate forceSave path.
+    private readonly onLazyWrite?: () => void | Promise<void>,
   ) {}
 
   async findHostById(
@@ -342,7 +347,7 @@ export class HostResolutionRepository {
       .update(hosts)
       .set({ hostKeyLastVerified: now })
       .where(eq(hosts.id, hostId));
-    await this.afterWrite();
+    await (this.onLazyWrite?.() ?? this.afterWrite());
   }
 
   async findCredentialByIdForUser(

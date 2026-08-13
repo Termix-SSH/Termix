@@ -755,6 +755,7 @@ async function initializeCompleteDatabase(): Promise<void> {
   }
 
   migrateSchema();
+  vacuumIfFreelistBloated();
 
   try {
     ensureRawSettingDefault("allow_registration", "true");
@@ -2827,6 +2828,45 @@ const migrateSchema = () => {
     operation: "schema_migration",
   });
 };
+
+// A trivial telemetry write forces `serialize()` to rewrite every free page
+// along with the live ones, so a database that has accumulated a large
+// freelist (from years of unbounded metrics/audit growth before retention
+// pruning existed) turns every future save into a multi-megabyte rewrite.
+// Reclaiming that space once at startup keeps steady-state saves cheap.
+const VACUUM_FREELIST_COUNT_THRESHOLD = 2000;
+const VACUUM_FREELIST_RATIO_THRESHOLD = 0.5;
+
+function vacuumIfFreelistBloated(): void {
+  try {
+    const pageCount = sqlite.pragma("page_count", { simple: true }) as number;
+    const freelistCount = sqlite.pragma("freelist_count", {
+      simple: true,
+    }) as number;
+    if (pageCount <= 0) return;
+
+    const freelistRatio = freelistCount / pageCount;
+    if (
+      freelistCount < VACUUM_FREELIST_COUNT_THRESHOLD ||
+      freelistRatio < VACUUM_FREELIST_RATIO_THRESHOLD
+    ) {
+      return;
+    }
+
+    databaseLogger.info("Reclaiming bloated SQLite freelist on startup", {
+      operation: "db_startup_vacuum",
+      pageCount,
+      freelistCount,
+      freelistRatio,
+    });
+    sqlite.exec("VACUUM");
+  } catch (error) {
+    databaseLogger.warn("Failed to vacuum database on startup", {
+      operation: "db_startup_vacuum_failed",
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 async function saveMemoryDatabaseToFile(): Promise<void> {
   if (!memoryDatabase) return;
