@@ -225,9 +225,6 @@ export class CredentialRepository {
 
     let affected: number;
     if (this.context.dialect === "sqlite") {
-      /* eslint-disable no-restricted-syntax -- sqlite-only branch: the dialect
-         is checked directly above, and better-sqlite3 rejects an async
-         transaction callback, so this cannot use the shared async helpers. */
       affected = this.context.drizzle.transaction((tx) => {
         let count = 0;
         for (const { id, sortOrder } of positions) {
@@ -242,7 +239,6 @@ export class CredentialRepository {
         }
         return count;
       });
-      /* eslint-enable no-restricted-syntax */
     } else {
       affected = await this.context.drizzle.transaction(async (tx) => {
         let count = 0;

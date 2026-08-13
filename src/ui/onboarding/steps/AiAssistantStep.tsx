@@ -39,7 +39,6 @@ export function AiAssistantStep() {
   // Skipping the step entirely still has to mean off, not unset.
   useEffect(() => {
     apply(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const options = [
