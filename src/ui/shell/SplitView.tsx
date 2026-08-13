@@ -15,6 +15,8 @@ export function defaultSizes(mode: SplitMode): {
   switch (mode) {
     case "2-way":
       return { rowSizes: [100], rowColSizes: [[50, 50]] };
+    case "2-way-horizontal":
+      return { rowSizes: [50, 50], rowColSizes: [[100], [100]] };
     case "3-way":
       return { rowSizes: [50, 50], rowColSizes: [[50, 50], [100]] };
     case "3-way-horizontal":
@@ -531,6 +533,45 @@ export const SplitView = memo(function SplitView({
           onPaneClick={onPaneClick}
           onAssignPane={onAssignPane}
         />
+      )}
+
+      {splitMode === "2-way-horizontal" && (
+        <div className="flex flex-col w-full h-full min-h-0">
+          <Row
+            rowIdx={0}
+            paneIndices={[0]}
+            rowHeight={rowSizes[0]}
+            colWidths={rowColSizes[0] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
+          />
+          <RowDivider
+            onMouseDown={(e) => onRowDivider(e, 0)}
+            onTouchStart={(e) => onRowDividerTouch(e, 0)}
+          />
+          <Row
+            rowIdx={1}
+            paneIndices={[1]}
+            rowHeight={rowSizes[1]}
+            colWidths={rowColSizes[1] ?? []}
+            paneTabIds={paneTabIds}
+            tabs={tabs}
+            isDragging={isDragging}
+            focusedPaneIndex={focusedPaneIndex ?? null}
+            onColDivider={onColDivider}
+            onColDividerTouch={onColDividerTouch}
+            onPaneContentRef={onPaneContentRef}
+            onPaneClick={onPaneClick}
+            onAssignPane={onAssignPane}
+          />
+        </div>
       )}
 
       {splitMode === "3-way" && (

@@ -410,7 +410,14 @@ export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
 
 export type ToolsTab = "ssh-tools" | "snippets" | "history" | "split-screen";
 export type SplitMode =
-  "none" | "2-way" | "3-way" | "3-way-horizontal" | "4-way" | "5-way" | "6-way";
+  | "none"
+  | "2-way"
+  | "2-way-horizontal"
+  | "3-way"
+  | "3-way-horizontal"
+  | "4-way"
+  | "5-way"
+  | "6-way";
 
 export type SplitTabConfig = {
   mode: Exclude<SplitMode, "none">;
