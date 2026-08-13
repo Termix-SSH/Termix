@@ -33,6 +33,7 @@ import {
   getCurrentToken,
   getOidcSilentLoginDefault,
   requestDesktopAutoSession,
+  requestTrustedProxyLogin,
 } from "@/main-axios";
 import { getSSOProviders, ldapLogin } from "@/api/sso-provider-api";
 import type { SSOProviderPublic } from "@/types/index";
@@ -258,6 +259,7 @@ export function Auth({ onLogin }: AuthProps) {
   const [ldapUsername, setLdapUsername] = useState("");
   const [ldapPassword, setLdapPassword] = useState("");
   const silentSigninHandledRef = useRef(false);
+  const proxySigninHandledRef = useRef(false);
   const [oidcSilentLoginDefault, setOidcSilentLoginDefault] = useState(false);
   const [oidcSilentLoginDefaultLoaded, setOidcSilentLoginDefaultLoaded] =
     useState(false);
@@ -280,6 +282,25 @@ export function Auth({ onLogin }: AuthProps) {
     boolean | null
   >(!isElectron() || isInElectronWebView() ? true : null);
   const [desktopAutoSessionRetries, setDesktopAutoSessionRetries] = useState(0);
+
+  useEffect(() => {
+    if (proxySigninHandledRef.current || isElectron()) return;
+    proxySigninHandledRef.current = true;
+    requestTrustedProxyLogin()
+      .then((result) => {
+        if (!result.enabled || !result.success) return;
+        storeAuth(result.username || "");
+        onLogin(
+          result.username || "",
+          result.userId || undefined,
+          !!result.is_admin,
+        );
+      })
+      .catch(() => {
+        // Leave the login screen visible. The backend logs the reason without
+        // exposing trusted proxy configuration to an untrusted client.
+      });
+  }, [onLogin]);
 
   useEffect(() => {
     try {
