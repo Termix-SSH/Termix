@@ -35,6 +35,69 @@ describe("ONBOARDING_STEPS", () => {
     expect(withHosts).not.toContain("first-host");
     expect(without).toContain("first-host");
   });
+
+  it("ends on the done step for either kind of account", () => {
+    for (const hasHosts of [true, false]) {
+      const ids = relevantSteps({ hasHosts }).map((s) => s.id);
+      expect(ids[ids.length - 1]).toBe("done");
+    }
+  });
+
+  it("tours the feature set after the setup choices", () => {
+    const ids = ONBOARDING_STEPS.map((s) => s.id);
+    for (const id of ["features", "workflow", "security"]) {
+      expect(ids).toContain(id);
+      expect(ids.indexOf(id)).toBeGreaterThan(ids.indexOf("appearance"));
+    }
+  });
+});
+
+describe("onboarding step body translations", () => {
+  const KEYS: Record<string, string[]> = {
+    welcome: ["hosts", "terminal", "files"],
+    feature: [
+      "files",
+      "desktop",
+      "tunnels",
+      "docker",
+      "snippets",
+      "automations",
+      "metrics",
+    ],
+    workflow: ["palette", "split", "dock", "workspaces"],
+    security: ["credentials", "twofa", "identity", "sharing"],
+    done: ["settings", "rerun", "docs"],
+  };
+
+  it("has a title and description for every card the steps render", () => {
+    for (const [prefix, keys] of Object.entries(KEYS)) {
+      for (const key of keys) {
+        expect(
+          lookup(`onboarding.${prefix}_${key}`),
+          `${prefix}_${key}`,
+        ).toBeTypeOf("string");
+        expect(
+          lookup(`onboarding.${prefix}_${key}_desc`),
+          `${prefix}_${key}_desc`,
+        ).toBeTypeOf("string");
+      }
+    }
+  });
+
+  it("has the intro copy each step shows above its cards", () => {
+    for (const key of [
+      "welcomeIntro",
+      "presetIntro",
+      "appearanceIntro",
+      "firstHostIntro",
+      "featuresIntro",
+      "workflowIntro",
+      "securityIntro",
+      "doneDesc",
+    ]) {
+      expect(lookup(`onboarding.${key}`), key).toBeTypeOf("string");
+    }
+  });
 });
 
 describe("interface settings translations", () => {

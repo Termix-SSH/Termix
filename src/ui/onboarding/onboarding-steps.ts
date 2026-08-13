@@ -2,6 +2,9 @@ import type { ComponentType } from "react";
 import { WelcomeStep } from "./steps/WelcomeStep";
 import { PresetStep } from "./steps/PresetStep";
 import { AppearanceStep } from "./steps/AppearanceStep";
+import { FeaturesStep } from "./steps/FeaturesStep";
+import { WorkflowStep } from "./steps/WorkflowStep";
+import { SecurityStep } from "./steps/SecurityStep";
 import { FirstHostStep } from "./steps/FirstHostStep";
 import { DoneStep } from "./steps/DoneStep";
 
@@ -46,6 +49,21 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     Component: FirstHostStep,
     // Nothing to offer someone who already has hosts.
     isRelevant: (context) => !context.hasHosts,
+  },
+  {
+    id: "features",
+    titleKey: "onboarding.featuresTitle",
+    Component: FeaturesStep,
+  },
+  {
+    id: "workflow",
+    titleKey: "onboarding.workflowTitle",
+    Component: WorkflowStep,
+  },
+  {
+    id: "security",
+    titleKey: "onboarding.securityTitle",
+    Component: SecurityStep,
   },
   { id: "done", titleKey: "onboarding.doneTitle", Component: DoneStep },
 ];

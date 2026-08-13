@@ -35,6 +35,7 @@ import {
 } from "@/sidebar/rail-items";
 import { MultiPanelHint } from "@/sidebar/MultiPanelHint";
 import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
+import { UI_ONBOARDING_VERSION } from "@/types/ui-preferences";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { SplitView, defaultSizes } from "@/shell/SplitView";
 import type { RowColSizes } from "@/shell/SplitView";
@@ -263,7 +264,8 @@ export function AppShell({
   // an already-completed state, so only genuinely new users are interrupted.
   const uiPrefs = useUiPreferencesContext();
   const onboardingPending =
-    !!uiPrefs?.loaded && uiPrefs.preferences.onboarding.completedVersion === 0;
+    !!uiPrefs?.loaded &&
+    uiPrefs.preferences.onboarding.completedVersion < UI_ONBOARDING_VERSION;
 
   useEffect(() => {
     if (!username || !onboardingPending) return;

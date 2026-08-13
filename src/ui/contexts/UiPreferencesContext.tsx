@@ -19,6 +19,7 @@ import {
   PRESETS,
   resolveArea,
   sanitizeUiPreferences,
+  UI_ONBOARDING_VERSION,
   type UiAreaKey,
   type UiAreaPreferences,
   type UiOverrides,
@@ -227,7 +228,7 @@ export function UiPreferencesProvider({ children }: { children: ReactNode }) {
   const completeOnboarding = useCallback(
     (skipped: boolean) => {
       const onboarding = {
-        completedVersion: 1,
+        completedVersion: UI_ONBOARDING_VERSION,
         completedAt: new Date().toISOString(),
         skipped,
       };

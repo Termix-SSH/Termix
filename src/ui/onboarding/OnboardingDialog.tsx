@@ -68,6 +68,13 @@ export function OnboardingDialog({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="h-0.5 w-full bg-muted-foreground/15">
+          <div
+            className="h-full bg-accent-brand transition-all duration-200"
+            style={{ width: `${((clamped + 1) / steps.length) * 100}%` }}
+          />
+        </div>
+
         <div className="mt-1">
           <StepComponent context={context} onAddHost={onAddHost} />
         </div>
@@ -75,10 +82,17 @@ export function OnboardingDialog({
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
           <div className="flex items-center gap-1.5">
             {steps.map((s, i) => (
-              <span
+              <button
                 key={s.id}
+                type="button"
+                title={t(s.titleKey)}
+                aria-label={t(s.titleKey)}
+                aria-current={i === clamped}
+                onClick={() => setIndex(i)}
                 className={`h-1.5 w-1.5 rounded-full transition-colors ${
-                  i === clamped ? "bg-accent-brand" : "bg-muted-foreground/25"
+                  i === clamped
+                    ? "bg-accent-brand"
+                    : "bg-muted-foreground/25 hover:bg-muted-foreground/50"
                 }`}
               />
             ))}

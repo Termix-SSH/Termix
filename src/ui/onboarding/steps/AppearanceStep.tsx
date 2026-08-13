@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
+import { LanguageSwitcher } from "@/user/LanguageSwitcher";
 import { ACCENT_PRESET_COLORS, applyAccentColor } from "@/lib/theme";
 import type { ThemeId } from "@/types/ui-types";
 
@@ -87,6 +88,13 @@ export function AppearanceStep() {
             </button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          {t("newUi.sidebar.userProfile.languageLabel")}
+        </span>
+        <LanguageSwitcher />
       </div>
     </div>
   );
