@@ -43,6 +43,16 @@ export interface RailItemDef {
   separatorAfter?: boolean;
   /** Shown on the mobile bottom bar's primary row rather than its More menu. */
   mobilePrimary?: boolean;
+  /**
+   * Can also open as a full-width tab in the main area, via ctrl/middle-click
+   * or the rail context menu. The id doubles as the TabType.
+   */
+  promotable?: boolean;
+  /**
+   * Can be opened in the right dock. Reference panels only -- editors stay in
+   * the left sidebar, which is the only dock that widens for them.
+   */
+  rightDockable?: boolean;
 }
 
 export const RAIL_ITEMS: RailItemDef[] = [
@@ -58,12 +68,14 @@ export const RAIL_ITEMS: RailItemDef[] = [
     icon: Fingerprint,
     labelKey: "nav.termixId",
     separatorAfter: true,
+    promotable: true,
   },
   {
     id: "connections",
     icon: Plug,
     labelKey: "nav.connections",
     separatorAfter: true,
+    rightDockable: true,
   },
   {
     id: "quick-connect",
@@ -79,6 +91,8 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.sshTools",
     separatorAfter: true,
     mobilePrimary: true,
+    promotable: true,
+    rightDockable: true,
   },
   {
     id: "snippets",
@@ -86,6 +100,8 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.snippets",
     separatorAfter: true,
     mobilePrimary: true,
+    promotable: true,
+    rightDockable: true,
   },
   { id: "fleets", icon: Boxes, labelKey: "nav.fleets", separatorAfter: true },
   {
@@ -93,13 +109,23 @@ export const RAIL_ITEMS: RailItemDef[] = [
     icon: Workflow,
     labelKey: "nav.automations",
     separatorAfter: true,
+    promotable: true,
   },
-  { id: "history", icon: Clock, labelKey: "nav.history", separatorAfter: true },
+  {
+    id: "history",
+    icon: Clock,
+    labelKey: "nav.history",
+    separatorAfter: true,
+    promotable: true,
+    rightDockable: true,
+  },
   {
     id: "session-logs",
     icon: ScrollText,
     labelKey: "nav.sessionLogs",
     separatorAfter: true,
+    promotable: true,
+    rightDockable: true,
   },
   {
     id: "split-screen",
@@ -127,10 +153,26 @@ export const RAIL_ITEMS: RailItemDef[] = [
  * title and a mobile entry.
  */
 export const RAIL_UTILITY_ITEMS: RailItemDef[] = [
-  { id: "alerts", icon: Plug, labelKey: "nav.alerts" },
+  {
+    id: "alerts",
+    icon: Plug,
+    labelKey: "nav.alerts",
+    promotable: true,
+    rightDockable: true,
+  },
   { id: "user-profile", icon: User, labelKey: "nav.userProfile" },
   { id: "admin-settings", icon: Settings, labelKey: "nav.admin" },
 ];
+
+/** Ids that may be opened in the right dock. */
+export const RIGHT_DOCKABLE_IDS = [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
+  .filter((item) => item.rightDockable)
+  .map((item) => item.id);
+
+/** Ids that may be opened as a full-width tab. */
+export const PROMOTABLE_IDS = [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
+  .filter((item) => item.promotable)
+  .map((item) => item.id);
 
 /** Ids a user is allowed to hide, mirroring HideableRailView. */
 export const HIDEABLE_RAIL_IDS = RAIL_ITEMS.filter(

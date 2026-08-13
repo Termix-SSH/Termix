@@ -278,4 +278,38 @@ describe("buildWorkspacePayload", () => {
     expect(payload.activeSlotId).toBeNull();
     expect(payload.tabs).toHaveLength(0);
   });
+
+  it("round-trips the sidebar arrangement", () => {
+    const payload = buildWorkspacePayload({
+      tabs: [],
+      activeTabId: "dashboard",
+      splitMode: "none",
+      paneTabIds: [null, null, null, null, null, null],
+      rowSizes: [100],
+      rowColSizes: [[100]],
+      sidebar: {
+        left: { view: "hosts", open: true, width: 320 },
+        right: { view: "history", open: true, width: 240 },
+      },
+    });
+
+    expect(payload.sidebar).toEqual({
+      left: { view: "hosts", open: true, width: 320 },
+      right: { view: "history", open: true, width: 240 },
+    });
+  });
+
+  it("omits sidebar when not supplied so older payloads stay unchanged", () => {
+    const payload = buildWorkspacePayload({
+      tabs: [],
+      activeTabId: "dashboard",
+      splitMode: "none",
+      paneTabIds: [null, null, null, null, null, null],
+      rowSizes: [100],
+      rowColSizes: [[100]],
+    });
+
+    expect(payload.sidebar).toBeUndefined();
+    expect(payload.version).toBe(1);
+  });
 });

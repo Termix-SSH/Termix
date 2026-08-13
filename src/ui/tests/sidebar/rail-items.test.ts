@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   HIDEABLE_RAIL_IDS,
+  PROMOTABLE_IDS,
   RAIL_ITEMS,
   RAIL_UTILITY_ITEMS,
+  RIGHT_DOCKABLE_IDS,
   railItemLabel,
 } from "@/sidebar/rail-items";
+import { WORKSPACE_CAPTURABLE_TYPES } from "@/shell/workspaceUtils";
+import type { TabType } from "@/types/ui-types";
 import en from "@/locales/en.json";
 
 function lookup(key: string): unknown {
@@ -65,6 +69,66 @@ describe("RAIL_ITEMS", () => {
     expect(
       RAIL_ITEMS.filter((item) => item.mobilePrimary).map((item) => item.id),
     ).toEqual(["hosts", "quick-connect", "ssh-tools", "snippets"]);
+  });
+
+  it("marks the panels that can open as a tab", () => {
+    expect(
+      [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
+        .filter((item) => item.promotable)
+        .map((item) => item.id),
+    ).toEqual([
+      "termix-id",
+      "ssh-tools",
+      "snippets",
+      "automations",
+      "history",
+      "session-logs",
+      "alerts",
+    ]);
+  });
+
+  it("derives PROMOTABLE_IDS from the promotable flag", () => {
+    // The header button and the hint both gate on this list, so a drift here
+    // silently hides the feature for that panel.
+    expect(PROMOTABLE_IDS).toEqual(
+      [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
+        .filter((item) => item.promotable)
+        .map((item) => item.id),
+    );
+  });
+
+  it("every promotable id is also a captured workspace tab type", () => {
+    // The id doubles as the TabType, so a promoted panel that isn't capturable
+    // would silently vanish from saved workspaces.
+    for (const item of [...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]) {
+      if (!item.promotable) continue;
+      expect(
+        WORKSPACE_CAPTURABLE_TYPES,
+        `${item.id} is promotable but not workspace-capturable`,
+      ).toContain(item.id as TabType);
+    }
+  });
+
+  it("keeps the mounted-but-hidden panels out of the right dock", () => {
+    // Hosts, credentials and fleets stay mounted while hidden and share editing
+    // state, so a second live instance in the right dock would fight the first.
+    for (const id of ["hosts", "credentials", "fleets"]) {
+      expect(
+        RIGHT_DOCKABLE_IDS,
+        `${id} must not be right-dockable`,
+      ).not.toContain(id);
+    }
+  });
+
+  it("only offers reference panels in the right dock", () => {
+    expect(RIGHT_DOCKABLE_IDS).toEqual([
+      "connections",
+      "ssh-tools",
+      "snippets",
+      "history",
+      "session-logs",
+      "alerts",
+    ]);
   });
 });
 

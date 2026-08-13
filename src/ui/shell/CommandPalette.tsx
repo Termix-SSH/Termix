@@ -43,6 +43,7 @@ import {
 } from "@/main-axios";
 import type { Host, TabType, Tab, Snippet } from "@/types/ui-types";
 import { canEditHost } from "@/sidebar/host-permissions";
+import { RAIL_ITEMS, RAIL_UTILITY_ITEMS } from "@/sidebar/rail-items";
 import { useSnippetRunner } from "@/hooks/use-snippet-runner.tsx";
 
 interface CommandPaletteProps {
@@ -52,6 +53,8 @@ interface CommandPaletteProps {
   terminalTabs?: Tab[];
   activeTabId?: string;
   onOpenTab: (type: TabType, label?: string, pendingEvent?: string) => void;
+  /** Opens a sidebar panel. Kept separate from onOpenTab, which is TabType-shaped. */
+  onOpenPanel?: (view: string) => void;
 }
 
 const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
@@ -126,6 +129,7 @@ export function CommandPalette({
   terminalTabs = [],
   activeTabId = "",
   onOpenTab,
+  onOpenPanel,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -338,6 +342,39 @@ export function CommandPalette({
                 </div>
               </CommandItem>
             </CommandGroup>
+
+            {onOpenPanel && (
+              <>
+                <CommandSeparator className="my-2" />
+                <CommandGroup
+                  heading={t("commandPalette.navigation")}
+                  className="px-2"
+                >
+                  {[...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
+                    .filter((item) => item.kind !== "tab")
+                    .map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <CommandItem
+                          key={`nav-${item.id}`}
+                          value={`nav-${item.id} ${t(item.labelKey)}`}
+                          onSelect={() =>
+                            handleAction(() => onOpenPanel(item.id))
+                          }
+                          className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                        >
+                          <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
+                            <Icon className="size-4 text-accent-brand" />
+                          </div>
+                          <span className="text-sm font-semibold flex-1">
+                            {t(item.labelKey)}
+                          </span>
+                        </CommandItem>
+                      );
+                    })}
+                </CommandGroup>
+              </>
+            )}
 
             {filteredSnippets.length > 0 && (
               <>
@@ -664,6 +701,10 @@ export function CommandPalette({
             </div>
             <div className="flex items-center gap-1">
               <span>{t("commandPalette.toggleWith")}</span>
+              <Kbd className="h-5 px-1.5 bg-background rounded-none">Ctrl</Kbd>
+              <span>+</span>
+              <Kbd className="h-5 px-1.5 bg-background rounded-none">K</Kbd>
+              <span>{t("commandPalette.orShortcut")}</span>
               <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>
               <span>+</span>
               <Kbd className="h-5 px-1.5 bg-background rounded-none">Shift</Kbd>

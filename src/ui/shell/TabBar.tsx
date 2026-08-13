@@ -19,6 +19,7 @@ import {
   Maximize2,
   Minimize2,
   FolderOpen,
+  PanelRight,
   Share2,
 } from "lucide-react";
 import { tabIcon } from "@/shell/tabUtils";
@@ -46,6 +47,8 @@ export function TabBar({
   onOpenShare,
   isAppFullscreen,
   onToggleAppFullscreen,
+  rightDockOpen,
+  onToggleRightDock,
 }: {
   tabs: Tab[];
   activeTabId: string;
@@ -64,6 +67,8 @@ export function TabBar({
   onOpenShare?: (tabId: string) => void;
   isAppFullscreen: boolean;
   onToggleAppFullscreen: () => void;
+  rightDockOpen?: boolean;
+  onToggleRightDock?: () => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(true);
@@ -463,6 +468,22 @@ export function TabBar({
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          {onToggleRightDock && (
+            <>
+              <Separator orientation="vertical" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-full w-12.5 rounded-none border-y-0 border-border ${rightDockOpen ? "text-accent-brand bg-accent-brand/10" : "text-muted-foreground hover:text-foreground"}`}
+                title={t("nav.toggleRightDock")}
+                aria-label={t("nav.toggleRightDock")}
+                aria-pressed={!!rightDockOpen}
+                onClick={onToggleRightDock}
+              >
+                <PanelRight className="size-4" />
+              </Button>
+            </>
+          )}
           {!isElectron() && (
             <>
               <Separator orientation="vertical" />

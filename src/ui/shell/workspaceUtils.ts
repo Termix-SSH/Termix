@@ -25,6 +25,13 @@ export const WORKSPACE_CAPTURABLE_TYPES: TabType[] = [
   "serial",
   "homepage",
   "fleet-inventory",
+  "termix-id",
+  "alerts",
+  "session-logs",
+  "snippets",
+  "history",
+  "ssh-tools",
+  "automations",
 ];
 
 export const HOSTLESS_WORKSPACE_TAB_TYPES: TabType[] = [
@@ -34,6 +41,13 @@ export const HOSTLESS_WORKSPACE_TAB_TYPES: TabType[] = [
   "homepage",
   "fleet-inventory",
   "docker",
+  "termix-id",
+  "alerts",
+  "session-logs",
+  "snippets",
+  "history",
+  "ssh-tools",
+  "automations",
 ];
 
 /**
@@ -118,6 +132,7 @@ export function buildWorkspacePayload(input: {
   rowSizes: number[];
   rowColSizes: number[][];
   genSlotId?: () => string;
+  sidebar?: WorkspacePayload["sidebar"];
 }): WorkspacePayload {
   const { snapshots, slotIdByTabId } = buildWorkspaceTabSnapshots(
     input.tabs,
@@ -134,5 +149,6 @@ export function buildWorkspacePayload(input: {
     ),
     rowSizes: input.rowSizes,
     rowColSizes: input.rowColSizes,
+    ...(input.sidebar ? { sidebar: input.sidebar } : {}),
   };
 }

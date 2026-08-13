@@ -18,6 +18,13 @@ import {
   Activity,
   TerminalSquare,
   Layers, // --- tmux-monitor ---
+  Clock,
+  Fingerprint,
+  Hammer,
+  Play,
+  Plug,
+  ScrollText,
+  Workflow,
 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
@@ -109,6 +116,33 @@ const FleetInventoryTab = lazy(() =>
   })),
 );
 
+// Rail panels promoted to full tabs.
+const TermixIdPanel = lazy(() =>
+  import("@/sidebar/TermixIdPanel").then((m) => ({ default: m.TermixIdPanel })),
+);
+const AlertsPanel = lazy(() =>
+  import("@/sidebar/AlertsPanel").then((m) => ({ default: m.AlertsPanel })),
+);
+const SessionLogsPanel = lazy(() =>
+  import("@/sidebar/SessionLogsPanel").then((m) => ({
+    default: m.SessionLogsPanel,
+  })),
+);
+const SnippetsPanel = lazy(() =>
+  import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
+);
+const HistoryPanel = lazy(() =>
+  import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
+);
+const SshToolsPanel = lazy(() =>
+  import("@/sidebar/SshToolsPanel").then((m) => ({ default: m.SshToolsPanel })),
+);
+const AutomationsPanel = lazy(() =>
+  import("@/sidebar/AutomationsPanel").then((m) => ({
+    default: m.AutomationsPanel,
+  })),
+);
+
 function hostToSSHHost(h: Host): SSHHost {
   return {
     id: parseInt(h.id, 10),
@@ -184,6 +218,21 @@ function withTabSuspense(node: React.ReactNode) {
   return <Suspense fallback={<TabChunkFallback />}>{node}</Suspense>;
 }
 
+/**
+ * Host frame for rail panels opened as tabs. Panels expect a full-height flex
+ * column like the sidebar gives them. The max width keeps forms readable on a
+ * wide monitor instead of stretching them edge to edge.
+ */
+function PanelTabFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-full w-full justify-center overflow-y-auto bg-background">
+      <div className="flex flex-col flex-1 min-h-0 w-full max-w-5xl">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function tabIcon(type: TabType) {
   switch (type) {
     case "dashboard":
@@ -223,6 +272,20 @@ export function tabIcon(type: TabType) {
       return <LayoutGrid className="size-3.5" />;
     case "fleet-inventory":
       return <Boxes className="size-3.5" />;
+    case "termix-id":
+      return <Fingerprint className="size-3.5" />;
+    case "alerts":
+      return <Plug className="size-3.5" />;
+    case "session-logs":
+      return <ScrollText className="size-3.5" />;
+    case "snippets":
+      return <Play className="size-3.5" />;
+    case "history":
+      return <Clock className="size-3.5" />;
+    case "ssh-tools":
+      return <Hammer className="size-3.5" />;
+    case "automations":
+      return <Workflow className="size-3.5" />;
   }
 }
 
@@ -302,6 +365,17 @@ function TerminalTabContent({
   );
 }
 
+/**
+ * Everything the promoted rail panels need from AppShell. Passed as one bag
+ * rather than more positional params, which renderTabContent already has too
+ * many of.
+ */
+export type PromotedPanelProps = {
+  terminalTabs?: Tab[];
+  targetTerminalTabId?: string;
+  storageMode?: "local" | "cloud";
+};
+
 export function renderTabContent(
   tab: Tab,
   onOpenSingletonTab?: (type: TabType) => void,
@@ -314,6 +388,7 @@ export function renderTabContent(
   onRenameTab?: (tabId: string, newLabel: string) => void,
   onSaveQuickConnect?: (tab: Tab, host: Host) => Promise<void>,
   isFocusedPane = true,
+  panelProps?: PromotedPanelProps,
 ) {
   const { host, label } = tab;
 
@@ -481,6 +556,65 @@ export function renderTabContent(
     case "fleet-inventory":
       return withTabSuspense(
         <FleetInventoryTab fleetId={tab.fleetId} isVisible={isVisible} />,
+      );
+
+    case "termix-id":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <TermixIdPanel />
+        </PanelTabFrame>,
+      );
+
+    case "alerts":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <AlertsPanel />
+        </PanelTabFrame>,
+      );
+
+    case "session-logs":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <SessionLogsPanel />
+        </PanelTabFrame>,
+      );
+
+    case "automations":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <AutomationsPanel active={isVisible} />
+        </PanelTabFrame>,
+      );
+
+    case "snippets":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <SnippetsPanel
+            terminalTabs={panelProps?.terminalTabs ?? []}
+            activeTabId={panelProps?.targetTerminalTabId ?? ""}
+            storageMode={panelProps?.storageMode ?? "local"}
+          />
+        </PanelTabFrame>,
+      );
+
+    case "history":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <HistoryPanel
+            terminalTabs={panelProps?.terminalTabs ?? []}
+            activeTabId={panelProps?.targetTerminalTabId ?? ""}
+          />
+        </PanelTabFrame>,
+      );
+
+    case "ssh-tools":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <SshToolsPanel
+            terminalTabs={panelProps?.terminalTabs ?? []}
+            activeTabId={panelProps?.targetTerminalTabId ?? ""}
+          />
+        </PanelTabFrame>,
       );
 
     case "host-manager":

@@ -251,7 +251,15 @@ export type TabType =
   | "tmux_monitor" // --- tmux-monitor ---
   | "serial"
   | "homepage"
-  | "fleet-inventory";
+  | "fleet-inventory"
+  // Rail panels that can also open full-width in the main area.
+  | "termix-id"
+  | "alerts"
+  | "session-logs"
+  | "snippets"
+  | "history"
+  | "ssh-tools"
+  | "automations";
 
 export type SerialConfig = {
   path: string;
@@ -415,6 +423,13 @@ export type WorkspaceTabSnapshot = {
   serialConfig?: SerialConfig;
 };
 
+/** One dock's arrangement. `view` is a RailView, or null when the dock is closed. */
+export type WorkspaceDockState = {
+  view: string | null;
+  open: boolean;
+  width: number;
+};
+
 export type WorkspacePayload = {
   version: 1;
   tabs: WorkspaceTabSnapshot[];
@@ -424,6 +439,11 @@ export type WorkspacePayload = {
   paneTabIds: (string | null)[];
   rowSizes: number[];
   rowColSizes: number[][];
+  /** Sidebar arrangement, so a workspace restores the whole layout and not just tabs. */
+  sidebar?: {
+    left: WorkspaceDockState;
+    right: WorkspaceDockState;
+  };
 };
 
 export type WorkspaceKind = "manual" | "last_session";

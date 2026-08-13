@@ -10,7 +10,9 @@ import {
   ChevronRight,
   Maximize2,
   Minimize2,
+  PanelRight,
   RotateCcw,
+  SquareArrowOutUpRight,
 } from "lucide-react";
 import {
   useState,
@@ -26,7 +28,12 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { AppRail } from "@/sidebar/AppRail";
 import type { RailView } from "@/sidebar/AppRail";
-import { railItemLabel } from "@/sidebar/rail-items";
+import {
+  railItemLabel,
+  PROMOTABLE_IDS,
+  RIGHT_DOCKABLE_IDS,
+} from "@/sidebar/rail-items";
+import { MultiPanelHint } from "@/sidebar/MultiPanelHint";
 import { OnboardingDialog } from "@/onboarding/OnboardingDialog";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { SplitView, defaultSizes } from "@/shell/SplitView";
@@ -298,6 +305,25 @@ export function AppShell({
   const [sidebarDragging, setSidebarDragging] = useState(false);
   const [sidebarEditing, setSidebarEditing] = useState(false);
   const [settingsFullscreen, setSettingsFullscreen] = useState(false);
+
+  // Right dock — a second panel column so reference panels like history can
+  // stay visible while the left sidebar is used for something else.
+  const [rightRailView, setRightRailView] = useState<RailView | null>(() => {
+    const saved = localStorage.getItem("termix_rightRailView");
+    return saved && RIGHT_DOCKABLE_IDS.includes(saved)
+      ? (saved as RailView)
+      : null;
+  });
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(() => {
+    const saved = localStorage.getItem("termix_rightSidebarWidth");
+    return saved ? parseInt(saved, 10) : 291;
+  });
+  const [rightSidebarDragging, setRightSidebarDragging] = useState(false);
+  // Remembers the last panel shown in the dock so the tab bar toggle can bring
+  // it back instead of always falling back to the same default.
+  const lastRightRailViewRef = useRef<string | null>(
+    localStorage.getItem("termix_lastRightRailView"),
+  );
   const [isAppFullscreen, setIsAppFullscreen] = useState(
     () => !!document.fullscreenElement,
   );
@@ -305,6 +331,20 @@ export function AppShell({
   useEffect(() => {
     localStorage.setItem("termix_sidebarWidth", String(sidebarWidth));
   }, [sidebarWidth]);
+
+  useEffect(() => {
+    localStorage.setItem("termix_rightSidebarWidth", String(rightSidebarWidth));
+  }, [rightSidebarWidth]);
+
+  useEffect(() => {
+    if (rightRailView) {
+      localStorage.setItem("termix_rightRailView", rightRailView);
+      lastRightRailViewRef.current = rightRailView;
+      localStorage.setItem("termix_lastRightRailView", rightRailView);
+    } else {
+      localStorage.removeItem("termix_rightRailView");
+    }
+  }, [rightRailView]);
 
   useEffect(() => {
     localStorage.setItem("termix_splitMode", splitMode);
@@ -414,6 +454,14 @@ export function AppShell({
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
+  // Panels like history and snippets act on "the terminal you're working in".
+  // Once those panels can themselves be the active tab, activeTabId points at
+  // the panel and the lookup misses, so remember the last terminal instead.
+  const [lastTerminalTabId, setLastTerminalTabId] = useState(activeTabId);
+  useEffect(() => {
+    const active = tabs.find((t) => t.id === activeTabId);
+    if (active?.type === "terminal") setLastTerminalTabId(active.id);
+  }, [activeTabId, tabs]);
   useEffect(() => {
     splitModeRef.current = splitMode;
   }, [splitMode]);
@@ -470,7 +518,8 @@ export function AppShell({
   // in step with the rail itself.
   const sidebarTitle = (view: RailView): string => railItemLabel(view, t);
 
-  // Double-shift opens command palette
+  // Double-shift or Ctrl+K opens the command palette. Double-shift alone was
+  // hard to discover.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "ShiftLeft" && !e.repeat) {
@@ -479,10 +528,44 @@ export function AppShell({
           setCommandPaletteOpen((prev) => !prev);
         lastShiftTime.current = now;
       }
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        !e.altKey &&
+        e.code === "KeyK" &&
+        commandPaletteShortcutEnabled
+      ) {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [commandPaletteShortcutEnabled]);
+
+  // Ctrl+Shift+E toggles between the two most recent sidebar panels.
+  const previousRailViewRef = useRef<RailView | null>(null);
+  const currentRailViewRef = useRef(railView);
+  useEffect(() => {
+    if (currentRailViewRef.current !== railView) {
+      previousRailViewRef.current = currentRailViewRef.current;
+      currentRailViewRef.current = railView;
+    }
+  }, [railView]);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !e.shiftKey || e.altKey || e.code !== "KeyE") return;
+      e.preventDefault();
+      const previous = previousRailViewRef.current;
+      if (!sidebarOpen) {
+        setSidebarOpen(true);
+        return;
+      }
+      if (previous && previous !== railView) handleRailClick(previous);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [railView, sidebarOpen]);
 
   // Split-screen and tab navigation hotkeys
   // Also registered in globalShortcutHandler so xterm can invoke directly
@@ -988,6 +1071,14 @@ export function AppShell({
       paneTabIds,
       rowSizes,
       rowColSizes,
+      sidebar: {
+        left: { view: railView, open: sidebarOpen, width: sidebarWidth },
+        right: {
+          view: rightRailView,
+          open: rightRailView !== null,
+          width: rightSidebarWidth,
+        },
+      },
     });
   }
 
@@ -1046,6 +1137,22 @@ export function AppShell({
       ? (slotIdToNewTabId.get(workspace.payload.activeSlotId) ?? "dashboard")
       : "dashboard";
     setActiveTabId(activeId);
+
+    // Older payloads predate the sidebar field, so leave the docks alone then.
+    const sidebar = workspace.payload.sidebar;
+    if (sidebar) {
+      if (sidebar.left.view) setRailView(sidebar.left.view as RailView);
+      setSidebarOpen(sidebar.left.open);
+      if (sidebar.left.width) setSidebarWidth(sidebar.left.width);
+
+      const right = sidebar.right.open ? sidebar.right.view : null;
+      setRightRailView(
+        right && RIGHT_DOCKABLE_IDS.includes(right)
+          ? (right as RailView)
+          : null,
+      );
+      if (sidebar.right.width) setRightSidebarWidth(sidebar.right.width);
+    }
 
     if (skippedTabs.length > 0) {
       toast.warning(
@@ -1274,7 +1381,19 @@ export function AppShell({
       if (lastSessionSaveTimeoutRef.current)
         clearTimeout(lastSessionSaveTimeoutRef.current);
     };
-  }, [tabs, paneTabIds, splitMode, rowSizes, rowColSizes, tabsReady]);
+  }, [
+    tabs,
+    paneTabIds,
+    splitMode,
+    rowSizes,
+    rowColSizes,
+    tabsReady,
+    railView,
+    sidebarOpen,
+    sidebarWidth,
+    rightRailView,
+    rightSidebarWidth,
+  ]);
 
   // ─── Tab management ──────────────────────────────────────────────────────
 
@@ -1510,7 +1629,8 @@ export function AppShell({
         homepage: t("nav.homepage"),
         "fleet-inventory": t("nav.fleets"),
       };
-      const label = singletonLabels[type] ?? type;
+      // Promoted rail panels reuse the rail's own label so the two stay in sync.
+      const label = singletonLabels[type] ?? railItemLabel(type, t);
       setTabs((prev) => {
         const existing = prev.find((t) => t.id === id);
         if (existing) {
@@ -1748,10 +1868,31 @@ export function AppShell({
 
   // ─── Rail / sidebar ──────────────────────────────────────────────────────
 
+  // Moving a panel to the right dock rather than copying it: two live copies of
+  // the same panel would fight over the shared editing state.
+  function openInRightDock(view: RailView) {
+    setRightRailView(view);
+    if (railView === view) setSidebarOpen(false);
+  }
+
+  // Tab bar toggle: reopens whatever was last in the dock, so it behaves like a
+  // show/hide rather than losing the user's choice each time.
+  function toggleRightDock() {
+    if (rightRailView) {
+      lastRightRailViewRef.current = rightRailView;
+      setRightRailView(null);
+      return;
+    }
+    const fallback = lastRightRailViewRef.current ?? RIGHT_DOCKABLE_IDS[0];
+    if (fallback) setRightRailView(fallback as RailView);
+  }
+
   function handleRailClick(view: RailView) {
     if (railView === view && sidebarOpen) {
       setSidebarOpen(false);
     } else {
+      // A panel lives in one dock at a time, so the left dock reclaims it.
+      if (rightRailView === view) setRightRailView(null);
       if (view !== railView) setSidebarEditing(false);
       if (view !== railView) setSettingsFullscreen(false);
       setRailView(view);
@@ -1791,6 +1932,29 @@ export function AppShell({
     [sidebarWidth],
   );
 
+  // Same drag, mirrored: the right dock grows as the pointer moves left.
+  const onRightSidebarMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      setRightSidebarDragging(true);
+      const startX = e.clientX;
+      const startW = rightSidebarWidth;
+      function onMove(ev: MouseEvent) {
+        setRightSidebarWidth(
+          Math.max(160, Math.min(480, startW - (ev.clientX - startX))),
+        );
+      }
+      function onUp() {
+        setRightSidebarDragging(false);
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      }
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [rightSidebarWidth],
+  );
+
   // Resize all terminals in panes + active terminal when split mode or sidebar changes
   const resizeAllTerminals = useCallback(() => {
     const id = requestAnimationFrame(() => {
@@ -1807,7 +1971,7 @@ export function AppShell({
   useEffect(() => {
     const id = resizeAllTerminals();
     return () => cancelAnimationFrame(id);
-  }, [splitMode, sidebarWidth, sidebarOpen]);
+  }, [splitMode, sidebarWidth, sidebarOpen, rightSidebarWidth, rightRailView]);
 
   const isSplit = splitMode !== "none";
 
@@ -1861,34 +2025,56 @@ export function AppShell({
 
   const terminalTabs = tabs.filter((t) => t.type === "terminal");
 
-  // Sidebar panel content — shared between desktop inline sidebar and mobile sheet
-  const sidebarPanelContent = (
+  // What history/snippets/ssh-tools should act on. Falls back to the remembered
+  // terminal when the active tab isn't one, and drops it once it's closed.
+  const targetTerminalTabId = terminalTabs.some((t) => t.id === activeTabId)
+    ? activeTabId
+    : terminalTabs.some((t) => t.id === lastTerminalTabId)
+      ? lastTerminalTabId
+      : "";
+
+  /**
+   * Sidebar panel content, shared between the desktop sidebar, the mobile
+   * sheet and the right dock. Takes the view rather than reading railView so
+   * both docks can render from the same code.
+   *
+   * `owned` marks the dock responsible for the panels that stay mounted while
+   * hidden (hosts, credentials, fleets). Only one dock may own them, otherwise
+   * two live instances fight over the shared editing state.
+   */
+  // The param deliberately shadows the outer railView so the body reads the
+  // same whichever dock is rendering.
+  const renderSidebarPanels = (railView: RailView, owned = true) => (
     <Suspense fallback={<SidebarPanelFallback />}>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-        <div
-          className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
-        >
-          <HostsPanel
-            onOpenTab={(host, type) => {
-              connectHost(host, type);
-              if (isMobile) setSidebarOpen(false);
-            }}
-            onEditHost={editHostInManager}
-            hostTree={realHostTree ?? undefined}
-            loading={hostsLoading}
-            onEditingChange={setSidebarEditing}
-            active={railView === "hosts"}
-          />
-        </div>
+        {owned && (
+          <>
+            <div
+              className={`flex flex-col flex-1 min-h-0 ${railView === "hosts" ? "" : "hidden"}`}
+            >
+              <HostsPanel
+                onOpenTab={(host, type) => {
+                  connectHost(host, type);
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                onEditHost={editHostInManager}
+                hostTree={realHostTree ?? undefined}
+                loading={hostsLoading}
+                onEditingChange={setSidebarEditing}
+                active={railView === "hosts"}
+              />
+            </div>
 
-        <div
-          className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
-        >
-          <CredentialsPanel
-            onEditingChange={setSidebarEditing}
-            active={railView === "credentials"}
-          />
-        </div>
+            <div
+              className={`flex flex-col flex-1 min-h-0 ${railView === "credentials" ? "" : "hidden"}`}
+            >
+              <CredentialsPanel
+                onEditingChange={setSidebarEditing}
+                active={railView === "credentials"}
+              />
+            </div>
+          </>
+        )}
 
         {railView === "termix-id" && (
           <div className="flex flex-col flex-1 min-h-0">
@@ -1918,7 +2104,7 @@ export function AppShell({
           <div className="flex-1 min-h-0 overflow-y-auto">
             <SshToolsPanel
               terminalTabs={terminalTabs}
-              activeTabId={activeTabId}
+              activeTabId={targetTerminalTabId}
             />
           </div>
         )}
@@ -1927,7 +2113,7 @@ export function AppShell({
           <div className="flex-1 min-h-0 overflow-y-auto">
             <SnippetsPanel
               terminalTabs={terminalTabs}
-              activeTabId={activeTabId}
+              activeTabId={targetTerminalTabId}
               storageMode={
                 userPrefs.storageMode === "cloud" ? "cloud" : "local"
               }
@@ -1935,22 +2121,29 @@ export function AppShell({
           </div>
         )}
 
-        <div
-          className={`flex flex-col flex-1 min-h-0 ${railView === "fleets" ? "" : "hidden"}`}
-        >
-          <FleetsPanel
-            active={railView === "fleets"}
-            onOpenFleetInventory={(fleetId) =>
-              openSingletonTab("fleet-inventory", undefined, undefined, fleetId)
-            }
-          />
-        </div>
+        {owned && (
+          <div
+            className={`flex flex-col flex-1 min-h-0 ${railView === "fleets" ? "" : "hidden"}`}
+          >
+            <FleetsPanel
+              active={railView === "fleets"}
+              onOpenFleetInventory={(fleetId) =>
+                openSingletonTab(
+                  "fleet-inventory",
+                  undefined,
+                  undefined,
+                  fleetId,
+                )
+              }
+            />
+          </div>
+        )}
 
         {railView === "history" && (
           <div className="flex flex-col flex-1 min-h-0 overflow-y-auto">
             <HistoryPanel
               terminalTabs={terminalTabs}
-              activeTabId={activeTabId}
+              activeTabId={targetTerminalTabId}
             />
           </div>
         )}
@@ -2126,12 +2319,44 @@ export function AppShell({
     </Suspense>
   );
 
+  const sidebarPanelContent = renderSidebarPanels(railView);
+
   // Sidebar header — shared
   const sidebarHeader = (
     <div className="flex flex-row items-center border-b border-border h-12.5 shrink-0">
       <span className="flex-1 text-base font-bold tracking-tight text-foreground px-3">
         {sidebarTitle(railView)}
       </span>
+      {!isMobile && PROMOTABLE_IDS.includes(railView) && (
+        <>
+          <Separator orientation="vertical" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            title={t("nav.openAsTab")}
+            aria-label={t("nav.openAsTab")}
+            onClick={() => openSingletonTab(railView as TabType)}
+          >
+            <SquareArrowOutUpRight className="size-3.5" />
+          </Button>
+        </>
+      )}
+      {!isMobile && RIGHT_DOCKABLE_IDS.includes(railView) && (
+        <>
+          <Separator orientation="vertical" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+            title={t("nav.openInRightDock")}
+            aria-label={t("nav.openInRightDock")}
+            onClick={() => openInRightDock(railView)}
+          >
+            <PanelRight className="size-3.5" />
+          </Button>
+        </>
+      )}
       {!isMobile && (
         <>
           <Separator orientation="vertical" />
@@ -2188,6 +2413,15 @@ export function AppShell({
     </div>
   );
 
+  const sidebarHint = !isMobile && (
+    <MultiPanelHint
+      canPromote={PROMOTABLE_IDS.includes(railView)}
+      canRightDock={RIGHT_DOCKABLE_IDS.includes(railView)}
+      onOpenAsTab={() => openSingletonTab(railView as TabType)}
+      onOpenInRightDock={() => openInRightDock(railView)}
+    />
+  );
+
   return (
     <ServerStatusProvider isAuthenticated={!!username}>
       <div
@@ -2222,6 +2456,7 @@ export function AppShell({
               isAdmin={showAdminUI}
               onRailClick={handleRailClick}
               onOpenTab={openSingletonTab}
+              onOpenInRightDock={openInRightDock}
               onLogout={onLogout}
             />
           )}
@@ -2242,6 +2477,7 @@ export function AppShell({
               }}
             >
               {sidebarHeader}
+              {sidebarHint}
               {sidebarPanelContent}
 
               {sidebarOpen && !sidebarEditing && !settingsFullscreen && (
@@ -2305,6 +2541,8 @@ export function AppShell({
                 onOpenShare={openShareForTab}
                 isAppFullscreen={isAppFullscreen}
                 onToggleAppFullscreen={toggleAppFullscreen}
+                rightDockOpen={rightRailView !== null}
+                onToggleRightDock={isMobile ? undefined : toggleRightDock}
               />
               <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
                 {/* Split view — always mounted when not mobile, hidden via CSS when inactive */}
@@ -2397,6 +2635,14 @@ export function AppShell({
                         renameTab,
                         saveQuickConnectHost,
                         isFocusedPane,
+                        {
+                          terminalTabs,
+                          targetTerminalTabId,
+                          storageMode:
+                            userPrefs.storageMode === "cloud"
+                              ? "cloud"
+                              : "local",
+                        },
                       ),
                       tabNode,
                       tab.id,
@@ -2414,6 +2660,41 @@ export function AppShell({
               onRailClick={handleRailClick}
             />
           </div>
+
+          {/* Right dock — desktop only, holds a second reference panel */}
+          {!isMobile && rightRailView && !settingsFullscreen && (
+            <div
+              className={`relative flex flex-col min-h-0 bg-sidebar shrink-0 overflow-hidden border-l transition-colors ${rightSidebarDragging ? "border-accent-brand/60" : "border-border"}`}
+              style={{
+                width: rightSidebarWidth,
+                transition: rightSidebarDragging ? "none" : "width 0.2s",
+              }}
+            >
+              <div className="flex flex-row items-center border-b border-border h-12.5 shrink-0">
+                <span className="flex-1 text-base font-bold tracking-tight text-foreground px-3">
+                  {sidebarTitle(rightRailView)}
+                </span>
+                <Separator orientation="vertical" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-full w-12.5 rounded-none text-muted-foreground hover:text-foreground"
+                  title={t("nav.closeRightDock")}
+                  aria-label={t("nav.closeRightDock")}
+                  onClick={() => setRightRailView(null)}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+
+              {renderSidebarPanels(rightRailView, false)}
+
+              <div
+                onMouseDown={onRightSidebarMouseDown}
+                className={`absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-30 transition-colors ${rightSidebarDragging ? "bg-accent-brand/60" : "hover:bg-accent-brand/40"}`}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -2425,6 +2706,7 @@ export function AppShell({
             hosts={allHosts}
             terminalTabs={terminalTabs}
             activeTabId={activeTabId}
+            onOpenPanel={(view) => handleRailClick(view as RailView)}
             onOpenTab={(type, label, pendingEvent) => {
               if (
                 [
