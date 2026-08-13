@@ -156,6 +156,7 @@ interface StatsConfig {
   useGlobalMetricsInterval?: boolean;
   disableTcpPing?: boolean;
   excludedMounts?: string[];
+  monitoredMounts?: Array<{ path: string; label?: string }>;
 }
 
 const DEFAULT_STATS_CONFIG: StatsConfig = {
@@ -1632,6 +1633,8 @@ async function collectMetrics(
       state: string;
       rxBytes: string | null;
       txBytes: string | null;
+      rxRateBps: number | null;
+      txRateBps: number | null;
     }>;
   };
   uptime: {
@@ -1680,12 +1683,19 @@ async function collectMetrics(
       const excludedMounts = pollingManager.parseStatsConfig(
         host.statsConfig,
       ).excludedMounts;
+      const monitoredMounts = pollingManager.parseStatsConfig(
+        host.statsConfig,
+      ).monitoredMounts;
 
       const collectFn = async (client: Client) => {
         onAuthenticated?.();
         const cpu = await collectCpuMetrics(client);
         const memory = await collectMemoryMetrics(client);
-        const disk = await collectDiskMetrics(client, excludedMounts);
+        const disk = await collectDiskMetrics(
+          client,
+          excludedMounts,
+          monitoredMounts,
+        );
         const network = await collectNetworkMetrics(client);
         const uptime = await collectUptimeMetrics(client);
         const processes = await collectProcessesMetrics(client);

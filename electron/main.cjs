@@ -24,6 +24,7 @@ const { URL } = require("url");
 const { fork, spawn } = require("child_process");
 const WebSocket = require("ws");
 const remoteSync = require("./remote-sync.cjs");
+const { launchNativeRdp } = require("./native-rdp.cjs");
 
 // The main process's Node.js networking (the `https`/`http` modules used by
 // httpFetch below, and the global `fetch` used by remote-sync.cjs) only
@@ -1448,6 +1449,10 @@ ipcMain.handle("check-electron-update", async () => {
 ipcMain.handle("get-platform", () => {
   return process.platform;
 });
+
+ipcMain.handle("open-native-rdp", (_event, options) =>
+  launchNativeRdp(options),
+);
 
 ipcMain.handle("get-embedded-server-status", () => {
   return {

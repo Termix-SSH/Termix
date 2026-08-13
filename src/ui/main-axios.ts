@@ -96,6 +96,7 @@ export interface DiskFilesystem {
   usedBytes: number | null;
   totalBytes: number | null;
   availableBytes: number | null;
+  label?: string;
 }
 
 interface DiskMetrics {
@@ -115,6 +116,8 @@ export interface NetworkInterface {
   tx?: string | null;
   rxBytes?: string | null;
   txBytes?: string | null;
+  rxRateBps?: number | null;
+  txRateBps?: number | null;
 }
 
 export interface ProcessInfo {

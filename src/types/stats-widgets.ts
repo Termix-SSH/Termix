@@ -72,6 +72,8 @@ export interface StatsConfig {
   disableTcpPing?: boolean;
   /** Filesystem mount points to leave out of the disk widget. */
   excludedMounts?: string[];
+  /** Extra paths to monitor, including paths inside bind-mounted containers. */
+  monitoredMounts?: Array<{ path: string; label?: string }>;
 }
 
 export const DEFAULT_STATS_CONFIG: StatsConfig = {

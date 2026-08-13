@@ -21,6 +21,16 @@ export interface DiskFilesystem {
   usedBytes: number | null;
   totalBytes: number | null;
   availableBytes: number | null;
+  label?: string;
+}
+
+export interface MonitoredMount {
+  path: string;
+  label?: string;
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 // Parses `df -T -P`-style output: Filesystem, Type, then the size columns,
@@ -167,9 +177,35 @@ export function filterExcludedFilesystems(
   });
 }
 
+export function mergeMonitoredFilesystems(
+  filesystems: DiskFilesystem[],
+  monitored: MonitoredMount[],
+  customFilesystems: Array<DiskFilesystem | null>,
+): DiskFilesystem[] {
+  const result = [...filesystems];
+  monitored.forEach((entry, index) => {
+    const path = entry.path.trim();
+    const custom = customFilesystems[index];
+    if (!path || !custom) return;
+
+    const existing = result.find((fs) => fs.mount === path);
+    if (existing) {
+      existing.label = entry.label?.trim() || undefined;
+      return;
+    }
+    result.push({
+      ...custom,
+      mount: path,
+      label: entry.label?.trim() || undefined,
+    });
+  });
+  return result;
+}
+
 export async function collectDiskMetrics(
   client: Client,
   excludedMounts?: string[] | null,
+  monitoredMounts?: MonitoredMount[] | null,
 ): Promise<{
   percent: number | null;
   usedHuman: string | null;
@@ -186,10 +222,37 @@ export async function collectDiskMetrics(
 
     const humanRows = parseDfLines(diskOutHuman.stdout);
     const bytesRows = parseDfLines(diskOutBytes.stdout);
-    const filesystems = filterExcludedFilesystems(
-      buildFilesystemList(bytesRows, humanRows),
-      excludedMounts,
+    let detected = buildFilesystemList(bytesRows, humanRows);
+    const monitored = (monitoredMounts ?? []).filter((entry) =>
+      Boolean(entry.path.trim()),
     );
+    if (monitored.length > 0) {
+      const customFilesystems = await Promise.all(
+        monitored.map(async (entry) => {
+          const path = shellQuote(entry.path.trim());
+          try {
+            const [customHuman, customBytes] = await Promise.all([
+              execCommand(client, `df -hT -P -- ${path} | tail -n +2`),
+              execCommand(client, `df -TB1 -P -- ${path} | tail -n +2`),
+            ]);
+            return (
+              buildFilesystemList(
+                parseDfLines(customBytes.stdout),
+                parseDfLines(customHuman.stdout),
+              )[0] ?? null
+            );
+          } catch {
+            return null;
+          }
+        }),
+      );
+      detected = mergeMonitoredFilesystems(
+        detected,
+        monitored,
+        customFilesystems,
+      );
+    }
+    const filesystems = filterExcludedFilesystems(detected, excludedMounts);
     const primary = selectPrimaryFilesystem(filesystems);
 
     return {
