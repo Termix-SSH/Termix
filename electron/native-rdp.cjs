@@ -28,8 +28,7 @@ function validateNativeRdpOptions(options) {
 }
 
 function buildRdpFile(options) {
-  const { host, port, username, domain } =
-    validateNativeRdpOptions(options);
+  const { host, port, username, domain } = validateNativeRdpOptions(options);
   const address = host.includes(":") ? `[${host}]:${port}` : `${host}:${port}`;
   const qualifiedUsername = username
     ? domain
@@ -47,13 +46,21 @@ function buildRdpFile(options) {
 
 async function launchNativeRdp(options, platform = process.platform) {
   if (platform !== "win32") {
-    return { success: false, error: "Windows Remote Desktop is only available on Windows" };
+    return {
+      success: false,
+      error: "Windows Remote Desktop is only available on Windows",
+    };
   }
 
   const rdpContent = buildRdpFile(options);
-  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "termix-rdp-"));
+  const tempDir = await fs.promises.mkdtemp(
+    path.join(os.tmpdir(), "termix-rdp-"),
+  );
   const rdpPath = path.join(tempDir, "connection.rdp");
-  await fs.promises.writeFile(rdpPath, rdpContent, { encoding: "utf8", mode: 0o600 });
+  await fs.promises.writeFile(rdpPath, rdpContent, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
 
   return new Promise((resolve) => {
     const child = spawn("mstsc.exe", [rdpPath], {
