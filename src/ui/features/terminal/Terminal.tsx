@@ -43,6 +43,7 @@ import { TmuxSessionPicker } from "@/ssh/dialogs/TmuxSessionPicker.tsx";
 import {
   DEFAULT_TERMINAL_CONFIG,
   TERMINAL_FONTS,
+  resolveTerminalFontFamily,
 } from "@/lib/terminal-themes.ts";
 import { ensureTerminalFontsLoaded } from "./terminal-global-styles.ts";
 import { useTheme } from "@/components/theme-provider.tsx";
@@ -2258,11 +2259,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         config.customThemeColors,
       );
 
-      const fontConfig = TERMINAL_FONTS.find(
-        (f) => f.value === config.fontFamily,
-      );
-      const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
-      ensureTerminalFontsLoaded(fontConfig?.value || TERMINAL_FONTS[0].value);
+      const fontFamily = resolveTerminalFontFamily(config.fontFamily);
+      ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
 
       // Update terminal options individually to avoid re-initialization flashes
       terminal.options.cursorBlink = config.cursorBlink;
@@ -2322,11 +2320,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         ...hostConfig.terminalConfig,
       };
 
-      const fontConfig = TERMINAL_FONTS.find(
-        (f) => f.value === config.fontFamily,
-      );
-      const fontFamily = fontConfig?.fallback || TERMINAL_FONTS[0].fallback;
-      ensureTerminalFontsLoaded(fontConfig?.value || TERMINAL_FONTS[0].value);
+      const fontFamily = resolveTerminalFontFamily(config.fontFamily);
+      ensureTerminalFontsLoaded(config.fontFamily || TERMINAL_FONTS[0].value);
 
       const activeTheme = previewTheme || config.theme;
       const themeColors = resolveTermixThemeColors(

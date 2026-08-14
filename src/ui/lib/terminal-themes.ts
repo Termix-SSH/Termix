@@ -804,6 +804,16 @@ export const TERMINAL_FONTS = [
   },
 ];
 
+// Unknown values are treated as a custom font installed on the user's system.
+export function resolveTerminalFontFamily(fontFamily?: string): string {
+  const known = TERMINAL_FONTS.find((f) => f.value === fontFamily);
+  if (known) return known.fallback;
+  if (fontFamily && fontFamily.trim()) {
+    return `"${fontFamily.trim()}", "SF Mono", Consolas, "Liberation Mono", monospace`;
+  }
+  return TERMINAL_FONTS[0].fallback;
+}
+
 export const CURSOR_STYLES = [
   { value: "block", label: "Block" },
   { value: "underline", label: "Underline" },

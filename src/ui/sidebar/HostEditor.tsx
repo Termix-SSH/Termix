@@ -12,11 +12,18 @@ import { Input } from "@/components/input";
 import { PasswordInput } from "@/components/password-input";
 import { Slider } from "@/components/slider";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/tooltip";
+import {
   TERMINAL_FONT_ZOOM_MIN,
   TERMINAL_FONT_ZOOM_MAX,
 } from "@/features/terminal/terminal-font-zoom";
 import {
   Globe,
+  Info,
   Layers, // --- tmux-monitor ---
   LayoutGrid,
   Network,
@@ -89,6 +96,8 @@ import {
   type CredentialOption,
 } from "./quick-created-credential";
 
+const CUSTOM_FONT_OPTION = "__custom__";
+
 export function HostEditor({
   host,
   activeTab,
@@ -122,6 +131,9 @@ export function HostEditor({
   const { t } = useTranslation();
   const { setPreviewTerminalTheme } = useTabsSafe();
   const [form, setForm] = useState(() => createHostEditorForm(host));
+  const [isCustomFont, setIsCustomFont] = useState(
+    () => !TERMINAL_FONTS.some((f) => f.value === form.fontFamily),
+  );
 
   const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
     onDirtyChange?.(true);
@@ -1200,12 +1212,34 @@ export function HostEditor({
                       </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {t("hosts.fontFamilyLabel")}
-                      </label>
+                      <div className="flex items-center gap-1">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                          {t("hosts.fontFamilyLabel")}
+                        </label>
+                        <TooltipProvider delayDuration={200}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="size-3 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              {t("hosts.fontFamilyCustomHint")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <select
-                        value={form.fontFamily}
-                        onChange={(e) => setField("fontFamily", e.target.value)}
+                        value={
+                          isCustomFont ? CUSTOM_FONT_OPTION : form.fontFamily
+                        }
+                        onChange={(e) => {
+                          if (e.target.value === CUSTOM_FONT_OPTION) {
+                            setIsCustomFont(true);
+                            setField("fontFamily", "");
+                          } else {
+                            setIsCustomFont(false);
+                            setField("fontFamily", e.target.value);
+                          }
+                        }}
                         className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring font-mono"
                       >
                         {TERMINAL_FONTS.map((f) => (
@@ -1213,7 +1247,22 @@ export function HostEditor({
                             {f.label}
                           </option>
                         ))}
+                        <option value={CUSTOM_FONT_OPTION}>
+                          {t("hosts.fontFamilyCustomOption")}
+                        </option>
                       </select>
+                      {isCustomFont && (
+                        <Input
+                          value={form.fontFamily}
+                          onChange={(e) =>
+                            setField("fontFamily", e.target.value)
+                          }
+                          placeholder={t(
+                            "hosts.fontFamilyCustomPlaceholder",
+                          )}
+                          className="h-9 text-xs font-mono"
+                        />
+                      )}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center justify-between">
