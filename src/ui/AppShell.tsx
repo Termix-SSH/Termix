@@ -451,6 +451,7 @@ export function AppShell({
   const lastShiftTime = useRef(0);
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
+  const closeActiveTabRef = useRef<() => void>(() => {});
   const splitModeRef = useRef(splitMode);
   const focusedPaneIndexRef = useRef<number | null>(null);
   const paneContentElsRef = useRef<(HTMLDivElement | null)[]>(
@@ -463,6 +464,11 @@ export function AppShell({
   useEffect(() => {
     activeTabIdRef.current = activeTabId;
   }, [activeTabId]);
+  useEffect(() => {
+    return window.electronAPI?.onCloseActiveTab?.(() =>
+      closeActiveTabRef.current(),
+    );
+  }, []);
   const skipSplitSyncRef = useRef(false);
   useEffect(() => {
     const active = tabsRef.current.find((tab) => tab.id === activeTabId);
@@ -1894,6 +1900,11 @@ export function AppShell({
 
     doCloseTab(id);
   }
+
+  closeActiveTabRef.current = () => {
+    const id = activeTabIdRef.current;
+    if (id !== "dashboard") closeTab(id);
+  };
 
   function renameTab(tabId: string, newLabel: string) {
     setTabs((prev) =>

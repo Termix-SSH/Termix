@@ -25,6 +25,7 @@ const { fork, spawn } = require("child_process");
 const WebSocket = require("ws");
 const remoteSync = require("./remote-sync.cjs");
 const { launchNativeRdp } = require("./native-rdp.cjs");
+const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 
 // The main process's Node.js networking (the `https`/`http` modules used by
 // httpFetch below, and the global `fetch` used by remote-sync.cjs) only
@@ -1188,6 +1189,13 @@ function createWindow() {
 
   const customUserAgent = `Termix-Desktop/${appVersion} (${platform}; Electron/${electronVersion})`;
   mainWindow.webContents.setUserAgent(customUserAgent);
+
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (process.platform !== "win32" || !isCloseActiveTabInput(input)) return;
+
+    event.preventDefault();
+    mainWindow.webContents.send("close-active-tab");
+  });
 
   mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
     (details, callback) => {

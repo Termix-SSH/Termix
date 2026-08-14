@@ -39,6 +39,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () =>
       ipcRenderer.removeListener("remote-sync-status-changed", listener);
   },
+  onCloseActiveTab: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("close-active-tab", listener);
+    return () => ipcRenderer.removeListener("close-active-tab", listener);
+  },
 
   clearSessionCookies: () => ipcRenderer.invoke("clear-session-cookies"),
   getSessionCookie: (name, targetUrl) =>
