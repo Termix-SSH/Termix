@@ -19,6 +19,7 @@ import {
 } from "../transfer-paths.js";
 import {
   buildTransferScanSummary,
+  estimateIncompressibleSample,
   getArchiveTransferReasonKey,
   resolveArchiveTransferMethod,
   type TransferMethodPreference,
@@ -33,6 +34,11 @@ import {
   shouldUseDirectTransfer,
   type DirectTransferEndpoint,
 } from "./direct-transfer-routing.js";
+import {
+  getTransferProfile,
+  recordTransferProfile,
+  selectTransferTuning,
+} from "./transfer-tuning.js";
 
 export type {
   TransferMethodPreference,
@@ -175,7 +181,7 @@ export interface TransferRequest {
   move?: boolean;
   userId: string;
   methodPreference?: TransferMethodPreference;
-  /** Parallel 256 MiB segment lanes for single-file SFTP copy (default 2). */
+  /** Explicit parallel lane override; omitted values are tuned automatically. */
   parallelSegmentCount?: number;
 }
 
@@ -338,6 +344,7 @@ interface TransferReconnectContext {
   dedicatedSourceSessionId: string;
   dedicatedDestSessionId: string;
   transferId: string;
+  profileKey?: string;
 }
 
 type TransferReconnectMeta = Omit<
@@ -1393,7 +1400,52 @@ async function scanSourcePathsForRouting(
       ...work.map((w) => ({ sourcePath: w.sourcePath, size: w.size })),
     );
   }
-  return buildTransferScanSummary(scanItems);
+  const summary = buildTransferScanSummary(scanItems);
+  const candidates = [...scanItems]
+    .filter((item) => item.size > 0)
+    .sort((a, b) => b.size - a.size)
+    .slice(0, 3);
+  let sampledBytes = 0;
+  let sampledIncompressibleBytes = 0;
+  for (const item of candidates) {
+    throwIfCancelled(transferId);
+    try {
+      const sample = await readSftpSample(sftp, item.sourcePath, item.size);
+      sampledBytes += sample.length;
+      if (estimateIncompressibleSample(sample)) {
+        sampledIncompressibleBytes += sample.length;
+      }
+    } catch {
+      /* Extension-based routing remains the safe fallback. */
+    }
+  }
+  if (sampledBytes > 0) {
+    summary.sampledIncompressibleRatio =
+      sampledIncompressibleBytes / sampledBytes;
+  }
+  return summary;
+}
+
+async function readSftpSample(
+  sftp: SFTPWrapper,
+  path: string,
+  fileSize: number,
+): Promise<Buffer> {
+  const sampleSize = Math.min(64 * 1024, fileSize);
+  const position = Math.max(0, Math.floor((fileSize - sampleSize) / 2));
+  const handle = await promisifySftpOpen(sftp, path, SFTP_OPEN_READ, 0o666);
+  try {
+    const buffer = Buffer.alloc(sampleSize);
+    const bytesRead = await new Promise<number>((resolve, reject) => {
+      sftp.read(handle, buffer, 0, sampleSize, position, (err, count) => {
+        if (err) reject(err);
+        else resolve(count);
+      });
+    });
+    return buffer.subarray(0, bytesRead);
+  } finally {
+    await promisifySftpClose(sftp, handle).catch(() => {});
+  }
 }
 
 function promisifySftpOpen(
@@ -1435,6 +1487,7 @@ interface PipelinedXferOptions {
   fileSize?: number;
   initialOffset?: number;
   parallelSegmentCount?: number;
+  pipelineConcurrency?: number;
   onProgress?: (bytes: number) => void;
   shouldAbort?: () => boolean;
   transferId?: string;
@@ -1549,7 +1602,7 @@ async function runFastSftpCopy(
   sourceReadClock: ReturnType<typeof createHopWallClock>,
   destWriteClock: ReturnType<typeof createHopWallClock>,
 ): Promise<void> {
-  let concurrency = SFTP_XFER_CONCURRENCY;
+  let concurrency = options.pipelineConcurrency ?? SFTP_XFER_CONCURRENCY;
   let chunkSize = SFTP_XFER_CHUNK_SIZE;
   let bufsize = chunkSize * concurrency;
   while (bufsize > byteLength && concurrency > 1) {
@@ -2437,7 +2490,7 @@ async function pipelinedSftpToLocalFile(
   const transferStart = Date.now();
 
   await promisifyFastGet(sourceSftp, sourcePath, localPath, {
-    concurrency: SFTP_XFER_CONCURRENCY,
+    concurrency: options.pipelineConcurrency ?? SFTP_XFER_CONCURRENCY,
     chunkSize: SFTP_XFER_CHUNK_SIZE,
     fileSize,
     step: (_total, chunk) => {
@@ -2468,6 +2521,13 @@ async function transferFileData(
   onResumeOffset?: (offset: number) => void,
   parallelSegmentCount?: number,
 ): Promise<PipelinedXferStats> {
+  const tuning = selectTransferTuning(
+    fileSize,
+    reconnect?.profileKey
+      ? getTransferProfile(reconnect.profileKey)
+      : undefined,
+    parallelSegmentCount,
+  );
   const pipeOptions: PipelinedXferOptions = {
     fileSize,
     onProgress,
@@ -2475,25 +2535,66 @@ async function transferFileData(
     transferId,
     reconnect,
     onResumeOffset,
-    parallelSegmentCount,
+    parallelSegmentCount: tuning.parallelSegmentCount,
+    pipelineConcurrency: tuning.pipelineConcurrency,
   };
 
-  if (isLocalSshEndpoint(destSession.ip)) {
-    return pipelinedSftpToLocalFile(
-      sourceSftp,
-      sourcePath,
-      destPath,
-      pipeOptions,
-    );
+  if (transferId) {
+    updateTransfer(transferId, {
+      parallelSegmentCount: tuning.parallelSegmentCount,
+    });
   }
 
-  return pipelinedSftpFile(
-    sourceSftp,
-    destSftp,
-    sourcePath,
-    destPath,
-    pipeOptions,
-  );
+  const startedAt = Date.now();
+  const shouldProfile = fileSize >= SFTP_XFER_SEGMENT_THRESHOLD;
+  fileLogger.info("Selected adaptive transfer tuning", {
+    operation: "host_transfer_tuning",
+    transferId,
+    fileSize,
+    parallelSegmentCount: tuning.parallelSegmentCount,
+    pipelineConcurrency: tuning.pipelineConcurrency,
+    profileSamples: reconnect?.profileKey
+      ? getTransferProfile(reconnect.profileKey)?.samples
+      : undefined,
+    explicitParallelOverride: parallelSegmentCount !== undefined,
+  });
+  try {
+    const stats = isLocalSshEndpoint(destSession.ip)
+      ? await pipelinedSftpToLocalFile(
+          sourceSftp,
+          sourcePath,
+          destPath,
+          pipeOptions,
+        )
+      : await pipelinedSftpFile(
+          sourceSftp,
+          destSftp,
+          sourcePath,
+          destPath,
+          pipeOptions,
+        );
+    if (shouldProfile && reconnect?.profileKey) {
+      recordTransferProfile(reconnect.profileKey, {
+        bytes: stats.bytes,
+        durationMs: Math.max(1, Date.now() - startedAt),
+        lanes: tuning.parallelSegmentCount,
+        pipelineConcurrency: tuning.pipelineConcurrency,
+        failed: false,
+      });
+    }
+    return stats;
+  } catch (err) {
+    if (shouldProfile && reconnect?.profileKey) {
+      recordTransferProfile(reconnect.profileKey, {
+        bytes: 0,
+        durationMs: Math.max(1, Date.now() - startedAt),
+        lanes: tuning.parallelSegmentCount,
+        pipelineConcurrency: tuning.pipelineConcurrency,
+        failed: true,
+      });
+    }
+    throw err;
+  }
 }
 
 const DIRECT_BENCHMARK_BYTES = 8 * 1024 * 1024;
@@ -2525,6 +2626,13 @@ function directRouteKey(
   endpoint: DirectTransferEndpoint,
 ): string {
   return `${sourceSession.username ?? ""}@${sourceSession.ip}->${endpoint.username}@${endpoint.host}:${endpoint.port}`;
+}
+
+function transferProfileKey(
+  sourceSession: SSHSessionLike,
+  destSession: SSHSessionLike,
+): string {
+  return `${sourceSession.username ?? ""}@${sourceSession.ip ?? "local"}:${sourceSession.port ?? 22}->${destSession.username ?? ""}@${destSession.ip ?? "local"}:${destSession.port ?? 22}`;
 }
 
 async function benchmarkTransferRoutes(
@@ -2786,6 +2894,7 @@ async function transferSingleFile(
   destPath: string,
   move: boolean,
   reconnectMeta: TransferReconnectMeta,
+  requestedParallelSegments?: number,
 ): Promise<TransferProgress> {
   const sourceSftp = await deps.getSessionSftp(sourceSession);
   const destSftp = await deps.getSessionSftp(destSession);
@@ -2827,9 +2936,12 @@ async function transferSingleFile(
     updateTransfer(transferId, { bytesTransferred: absoluteOffset });
   };
 
-  const parallelLanes = clampParallelSegmentCount(
-    activeTransfers.get(transferId)?.parallelSegmentCount,
+  const tuning = selectTransferTuning(
+    stats.size,
+    reconnect.profileKey ? getTransferProfile(reconnect.profileKey) : undefined,
+    requestedParallelSegments,
   );
+  const parallelLanes = tuning.parallelSegmentCount;
   const useAbsoluteProgressOnly = parallelLanes > 1;
 
   throwIfCancelled(transferId);
@@ -2851,7 +2963,7 @@ async function transferSingleFile(
     transferId,
     reconnect,
     syncProgress,
-    parallelLanes,
+    requestedParallelSegments,
   );
 
   await verifyTransferredFile(
@@ -3229,13 +3341,10 @@ async function runTransfer(
     move = false,
     userId,
     methodPreference = "auto",
-    parallelSegmentCount:
-      requestParallelSegments = DEFAULT_PARALLEL_SEGMENT_COUNT,
+    parallelSegmentCount: requestParallelSegments,
   } = request;
 
-  const parallelSegmentCount = clampParallelSegmentCount(
-    requestParallelSegments,
-  );
+  const parallelSegmentCount = requestParallelSegments;
 
   const dedicatedSourceSessionId = `xfer:${transferId}:src`;
   const dedicatedDestSessionId = `xfer:${transferId}:dst`;
@@ -3262,11 +3371,14 @@ async function runTransfer(
       transferId,
     );
 
+    reconnectMeta.profileKey = transferProfileKey(sourceSession, destSession);
+
     sourceSession.lastActive = Date.now();
     destSession.lastActive = Date.now();
 
     updateTransfer(transferId, {
-      parallelSegmentCount,
+      parallelSegmentCount:
+        parallelSegmentCount ?? DEFAULT_PARALLEL_SEGMENT_COUNT,
       dedicatedSourceSessionId,
       dedicatedDestSessionId,
     });
@@ -3341,6 +3453,7 @@ async function runTransfer(
         destPath,
         move,
         reconnectMeta,
+        parallelSegmentCount,
       );
     } else {
       const prepareStart = Date.now();
@@ -3691,10 +3804,7 @@ export function retryHostTransfer(
     await runTransfer(deps, transferId, {
       ...latest.requestSnapshot,
       userId,
-      parallelSegmentCount:
-        latest.requestSnapshot?.parallelSegmentCount ??
-        latest.parallelSegmentCount ??
-        DEFAULT_PARALLEL_SEGMENT_COUNT,
+      parallelSegmentCount: latest.requestSnapshot.parallelSegmentCount,
     });
   })();
 
@@ -3748,14 +3858,11 @@ export async function previewArchiveTransferMethod(
   );
 
   const sourceSftp = await deps.getSessionSftp(sourceSession);
-  const scanItems: Array<{ sourcePath: string; size: number }> = [];
-  for (const sourcePath of sourcePaths) {
-    const work = await collectFileWorkItems(sourceSftp, sourcePath, "/");
-    scanItems.push(
-      ...work.map((w) => ({ sourcePath: w.sourcePath, size: w.size })),
-    );
-  }
-  const scanSummary = buildTransferScanSummary(scanItems);
+  const scanSummary = await scanSourcePathsForRouting(
+    sourceSftp,
+    sourcePaths,
+    "preview",
+  );
 
   const sourceHasTar =
     sourcePlatform === "unix" && (await checkTarAvailable(deps, sourceSession));
@@ -3821,9 +3928,7 @@ export function startHostTransfer(
       destPath: request.destPath,
       move: request.move,
       methodPreference: request.methodPreference,
-      parallelSegmentCount: clampParallelSegmentCount(
-        request.parallelSegmentCount,
-      ),
+      parallelSegmentCount: request.parallelSegmentCount,
     },
   });
 

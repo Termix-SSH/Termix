@@ -2986,7 +2986,7 @@ app.post("/ssh/file_manager/ssh/transferToHost", async (req, res) => {
     const rawParallel = Number(parallelSegmentCountRaw);
     const parallelSegmentCount = Number.isFinite(rawParallel)
       ? Math.max(1, Math.min(8, Math.floor(rawParallel)))
-      : 2;
+      : undefined;
 
     const { transferId } = startHostTransfer(hostTransferDeps, {
       sourceSessionId,

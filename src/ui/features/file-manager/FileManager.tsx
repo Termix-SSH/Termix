@@ -1846,7 +1846,7 @@ function FileManagerContent({
     destPath: string,
     destPathLabel: string,
     methodPreference: TransferMethodPreference,
-    parallelSegmentCount: number,
+    parallelSegmentCount?: number,
   ) {
     if (!sshSessionId || !currentHost?.id || transferFiles.length === 0) return;
 
