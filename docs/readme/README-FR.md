@@ -4,7 +4,7 @@
 
 <h1>Termix</h1>
 
-<p>Gestion SSH auto-hebergee et acces bureau a distance</p>
+<p>Gestion de serveurs auto-hébergée, du SSH au bureau à distance jusqu'aux automatisations</p>
 
 <p>
   <a href="../README.md">English</a> ·
@@ -37,7 +37,7 @@
 
 <br />
 
-Termix est gratuit et open source. Si vous le trouvez utile, pensez à [faire un don](https://donate.termix.site/) pour aider à couvrir les coûts de serveur et le temps de développement.
+Termix est gratuit et open source. S'il vous est utile, pensez à [faire un don](https://donate.termix.site/) pour aider à payer les serveurs et le temps de développement.
 
 <br />
 
@@ -56,152 +56,194 @@ Termix est gratuit et open source. Si vous le trouvez utile, pensez à [faire un
 
 <br />
 
-## Presentation
+## Présentation
 
-Termix est une plateforme de gestion de serveurs tout-en-un, open source, a jamais gratuite et auto-hebergee. Elle fournit une solution multiplateforme pour gerer vos serveurs et votre infrastructure a travers une interface unique et intuitive. Termix offre un acces terminal SSH, le controle de bureau a distance (RDP, VNC, Telnet), des capacites de tunneling SSH, la gestion de fichiers SSH a distance et de nombreux autres outils. Termix est l'alternative parfaite, gratuite et auto-hebergee a Termius, disponible sur toutes les plateformes.
+Termix est une plateforme gratuite, open source et auto-hébergée pour gérer vos serveurs. Elle réunit au même endroit les terminaux SSH, les bureaux à distance (RDP, VNC, Telnet), les transferts de fichiers, les tunnels, Docker, les métriques et les automatisations, sur le web, le bureau et le mobile. C'est une alternative auto-hébergée à Termius, gratuite pour toujours.
 
 <br />
 
-## Fonctionnalites
+## Fonctionnalités
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-**Acces terminal SSH:**
-Terminal complet avec support d'ecran partage (jusqu'a 4 panneaux) et un systeme d'onglets inspire des navigateurs. Inclut la personnalisation du terminal avec des themes courants, des polices et d'autres composants.
+**Terminal SSH:**
+Un vrai terminal avec des onglets façon navigateur et un écran divisé, jusqu'à 6 panneaux à la fois. Choisissez votre thème, votre police et vos couleurs. Une barre d'outils au-dessus de chaque session affiche le CPU, la mémoire et le disque en direct, avec des raccourcis vers les fichiers, Docker, les tunnels et les métriques de cet hôte.
 
 </td>
 <td width="50%" valign="top">
 
-**Acces Bureau a Distance:**
-Support RDP, VNC et Telnet via navigateur avec personnalisation complete et ecran partage.
+**Bureau à distance:**
+RDP, VNC et Telnet dans le navigateur, en onglets et en écran divisé comme n'importe quelle autre session. Comprend un explorateur de fichiers pour les lecteurs RDP et l'envoi par glisser-déposer. Sur le bureau Windows, vous pouvez aussi ouvrir un hôte dans le client RDP natif.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Gestion des tunnels SSH:**
-Creez et gerez des tunnels SSH de serveur a serveur avec reconnexion automatique, surveillance de l'etat et transfert local, distant ou SOCKS dynamique. Les parametres de tunnel client-bureau-vers-serveur sont stockes localement par installation bureau ; des instantanes de prereglages C2S optionnels peuvent etre sauvegardes sur le serveur, renommes, charges ou supprimes pour deplacer une configuration de tunnel locale entre clients.
+**Tunnels SSH:**
+Redirection locale, distante et SOCKS dynamique, avec reconnexion automatique et vérification de l'état. Les tunnels client vers serveur de l'application de bureau restent sur cette machine, et vous pouvez enregistrer des préréglages sur le serveur pour reprendre une configuration sur un autre poste.
 
 </td>
 <td width="50%" valign="top">
 
-**Gestionnaire de fichiers distant:**
-Gerez les fichiers directement sur les serveurs distants avec support de la visualisation et de l'edition de code, images, audio et video. Televersez, telechargez, renommez, supprimez et deplacez des fichiers de maniere fluide avec support sudo. Inclut la prise en charge du deplacement de fichiers de serveur a serveur.
+**Gestionnaire de fichiers:**
+Parcourez, modifiez, envoyez, téléchargez, renommez, déplacez et supprimez des fichiers en SFTP, avec sudo. Affichez et modifiez du code, des images, de l'audio et de la vidéo. Copiez des fichiers directement d'un serveur à l'autre : le chemin le plus rapide est choisi pour vous et l'intégrité des transferts est vérifiée.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Gestion Docker et Podman:**
-Demarrez, arretez, mettez en pause, supprimez des conteneurs. Consultez les statistiques des conteneurs. Controlez les conteneurs via le terminal docker exec. Compatible avec Docker et Podman comme environnement d'execution de conteneurs. Non concu pour remplacer Portainer ou Dockge, mais plutot pour gerer simplement vos conteneurs plutot que de les creer.
+**Docker et Podman:**
+Démarrez, arrêtez, mettez en pause et supprimez des conteneurs, suivez leurs statistiques et ouvrez un shell à l'intérieur. Fonctionne avec Docker comme avec Podman. Le but n'est pas de remplacer Portainer ou Dockge, juste de gérer les conteneurs que vous avez déjà.
 
 </td>
 <td width="50%" valign="top">
 
-**Gestionnaire d'hotes SSH:**
-Enregistrez, organisez et gerez vos connexions SSH avec des tags et des dossiers (personnalisation des dossiers et prise en charge des dossiers imbriques), et sauvegardez facilement les informations de connexion reutilisables tout en automatisant le deploiement des cles SSH.
+**Gestionnaire d'hôtes:**
+Rangez vos hôtes avec des étiquettes et des dossiers imbriqués que vous pouvez nommer et colorer. Réutilisez des identifiants enregistrés sur plusieurs hôtes, déployez des clés SSH automatiquement, regroupez des hôtes sous un hôte parent, modifiez et exportez en lot, et utilisez la connexion rapide pour les connexions ponctuelles que vous ne voulez pas garder.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Metriques d'hote:**
-Visualisez l'utilisation du CPU, de la memoire, du disque, le reseau, le temps de fonctionnement, les informations systeme, le pare-feu, le moniteur de ports, le visualiseur de journaux, les utilisateurs/permissions, les certificats et bien plus encore sur la plupart des serveurs Linux. Inclut des graphiques d'historique en serie temporelle et des alertes basees sur des seuils avec support ntfy et webhook.
+**Métriques des hôtes:**
+CPU, mémoire, disque, réseau, température, temps de fonctionnement, processus, ports, connexions et informations système sur la plupart des serveurs Linux, avec des graphiques d'historique. Les cartes de gestion vous permettent de gérer les services, les tâches cron, les paquets, les utilisateurs, les règles de pare-feu, WireGuard, Tailscale, les certificats SSL, les journaux et les vérifications d'état sans quitter Termix.
 
 </td>
 <td width="50%" valign="top">
 
-**Authentification des utilisateurs:**
-Gestion securisee des utilisateurs avec controles administrateur (peut modifier les informations des autres utilisateurs) et support OIDC/LDAP/SSO (avec controle d'acces), 2FA (TOTP), et support des passkeys (WebAuthn). Visualisez les sessions utilisateur actives sur toutes les plateformes et revoquez les permissions. Liez vos comptes OIDC/locaux ensemble. Consultez le journal d'audit des actions de tous les utilisateurs.
+**Automatisations:**
+Choisissez un déclencheur, puis dites ce qui doit se passer. Les déclencheurs peuvent être une métrique qui dépasse un seuil, un hôte qui tombe ou revient, une vérification d'état qui change, un horaire, un événement de conteneur ou un webhook entrant. Les étapes peuvent lancer des commandes et des extraits, piloter des conteneurs et des tunnels, réveiller un hôte, appeler une URL, attendre, se diviser selon une condition, lancer une autre automatisation et vous prévenir via ntfy, Discord ou un webhook. Les essais à blanc vous permettent de tester sans risque.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Integration Tailscale:**
-Listez les appareils de votre reseau Tailscale pour les ajouter rapidement comme hotes, et connectez-vous en utilisant Tailscale SSH comme methode d'authentification, laissant les ACL de votre reseau gerer l'autorisation sans stocker de credentials.
+**Flottes:**
+Regroupez des hôtes dans une flotte en les choisissant ou avec des règles d'étiquettes, pour que les nouveaux hôtes s'ajoutent tout seuls. Lancez une commande sur tous les hôtes d'un coup, envoyez et récupérez des fichiers sur l'ensemble, installez des paquets et collectez un inventaire de l'OS, du noyau, de l'architecture et du temps de fonctionnement.
 
 </td>
 <td width="50%" valign="top">
 
-**RBAC/Partage:**
-Creez des roles et partagez des hotes entre utilisateurs/roles. Prend en charge tous les types d'authentification et tous les protocoles d'hote.
+**Assistant IA:**
+Optionnel, et désactivé tant que vous ne l'activez pas. Connectez OpenAI, Anthropic, Gemini, Ollama ou n'importe quel point d'accès compatible OpenAI et posez des questions sur votre installation. Il lit les hôtes, les flottes, les extraits et les alertes, et propose des changements que vous validez au lieu de les appliquer lui-même. Il ne peut jamais toucher aux identifiants, aux utilisateurs ni aux réglages. Les administrateurs peuvent le laisser désactivé pour toute l'instance, et vous pouvez le masquer pendant la configuration.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Connexions Serie:**
-Connectez-vous a des appareils serie (routeurs, commutateurs, microcontroleurs, etc.) directement depuis le navigateur ou l'application bureau. Configurez le debit en bauds, les bits de donnees, les bits d'arret et la parite. Utilise l'API Web Serial dans les navigateurs compatibles ou un backend natif dans l'application Electron.
+**Connexion et utilisateurs:**
+Comptes locaux ainsi que connexion OIDC, LDAP, GitHub et Google, avec double authentification (TOTP), clés d'accès (WebAuthn) et appareils de confiance. Les administrateurs peuvent gérer les utilisateurs, associer les groupes OIDC aux rôles, voir toutes les sessions actives sur toutes les plateformes et les révoquer. Reliez vos comptes local et OIDC, et consultez le journal d'audit de ce que chacun a fait.
 
 </td>
+<td width="50%" valign="top">
+
+**Rôles et partage:**
+Créez des rôles et partagez des hôtes avec des utilisateurs ou des rôles selon quatre niveaux : connexion, lecture, modification et gestion. Cela fonctionne avec tous les types d'authentification et tous les protocoles, et vous pouvez remplacer les identifiants utilisés pour un hôte partagé.
+
+</td>
+</tr>
+<tr>
 <td width="50%" valign="top">
 
 **Alertes:**
-Definissez des regles d'alerte basees sur des seuils pour les metriques d'hote (CPU, memoire, disque, etc.) et recevez des notifications via ntfy ou webhooks lorsqu'elles se declenchent. Consultez les alertes actives et resolues dans un journal d'historique.
+Définissez des règles sur les métriques des hôtes comme le CPU, la mémoire et le disque, et recevez une notification via ntfy, Discord ou un webhook quand elles se déclenchent. Consultez les alertes en cours et résolues dans un historique, et écartez celles qui ne vous intéressent pas.
 
 </td>
-</tr>
-<tr>
 <td width="50%" valign="top">
 
 **Page d'accueil:**
-Une page d'accueil entierement personnalisable avec une grille de widgets glisser-deposer. Ajoutez des widgets pour l'etat des hotes, les liens de services, les horloges, les notes, les flux RSS, la meteo, les conteneurs Docker, les graphiques de metriques d'hote, les terminaux integres, les iframes et plus encore.
-
-</td>
-<td width="50%" valign="top">
-
-**Chiffrement de la base de donnees:**
-Le backend est stocke sous forme de fichiers de base de donnees SQLite chiffres. Consultez la [documentation](https://docs.termix.site/security) pour plus de details.
+Une grille de widgets en glisser-déposer que vous construisez vous-même. Des widgets pour l'état des hôtes, les pings, les liens de services, les favoris, la recherche, les horloges, les calendriers, les comptes à rebours, les notes, les flux RSS, la météo, les images, les iframes, Docker, les tunnels, les graphiques de métriques, les API personnalisées et même un terminal en direct.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Graphe reseau:**
-Personnalisez votre tableau de bord pour visualiser votre homelab base sur vos connexions SSH avec support des statuts.
+**Extraits et outils:**
+Enregistrez les commandes que vous lancez souvent et exécutez-les en un clic, avec des variables pour l'hôte et vos propres saisies. Lancez une même commande dans tous les terminaux ouverts, et cherchez dans votre historique avec la complétion automatique.
 
 </td>
 <td width="50%" valign="top">
 
-**Outils SSH:**
-Creez des extraits de commandes reutilisables executables en un seul clic. Executez une commande simultanement sur plusieurs terminaux ouverts.
+**Partage de session:**
+Partagez en direct une session terminal, RDP, VNC ou Telnet. Envoyez un lien que n'importe qui peut rejoindre sans compte, ou partagez avec un utilisateur Termix précis, en lecture seule ou en lecture-écriture. Les partages peuvent expirer d'eux-mêmes ou être révoqués, et se désactivent globalement ou hôte par hôte.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Onglets Persistants:**
-Les sessions SSH et les onglets restent ouverts sur tous les appareils/actualisations si active dans le profil utilisateur.
+**Enregistrement et journaux de session:**
+Enregistrez les sessions terminal, RDP et VNC pour les revoir plus tard. Téléchargez les journaux d'une session en texte simple, et consultez le journal de connexion pour voir exactement ce qui s'est passé pendant une connexion.
+
+</td>
+<td width="50%" valign="top">
+
+**Connexions série:**
+Dialoguez avec des appareils série comme des routeurs, des commutateurs et des microcontrôleurs depuis le navigateur ou l'application de bureau. Réglez la vitesse, les bits de données, les bits d'arrêt et la parité. Utilise l'API Web Serial dans les navigateurs compatibles, ou un backend natif dans l'application de bureau.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Tailscale:**
+Récupérez les appareils de votre tailnet pour les ajouter comme hôtes en quelques clics, et connectez-vous avec Tailscale SSH pour que les ACL de votre tailnet gèrent les accès, sans stocker d'identifiants. Headscale et les points d'accès personnalisés fonctionnent aussi.
+
+</td>
+<td width="50%" valign="top">
+
+**Proxmox:**
+Importez des hôtes directement depuis une instance Proxmox, et suivez les statistiques des nœuds et des invités, dont le CPU, la mémoire et le stockage, dans un onglet dédié.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Espaces de travail et onglets:**
+Enregistrez un ensemble d'onglets avec leur disposition en écran divisé et rouvrez le tout en un clic. Termix retient aussi votre dernière session, donc vos onglets reviennent après un rafraîchissement ou sur un autre appareil.
+
+</td>
+<td width="50%" valign="top">
+
+**Configuration guidée:**
+Une courte configuration vous aide à choisir un préréglage d'interface, votre thème, les fonctionnalités que vous voulez et votre premier hôte. Le mode simple masque ce que vous n'utilisez pas, et vous pouvez relancer la configuration ou changer de préréglage quand vous voulez.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Application de bureau autonome et synchronisation:**
+L'application de bureau fonctionne toute seule, avec son propre backend et sa base de données, sans serveur. Vous pouvez aussi la relier à un serveur Termix pour synchroniser dans les deux sens les hôtes, les identifiants, les extraits et le reste, et choisir si les connexions partent de votre machine ou passent par le serveur.
+
+</td>
+<td width="50%" valign="top">
+
+**Ligne de commande:**
+Un CLI `termix` pour votre shell et vos scripts. Ouvrez des terminaux, lancez une commande sur un hôte ou une flotte entière, déplacez des fichiers en SFTP et gérez hôtes, extraits et identifiants. Installez-le avec `npm install -g @termix-cli/cli` ou récupérez un binaire autonome. Voir la [documentation du CLI](https://docs.termix.site/cli).
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Sécurité:**
+Les mots de passe, les clés et les autres secrets sont chiffrés par utilisateur, et les fichiers de base de données eux-mêmes peuvent être chiffrés sur le disque. Voir la [documentation](https://docs.termix.site/security) pour le détail.
 
 </td>
 <td width="50%" valign="top">
 
 **Langues:**
-Support integre d'environ 30 langues (gere par [Crowdin](https://docs.termix.site/translations)).
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Partage de session:**
-Partagez une session de terminal, RDP, VNC ou Telnet en direct avec d'autres personnes en temps reel. Partagez via un lien (rejoint anonymement, sans compte necessaire) ou avec un utilisateur Termix specifique, et choisissez un acces en lecture seule ou en lecture-ecriture. Les partages peuvent expirer automatiquement ou etre revoques a tout moment, et le partage de session peut etre active globalement ou par hote.
-
-</td>
-<td width="50%" valign="top">
-
-**Application de bureau autonome + synchronisation bidirectionnelle:**
-L'application de bureau Electron fonctionne de maniere totalement autonome avec son propre backend et sa propre base de donnees locale, sans serveur requis. Connectez-la eventuellement a un serveur Termix distant pour une synchronisation bidirectionnelle automatique des hotes, des identifiants, des extraits de code et plus encore, et choisissez si les connexions SSH sont demarrees localement ou via le serveur distant.
+Une trentaine de langues intégrées, gérées via [Crowdin](https://docs.termix.site/translations).
 
 </td>
 </tr>
@@ -210,26 +252,29 @@ L'application de bureau Electron fonctionne de maniere totalement autonome avec 
 <br />
 
 <details>
-<summary><b>Plus de fonctionnalites</b></summary>
+<summary><b>Plus de fonctionnalités</b></summary>
 <br />
 
-- **Tableau de bord** - Consultez les informations de vos serveurs en un coup d'oeil depuis votre tableau de bord
-- **Cles API** - Creez des cles API a portee utilisateur avec des dates d'expiration pour une utilisation en automatisation/CI
-- **Export/Import de donnees** - Exportez et importez les hotes SSH, les identifiants et les donnees du gestionnaire de fichiers
-- **Configuration SSL automatique** - Generation et gestion integrees de certificats SSL avec redirections HTTPS
-- **Interface moderne** - Interface epuree compatible desktop/mobile construite avec React, Tailwind CSS et Shadcn. Choisissez parmi de nombreux themes d'interface utilisateur, notamment clair, sombre, Dracula, etc. Utilisez les routes URL pour ouvrir n'importe quelle connexion en plein ecran.
-- **Historique des commandes** - Auto-completion et consultation des commandes SSH precedemment executees
-- **Connexion rapide** - Connectez-vous a un serveur sans avoir a sauvegarder les donnees de connexion
-- **Palette de commandes** - Appuyez deux fois sur Shift gauche pour acceder rapidement aux connexions SSH avec votre clavier
-- **Integration Proxmox** - Ajoutez automatiquement des hotes dans Termix depuis votre instance Proxmox
-- **SSH riche en fonctionnalites** - Support des hotes de rebond, Warpgate, connexions basees sur TOTP, SOCKS5, verification des cles d'hote, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, journalisation du terminal, transfert d'agent SSH, agent SSH Bitwarden, signature SSH HashiCorp Vault, et plus encore.
-- **Termix ID** - Un equivalent de sshid.io integre a Termix. Reservez un identifiant, publiez vos cles SSH publiques a une URL de resolution, et utilisez une autorite de certification integree pour emettre des certificats SSH.
+- **Tableau de bord** - Vos serveurs en un coup d'œil, avec des cartes que vous rangez vous-même
+- **Graphe réseau** - Votre homelab dessiné à partir de vos hôtes, avec l'état en direct
+- **Moniteur tmux** - Parcourez les sessions, fenêtres et panneaux tmux, avec aperçus et recherche
+- **Clés API** - Des clés par utilisateur avec date d'expiration, pour vos scripts et votre CI
+- **Export et import** - Faites entrer et sortir hôtes, identifiants et données du gestionnaire de fichiers
+- **SSL automatique** - Certificats générés et renouvelés pour vous, avec redirection HTTPS, ou apportez les vôtres
+- **Bases de données** - SQLite par défaut, PostgreSQL et MySQL également pris en charge
+- **Interface moderne** - Une interface React soignée qui marche sur ordinateur et mobile, avec des thèmes clair, sombre et Dracula. Chaque connexion peut s'ouvrir en plein écran depuis une URL
+- **Palette de commandes** - Double appui sur Maj gauche pour rejoindre un hôte au clavier
+- **Raccourcis clavier** - Naviguer entre les onglets, les fermer et plus encore, tout est reconfigurable
+- **Wake-on-LAN** - Réveillez une machine depuis Termix ou depuis une étape d'automatisation
+- **Authentification par proxy de confiance** - Laissez un reverse proxy gérer la connexion et transmettre l'utilisateur
+- **SSH complet** - Hôtes de rebond, Warpgate, demandes TOTP, SOCKS5, vérification des clés d'hôte, remplissage automatique des mots de passe, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, journalisation du terminal, transfert d'agent, agent SSH Bitwarden, signature SSH HashiCorp Vault et plus encore
+- **Termix ID** - Une version intégrée de sshid.io. Réservez un identifiant, publiez vos clés publiques sur une URL de résolution et émettez des certificats SSH depuis l'autorité intégrée
 
 </details>
 
 <br />
 
-## Support des plateformes
+## Plateformes prises en charge
 
 <table align="center">
 <tr>
@@ -238,11 +283,11 @@ L'application de bureau Electron fonctionne de maniere totalement autonome avec 
 </tr>
 <tr>
 <td align="center"><b>Web</b></td>
-<td>Tout navigateur moderne (Chrome, Safari, Firefox) · Support PWA</td>
+<td>Tout navigateur récent (Chrome, Safari, Firefox) · Compatible PWA</td>
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Portable · MSI Installateur · Chocolatey</td>
+<td>Portable · Installeur MSI · Chocolatey</td>
 </tr>
 <tr>
 <td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
@@ -266,9 +311,9 @@ L'application de bureau Electron fonctionne de maniere totalement autonome avec 
 
 ## Installation
 
-Visitez la [documentation](https://docs.termix.site/install) de Termix pour des instructions d'installation completes sur toutes les plateformes.
+Consultez la [documentation Termix](https://docs.termix.site/install) pour les instructions d'installation complètes sur toutes les plateformes.
 
-Voici un exemple de fichier Docker Compose (vous pouvez omettre guacd et le reseau si vous ne prevoyez pas d'utiliser les fonctionnalites de bureau a distance) :
+Exemple de fichier Docker Compose (vous pouvez retirer `guacd` et le réseau si vous ne comptez pas utiliser le bureau à distance) :
 
 ```yaml
 services:
@@ -305,11 +350,37 @@ networks:
     driver: bridge
 ```
 
+### Ligne de commande
+
+Termix propose aussi un CLI, pour gérer vos serveurs depuis un terminal et utiliser Termix dans vos propres scripts.
+
+```bash
+npm install -g @termix-cli/cli
+termix login --url https://termix.example.com
+termix ssh 1
+```
+
+Il peut ouvrir des terminaux, lancer une commande sur un hôte ou une flotte entière, déplacer des fichiers en SFTP et gérer hôtes, extraits et identifiants. La documentation complète est sur [docs.termix.site/cli](https://docs.termix.site/cli).
+
+### Hébergement cloud
+
+Vous pouvez faire tourner le serveur Termix sur un VPS plutôt que dans votre propre réseau. Si Termix tourne sur le réseau qu'il gère, une panne l'emporte avec elle, juste au moment où vous en avez besoin pour réparer. Ailleurs, il reste joignable, vous avez une IP fixe et vous pouvez y accéder de partout sans VPN ni redirection de port.
+
+[GINERNET](https://docs.termix.site/install/ginernet) sponsorise Termix, et la documentation contient un guide pas à pas pour déployer sur leur plateforme VPS.
+
+<br />
+
+## Télémétrie
+
+Termix envoie une fois par jour un petit signal anonyme, pour que je puisse voir combien d'instances tournent et quelles fonctionnalités servent vraiment. Il contient un identifiant d'instance aléatoire, le nombre d'utilisateurs et d'hôtes, la version de l'application et les fonctionnalités utilisées ces dernières 24 heures (terminal, gestionnaire de fichiers, tunnels, docker, etc.). Il ne contient jamais de noms d'utilisateur, de noms d'hôtes, d'adresses IP, d'identifiants ni quoi que ce soit qui puisse vous identifier, vous ou vos serveurs.
+
+C'est activé par défaut. Désactivez-le dans les paramètres d'administration, section Général, ou définissez `ENABLE_TELEMETRY=false` avant même de démarrer Termix.
+
 <br />
 
 ## Faire un don
 
-Termix est gratuit et open source, sans abonnement ni plan payant. Si vous le trouvez utile, pensez a faire un don pour aider a couvrir les couts de serveur, les domaines et le temps de developpement. Les dons contribuent egalement a financer le temps necessaire pour rechercher et apprendre ce qui est requis pour construire des fonctionnalites comme SAML, Kubernetes et le support des agents. Suivez la progression et faites un don ci-dessous.
+Termix est gratuit et open source, sans abonnement ni offre payante. S'il vous est utile, pensez à faire un don pour aider à couvrir les serveurs, les noms de domaine et le temps de développement. Les dons financent aussi le temps de recherche nécessaire pour construire des fonctionnalités comme SAML, Kubernetes et le support des agents. Suivez l'avancement et faites un don ci-dessous.
 
 [Faire un don](https://donate.termix.site/)
 
@@ -317,7 +388,7 @@ Termix est gratuit et open source, sans abonnement ni plan payant. Si vous le tr
 
 ## Sponsors
 
-Interesse par un placement payant pour soutenir le developpement ? Envoyez un email a [mail@termix.site](mailto:mail@termix.site).
+Intéressé par un emplacement payant pour soutenir le développement ? Écrivez à [mail@termix.site](mailto:mail@termix.site).
 
 <div align="center">
 
@@ -339,10 +410,6 @@ Interesse par un placement payant pour soutenir le developpement ? Envoyez un em
   <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
 </a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
 <a href="https://akamai.com/">
   <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
 </a>
@@ -354,18 +421,21 @@ Interesse par un placement payant pour soutenir le developpement ? Envoyez un em
 <a href="https://rackgenius.com/">
   <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
 </a>
-
+&nbsp;&nbsp;&nbsp;
+<a href="https://ginernet.com/">
+  <img src="https://ginernet.com/img/logo-web.png" height="40" alt="Ginernet" />
+</a>
 </div>
 
 <br />
 
 ## Support
 
-Si vous avez besoin d'aide ou souhaitez demander une fonctionnalite pour Termix, visitez la page [Issues](https://github.com/Termix-SSH/Support/issues), connectez-vous et appuyez sur `New Issue`. Veuillez etre aussi detaille que possible dans votre issue, de preference redigee en anglais. Vous pouvez egalement rejoindre le serveur [Discord](https://discord.gg/jVQGdvHDrf) et visiter le canal de support, cependant les temps de reponse peuvent etre plus longs.
+Besoin d'aide ou envie de proposer une fonctionnalité ? Ouvrez un [nouveau ticket](https://github.com/Termix-SSH/Support/issues) avec le plus de détails possible, en anglais si vous le pouvez. Vous pouvez aussi demander dans le canal support sur [Discord](https://discord.gg/jVQGdvHDrf), même si les réponses y prennent parfois plus de temps.
 
 <br />
 
-## Captures d'ecran
+## Captures d'écran
 
 <div align="center">
 
@@ -373,7 +443,7 @@ Si vous avez besoin d'aide ou souhaitez demander une fonctionnalite pour Termix,
 
 [![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
-<sub>Regarder les aperçus des mises a jour sur YouTube</sub>
+<sub>Regarder les présentations des mises à jour sur YouTube</sub>
 
 <br />
 <br />
@@ -413,18 +483,18 @@ Si vous avez besoin d'aide ou souhaitez demander une fonctionnalite pour Termix,
 </tr>
 </table>
 
-<sub>Certaines videos et images peuvent etre obsoletes ou ne pas presenter parfaitement les fonctionnalites.</sub>
+<sub>Certaines vidéos et images peuvent être dépassées ou ne pas montrer parfaitement les fonctionnalités.</sub>
 
 </div>
 
 <br />
 
-## Fonctionnalites prevues
+## Fonctionnalités prévues
 
-Consultez les [Projects](https://github.com/orgs/Termix-SSH/projects/5) pour toutes les fonctionnalites prevues. Si vous souhaitez contribuer, consultez [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
+Toutes les fonctionnalités prévues sont dans [Projects](https://github.com/orgs/Termix-SSH/projects/5). Si vous souhaitez contribuer, voir [Contribuer](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md).
 
 <br />
 
 ## Licence
 
-Distribue sous la licence Apache Version 2.0. Consultez `LICENSE` pour plus d'informations.
+Distribué sous licence Apache version 2.0. Voir `LICENSE` pour plus d'informations.
