@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { StringDecoder } from "string_decoder";
 import { Client as SSHClient } from "ssh2";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { WebSocketServer, WebSocket } from "ws";
@@ -642,12 +643,19 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   containerId,
                 });
 
+                // Buffers incomplete multi-byte UTF-8 sequences across chunk
+                // boundaries so box-drawing/special characters don't get
+                // corrupted when a character is split across TCP packets.
+                const decoder = new StringDecoder("utf-8");
+
                 stream.on("data", (data: Buffer) => {
                   if (ws.readyState === WebSocket.OPEN) {
+                    const text = decoder.write(data);
+                    if (!text) return;
                     ws.send(
                       JSON.stringify({
                         type: "output",
-                        data: data.toString("utf8"),
+                        data: text,
                       }),
                     );
                   }

@@ -1,4 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
+import { StringDecoder } from "string_decoder";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import ssh2Pkg, {
   type Client as SSHClientType,
@@ -2050,10 +2051,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           const boundSessionId = currentSessionId;
+          // A single TCP/SSH packet boundary can split a multi-byte UTF-8
+          // character (e.g. the box-drawing glyphs mc/htop use for borders).
+          // Buffer.toString("utf-8") on each chunk independently replaces the
+          // split bytes with U+FFFD, which shows up as corrupted/inserted
+          // characters. StringDecoder carries incomplete trailing bytes over
+          // to the next chunk so multi-byte characters decode correctly.
+          const decoder = new StringDecoder("utf-8");
 
           stream.on("data", (data: Buffer) => {
             try {
-              const utf8String = data.toString("utf-8");
+              const utf8String = decoder.write(data);
 
               if (!utf8String) return;
 
