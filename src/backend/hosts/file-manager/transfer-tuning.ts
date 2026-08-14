@@ -16,12 +16,24 @@ export interface TransferTuning {
   pipelineConcurrency: number;
 }
 
+export interface DirectRouteProfile {
+  directMs: number;
+  relayMs: number;
+  failureRate: number;
+  benchmarkSamples: number;
+  outcomeSamples: number;
+  benchmarkedAt: number;
+  cooldownUntil?: number;
+  updatedAt: number;
+}
+
 const MB = 1024 * 1024;
 const PROFILE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_PROFILES = 128;
 const STORE_VERSION = 1;
 const STORE_FILENAME = "adaptive-transfer-profiles.json";
 const profiles = new Map<string, TransferPerformanceProfile>();
+const directRoutes = new Map<string, DirectRouteProfile>();
 let loadedPath: string | undefined;
 let loadPromise: Promise<void> | undefined;
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
@@ -30,6 +42,29 @@ let persistPromise = Promise.resolve();
 interface PersistedProfiles {
   version: typeof STORE_VERSION;
   profiles: Record<string, TransferPerformanceProfile>;
+  directRoutes: Record<string, DirectRouteProfile>;
+}
+
+function validDirectRoute(value: unknown): value is DirectRouteProfile {
+  if (!value || typeof value !== "object") return false;
+  const profile = value as Partial<DirectRouteProfile>;
+  return (
+    Number.isFinite(profile.directMs) &&
+    Number(profile.directMs) > 0 &&
+    Number.isFinite(profile.relayMs) &&
+    Number(profile.relayMs) > 0 &&
+    Number.isFinite(profile.failureRate) &&
+    Number(profile.failureRate) >= 0 &&
+    Number(profile.failureRate) <= 1 &&
+    Number.isFinite(profile.benchmarkSamples) &&
+    Number(profile.benchmarkSamples) > 0 &&
+    Number.isFinite(profile.outcomeSamples) &&
+    Number(profile.outcomeSamples) >= 0 &&
+    Number.isFinite(profile.benchmarkedAt) &&
+    (profile.cooldownUntil === undefined ||
+      Number.isFinite(profile.cooldownUntil)) &&
+    Number.isFinite(profile.updatedAt)
+  );
 }
 
 function storePath(): string {
@@ -68,6 +103,15 @@ function trimProfiles(now = Date.now()): void {
     .slice(0, MAX_PROFILES);
   profiles.clear();
   for (const [key, profile] of recent) profiles.set(key, profile);
+
+  for (const [key, profile] of directRoutes) {
+    if (now - profile.updatedAt > PROFILE_TTL_MS) directRoutes.delete(key);
+  }
+  const recentRoutes = [...directRoutes.entries()]
+    .sort(([, a], [, b]) => b.updatedAt - a.updatedAt)
+    .slice(0, MAX_PROFILES);
+  directRoutes.clear();
+  for (const [key, profile] of recentRoutes) directRoutes.set(key, profile);
 }
 
 async function persistProfiles(): Promise<void> {
@@ -77,6 +121,7 @@ async function persistProfiles(): Promise<void> {
   const payload: PersistedProfiles = {
     version: STORE_VERSION,
     profiles: Object.fromEntries(profiles),
+    directRoutes: Object.fromEntries(directRoutes),
   };
   try {
     await fs.mkdir(path.dirname(target), { recursive: true });
@@ -105,6 +150,7 @@ export async function initializeTransferProfiles(): Promise<void> {
   loadedPath = target;
   loadPromise = (async () => {
     profiles.clear();
+    directRoutes.clear();
     try {
       const parsed = JSON.parse(
         await fs.readFile(target, "utf8"),
@@ -113,6 +159,11 @@ export async function initializeTransferProfiles(): Promise<void> {
       for (const [key, profile] of Object.entries(parsed.profiles)) {
         if (/^[a-f0-9]{64}$/.test(key) && validProfile(profile)) {
           profiles.set(key, profile);
+        }
+      }
+      for (const [key, profile] of Object.entries(parsed.directRoutes ?? {})) {
+        if (/^[a-f0-9]{64}$/.test(key) && validDirectRoute(profile)) {
+          directRoutes.set(key, profile);
         }
       }
       trimProfiles();
@@ -240,10 +291,97 @@ export function recordTransferProfile(
   return profile;
 }
 
+export function getDirectRouteProfile(
+  key: string,
+  now = Date.now(),
+): DirectRouteProfile | undefined {
+  const id = profileId(key);
+  const profile = directRoutes.get(id);
+  if (!profile) return undefined;
+  if (now - profile.updatedAt <= PROFILE_TTL_MS) return profile;
+  directRoutes.delete(id);
+  queuePersist();
+  return undefined;
+}
+
+export function recordDirectRouteBenchmark(
+  key: string,
+  directMs: number,
+  relayMs: number,
+  now = Date.now(),
+): DirectRouteProfile {
+  const previous = getDirectRouteProfile(key, now);
+  const weight = previous ? 0.25 : 1;
+  const profile: DirectRouteProfile = {
+    directMs: previous
+      ? previous.directMs * (1 - weight) + directMs * weight
+      : directMs,
+    relayMs: previous
+      ? previous.relayMs * (1 - weight) + relayMs * weight
+      : relayMs,
+    failureRate: previous?.failureRate ?? 0,
+    benchmarkSamples: (previous?.benchmarkSamples ?? 0) + 1,
+    outcomeSamples: previous?.outcomeSamples ?? 0,
+    benchmarkedAt: now,
+    cooldownUntil: previous?.cooldownUntil,
+    updatedAt: now,
+  };
+  directRoutes.set(profileId(key), profile);
+  trimProfiles(now);
+  queuePersist();
+  return profile;
+}
+
+export function recordDirectRouteOutcome(
+  key: string,
+  failed: boolean,
+  now = Date.now(),
+  cooldownMs = 10 * 60 * 1000,
+): DirectRouteProfile | undefined {
+  const previous = getDirectRouteProfile(key, now);
+  if (!previous) return undefined;
+  const failure = failed ? 1 : 0;
+  const weight = previous.outcomeSamples > 0 ? 0.25 : 1;
+  const profile = {
+    ...previous,
+    failureRate: previous.failureRate * (1 - weight) + failure * weight,
+    outcomeSamples: previous.outcomeSamples + 1,
+    cooldownUntil: failed ? now + cooldownMs : undefined,
+    updatedAt: now,
+  };
+  directRoutes.set(profileId(key), profile);
+  queuePersist();
+  return profile;
+}
+
+export function getRecentDirectRouteDecision(
+  key: string,
+  maxAgeMs: number,
+  now = Date.now(),
+): { useDirect: boolean; directMs: number; relayMs: number } | undefined {
+  const profile = getDirectRouteProfile(key, now);
+  if (!profile) return undefined;
+  if ((profile.cooldownUntil ?? 0) > now) {
+    return {
+      useDirect: false,
+      directMs: profile.directMs,
+      relayMs: profile.relayMs,
+    };
+  }
+  if (now - profile.benchmarkedAt > maxAgeMs) return undefined;
+  return {
+    useDirect:
+      profile.failureRate < 0.2 && profile.directMs <= profile.relayMs * 0.8,
+    directMs: profile.directMs,
+    relayMs: profile.relayMs,
+  };
+}
+
 export function clearTransferProfiles(): void {
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = undefined;
   loadedPath = undefined;
   loadPromise = undefined;
   profiles.clear();
+  directRoutes.clear();
 }
