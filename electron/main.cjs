@@ -26,6 +26,7 @@ const WebSocket = require("ws");
 const remoteSync = require("./remote-sync.cjs");
 const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
+const { quitApp } = require("./app-quit.cjs");
 
 // The main process's Node.js networking (the `https`/`http` modules used by
 // httpFetch below, and the global `fetch` used by remote-sync.cjs) only
@@ -1111,7 +1112,7 @@ function createTray() {
         label: "Quit",
         click: () => {
           isQuitting = true;
-          app.quit();
+          quitApp(app, mainWindow);
         },
       },
     ]);
