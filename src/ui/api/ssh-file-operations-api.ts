@@ -12,6 +12,7 @@ import {
 import { resolveConnectionOrigin } from "@/lib/connection-origin";
 import { fileLogger } from "@/lib/frontend-logger";
 import type { FileItem, SSHHost } from "@/types/index";
+import { getCachedFileList } from "@/lib/file-list-request-cache";
 
 type ApiConnectionLog = {
   type: "info" | "success" | "warning" | "error";
@@ -298,17 +299,24 @@ export async function keepSSHAlive(
 export async function listSSHFiles(
   sessionId: string,
   path: string,
+  options: { force?: boolean } = {},
 ): Promise<{ files: FileItem[]; path: string }> {
-  try {
-    const response = await getFileManagerApiForSession(sessionId).get(
-      "/ssh/listFiles",
-      { params: { sessionId, path } },
-    );
-    return response.data || { files: [], path };
-  } catch (error) {
-    handleApiError(error, "list SSH files");
-    return { files: [], path };
-  }
+  return getCachedFileList(
+    sessionId,
+    path,
+    async () => {
+      try {
+        const response = await getFileManagerApiForSession(sessionId).get(
+          "/ssh/listFiles",
+          { params: { sessionId, path } },
+        );
+        return response.data || { files: [], path };
+      } catch (error) {
+        handleApiError(error, "list SSH files");
+      }
+    },
+    options.force,
+  );
 }
 
 export async function identifySSHSymlink(
