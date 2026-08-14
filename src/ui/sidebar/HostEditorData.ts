@@ -296,6 +296,7 @@ export function buildHostEditorPayload(
   const usesKey = form.authType === "key";
   const usesPassword = form.authType === "password";
   const usesAgent = form.authType === "agent";
+  const usesVault = form.authType === "vault";
 
   return {
     connectionType: protocols.enableSsh
@@ -341,7 +342,8 @@ export function buildHostEditorPayload(
     keyType: usesKey && form.keyType !== "auto" ? form.keyType : null,
     credentialId:
       usesCredential && form.credentialId ? Number(form.credentialId) : null,
-    vaultProfileId: form.vaultProfileId ? Number(form.vaultProfileId) : null,
+    vaultProfileId:
+      usesVault && form.vaultProfileId ? Number(form.vaultProfileId) : null,
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
     macAddress: form.macAddress || null,

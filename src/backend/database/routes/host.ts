@@ -314,7 +314,8 @@ router.post(
       useWarpgate: useWarpgate ? 1 : 0,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
-      vaultProfileId: vaultProfileId || null,
+      vaultProfileId:
+        effectiveAuthType === "vault" ? vaultProfileId || null : null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
@@ -999,7 +1000,8 @@ router.put(
       useWarpgate: useWarpgate ? 1 : 0,
       shareSshAuth: shareSshAuth === true ? 1 : 0,
       credentialId: credentialId || null,
-      vaultProfileId: vaultProfileId || null,
+      vaultProfileId:
+        effectiveAuthType === "vault" ? vaultProfileId || null : null,
       overrideCredentialUsername: overrideCredentialUsername ? 1 : 0,
       pin: pin ? 1 : 0,
       enableTerminal: enableTerminal ? 1 : 0,
