@@ -164,6 +164,8 @@ describe("storeImageViaSftp", () => {
     mkdirError?: Error;
     writeError?: Error;
     stallWrite?: boolean;
+    readdirEntries?: Array<{ filename: string; mtime?: number }>;
+    readdirError?: Error;
   }): {
     sftp: ImageSftpClient;
     written: Map<string, Buffer>;
@@ -250,6 +252,34 @@ describe("storeImageViaSftp", () => {
     expect(calls.createWriteStream).toEqual([
       { path: stored.shellPath, mode: 0o600 },
     ]);
+  });
+  it("removes expired UUID PNGs with best-effort remote retention", async () => {
+    const nowMs = 10_000_000;
+    const expiredName = `${randomUUID()}.png`;
+    const freshName = `${randomUUID()}.png`;
+    const unlinked: string[] = [];
+    const base = fakeSftp({});
+    const sftp = base.sftp as ImageSftpClient & {
+      readdir: (dir: string, callback: (err: Error | undefined, entries: Array<{ filename: string; attrs?: { mtime?: number } }>) => void) => void;
+      unlink: (remotePath: string, callback: (err?: Error) => void) => void;
+    };
+    sftp.readdir = (_dir, callback) =>
+      callback(undefined, [
+        { filename: expiredName, attrs: { mtime: (nowMs - 7_200_000) / 1000 } },
+        { filename: freshName, attrs: { mtime: nowMs / 1000 } },
+        { filename: "other.txt", attrs: { mtime: 0 } },
+      ]);
+    sftp.unlink = (remotePath, callback) => {
+      unlinked.push(remotePath);
+      callback();
+    };
+
+    await storeImageViaSftp(sftp, PNG_BYTES, {
+      ttlMs: 3_600_000,
+      nowMs,
+    });
+
+    expect(unlinked).toEqual([`${REMOTE_IMAGE_DIR}/${expiredName}`]);
   });
   it("destroys a stalled SFTP write after its timeout", async () => {
     const { sftp, streams } = fakeSftp({ stallWrite: true });

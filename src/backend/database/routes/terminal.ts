@@ -193,7 +193,9 @@ router.post(
                   resolve(sftp);
                 });
               });
-              return storeImageViaSftp(remoteSftp, normalizedImage);
+              return storeImageViaSftp(remoteSftp, normalizedImage, {
+                ttlMs: storageSettings.ttlMs,
+              });
             })()
           : await storeImageLocally(normalizedImage, storageSettings);
 

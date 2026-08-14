@@ -189,7 +189,17 @@ export interface ImageSftpClient {
     remotePath: string,
     options?: { mode?: number },
   ): NodeJS.WritableStream;
+  readdir?: (
+    dir: string,
+    callback: (error: Error | undefined, entries: ImageSftpEntry[]) => void,
+  ) => void;
+  unlink?: (remotePath: string, callback: (error?: Error) => void) => void;
   end?: () => void;
+}
+
+interface ImageSftpEntry {
+  filename: string;
+  attrs?: { mtime?: number };
 }
 
 export interface ImageSshExecClient {
@@ -303,6 +313,39 @@ function sftpWriteFile(
   });
 }
 
+async function cleanupExpiredRemoteImages(
+  sftp: ImageSftpClient,
+  ttlMs: number | undefined,
+  nowMs = Date.now(),
+): Promise<void> {
+  if (!ttlMs || ttlMs <= 0 || !sftp.readdir || !sftp.unlink) return;
+  const entries = await new Promise<ImageSftpEntry[]>((resolve) => {
+    sftp.readdir!(REMOTE_IMAGE_DIR, (error, result) => {
+      resolve(error ? [] : result);
+    });
+  });
+  const cutoffSeconds = (nowMs - ttlMs) / 1000;
+  const uuidPng = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/i;
+  await Promise.all(
+    entries
+      .filter(
+        (entry) =>
+          uuidPng.test(entry.filename) &&
+          typeof entry.attrs?.mtime === "number" &&
+          entry.attrs.mtime < cutoffSeconds,
+      )
+      .map(
+        (entry) =>
+          new Promise<void>((resolve) => {
+            sftp.unlink!(
+              `${REMOTE_IMAGE_DIR}/${entry.filename}`,
+              () => resolve(),
+            );
+          }),
+      ),
+  );
+}
+
 /**
  * Remote SFTP adapter. Any failure is reported as `IMAGE_REMOTE_WRITE_FAILED`
  * (HTTP 502 at the route); the underlying SFTP error is only logged, never
@@ -311,13 +354,14 @@ function sftpWriteFile(
 export async function storeImageViaSftp(
   sftp: ImageSftpClient,
   image: Buffer,
-  options: { writeTimeoutMs?: number } = {},
+  options: { writeTimeoutMs?: number; ttlMs?: number; nowMs?: number } = {},
 ): Promise<StoredTerminalImage> {
   const id = randomUUID();
   const filename = `${id}.png`;
   const remotePath = `${REMOTE_IMAGE_DIR}/${filename}`;
 
   try {
+    await cleanupExpiredRemoteImages(sftp, options.ttlMs, options.nowMs);
     await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
     await sftpWriteFile(
       sftp,
