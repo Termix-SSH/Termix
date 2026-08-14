@@ -36,6 +36,7 @@ import {
 } from "./direct-transfer-routing.js";
 import {
   getTransferProfile,
+  initializeTransferProfiles,
   recordTransferProfile,
   selectTransferTuning,
 } from "./transfer-tuning.js";
@@ -2631,8 +2632,9 @@ function directRouteKey(
 function transferProfileKey(
   sourceSession: SSHSessionLike,
   destSession: SSHSessionLike,
+  userId: string,
 ): string {
-  return `${sourceSession.username ?? ""}@${sourceSession.ip ?? "local"}:${sourceSession.port ?? 22}->${destSession.username ?? ""}@${destSession.ip ?? "local"}:${destSession.port ?? 22}`;
+  return `${userId}:${sourceSession.username ?? ""}@${sourceSession.ip ?? "local"}:${sourceSession.port ?? 22}->${destSession.username ?? ""}@${destSession.ip ?? "local"}:${destSession.port ?? 22}`;
 }
 
 async function benchmarkTransferRoutes(
@@ -3333,6 +3335,7 @@ async function runTransfer(
   transferId: string,
   request: TransferRequest,
 ): Promise<void> {
+  await initializeTransferProfiles();
   const {
     sourceSessionId: browseSourceSessionId,
     sourcePaths,
@@ -3371,7 +3374,11 @@ async function runTransfer(
       transferId,
     );
 
-    reconnectMeta.profileKey = transferProfileKey(sourceSession, destSession);
+    reconnectMeta.profileKey = transferProfileKey(
+      sourceSession,
+      destSession,
+      userId,
+    );
 
     sourceSession.lastActive = Date.now();
     destSession.lastActive = Date.now();
