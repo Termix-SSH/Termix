@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+
 export interface TransferPerformanceProfile {
   throughputBps: number;
   failureRate: number;
@@ -13,8 +17,120 @@ export interface TransferTuning {
 }
 
 const MB = 1024 * 1024;
-const PROFILE_TTL_MS = 24 * 60 * 60 * 1000;
+const PROFILE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_PROFILES = 128;
+const STORE_VERSION = 1;
+const STORE_FILENAME = "adaptive-transfer-profiles.json";
 const profiles = new Map<string, TransferPerformanceProfile>();
+let loadedPath: string | undefined;
+let loadPromise: Promise<void> | undefined;
+let persistTimer: ReturnType<typeof setTimeout> | undefined;
+let persistPromise = Promise.resolve();
+
+interface PersistedProfiles {
+  version: typeof STORE_VERSION;
+  profiles: Record<string, TransferPerformanceProfile>;
+}
+
+function storePath(): string {
+  const dataDir =
+    process.env.DATA_DIR || path.join(process.cwd(), "db", "data");
+  return path.join(dataDir, STORE_FILENAME);
+}
+
+function profileId(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
+function validProfile(value: unknown): value is TransferPerformanceProfile {
+  if (!value || typeof value !== "object") return false;
+  const profile = value as Partial<TransferPerformanceProfile>;
+  return (
+    Number.isFinite(profile.throughputBps) &&
+    Number(profile.throughputBps) >= 0 &&
+    Number.isFinite(profile.failureRate) &&
+    Number(profile.failureRate) >= 0 &&
+    Number(profile.failureRate) <= 1 &&
+    Number.isFinite(profile.samples) &&
+    Number(profile.samples) > 0 &&
+    Number.isFinite(profile.preferredLanes) &&
+    Number.isFinite(profile.pipelineConcurrency) &&
+    Number.isFinite(profile.updatedAt)
+  );
+}
+
+function trimProfiles(now = Date.now()): void {
+  for (const [key, profile] of profiles) {
+    if (now - profile.updatedAt > PROFILE_TTL_MS) profiles.delete(key);
+  }
+  const recent = [...profiles.entries()]
+    .sort(([, a], [, b]) => b.updatedAt - a.updatedAt)
+    .slice(0, MAX_PROFILES);
+  profiles.clear();
+  for (const [key, profile] of recent) profiles.set(key, profile);
+}
+
+async function persistProfiles(): Promise<void> {
+  trimProfiles();
+  const target = storePath();
+  const temporary = `${target}.${process.pid}.tmp`;
+  const payload: PersistedProfiles = {
+    version: STORE_VERSION,
+    profiles: Object.fromEntries(profiles),
+  };
+  try {
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(temporary, JSON.stringify(payload), {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    await fs.rename(temporary, target);
+  } catch {
+    await fs.rm(temporary, { force: true }).catch(() => {});
+  }
+}
+
+function queuePersist(): void {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = undefined;
+    persistPromise = persistPromise.then(persistProfiles);
+  }, 250);
+  persistTimer.unref?.();
+}
+
+export async function initializeTransferProfiles(): Promise<void> {
+  const target = storePath();
+  if (loadedPath === target) return loadPromise;
+  loadedPath = target;
+  loadPromise = (async () => {
+    profiles.clear();
+    try {
+      const parsed = JSON.parse(
+        await fs.readFile(target, "utf8"),
+      ) as Partial<PersistedProfiles>;
+      if (parsed.version !== STORE_VERSION || !parsed.profiles) return;
+      for (const [key, profile] of Object.entries(parsed.profiles)) {
+        if (/^[a-f0-9]{64}$/.test(key) && validProfile(profile)) {
+          profiles.set(key, profile);
+        }
+      }
+      trimProfiles();
+    } catch {
+      // Missing or malformed local learning data must not affect transfers.
+    }
+  })();
+  return loadPromise;
+}
+
+export async function flushTransferProfiles(): Promise<void> {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = undefined;
+  }
+  persistPromise = persistPromise.then(persistProfiles);
+  await persistPromise;
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, Math.floor(value)));
@@ -104,10 +220,12 @@ export function getTransferProfile(
   key: string,
   now = Date.now(),
 ): TransferPerformanceProfile | undefined {
-  const profile = profiles.get(key);
+  const id = profileId(key);
+  const profile = profiles.get(id);
   if (!profile) return undefined;
   if (now - profile.updatedAt <= PROFILE_TTL_MS) return profile;
-  profiles.delete(key);
+  profiles.delete(id);
+  queuePersist();
   return undefined;
 }
 
@@ -116,10 +234,16 @@ export function recordTransferProfile(
   observation: Parameters<typeof updateTransferProfile>[1],
 ): TransferPerformanceProfile {
   const profile = updateTransferProfile(getTransferProfile(key), observation);
-  profiles.set(key, profile);
+  profiles.set(profileId(key), profile);
+  trimProfiles(observation.now);
+  queuePersist();
   return profile;
 }
 
 export function clearTransferProfiles(): void {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = undefined;
+  loadedPath = undefined;
+  loadPromise = undefined;
   profiles.clear();
 }

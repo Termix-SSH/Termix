@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { promises as fs } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   clearTransferProfiles,
+  flushTransferProfiles,
   getTransferProfile,
+  initializeTransferProfiles,
   recordTransferProfile,
   selectTransferTuning,
   updateTransferProfile,
@@ -56,6 +61,45 @@ describe("adaptive transfer tuning", () => {
       now: 100,
     });
     expect(getTransferProfile("a->b", 101)?.samples).toBe(1);
-    expect(getTransferProfile("a->b", 25 * 60 * 60 * 1000)).toBeUndefined();
+    expect(getTransferProfile("a->b", 8 * 24 * 60 * 60 * 1000)).toBeUndefined();
+  });
+
+  it("persists only anonymous local profiles across restarts", async () => {
+    const previousDataDir = process.env.DATA_DIR;
+    const dataDir = await fs.mkdtemp(path.join(tmpdir(), "termix-transfer-"));
+    process.env.DATA_DIR = dataDir;
+    const rawKey = "root@10.0.0.1->deploy@10.0.0.2";
+    const now = Date.now();
+
+    try {
+      await initializeTransferProfiles();
+      recordTransferProfile(rawKey, {
+        bytes: 256 * MB,
+        durationMs: 2000,
+        lanes: 2,
+        pipelineConcurrency: 16,
+        failed: false,
+        now,
+      });
+      await flushTransferProfiles();
+
+      const stored = await fs.readFile(
+        path.join(dataDir, "adaptive-transfer-profiles.json"),
+        "utf8",
+      );
+      expect(stored).not.toContain(rawKey);
+      expect(Object.keys(JSON.parse(stored).profiles)[0]).toMatch(
+        /^[a-f0-9]{64}$/,
+      );
+
+      clearTransferProfiles();
+      await initializeTransferProfiles();
+      expect(getTransferProfile(rawKey, now + 1)).toMatchObject({ samples: 1 });
+    } finally {
+      clearTransferProfiles();
+      if (previousDataDir === undefined) delete process.env.DATA_DIR;
+      else process.env.DATA_DIR = previousDataDir;
+      await fs.rm(dataDir, { recursive: true, force: true });
+    }
   });
 });
