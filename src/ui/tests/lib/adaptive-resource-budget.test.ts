@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   computeAdaptiveResourceBudget,
   markAdaptiveResourceUsed,
+  resetAdaptiveResourceState,
   runAdaptiveBackgroundTask,
 } from "../../lib/adaptive-resource-budget";
 import {
@@ -10,7 +11,10 @@ import {
 } from "../../lib/local-adaptive-engine";
 
 describe("adaptive resource budget", () => {
-  beforeEach(clearLocalAdaptiveEngine);
+  beforeEach(() => {
+    clearLocalAdaptiveEngine();
+    resetAdaptiveResourceState();
+  });
 
   it("uses hard environmental constraints before optional work", () => {
     expect(computeAdaptiveResourceBudget({ visible: false }).tier).toBe(
@@ -130,6 +134,11 @@ describe("adaptive resource budget", () => {
         getLocalAdaptiveStats("resource-budget:module")["tab:files"].successes,
       ).toBe(1);
     });
+
+    // A finished task must free its slot no later than it records its outcome.
+    expect(
+      runAdaptiveBackgroundTask("module", "tab:docker", async () => {}),
+    ).toBe(true);
   });
 
   it("records whether foreground navigation used a preload", async () => {

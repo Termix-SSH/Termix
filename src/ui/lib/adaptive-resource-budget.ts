@@ -150,6 +150,13 @@ export function markAdaptiveResourceUsed(
   );
 }
 
+/** Drops in-flight bookkeeping. Intended for tests and hard session resets. */
+export function resetAdaptiveResourceState(): void {
+  pendingPreloads.clear();
+  activeTasks.module = 0;
+  activeTasks.network = 0;
+}
+
 export function computeAdaptiveResourceBudget(
   environment: AdaptiveResourceEnvironment,
   feedback?: AdaptiveResourceFeedback,
@@ -271,21 +278,21 @@ export function runAdaptiveBackgroundTask(
   void Promise.resolve()
     .then(task)
     .then(
-      () =>
+      () => {
+        activeTasks[kind] -= 1;
         recordLocalAdaptiveOutcome(scopes[kind], action, {
           success: true,
           latencyMs: performance.now() - startedAt,
-        }),
+        });
+      },
       () => {
+        activeTasks[kind] -= 1;
         pendingPreloads.delete(key);
         recordLocalAdaptiveOutcome(scopes[kind], action, {
           success: false,
           latencyMs: performance.now() - startedAt,
         });
       },
-    )
-    .finally(() => {
-      activeTasks[kind] -= 1;
-    });
+    );
   return true;
 }
