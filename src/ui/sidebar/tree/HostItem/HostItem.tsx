@@ -875,9 +875,6 @@ export function HostItem({
           onToggleSelect?.();
           return;
         }
-        const launchDefault = () => {
-          openHostTab(defaultAction);
-        };
         // On touch devices, open the action tray so the per-protocol buttons are
         // reachable. If the host only exposes a single action, just launch it.
         if (isTouchOnly) {
@@ -889,13 +886,17 @@ export function HostItem({
             host.enableTelnet,
           ].filter(Boolean).length;
           if (actionCount + otherProtocols <= 1) {
-            launchDefault();
+            openHostTab(defaultAction);
           } else {
             onTrayOpenChange?.(!isTrayOpen);
           }
-          return;
         }
-        launchDefault();
+      }}
+      onDoubleClick={(e) => {
+        // Desktop launches only on double click, single click is reserved for selection.
+        if (selectionMode || isTouchOnly) return;
+        e.stopPropagation();
+        openHostTab(defaultAction);
       }}
     >
       {reorderMode && reorderEdge && (
