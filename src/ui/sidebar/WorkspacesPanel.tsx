@@ -505,10 +505,18 @@ export function WorkspacesPanel({
         <span className="text-sm font-semibold">
           {t("newUi.sidebar.workspaces.title")}
         </span>
+        <a
+          href="https://docs.termix.site/features/workspaces"
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto shrink-0 text-[10px] text-accent-brand hover:underline"
+        >
+          {t("hosts.docsLink")}
+        </a>
         <Button
           variant="outline"
           size="sm"
-          className="ml-auto border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+          className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
           onClick={() => setSaveDialogOpen(true)}
         >
           <Plus className="size-3.5 mr-1.5" />

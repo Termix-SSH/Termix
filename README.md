@@ -69,7 +69,7 @@ Termix is an open-source, forever-free, self-hosted all-in-one server management
 <td width="50%" valign="top">
 
 **SSH Terminal Access:**
-Full-featured terminal with split-screen support (up to 4 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
+Full-featured terminal with split-screen support (up to 6 panels) with a browser-like tab system. Includes support for customizing the terminal including common terminal themes, fonts, and other components.
 
 </td>
 <td width="50%" valign="top">
@@ -205,6 +205,34 @@ The Electron desktop app runs fully standalone with its own local backend and da
 
 </td>
 </tr>
+<tr>
+<td width="50%" valign="top">
+
+**Fleets:**
+Group hosts into fleets, either by picking them or with tag rules so new hosts join automatically. Run one command across every host at once, push and pull files to all of them, install packages, and collect an inventory of the OS, kernel and uptime of each machine.
+
+</td>
+<td width="50%" valign="top">
+
+**Automations:**
+Run steps automatically from a trigger: a metric crossing a threshold, a host going offline, a schedule, a Docker event, or an incoming webhook. Steps can run commands and snippets, restart containers, call an API, wake a machine, branch on conditions, and notify you over webhook, ntfy, or Discord. Dry run mode lets you test safely first.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**AI Assistant:**
+Connect OpenAI, Anthropic, Gemini, Ollama, or any OpenAI-compatible endpoint and ask questions about your setup. It can read your configuration but never changes anything without you approving it first, and it has no access to credentials at all. Disabled by default, with an admin switch and a per-user opt-in.
+
+</td>
+<td width="50%" valign="top">
+
+**Command Line Interface:**
+A `termix` CLI for your shell and your scripts. Open terminals, run commands on a host or a whole fleet, transfer files over SFTP, and manage hosts, snippets and credentials. Install with `npm install -g @termix-cli/cli`, or grab a standalone binary. See the [CLI docs](https://docs.termix.site/cli).
+
+</td>
+</tr>
 </table>
 
 <br />
@@ -221,6 +249,7 @@ The Electron desktop app runs fully standalone with its own local backend and da
 - **Command History** - Auto-complete and view previously ran SSH commands
 - **Quick Connect** - Connect to a server without having to save the connection data
 - **Command Palette** - Double tap left shift to quickly access SSH connections with your keyboard
+- **Workspaces** - Save a set of tabs and their split layout, then reopen the whole thing in one click. Termix also keeps your last session so you can carry on where you left off.
 - **Proxmox Integration** - Auto-add hosts into Termix from your Proxmox instance
 - **SSH Feature Rich** - Supports jump hosts, Warpgate, TOTP based connections, SOCKS5, host key verification, password autofill, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal logging, SSH agent forwarding, Bitwarden SSH agent, HashiCorp Vault SSH signing, and more.
 - **Termix ID** - A sshid.io equivalent built into Termix. Claim a handle, publish your public SSH keys at a resolver URL, and use a built-in CA to issue SSH certificates.
@@ -304,6 +333,18 @@ networks:
   termix-net:
     driver: bridge
 ```
+
+### Command Line Interface
+
+Termix also has a CLI, so you can manage your servers from a terminal and use Termix in your own scripts.
+
+```bash
+npm install -g @termix-cli/cli
+termix login --url https://termix.example.com
+termix ssh 1
+```
+
+It can open terminals, run a command on one host or a whole fleet, move files over SFTP, and manage hosts, snippets and credentials. Full documentation is at [docs.termix.site/cli](https://docs.termix.site/cli).
 
 ### Cloud Hosting
 

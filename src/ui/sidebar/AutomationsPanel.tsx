@@ -412,6 +412,14 @@ export function AutomationsPanel({
             )}
           </Button>
         ))}
+        <a
+          href="https://docs.termix.site/features/automations/overview"
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto shrink-0 pr-1 text-[10px] text-accent-brand hover:underline"
+        >
+          {t("hosts.docsLink")}
+        </a>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2">

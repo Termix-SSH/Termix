@@ -337,10 +337,18 @@ export function AiPanel({ activeTab }: { activeTab?: string | null }) {
         <div className="flex items-center gap-2 px-3 py-2">
           <Sparkles size={16} className="shrink-0" />
           <span className="truncate text-sm font-medium">{t("ai.title")}</span>
+          <a
+            href="https://docs.termix.site/features/ai/overview"
+            target="_blank"
+            rel="noreferrer"
+            className="ml-auto shrink-0 text-[10px] text-accent-brand hover:underline"
+          >
+            {t("hosts.docsLink")}
+          </a>
           <Button
             size="sm"
             variant="ghost"
-            className="ml-auto shrink-0"
+            className="shrink-0"
             onClick={() => setShowSettings((value) => !value)}
             aria-label={t("ai.providerSettings")}
           >

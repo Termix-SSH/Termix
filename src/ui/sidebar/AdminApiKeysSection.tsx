@@ -71,6 +71,16 @@ export function AdminApiKeysSection({
             >
               {t("admin.apiKeysDocsLink")}
             </a>
+            <br />
+            {t("admin.apiKeysCliHint")}{" "}
+            <a
+              href="https://docs.termix.site/cli"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent-brand hover:underline"
+            >
+              {t("admin.apiKeysCliLink")}
+            </a>
           </span>
           <div className="flex items-center gap-1">
             <Button
