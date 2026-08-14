@@ -48,7 +48,12 @@ import {
   updateHostDefaults,
   getAnalyticsEnabled,
   updateAnalyticsEnabled,
+  getTerminalImageStorageSettings,
+  updateTerminalImageStorageSettings,
+  testTerminalImageStorage,
   type HostDefaults,
+  type TerminalImageStorageSettings,
+  type TerminalImageStorageTestResult,
 } from "@/api/settings-api";
 import {
   getSessionSharingGloballyEnabled,
@@ -114,6 +119,7 @@ import {
 } from "@/api/touch-input-settings-api";
 import { cacheTouchInputSettings } from "@/features/terminal/touch-input-settings-store";
 import { AdminTouchInputSection } from "./AdminTouchInputSection";
+import { AdminImageStorageSection } from "./AdminImageStorageSection";
 
 type ApiErrorLike = {
   response?: {
@@ -163,6 +169,17 @@ export function AdminSettingsPanel({
   const [hostDefaults, setHostDefaults] = useState<HostDefaults>({});
   const [touchInputSettings, setTouchInputSettings] =
     useState<TouchInputSettings>({ ...TOUCH_INPUT_DEFAULTS });
+
+  // Terminal image storage state. localDir stays a draft: the API never
+  // returns the configured backend path, so it is only sent when changed.
+  const [imageStorageSettings, setImageStorageSettings] =
+    useState<TerminalImageStorageSettings | null>(null);
+  const [imageStorageLocalDir, setImageStorageLocalDir] = useState("");
+  const [imageStorageInstanceId, setImageStorageInstanceId] = useState("");
+  const [imageStorageSaving, setImageStorageSaving] = useState(false);
+  const [imageStorageTesting, setImageStorageTesting] = useState(false);
+  const [imageStorageTestResult, setImageStorageTestResult] =
+    useState<TerminalImageStorageTestResult | null>(null);
 
   // SSO / auto-provision state
   const [oidcAutoProvision, setOidcAutoProvision] = useState(false);
@@ -345,6 +362,7 @@ export function AdminSettingsPanel({
         touchInput,
         aiEnabled,
         aiEndpoints,
+        imageStorage,
       ] = await Promise.allSettled([
         getRegistrationAllowed(),
         getPasswordLoginAllowed(),
@@ -362,6 +380,7 @@ export function AdminSettingsPanel({
         getTouchInputSettings(),
         getAiGloballyEnabled(),
         getAiPrivateEndpoints(),
+        getTerminalImageStorageSettings(),
       ]);
 
       if (reg.status === "fulfilled") setAllowRegistration(reg.value.allowed);
@@ -410,6 +429,9 @@ export function AdminSettingsPanel({
       }
       if (aiEndpoints.status === "fulfilled") {
         setAiPrivateEndpoints(aiEndpoints.value);
+      }
+      if (imageStorage.status === "fulfilled") {
+        setImageStorageSettings(imageStorage.value);
       }
     } catch {
       // non-fatal
@@ -578,6 +600,48 @@ export function AdminSettingsPanel({
     const defaults = { ...TOUCH_INPUT_DEFAULTS };
     setTouchInputSettings(defaults);
     void saveTouchInputSettings(defaults);
+  }
+
+  async function handleSaveImageStorage() {
+    if (!imageStorageSettings) return;
+    setImageStorageSaving(true);
+    try {
+      const saved = await updateTerminalImageStorageSettings({
+        mode: imageStorageSettings.mode,
+        hostPath: imageStorageSettings.hostPath,
+        ttlMs: imageStorageSettings.ttlMs,
+        maxCount: imageStorageSettings.maxCount,
+        maxBytes: imageStorageSettings.maxBytes,
+        ...(imageStorageLocalDir.trim()
+          ? { localDir: imageStorageLocalDir.trim() }
+          : {}),
+      });
+      setImageStorageSettings(saved);
+      setImageStorageLocalDir("");
+      toast.success(t("admin.imageStorageSaved"));
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("admin.imageStorageSaveFailed")));
+    } finally {
+      setImageStorageSaving(false);
+    }
+  }
+
+  async function handleTestImageStorage() {
+    if (!imageStorageInstanceId.trim()) {
+      toast.error(t("admin.imageStorageInstanceIdRequired"));
+      return;
+    }
+    setImageStorageTesting(true);
+    setImageStorageTestResult(null);
+    try {
+      setImageStorageTestResult(
+        await testTerminalImageStorage(imageStorageInstanceId.trim()),
+      );
+    } catch (e) {
+      toast.error(apiErrorMessage(e, t("admin.imageStorageTestFailed")));
+    } finally {
+      setImageStorageTesting(false);
+    }
   }
 
   async function handleSaveSessionTimeout() {
@@ -1155,6 +1219,22 @@ export function AdminSettingsPanel({
         defaults={hostDefaults}
         setDefaults={setHostDefaults}
         handleSaveDefaults={handleSaveHostDefaults}
+      />
+
+      <AdminImageStorageSection
+        open={openSections.has("image-storage")}
+        onToggle={() => toggle("image-storage")}
+        settings={imageStorageSettings}
+        setSettings={setImageStorageSettings}
+        localDir={imageStorageLocalDir}
+        setLocalDir={setImageStorageLocalDir}
+        instanceId={imageStorageInstanceId}
+        setInstanceId={setImageStorageInstanceId}
+        saving={imageStorageSaving}
+        testing={imageStorageTesting}
+        testResult={imageStorageTestResult}
+        onSave={() => void handleSaveImageStorage()}
+        onTest={() => void handleTestImageStorage()}
       />
 
       <AdminDatabaseSection

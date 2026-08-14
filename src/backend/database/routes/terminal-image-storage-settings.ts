@@ -65,7 +65,7 @@ export const DEFAULT_IMAGE_TTL_MS = 3_600_000;
 export const DEFAULT_IMAGE_MAX_COUNT = 100;
 export const DEFAULT_IMAGE_MAX_BYTES = 5_368_709_120;
 export const DEFAULT_IMAGE_HOST_PATH = "/tmp/termix-image-v0";
-const MIN_IMAGE_MAX_BYTES = 1_048_576;
+export const MIN_IMAGE_MAX_BYTES = 1_048_576;
 
 export function defaultImageLocalDir(env: NodeJS.ProcessEnv): string {
   return path.resolve(
