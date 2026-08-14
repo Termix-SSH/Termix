@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
+  getPollingEnvironmentMultiplier,
   runAdaptivePolling,
   type AdaptivePollResult,
   type AdaptivePollingPolicy,
@@ -18,8 +19,13 @@ export function useAdaptivePolling(
   const errorRef = useRef(options.onError);
   pollRef.current = poll;
   errorRef.current = options.onError;
-  const { minIntervalMs, maxIntervalMs, stablePollsPerStep, jitterRatio } =
-    policy;
+  const {
+    minIntervalMs,
+    maxIntervalMs,
+    stablePollsPerStep,
+    jitterRatio,
+    maxRequestDutyCycle,
+  } = policy;
   const runImmediately = options.runImmediately;
 
   useEffect(
@@ -31,11 +37,13 @@ export function useAdaptivePolling(
           maxIntervalMs,
           stablePollsPerStep,
           jitterRatio,
+          maxRequestDutyCycle,
         },
         {
           enabled: () => enabled,
           runImmediately,
           onError: (error) => errorRef.current?.(error),
+          intervalMultiplier: getPollingEnvironmentMultiplier,
         },
       ),
     [
@@ -45,6 +53,7 @@ export function useAdaptivePolling(
       minIntervalMs,
       runImmediately,
       stablePollsPerStep,
+      maxRequestDutyCycle,
     ],
   );
 }
