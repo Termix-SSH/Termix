@@ -180,8 +180,15 @@ export const REMOTE_IMAGE_DIR = "/tmp/termix-images";
 
 /** Minimal SFTP surface the remote adapter needs (satisfied by ssh2). */
 export interface ImageSftpClient {
-  mkdir(dir: string, callback: (err?: Error) => void): void;
-  createWriteStream(remotePath: string): NodeJS.WritableStream;
+  mkdir(
+    dir: string,
+    attrsOrCallback: { mode?: number } | ((err?: Error) => void),
+    callback?: (err?: Error) => void,
+  ): void;
+  createWriteStream(
+    remotePath: string,
+    options?: { mode?: number },
+  ): NodeJS.WritableStream;
   end?: () => void;
 }
 
@@ -257,7 +264,7 @@ export async function probeLocalImageVisibility(
 
 function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    sftp.mkdir(dir, (err) => {
+    sftp.mkdir(dir, { mode: 0o700 }, (err) => {
       // EEXIST (or a bare "Failure" from some SFTP servers when the
       // directory already exists) is not a real failure here.
       if (err && !/exist/i.test(err.message)) return reject(err);
@@ -272,7 +279,7 @@ function sftpWriteFile(
   data: Buffer,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const stream = sftp.createWriteStream(remotePath);
+    const stream = sftp.createWriteStream(remotePath, { mode: 0o600 });
     stream.on("error", reject);
     stream.on("close", resolve);
     stream.end(data);

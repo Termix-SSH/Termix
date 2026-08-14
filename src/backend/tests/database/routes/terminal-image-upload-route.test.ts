@@ -82,8 +82,18 @@ function fakeSftp(behavior: { writeError?: Error } = {}): {
   const written = new Map<string, Buffer>();
   const end = vi.fn();
   const sftp = {
-    mkdir: (_dir: string, callback: (err?: Error) => void) => callback(),
-    createWriteStream: (remotePath: string) => {
+    mkdir: (
+      _dir: string,
+      attrsOrCallback: { mode?: number } | ((err?: Error) => void),
+      maybeCallback?: (err?: Error) => void,
+    ) => {
+      const callback =
+        typeof attrsOrCallback === "function"
+          ? attrsOrCallback
+          : maybeCallback!;
+      callback();
+    },
+    createWriteStream: (remotePath: string, _options?: { mode?: number }) => {
       const stream = new EventEmitter() as NodeJS.WritableStream & {
         end: (data: Buffer) => void;
       };

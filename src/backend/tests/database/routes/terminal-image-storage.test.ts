@@ -163,11 +163,43 @@ describe("storeImageViaSftp", () => {
   function fakeSftp(behavior: {
     mkdirError?: Error;
     writeError?: Error;
-  }): { sftp: ImageSftpClient; written: Map<string, Buffer> } {
+  }): {
+    sftp: ImageSftpClient;
+    written: Map<string, Buffer>;
+    calls: {
+      mkdir: Array<{ dir: string; mode?: number }>;
+      createWriteStream: Array<{ path: string; mode?: number }>;
+    };
+  } {
     const written = new Map<string, Buffer>();
-    const sftp: ImageSftpClient = {
-      mkdir: (_dir, callback) => callback(behavior.mkdirError),
-      createWriteStream: (remotePath) => {
+    const calls = { mkdir: [], createWriteStream: [] } as {
+      mkdir: Array<{ dir: string; mode?: number }>;
+      createWriteStream: Array<{ path: string; mode?: number }>;
+    };
+    const sftp = {
+      mkdir: (
+        dir: string,
+        attrsOrCallback: { mode?: number } | ((err?: Error) => void),
+        maybeCallback?: (err?: Error) => void,
+      ) => {
+        const callback =
+          typeof attrsOrCallback === "function"
+            ? attrsOrCallback
+            : maybeCallback!;
+        calls.mkdir.push({
+          dir,
+          mode:
+            typeof attrsOrCallback === "function"
+              ? undefined
+              : attrsOrCallback.mode,
+        });
+        callback(behavior.mkdirError);
+      },
+      createWriteStream: (
+        remotePath: string,
+        options?: { mode?: number },
+      ) => {
+        calls.createWriteStream.push({ path: remotePath, mode: options?.mode });
         const stream = new EventEmitter() as NodeJS.WritableStream & {
           end: (data: Buffer) => void;
         };
@@ -183,8 +215,8 @@ describe("storeImageViaSftp", () => {
         };
         return stream;
       },
-    };
-    return { sftp, written };
+    } as unknown as ImageSftpClient;
+    return { sftp, written, calls };
   }
 
   it("writes into the remote image directory and returns its POSIX path", async () => {
@@ -198,6 +230,16 @@ describe("storeImageViaSftp", () => {
     expect(written.get(stored.shellPath)).toEqual(PNG_BYTES);
   });
 
+  it("requests restrictive modes for the remote directory and file", async () => {
+    const { sftp, calls } = fakeSftp({});
+    const stored = await storeImageViaSftp(sftp, PNG_BYTES);
+
+    expect(stored.storage).toBe("remote-sftp");
+    expect(calls.mkdir).toEqual([{ dir: REMOTE_IMAGE_DIR, mode: 0o700 }]);
+    expect(calls.createWriteStream).toEqual([
+      { path: stored.shellPath, mode: 0o600 },
+    ]);
+  });
   it("tolerates mkdir failures for an already-existing directory", async () => {
     const { sftp } = fakeSftp({
       mkdirError: new Error("Failure: file already exists"),
