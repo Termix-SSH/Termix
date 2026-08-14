@@ -21,6 +21,8 @@ export interface AdaptiveResourceFeedback {
   cancellations: number;
   fallbacks: number;
   latencyEwmaMs?: number;
+  usefulnessObservations?: number;
+  usefulPreloads?: number;
 }
 
 export interface AdaptiveResourceBudget {
@@ -42,6 +44,15 @@ const scopes: Record<AdaptiveTaskKind, string> = {
   module: "resource-budget:module",
   network: "resource-budget:network",
 };
+const usefulnessScopes: Record<AdaptiveTaskKind, string> = {
+  module: "resource-usefulness:module",
+  network: "resource-usefulness:network",
+};
+const PRELOAD_USE_WINDOW_MS = 10_000;
+const pendingPreloads = new Map<
+  string,
+  { kind: AdaptiveTaskKind; action: string; expiresAt: number }
+>();
 const activeTasks: Record<AdaptiveTaskKind, number> = {
   module: 0,
   network: 0,
@@ -100,7 +111,42 @@ function feedbackIsPoor(feedback?: AdaptiveResourceFeedback): boolean {
   return (
     failureRate > 0.25 ||
     abandoned / feedback.observations > 0.25 ||
-    (feedback.latencyEwmaMs ?? 0) > 2_000
+    (feedback.latencyEwmaMs ?? 0) > 2_000 ||
+    ((feedback.usefulnessObservations ?? 0) >= 4 &&
+      (feedback.usefulPreloads ?? 0) / (feedback.usefulnessObservations ?? 1) <
+        0.25)
+  );
+}
+
+function preloadKey(kind: AdaptiveTaskKind, action: string): string {
+  return `${kind}:${action}`;
+}
+
+function flushExpiredPreloads(now = Date.now()): void {
+  for (const [key, preload] of pendingPreloads) {
+    if (preload.expiresAt > now) continue;
+    recordLocalAdaptiveOutcome(usefulnessScopes[preload.kind], preload.action, {
+      success: false,
+    });
+    pendingPreloads.delete(key);
+  }
+}
+
+/** Marks that foreground navigation consumed a recent speculative preload. */
+export function markAdaptiveResourceUsed(
+  kind: AdaptiveTaskKind,
+  action: string,
+  now = Date.now(),
+): void {
+  flushExpiredPreloads(now);
+  const key = preloadKey(kind, action);
+  if (!pendingPreloads.has(key)) return;
+  pendingPreloads.delete(key);
+  recordLocalAdaptiveOutcome(
+    usefulnessScopes[kind],
+    action,
+    { success: true },
+    now,
   );
 }
 
@@ -148,7 +194,11 @@ function readEnvironment(): AdaptiveResourceEnvironment {
 }
 
 function readFeedback(kind: AdaptiveTaskKind): AdaptiveResourceFeedback {
+  flushExpiredPreloads();
   const stats = Object.values(getLocalAdaptiveStats(scopes[kind]));
+  const usefulness = Object.values(
+    getLocalAdaptiveStats(usefulnessScopes[kind]),
+  );
   const observations = stats.reduce((sum, stat) => sum + stat.observations, 0);
   const latencySamples = stats.filter(
     (stat) => stat.latencyEwmaMs !== undefined && stat.observations > 0,
@@ -162,6 +212,11 @@ function readFeedback(kind: AdaptiveTaskKind): AdaptiveResourceFeedback {
     successes: stats.reduce((sum, stat) => sum + stat.successes, 0),
     cancellations: stats.reduce((sum, stat) => sum + stat.cancellations, 0),
     fallbacks: stats.reduce((sum, stat) => sum + stat.fallbacks, 0),
+    usefulnessObservations: usefulness.reduce(
+      (sum, stat) => sum + stat.observations,
+      0,
+    ),
+    usefulPreloads: usefulness.reduce((sum, stat) => sum + stat.successes, 0),
     ...(latencyWeight > 0
       ? {
           latencyEwmaMs:
@@ -206,6 +261,12 @@ export function runAdaptiveBackgroundTask(
   if (!allowed || activeTasks[kind] >= concurrency) return false;
 
   activeTasks[kind] += 1;
+  const key = preloadKey(kind, action);
+  pendingPreloads.set(key, {
+    kind,
+    action,
+    expiresAt: Date.now() + PRELOAD_USE_WINDOW_MS,
+  });
   const startedAt = performance.now();
   void Promise.resolve()
     .then(task)
@@ -215,11 +276,13 @@ export function runAdaptiveBackgroundTask(
           success: true,
           latencyMs: performance.now() - startedAt,
         }),
-      () =>
+      () => {
+        pendingPreloads.delete(key);
         recordLocalAdaptiveOutcome(scopes[kind], action, {
           success: false,
           latencyMs: performance.now() - startedAt,
-        }),
+        });
+      },
     )
     .finally(() => {
       activeTasks[kind] -= 1;

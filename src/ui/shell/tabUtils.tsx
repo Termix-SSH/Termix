@@ -40,7 +40,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
-import { runAdaptiveBackgroundTask } from "@/lib/adaptive-resource-budget";
+import {
+  markAdaptiveResourceUsed,
+  runAdaptiveBackgroundTask,
+} from "@/lib/adaptive-resource-budget";
 
 // Heavy tab surfaces — keep out of the AppShell critical path.
 const CommandHistoryProvider = lazy(() =>
@@ -169,6 +172,10 @@ const tabSurfaceLoaders: Partial<Record<TabType, () => Promise<unknown>>> = {
 export function preloadTabSurface(type: TabType): void {
   const loader = tabSurfaceLoaders[type];
   if (loader) runAdaptiveBackgroundTask("module", `tab:${type}`, loader);
+}
+
+export function markTabSurfaceUsed(type: TabType): void {
+  markAdaptiveResourceUsed("module", `tab:${type}`);
 }
 
 function hostToSSHHost(h: Host): SSHHost {

@@ -1,4 +1,7 @@
-import { runAdaptiveBackgroundTask } from "@/lib/adaptive-resource-budget";
+import {
+  markAdaptiveResourceUsed,
+  runAdaptiveBackgroundTask,
+} from "@/lib/adaptive-resource-budget";
 
 export type FilePreviewKind =
   | "image"
@@ -105,4 +108,11 @@ export function preloadFilePreview(filename: string): void {
   const kind = resolveFilePreviewKind(filename);
   const loader = previewLoaders[kind];
   if (loader) runAdaptiveBackgroundTask("module", `preview:${kind}`, loader);
+}
+
+export function markFilePreviewUsed(filename: string): void {
+  markAdaptiveResourceUsed(
+    "module",
+    `preview:${resolveFilePreviewKind(filename)}`,
+  );
 }

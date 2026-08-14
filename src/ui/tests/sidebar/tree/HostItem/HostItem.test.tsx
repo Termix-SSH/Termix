@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Host } from "@/types/ui-types";
 import { LOCAL_ADAPTIVE_PREFERENCES_KEY } from "@/lib/local-adaptive-preferences";
 
-const { preloadTabSurfaceMock } = vi.hoisted(() => ({
+const { markTabSurfaceUsedMock, preloadTabSurfaceMock } = vi.hoisted(() => ({
+  markTabSurfaceUsedMock: vi.fn(),
   preloadTabSurfaceMock: vi.fn(),
 }));
 
 vi.mock("@/shell/tabUtils", () => ({
+  markTabSurfaceUsed: markTabSurfaceUsedMock,
   preloadTabSurface: preloadTabSurfaceMock,
 }));
 
@@ -86,6 +88,7 @@ function renderHostItem(
 
 afterEach(() => {
   cleanup();
+  markTabSurfaceUsedMock.mockClear();
   preloadTabSurfaceMock.mockClear();
   localStorage.removeItem(LOCAL_ADAPTIVE_PREFERENCES_KEY);
 });

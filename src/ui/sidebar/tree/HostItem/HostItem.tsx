@@ -68,7 +68,7 @@ import {
   TooltipTrigger,
 } from "@/components/tooltip";
 import { hostMatchesQuery } from "../visible-rows";
-import { preloadTabSurface } from "@/shell/tabUtils";
+import { markTabSurfaceUsed, preloadTabSurface } from "@/shell/tabUtils";
 import {
   getPreferredHostAction,
   recordHostActionPreference,
@@ -406,6 +406,7 @@ export function HostItem({
           ? "telnet"
           : "terminal";
   const openHostTab = (type: TabType) => {
+    markTabSurfaceUsed(type);
     recordHostActionPreference(host.id, type);
     onOpenTab(type);
   };
