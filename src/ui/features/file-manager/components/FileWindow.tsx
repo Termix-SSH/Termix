@@ -271,7 +271,9 @@ export function FileWindow({
 
         await ensureSSHConnection();
 
-        const response = await readSSHFile(sshSessionId, file.path);
+        const response = await readSSHFile(sshSessionId, file.path, {
+          force: true,
+        });
         const fileContent = response.content || "";
         setContent(fileContent);
         setPendingContent("");
