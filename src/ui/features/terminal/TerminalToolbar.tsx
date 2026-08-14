@@ -1,19 +1,30 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Check,
   ChevronDown,
-  ChevronUp,
   ClipboardPaste,
+  Gauge,
+  GripVertical,
   ImagePlus,
   LayoutGrid,
+  LogOut,
+  Maximize2,
+  Minimize2,
+  Shapes,
+  Type,
+  X,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/tooltip.tsx";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { getSshActions } from "@/sidebar/tree/HostItem/HostItem";
 import {
   getServerMetricsById,
@@ -25,91 +36,43 @@ import {
   getPollingEnvironmentMultiplier,
   runAdaptivePolling,
 } from "@/lib/adaptive-polling";
-
-type ToolbarDensity = "icon" | "labeled" | "expanded";
+import {
+  clampToolbarPosition,
+  getResponsiveToolbarDensity,
+  persistToolbarPosition,
+  readStoredToolbarPosition,
+  type ToolbarPosition,
+  type ToolbarDensity,
+} from "./toolbar-geometry";
+type SelectedToolbarDensity = ToolbarDensity;
 
 const DENSITY_STORAGE_KEY = "termix-terminal-toolbar-density";
-const DENSITY_ORDER: ToolbarDensity[] = ["icon", "labeled", "expanded"];
+
+const DENSITY_OPTIONS: {
+  value: ToolbarDensity;
+  icon: typeof Shapes;
+}[] = [
+  { value: "icon", icon: Shapes },
+  { value: "labeled", icon: Type },
+  { value: "expanded", icon: Gauge },
+];
+const DENSITIES = DENSITY_OPTIONS.map((option) => option.value);
 
 function readStoredDensity(): ToolbarDensity {
   if (typeof window === "undefined") return "labeled";
-  const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
-  return stored === "icon" || stored === "labeled" || stored === "expanded"
-    ? stored
-    : "labeled";
+  try {
+    const stored = window.localStorage.getItem(DENSITY_STORAGE_KEY);
+    return DENSITIES.includes(stored as ToolbarDensity)
+      ? (stored as ToolbarDensity)
+      : "labeled";
+  } catch {
+    return "labeled";
+  }
 }
 
-const BTN_BASE =
-  "flex items-center justify-center gap-1.5 h-7 px-2 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-sm whitespace-nowrap select-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground";
-
-const BTN_ICON =
-  "flex items-center justify-center size-7 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors rounded-sm select-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground";
-
-const SEP = "w-px h-5 bg-border mx-0.5 shrink-0";
-
-function TipBtn({
-  tooltip,
-  onClick,
-  disabled,
-  className,
-  children,
-}: {
-  tooltip: string;
-  onClick: () => void;
-  disabled?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={disabled}
-          className={cn(BTN_BASE, className)}
-        >
-          {children}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6}>
-        {tooltip}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function TipIconBtn({
-  tooltip,
-  onClick,
-  disabled,
-  className,
-  children,
-}: {
-  tooltip: string;
-  onClick: () => void;
-  disabled?: boolean;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={disabled}
-          className={cn(BTN_ICON, className)}
-        >
-          {children}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" sideOffset={6}>
-        {tooltip}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
+const CONTROL =
+  "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-sm px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:translate-y-px active:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-muted data-[state=open]:text-foreground";
+const SEPARATOR = "mx-0.5 h-6 w-px shrink-0 bg-border";
 
 function StatBar({
   label,
@@ -121,10 +84,10 @@ function StatBar({
   const value = percent == null ? null : Math.max(0, Math.min(100, percent));
   return (
     <div className="flex items-center gap-1.5 px-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground w-12 shrink-0 whitespace-nowrap">
+      <span className="w-12 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <div className="w-12 h-1.5 rounded-full bg-muted overflow-hidden shrink-0">
+      <div className="h-1.5 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
         {value != null && (
           <div
             className={cn(
@@ -139,8 +102,8 @@ function StatBar({
           />
         )}
       </div>
-      <span className="text-[10px] tabular-nums text-muted-foreground w-7 text-right shrink-0">
-        {value != null ? `${Math.round(value)}%` : "--"}
+      <span className="w-7 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+        {value == null ? "--" : `${Math.round(value)}%`}
       </span>
     </div>
   );
@@ -148,20 +111,21 @@ function StatBar({
 
 interface TerminalToolbarProps {
   host: Host;
+  terminalIdentity?: string;
   isConnected: boolean;
   isTmuxAttached: boolean;
   onTmuxDetach: () => void;
   isImageUploading: boolean;
-  onUploadImage: (file: File) => void;
-  onPasteImage: () => void;
+  onUploadImage: (file: File) => void | Promise<void>;
+  onPasteImage: () => void | Promise<void>;
   onOpenTab?: (type: TabType) => void;
-  /** Opens Files at the terminal's current working directory, when known. */
   onOpenFiles?: () => void;
   isFocused: boolean;
 }
 
 export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   host,
+  terminalIdentity,
   isConnected,
   isTmuxAttached,
   onTmuxDetach,
@@ -173,44 +137,248 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
   isFocused,
 }) => {
   const { t } = useTranslation();
-  const [density, setDensity] = useState<ToolbarDensity>(readStoredDensity);
+  const [density, setDensity] =
+    useState<SelectedToolbarDensity>(readStoredDensity);
+  const [responsiveDensity, setResponsiveDensity] =
+    useState<SelectedToolbarDensity>(readStoredDensity);
+  const [position, setPosition] = useState<ToolbarPosition>(
+    readStoredToolbarPosition,
+  );
+  const positionRef = useRef(position);
   const [collapsed, setCollapsed] = useState(false);
+  const [densityOpen, setDensityOpen] = useState(false);
   const [metrics, setMetrics] = useState<{
     cpu: number | null;
     memory: number | null;
     disk: number | null;
   } | null>(null);
   const [statsAvailable, setStatsAvailable] = useState(true);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [retryImageAction, setRetryImageAction] = useState<(() => void) | null>(
+    null,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const effectiveDensity: ToolbarDensity = isFocused ? density : "icon";
+  const densityTriggerRef = useRef<HTMLButtonElement>(null);
+  const hideToolbarRef = useRef<HTMLButtonElement>(null);
+  const pendingExpansionFocusRef = useRef(false);
+  const pendingRightEdgeRef = useRef<number | null>(null);
+  const pendingDensityFocusRef = useRef<number | null>(null);
+  const mountedRef = useRef(false);
+  const imageGenerationRef = useRef(0);
+  const hostRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const measurementRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    basePosition: ToolbarPosition;
+  } | null>(null);
+  const capturedPointerIdRef = useRef<number | null>(null);
+  const dragMovedRef = useRef(false);
+  const densityId = useId();
+  const [desktopViewportReady, setDesktopViewportReady] = useState<boolean>();
+  const hostIdentity = terminalIdentity ?? `${host.id ?? "unknown"}`;
+  positionRef.current = position;
+  const hostActions = getSshActions(host).filter(
+    (action) => action.type !== "terminal",
+  );
+  const effectiveDensity: ToolbarDensity = isFocused
+    ? responsiveDensity
+    : "icon";
   const showStats = effectiveDensity === "expanded";
+  const hostId = host.id ? Number(host.id) : null;
+  const isMobile = useIsMobile();
+
+  useLayoutEffect(() => {
+    setDesktopViewportReady(
+      typeof window !== "undefined" && window.innerWidth >= 768,
+    );
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
-  }, [density]);
+    if (isMobile === false) setDesktopViewportReady(true);
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (desktopViewportReady !== true || isMobile !== false) return;
+    try {
+      window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
+    } catch {
+      // Storage can be unavailable in hardened browser contexts.
+    }
+  }, [density, desktopViewportReady, isMobile]);
 
   // Picking an interface preset seeds this key, so pick the new value up
   // without needing the tab to remount.
   useEffect(() => {
+    if (desktopViewportReady !== true || isMobile !== false) return;
     const handler = () => setDensity(readStoredDensity());
     window.addEventListener("terminalToolbarDensityChanged", handler);
     return () =>
       window.removeEventListener("terminalToolbarDensityChanged", handler);
-  }, []);
-
-  const hostId = host?.id ? Number(host.id) : null;
+  }, [desktopViewportReady, isMobile]);
+  useEffect(() => {
+    if (desktopViewportReady !== true || isMobile !== false) return;
+    const measurement = measurementRef.current;
+    const host = hostRef.current;
+    if (!measurement || !host) return;
+    let frameId: number | null = null;
+    let remeasurements = 0;
+    const measure = () => {
+      frameId = null;
+      const available = host.getBoundingClientRect().width;
+      const required = measurement.getBoundingClientRect().width;
+      if (available > 0 && required > 0) {
+        setResponsiveDensity((current) =>
+          getResponsiveToolbarDensity(density, current, available, required),
+        );
+        remeasurements = 0;
+      } else if (remeasurements < 2) {
+        remeasurements += 1;
+        frameId = window.requestAnimationFrame(measure);
+      }
+    };
+    const schedule = () => {
+      if (frameId == null) frameId = window.requestAnimationFrame(measure);
+    };
+    schedule();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(schedule);
+    observer?.observe(host);
+    observer?.observe(measurement);
+    return () => {
+      if (frameId != null) window.cancelAnimationFrame(frameId);
+      observer?.disconnect();
+    };
+  }, [
+    density,
+    desktopViewportReady,
+    hostActions.length,
+    isConnected,
+    isMobile,
+    isTmuxAttached,
+    t,
+  ]);
 
   useEffect(() => {
-    if (!showStats || !hostId || collapsed) {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      imageGenerationRef.current += 1;
+      dragRef.current = null;
+      capturedPointerIdRef.current = null;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (desktopViewportReady !== true || isMobile !== false) return;
+    const toolbar = toolbarRef.current;
+    const host = hostRef.current;
+    if (!toolbar || !host || dragRef.current) return;
+    const hostRect = host.getBoundingClientRect();
+    const toolbarRect = toolbar.getBoundingClientRect();
+    const extremeOffset =
+      hostRect.width > 0 &&
+      hostRect.height > 0 &&
+      Math.max(
+        Math.abs(positionRef.current.x),
+        Math.abs(positionRef.current.y),
+      ) >
+        Math.max(hostRect.width, hostRect.height) * 4;
+    if (extremeOffset) {
+      positionRef.current = { x: 0, y: 0 };
+      setPosition({ x: 0, y: 0 });
+      persistToolbarPosition({ x: 0, y: 0 });
+      return;
+    }
+    if (toolbarRect.width > 0 && toolbarRect.height > 0) {
+      const pendingRightEdge = pendingRightEdgeRef.current;
+      pendingRightEdgeRef.current = null;
+      const baseRight = toolbarRect.right - positionRef.current.x;
+      const next = clampToolbarPosition(
+        {
+          x:
+            pendingRightEdge == null
+              ? positionRef.current.x
+              : pendingRightEdge - baseRight,
+          y: positionRef.current.y,
+        },
+        toolbarRect,
+        hostRect,
+        positionRef.current,
+      );
+      if (
+        next.x !== positionRef.current.x ||
+        next.y !== positionRef.current.y
+      ) {
+        positionRef.current = next;
+        setPosition(next);
+        persistToolbarPosition(next);
+      }
+    }
+    if (!collapsed && pendingExpansionFocusRef.current) {
+      pendingExpansionFocusRef.current = false;
+      hideToolbarRef.current?.focus();
+    }
+  }, [
+    collapsed,
+    density,
+    desktopViewportReady,
+    effectiveDensity,
+    hostActions.length,
+    isConnected,
+    isMobile,
+    isTmuxAttached,
+    responsiveDensity,
+  ]);
+
+  useEffect(() => {
+    imageGenerationRef.current += 1;
+    setDensityOpen(false);
+    setImageError(null);
+    setRetryImageAction(null);
+  }, [isConnected, hostIdentity]);
+
+  useEffect(() => {
+    if (desktopViewportReady !== true || isMobile !== false) return;
+    const pendingIndex = pendingDensityFocusRef.current;
+    if (pendingIndex == null) return;
+    pendingDensityFocusRef.current = null;
+    const timeoutId = window.setTimeout(() => {
+      const radios = document
+        .getElementById(`${densityId}-group`)
+        ?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+      radios?.[pendingIndex]?.focus();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [desktopViewportReady, density, densityId, isMobile]);
+
+  useEffect(() => {
+    if (collapsed || !pendingExpansionFocusRef.current) return;
+    pendingExpansionFocusRef.current = false;
+    hideToolbarRef.current?.focus();
+  }, [collapsed]);
+
+  useEffect(() => {
+    if (
+      !showStats ||
+      desktopViewportReady !== true ||
+      isMobile !== false ||
+      !hostId ||
+      collapsed ||
+      !isConnected
+    ) {
       setMetrics(null);
       return;
     }
-
     let cancelled = false;
     let stopPolling: (() => void) | undefined;
     let viewerSessionId: string | undefined;
     let previousMetrics: typeof metrics = null;
+    setStatsAvailable(true);
 
     const poll = async () => {
       try {
@@ -236,15 +404,21 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
         setMetrics(next);
         return changed;
       } catch {
-        // keep prior value on transient errors
+        // Retain the previous sample after a transient polling error.
         return false;
       }
     };
-
     const start = async () => {
       try {
         const result = await startMetricsPolling(hostId);
-        if (cancelled) return;
+        if (cancelled) {
+          if (result.viewerSessionId) {
+            void stopMetricsPolling(hostId, result.viewerSessionId).catch(
+              () => {},
+            );
+          }
+          return;
+        }
         if (result.requires_totp) {
           setStatsAvailable(false);
           return;
@@ -264,177 +438,488 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
         if (!cancelled) setStatsAvailable(false);
       }
     };
-
     void start();
-
     return () => {
       cancelled = true;
       stopPolling?.();
       void stopMetricsPolling(hostId, viewerSessionId).catch(() => {});
     };
-  }, [showStats, hostId, collapsed]);
+  }, [
+    desktopViewportReady,
+    showStats,
+    isMobile,
+    hostId,
+    collapsed,
+    isConnected,
+    hostIdentity,
+  ]);
 
-  if (!isConnected) return null;
+  if (!isConnected || desktopViewportReady !== true || isMobile !== false)
+    return null;
 
-  const hostActions = getSshActions(host).filter(
-    (action) => action.type !== "terminal",
-  );
-
-  const cycleDensity = () => {
-    const idx = DENSITY_ORDER.indexOf(density);
-    setDensity(DENSITY_ORDER[(idx + 1) % DENSITY_ORDER.length]);
+  const setAndStoreDensity = (next: ToolbarDensity) => {
+    setDensity(next);
+  };
+  const reportImageResult = (
+    action: () => void | Promise<void>,
+    retry: () => void,
+  ) => {
+    const generation = ++imageGenerationRef.current;
+    let result: void | Promise<void>;
+    try {
+      result = action();
+    } catch (error) {
+      result = Promise.reject(error);
+    }
+    void Promise.resolve(result).then(
+      () => {
+        if (!mountedRef.current || generation !== imageGenerationRef.current)
+          return;
+        setImageError(null);
+        setRetryImageAction(null);
+      },
+      (error: unknown) => {
+        if (!mountedRef.current || generation !== imageGenerationRef.current)
+          return;
+        setImageError(
+          error instanceof Error
+            ? error.message
+            : t("terminalToolbar.imageActionFailed"),
+        );
+        setRetryImageAction(() => retry);
+      },
+    );
+  };
+  const uploadFile = (file: File) => {
+    setImageError(null);
+    reportImageResult(
+      () => onUploadImage(file),
+      () => uploadFile(file),
+    );
+  };
+  const pasteImage = () => {
+    setImageError(null);
+    // Invoke clipboard access in this click's user-activation call chain.
+    reportImageResult(onPasteImage, pasteImage);
+  };
+  const chooseFile = () => fileInputRef.current?.click();
+  const handleGrabPointerDown = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => {
+    if (event.button !== 0 || event.pointerType === "touch") return;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    capturedPointerIdRef.current = event.pointerId;
+    dragMovedRef.current = false;
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      basePosition: positionRef.current,
+    };
+  };
+  const handleGrabPointerMove = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - drag.startX;
+    const deltaY = event.clientY - drag.startY;
+    const toolbar = toolbarRef.current;
+    const host = hostRef.current;
+    if (!toolbar || !host) return;
+    const next = clampToolbarPosition(
+      {
+        x: drag.basePosition.x + deltaX,
+        y: drag.basePosition.y + deltaY,
+      },
+      toolbar.getBoundingClientRect(),
+      host.getBoundingClientRect(),
+      positionRef.current,
+    );
+    if (event.clientX !== drag.startX || event.clientY !== drag.startY) {
+      dragMovedRef.current = true;
+    }
+    positionRef.current = next;
+    setPosition(next);
+  };
+  const handleGrabPointerEnd = (
+    event: React.PointerEvent<HTMLButtonElement>,
+  ) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    persistToolbarPosition(positionRef.current);
+    dragRef.current = null;
+    if (capturedPointerIdRef.current === event.pointerId) {
+      capturedPointerIdRef.current = null;
+      if (event.type !== "lostpointercapture") {
+        try {
+          event.currentTarget.releasePointerCapture?.(event.pointerId);
+        } catch {
+          // The browser may have already released capture for this pointer.
+        }
+      }
+    }
+  };
+  const densityLabels: Record<ToolbarDensity, string> = {
+    icon: t("terminalToolbar.layoutIcon"),
+    labeled: t("terminalToolbar.layoutLabeled"),
+    expanded: t("terminalToolbar.layoutExpanded"),
   };
 
-  const densityIcon =
-    density === "icon" ? (
-      <ChevronUp className="size-3.5" />
-    ) : density === "labeled" ? (
-      <LayoutGrid className="size-3.5" />
-    ) : (
-      <ChevronDown className="size-3.5" />
+  const densityPopover = (
+    <Popover open={densityOpen} onOpenChange={setDensityOpen}>
+      <PopoverTrigger asChild>
+        <button
+          ref={densityTriggerRef}
+          type="button"
+          className={CONTROL}
+          aria-label={t("terminalToolbar.layout")}
+          title={t("terminalToolbar.layout")}
+          aria-expanded={densityOpen}
+          aria-controls={densityId}
+        >
+          <LayoutGrid className="size-4 shrink-0" />
+          <ChevronDown className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        id={densityId}
+        side="top"
+        className="w-64 p-2"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          densityTriggerRef.current?.focus();
+        }}
+      >
+        <div
+          role="radiogroup"
+          id={`${densityId}-group`}
+          aria-label={t("terminalToolbar.layout")}
+          className="grid gap-1"
+        >
+          {DENSITY_OPTIONS.map((option, index) => {
+            const OptionIcon = option.icon;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="radio"
+                aria-checked={density === option.value}
+                tabIndex={density === option.value ? 0 : -1}
+                className={cn(
+                  CONTROL,
+                  "justify-between data-[selected=true]:font-semibold",
+                  density === option.value && "bg-muted text-foreground",
+                )}
+                title={densityLabels[option.value]}
+                data-selected={density === option.value}
+                onClick={() => setAndStoreDensity(option.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp")
+                    return;
+                  event.preventDefault();
+                  const delta = event.key === "ArrowDown" ? 1 : -1;
+                  const next =
+                    (index + delta + DENSITY_OPTIONS.length) %
+                    DENSITY_OPTIONS.length;
+                  pendingDensityFocusRef.current = next;
+                  setAndStoreDensity(DENSITY_OPTIONS[next].value);
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <OptionIcon className="size-4" aria-hidden="true" />
+                  {densityLabels[option.value]}
+                </span>
+                {density === option.value && (
+                  <Check className="size-4" aria-hidden="true" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+
+  const leadHostActions = hostActions.filter(
+    (action) =>
+      action.type === "host-metrics" || action.type === "tmux_monitor",
+  );
+  const otherHostActions = hostActions.filter(
+    (action) =>
+      action.type !== "host-metrics" && action.type !== "tmux_monitor",
+  );
+  const renderHostAction = (action: (typeof hostActions)[number]) => {
+    const Icon = action.icon;
+    const invoke = () =>
+      action.type === "files" && onOpenFiles
+        ? onOpenFiles()
+        : onOpenTab?.(action.type);
+    return (
+      <button
+        key={action.type}
+        type="button"
+        className={CONTROL}
+        aria-label={action.label}
+        title={action.label}
+        onClick={invoke}
+      >
+        <Icon className="size-4 shrink-0" />
+        {effectiveDensity !== "icon" && action.label}
+      </button>
     );
+  };
+
+  const imageButtons = (
+    <>
+      <button
+        type="button"
+        className={CONTROL}
+        aria-label={t("terminalToolbar.uploadImage")}
+        title={t("terminalToolbar.uploadImage")}
+        disabled={isImageUploading}
+        onClick={chooseFile}
+      >
+        <ImagePlus className="size-4 shrink-0" />
+        {effectiveDensity !== "icon" && t("terminalToolbar.upload")}
+      </button>
+      <button
+        type="button"
+        className={CONTROL}
+        aria-label={t("terminalToolbar.pasteImage")}
+        title={t("terminalToolbar.pasteImage")}
+        disabled={isImageUploading}
+        onClick={pasteImage}
+      >
+        <ClipboardPaste className="size-4 shrink-0" />
+        {effectiveDensity !== "icon" && t("terminalToolbar.paste")}
+      </button>
+    </>
+  );
+  const expandButton = (
+    <button
+      type="button"
+      className={CONTROL}
+      aria-label={t("terminalToolbar.showToolbar")}
+      title={t("terminalToolbar.showToolbar")}
+      onClick={() => {
+        pendingRightEdgeRef.current =
+          toolbarRef.current?.getBoundingClientRect().right ?? null;
+        pendingExpansionFocusRef.current = true;
+        setCollapsed(false);
+      }}
+    >
+      <Maximize2 className="size-4" />
+      <span className="sr-only">{t("terminalToolbar.showToolbar")}</span>
+    </button>
+  );
+  const grabButton = () => (
+    <button
+      type="button"
+      className={cn(CONTROL, "cursor-grab active:cursor-grabbing")}
+      aria-label={t("terminalToolbar.moveToolbar")}
+      title={t("terminalToolbar.moveToolbarHint")}
+      onPointerDown={handleGrabPointerDown}
+      onPointerMove={handleGrabPointerMove}
+      onPointerUp={handleGrabPointerEnd}
+      onPointerCancel={handleGrabPointerEnd}
+      onLostPointerCapture={handleGrabPointerEnd}
+    >
+      <GripVertical className="size-4" />
+    </button>
+  );
 
   return (
-    <TooltipProvider delayDuration={400}>
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[110] max-w-[calc(100%-1rem)]">
-        {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
+    <>
+      <div
+        ref={hostRef}
+        data-terminal-toolbar-host
+        className={cn(
+          "pointer-events-none @container absolute inset-0 z-[110] flex items-end justify-center pb-2",
+        )}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          tabIndex={-1}
+          disabled={isImageUploading}
+          aria-hidden="true"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) uploadFile(file);
+          }}
+        />
+        <span role="status" aria-live="polite" className="sr-only">
+          {isImageUploading ? t("terminalToolbar.uploadingImage") : ""}
+        </span>
+        {imageError && (
+          <div
+            role="alert"
+            className="pointer-events-auto absolute bottom-full mb-2 flex min-h-11 max-w-sm items-center gap-2 rounded-sm border border-destructive bg-background p-2 text-xs text-destructive shadow-lg"
+          >
+            <span>{imageError}</span>
+            {retryImageAction && (
               <button
                 type="button"
-                onClick={() => setCollapsed(false)}
-                className="flex items-center justify-center size-7 bg-background/85 backdrop-blur-sm border border-border shadow-lg rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <LayoutGrid className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" sideOffset={6}>
-              {t("terminalToolbar.expand")}
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <div className="flex flex-col bg-background/85 backdrop-blur-sm border border-border shadow-lg rounded-sm overflow-hidden">
-            {showStats && (
-              <div className="flex items-center justify-center flex-wrap gap-x-1 gap-y-0.5 px-1.5 py-1 border-b border-border">
-                {statsAvailable ? (
-                  <>
-                    <StatBar
-                      label={t("terminalToolbar.cpu")}
-                      percent={metrics?.cpu ?? null}
-                    />
-                    <StatBar
-                      label={t("terminalToolbar.memory")}
-                      percent={metrics?.memory ?? null}
-                    />
-                    <StatBar
-                      label={t("terminalToolbar.disk")}
-                      percent={metrics?.disk ?? null}
-                    />
-                  </>
-                ) : (
-                  <span className="text-[10px] text-muted-foreground px-1 py-0.5">
-                    {t("terminalToolbar.statsUnavailable")}
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="flex items-center flex-wrap px-0.5 py-0.5 gap-0">
-              {hostActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <TipBtn
-                    key={action.type}
-                    tooltip={action.label}
-                    onClick={() =>
-                      action.type === "files" && onOpenFiles
-                        ? onOpenFiles()
-                        : onOpenTab?.(action.type)
-                    }
-                    className={
-                      effectiveDensity === "icon" ? "px-1.5" : undefined
-                    }
-                  >
-                    <Icon className="size-3.5" />
-                    {effectiveDensity !== "icon" && action.label}
-                  </TipBtn>
-                );
-              })}
-
-              {(hostActions.length > 0 || isTmuxAttached) && (
-                <div className={SEP} />
-              )}
-
-              {isTmuxAttached && (
-                <TipBtn
-                  tooltip={t("terminalToolbar.tmuxDetach")}
-                  onClick={onTmuxDetach}
-                  className={effectiveDensity === "icon" ? "px-1.5" : undefined}
-                >
-                  tmux
-                  {effectiveDensity !== "icon" &&
-                    `:${t("terminalToolbar.tmuxDetach")}`}
-                </TipBtn>
-              )}
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <label
-                    className={cn(
-                      BTN_BASE,
-                      "cursor-pointer",
-                      effectiveDensity === "icon" && "px-1.5",
-                    )}
-                  >
-                    <ImagePlus className="size-3.5" />
-                    {effectiveDensity !== "icon" &&
-                      (isImageUploading
-                        ? t("terminalToolbar.uploadingImage")
-                        : t("terminalToolbar.uploadImage"))}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      disabled={isImageUploading}
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.target.value = "";
-                        if (file) onUploadImage(file);
-                      }}
-                    />
-                  </label>
-                </TooltipTrigger>
-                <TooltipContent side="top" sideOffset={6}>
-                  {t("terminalToolbar.uploadImage")}
-                </TooltipContent>
-              </Tooltip>
-
-              <TipIconBtn
-                tooltip={t("terminalToolbar.pasteImage")}
-                onClick={onPasteImage}
+                className={cn(CONTROL, "text-foreground")}
+                title={t("terminalToolbar.retry")}
                 disabled={isImageUploading}
+                onClick={retryImageAction}
               >
-                <ClipboardPaste className="size-3.5" />
-              </TipIconBtn>
-
-              <div className={SEP} />
-
-              <TipIconBtn
-                tooltip={t("terminalToolbar.cycleDensity")}
-                onClick={cycleDensity}
-              >
-                {densityIcon}
-              </TipIconBtn>
-              <TipIconBtn
-                tooltip={t("terminalToolbar.collapse")}
-                onClick={() => setCollapsed(true)}
-              >
-                <ChevronDown className="size-3.5" />
-              </TipIconBtn>
-            </div>
+                {t("terminalToolbar.retry")}
+              </button>
+            )}
+            <button
+              type="button"
+              className={cn(CONTROL, "px-2")}
+              aria-label={t("terminalToolbar.dismissError")}
+              title={t("terminalToolbar.dismissError")}
+              onClick={() => {
+                setImageError(null);
+                setRetryImageAction(null);
+              }}
+            >
+              <X className="size-4" />
+            </button>
           </div>
         )}
+
+        <div
+          ref={measurementRef}
+          aria-hidden="true"
+          className="pointer-events-none invisible absolute left-0 top-0 flex whitespace-nowrap"
+        >
+          {hostActions.map((action) => (
+            <span key={action.type} className={CONTROL}>
+              <action.icon className="size-4" />
+              {density !== "icon" && action.label}
+            </span>
+          ))}
+          {isTmuxAttached && (
+            <span className={CONTROL}>
+              <LogOut className="size-4" />
+              {density !== "icon" && t("terminalToolbar.detachTmux")}
+            </span>
+          )}
+          <span className={CONTROL}>
+            <ImagePlus className="size-4" />
+            {density !== "icon" && t("terminalToolbar.upload")}
+          </span>
+          <span className={CONTROL}>
+            <ClipboardPaste className="size-4" />
+            {density !== "icon" && t("terminalToolbar.paste")}
+          </span>
+          <span className={CONTROL}>
+            <LayoutGrid className="size-4" />
+          </span>
+          <span className={CONTROL}>
+            <Minimize2 className="size-4" />
+          </span>
+          <span className={CONTROL}>
+            <GripVertical className="size-4" />
+          </span>
+        </div>
+        <div
+          ref={toolbarRef}
+          data-terminal-toolbar-wide
+          className={cn(
+            "pointer-events-auto transition-opacity duration-300 hover:duration-0 focus-within:duration-0 hover:opacity-100 focus-within:opacity-100",
+            collapsed ? "opacity-100" : "opacity-30",
+          )}
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px)`,
+          }}
+        >
+          {collapsed ? (
+            <div className="terminal-toolbar-collapsed-shell flex rounded-sm border border-border bg-background/90 p-0.5 shadow-lg backdrop-blur-sm">
+              {expandButton}
+              {grabButton()}
+            </div>
+          ) : (
+            <div className="flex flex-col overflow-hidden rounded-sm border border-border bg-background/90 shadow-lg backdrop-blur-sm">
+              {showStats && (
+                <div className="flex flex-wrap items-center justify-center gap-x-1 border-b border-border px-1.5 py-1">
+                  {statsAvailable ? (
+                    <>
+                      <StatBar
+                        label={t("terminalToolbar.cpu")}
+                        percent={metrics?.cpu ?? null}
+                      />
+                      <StatBar
+                        label={t("terminalToolbar.memory")}
+                        percent={metrics?.memory ?? null}
+                      />
+                      <StatBar
+                        label={t("terminalToolbar.disk")}
+                        percent={metrics?.disk ?? null}
+                      />
+                    </>
+                  ) : (
+                    <span
+                      role="status"
+                      className="min-h-11 px-3 py-3 text-xs text-muted-foreground"
+                    >
+                      {t("terminalToolbar.statsUnavailable")}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className={cn("flex gap-0.5 p-0.5", "items-center")}>
+                {leadHostActions.map(renderHostAction)}
+                {isTmuxAttached && (
+                  <button
+                    type="button"
+                    className={CONTROL}
+                    aria-label={t("terminalToolbar.detachTmuxDescription")}
+                    title={t("terminalToolbar.detachTmuxDescription")}
+                    onClick={onTmuxDetach}
+                  >
+                    <LogOut className="size-4" />
+                    {effectiveDensity !== "icon" &&
+                      t("terminalToolbar.detachTmux")}
+                  </button>
+                )}
+                {(hostActions.length > 0 || isTmuxAttached) && (
+                  <div className={SEPARATOR} />
+                )}
+                <div
+                  role="group"
+                  aria-label={t("terminalToolbar.image")}
+                  className="flex items-center gap-0.5"
+                >
+                  {imageButtons}
+                </div>
+                <div className={SEPARATOR} />
+                {densityPopover}
+                <button
+                  ref={hideToolbarRef}
+                  type="button"
+                  className={CONTROL}
+                  aria-label={t("terminalToolbar.hideToolbar")}
+                  title={t("terminalToolbar.hideToolbar")}
+                  onClick={() => {
+                    pendingRightEdgeRef.current =
+                      toolbarRef.current?.getBoundingClientRect().right ?? null;
+                    setCollapsed(true);
+                  }}
+                >
+                  <Minimize2 className="size-4" />
+                  <span className="sr-only">
+                    {t("terminalToolbar.hideToolbar")}
+                  </span>
+                </button>
+                {otherHostActions.length > 0 && <div className={SEPARATOR} />}
+                {otherHostActions.map(renderHostAction)}
+                <div className={SEPARATOR} />
+                {grabButton()}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </TooltipProvider>
+    </>
   );
 };
