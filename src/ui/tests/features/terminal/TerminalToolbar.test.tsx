@@ -35,12 +35,13 @@ vi.mock("react-i18next", () => ({
       ({
         "terminalToolbar.detachTmux": "Detach tmux",
         "terminalToolbar.detachTmuxDescription": "Detach tmux session",
-        "terminalToolbar.image": "Image",
-        "terminalToolbar.upload": "Upload",
-        "terminalToolbar.uploadImage": "Upload image",
+        "terminalToolbar.image": "Image actions (images only)",
+        "terminalToolbar.upload": "Upload image",
+        "terminalToolbar.uploadImage": "Upload an image to the host",
         "terminalToolbar.uploadingImage": "Uploading image…",
-        "terminalToolbar.paste": "Paste",
-        "terminalToolbar.pasteImage": "Paste image from clipboard",
+        "terminalToolbar.paste": "Paste image",
+        "terminalToolbar.pasteImage":
+          "Paste image from clipboard (images only)",
         "terminalToolbar.showActions": "Show toolbar",
         "terminalToolbar.showToolbar": "Expand toolbar",
         "terminalToolbar.hideToolbar": "Hide toolbar",
@@ -82,7 +83,12 @@ function renderToolbar(
   return { ...render(<TerminalToolbar {...props} />), props };
 }
 
+// jsdom lacks the pointer APIs Radix Select needs to open its popup.
 beforeEach(() => {
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.setPointerCapture ??= () => {};
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
   vi.clearAllMocks();
   mobileApi.isMobile = false;
   Object.defineProperty(window, "innerWidth", {
@@ -329,72 +335,56 @@ describe("TerminalToolbar Phase 1", () => {
       container.querySelector("[data-terminal-toolbar-narrow]"),
     ).toBeNull();
 
-    const imageGroup = screen.getAllByRole("group", { name: "Image" })[0];
-    expect(imageGroup).not.toHaveTextContent("Image");
+    const imageGroup = screen.getAllByRole("group", {
+      name: "Image actions (images only)",
+    })[0];
     expect(imageGroup.querySelectorAll("button, label")).toHaveLength(2);
     expect(
-      screen.getAllByRole("button", { name: "Upload image" })[0],
+      screen.getAllByRole("button", { name: "Upload an image to the host" })[0],
     ).toBeVisible();
     expect(
-      screen.getAllByRole("button", { name: "Paste image from clipboard" })[0],
+      screen.getAllByRole("button", {
+        name: "Paste image from clipboard (images only)",
+      })[0],
     ).toBeVisible();
   });
 
-  it("uses explicit labels, conditional tmux, and 44px interactive targets", () => {
+  it("uses explicit labels, conditional tmux, and compact interactive targets", () => {
     const { rerender, props } = renderToolbar();
     expect(
       screen.getAllByRole("button", { name: "Detach tmux session" })[0],
     ).toHaveTextContent("Detach tmux");
     expect(
       screen.getAllByRole("button", { name: "Detach tmux session" })[0],
-    ).toHaveClass("min-h-11", "min-w-11");
+    ).toHaveClass("min-h-8", "min-w-8");
     rerender(<TerminalToolbar {...props} isTmuxAttached={false} />);
     expect(
       screen.queryByRole("button", { name: "Detach tmux session" }),
     ).not.toBeInTheDocument();
   });
 
-  it("opens an accessible density radio group and supports arrow keys", async () => {
+  it("exposes density as a select and applies the chosen mode", async () => {
     const user = userEvent.setup();
     renderToolbar();
-    const trigger = screen.getByRole("button", {
+    const trigger = screen.getByRole("combobox", {
       name: "Toolbar display mode",
     });
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveTextContent("");
     await user.click(trigger);
-    const openTrigger = screen.getByRole("button", {
-      name: "Toolbar display mode",
-    });
-    expect(openTrigger).toHaveAttribute("aria-expanded", "true");
-    expect(
-      screen.getByRole("radiogroup", {
-        name: "Toolbar display mode",
-      }),
-    ).toBeInTheDocument();
-    const labeled = screen.getByRole("radio", { name: "Icons and labels" });
-    expect(labeled).toHaveAttribute("aria-checked", "true");
-    labeled.focus();
-    await user.keyboard("{ArrowDown}");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("radio", { name: "Expanded with metrics" }),
-      ).toHaveFocus(),
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Icon only",
+      "Icons and labels",
+      "Expanded with metrics",
+    ]);
+    await user.click(
+      screen.getByRole("option", { name: "Expanded with metrics" }),
     );
-    expect(
-      screen.getByRole("radio", { name: "Expanded with metrics" }),
-    ).toHaveAttribute("aria-checked", "true");
-    expect(
-      screen.getByRole("radiogroup", { name: "Toolbar display mode" }),
-    ).toBeInTheDocument();
-    await user.keyboard("{Escape}");
     await waitFor(() =>
-      expect(
-        screen.queryByRole("radiogroup", { name: "Toolbar display mode" }),
-      ).not.toBeInTheDocument(),
+      expect(localStorage.getItem("termix-terminal-toolbar-density")).toBe(
+        "expanded",
+      ),
     );
-    expect(
-      screen.getByRole("button", { name: "Toolbar display mode" }),
-    ).toHaveFocus();
   });
 
   it("keeps one file input mounted, resets repeated selections, and exposes loading", () => {
@@ -412,10 +402,12 @@ describe("TerminalToolbar Phase 1", () => {
     expect(container.querySelector('input[type="file"]')).toBe(input);
     expect(screen.getByRole("status")).toHaveTextContent("Uploading image…");
     expect(
-      screen.getAllByRole("button", { name: "Upload image" })[0],
+      screen.getAllByRole("button", { name: "Upload an image to the host" })[0],
     ).toBeDisabled();
     expect(
-      screen.getAllByRole("button", { name: "Paste image from clipboard" })[0],
+      screen.getAllByRole("button", {
+        name: "Paste image from clipboard (images only)",
+      })[0],
     ).toBeDisabled();
   });
 
@@ -428,19 +420,20 @@ describe("TerminalToolbar Phase 1", () => {
     });
     expect(collapsedMover).toHaveAttribute("aria-label", "Move toolbar");
     await user.click(screen.getByRole("button", { name: "Expand toolbar" }));
-    await user.click(
-      screen.getByRole("button", { name: "Toolbar display mode" }),
-    );
-    expect(screen.getByRole("radiogroup")).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: "Toolbar display mode" }),
+    ).toBeInTheDocument();
     rerender(<TerminalToolbar {...props} isConnected={false} />);
-    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("combobox", { name: "Toolbar display mode" }),
+    ).not.toBeInTheDocument();
   });
 
   it("calls paste synchronously in the activation handler and does not cancel outside pointerdown", () => {
     const onPasteImage = vi.fn();
     renderToolbar({ onPasteImage });
     const paste = screen.getAllByRole("button", {
-      name: "Paste image from clipboard",
+      name: "Paste image from clipboard (images only)",
     })[0];
     fireEvent.click(paste);
     expect(onPasteImage).toHaveBeenCalledOnce();
@@ -461,7 +454,7 @@ describe("TerminalToolbar Phase 1", () => {
     renderToolbar({ onPasteImage });
     await user.click(
       screen.getAllByRole("button", {
-        name: "Paste image from clipboard",
+        name: "Paste image from clipboard (images only)",
       })[0],
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -481,7 +474,9 @@ describe("TerminalToolbar Phase 1", () => {
       }),
     });
     fireEvent.click(
-      screen.getByRole("button", { name: "Paste image from clipboard" }),
+      screen.getByRole("button", {
+        name: "Paste image from clipboard (images only)",
+      }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Synchronous clipboard failure",
@@ -499,19 +494,19 @@ describe("TerminalToolbar Phase 1", () => {
       container.querySelectorAll("[data-terminal-toolbar-wide] button"),
     ).map((button) => button.getAttribute("aria-label"));
     expect(labels).toEqual([
+      "Files",
       "Host Metrics",
       "Tmux Monitor",
       "Detach tmux session",
-      "Upload image",
-      "Paste image from clipboard",
+      "Upload an image to the host",
+      "Paste image from clipboard (images only)",
       "Toolbar display mode",
       "Hide toolbar",
-      "Files",
       "Move toolbar",
     ]);
   });
 
-  it("shows three icon-backed modes and fades the expanded toolbar", async () => {
+  it("shows three modes and fades the expanded toolbar", async () => {
     const user = userEvent.setup();
     const { container } = renderToolbar();
     const toolbar = container.querySelector(
@@ -524,13 +519,9 @@ describe("TerminalToolbar Phase 1", () => {
       "focus-within:opacity-100",
     );
     await user.click(
-      screen.getByRole("button", { name: "Toolbar display mode" }),
+      screen.getByRole("combobox", { name: "Toolbar display mode" }),
     );
-    const radios = screen.getAllByRole("radio");
-    expect(radios).toHaveLength(3);
-    radios.forEach((radio) =>
-      expect(radio.querySelector("svg")).toBeInTheDocument(),
-    );
+    expect(await screen.findAllByRole("option")).toHaveLength(3);
   });
 
   it("gives the collapsed toolbar idle opacity and keyboard recovery", async () => {
@@ -868,7 +859,9 @@ describe("TerminalToolbar Phase 1", () => {
       </StrictMode>,
     );
     fireEvent.click(
-      screen.getByRole("button", { name: "Paste image from clipboard" }),
+      screen.getByRole("button", {
+        name: "Paste image from clipboard (images only)",
+      }),
     );
     rerender(
       <StrictMode>

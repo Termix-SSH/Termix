@@ -534,41 +534,6 @@ html.fs-xl {
   }
 }
 
-@keyframes terminal-toolbar-collapsed-pulse {
-  0%,
-  100% {
-    opacity: 0;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.85;
-    transform: scale(1.04);
-  }
-}
-
 .terminal-toolbar-collapsed-shell {
   position: relative;
-}
-
-.terminal-toolbar-collapsed-shell::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  pointer-events: none;
-  border: 2px solid var(--ring);
-  border-radius: inherit;
-  box-shadow: 0 0 12px var(--ring);
-  animation: terminal-toolbar-collapsed-pulse 3s ease-in-out infinite;
-}
-
-.terminal-toolbar-collapsed-shell:hover::after,
-.terminal-toolbar-collapsed-shell:focus-within::after {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .terminal-toolbar-collapsed-shell::after {
-    animation: none;
-    opacity: 0;
-  }
 }

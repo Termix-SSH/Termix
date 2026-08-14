@@ -108,5 +108,5 @@ export function getResponsiveToolbarDensity(
       : currentDensity;
   return availableInlineSize < requiredInlineSize * 1.1
     ? "icon"
-    : currentDensity;
+    : selectedDensity;
 }

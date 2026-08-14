@@ -7,21 +7,22 @@ import React, {
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Check,
   ChevronDown,
   ClipboardPaste,
-  Gauge,
   GripVertical,
   ImagePlus,
   LayoutGrid,
   LogOut,
   Maximize2,
   Minimize2,
-  Shapes,
-  Type,
   X,
 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/select";
 
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -48,13 +49,10 @@ type SelectedToolbarDensity = ToolbarDensity;
 
 const DENSITY_STORAGE_KEY = "termix-terminal-toolbar-density";
 
-const DENSITY_OPTIONS: {
-  value: ToolbarDensity;
-  icon: typeof Shapes;
-}[] = [
-  { value: "icon", icon: Shapes },
-  { value: "labeled", icon: Type },
-  { value: "expanded", icon: Gauge },
+const DENSITY_OPTIONS: { value: ToolbarDensity }[] = [
+  { value: "icon" },
+  { value: "labeled" },
+  { value: "expanded" },
 ];
 const DENSITIES = DENSITY_OPTIONS.map((option) => option.value);
 
@@ -71,8 +69,8 @@ function readStoredDensity(): ToolbarDensity {
 }
 
 const CONTROL =
-  "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-sm px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:translate-y-px active:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-muted data-[state=open]:text-foreground";
-const SEPARATOR = "mx-0.5 h-6 w-px shrink-0 bg-border";
+  "inline-flex min-h-8 min-w-8 items-center justify-center gap-1.5 rounded-sm px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:translate-y-px active:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40 data-[state=open]:bg-muted data-[state=open]:text-foreground";
+const SEPARATOR = "mx-0.5 h-5 w-px shrink-0 bg-border";
 
 function StatBar({
   label,
@@ -158,11 +156,9 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     null,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const densityTriggerRef = useRef<HTMLButtonElement>(null);
   const hideToolbarRef = useRef<HTMLButtonElement>(null);
   const pendingExpansionFocusRef = useRef(false);
   const pendingRightEdgeRef = useRef<number | null>(null);
-  const pendingDensityFocusRef = useRef<number | null>(null);
   const mountedRef = useRef(false);
   const imageGenerationRef = useRef(0);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -337,24 +333,9 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
 
   useEffect(() => {
     imageGenerationRef.current += 1;
-    setDensityOpen(false);
     setImageError(null);
     setRetryImageAction(null);
   }, [isConnected, hostIdentity]);
-
-  useEffect(() => {
-    if (desktopViewportReady !== true || isMobile !== false) return;
-    const pendingIndex = pendingDensityFocusRef.current;
-    if (pendingIndex == null) return;
-    pendingDensityFocusRef.current = null;
-    const timeoutId = window.setTimeout(() => {
-      const radios = document
-        .getElementById(`${densityId}-group`)
-        ?.querySelectorAll<HTMLButtonElement>('[role="radio"]');
-      radios?.[pendingIndex]?.focus();
-    }, 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [desktopViewportReady, density, densityId, isMobile]);
 
   useEffect(() => {
     if (collapsed || !pendingExpansionFocusRef.current) return;
@@ -566,89 +547,35 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     expanded: t("terminalToolbar.layoutExpanded"),
   };
 
-  const densityPopover = (
-    <Popover open={densityOpen} onOpenChange={setDensityOpen}>
-      <PopoverTrigger asChild>
-        <button
-          ref={densityTriggerRef}
-          type="button"
-          className={CONTROL}
-          aria-label={t("terminalToolbar.layout")}
-          title={t("terminalToolbar.layout")}
-          aria-expanded={densityOpen}
-          aria-controls={densityId}
-        >
-          <LayoutGrid className="size-4 shrink-0" />
-          <ChevronDown className="size-3.5" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
+  const densitySelect = (
+    <Select
+      value={density}
+      open={densityOpen}
+      onOpenChange={setDensityOpen}
+      onValueChange={(value) => setAndStoreDensity(value as ToolbarDensity)}
+    >
+      <SelectTrigger
         id={densityId}
-        side="top"
-        className="w-64 p-2"
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          densityTriggerRef.current?.focus();
-        }}
+        size="sm"
+        aria-label={t("terminalToolbar.layout")}
+        title={t("terminalToolbar.layout")}
+        className={cn(
+          CONTROL,
+          "h-8 border-0 bg-transparent px-2 shadow-none dark:bg-transparent dark:hover:bg-muted",
+        )}
       >
-        <div
-          role="radiogroup"
-          id={`${densityId}-group`}
-          aria-label={t("terminalToolbar.layout")}
-          className="grid gap-1"
-        >
-          {DENSITY_OPTIONS.map((option, index) => {
-            const OptionIcon = option.icon;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                role="radio"
-                aria-checked={density === option.value}
-                tabIndex={density === option.value ? 0 : -1}
-                className={cn(
-                  CONTROL,
-                  "justify-between data-[selected=true]:font-semibold",
-                  density === option.value && "bg-muted text-foreground",
-                )}
-                title={densityLabels[option.value]}
-                data-selected={density === option.value}
-                onClick={() => setAndStoreDensity(option.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp")
-                    return;
-                  event.preventDefault();
-                  const delta = event.key === "ArrowDown" ? 1 : -1;
-                  const next =
-                    (index + delta + DENSITY_OPTIONS.length) %
-                    DENSITY_OPTIONS.length;
-                  pendingDensityFocusRef.current = next;
-                  setAndStoreDensity(DENSITY_OPTIONS[next].value);
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  <OptionIcon className="size-4" aria-hidden="true" />
-                  {densityLabels[option.value]}
-                </span>
-                {density === option.value && (
-                  <Check className="size-4" aria-hidden="true" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+        <LayoutGrid className="size-4 shrink-0" />
+      </SelectTrigger>
+      <SelectContent>
+        {DENSITY_OPTIONS.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {densityLabels[option.value]}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 
-  const leadHostActions = hostActions.filter(
-    (action) =>
-      action.type === "host-metrics" || action.type === "tmux_monitor",
-  );
-  const otherHostActions = hostActions.filter(
-    (action) =>
-      action.type !== "host-metrics" && action.type !== "tmux_monitor",
-  );
   const renderHostAction = (action: (typeof hostActions)[number]) => {
     const Icon = action.icon;
     const invoke = () =>
@@ -812,8 +739,9 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
             <ClipboardPaste className="size-4" />
             {density !== "icon" && t("terminalToolbar.paste")}
           </span>
-          <span className={CONTROL}>
+          <span className={cn(CONTROL, "h-8 px-2")}>
             <LayoutGrid className="size-4" />
+            <ChevronDown className="size-4" />
           </span>
           <span className={CONTROL}>
             <Minimize2 className="size-4" />
@@ -827,7 +755,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
           data-terminal-toolbar-wide
           className={cn(
             "pointer-events-auto transition-opacity duration-300 hover:duration-0 focus-within:duration-0 hover:opacity-100 focus-within:opacity-100",
-            collapsed ? "opacity-100" : "opacity-30",
+            collapsed || densityOpen ? "opacity-100" : "opacity-30",
           )}
           style={{
             transform: `translate(${position.x}px, ${position.y}px)`,
@@ -841,7 +769,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
           ) : (
             <div className="flex flex-col overflow-hidden rounded-sm border border-border bg-background/90 shadow-lg backdrop-blur-sm">
               {showStats && (
-                <div className="flex flex-wrap items-center justify-center gap-x-1 border-b border-border px-1.5 py-1">
+                <div className="flex flex-wrap items-center justify-center gap-x-1 border-b border-border px-1.5 py-0.5">
                   {statsAvailable ? (
                     <>
                       <StatBar
@@ -860,7 +788,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                   ) : (
                     <span
                       role="status"
-                      className="min-h-11 px-3 py-3 text-xs text-muted-foreground"
+                      className="px-2 py-1 text-xs text-muted-foreground"
                     >
                       {t("terminalToolbar.statsUnavailable")}
                     </span>
@@ -868,7 +796,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                 </div>
               )}
               <div className={cn("flex gap-0.5 p-0.5", "items-center")}>
-                {leadHostActions.map(renderHostAction)}
+                {hostActions.map(renderHostAction)}
                 {isTmuxAttached && (
                   <button
                     type="button"
@@ -893,7 +821,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                   {imageButtons}
                 </div>
                 <div className={SEPARATOR} />
-                {densityPopover}
+                {densitySelect}
                 <button
                   ref={hideToolbarRef}
                   type="button"
@@ -911,8 +839,6 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
                     {t("terminalToolbar.hideToolbar")}
                   </span>
                 </button>
-                {otherHostActions.length > 0 && <div className={SEPARATOR} />}
-                {otherHostActions.map(renderHostAction)}
                 <div className={SEPARATOR} />
                 {grabButton()}
               </div>
