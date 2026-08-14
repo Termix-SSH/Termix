@@ -20,13 +20,49 @@ const http = require("http");
 const net = require("net");
 const tls = require("tls");
 const zlib = require("zlib");
+const crypto = require("crypto");
 const { URL } = require("url");
 const { fork, spawn } = require("child_process");
+const pty = require("node-pty");
 const WebSocket = require("ws");
 const remoteSync = require("./remote-sync.cjs");
 const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
+
+const localTerminalSessions = new Map();
+
+function localShell() {
+  if (process.platform === "win32") {
+    return {
+      file: process.env.TERMIX_LOCAL_SHELL || "powershell.exe",
+      args: ["-NoLogo"],
+    };
+  }
+  return {
+    file:
+      process.env.TERMIX_LOCAL_SHELL ||
+      process.env.SHELL ||
+      (process.platform === "darwin" ? "/bin/zsh" : "/bin/bash"),
+    args: ["-l"],
+  };
+}
+
+function ownedLocalTerminal(event, sessionId) {
+  if (typeof sessionId !== "string" || !/^[a-f0-9-]{36}$/.test(sessionId)) {
+    return null;
+  }
+  const session = localTerminalSessions.get(sessionId);
+  return session?.ownerId === event.sender.id ? session : null;
+}
+
+function closeLocalTerminalsFor(ownerId) {
+  for (const [sessionId, session] of localTerminalSessions) {
+    if (session.ownerId !== ownerId) continue;
+    session.process.kill();
+    localTerminalSessions.delete(sessionId);
+  }
+}
 
 // The main process's Node.js networking (the `https`/`http` modules used by
 // httpFetch below, and the global `fetch` used by remote-sync.cjs) only
@@ -2879,6 +2915,91 @@ ipcMain.handle("clipboard-write-text", (_event, text) => {
 });
 
 ipcMain.handle("clipboard-read-text", () => clipboard.readText());
+
+ipcMain.handle("local-terminal-start", (event, dimensions = {}) => {
+  const cols = Math.min(500, Math.max(2, Number(dimensions.cols) || 80));
+  const rows = Math.min(300, Math.max(1, Number(dimensions.rows) || 24));
+  const sessionId = crypto.randomUUID();
+  const shellConfig = localShell();
+  const child = pty.spawn(shellConfig.file, shellConfig.args, {
+    name: "xterm-256color",
+    cols,
+    rows,
+    cwd: os.homedir(),
+    env: {
+      ...process.env,
+      TERM: "xterm-256color",
+      COLORTERM: "truecolor",
+    },
+  });
+  const ownerId = event.sender.id;
+  const session = { ownerId, process: child, ready: false, buffered: "" };
+  localTerminalSessions.set(sessionId, session);
+  child.onData((data) => {
+    if (!session.ready) {
+      session.buffered = (session.buffered + data).slice(-1024 * 1024);
+      return;
+    }
+    if (!event.sender.isDestroyed()) {
+      event.sender.send(`local-terminal:data:${sessionId}`, data);
+    }
+  });
+  child.onExit(({ exitCode }) => {
+    localTerminalSessions.delete(sessionId);
+    if (!event.sender.isDestroyed()) {
+      event.sender.send(`local-terminal:exit:${sessionId}`, exitCode);
+    }
+  });
+  event.sender.once("destroyed", () => closeLocalTerminalsFor(ownerId));
+  return { sessionId, shell: shellConfig.file };
+});
+
+ipcMain.handle("local-terminal-ready", (event, sessionId) => {
+  const session = ownedLocalTerminal(event, sessionId);
+  if (!session) return false;
+  session.ready = true;
+  if (session.buffered && !event.sender.isDestroyed()) {
+    event.sender.send(`local-terminal:data:${sessionId}`, session.buffered);
+    session.buffered = "";
+  }
+  return true;
+});
+
+ipcMain.handle("local-terminal-write", (event, sessionId, data) => {
+  const session = ownedLocalTerminal(event, sessionId);
+  if (!session || typeof data !== "string" || data.length > 64 * 1024) {
+    return false;
+  }
+  session.process.write(data);
+  return true;
+});
+
+ipcMain.handle("local-terminal-resize", (event, sessionId, cols, rows) => {
+  const session = ownedLocalTerminal(event, sessionId);
+  const width = Number(cols);
+  const height = Number(rows);
+  if (
+    !session ||
+    !Number.isInteger(width) ||
+    !Number.isInteger(height) ||
+    width < 2 ||
+    width > 500 ||
+    height < 1 ||
+    height > 300
+  ) {
+    return false;
+  }
+  session.process.resize(width, height);
+  return true;
+});
+
+ipcMain.handle("local-terminal-close", (event, sessionId) => {
+  const session = ownedLocalTerminal(event, sessionId);
+  if (!session) return false;
+  localTerminalSessions.delete(sessionId);
+  session.process.kill();
+  return true;
+});
 
 ipcMain.handle("show-save-dialog", async (_event, options) => {
   return dialog.showSaveDialog(mainWindow, options || {});
