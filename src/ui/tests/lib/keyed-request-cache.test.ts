@@ -66,4 +66,19 @@ describe("createKeyedRequestCache", () => {
     ).rejects.toThrow("offline");
     expect(cache.peek("key")).toBe("safe");
   });
+
+  it("does not let an invalidated request overwrite newer data", async () => {
+    let resolveOld!: (value: string) => void;
+    const cache = createKeyedRequestCache<string>(10_000);
+    const oldRequest = cache.get(
+      "key",
+      () => new Promise<string>((resolve) => (resolveOld = resolve)),
+    );
+
+    cache.set("key", "optimistic");
+    resolveOld("old");
+    await oldRequest;
+
+    expect(cache.peek("key")).toBe("optimistic");
+  });
 });

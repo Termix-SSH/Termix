@@ -33,3 +33,11 @@ export function invalidateCachedFileList(
 ): void {
   cache.invalidate(keyFor(sessionId, path));
 }
+
+export function updateCachedFileList(
+  sessionId: string,
+  path: string,
+  files: FileItem[],
+): void {
+  cache.set(keyFor(sessionId, path), { files, path });
+}
