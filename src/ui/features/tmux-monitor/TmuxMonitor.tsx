@@ -47,6 +47,7 @@ import {
   type TmuxSearchResult,
 } from "@/api/tmux-monitor-api";
 import type { TerminalHandle } from "@/features/terminal/Terminal";
+import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 import { SessionTree, type SessionMetricsAgg } from "./SessionTree";
 import { SearchResults } from "./SearchResults";
 import { PanePreview } from "./PanePreview";
@@ -116,6 +117,8 @@ export function TmuxMonitor({
   // stale (the user switched away while the request was in flight) and must
   // not overwrite the current tree.
   const activeHostRef = useRef<number | null>(null);
+  const overviewSignatureRef = useRef("");
+  const metricsSignatureRef = useRef("");
   // True when the expanded-session set for the current host was restored from
   // localStorage (or touched by the user) and must not be overwritten by the
   // default expand-all behavior.
@@ -256,12 +259,15 @@ export function TmuxMonitor({
       try {
         const data = await getTmuxOverview(hostId);
         if (activeHostRef.current !== hostId) return true;
+        const signature = JSON.stringify(data);
+        const changed = signature !== overviewSignatureRef.current;
+        overviewSignatureRef.current = signature;
         setOverview(data);
         setExpandedSessions((prev) => {
           if (expandedRestoredRef.current || prev.size > 0) return prev;
           return new Set(data.sessions.map((s) => s.name));
         });
-        return true;
+        return changed;
       } catch (err) {
         if (activeHostRef.current !== hostId) return true;
         if (!silent) {
@@ -293,6 +299,7 @@ export function TmuxMonitor({
             );
           }
         }
+        if (silent) throw err;
         return false;
       } finally {
         if (!silent && activeHostRef.current === hostId)
@@ -343,33 +350,36 @@ export function TmuxMonitor({
   // Poll only while this app tab is shown: the component stays mounted when
   // the user switches tabs (AppShell keeps tab content alive) and would
   // otherwise keep running SSH execs against the host forever.
-  useEffect(() => {
-    if (selectedHostId === null || !isVisible) return;
-    const interval = setInterval(() => {
-      if (!document.hidden) loadOverview(selectedHostId, true);
-    }, OVERVIEW_POLL_MS);
-    return () => clearInterval(interval);
-  }, [selectedHostId, isVisible, loadOverview]);
+  useAdaptivePolling(
+    () =>
+      selectedHostId === null ? undefined : loadOverview(selectedHostId, true),
+    {
+      minIntervalMs: OVERVIEW_POLL_MS,
+      maxIntervalMs: 60_000,
+      stablePollsPerStep: 3,
+    },
+    selectedHostId !== null && isVisible,
+    { runImmediately: false },
+  );
 
   // -- metrics polling ------------------------------------------------------
-  useEffect(() => {
-    if (selectedHostId === null || !overview?.available || !isVisible) return;
-    let cancelled = false;
-    const load = () => {
-      if (document.hidden) return;
-      getTmuxMetrics(selectedHostId)
-        .then((m) => {
-          if (!cancelled) setMetrics(m);
-        })
-        .catch(() => {});
-    };
-    load();
-    const interval = setInterval(load, METRICS_POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [selectedHostId, overview?.available, isVisible]);
+  useAdaptivePolling(
+    async () => {
+      if (selectedHostId === null) return;
+      const next = await getTmuxMetrics(selectedHostId);
+      const signature = JSON.stringify(next);
+      const changed = signature !== metricsSignatureRef.current;
+      metricsSignatureRef.current = signature;
+      setMetrics(next);
+      return changed;
+    },
+    {
+      minIntervalMs: METRICS_POLL_MS,
+      maxIntervalMs: 60_000,
+      stablePollsPerStep: 3,
+    },
+    selectedHostId !== null && !!overview?.available && isVisible,
+  );
 
   // -- keyboard shortcuts -----------------------------------------------------
   // Gated on isVisible: the listener is global, and a hidden-but-mounted tab

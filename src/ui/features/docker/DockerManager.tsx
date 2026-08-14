@@ -39,6 +39,7 @@ import {
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
+import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
 import type { LogEntry } from "@/types/connection-log.ts";
 
 interface DockerManagerProps {
@@ -72,6 +73,7 @@ function DockerManagerInner({
   const [currentHostConfig, setCurrentHostConfig] = React.useState(hostConfig);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [containers, setContainers] = React.useState<DockerContainer[]>([]);
+  const containersSignatureRef = React.useRef("");
   const [selectedContainer, setSelectedContainer] = React.useState<
     string | null
   >(null);
@@ -319,39 +321,34 @@ function DockerManagerInner({
     setHasLoadedContainersOnce(false);
   }, [sessionId]);
 
-  React.useEffect(() => {
-    if (!sessionId || !isVisible || !dockerValidation?.available) return;
-
-    let cancelled = false;
-
-    const pollContainers = async () => {
-      try {
-        setIsLoadingContainers(true);
-        const data = await listDockerContainers(sessionId, true);
-        if (!cancelled) {
-          setContainers(data);
-        }
-      } catch {
-        // Silently handle polling errors
-      } finally {
-        if (!cancelled) {
-          setIsLoadingContainers(false);
-          setHasLoadedContainersOnce(true);
-        }
-      }
-    };
-
-    pollContainers();
-    const interval = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void pollContainers();
-    }, 5000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [sessionId, isVisible, dockerValidation?.available]);
+  useAdaptivePolling(
+    async () => {
+      if (!sessionId) return;
+      setIsLoadingContainers((loading) =>
+        hasLoadedContainersOnce ? loading : true,
+      );
+      const data = await listDockerContainers(sessionId, true);
+      const signature = JSON.stringify(data);
+      const changed = signature !== containersSignatureRef.current;
+      containersSignatureRef.current = signature;
+      setContainers(data);
+      setIsLoadingContainers(false);
+      setHasLoadedContainersOnce(true);
+      return changed;
+    },
+    {
+      minIntervalMs: 5000,
+      maxIntervalMs: 30000,
+      stablePollsPerStep: 3,
+    },
+    !!sessionId && isVisible && !!dockerValidation?.available,
+    {
+      onError: () => {
+        setIsLoadingContainers(false);
+        setHasLoadedContainersOnce(true);
+      },
+    },
+  );
 
   const handleBack = React.useCallback(() => {
     setViewMode("list");
