@@ -40,6 +40,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
+import { getPollingEnvironmentMultiplier } from "@/lib/adaptive-polling";
 
 // Heavy tab surfaces — keep out of the AppShell critical path.
 const CommandHistoryProvider = lazy(() =>
@@ -47,46 +48,46 @@ const CommandHistoryProvider = lazy(() =>
     (m) => ({ default: m.CommandHistoryProvider }),
   ),
 );
-const TerminalFeature = lazy(() =>
+const loadTerminalFeature = () =>
   import("@/features/terminal/Terminal").then((m) => ({
     default: m.Terminal,
-  })),
-);
+  }));
+const TerminalFeature = lazy(loadTerminalFeature);
 const MobileTerminalKeyboard = lazy(() =>
   import("@/features/terminal/MobileTerminalKeyboard").then((m) => ({
     default: m.MobileTerminalKeyboard,
   })),
 );
-const FileManager = lazy(() =>
+const loadFileManager = () =>
   import("@/features/file-manager/FileManager").then((m) => ({
     default: m.FileManager,
-  })),
-);
-const DockerManager = lazy(() =>
+  }));
+const FileManager = lazy(loadFileManager);
+const loadDockerManager = () =>
   import("@/features/docker/DockerManager").then((m) => ({
     default: m.DockerManager,
-  })),
-);
-const HostMetricsTab = lazy(() =>
+  }));
+const DockerManager = lazy(loadDockerManager);
+const loadHostMetricsTab = () =>
   import("@/features/host-metrics/HostMetricsTab").then((m) => ({
     default: m.HostMetricsTab,
-  })),
-);
-const ProxmoxStatsTab = lazy(() =>
+  }));
+const HostMetricsTab = lazy(loadHostMetricsTab);
+const loadProxmoxStatsTab = () =>
   import("@/features/proxmox-stats/ProxmoxStatsTab").then((m) => ({
     default: m.ProxmoxStatsTab,
-  })),
-);
-const TmuxMonitor = lazy(() =>
+  }));
+const ProxmoxStatsTab = lazy(loadProxmoxStatsTab);
+const loadTmuxMonitor = () =>
   import("@/features/tmux-monitor/TmuxMonitor").then((m) => ({
     default: m.TmuxMonitor,
-  })),
-);
-const GuacamoleApp = lazy(() =>
+  }));
+const TmuxMonitor = lazy(loadTmuxMonitor);
+const loadGuacamoleApp = () =>
   import("@/features/guacamole/GuacamoleApp").then((m) => ({
     default: m.default,
-  })),
-);
+  }));
+const GuacamoleApp = lazy(loadGuacamoleApp);
 const DashboardTab = lazy(() =>
   import("@/dashboard/DashboardTab").then((m) => ({
     default: m.DashboardTab,
@@ -97,11 +98,11 @@ const HomepageCanvas = lazy(() =>
     default: m.HomepageCanvas,
   })),
 );
-const TunnelTab = lazy(() =>
+const loadTunnelTab = () =>
   import("@/features/tunnel/TunnelTab").then((m) => ({
     default: m.TunnelTab,
-  })),
-);
+  }));
+const TunnelTab = lazy(loadTunnelTab);
 const NetworkGraphCard = lazy(() =>
   import("@/dashboard/cards/NetworkGraphCard").then((m) => ({
     default: m.NetworkGraphCard,
@@ -150,6 +151,25 @@ const AiPanel = lazy(() =>
     default: m.AiPanel,
   })),
 );
+
+const tabSurfaceLoaders: Partial<Record<TabType, () => Promise<unknown>>> = {
+  terminal: loadTerminalFeature,
+  files: loadFileManager,
+  docker: loadDockerManager,
+  "host-metrics": loadHostMetricsTab,
+  "proxmox-stats": loadProxmoxStatsTab,
+  tmux_monitor: loadTmuxMonitor,
+  tunnel: loadTunnelTab,
+  rdp: loadGuacamoleApp,
+  vnc: loadGuacamoleApp,
+  telnet: loadGuacamoleApp,
+};
+
+/** Download a likely next tab without starting a connection or mounting UI. */
+export function preloadTabSurface(type: TabType): void {
+  if (getPollingEnvironmentMultiplier() > 1) return;
+  void tabSurfaceLoaders[type]?.().catch(() => {});
+}
 
 function hostToSSHHost(h: Host): SSHHost {
   return {
