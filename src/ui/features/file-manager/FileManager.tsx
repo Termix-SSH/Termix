@@ -75,10 +75,14 @@ import {
 } from "@/main-axios.ts";
 import {
   getAdaptiveResourceBudget,
+  markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
 } from "@/lib/adaptive-resource-budget";
 import { shouldPrefetchFileContent } from "@/lib/file-content-request-cache";
-import { preloadFilePreview } from "./file-preview-preload";
+import {
+  markFilePreviewUsed,
+  preloadFilePreview,
+} from "./file-preview-preload";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
 import type {
@@ -1540,6 +1544,7 @@ function FileManagerContent({
 
   async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
+      markAdaptiveResourceUsed("network", "directory-list");
       directoryRequestRef.current += 1;
       const cached = sshSessionId
         ? peekCachedFileList(sshSessionId, file.path)
@@ -1562,6 +1567,13 @@ function FileManagerContent({
 
     if (!(await confirmLargeFileOpen(file))) return;
 
+    markFilePreviewUsed(file.name);
+    markAdaptiveResourceUsed(
+      "network",
+      file.size && file.size > 128 * 1024
+        ? "file-content:medium"
+        : "file-content:small",
+    );
     await recordRecentFile(file);
     openFileWindow(file, sshSessionId);
   }

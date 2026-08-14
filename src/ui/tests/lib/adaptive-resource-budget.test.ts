@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   computeAdaptiveResourceBudget,
+  markAdaptiveResourceUsed,
   runAdaptiveBackgroundTask,
 } from "../../lib/adaptive-resource-budget";
 import {
@@ -68,6 +69,30 @@ describe("adaptive resource budget", () => {
     ).toMatchObject({ tier: "balanced", reason: "feedback" });
   });
 
+  it("degrades only after enough speculative work goes unused", () => {
+    const environment = { visible: true, deviceMemoryGb: 8 };
+    expect(
+      computeAdaptiveResourceBudget(environment, {
+        observations: 4,
+        successes: 4,
+        cancellations: 0,
+        fallbacks: 0,
+        usefulnessObservations: 3,
+        usefulPreloads: 0,
+      }).tier,
+    ).toBe("eager");
+    expect(
+      computeAdaptiveResourceBudget(environment, {
+        observations: 4,
+        successes: 4,
+        cancellations: 0,
+        fallbacks: 0,
+        usefulnessObservations: 4,
+        usefulPreloads: 0,
+      }),
+    ).toMatchObject({ tier: "balanced", reason: "feedback" });
+  });
+
   it("bounds concurrency and records aggregate task outcomes", async () => {
     let releaseFirst!: () => void;
     let releaseSecond!: () => void;
@@ -104,6 +129,19 @@ describe("adaptive resource budget", () => {
       expect(
         getLocalAdaptiveStats("resource-budget:module")["tab:files"].successes,
       ).toBe(1);
+    });
+  });
+
+  it("records whether foreground navigation used a preload", async () => {
+    expect(
+      runAdaptiveBackgroundTask("module", "tab:files", async () => {}),
+    ).toBe(true);
+    markAdaptiveResourceUsed("module", "tab:files");
+
+    await vi.waitFor(() => {
+      expect(
+        getLocalAdaptiveStats("resource-usefulness:module")["tab:files"],
+      ).toMatchObject({ observations: 1, successes: 1 });
     });
   });
 });
