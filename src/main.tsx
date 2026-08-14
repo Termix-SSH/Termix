@@ -15,6 +15,7 @@ import type { FontSizeId } from "@/types/ui-types";
 import { useServiceWorker } from "@/hooks/use-service-worker";
 import { useTranslation } from "react-i18next";
 import { UiPreferencesProvider } from "@/contexts/UiPreferencesContext";
+import { ConnectionDefaultsProvider } from "@/contexts/ConnectionDefaultsContext";
 
 const AppShell = lazy(() =>
   import("@/AppShell").then((m) => ({ default: m.AppShell })),
@@ -361,7 +362,9 @@ function App() {
         >
           <Suspense fallback={null}>
             <UiPreferencesProvider>
-              <AppShell username={authUsername} onLogout={handleLogout} />
+              <ConnectionDefaultsProvider>
+                <AppShell username={authUsername} onLogout={handleLogout} />
+              </ConnectionDefaultsProvider>
             </UiPreferencesProvider>
           </Suspense>
         </div>
@@ -406,7 +409,9 @@ function RootApp() {
     return (
       <Suspense fallback={null}>
         <UiPreferencesProvider>
-          <FullscreenAppGate />
+          <ConnectionDefaultsProvider>
+            <FullscreenAppGate />
+          </ConnectionDefaultsProvider>
         </UiPreferencesProvider>
       </Suspense>
     );

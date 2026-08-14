@@ -1152,6 +1152,8 @@ export const userPreferences = pgTable("user_preferences", {
   statusColorScheme: text("status_color_scheme"),
   customThemes: text("custom_themes"),
   customKeybindings: text("custom_keybindings"),
+  terminalDefaults: text("terminal_defaults"),
+  rdpDefaults: text("rdp_defaults"),
   updatedAt: varchar("updated_at", { length: 255 })
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

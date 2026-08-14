@@ -37,7 +37,21 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   statusColorScheme: row?.statusColorScheme ?? null,
   customThemes: row?.customThemes ?? null,
   customKeybindings: row?.customKeybindings ?? null,
+  terminalDefaults: row?.terminalDefaults ?? null,
+  rdpDefaults: row?.rdpDefaults ?? null,
 });
+
+const connectionDefaultFields = ["terminalDefaults", "rdpDefaults"] as const;
+
+export function validateDefaultsJson(value: string): boolean {
+  if (value.length > 32_768) return false;
+  try {
+    const parsed = JSON.parse(value);
+    return !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
+}
 
 /**
  * @openapi
@@ -210,6 +224,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     aiReadOnlyCommands,
     customThemes,
     customKeybindings,
+    terminalDefaults,
+    rdpDefaults,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
     theme?: string | null;
@@ -229,6 +245,8 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     aiReadOnlyCommands?: boolean | null;
     customThemes?: string | null;
     customKeybindings?: string | null;
+    terminalDefaults?: string | null;
+    rdpDefaults?: string | null;
   };
   // showHostTags, hostTrayOnClick, compactHostView, statusColorScheme,
   // foldersCollapsed are no longer writable here -- they moved to
@@ -258,9 +276,24 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     hiddenRailTabs,
     customThemes,
     customKeybindings,
+    terminalDefaults,
+    rdpDefaults,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
       return res.status(400).json({ error: `${key} must be a string` });
+    }
+  }
+
+  const connectionDefaults = {
+    terminalDefaults,
+    rdpDefaults,
+  };
+  for (const key of connectionDefaultFields) {
+    const value = connectionDefaults[key];
+    if (value !== undefined && value !== null && !validateDefaultsJson(value)) {
+      return res.status(400).json({
+        error: `${key} must be a JSON-encoded object of at most 32 KiB`,
+      });
     }
   }
 
@@ -356,6 +389,9 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (customThemes !== undefined) updates.customThemes = customThemes;
   if (customKeybindings !== undefined)
     updates.customKeybindings = customKeybindings;
+  if (terminalDefaults !== undefined)
+    updates.terminalDefaults = terminalDefaults;
+  if (rdpDefaults !== undefined) updates.rdpDefaults = rdpDefaults;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

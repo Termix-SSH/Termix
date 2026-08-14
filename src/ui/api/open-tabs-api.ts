@@ -118,6 +118,8 @@ export interface UserPreferences {
   statusColorScheme?: string | null;
   customThemes?: string | null;
   customKeybindings?: string | null;
+  terminalDefaults?: string | null;
+  rdpDefaults?: string | null;
 }
 
 export function parseCustomThemes(raw?: string | null): SavedCustomTheme[] {

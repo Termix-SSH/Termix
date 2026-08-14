@@ -60,7 +60,7 @@ export type Host = {
   allowSessionSharing?: boolean;
   /** Stable identity across a desktop/server sync pair. */
   syncId?: string | null;
-  terminalConfig?: TerminalConfig;
+  terminalConfig?: Partial<TerminalConfig>;
 
   useSocks5?: boolean;
   socks5Host?: string;

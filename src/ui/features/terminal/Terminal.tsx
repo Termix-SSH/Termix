@@ -90,6 +90,7 @@ import {
 } from "@/lib/keybinding-dispatch";
 import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
 import type { CustomKeybinding } from "@/types/keybindings";
+import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
 type HostKeyVerificationData = Omit<
@@ -168,16 +169,19 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { confirmWithToast } = useConfirmation();
     const { theme: appTheme } = useTheme();
     const { addLog } = useConnectionLog();
+    const { terminal: terminalDefaults } = useConnectionDefaults();
 
     const savedTheme = localStorage.getItem(
       `terminal_theme_host_${hostConfig.id}`,
     );
     const config = {
       ...DEFAULT_TERMINAL_CONFIG,
+      ...terminalDefaults,
       ...hostConfig.terminalConfig,
       theme:
         savedTheme ||
         hostConfig.terminalConfig?.theme ||
+        terminalDefaults.theme ||
         DEFAULT_TERMINAL_CONFIG.theme,
     };
 
@@ -1472,6 +1476,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             setTimeout(async () => {
               const terminalConfig = {
                 ...DEFAULT_TERMINAL_CONFIG,
+                ...terminalDefaults,
                 ...hostConfig.terminalConfig,
               };
 
@@ -2249,6 +2254,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
+        ...terminalDefaults,
         ...hostConfig.terminalConfig,
       };
 
@@ -2310,13 +2316,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
       // Refresh terminal to apply new theme colors to existing buffer content
       hardRefresh();
-    }, [terminal, hostConfig.terminalConfig, previewTheme, appTheme, isFitted]);
+    }, [
+      terminal,
+      terminalDefaults,
+      hostConfig.terminalConfig,
+      previewTheme,
+      appTheme,
+      isFitted,
+    ]);
 
     useEffect(() => {
       if (!terminal || !xtermRef.current) return;
 
       const config = {
         ...DEFAULT_TERMINAL_CONFIG,
+        ...terminalDefaults,
         ...hostConfig.terminalConfig,
       };
 
@@ -2442,6 +2456,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         const cfg = {
           ...DEFAULT_TERMINAL_CONFIG,
+          ...terminalDefaults,
           ...hostConfig.terminalConfig,
         };
         const mod = cfg.fastScrollModifier;
@@ -2544,6 +2559,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
 
         const config = {
           ...DEFAULT_TERMINAL_CONFIG,
+          ...terminalDefaults,
           ...hostConfig.terminalConfig,
         };
         if (config.backspaceMode !== "control-h") return;

@@ -178,7 +178,7 @@ export type Host = {
   jumpHosts?: JumpHost[];
   quickActions?: QuickAction[];
   statsConfig?: string | StatsConfig;
-  terminalConfig?: TerminalConfig;
+  terminalConfig?: Partial<TerminalConfig>;
   notes?: string;
 
   useSocks5?: boolean;
@@ -337,7 +337,7 @@ export interface HostData {
   jumpHosts?: JumpHostData[];
   quickActions?: QuickActionData[];
   statsConfig?: string | StatsConfig;
-  terminalConfig?: TerminalConfig;
+  terminalConfig?: Partial<TerminalConfig>;
   notes?: string;
 
   useSocks5?: boolean;

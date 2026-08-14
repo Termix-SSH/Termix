@@ -64,6 +64,13 @@
       "when": 1786598521514,
       "tag": "0008_fast_imperial_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1786737720988,
+      "tag": "0009_pink_susan_delgado",
+      "breakpoints": true
     }
   ]
 }
