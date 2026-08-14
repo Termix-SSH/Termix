@@ -1174,6 +1174,8 @@ export interface TransferTimings {
   transferMs?: number;
   extractMs?: number;
   verifyMs?: number;
+  directBenchmarkMs?: number;
+  relayBenchmarkMs?: number;
   sourceDeleteMs?: number;
   totalMs?: number;
   transferBytes?: number;
@@ -1280,6 +1282,7 @@ export interface TransferProgressResponse {
   phase:
     | "compressing"
     | "transferring"
+    | "benchmarking"
     | "verifying"
     | "extracting"
     | "reconnecting";
@@ -1289,7 +1292,7 @@ export interface TransferProgressResponse {
   totalItems?: number;
   failedPaths?: string[];
   message?: string;
-  method?: "stream" | "tar" | "item_sftp";
+  method?: "stream" | "tar" | "item_sftp" | "direct_rsync";
   sourcePaths?: string[];
   destPath?: string;
   sourceSessionId?: string;
