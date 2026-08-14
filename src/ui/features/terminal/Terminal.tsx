@@ -3292,9 +3292,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           let clipboardFile = new File([blob], "clipboard-image.png", {
             type: imageType,
           });
-          // Rasterize browser-specific clipboard formats to PNG when
-          // possible; Sharp remains the server-side validator.
-          if (typeof createImageBitmap === "function") {
+          // Preserve native PNG clipboard bytes. Some browser/platform
+          // clipboard implementations decode transparent PNGs incorrectly
+          // through canvas, producing an all-black/transparent re-encode.
+          // Only rasterize formats that need conversion; Sharp validates the
+          // resulting image server-side.
+          if (imageType !== "image/png" && typeof createImageBitmap === "function") {
             try {
               const bitmap = await createImageBitmap(blob);
               try {
