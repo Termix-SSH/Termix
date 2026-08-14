@@ -79,6 +79,7 @@ import {
 import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
+import { quoteTerminalImagePath } from "./terminal-image-path.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -3256,7 +3257,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           webSocketRef.current?.readyState === WebSocket.OPEN;
         if (pathInserted) {
           webSocketRef.current?.send(
-            JSON.stringify({ type: "input", data: shellPath }),
+            JSON.stringify({
+              type: "input",
+              data: quoteTerminalImagePath(shellPath),
+            }),
           );
           toast.success(`Image uploaded: ${shellPath}`);
         } else {
