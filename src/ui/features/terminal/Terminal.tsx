@@ -193,6 +193,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       : themeColors.background;
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
+    const terminalInputDisposableRef = useRef<{ dispose(): void } | null>(null);
     const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
     const cachedSnippetsRef = useRef<{ id: number; content: string }[] | null>(
       null,
@@ -1211,6 +1212,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
         webSocketRef.current &&
         webSocketRef.current.readyState !== WebSocket.CLOSED
       ) {
+        terminalInputDisposableRef.current?.dispose();
+        terminalInputDisposableRef.current = null;
         webSocketRef.current.close();
       }
 
@@ -1322,7 +1325,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }),
           );
         }
-        terminal.onData((data) => {
+        terminalInputDisposableRef.current?.dispose();
+        terminalInputDisposableRef.current = terminal.onData((data) => {
+          if (ws.readyState !== WebSocket.OPEN) return;
           if (data === "\r" || data === "\n") {
             const currentCmd = getCurrentCommand().trim();
             const termixMatch = currentCmd.match(/^termix\s+(.+)$/);
@@ -2021,6 +2026,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           return;
         }
 
+        terminalInputDisposableRef.current?.dispose();
+        terminalInputDisposableRef.current = null;
+
         setIsConnected(false);
         isConnectingRef.current = false;
 
@@ -2602,6 +2610,14 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     }, [xtermRef, terminal]);
 
     const isMountedRef = useRef(false);
+
+    useEffect(
+      () => () => {
+        terminalInputDisposableRef.current?.dispose();
+        terminalInputDisposableRef.current = null;
+      },
+      [],
+    );
 
     useEffect(() => {
       isMountedRef.current = true;

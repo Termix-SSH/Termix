@@ -13,6 +13,11 @@ import { resolveConnectionOrigin } from "@/lib/connection-origin";
 import { fileLogger } from "@/lib/frontend-logger";
 import type { FileItem, SSHHost } from "@/types/index";
 import { getCachedFileList } from "@/lib/file-list-request-cache";
+import {
+  getCachedFileContent,
+  invalidateCachedFileContent,
+  type FileContentResult,
+} from "@/lib/file-content-request-cache";
 
 type ApiConnectionLog = {
   type: "info" | "success" | "warning" | "error";
@@ -352,31 +357,41 @@ export async function resolveSSHPath(
 export async function readSSHFile(
   sessionId: string,
   path: string,
-): Promise<{
-  content: string;
-  path: string;
-  encoding?: "base64" | "utf8";
-}> {
-  try {
-    const response = await getFileManagerApiForSession(sessionId).get(
-      "/ssh/readFile",
-      { params: { sessionId, path } },
-    );
-    return response.data;
-  } catch (error: unknown) {
-    const httpError = asHttpError(error);
-    if (httpError.response?.status === 404) {
-      const customError = new Error("File not found");
-      (
-        customError as Error & { response?: unknown; isFileNotFound?: boolean }
-      ).response = httpError.response;
-      (
-        customError as Error & { response?: unknown; isFileNotFound?: boolean }
-      ).isFileNotFound = httpError.response.data?.fileNotFound || true;
-      throw customError;
-    }
-    handleApiError(error, "read SSH file");
-  }
+  options: { force?: boolean } = {},
+): Promise<FileContentResult> {
+  return getCachedFileContent(
+    sessionId,
+    path,
+    async () => {
+      try {
+        const response = await getFileManagerApiForSession(sessionId).get(
+          "/ssh/readFile",
+          { params: { sessionId, path } },
+        );
+        return response.data;
+      } catch (error: unknown) {
+        const httpError = asHttpError(error);
+        if (httpError.response?.status === 404) {
+          const customError = new Error("File not found");
+          (
+            customError as Error & {
+              response?: unknown;
+              isFileNotFound?: boolean;
+            }
+          ).response = httpError.response;
+          (
+            customError as Error & {
+              response?: unknown;
+              isFileNotFound?: boolean;
+            }
+          ).isFileNotFound = httpError.response.data?.fileNotFound || true;
+          throw customError;
+        }
+        handleApiError(error, "read SSH file");
+      }
+    },
+    options.force,
+  );
 }
 
 export async function writeSSHFile(
@@ -397,6 +412,7 @@ export async function writeSSHFile(
       (response.data.message === "File written successfully" ||
         response.status === 200)
     ) {
+      invalidateCachedFileContent(sessionId, path);
       return response.data;
     } else {
       throw new Error("File write operation did not return success status");
@@ -604,6 +620,7 @@ export async function deleteSSHItem(
         },
       },
     );
+    if (!isDirectory) invalidateCachedFileContent(sessionId, path);
     return response.data;
   } catch (error) {
     handleApiError(error, "delete SSH item");
@@ -671,6 +688,10 @@ export async function renameSSHItem(
       "/ssh/renameItem",
       { sessionId, oldPath, newName, hostId, userId },
     );
+    invalidateCachedFileContent(sessionId, oldPath);
+    const separator = oldPath.lastIndexOf("/");
+    const newPath = `${oldPath.slice(0, separator + 1)}${newName}`;
+    invalidateCachedFileContent(sessionId, newPath);
     return response.data;
   } catch (error) {
     handleApiError(error, "rename SSH item");
@@ -699,6 +720,8 @@ export async function moveSSHItem(
         timeout: 60000,
       },
     );
+    invalidateCachedFileContent(sessionId, oldPath);
+    invalidateCachedFileContent(sessionId, newPath);
     return response.data;
   } catch (error) {
     handleApiError(error, "move SSH item");

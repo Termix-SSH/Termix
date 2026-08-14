@@ -41,6 +41,7 @@ import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import {
   listSSHFiles,
+  readSSHFile,
   resolveSSHPath,
   uploadSSHFile,
   createSSHFile,
@@ -72,6 +73,9 @@ import {
   type TransferMethodPreference,
   type DiskFilesystem,
 } from "@/main-axios.ts";
+import { getPollingEnvironmentMultiplier } from "@/lib/adaptive-polling";
+import { shouldPrefetchFileContent } from "@/lib/file-content-request-cache";
+import { preloadFilePreview } from "./file-preview-preload";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
 import type {
@@ -1559,10 +1563,17 @@ function FileManagerContent({
     openFileWindow(file, sshSessionId);
   }
 
-  const prefetchDirectory = useCallback(
+  const prefetchFileIntent = useCallback(
     (file: FileItem) => {
-      if (!sshSessionId || file.type !== "directory") return;
-      void listSSHFiles(sshSessionId, file.path).catch(() => {});
+      if (!sshSessionId) return;
+      if (file.type === "directory") {
+        void listSSHFiles(sshSessionId, file.path).catch(() => {});
+        return;
+      }
+      if (shouldPrefetchFileContent(file, getPollingEnvironmentMultiplier())) {
+        preloadFilePreview(file.name);
+        void readSSHFile(sshSessionId, file.path).catch(() => {});
+      }
     },
     [sshSessionId],
   );
@@ -3164,7 +3175,7 @@ function FileManagerContent({
                 files={filteredFiles}
                 selectedFiles={selectedFiles}
                 onFileOpen={handleFileOpen}
-                onDirectoryIntent={prefetchDirectory}
+                onFileIntent={prefetchFileIntent}
                 onSelectionChange={setSelection}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}

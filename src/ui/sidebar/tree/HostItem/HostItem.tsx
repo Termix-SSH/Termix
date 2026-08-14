@@ -68,6 +68,7 @@ import {
   TooltipTrigger,
 } from "@/components/tooltip";
 import { hostMatchesQuery } from "../visible-rows";
+import { preloadTabSurface } from "@/shell/tabUtils";
 
 export function statusCheckEnabled(host: Host): boolean {
   return host.statsConfig?.statusCheckEnabled !== false;
@@ -390,6 +391,8 @@ export function HostItem({
         <button
           key={type}
           title={label}
+          onPointerEnter={() => preloadTabSurface(type)}
+          onFocus={() => preloadTabSurface(type)}
           onClick={(e) => {
             e.stopPropagation();
             onOpenTab(type);
@@ -407,6 +410,8 @@ export function HostItem({
       {host.enableRdp && (
         <button
           title={t("hosts.connectRdp")}
+          onPointerEnter={() => preloadTabSurface("rdp")}
+          onFocus={() => preloadTabSurface("rdp")}
           onClick={(e) => {
             e.stopPropagation();
             onOpenTab("rdp");
@@ -428,6 +433,8 @@ export function HostItem({
       {host.enableVnc && (
         <button
           title={t("hosts.connectVnc")}
+          onPointerEnter={() => preloadTabSurface("vnc")}
+          onFocus={() => preloadTabSurface("vnc")}
           onClick={(e) => {
             e.stopPropagation();
             onOpenTab("vnc");
@@ -440,6 +447,8 @@ export function HostItem({
       {host.enableTelnet && (
         <button
           title={t("hosts.connectTelnet")}
+          onPointerEnter={() => preloadTabSurface("telnet")}
+          onFocus={() => preloadTabSurface("telnet")}
           onClick={(e) => {
             e.stopPropagation();
             onOpenTab("telnet");
@@ -817,6 +826,12 @@ export function HostItem({
         }
       }}
       style={depthStyle}
+      onPointerEnter={() => {
+        if (host.enableSsh) preloadTabSurface("terminal");
+        else if (host.enableRdp) preloadTabSurface("rdp");
+        else if (host.enableVnc) preloadTabSurface("vnc");
+        else if (host.enableTelnet) preloadTabSurface("telnet");
+      }}
       className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/50 ${
         selected
           ? "bg-accent-brand/[0.07]"
