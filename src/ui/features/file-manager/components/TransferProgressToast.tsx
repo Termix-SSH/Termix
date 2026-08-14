@@ -49,6 +49,8 @@ export function TransferProgressToast({
   let title = t("transfer.progressTransferring");
   if (status.phase === "reconnecting") {
     title = t("transfer.progressReconnecting");
+  } else if (status.phase === "verifying") {
+    title = t("transfer.progressVerifying");
   } else if (status.phase === "compressing") {
     title = t("transfer.progressCompressing");
   } else if (status.phase === "extracting") {

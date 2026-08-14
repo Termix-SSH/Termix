@@ -55,6 +55,13 @@ export function createFormatTransferMetrics(t: TFunction) {
         }),
       );
     }
+    if (timings.verifyMs !== undefined) {
+      parts.push(
+        t("transfer.metricsVerify", {
+          duration: formatDurationMs(timings.verifyMs),
+        }),
+      );
+    }
     if (timings.sourceDeleteMs !== undefined) {
       parts.push(
         t("transfer.metricsSourceDelete", {

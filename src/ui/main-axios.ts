@@ -1173,6 +1173,7 @@ export interface TransferTimings {
   compressMs?: number;
   transferMs?: number;
   extractMs?: number;
+  verifyMs?: number;
   sourceDeleteMs?: number;
   totalMs?: number;
   transferBytes?: number;
@@ -1276,7 +1277,12 @@ export function createTransferProgressTracker(): TransferProgressTracker {
 export interface TransferProgressResponse {
   transferId: string;
   status: "running" | "success" | "partial" | "error" | "cancelled";
-  phase: "compressing" | "transferring" | "extracting" | "reconnecting";
+  phase:
+    | "compressing"
+    | "transferring"
+    | "verifying"
+    | "extracting"
+    | "reconnecting";
   bytesTransferred?: number;
   totalBytes?: number;
   itemsCompleted?: number;
@@ -1295,6 +1301,7 @@ export interface TransferProgressResponse {
   partialDestRemaining?: boolean;
   cleanupCompleted?: boolean;
   retryable?: boolean;
+  integrityVerified?: boolean;
   parallelSegmentCount?: number;
 }
 

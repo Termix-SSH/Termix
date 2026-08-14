@@ -24,6 +24,7 @@ import {
   type TransferMethodPreference,
   type TransferScanSummary,
 } from "./transfer-routing.js";
+import { verifySftpFileIntegrity } from "./transfer-integrity.js";
 
 export type {
   TransferMethodPreference,
@@ -77,7 +78,7 @@ export interface HostTransferDeps {
 }
 
 export type TransferPhase =
-  "compressing" | "transferring" | "extracting" | "reconnecting";
+  "compressing" | "transferring" | "verifying" | "extracting" | "reconnecting";
 export type TransferStatus =
   "running" | "success" | "partial" | "error" | "cancelled";
 export type TransferMethod = "stream" | "tar" | "item_sftp";
@@ -98,6 +99,7 @@ export interface TransferTimings {
   compressMs?: number;
   transferMs?: number;
   extractMs?: number;
+  verifyMs?: number;
   sourceDeleteMs?: number;
   totalMs?: number;
   transferBytes?: number;
@@ -137,6 +139,7 @@ export interface TransferProgress {
   partialDestRemaining?: boolean;
   cleanupCompleted?: boolean;
   retryable?: boolean;
+  integrityVerified?: boolean;
   requestSnapshot?: {
     sourceSessionId: string;
     sourcePaths: string[];
@@ -377,7 +380,8 @@ function buildStreamTransferTimings(
   const wallStart = progress?.startedAt ?? Date.now();
   const totalMs = elapsedMs(wallStart);
   const prepare = prepareDestMs ?? progress?.timings?.prepareDestMs ?? 0;
-  const dataMs = Math.max(1, totalMs - prepare);
+  const verify = progress?.timings?.verifyMs ?? 0;
+  const dataMs = Math.max(1, totalMs - prepare - verify);
 
   return {
     ...progress?.timings,
@@ -395,6 +399,7 @@ async function finalizeStreamTransferIfDestAtSize(
   destPath: string,
   expectedSize: number,
   extra: Partial<TransferProgress> = {},
+  verify?: () => Promise<void>,
 ): Promise<boolean> {
   try {
     const destSize = await probeDestResumeOffset(
@@ -405,6 +410,8 @@ async function finalizeStreamTransferIfDestAtSize(
     if (destSize < expectedSize) {
       return false;
     }
+
+    await verify?.();
 
     fileLogger.info("Destination file complete — finalizing transfer", {
       operation: "host_transfer_dest_complete",
@@ -436,6 +443,7 @@ async function tryFinalizeStreamTransferIfDestComplete(
   destPath: string,
   expectedSize: number,
   extra: Partial<TransferProgress> = {},
+  verify?: () => Promise<void>,
 ): Promise<boolean> {
   try {
     const destSftp = await deps.getSessionSftp(destSession);
@@ -445,6 +453,7 @@ async function tryFinalizeStreamTransferIfDestComplete(
       destPath,
       expectedSize,
       extra,
+      verify,
     );
   } catch {
     return false;
@@ -1087,6 +1096,53 @@ function finalizeTransfer(
 
 function elapsedMs(start: number): number {
   return Date.now() - start;
+}
+
+async function verifyTransferredFile(
+  deps: HostTransferDeps,
+  transferId: string,
+  reconnectMeta: TransferReconnectMeta,
+  sourcePath: string,
+  destPath: string,
+): Promise<void> {
+  updateTransfer(transferId, { phase: "verifying" });
+  const verifyStart = Date.now();
+  const [sourceSession, destSession] = await Promise.all([
+    deps.openDedicatedTransferSession(
+      reconnectMeta.browseSourceSessionId,
+      reconnectMeta.dedicatedSourceSessionId,
+      reconnectMeta.userId,
+      transferId,
+      { allowBrowseDisconnected: true },
+    ),
+    deps.openDedicatedTransferSession(
+      reconnectMeta.browseDestSessionId,
+      reconnectMeta.dedicatedDestSessionId,
+      reconnectMeta.userId,
+      transferId,
+      { allowBrowseDisconnected: true },
+    ),
+  ]);
+  const [sourceSftp, destSftp] = await Promise.all([
+    deps.getSessionSftp(sourceSession),
+    deps.getSessionSftp(destSession),
+  ]);
+  await verifySftpFileIntegrity(
+    sourceSftp,
+    destSftp,
+    sourcePath,
+    destPath,
+    createTransferShouldAbort(transferId),
+    () => new TransferCancelledError(),
+  );
+  const current = activeTransfers.get(transferId);
+  updateTransfer(transferId, {
+    integrityVerified: true,
+    timings: {
+      ...current?.timings,
+      verifyMs: (current?.timings?.verifyMs ?? 0) + elapsedMs(verifyStart),
+    },
+  });
 }
 
 export function computeTransferMbPerSec(
@@ -2465,6 +2521,14 @@ async function transferSingleFile(
     parallelLanes,
   );
 
+  await verifyTransferredFile(
+    deps,
+    transferId,
+    reconnectMeta,
+    sourcePath,
+    destPath,
+  );
+
   if (move) {
     await deleteSourcePathsAfterSuccess(deps, transferId, sourceSession, [
       sourcePath,
@@ -2604,8 +2668,16 @@ async function transferViaTar(
       syncProgress,
     );
     mergeXferStats(xferStats, fileStats);
+    await verifyTransferredFile(
+      deps,
+      transferId,
+      reconnectMeta,
+      tempArchive,
+      tempArchive,
+    );
   } catch (err) {
     if (!(err instanceof TransferCancelledError)) {
+      await promisifySftpUnlink(destSftp, tempArchive).catch(() => {});
       await cleanupDestItems(deps, destSession, destPath, basenames);
     }
     throw err;
@@ -2745,6 +2817,14 @@ async function transferViaItemSftp(
         },
       );
       mergeXferStats(xferStats, itemXferStats);
+      await verifyTransferredFile(
+        deps,
+        transferId,
+        reconnectMeta,
+        item.sourcePath,
+        item.destPath,
+      );
+      updateTransfer(transferId, { phase: "transferring" });
       if (destPlatform !== "windows") {
         await promisifySftpChmod(destSftp, item.destPath, item.mode);
       }
@@ -2759,6 +2839,7 @@ async function transferViaItemSftp(
         continue;
       }
       if (!(err instanceof TransferCancelledError)) {
+        await deletePathSftp(destSftp, item.destPath).catch(() => {});
         for (const created of [...createdFiles].reverse()) {
           await deletePathSftp(destSftp, created).catch(() => {});
         }
@@ -2793,6 +2874,7 @@ async function transferViaItemSftp(
     destPath,
     sourceDeleted: status === "success" && move,
     moveRequested: move,
+    integrityVerified: status === "success",
     timings: {
       ...activeTransfers.get(transferId)?.timings,
       transferMs,
@@ -3006,6 +3088,7 @@ async function runTransfer(
           totalItems: current?.totalItems,
           moveRequested: move,
           sourceDeleted: false,
+          integrityVerified: false,
           timings: {
             ...current?.timings,
             totalMs: elapsedMs(runStart),
@@ -3049,6 +3132,14 @@ async function runTransfer(
             moveRequested: move,
             sourceDeleted: current.sourceDeleted,
           },
+          () =>
+            verifyTransferredFile(
+              deps,
+              transferId,
+              reconnectMeta,
+              sourcePaths[0],
+              current.destPath!,
+            ),
         );
         if (finalized) {
           fileLogger.info("Host transfer succeeded after destination verify", {
@@ -3078,6 +3169,7 @@ async function runTransfer(
         itemsCompleted: current?.itemsCompleted,
         totalItems: current?.totalItems,
         moveRequested: move,
+        integrityVerified: false,
         timings: {
           ...current?.timings,
           totalMs: elapsedMs(runStart),
