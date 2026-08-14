@@ -163,6 +163,7 @@ describe("storeImageViaSftp", () => {
   function fakeSftp(behavior: {
     mkdirError?: Error;
     writeError?: Error;
+    stallWrite?: boolean;
   }): {
     sftp: ImageSftpClient;
     written: Map<string, Buffer>;
@@ -170,8 +171,10 @@ describe("storeImageViaSftp", () => {
       mkdir: Array<{ dir: string; mode?: number }>;
       createWriteStream: Array<{ path: string; mode?: number }>;
     };
+    streams: Array<NodeJS.WritableStream & { destroy: () => void; destroyed: boolean }>;
   } {
     const written = new Map<string, Buffer>();
+    const streams: Array<NodeJS.WritableStream & { destroy: () => void; destroyed: boolean }> = [];
     const calls = { mkdir: [], createWriteStream: [] } as {
       mkdir: Array<{ dir: string; mode?: number }>;
       createWriteStream: Array<{ path: string; mode?: number }>;
@@ -202,8 +205,16 @@ describe("storeImageViaSftp", () => {
         calls.createWriteStream.push({ path: remotePath, mode: options?.mode });
         const stream = new EventEmitter() as NodeJS.WritableStream & {
           end: (data: Buffer) => void;
+          destroy: () => void;
+          destroyed: boolean;
         };
+        stream.destroyed = false;
+        stream.destroy = () => {
+          stream.destroyed = true;
+        };
+        streams.push(stream);
         stream.end = (data: Buffer) => {
+          if (behavior.stallWrite) return;
           queueMicrotask(() => {
             if (behavior.writeError) {
               stream.emit("error", behavior.writeError);
@@ -216,7 +227,7 @@ describe("storeImageViaSftp", () => {
         return stream;
       },
     } as unknown as ImageSftpClient;
-    return { sftp, written, calls };
+    return { sftp, written, calls, streams };
   }
 
   it("writes into the remote image directory and returns its POSIX path", async () => {
@@ -239,6 +250,18 @@ describe("storeImageViaSftp", () => {
     expect(calls.createWriteStream).toEqual([
       { path: stored.shellPath, mode: 0o600 },
     ]);
+  });
+  it("destroys a stalled SFTP write after its timeout", async () => {
+    const { sftp, streams } = fakeSftp({ stallWrite: true });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES, {
+      writeTimeoutMs: 25,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+    expect(streams[0]!.destroyed).toBe(true);
   });
   it("tolerates mkdir failures for an already-existing directory", async () => {
     const { sftp } = fakeSftp({

@@ -277,11 +277,28 @@ function sftpWriteFile(
   sftp: ImageSftpClient,
   remotePath: string,
   data: Buffer,
+  timeoutMs = 10_000,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const stream = sftp.createWriteStream(remotePath, { mode: 0o600 });
-    stream.on("error", reject);
-    stream.on("close", resolve);
+    const stream = sftp.createWriteStream(remotePath, { mode: 0o600 }) as NodeJS.WritableStream & {
+      destroy?: () => void;
+    };
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      stream.destroy?.();
+      reject(new Error("SFTP image write timed out"));
+    }, timeoutMs);
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) reject(error);
+      else resolve();
+    };
+    stream.on("error", (error: Error) => finish(error));
+    stream.on("close", () => finish());
     stream.end(data);
   });
 }
@@ -294,6 +311,7 @@ function sftpWriteFile(
 export async function storeImageViaSftp(
   sftp: ImageSftpClient,
   image: Buffer,
+  options: { writeTimeoutMs?: number } = {},
 ): Promise<StoredTerminalImage> {
   const id = randomUUID();
   const filename = `${id}.png`;
@@ -301,7 +319,12 @@ export async function storeImageViaSftp(
 
   try {
     await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
-    await sftpWriteFile(sftp, remotePath, image);
+    await sftpWriteFile(
+      sftp,
+      remotePath,
+      image,
+      options.writeTimeoutMs,
+    );
   } catch (error) {
     throw new TerminalImageStorageError(
       "IMAGE_REMOTE_WRITE_FAILED",
