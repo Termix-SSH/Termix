@@ -1257,9 +1257,7 @@ export function HostEditor({
                           onChange={(e) =>
                             setField("fontFamily", e.target.value)
                           }
-                          placeholder={t(
-                            "hosts.fontFamilyCustomPlaceholder",
-                          )}
+                          placeholder={t("hosts.fontFamilyCustomPlaceholder")}
                           className="h-9 text-xs font-mono"
                         />
                       )}
