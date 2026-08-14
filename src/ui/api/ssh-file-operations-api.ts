@@ -606,6 +606,7 @@ export async function deleteSSHItem(
   isDirectory: boolean,
   hostId?: number,
   userId?: string,
+  permanent = false,
 ): Promise<Record<string, unknown>> {
   try {
     const response = await getFileManagerApiForSession(sessionId).delete(
@@ -617,13 +618,94 @@ export async function deleteSSHItem(
           isDirectory,
           hostId,
           userId,
+          permanent,
         },
       },
     );
     if (!isDirectory) invalidateCachedFileContent(sessionId, path);
     return response.data;
   } catch (error) {
+    if (
+      axios.isAxiosError(error) &&
+      error.response?.data?.trashUnavailable === true
+    ) {
+      throw error;
+    }
     handleApiError(error, "delete SSH item");
+  }
+}
+
+export interface TrashItem {
+  id: string;
+  name: string;
+  originalPath: string;
+  isDirectory: boolean;
+  deletedAt: string;
+  size: number;
+}
+
+export async function getSSHTrash(sessionId: string): Promise<{
+  items: TrashItem[];
+  retentionDays: number;
+  canManageRetention: boolean;
+}> {
+  try {
+    const response = await getFileManagerApiForSession(sessionId).get(
+      "/ssh/trash",
+      { params: { sessionId } },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "list SSH trash");
+  }
+}
+
+export async function restoreSSHTrashItem(sessionId: string, id: string) {
+  try {
+    const response = await getFileManagerApiForSession(sessionId).post(
+      `/ssh/trash/${encodeURIComponent(id)}/restore`,
+      { sessionId },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "restore SSH trash item");
+  }
+}
+
+export async function permanentlyDeleteSSHTrashItem(
+  sessionId: string,
+  id: string,
+) {
+  try {
+    await getFileManagerApiForSession(sessionId).delete(
+      `/ssh/trash/${encodeURIComponent(id)}`,
+      { data: { sessionId } },
+    );
+  } catch (error) {
+    handleApiError(error, "permanently delete SSH trash item");
+  }
+}
+
+export async function emptySSHTrash(sessionId: string) {
+  try {
+    await getFileManagerApiForSession(sessionId).delete("/ssh/trash", {
+      data: { sessionId },
+    });
+  } catch (error) {
+    handleApiError(error, "empty SSH trash");
+  }
+}
+
+export async function updateSSHTrashRetention(
+  sessionId: string,
+  retentionDays: number,
+) {
+  try {
+    await getFileManagerApiForSession(sessionId).put("/ssh/trash-retention", {
+      retentionDays,
+    });
+  } catch (error) {
+    handleApiError(error, "update SSH trash retention");
   }
 }
 

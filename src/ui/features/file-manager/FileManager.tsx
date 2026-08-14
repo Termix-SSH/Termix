@@ -29,6 +29,7 @@ import { FileManagerDialogs } from "./FileManagerDialogs.tsx";
 import { PassphraseDialog } from "@/ssh/dialogs/PassphraseDialog.tsx";
 import { FileManagerToolbar } from "./FileManagerToolbar.tsx";
 import { TransferToHostDialog } from "./components/TransferToHostDialog.tsx";
+import { FileManagerTrashDialog } from "./FileManagerTrashDialog.tsx";
 import { TerminalWindow } from "./components/TerminalWindow.tsx";
 import type { SSHHost, FileItem } from "@/types/index";
 import {
@@ -188,6 +189,7 @@ function FileManagerContent({
   const [showPassphraseDialog, setShowPassphraseDialog] = useState(false);
   const [pinnedFiles, setPinnedFiles] = useState<Set<string>>(new Set());
   const [sidebarRefreshTrigger, setSidebarRefreshTrigger] = useState(0);
+  const [trashOpen, setTrashOpen] = useState(false);
   const [hasConnectionError, setHasConnectionError] = useState<boolean>(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [diskInfo, setDiskInfo] = useState<{
@@ -1219,7 +1221,7 @@ function FileManagerContent({
       });
     }
 
-    const fullMessage = `${confirmMessage}\n\n${t("fileManager.permanentDeleteWarning")}`;
+    const fullMessage = `${confirmMessage}\n\n${t("fileManager.moveToTrashWarning")}`;
 
     confirmWithToast(
       fullMessage,
@@ -1251,25 +1253,8 @@ function FileManagerContent({
             completed += 1;
           }
 
-          const deletedFiles = files.map((file) => ({
-            path: file.path,
-            name: file.name,
-          }));
-
-          const undoAction: UndoAction = {
-            type: "delete",
-            description: t("fileManager.deletedItems", { count: files.length }),
-            data: {
-              operation: "cut",
-              deletedFiles,
-              targetDirectory: currentPath,
-            },
-            timestamp: Date.now(),
-          };
-          setUndoHistory((prev) => [...prev.slice(-9), undoAction]);
-
           toast.success(
-            t("fileManager.itemsDeletedSuccessfully", { count: files.length }),
+            t("fileManager.itemsMovedToTrash", { count: files.length }),
           );
           if (
             sshSessionIdRef.current === operationSession &&
@@ -1301,6 +1286,29 @@ function FileManagerContent({
               files: files.slice(completed),
             });
             setSudoDialogOpen(true);
+            return;
+          }
+          if (
+            (axiosError.response?.data as { trashUnavailable?: boolean })
+              ?.trashUnavailable &&
+            window.confirm(t("fileManager.trashUnavailableConfirm"))
+          ) {
+            for (const file of files.slice(completed)) {
+              await deleteSSHItem(
+                sshSessionId,
+                file.path,
+                file.type === "directory",
+                currentHost?.id,
+                currentHost?.userId?.toString(),
+                true,
+              );
+            }
+            toast.success(
+              t("fileManager.itemsDeletedSuccessfully", {
+                count: files.length - completed,
+              }),
+            );
+            handleRefreshDirectory();
             return;
           }
           if (
@@ -3189,6 +3197,7 @@ function FileManagerContent({
                 onItemContextMenu={handleSidebarItemContextMenu}
                 sshSessionId={sshSessionId}
                 refreshTrigger={sidebarRefreshTrigger}
+                onOpenTrash={() => setTrashOpen(true)}
                 diskInfo={diskInfo ?? undefined}
               />
             </div>
@@ -3293,6 +3302,17 @@ function FileManagerContent({
             </div>
           </div>
         </div>
+
+        <FileManagerTrashDialog
+          open={trashOpen}
+          onOpenChange={setTrashOpen}
+          sessionId={sshSessionId}
+          onChanged={() => {
+            if (sshSessionId)
+              invalidateCachedFileList(sshSessionId, currentPath);
+            void handleRefreshDirectory();
+          }}
+        />
       </div>
 
       {currentHost && (

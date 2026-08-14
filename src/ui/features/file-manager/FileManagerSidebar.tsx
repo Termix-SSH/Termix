@@ -12,6 +12,7 @@ import {
   Bookmark,
   File,
   Folder,
+  Trash2,
   ChevronDown,
   Check,
 } from "lucide-react";
@@ -86,6 +87,7 @@ interface FileManagerSidebarProps {
   onItemContextMenu?: (event: React.MouseEvent, item: SidebarItem) => void;
   sshSessionId?: string;
   refreshTrigger?: number;
+  onOpenTrash?: () => void;
   diskInfo?: {
     usedHuman: string;
     totalHuman: string;
@@ -184,6 +186,7 @@ export function FileManagerSidebar({
   onItemContextMenu,
   sshSessionId,
   refreshTrigger,
+  onOpenTrash,
   diskInfo,
 }: FileManagerSidebarProps) {
   const { t } = useTranslation();
@@ -717,6 +720,15 @@ export function FileManagerSidebar({
     <>
       <div className="h-full flex flex-col bg-card overflow-hidden">
         <div className="flex-1 overflow-y-auto thin-scrollbar">
+          {onOpenTrash && (
+            <button
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted border-l-2 border-transparent"
+              onClick={onOpenTrash}
+            >
+              <Trash2 className="size-3.5 shrink-0" />
+              <span>{t("fileManager.trash")}</span>
+            </button>
+          )}
           {/* ── Recent files ──────────────────────────────────────── */}
           {renderSection(t("fileManager.recent"), recentItems, (item) =>
             renderQuickAccessItem(
