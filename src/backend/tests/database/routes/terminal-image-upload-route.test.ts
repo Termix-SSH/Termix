@@ -77,11 +77,13 @@ const imageUploadHandler =
 function fakeSftp(behavior: { writeError?: Error } = {}): {
   sftp: ImageSftpClient;
   written: Map<string, Buffer>;
+  end: ReturnType<typeof vi.fn>;
 } {
   const written = new Map<string, Buffer>();
-  const sftp: ImageSftpClient = {
-    mkdir: (_dir, callback) => callback(),
-    createWriteStream: (remotePath) => {
+  const end = vi.fn();
+  const sftp = {
+    mkdir: (_dir: string, callback: (err?: Error) => void) => callback(),
+    createWriteStream: (remotePath: string) => {
       const stream = new EventEmitter() as NodeJS.WritableStream & {
         end: (data: Buffer) => void;
       };
@@ -97,8 +99,9 @@ function fakeSftp(behavior: { writeError?: Error } = {}): {
       };
       return stream;
     },
-  };
-  return { sftp, written };
+    end,
+  } as unknown as ImageSftpClient & { end: ReturnType<typeof vi.fn> };
+  return { sftp, written, end };
 }
 
 function connectedSession(instanceId: string, sftp: ImageSftpClient) {
@@ -194,7 +197,7 @@ describe("terminal image upload route", () => {
   });
 
   it("writes over SFTP in auto mode when a session is connected", async () => {
-    const { sftp, written } = fakeSftp();
+    const { sftp, written, end } = fakeSftp();
     state.sessions = [connectedSession("tab-1", sftp)];
 
     const response = await invoke({
@@ -215,10 +218,11 @@ describe("terminal image upload route", () => {
     // Sharp normalized the upload to PNG before the write.
     const writtenBytes = written.get(body.shellPath)!;
     expect(writtenBytes.subarray(1, 4).toString()).toBe("PNG");
+    expect(end).toHaveBeenCalledTimes(1);
   });
 
   it("maps SFTP failures to 502 without leaking the raw remote error", async () => {
-    const { sftp } = fakeSftp({ writeError: new Error("Permission denied") });
+    const { sftp, end } = fakeSftp({ writeError: new Error("Permission denied") });
     state.sessions = [connectedSession("tab-1", sftp)];
 
     const response = await invoke({
@@ -232,6 +236,7 @@ describe("terminal image upload route", () => {
       code: "IMAGE_REMOTE_WRITE_FAILED",
     });
     expect(JSON.stringify(response.body)).not.toContain("Permission denied");
+    expect(end).toHaveBeenCalledTimes(1);
   });
 
   it("rejects undecodable image data", async () => {

@@ -182,18 +182,19 @@ router.post(
       });
     }
 
+    let remoteSftp: ImageSftpClient | undefined;
     try {
       const stored =
         storageMode === "remote-sftp"
-          ? await storeImageViaSftp(
-              await new Promise<ImageSftpClient>((resolve, reject) => {
+          ? await (async () => {
+              remoteSftp = await new Promise<ImageSftpClient>((resolve, reject) => {
                 session!.sshConn!.sftp((err, sftp) => {
                   if (err) return reject(err);
                   resolve(sftp);
                 });
-              }),
-              normalizedImage,
-            )
+              });
+              return storeImageViaSftp(remoteSftp, normalizedImage);
+            })()
           : await storeImageLocally(normalizedImage, storageSettings);
 
       res.json(stored);
@@ -231,6 +232,8 @@ router.post(
         error: "Failed to write image to the remote host",
         code: "IMAGE_REMOTE_WRITE_FAILED",
       });
+    } finally {
+      remoteSftp?.end?.();
     }
   },
 );

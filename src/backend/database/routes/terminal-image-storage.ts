@@ -182,6 +182,7 @@ export const REMOTE_IMAGE_DIR = "/tmp/termix-images";
 export interface ImageSftpClient {
   mkdir(dir: string, callback: (err?: Error) => void): void;
   createWriteStream(remotePath: string): NodeJS.WritableStream;
+  end?: () => void;
 }
 
 export interface ImageSshExecClient {
