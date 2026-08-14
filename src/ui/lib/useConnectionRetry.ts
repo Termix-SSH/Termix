@@ -22,6 +22,21 @@ interface UseConnectionRetryResult {
 }
 
 const COUNTDOWN_TICK_MS = 250;
+const RETRY_JITTER_RATIO = 0.1;
+
+export function computeReconnectDelay(
+  attempt: number,
+  baseDelayMs: number,
+  maxDelayMs: number,
+  random = Math.random,
+): number {
+  const base = Math.min(
+    baseDelayMs * Math.pow(2, Math.max(0, attempt - 1)),
+    maxDelayMs,
+  );
+  const jitter = base * RETRY_JITTER_RATIO * (random() * 2 - 1);
+  return Math.max(baseDelayMs, Math.min(maxDelayMs, Math.round(base + jitter)));
+}
 
 // Backoff curve mirrors Terminal.tsx's proven attemptReconnection(): 2s, 4s,
 // 8s, capped at 8s, up to 8 attempts before falling back to a manual retry.
@@ -77,8 +92,9 @@ export function useConnectionRetry({
     attemptRef.current += 1;
     setAttempt(attemptRef.current);
 
-    const delay = Math.min(
-      baseDelayMs * Math.pow(2, attemptRef.current - 1),
+    const delay = computeReconnectDelay(
+      attemptRef.current,
+      baseDelayMs,
       maxDelayMs,
     );
 

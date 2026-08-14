@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard";
-import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
+import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 import { Input } from "@/components/input";
 import {
   Tooltip,
@@ -221,46 +221,51 @@ export function SessionLogsPanel() {
   const [copied, setCopied] = useState(false);
   const [retentionDays, setRetentionDays] = useState<number | null>(null);
   const [savingRetention, setSavingRetention] = useState(false);
+  const logsRef = useRef(logs);
+  logsRef.current = logs;
 
   const load = useCallback(
-    (initial = false) => {
+    async (initial = false) => {
       if (initial) setLoading(true);
-      getSessionLogs()
-        .then((fresh) => {
-          setLogs((prev) => {
-            if (
-              prev.length === fresh.length &&
-              prev.every((log, i) => log.id === fresh[i]?.id)
-            ) {
-              return prev;
-            }
-            return fresh;
-          });
-        })
-        .catch(() => {
-          if (initial) toast.error(t("sessionLogs.loadError"));
-        })
-        .finally(() => {
-          if (initial) setLoading(false);
-        });
+      try {
+        const fresh = await getSessionLogs();
+        const changed =
+          logsRef.current.length !== fresh.length ||
+          logsRef.current.some((log, i) => log.id !== fresh[i]?.id);
+        if (changed) {
+          logsRef.current = fresh;
+          setLogs(fresh);
+        }
+        return changed;
+      } catch (error) {
+        if (initial) {
+          toast.error(t("sessionLogs.loadError"));
+          return false;
+        }
+        throw error;
+      } finally {
+        if (initial) setLoading(false);
+      }
     },
     [t],
   );
 
   useEffect(() => {
-    load(true);
+    void load(true);
     getSessionRecordingRetention()
       .then(setRetentionDays)
       .catch(() => setRetentionDays(null));
   }, [load]);
 
-  usePageVisibleInterval(
-    () => {
-      void load(false);
+  useAdaptivePolling(
+    () => load(false),
+    {
+      minIntervalMs: 5_000,
+      maxIntervalMs: 30_000,
+      stablePollsPerStep: 3,
     },
-    5_000,
     true,
-    { runOnMount: false },
+    { runImmediately: false },
   );
 
   const q = filter.trim().toLowerCase();

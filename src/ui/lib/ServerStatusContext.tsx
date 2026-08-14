@@ -16,6 +16,7 @@ import {
   type ServerStatusEntry,
   type StatusValue,
 } from "./server-status-store";
+import { runAdaptivePolling } from "./adaptive-polling";
 
 interface ServerStatusContextType {
   statuses: Map<number, ServerStatusEntry>;
@@ -47,7 +48,7 @@ export function ServerStatusProvider({
   // Bumps only full-context consumers (dashboard, folder counts, etc.).
   const [version, setVersion] = useState(0);
   const mountedRef = useRef(true);
-  const refreshInFlightRef = useRef<Promise<void> | null>(null);
+  const refreshInFlightRef = useRef<Promise<boolean | void> | null>(null);
 
   useEffect(() => {
     return store.subscribeAll(() => {
@@ -96,65 +97,82 @@ export function ServerStatusProvider({
     }
   }, [isAuthenticated, store]);
 
-  const refreshStatuses = useCallback(async () => {
-    if (!mountedRef.current || !isAuthenticated) return;
-    if (
-      typeof document !== "undefined" &&
-      document.visibilityState === "hidden"
-    ) {
-      return;
-    }
-
-    if (refreshInFlightRef.current) {
-      return refreshInFlightRef.current;
-    }
-
-    const showLoading = !store.getInitialLoadComplete();
-    if (showLoading) store.setLoading(true);
-
-    const run = (async () => {
-      try {
-        const data = await getAllServerStatuses();
-        if (!mountedRef.current) return;
-
-        const newStatuses = new Map<number, ServerStatusEntry>();
-        const now = new Date().toISOString();
-
-        if (data && typeof data === "object") {
-          Object.entries(data).forEach(([idStr, statusData]) => {
-            const id = parseInt(idStr, 10);
-            if (!isNaN(id)) {
-              const status =
-                statusData?.status === "online" ||
-                statusData?.status === "reachable"
-                  ? statusData.status
-                  : "offline";
-              newStatuses.set(id, {
-                status,
-                lastChecked: statusData?.lastChecked || now,
-              });
-            }
-          });
-        }
-
-        store.applyStatuses(newStatuses);
-      } catch {
-        if (mountedRef.current) {
-          store.markDegraded(store.getEnabledHostIds());
-        }
-      } finally {
-        if (mountedRef.current) {
-          if (showLoading) store.setLoading(false);
-          store.setInitialLoadComplete(true);
-        }
+  const refreshStatusesImpl = useCallback(
+    async (rethrow = false) => {
+      if (!mountedRef.current || !isAuthenticated) return;
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
+        return;
       }
-    })();
 
-    refreshInFlightRef.current = run.finally(() => {
-      refreshInFlightRef.current = null;
-    });
-    return refreshInFlightRef.current;
-  }, [isAuthenticated, store]);
+      if (refreshInFlightRef.current) {
+        return refreshInFlightRef.current;
+      }
+
+      const showLoading = !store.getInitialLoadComplete();
+      if (showLoading) store.setLoading(true);
+
+      const run = (async () => {
+        try {
+          const data = await getAllServerStatuses();
+          if (!mountedRef.current) return;
+
+          const newStatuses = new Map<number, ServerStatusEntry>();
+          const now = new Date().toISOString();
+
+          if (data && typeof data === "object") {
+            Object.entries(data).forEach(([idStr, statusData]) => {
+              const id = parseInt(idStr, 10);
+              if (!isNaN(id)) {
+                const status =
+                  statusData?.status === "online" ||
+                  statusData?.status === "reachable"
+                    ? statusData.status
+                    : "offline";
+                newStatuses.set(id, {
+                  status,
+                  lastChecked: statusData?.lastChecked || now,
+                });
+              }
+            });
+          }
+
+          const previousStatuses = store.getStatuses();
+          const changed =
+            previousStatuses.size !== newStatuses.size ||
+            [...newStatuses].some(
+              ([id, entry]) =>
+                previousStatuses.get(id)?.status !== entry.status,
+            );
+          store.applyStatuses(newStatuses);
+          return changed;
+        } catch (error) {
+          if (mountedRef.current) {
+            store.markDegraded(store.getEnabledHostIds());
+          }
+          if (rethrow) throw error;
+          return false;
+        } finally {
+          if (mountedRef.current) {
+            if (showLoading) store.setLoading(false);
+            store.setInitialLoadComplete(true);
+          }
+        }
+      })();
+
+      refreshInFlightRef.current = run.finally(() => {
+        refreshInFlightRef.current = null;
+      });
+      return refreshInFlightRef.current;
+    },
+    [isAuthenticated, store],
+  );
+
+  const refreshStatuses = useCallback(async () => {
+    await refreshStatusesImpl();
+  }, [refreshStatusesImpl]);
 
   const getStatus = useCallback(
     (hostId: number): StatusValue => store.getStatus(hostId),
@@ -164,52 +182,29 @@ export function ServerStatusProvider({
   useEffect(() => {
     mountedRef.current = true;
 
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    const startPolling = () => {
-      if (intervalId !== null) return;
-      intervalId = setInterval(() => {
-        void refreshStatuses();
-      }, POLL_INTERVAL);
-    };
-
-    const stopPolling = () => {
-      if (intervalId === null) return;
-      clearInterval(intervalId);
-      intervalId = null;
-    };
+    let stopPolling: (() => void) | null = null;
 
     const init = async () => {
       await fetchEnabledHosts();
-      await refreshStatuses();
-      if (
-        mountedRef.current &&
-        (typeof document === "undefined" ||
-          document.visibilityState !== "hidden")
-      ) {
-        startPolling();
-      }
+      if (!mountedRef.current) return;
+      stopPolling = runAdaptivePolling(
+        () => refreshStatusesImpl(true),
+        {
+          minIntervalMs: POLL_INTERVAL,
+          maxIntervalMs: 120_000,
+          stablePollsPerStep: 3,
+        },
+        { enabled: () => isAuthenticated },
+      );
     };
 
     void init();
 
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") {
-        stopPolling();
-        return;
-      }
-      void refreshStatuses();
-      startPolling();
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-
     return () => {
       mountedRef.current = false;
-      stopPolling();
-      document.removeEventListener("visibilitychange", onVisibility);
+      stopPolling?.();
     };
-  }, [fetchEnabledHosts, refreshStatuses]);
+  }, [fetchEnabledHosts, isAuthenticated, refreshStatusesImpl]);
 
   useEffect(() => {
     const handleHostsChanged = async () => {

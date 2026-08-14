@@ -23,8 +23,21 @@ import {
   useConnectionLog,
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
+import { runAdaptivePolling } from "@/lib/adaptive-polling.ts";
 
 const HISTORY_LEN = 30;
+
+function statsChangeKey(data: ProxmoxStatsSnapshot): string {
+  const bucket = (value: number | null | undefined) =>
+    value == null ? null : Math.round(value / 5) * 5;
+  return JSON.stringify({
+    cpu: bucket(data.node.cpu.percent),
+    memory: bucket(data.node.memory.percent),
+    disk: bucket(data.node.disk.percent),
+    guests: data.guests.counts,
+    cluster: data.cluster,
+  });
+}
 const DEFAULT_POLL_INTERVAL = 60;
 
 interface HostConfig {
@@ -158,7 +171,7 @@ function ProxmoxStatsInner({
   }, []);
 
   const notEnabled = currentHostConfig?.enableProxmoxStats !== true;
-  const pollingIdRef = React.useRef<number | undefined>(undefined);
+  const stopPollingRef = React.useRef<(() => void) | null>(null);
 
   const fetchSnapshot = React.useCallback(async (): Promise<void> => {
     if (!currentHostConfig?.id) return;
@@ -192,17 +205,26 @@ function ProxmoxStatsInner({
 
     const intervalMs =
       (statsConfig.pollInterval ?? DEFAULT_POLL_INTERVAL) * 1000;
-    pollingIdRef.current = window.setInterval(async () => {
-      try {
+    let signature = statsChangeKey(data);
+    stopPollingRef.current?.();
+    stopPollingRef.current = runAdaptivePolling(
+      async () => {
         const next = await getProxmoxStats(currentHostConfig.id);
-        if (next) {
-          setSnapshot(next);
-          pushHistory(next);
-        }
-      } catch {
-        /* keep prior */
-      }
-    }, intervalMs);
+        if (!next) throw new Error(t("proxmoxStats.connectionFailed"));
+        const nextSignature = statsChangeKey(next);
+        const changed = nextSignature !== signature;
+        signature = nextSignature;
+        setSnapshot(next);
+        pushHistory(next);
+        return changed;
+      },
+      {
+        minIntervalMs: intervalMs,
+        maxIntervalMs: Math.min(120_000, intervalMs * 6),
+        stablePollsPerStep: 3,
+      },
+      { runImmediately: false },
+    );
   }, [currentHostConfig?.id, statsConfig.pollInterval, addLog, t, pushHistory]);
 
   const retry = useConnectionRetry({
@@ -239,10 +261,8 @@ function ProxmoxStatsInner({
         retryRef.current.reset();
         retryRef.current.retryNow();
       } else if (!isActuallyVisible) {
-        if (pollingIdRef.current) {
-          window.clearInterval(pollingIdRef.current);
-          pollingIdRef.current = undefined;
-        }
+        stopPollingRef.current?.();
+        stopPollingRef.current = null;
         if (currentHostConfig?.id) {
           stopProxmoxStatsPolling(currentHostConfig.id, undefined).catch(
             () => {},
@@ -254,10 +274,8 @@ function ProxmoxStatsInner({
     return () => {
       cancelled = true;
       clearTimeout(debounce);
-      if (pollingIdRef.current) {
-        window.clearInterval(pollingIdRef.current);
-        pollingIdRef.current = undefined;
-      }
+      stopPollingRef.current?.();
+      stopPollingRef.current = null;
       if (currentHostConfig?.id) {
         stopProxmoxStatsPolling(currentHostConfig.id).catch(() => {});
       }

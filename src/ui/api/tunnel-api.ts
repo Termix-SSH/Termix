@@ -13,6 +13,7 @@ import type {
   TunnelStatus,
 } from "@/types/index";
 import { streamServerSentEvents } from "./sse-stream";
+import { runAdaptivePolling } from "@/lib/adaptive-polling";
 
 // TUNNEL MANAGEMENT
 // ============================================================================
@@ -70,7 +71,7 @@ export function subscribeTunnelStatuses(
 
   let latestLocal: Record<string, TunnelStatus> = {};
   let latestRemote: Record<string, TunnelStatus> = {};
-  let remotePollTimer: ReturnType<typeof setInterval> | null = null;
+  let stopRemotePolling: (() => void) | null = null;
 
   const emitMerged = () => {
     onStatuses({ ...latestLocal, ...latestRemote });
@@ -128,23 +129,31 @@ export function subscribeTunnelStatuses(
   // Remote tunnel status has no SSE stream exposed to the desktop app yet,
   // so poll it at a modest interval when a remote server is connected.
   isRemoteSyncConnected().then((connected) => {
-    if (!connected) return;
-    const pollRemote = async () => {
-      try {
+    if (!connected || controller.signal.aborted) return;
+    let signature = "";
+    stopRemotePolling = runAdaptivePolling(
+      async () => {
         const result = await getRemoteTunnelApi().get("/tunnel/status");
-        latestRemote = result.data || {};
+        const next = result.data || {};
+        const nextSignature = JSON.stringify(next);
+        const changed = nextSignature !== signature;
+        signature = nextSignature;
+        latestRemote = next;
         emitMerged();
-      } catch {
-        // remote unreachable this tick -- keep last known remote statuses
-      }
-    };
-    pollRemote();
-    remotePollTimer = setInterval(pollRemote, 5000);
+        return changed;
+      },
+      {
+        minIntervalMs: 5000,
+        maxIntervalMs: 30000,
+        stablePollsPerStep: 3,
+      },
+      { enabled: () => !controller.signal.aborted },
+    );
   });
 
   return () => {
     controller.abort();
-    if (remotePollTimer) clearInterval(remotePollTimer);
+    stopRemotePolling?.();
   };
 }
 

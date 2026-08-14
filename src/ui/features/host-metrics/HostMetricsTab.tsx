@@ -40,6 +40,7 @@ import {
 } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { ConnectionScreen } from "@/components/connection/ConnectionScreen.tsx";
 import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
+import { runAdaptivePolling } from "@/lib/adaptive-polling.ts";
 import type { LogEntry } from "@/types/connection-log.ts";
 import {
   CardGridCanvas,
@@ -57,6 +58,19 @@ import {
 } from "./cards";
 
 const HISTORY_LEN = 30;
+
+function metricsChangeKey(data: ServerMetrics): string {
+  const bucket = (value: number | null | undefined) =>
+    value == null ? null : Math.round(value / 5) * 5;
+  return JSON.stringify({
+    cpu: bucket(data.cpu.percent),
+    memory: bucket(data.memory.percent),
+    disk: bucket(data.disk.percent),
+    running: data.processes?.running ?? null,
+    ports: data.ports?.ports?.length ?? 0,
+    firewall: data.firewall?.status ?? null,
+  });
+}
 
 interface QuickAction {
   name: string;
@@ -305,24 +319,31 @@ function HostMetricsInner({
       return;
     }
     let cancelled = false;
+    let lastStatus = serverStatus;
     const fetchStatus = async () => {
       try {
         const res = await getServerStatusById(currentHostConfig.id);
+        const nextStatus = res?.status === "online" ? "online" : "offline";
         if (!cancelled) {
-          setServerStatus(res?.status === "online" ? "online" : "offline");
+          setServerStatus(nextStatus);
         }
+        const changed = nextStatus !== lastStatus;
+        lastStatus = nextStatus;
+        return changed;
       } catch {
         if (!cancelled) setServerStatus("offline");
+        throw new Error("Host status check failed");
       }
     };
-    fetchStatus();
-    const id = window.setInterval(
-      fetchStatus,
-      statsConfig.statusCheckInterval * 1000,
-    );
+    const minIntervalMs = statsConfig.statusCheckInterval * 1000;
+    const stop = runAdaptivePolling(fetchStatus, {
+      minIntervalMs,
+      maxIntervalMs: Math.min(120_000, minIntervalMs * 6),
+      stablePollsPerStep: 3,
+    });
     return () => {
       cancelled = true;
-      window.clearInterval(id);
+      stop();
     };
   }, [
     currentHostConfig?.id,
@@ -331,7 +352,7 @@ function HostMetricsInner({
     isActuallyVisible,
   ]);
 
-  const metricsPollingIdRef = React.useRef<number | undefined>(undefined);
+  const stopMetricsPollingRef = React.useRef<(() => void) | null>(null);
 
   const fetchMetrics = React.useCallback(async (): Promise<void> => {
     if (!currentHostConfig?.id) return;
@@ -375,17 +396,27 @@ function HostMetricsInner({
       message: t("terminal.connected"),
     });
 
-    metricsPollingIdRef.current = window.setInterval(async () => {
-      try {
+    let signature = metricsChangeKey(data);
+    const minIntervalMs = statsConfig.metricsInterval * 1000;
+    stopMetricsPollingRef.current?.();
+    stopMetricsPollingRef.current = runAdaptivePolling(
+      async () => {
         const next = await getServerMetricsById(currentHostConfig.id);
-        if (next) {
-          setMetrics(next);
-          pushHistory(next);
-        }
-      } catch {
-        /* keep prior */
-      }
-    }, statsConfig.metricsInterval * 1000);
+        if (!next) throw new Error(t("hostMetrics.connectionFailed"));
+        const nextSignature = metricsChangeKey(next);
+        const changed = nextSignature !== signature;
+        signature = nextSignature;
+        setMetrics(next);
+        pushHistory(next);
+        return changed;
+      },
+      {
+        minIntervalMs,
+        maxIntervalMs: Math.min(120_000, minIntervalMs * 6),
+        stablePollsPerStep: 3,
+      },
+      { runImmediately: false },
+    );
   }, [
     currentHostConfig,
     totpVerified,
@@ -436,10 +467,8 @@ function HostMetricsInner({
     let cancelled = false;
 
     const stopMetrics = async () => {
-      if (metricsPollingIdRef.current) {
-        window.clearInterval(metricsPollingIdRef.current);
-        metricsPollingIdRef.current = undefined;
-      }
+      stopMetricsPollingRef.current?.();
+      stopMetricsPollingRef.current = null;
       if (currentHostConfig?.id) {
         await stopMetricsPolling(
           currentHostConfig.id,
@@ -462,10 +491,8 @@ function HostMetricsInner({
     return () => {
       cancelled = true;
       clearTimeout(debounce);
-      if (metricsPollingIdRef.current) {
-        window.clearInterval(metricsPollingIdRef.current);
-        metricsPollingIdRef.current = undefined;
-      }
+      stopMetricsPollingRef.current?.();
+      stopMetricsPollingRef.current = null;
       if (currentHostConfig?.id) {
         stopMetricsPolling(currentHostConfig.id).catch(() => {});
       }
