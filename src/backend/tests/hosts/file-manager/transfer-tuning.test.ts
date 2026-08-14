@@ -5,8 +5,11 @@ import path from "node:path";
 import {
   clearTransferProfiles,
   flushTransferProfiles,
+  getRecentDirectRouteDecision,
   getTransferProfile,
   initializeTransferProfiles,
+  recordDirectRouteBenchmark,
+  recordDirectRouteOutcome,
   recordTransferProfile,
   selectTransferTuning,
   updateTransferProfile,
@@ -64,6 +67,21 @@ describe("adaptive transfer tuning", () => {
     expect(getTransferProfile("a->b", 8 * 24 * 60 * 60 * 1000)).toBeUndefined();
   });
 
+  it("reuses recent route benchmarks and cools down failed direct paths", () => {
+    recordDirectRouteBenchmark("a->b", 700, 1000, 100);
+    expect(getRecentDirectRouteDecision("a->b", 1_000, 101)).toEqual({
+      useDirect: true,
+      directMs: 700,
+      relayMs: 1000,
+    });
+
+    recordDirectRouteOutcome("a->b", true, 102, 500);
+    expect(getRecentDirectRouteDecision("a->b", 1_000, 103)?.useDirect).toBe(
+      false,
+    );
+    expect(getRecentDirectRouteDecision("a->b", 1_000, 1_103)).toBeUndefined();
+  });
+
   it("persists only anonymous local profiles across restarts", async () => {
     const previousDataDir = process.env.DATA_DIR;
     const dataDir = await fs.mkdtemp(path.join(tmpdir(), "termix-transfer-"));
@@ -81,6 +99,7 @@ describe("adaptive transfer tuning", () => {
         failed: false,
         now,
       });
+      recordDirectRouteBenchmark(rawKey, 700, 1000, now);
       await flushTransferProfiles();
 
       const stored = await fs.readFile(
@@ -95,6 +114,9 @@ describe("adaptive transfer tuning", () => {
       clearTransferProfiles();
       await initializeTransferProfiles();
       expect(getTransferProfile(rawKey, now + 1)).toMatchObject({ samples: 1 });
+      expect(
+        getRecentDirectRouteDecision(rawKey, 1_000, now + 1),
+      ).toMatchObject({ useDirect: true });
     } finally {
       clearTransferProfiles();
       if (previousDataDir === undefined) delete process.env.DATA_DIR;

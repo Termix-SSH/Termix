@@ -35,8 +35,11 @@ import {
   type DirectTransferEndpoint,
 } from "./direct-transfer-routing.js";
 import {
+  getRecentDirectRouteDecision,
   getTransferProfile,
   initializeTransferProfiles,
+  recordDirectRouteBenchmark,
+  recordDirectRouteOutcome,
   recordTransferProfile,
   selectTransferTuning,
 } from "./transfer-tuning.js";
@@ -2643,10 +2646,22 @@ async function benchmarkTransferRoutes(
   sourceSession: SSHSessionLike,
   destSession: SSHSessionLike,
   endpoint: DirectTransferEndpoint,
+  profileKey?: string,
 ): Promise<{ useDirect: boolean; directMs?: number; relayMs?: number }> {
   const key = directRouteKey(sourceSession, endpoint);
   const cached = directRouteCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached;
+  const learned = profileKey
+    ? getRecentDirectRouteDecision(profileKey, DIRECT_ROUTE_CACHE_MS)
+    : undefined;
+  if (learned) {
+    const result = {
+      ...learned,
+      expiresAt: Date.now() + DIRECT_ROUTE_CACHE_MS,
+    };
+    directRouteCache.set(key, result);
+    return result;
+  }
 
   updateTransfer(transferId, { phase: "benchmarking" });
   const probe = await execCommand(
@@ -2715,7 +2730,12 @@ async function benchmarkTransferRoutes(
       () => Date.now() >= relayDeadline,
     );
     const relayMs = performance.now() - relayStart;
-    const useDirect = shouldUseDirectTransfer(directMs, relayMs);
+    const profile = profileKey
+      ? recordDirectRouteBenchmark(profileKey, directMs, relayMs)
+      : undefined;
+    const useDirect =
+      shouldUseDirectTransfer(directMs, relayMs) &&
+      (!profile || profile.outcomeSamples < 2 || profile.failureRate < 0.25);
     const result = {
       useDirect,
       directMs,
@@ -2772,6 +2792,7 @@ async function tryAdaptiveDirectTransfer(
     sourceSession,
     destSession,
     endpoint,
+    reconnectMeta.profileKey,
   );
   if (!route.useDirect) return null;
   if (destIsDirectory) {
@@ -2848,6 +2869,14 @@ async function tryAdaptiveDirectTransfer(
     }
 
     const transferMs = performance.now() - transferStart;
+    if (reconnectMeta.profileKey) {
+      recordDirectRouteOutcome(
+        reconnectMeta.profileKey,
+        false,
+        Date.now(),
+        DIRECT_ROUTE_CACHE_MS,
+      );
+    }
     return finalizeTransfer(transferId, {
       status: "success",
       phase: "verifying",
@@ -2876,7 +2905,18 @@ async function tryAdaptiveDirectTransfer(
       transferId,
       error: getErrorMessage(error, "Direct transfer failed"),
     });
-    directRouteCache.delete(directRouteKey(sourceSession, endpoint));
+    if (reconnectMeta.profileKey) {
+      recordDirectRouteOutcome(
+        reconnectMeta.profileKey,
+        true,
+        Date.now(),
+        DIRECT_ROUTE_CACHE_MS,
+      );
+    }
+    directRouteCache.set(directRouteKey(sourceSession, endpoint), {
+      useDirect: false,
+      expiresAt: Date.now() + DIRECT_ROUTE_CACHE_MS,
+    });
     updateTransfer(transferId, {
       method: undefined,
       phase: "transferring",
