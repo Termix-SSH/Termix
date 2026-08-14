@@ -69,6 +69,10 @@ import {
 } from "@/components/tooltip";
 import { hostMatchesQuery } from "../visible-rows";
 import { preloadTabSurface } from "@/shell/tabUtils";
+import {
+  getPreferredHostAction,
+  recordHostActionPreference,
+} from "@/lib/local-adaptive-preferences";
 
 export function statusCheckEnabled(host: Host): boolean {
   return host.statsConfig?.statusCheckEnabled !== false;
@@ -385,9 +389,30 @@ export function HostItem({
   const trayButtonClass =
     "flex items-center justify-center size-6.5 text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors";
 
+  const sshActions = getSshActions(host);
+  const availableActions: TabType[] = [
+    ...sshActions.map(({ type }) => type),
+    ...(host.enableRdp ? (["rdp"] as const) : []),
+    ...(host.enableVnc ? (["vnc"] as const) : []),
+    ...(host.enableTelnet ? (["telnet"] as const) : []),
+  ];
+  const defaultAction: TabType = host.enableSsh
+    ? "terminal"
+    : host.enableRdp
+      ? "rdp"
+      : host.enableVnc
+        ? "vnc"
+        : host.enableTelnet
+          ? "telnet"
+          : "terminal";
+  const openHostTab = (type: TabType) => {
+    recordHostActionPreference(host.id, type);
+    onOpenTab(type);
+  };
+
   const connectionButtons = (
     <>
-      {getSshActions(host).map(({ type, icon: Icon, label }) => (
+      {sshActions.map(({ type, icon: Icon, label }) => (
         <button
           key={type}
           title={label}
@@ -395,7 +420,7 @@ export function HostItem({
           onFocus={() => preloadTabSurface(type)}
           onClick={(e) => {
             e.stopPropagation();
-            onOpenTab(type);
+            openHostTab(type);
           }}
           className={trayButtonClass}
         >
@@ -404,7 +429,7 @@ export function HostItem({
       ))}
       {host.enableSsh &&
         (host.enableRdp || host.enableVnc || host.enableTelnet) &&
-        getSshActions(host).length > 0 && (
+        sshActions.length > 0 && (
           <div className="w-px h-3.5 bg-border/60 mx-0.5 shrink-0" />
         )}
       {host.enableRdp && (
@@ -414,7 +439,7 @@ export function HostItem({
           onFocus={() => preloadTabSurface("rdp")}
           onClick={(e) => {
             e.stopPropagation();
-            onOpenTab("rdp");
+            openHostTab("rdp");
           }}
           className={trayButtonClass}
         >
@@ -437,7 +462,7 @@ export function HostItem({
           onFocus={() => preloadTabSurface("vnc")}
           onClick={(e) => {
             e.stopPropagation();
-            onOpenTab("vnc");
+            openHostTab("vnc");
           }}
           className={trayButtonClass}
         >
@@ -451,7 +476,7 @@ export function HostItem({
           onFocus={() => preloadTabSurface("telnet")}
           onClick={(e) => {
             e.stopPropagation();
-            onOpenTab("telnet");
+            openHostTab("telnet");
           }}
           className={trayButtonClass}
         >
@@ -827,10 +852,15 @@ export function HostItem({
       }}
       style={depthStyle}
       onPointerEnter={() => {
-        if (host.enableSsh) preloadTabSurface("terminal");
-        else if (host.enableRdp) preloadTabSurface("rdp");
-        else if (host.enableVnc) preloadTabSurface("vnc");
-        else if (host.enableTelnet) preloadTabSurface("telnet");
+        preloadTabSurface(defaultAction);
+        const preferredAction = getPreferredHostAction(
+          host.id,
+          availableActions,
+          defaultAction,
+        );
+        if (preferredAction !== defaultAction) {
+          preloadTabSurface(preferredAction);
+        }
       }}
       className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/50 ${
         selected
@@ -845,11 +875,7 @@ export function HostItem({
           return;
         }
         const launchDefault = () => {
-          if (host.enableSsh) onOpenTab("terminal");
-          else if (host.enableRdp) onOpenTab("rdp");
-          else if (host.enableVnc) onOpenTab("vnc");
-          else if (host.enableTelnet) onOpenTab("telnet");
-          else onOpenTab("terminal");
+          openHostTab(defaultAction);
         };
         // On touch devices, open the action tray so the per-protocol buttons are
         // reachable. If the host only exposes a single action, just launch it.

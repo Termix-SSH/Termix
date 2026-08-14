@@ -1,6 +1,15 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Host } from "@/types/ui-types";
+import { LOCAL_ADAPTIVE_PREFERENCES_KEY } from "@/lib/local-adaptive-preferences";
+
+const { preloadTabSurfaceMock } = vi.hoisted(() => ({
+  preloadTabSurfaceMock: vi.fn(),
+}));
+
+vi.mock("@/shell/tabUtils", () => ({
+  preloadTabSurface: preloadTabSurfaceMock,
+}));
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -75,7 +84,11 @@ function renderHostItem(
   );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  preloadTabSurfaceMock.mockClear();
+  localStorage.removeItem(LOCAL_ADAPTIVE_PREFERENCES_KEY);
+});
 
 describe("HostItem density parity", () => {
   it.each(["comfortable", "compact"] as const)(
@@ -151,5 +164,20 @@ describe("HostItem density parity", () => {
       />,
     );
     expect(screen.queryByText("prod")).toBeNull();
+  });
+
+  it("learns repeated local actions and preloads the preferred host tool", () => {
+    renderHostItem("comfortable");
+    const filesButton = screen.getByTitle("Files");
+    fireEvent.click(filesButton);
+    fireEvent.click(filesButton);
+    fireEvent.click(filesButton);
+
+    const hostRow = screen.getByText("web-01").closest(".cursor-pointer");
+    expect(hostRow).toBeTruthy();
+    fireEvent.pointerEnter(hostRow!);
+
+    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("terminal");
+    expect(preloadTabSurfaceMock).toHaveBeenCalledWith("files");
   });
 });
