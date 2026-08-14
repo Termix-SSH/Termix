@@ -73,7 +73,10 @@ import {
   type TransferMethodPreference,
   type DiskFilesystem,
 } from "@/main-axios.ts";
-import { getPollingEnvironmentMultiplier } from "@/lib/adaptive-polling";
+import {
+  getAdaptiveResourceBudget,
+  runAdaptiveBackgroundTask,
+} from "@/lib/adaptive-resource-budget";
 import { shouldPrefetchFileContent } from "@/lib/file-content-request-cache";
 import { preloadFilePreview } from "./file-preview-preload";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
@@ -1567,12 +1570,22 @@ function FileManagerContent({
     (file: FileItem) => {
       if (!sshSessionId) return;
       if (file.type === "directory") {
-        void listSSHFiles(sshSessionId, file.path).catch(() => {});
+        runAdaptiveBackgroundTask("network", "directory-list", () =>
+          listSSHFiles(sshSessionId, file.path),
+        );
         return;
       }
-      if (shouldPrefetchFileContent(file, getPollingEnvironmentMultiplier())) {
+      const budget = getAdaptiveResourceBudget("network");
+      if (shouldPrefetchFileContent(file, budget.maxPrefetchBytes)) {
         preloadFilePreview(file.name);
-        void readSSHFile(sshSessionId, file.path).catch(() => {});
+        runAdaptiveBackgroundTask(
+          "network",
+          file.size && file.size > 128 * 1024
+            ? "file-content:medium"
+            : "file-content:small",
+          () => readSSHFile(sshSessionId, file.path),
+          { estimatedBytes: file.size },
+        );
       }
     },
     [sshSessionId],

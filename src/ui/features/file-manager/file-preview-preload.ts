@@ -1,3 +1,5 @@
+import { runAdaptiveBackgroundTask } from "@/lib/adaptive-resource-budget";
+
 export type FilePreviewKind =
   | "image"
   | "video"
@@ -100,5 +102,7 @@ const previewLoaders: Partial<Record<FilePreviewKind, () => Promise<unknown>>> =
   };
 
 export function preloadFilePreview(filename: string): void {
-  void previewLoaders[resolveFilePreviewKind(filename)]?.().catch(() => {});
+  const kind = resolveFilePreviewKind(filename);
+  const loader = previewLoaders[kind];
+  if (loader) runAdaptiveBackgroundTask("module", `preview:${kind}`, loader);
 }

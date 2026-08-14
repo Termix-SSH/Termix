@@ -7,7 +7,6 @@ export interface FileContentResult {
   encoding?: "base64" | "utf8";
 }
 
-const MAX_PREFETCH_BYTES = 512 * 1024;
 const cache = createKeyedRequestCache<FileContentResult>(30_000, 24);
 const keyFor = (sessionId: string, path: string) => `${sessionId}\0${path}`;
 
@@ -29,12 +28,11 @@ export function invalidateCachedFileContent(
 
 export function shouldPrefetchFileContent(
   file: FileItem,
-  networkMultiplier: number,
+  maxPrefetchBytes: number,
 ): boolean {
   return (
     file.type === "file" &&
     typeof file.size === "number" &&
-    file.size <= MAX_PREFETCH_BYTES &&
-    networkMultiplier <= 1
+    file.size <= maxPrefetchBytes
   );
 }

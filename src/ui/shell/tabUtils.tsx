@@ -40,7 +40,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { Tab, TabType, Host } from "@/types/ui-types";
 import type { SSHHost } from "@/types";
 import { useTabsSafe } from "@/shell/TabContext";
-import { getPollingEnvironmentMultiplier } from "@/lib/adaptive-polling";
+import { runAdaptiveBackgroundTask } from "@/lib/adaptive-resource-budget";
 
 // Heavy tab surfaces — keep out of the AppShell critical path.
 const CommandHistoryProvider = lazy(() =>
@@ -167,8 +167,8 @@ const tabSurfaceLoaders: Partial<Record<TabType, () => Promise<unknown>>> = {
 
 /** Download a likely next tab without starting a connection or mounting UI. */
 export function preloadTabSurface(type: TabType): void {
-  if (getPollingEnvironmentMultiplier() > 1) return;
-  void tabSurfaceLoaders[type]?.().catch(() => {});
+  const loader = tabSurfaceLoaders[type];
+  if (loader) runAdaptiveBackgroundTask("module", `tab:${type}`, loader);
 }
 
 function hostToSSHHost(h: Host): SSHHost {

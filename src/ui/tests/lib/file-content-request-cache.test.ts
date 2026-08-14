@@ -24,25 +24,25 @@ describe("file content request cache", () => {
     expect(
       shouldPrefetchFileContent(
         { name: "note", path: "/note", type: "file", size: 512 * 1024 },
-        1,
+        512 * 1024,
       ),
     ).toBe(true);
     expect(
       shouldPrefetchFileContent(
         { name: "large", path: "/large", type: "file", size: 512 * 1024 + 1 },
-        1,
+        512 * 1024,
       ),
     ).toBe(false);
     expect(
       shouldPrefetchFileContent(
         { name: "unknown", path: "/unknown", type: "file" },
-        1,
+        512 * 1024,
       ),
     ).toBe(false);
     expect(
       shouldPrefetchFileContent(
         { name: "note", path: "/note", type: "file", size: 100 },
-        1.25,
+        0,
       ),
     ).toBe(false);
   });
