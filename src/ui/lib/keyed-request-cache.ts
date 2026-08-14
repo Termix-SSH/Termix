@@ -5,6 +5,7 @@ export interface KeyedRequestCache<T> {
     options?: { force?: boolean },
   ): Promise<T>;
   peek(key: string, maxAgeMs?: number): T | null;
+  set(key: string, value: T): void;
   invalidate(key?: string): void;
 }
 
@@ -15,6 +16,7 @@ export function createKeyedRequestCache<T>(
 ): KeyedRequestCache<T> {
   const values = new Map<string, { value: T; storedAt: number }>();
   const inflight = new Map<string, Promise<T>>();
+  const versions = new Map<string, number>();
 
   const store = (key: string, value: T) => {
     values.delete(key);
@@ -36,12 +38,15 @@ export function createKeyedRequestCache<T>(
       const pending = inflight.get(key);
       if (pending) return pending;
 
+      const version = versions.get(key) ?? 0;
       const request = loader()
         .then((value) => {
-          store(key, value);
+          if ((versions.get(key) ?? 0) === version) store(key, value);
           return value;
         })
-        .finally(() => inflight.delete(key));
+        .finally(() => {
+          if (inflight.get(key) === request) inflight.delete(key);
+        });
       inflight.set(key, request);
       return request;
     },
@@ -54,9 +59,24 @@ export function createKeyedRequestCache<T>(
       return cached.value;
     },
 
+    set(key, value) {
+      versions.set(key, (versions.get(key) ?? 0) + 1);
+      inflight.delete(key);
+      store(key, value);
+    },
+
     invalidate(key) {
-      if (key === undefined) values.clear();
-      else values.delete(key);
+      if (key === undefined) {
+        for (const activeKey of inflight.keys()) {
+          versions.set(activeKey, (versions.get(activeKey) ?? 0) + 1);
+        }
+        values.clear();
+        inflight.clear();
+      } else {
+        versions.set(key, (versions.get(key) ?? 0) + 1);
+        values.delete(key);
+        inflight.delete(key);
+      }
     },
   };
 }

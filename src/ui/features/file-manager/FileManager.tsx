@@ -84,7 +84,15 @@ import { formatFileSize } from "./file-manager-utils.ts";
 import {
   invalidateCachedFileList,
   peekCachedFileList,
+  updateCachedFileList,
 } from "@/lib/file-list-request-cache";
+import {
+  addOptimisticItem,
+  childPath,
+  removePaths,
+  renameOptimisticItem,
+  restoreItems,
+} from "./optimistic-file-list";
 
 const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
 
@@ -109,6 +117,8 @@ function FileManagerContent({
   const [currentPath, setCurrentPath] = useState(
     initialPath || initialHost?.defaultPath || "/",
   );
+  const currentPathRef = useRef(currentPath);
+  currentPathRef.current = currentPath;
   const lastSuccessfulPathRef = useRef(
     initialPath || initialHost?.defaultPath || "/",
   );
@@ -117,9 +127,13 @@ function FileManagerContent({
   ]);
   const [navIndex, setNavIndex] = useState(0);
   const [files, setFiles] = useState<FileItem[]>([]);
+  const filesRef = useRef(files);
+  filesRef.current = files;
   const directoryRequestRef = useRef(0);
   const [isLoading, setIsLoading] = useState(false);
   const [sshSessionId, setSshSessionId] = useState<string | null>(null);
+  const sshSessionIdRef = useRef(sshSessionId);
+  sshSessionIdRef.current = sshSessionId;
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [lastRefreshTime, setLastRefreshTime] = useState<number>(0);
@@ -226,6 +240,32 @@ function FileManagerContent({
     useState<PendingSudoOperation | null>(null);
 
   const { selectedFiles, clearSelection, setSelection } = useFileSelection();
+
+  const commitFilesForPath = useCallback(
+    (sessionId: string, path: string, next: FileItem[]) => {
+      updateCachedFileList(sessionId, path, next);
+      if (
+        sshSessionIdRef.current !== sessionId ||
+        currentPathRef.current !== path
+      ) {
+        return;
+      }
+      directoryRequestRef.current += 1;
+      filesRef.current = next;
+      setFiles(next);
+    },
+    [],
+  );
+
+  const filesForPath = useCallback((sessionId: string, path: string) => {
+    if (
+      sshSessionIdRef.current === sessionId &&
+      currentPathRef.current === path
+    ) {
+      return filesRef.current;
+    }
+    return peekCachedFileList(sessionId, path)?.files ?? [];
+  }, []);
 
   const { dragHandlers } = useDragAndDrop({
     onFilesDropped: handleFilesDropped,
@@ -1173,6 +1213,19 @@ function FileManagerContent({
     confirmWithToast(
       fullMessage,
       async () => {
+        const operationPath = currentPath;
+        const operationSession = sshSessionId;
+        const deletedPaths = new Set(files.map((file) => file.path));
+        commitFilesForPath(
+          operationSession,
+          operationPath,
+          removePaths(
+            filesForPath(operationSession, operationPath),
+            deletedPaths,
+          ),
+        );
+        clearSelection();
+        let completed = 0;
         try {
           await ensureSSHConnection();
 
@@ -1184,6 +1237,7 @@ function FileManagerContent({
               currentHost?.id,
               currentHost?.userId?.toString(),
             );
+            completed += 1;
           }
 
           const deletedFiles = files.map((file) => ({
@@ -1206,9 +1260,23 @@ function FileManagerContent({
           toast.success(
             t("fileManager.itemsDeletedSuccessfully", { count: files.length }),
           );
-          handleRefreshDirectory();
-          clearSelection();
+          if (
+            sshSessionIdRef.current === operationSession &&
+            currentPathRef.current === operationPath
+          ) {
+            handleRefreshDirectory();
+          } else {
+            invalidateCachedFileList(operationSession, operationPath);
+          }
         } catch (error: unknown) {
+          commitFilesForPath(
+            operationSession,
+            operationPath,
+            restoreItems(
+              filesForPath(operationSession, operationPath),
+              files.slice(completed),
+            ),
+          );
           const axiosError = error as {
             response?: {
               data?: { needsSudo?: boolean; error?: string };
@@ -1217,7 +1285,10 @@ function FileManagerContent({
             message?: string;
           };
           if (axiosError.response?.data?.needsSudo) {
-            setPendingSudoOperation({ type: "delete", files });
+            setPendingSudoOperation({
+              type: "delete",
+              files: files.slice(completed),
+            });
             setSudoDialogOpen(true);
             return;
           }
@@ -1827,7 +1898,6 @@ function FileManagerContent({
       toast.success(
         t("fileManager.archiveExtractedSuccessfully", { name: file.name }),
       );
-
       handleRefreshDirectory();
     } catch (error: unknown) {
       const errorMessage = getErrorMessage(error, String(error));
@@ -1869,7 +1939,6 @@ function FileManagerContent({
           name: archiveName,
         }),
       );
-
       handleRefreshDirectory();
       clearSelection();
     } catch (error: unknown) {
@@ -2128,10 +2197,25 @@ function FileManagerContent({
   async function handleConfirmCreate(name: string) {
     if (!createIntent || !sshSessionId) return;
 
+    const operationPath = currentPath;
+    const operationSession = sshSessionId;
+    const optimisticPath = childPath(operationPath, name);
+    const previousFiles = filesForPath(operationSession, operationPath);
+    const optimisticFiles = addOptimisticItem(
+      previousFiles,
+      operationPath,
+      name,
+      createIntent.type,
+    );
+    const didAddOptimistically = optimisticFiles !== previousFiles;
+    commitFilesForPath(operationSession, operationPath, optimisticFiles);
+    const createdType = createIntent.type;
+    setCreateIntent(null);
+
     try {
       await ensureSSHConnection();
 
-      if (createIntent.type === "file") {
+      if (createdType === "file") {
         await createSSHFile(
           sshSessionId,
           currentPath,
@@ -2152,9 +2236,25 @@ function FileManagerContent({
         toast.success(t("fileManager.folderCreatedSuccessfully", { name }));
       }
 
-      setCreateIntent(null);
-      handleRefreshDirectory();
+      if (
+        sshSessionIdRef.current === operationSession &&
+        currentPathRef.current === operationPath
+      ) {
+        handleRefreshDirectory();
+      } else {
+        invalidateCachedFileList(operationSession, operationPath);
+      }
     } catch (error: unknown) {
+      if (didAddOptimistically) {
+        commitFilesForPath(
+          operationSession,
+          operationPath,
+          removePaths(
+            filesForPath(operationSession, operationPath),
+            new Set([optimisticPath]),
+          ),
+        );
+      }
       const axiosError = error as {
         response?: { status?: number; data?: { error?: string } };
       };
@@ -2179,6 +2279,25 @@ function FileManagerContent({
   async function handleRenameConfirm(file: FileItem, newName: string) {
     if (!sshSessionId) return;
 
+    const operationPath = currentPath;
+    const operationSession = sshSessionId;
+    const renamedPath = childPath(
+      file.path.slice(0, Math.max(1, file.path.lastIndexOf("/"))),
+      newName,
+    );
+    const operationFiles = filesForPath(operationSession, operationPath);
+    const didRenameOptimistically = !operationFiles.some(
+      (entry) => entry.path === renamedPath && entry.path !== file.path,
+    );
+    if (didRenameOptimistically) {
+      commitFilesForPath(
+        operationSession,
+        operationPath,
+        renameOptimisticItem(operationFiles, file.path, newName),
+      );
+    }
+    setEditingFile(null);
+
     try {
       await ensureSSHConnection();
 
@@ -2193,9 +2312,26 @@ function FileManagerContent({
       toast.success(
         t("fileManager.itemRenamedSuccessfully", { name: newName }),
       );
-      setEditingFile(null);
-      handleRefreshDirectory();
+      if (
+        sshSessionIdRef.current === operationSession &&
+        currentPathRef.current === operationPath
+      ) {
+        handleRefreshDirectory();
+      } else {
+        invalidateCachedFileList(operationSession, operationPath);
+      }
     } catch (error: unknown) {
+      if (didRenameOptimistically) {
+        commitFilesForPath(
+          operationSession,
+          operationPath,
+          renameOptimisticItem(
+            filesForPath(operationSession, operationPath),
+            renamedPath,
+            file.name,
+          ),
+        );
+      }
       const axiosError = error as {
         response?: { status?: number; data?: { error?: string } };
       };
