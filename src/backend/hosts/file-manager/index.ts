@@ -438,8 +438,12 @@ async function openDedicatedTransferSession(
     throw new Error("Host not found for transfer connection");
   }
 
-  if (sshSessions[dedicatedSessionId]?.isConnected) {
-    closeDedicatedTransferSession(dedicatedSessionId);
+  const existingSession = sshSessions[dedicatedSessionId];
+  if (
+    existingSession?.isConnected &&
+    verifySessionOwnership(existingSession, userId)
+  ) {
+    return existingSession;
   }
 
   const client = new SSHClient();
