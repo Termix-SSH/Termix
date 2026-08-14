@@ -212,6 +212,18 @@
     "dompurify": "^3.4.1",
     "eslint-visitor-keys": "^4.2.1",
     "prebuild-install": "npm:@mmomtchev/prebuild-install@1.0.2",
-    "rimraf": "file:vendor/rimraf-compat"
+    "rimraf": "file:vendor/rimraf-compat",
+    "brace-expansion@1": "^1.1.18",
+    "brace-expansion@2": "^2.1.4",
+    "brace-expansion@5": "^5.0.9",
+    "esbuild": "^0.28.1",
+    "fast-uri@3": "^3.1.5",
+    "ip-address": "^10.5.0",
+    "js-yaml@4": "^4.3.1",
+    "nanoid@3": "^3.3.18",
+    "postcss": "^8.5.26",
+    "tar": "^7.5.22",
+    "undici@6": "^6.28.0",
+    "undici@7": "^7.29.0"
   }
 }
