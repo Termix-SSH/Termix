@@ -89,6 +89,8 @@ export function HostManager({
     message: string;
     onConfirm: () => void;
   } | null>(null);
+  const [hostEditorDirty, setHostEditorDirty] = useState(false);
+  const [showUnsavedHostDialog, setShowUnsavedHostDialog] = useState(false);
   const [editingProtocols, setEditingProtocols] = useState({
     enableSsh: true,
     enableRdp: false,
@@ -352,6 +354,21 @@ export function HostManager({
   }
 
   // Editor view: full-width with top tab bar instead of side nav
+  const closeHostEditor = () => {
+    setHostEditorDirty(false);
+    setShowUnsavedHostDialog(false);
+    setEditingHost(null);
+    setActiveHostTab("general");
+  };
+
+  const requestCloseHostEditor = () => {
+    if (hostEditorDirty) {
+      setShowUnsavedHostDialog(true);
+      return;
+    }
+    closeHostEditor();
+  };
+
   const renderEditorView = () => {
     const isHost = !!editingHost;
     // Simple mode keeps General and SSH -- between them they hold everything
@@ -396,8 +413,7 @@ export function HostManager({
           <button
             onClick={() => {
               if (isHost) {
-                setEditingHost(null);
-                setActiveHostTab("general");
+                requestCloseHostEditor();
               } else {
                 setEditingCredential(null);
                 setActiveCredentialTab("general");
@@ -475,10 +491,7 @@ export function HostManager({
               host={editingHost === "new" ? null : (editingHost as Host)}
               activeTab={effectiveHostTab}
               simpleMode={collapseAdvanced}
-              onBack={() => {
-                setEditingHost(null);
-                setActiveHostTab("general");
-              }}
+              onBack={requestCloseHostEditor}
               onSave={(saved) => {
                 const updated = sshHostToHost(
                   saved as unknown as SSHHostWithStatus,
@@ -493,13 +506,13 @@ export function HostManager({
                   return [...prev, updated];
                 });
                 window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-                setEditingHost(null);
-                setActiveHostTab("general");
+                closeHostEditor();
               }}
               protocols={editingProtocols}
               onProtocolChange={(p) =>
                 setEditingProtocols((prev) => ({ ...prev, ...p }))
               }
+              onDirtyChange={setHostEditorDirty}
               onTabChange={setActiveHostTab}
               hosts={hosts}
               credentials={credentials}
@@ -666,6 +679,35 @@ export function HostManager({
                 className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
               >
                 {t("hosts.deleteConfirmBtn")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUnsavedHostDialog && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-popover border border-border shadow-xl w-full max-w-xs flex flex-col gap-4 p-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-semibold text-foreground">
+                {t("common.unsavedChanges")}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("hosts.unsavedChangesDescription")}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowUnsavedHostDialog(false)}
+                className="px-3 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                {t("hosts.keepEditing")}
+              </button>
+              <button
+                onClick={closeHostEditor}
+                className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
+              >
+                {t("hosts.discardChanges")}
               </button>
             </div>
           </div>
