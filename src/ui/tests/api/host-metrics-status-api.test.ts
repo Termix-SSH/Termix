@@ -21,7 +21,10 @@ vi.mock("@/lib/connection-origin", () => ({
   resolveConnectionOrigin: resolveConnectionOriginMock,
 }));
 
-import { getAllServerStatuses } from "../../api/host-metrics-status-api";
+import {
+  getAllServerStatuses,
+  getServerMetricsById,
+} from "../../api/host-metrics-status-api";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -75,5 +78,23 @@ describe("status check origin routing", () => {
       params: { hostIds: "" },
       __silentRetry: true,
     });
+  });
+});
+
+describe("metrics request coalescing", () => {
+  it("shares simultaneous reads for the same host", async () => {
+    statsApiMock.get.mockResolvedValueOnce({
+      status: 200,
+      data: { cpu: { percent: 12 } },
+    });
+
+    const [first, second] = await Promise.all([
+      getServerMetricsById(991),
+      getServerMetricsById(991),
+    ]);
+
+    expect(first).toEqual({ cpu: { percent: 12 } });
+    expect(second).toBe(first);
+    expect(statsApiMock.get).toHaveBeenCalledOnce();
   });
 });

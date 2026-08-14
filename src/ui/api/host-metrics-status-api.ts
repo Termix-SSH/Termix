@@ -10,6 +10,7 @@ import type { ServerMetrics, ServerStatus } from "@/main-axios";
 import { getCachedServerStatuses } from "@/lib/hosts-request-cache";
 import { resolveConnectionOrigin } from "@/lib/connection-origin";
 import type { SSHHost } from "@/types/index";
+import { createKeyedRequestCache } from "@/lib/keyed-request-cache";
 
 // Metrics collection/viewer registration below (startMetricsPolling,
 // registerMetricsViewer, etc.) is NOT origin-routed: the backend that
@@ -52,6 +53,8 @@ type ConnectErrorResponse = {
 
 // SERVER STATISTICS
 // ============================================================================
+
+const metricsCache = createKeyedRequestCache<ServerMetrics | null>(1_500, 100);
 
 /**
  * Progressive retry schedule for the background /status poll.
@@ -188,25 +191,24 @@ export async function getServerStatusById(id: number): Promise<ServerStatus> {
 export async function getServerMetricsById(
   id: number,
 ): Promise<ServerMetrics | null> {
-  try {
-    const response = await statsApi.get(`/metrics/${id}`, {
-      // Treat 404 as an expected "no metrics yet / disabled" signal rather
-      // than an error so we don't spam warn logs on the client.
-      validateStatus: (status) => status === 200 || status === 404,
-    });
-    if (response.status === 404) {
-      return null;
+  return metricsCache.get(String(id), async () => {
+    try {
+      const response = await statsApi.get(`/metrics/${id}`, {
+        // Treat 404 as an expected "no metrics yet / disabled" signal rather
+        // than an error so we don't spam warn logs on the client.
+        validateStatus: (status) => status === 200 || status === 404,
+      });
+      if (response.status === 404) return null;
+      return response.data;
+    } catch (error) {
+      // If a 404 still slips through (e.g. intercepted before reaching here),
+      // swallow it quietly; everything else still flows through handleApiError.
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return null;
+      }
+      handleApiError(error, "fetch server metrics");
     }
-    return response.data;
-  } catch (error) {
-    // If a 404 still slips through (e.g. intercepted before reaching here),
-    // swallow it quietly; everything else still flows through handleApiError.
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      return null;
-    }
-    handleApiError(error, "fetch server metrics");
-    throw error;
-  }
+  });
 }
 
 export async function startMetricsPolling(hostId: number): Promise<{
@@ -219,6 +221,7 @@ export async function startMetricsPolling(hostId: number): Promise<{
 }> {
   try {
     const response = await statsApi.post(`/metrics/start/${hostId}`);
+    metricsCache.invalidate(String(hostId));
     return response.data;
   } catch (error: unknown) {
     if (
@@ -272,6 +275,7 @@ export async function registerMetricsViewer(hostId: number): Promise<{
     const response = await statsApi.post("/metrics/register-viewer", {
       hostId,
     });
+    metricsCache.invalidate(String(hostId));
     return response.data;
   } catch (error) {
     handleApiError(error, "register metrics viewer");
@@ -306,6 +310,7 @@ export async function submitMetricsTOTP(
       sessionId,
       totpCode,
     });
+    metricsCache.invalidate();
     return response.data;
   } catch (error) {
     handleApiError(error, "submit metrics TOTP");
@@ -326,6 +331,7 @@ export async function notifyHostCreatedOrUpdated(
 ): Promise<void> {
   try {
     await statsApi.post("/host-updated", { hostId });
+    metricsCache.invalidate(String(hostId));
   } catch (error) {
     console.warn("Failed to notify stats server of host update:", error);
   }

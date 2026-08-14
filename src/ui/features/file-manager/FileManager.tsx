@@ -81,6 +81,10 @@ import type {
   SSHConnectionError,
 } from "./file-manager-types.ts";
 import { formatFileSize } from "./file-manager-utils.ts";
+import {
+  invalidateCachedFileList,
+  peekCachedFileList,
+} from "@/lib/file-list-request-cache";
 
 const LARGE_FILE_WARNING_SIZE = 50 * 1024 * 1024;
 
@@ -113,6 +117,7 @@ function FileManagerContent({
   ]);
   const [navIndex, setNavIndex] = useState(0);
   const [files, setFiles] = useState<FileItem[]>([]);
+  const directoryRequestRef = useRef(0);
   const [isLoading, setIsLoading] = useState(false);
   const [sshSessionId, setSshSessionId] = useState<string | null>(null);
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
@@ -604,6 +609,7 @@ function FileManagerContent({
         console.error("Cannot load directory: no SSH session ID");
         return false;
       }
+      const requestId = ++directoryRequestRef.current;
 
       let resolvedPath = path;
       if (path.includes("$") || path.startsWith("~")) {
@@ -615,12 +621,19 @@ function FileManagerContent({
       }
 
       currentLoadingPathRef.current = resolvedPath;
-      setIsLoading(true);
+      const cached = peekCachedFileList(sshSessionId, resolvedPath);
+      if (cached) {
+        setFiles(cached.files);
+        clearSelection();
+      }
+      setIsLoading(!cached);
 
       try {
-        const response = await listSSHFiles(sshSessionId, resolvedPath);
+        const response = await listSSHFiles(sshSessionId, resolvedPath, {
+          force: cached !== null,
+        });
 
-        if (currentLoadingPathRef.current !== resolvedPath) {
+        if (directoryRequestRef.current !== requestId) {
           return false;
         }
 
@@ -633,7 +646,7 @@ function FileManagerContent({
         clearSelection();
         return true;
       } catch (error: unknown) {
-        if (currentLoadingPathRef.current === resolvedPath) {
+        if (directoryRequestRef.current === requestId) {
           // ApiError has .status directly; raw axios errors have .response.status
           const apiError = error as {
             status?: number;
@@ -744,7 +757,7 @@ function FileManagerContent({
         }
         return false;
       } finally {
-        if (currentLoadingPathRef.current === resolvedPath) {
+        if (directoryRequestRef.current === requestId) {
           setIsLoading(false);
           currentLoadingPathRef.current = "";
         }
@@ -771,7 +784,12 @@ function FileManagerContent({
 
   const navigateTo = useCallback(
     (path: string) => {
-      if (sshSessionId) setIsLoading(true);
+      directoryRequestRef.current += 1;
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setCurrentPath(path);
       setNavHistory((prev) => {
         const next = [...prev.slice(0, navIndex + 1), path];
@@ -784,19 +802,31 @@ function FileManagerContent({
 
   const goBack = useCallback(() => {
     if (navIndex > 0) {
-      if (sshSessionId) setIsLoading(true);
+      directoryRequestRef.current += 1;
       const newIndex = navIndex - 1;
+      const path = navHistory[newIndex];
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setNavIndex(newIndex);
-      setCurrentPath(navHistory[newIndex]);
+      setCurrentPath(path);
     }
   }, [navIndex, navHistory, sshSessionId]);
 
   const goForward = useCallback(() => {
     if (navIndex < navHistory.length - 1) {
-      if (sshSessionId) setIsLoading(true);
+      directoryRequestRef.current += 1;
       const newIndex = navIndex + 1;
+      const path = navHistory[newIndex];
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setNavIndex(newIndex);
-      setCurrentPath(navHistory[newIndex]);
+      setCurrentPath(path);
     }
   }, [navIndex, navHistory, sshSessionId]);
 
@@ -834,11 +864,12 @@ function FileManagerContent({
     }
 
     setLastRefreshTime(now);
+    if (sshSessionId) invalidateCachedFileList(sshSessionId, currentPath);
     // Force reset loading state to ensure refresh is not blocked
     setIsLoading(false);
     currentLoadingPathRef.current = "";
     loadDirectory(currentPath);
-  }, [currentPath, lastRefreshTime, loadDirectory]);
+  }, [currentPath, lastRefreshTime, loadDirectory, sshSessionId]);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -1431,7 +1462,12 @@ function FileManagerContent({
 
   async function handleFileOpen(file: FileItem) {
     if (file.type === "directory") {
-      if (sshSessionId) setIsLoading(true);
+      directoryRequestRef.current += 1;
+      const cached = sshSessionId
+        ? peekCachedFileList(sshSessionId, file.path)
+        : null;
+      if (cached) setFiles(cached.files);
+      setIsLoading(!!sshSessionId && !cached);
       setCurrentPath(file.path);
       return;
     }
@@ -1451,6 +1487,14 @@ function FileManagerContent({
     await recordRecentFile(file);
     openFileWindow(file, sshSessionId);
   }
+
+  const prefetchDirectory = useCallback(
+    (file: FileItem) => {
+      if (!sshSessionId || file.type !== "directory") return;
+      void listSSHFiles(sshSessionId, file.path).catch(() => {});
+    },
+    [sshSessionId],
+  );
 
   function handleContextMenu(event: React.MouseEvent, file?: FileItem) {
     event.preventDefault();
@@ -2984,6 +3028,7 @@ function FileManagerContent({
                 files={filteredFiles}
                 selectedFiles={selectedFiles}
                 onFileOpen={handleFileOpen}
+                onDirectoryIntent={prefetchDirectory}
                 onSelectionChange={setSelection}
                 onRefresh={handleRefreshDirectory}
                 onUpload={handleFilesDropped}

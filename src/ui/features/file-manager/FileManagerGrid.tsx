@@ -46,6 +46,7 @@ interface FileManagerGridProps {
   files: FileItem[];
   selectedFiles: FileItem[];
   onFileOpen: (file: FileItem) => void;
+  onDirectoryIntent?: (file: FileItem) => void;
   onSelectionChange: (files: FileItem[]) => void;
   onRefresh: () => void;
   onUpload?: (files: FileList) => void;
@@ -162,6 +163,7 @@ export function FileManagerGrid({
   files,
   selectedFiles,
   onFileOpen,
+  onDirectoryIntent,
   onSelectionChange,
   onRefresh,
   onUpload,
@@ -714,6 +716,8 @@ export function FileManagerGrid({
 
   const handleFileClick = (file: FileItem, event: React.MouseEvent) => {
     event.stopPropagation();
+
+    if (file.type === "directory") onDirectoryIntent?.(file);
 
     if (gridRef.current && !createIntent) {
       gridRef.current.focus();
