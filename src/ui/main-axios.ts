@@ -1315,7 +1315,7 @@ export async function transferToHost(
   destPath: string,
   move?: boolean,
   methodPreference?: TransferMethodPreference,
-  parallelSegmentCount = 2,
+  parallelSegmentCount?: number,
 ): Promise<{ transferId: string }> {
   try {
     fileLogger.info("Starting host transfer", {
