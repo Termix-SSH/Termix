@@ -96,6 +96,7 @@ export function HostEditor({
   onSave,
   protocols,
   onProtocolChange,
+  onDirtyChange,
   onTabChange,
   hosts,
   credentials,
@@ -110,6 +111,7 @@ export function HostEditor({
   onSave: (saved: SSHHost) => void;
   protocols: HostProtocols;
   onProtocolChange: (p: Partial<typeof protocols>) => void;
+  onDirtyChange?: (dirty: boolean) => void;
   onTabChange: (tab: string) => void;
   hosts: Host[];
   credentials: { id: string; name: string; username: string }[];
@@ -121,8 +123,10 @@ export function HostEditor({
   const { setPreviewTerminalTheme } = useTabsSafe();
   const [form, setForm] = useState(() => createHostEditorForm(host));
 
-  const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+  const setField = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => {
+    onDirtyChange?.(true);
     setForm((p) => ({ ...p, [k]: v }));
+  };
 
   const setGuacField = (key: string, value: unknown) =>
     setField("guacamoleConfig", { ...form.guacamoleConfig, [key]: value });
@@ -413,6 +417,7 @@ export function HostEditor({
     proto: keyof typeof protocols,
     value: boolean,
   ) => {
+    onDirtyChange?.(true);
     onProtocolChange({ [proto]: value });
     const tabForProto: Record<string, string> = {
       enableSsh: "ssh",
