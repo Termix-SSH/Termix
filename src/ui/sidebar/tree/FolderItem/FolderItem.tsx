@@ -67,6 +67,7 @@ export function FolderItem({
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
+  openOnDoubleClick = false,
   reorderMode = false,
   onReorderDrop,
   onFolderDragStart,
@@ -108,6 +109,7 @@ export function FolderItem({
   density?: HostDensity;
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
+  openOnDoubleClick?: boolean;
   /** When true (manual sort mode), the top/bottom edges become reorder drop zones instead of folder-assignment. */
   reorderMode?: boolean;
   onReorderDrop?: (targetKey: string, position: "before" | "after") => void;
@@ -303,6 +305,7 @@ export function FolderItem({
                 density={density}
                 trayTrigger={trayTrigger}
                 showTags={showTags}
+                openOnDoubleClick={openOnDoubleClick}
                 reorderMode={reorderMode}
                 onReorderDrop={onReorderDrop}
                 onFolderDragStart={onFolderDragStart}
@@ -338,6 +341,7 @@ export function FolderItem({
                 density={density}
                 trayTrigger={trayTrigger}
                 showTags={showTags}
+                openOnDoubleClick={openOnDoubleClick}
                 reorderMode={reorderMode}
                 onReorderDrop={
                   onReorderDrop

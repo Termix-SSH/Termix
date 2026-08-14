@@ -45,6 +45,8 @@ export interface HostSidebarDisplayPreferences {
   showTags: boolean;
   trayTrigger: HostTrayTrigger;
   statusColorScheme: StatusColorScheme;
+  /** When true, a host row needs a double click to launch its session. */
+  openOnDoubleClick: boolean;
 }
 
 export interface HostSidebarPreferences {
@@ -124,6 +126,7 @@ export function defaultHostSidebarPreferences(): HostSidebarPreferences {
       showTags: true,
       trayTrigger: "always",
       statusColorScheme: "accent",
+      openOnDoubleClick: false,
     },
   };
 }
@@ -193,6 +196,10 @@ export function sanitizeHostSidebarPreferences(
     )
       ? (displayObj.statusColorScheme as StatusColorScheme)
       : defaults.display.statusColorScheme,
+    openOnDoubleClick:
+      typeof displayObj.openOnDoubleClick === "boolean"
+        ? displayObj.openOnDoubleClick
+        : defaults.display.openOnDoubleClick,
   };
 
   return {

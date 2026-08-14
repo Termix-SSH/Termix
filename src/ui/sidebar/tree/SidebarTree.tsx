@@ -83,6 +83,7 @@ export function SidebarTree({
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
+  openOnDoubleClick = false,
 }: {
   children: (Host | HostFolder)[];
   onOpenTab: (host: Host, type: TabType) => void;
@@ -98,6 +99,7 @@ export function SidebarTree({
   density?: HostDensity;
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
+  openOnDoubleClick?: boolean;
 }) {
   const { t } = useTranslation();
   // Knobs with no other owner come straight from the interface preset; the
@@ -869,6 +871,7 @@ export function SidebarTree({
                       density={density}
                       trayTrigger={trayTrigger}
                       showTags={showTags}
+                      openOnDoubleClick={openOnDoubleClick}
                       reorderMode={reorderMode}
                       onReorderDrop={handleReorderDrop}
                       onFolderDragStart={(path) =>
@@ -933,6 +936,7 @@ export function SidebarTree({
                       density={density}
                       trayTrigger={trayTrigger}
                       showTags={showTags}
+                      openOnDoubleClick={openOnDoubleClick}
                       showResourceBars={showResourceBars}
                       showStatusStripes={showStatusStripes}
                       rowActions={rowActions}

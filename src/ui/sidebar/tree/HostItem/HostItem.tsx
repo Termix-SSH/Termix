@@ -220,6 +220,7 @@ export function HostItem({
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
+  openOnDoubleClick = false,
   showResourceBars = true,
   showStatusStripes = true,
   rowActions = "full",
@@ -256,6 +257,8 @@ export function HostItem({
   density?: HostDensity;
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
+  /** Requires a double click to launch instead of a single click. */
+  openOnDoubleClick?: boolean;
   /** Preset-driven: hides the CPU/RAM bars without changing density. */
   showResourceBars?: boolean;
   /** Preset-driven: hides the per-row status color stripe. */
@@ -890,11 +893,13 @@ export function HostItem({
           } else {
             onTrayOpenChange?.(!isTrayOpen);
           }
+          return;
         }
+        if (openOnDoubleClick) return;
+        openHostTab(defaultAction);
       }}
       onDoubleClick={(e) => {
-        // Desktop launches only on double click, single click is reserved for selection.
-        if (selectionMode || isTouchOnly) return;
+        if (selectionMode || isTouchOnly || !openOnDoubleClick) return;
         e.stopPropagation();
         openHostTab(defaultAction);
       }}

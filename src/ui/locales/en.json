@@ -1320,6 +1320,8 @@
     "actionsOnly": "Connect only, rest on click",
     "actionsHover": "Show on hover",
     "actionsClick": "Show on click",
+    "openOnDoubleClick": "Open on double click",
+    "openOnDoubleClickDesc": "Require a double click to open a host session instead of a single click",
     "deletedHost": "Deleted {{name}}",
     "copiedToClipboard": "Copied to clipboard",
     "terminalUrlCopied": "Terminal URL copied",

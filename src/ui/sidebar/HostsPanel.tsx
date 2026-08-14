@@ -1043,6 +1043,7 @@ export function HostsPanel({
           density={sidebarPrefs.display.density}
           trayTrigger={sidebarPrefs.display.trayTrigger}
           showTags={sidebarPrefs.display.showTags}
+          openOnDoubleClick={sidebarPrefs.display.openOnDoubleClick}
         />
       </div>
 

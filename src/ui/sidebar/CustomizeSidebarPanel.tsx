@@ -126,6 +126,20 @@ export function CustomizeSidebarPanel({
               </select>
             </div>
             <SettingRow
+              label={t("hosts.openOnDoubleClick")}
+              description={t("hosts.openOnDoubleClickDesc")}
+            >
+              <FakeSwitch
+                checked={preferences.display.openOnDoubleClick}
+                onChange={(v) =>
+                  update((prev) => ({
+                    ...prev,
+                    display: { ...prev.display, openOnDoubleClick: v },
+                  }))
+                }
+              />
+            </SettingRow>
+            <SettingRow
               label={t("newUi.sidebar.userProfile.statusColors")}
               description={t("newUi.sidebar.userProfile.statusColorsDesc")}
             >

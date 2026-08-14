@@ -25,6 +25,7 @@ describe("defaultHostSidebarPreferences", () => {
         showTags: true,
         trayTrigger: "always",
         statusColorScheme: "accent",
+        openOnDoubleClick: false,
       },
     });
   });
@@ -61,9 +62,20 @@ describe("sanitizeHostSidebarPreferences", () => {
         showTags: false,
         trayTrigger: "click",
         statusColorScheme: "status",
+        openOnDoubleClick: true,
       },
     };
     expect(sanitizeHostSidebarPreferences(valid)).toEqual(valid);
+  });
+
+  it("defaults openOnDoubleClick to false when missing or not a boolean", () => {
+    expect(
+      sanitizeHostSidebarPreferences({ display: {} }).display.openOnDoubleClick,
+    ).toBe(false);
+    expect(
+      sanitizeHostSidebarPreferences({ display: { openOnDoubleClick: "yes" } })
+        .display.openOnDoubleClick,
+    ).toBe(false);
   });
 
   it("falls back to defaults for invalid enum values", () => {
