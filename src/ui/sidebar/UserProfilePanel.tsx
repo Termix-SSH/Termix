@@ -84,6 +84,7 @@ import { useTheme } from "@/components/theme-provider";
 import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
+import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
 
 type UserProfileSection =
   | "account"
@@ -954,6 +955,7 @@ export function UserProfilePanel({
   }
 
   function resetToDefaults() {
+    clearLocalAdaptivePreferences();
     const DEFAULT_ACCENT = "#f59145";
     setTheme("system");
     setFontSize("md");
