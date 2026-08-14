@@ -2,6 +2,7 @@
 import {
   Box,
   Boxes,
+  Braces,
   FolderSearch,
   HardDrive,
   LayoutDashboard,
@@ -141,6 +142,9 @@ const SessionLogsPanel = lazy(() =>
 );
 const SnippetsPanel = lazy(() =>
   import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
+);
+const MacrosPanel = lazy(() =>
+  import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
 );
 const HistoryPanel = lazy(() =>
   import("@/sidebar/HistoryPanel").then((m) => ({ default: m.HistoryPanel })),
@@ -322,6 +326,8 @@ export function tabIcon(type: TabType) {
       return <ScrollText className="size-3.5" />;
     case "snippets":
       return <Play className="size-3.5" />;
+    case "macros":
+      return <Braces className="size-3.5" />;
     case "history":
       return <Clock className="size-3.5" />;
     case "ssh-tools":
@@ -651,6 +657,17 @@ export function renderTabContent(
       return withTabSuspense(
         <PanelTabFrame>
           <SnippetsPanel
+            terminalTabs={panelProps?.terminalTabs ?? []}
+            activeTabId={panelProps?.targetTerminalTabId ?? ""}
+            storageMode={panelProps?.storageMode ?? "local"}
+          />
+        </PanelTabFrame>,
+      );
+
+    case "macros":
+      return withTabSuspense(
+        <PanelTabFrame>
+          <MacrosPanel
             terminalTabs={panelProps?.terminalTabs ?? []}
             activeTabId={panelProps?.targetTerminalTabId ?? ""}
             storageMode={panelProps?.storageMode ?? "local"}

@@ -150,6 +150,7 @@ const ALL_HIDEABLE_RAIL_VIEWS = [
   "serial",
   "ssh-tools",
   "snippets",
+  "macros",
   "history",
   "split-screen",
   "connections",

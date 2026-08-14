@@ -1,5 +1,6 @@
 import {
   Boxes,
+  Braces,
   Clock,
   Fingerprint,
   Hammer,
@@ -101,6 +102,14 @@ export const RAIL_ITEMS: RailItemDef[] = [
     labelKey: "nav.snippets",
     separatorAfter: true,
     mobilePrimary: true,
+    promotable: true,
+    rightDockable: true,
+  },
+  {
+    id: "macros",
+    icon: Braces,
+    labelKey: "nav.macros",
+    separatorAfter: true,
     promotable: true,
     rightDockable: true,
   },

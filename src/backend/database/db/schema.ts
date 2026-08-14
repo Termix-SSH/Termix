@@ -1150,6 +1150,7 @@ export const userPreferences = sqliteTable("user_preferences", {
   customKeybindings: text("custom_keybindings"),
   terminalDefaults: text("terminal_defaults"),
   rdpDefaults: text("rdp_defaults"),
+  terminalMacros: text("terminal_macros"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),

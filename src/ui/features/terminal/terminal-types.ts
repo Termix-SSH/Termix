@@ -28,6 +28,7 @@ export interface TerminalHandle {
   fit: () => void;
   focus: () => void;
   sendInput: (data: string) => void;
+  subscribeOutput: (listener: (data: string) => void) => () => void;
   paste: (text: string) => void;
   notifyResize: () => void;
   refresh: () => void;
