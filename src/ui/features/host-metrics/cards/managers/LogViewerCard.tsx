@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { managerGet, managerGetSub } from "@/main-axios";
 import { extractError } from "./useManagerData";
 import { ManagerCardShell } from "./ManagerCardShell";
+import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 
 interface LogFiles {
   common: string[];
@@ -26,6 +27,8 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<string[]>([]);
   const bodyRef = useRef<HTMLPreElement | null>(null);
+  const contentRef = useRef(content);
+  contentRef.current = content;
 
   // Load the host's actual log files once.
   useEffect(() => {
@@ -42,44 +45,56 @@ export function LogViewerCard({ hostId }: { hostId: number | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hostId]);
 
-  const fetchLog = async () => {
-    if (hostId == null) return;
+  const fetchLog = useCallback(async () => {
+    if (hostId == null) return false;
     const params: Record<string, string | number> = { lines };
     if (mode === "unit") {
-      if (!unit.trim()) return;
+      if (!unit.trim()) return false;
       params.unit = unit.trim();
     } else {
       const p = customPath.trim() || path;
-      if (!p) return;
+      if (!p) return false;
       params.path = p;
     }
     setLoading(true);
     setError(null);
     try {
       const res = await managerGet<{ content: string }>(hostId, "logs", params);
-      setContent(res.content || "");
-      requestAnimationFrame(() => {
-        if (bodyRef.current)
-          bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-      });
+      const next = res.content || "";
+      const changed = next !== contentRef.current;
+      if (changed) {
+        contentRef.current = next;
+        setContent(next);
+        requestAnimationFrame(() => {
+          if (bodyRef.current)
+            bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+        });
+      }
+      return changed;
     } catch (e) {
       setError(extractError(e).message);
     } finally {
       setLoading(false);
     }
-  };
+  }, [customPath, hostId, lines, mode, path, unit]);
 
   useEffect(() => {
-    fetchLog();
+    void fetchLog();
+    // Custom paths are applied on blur/manual refresh, not on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, path, unit, lines]);
+  }, [hostId, mode, path, unit, lines]);
 
-  useEffect(() => {
-    if (!follow) return;
-    const id = setInterval(fetchLog, 3000);
-    return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [follow, mode, path, unit, lines, customPath]);
+  useAdaptivePolling(
+    fetchLog,
+    {
+      minIntervalMs: 3_000,
+      maxIntervalMs: 18_000,
+      stablePollsPerStep: 2,
+      maxRequestDutyCycle: 0.2,
+    },
+    follow,
+    { runImmediately: false },
+  );
 
   const shown = useMemo(() => {
     if (!grep) return content;

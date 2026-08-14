@@ -21,6 +21,10 @@ import {
   stopMetricsPolling,
 } from "@/api/host-metrics-status-api";
 import type { Host, TabType } from "@/types/ui-types";
+import {
+  getPollingEnvironmentMultiplier,
+  runAdaptivePolling,
+} from "@/lib/adaptive-polling";
 
 type ToolbarDensity = "icon" | "labeled" | "expanded";
 
@@ -204,20 +208,36 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
     }
 
     let cancelled = false;
-    let intervalId: number | undefined;
+    let stopPolling: (() => void) | undefined;
     let viewerSessionId: string | undefined;
+    let previousMetrics: typeof metrics = null;
 
     const poll = async () => {
       try {
         const data = await getServerMetricsById(hostId);
         if (cancelled || !data) return;
-        setMetrics({
+        const next = {
           cpu: data.cpu?.percent ?? null,
           memory: data.memory?.percent ?? null,
           disk: data.disk?.percent ?? null,
-        });
+        };
+        const changed =
+          !previousMetrics ||
+          (["cpu", "memory", "disk"] as const).some((key) => {
+            const previous = previousMetrics?.[key];
+            const current = next[key];
+            return (
+              previous == null ||
+              current == null ||
+              Math.abs(current - previous) >= 2
+            );
+          });
+        previousMetrics = next;
+        setMetrics(next);
+        return changed;
       } catch {
         // keep prior value on transient errors
+        return false;
       }
     };
 
@@ -230,8 +250,16 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
           return;
         }
         viewerSessionId = result.viewerSessionId;
-        await poll();
-        intervalId = window.setInterval(poll, 5000);
+        stopPolling = runAdaptivePolling(
+          poll,
+          {
+            minIntervalMs: 5_000,
+            maxIntervalMs: 20_000,
+            stablePollsPerStep: 2,
+            maxRequestDutyCycle: 0.2,
+          },
+          { intervalMultiplier: getPollingEnvironmentMultiplier },
+        );
       } catch {
         if (!cancelled) setStatsAvailable(false);
       }
@@ -241,7 +269,7 @@ export const TerminalToolbar: React.FC<TerminalToolbarProps> = ({
 
     return () => {
       cancelled = true;
-      if (intervalId) window.clearInterval(intervalId);
+      stopPolling?.();
       void stopMetricsPolling(hostId, viewerSessionId).catch(() => {});
     };
   }, [showStats, hostId, collapsed]);

@@ -14,6 +14,7 @@ import { getContainerStats } from "@/main-axios.ts";
 import { useTranslation } from "react-i18next";
 import { SectionCard } from "@/components/section-card";
 import { DockerBadge } from "./ContainerCard.tsx";
+import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
 
 interface ContainerStatsProps {
   sessionId: string;
@@ -32,14 +33,26 @@ export function ContainerStats({
   const [stats, setStats] = React.useState<DockerStats | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const statsRef = React.useRef(stats);
+  statsRef.current = stats;
 
   const fetchStats = React.useCallback(async () => {
-    if (containerState !== "running") return;
+    if (containerState !== "running") return false;
     setIsLoading(true);
     setError(null);
     try {
       const data = await getContainerStats(sessionId, containerId);
+      const previous = statsRef.current;
+      const changed =
+        !previous ||
+        Math.abs(parseFloat(data.cpu) - parseFloat(previous.cpu)) >= 1.5 ||
+        Math.abs(
+          parseFloat(data.memoryPercent) - parseFloat(previous.memoryPercent),
+        ) >= 1 ||
+        data.pids !== previous.pids;
+      statsRef.current = data;
       setStats(data);
+      return changed;
     } catch (err) {
       setError(getErrorMessage(err, t("docker.failedToFetchStats")));
     } finally {
@@ -47,14 +60,16 @@ export function ContainerStats({
     }
   }, [sessionId, containerId, containerState, t]);
 
-  React.useEffect(() => {
-    fetchStats();
-    const interval = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void fetchStats();
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [fetchStats]);
+  useAdaptivePolling(
+    fetchStats,
+    {
+      minIntervalMs: 2_000,
+      maxIntervalMs: 12_000,
+      stablePollsPerStep: 2,
+      maxRequestDutyCycle: 0.2,
+    },
+    containerState === "running",
+  );
 
   if (containerState !== "running") {
     return (

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   computeAdaptivePollDelay,
+  getPollingEnvironmentMultiplier,
   runAdaptivePolling,
 } from "../../lib/adaptive-polling.ts";
 
@@ -37,6 +38,30 @@ describe("adaptive polling", () => {
     const state = { stablePolls: 0, consecutiveFailures: 2 };
     expect(computeAdaptivePollDelay(policy, state, () => 0)).toBe(3600);
     expect(computeAdaptivePollDelay(policy, state, () => 1)).toBe(4400);
+  });
+
+  it("limits request duty cycle when polling is expensive", () => {
+    expect(
+      computeAdaptivePollDelay(
+        {
+          minIntervalMs: 1000,
+          maxIntervalMs: 30000,
+          maxRequestDutyCycle: 0.2,
+          jitterRatio: 0,
+        },
+        {
+          stablePolls: 0,
+          consecutiveFailures: 0,
+          lastPollDurationMs: 2000,
+        },
+      ),
+    ).toBe(8000);
+  });
+
+  it("slows non-critical polling on constrained connections", () => {
+    expect(getPollingEnvironmentMultiplier({ saveData: true })).toBe(2);
+    expect(getPollingEnvironmentMultiplier({ effectiveType: "2g" })).toBe(1.75);
+    expect(getPollingEnvironmentMultiplier({ effectiveType: "4g" })).toBe(1);
   });
 
   it("never overlaps requests", async () => {
