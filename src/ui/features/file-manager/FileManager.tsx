@@ -75,6 +75,7 @@ import {
 } from "@/main-axios.ts";
 import { getPollingEnvironmentMultiplier } from "@/lib/adaptive-polling";
 import { shouldPrefetchFileContent } from "@/lib/file-content-request-cache";
+import { preloadFilePreview } from "./file-preview-preload";
 import { beginTransferProgressMonitoring } from "./transferProgressMonitor.tsx";
 import { createFormatTransferMetrics } from "./transferMetricsFormat.ts";
 import type {
@@ -1570,6 +1571,7 @@ function FileManagerContent({
         return;
       }
       if (shouldPrefetchFileContent(file, getPollingEnvironmentMultiplier())) {
+        preloadFilePreview(file.name);
         void readSSHFile(sshSessionId, file.path).catch(() => {});
       }
     },

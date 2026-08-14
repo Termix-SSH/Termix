@@ -45,32 +45,20 @@ import {
 import { Button } from "@/components/button.tsx";
 import { Kbd, KbdKey } from "@/components/kbd.tsx";
 import type { CodeEditorHandle } from "./CodeEditor.tsx";
+import {
+  loadAudioPreview,
+  loadCodeEditor,
+  loadImagePreview,
+  loadMarkdownRenderer,
+  loadPdfPreview,
+  resolveFilePreviewKind,
+} from "../file-preview-preload";
 
-const CodeEditor = lazy(() =>
-  import("./CodeEditor.tsx").then((module) => ({
-    default: module.CodeEditor,
-  })),
-);
-const ImagePreview = lazy(() =>
-  import("./ImagePreview.tsx").then((module) => ({
-    default: module.ImagePreview,
-  })),
-);
-const MarkdownRenderer = lazy(() =>
-  import("./MarkdownRenderer.tsx").then((module) => ({
-    default: module.MarkdownRenderer,
-  })),
-);
-const PdfPreview = lazy(() =>
-  import("./PdfPreview.tsx").then((module) => ({
-    default: module.PdfPreview,
-  })),
-);
-const AudioPreview = lazy(() =>
-  import("./AudioPreview.tsx").then((module) => ({
-    default: module.AudioPreview,
-  })),
-);
+const CodeEditor = lazy(loadCodeEditor);
+const ImagePreview = lazy(loadImagePreview);
+const MarkdownRenderer = lazy(loadMarkdownRenderer);
+const PdfPreview = lazy(loadPdfPreview);
+const AudioPreview = lazy(loadAudioPreview);
 
 interface FileItem {
   name: string;
@@ -157,84 +145,45 @@ function getFileType(filename: string): {
   icon: React.ReactNode;
   color: string;
 } {
-  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  const kind = resolveFilePreviewKind(filename);
 
-  const imageExts = ["png", "jpg", "jpeg", "gif", "bmp", "svg", "webp"];
-  const videoExts = ["mp4", "avi", "mkv", "mov", "wmv", "flv", "webm"];
-  const audioExts = ["mp3", "wav", "flac", "ogg", "aac", "m4a"];
-  const textExts = ["txt", "readme"];
-  const markdownExts = ["md", "markdown", "mdown", "mkdn", "mdx"];
-  const pdfExts = ["pdf"];
-  const codeExts = [
-    "js",
-    "ts",
-    "jsx",
-    "tsx",
-    "py",
-    "java",
-    "cpp",
-    "c",
-    "cs",
-    "php",
-    "rb",
-    "go",
-    "rs",
-    "html",
-    "css",
-    "scss",
-    "less",
-    "json",
-    "xml",
-    "yaml",
-    "yml",
-    "toml",
-    "ini",
-    "conf",
-    "sh",
-    "bash",
-    "zsh",
-    "sql",
-    "vue",
-    "svelte",
-  ];
-
-  if (imageExts.includes(ext)) {
+  if (kind === "image") {
     return {
       type: "image",
       icon: <ImageIcon className="w-6 h-6" />,
       color: "text-green-500",
     };
-  } else if (videoExts.includes(ext)) {
+  } else if (kind === "video") {
     return {
       type: "video",
       icon: <Film className="w-6 h-6" />,
       color: "text-purple-500",
     };
-  } else if (audioExts.includes(ext)) {
+  } else if (kind === "audio") {
     return {
       type: "audio",
       icon: <Music className="w-6 h-6" />,
       color: "text-pink-500",
     };
-  } else if (markdownExts.includes(ext)) {
+  } else if (kind === "markdown") {
     return {
       type: "markdown",
       icon: <FileText className="w-6 h-6" />,
       color: "text-blue-600",
     };
-  } else if (pdfExts.includes(ext)) {
+  } else if (kind === "pdf") {
     return {
       type: "pdf",
       icon: <FileText className="w-6 h-6" />,
       color: "text-red-600",
     };
-  } else if (textExts.includes(ext)) {
+  } else if (kind === "text") {
     return {
       type: "text",
       icon: <FileText className="w-6 h-6" />,
       color: "text-blue-500",
     };
-  } else if (codeExts.includes(ext)) {
+  } else if (kind === "code") {
     return {
       type: "code",
       icon: getLanguageIcon(filename),
