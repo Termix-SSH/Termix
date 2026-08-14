@@ -102,4 +102,20 @@ describe("local adaptive engine", () => {
       }),
     ).toMatchObject({ action: "terminal", confidence: 0, reason: "fallback" });
   });
+
+  it("keeps recent outcome-only actions when a scope reaches its limit", () => {
+    for (let i = 0; i < 13; i++) {
+      recordLocalAdaptiveOutcome(
+        "resource-budget:module",
+        `module:${i}`,
+        { success: true },
+        i,
+      );
+    }
+
+    const stats = getLocalAdaptiveStats("resource-budget:module");
+    expect(Object.keys(stats)).toHaveLength(12);
+    expect(stats["module:0"]).toBeUndefined();
+    expect(stats["module:12"]).toBeDefined();
+  });
 });

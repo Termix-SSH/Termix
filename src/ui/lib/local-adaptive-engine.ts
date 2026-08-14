@@ -147,7 +147,11 @@ function trimStore(store: AdaptiveStore, now: number): void {
   for (const scope of Object.values(store.scopes)) {
     scope.actions = Object.fromEntries(
       Object.entries(scope.actions)
-        .sort(([, a], [, b]) => decayedWeight(b, now) - decayedWeight(a, now))
+        .sort(
+          ([, a], [, b]) =>
+            decayedWeight(b, now) - decayedWeight(a, now) ||
+            b.updatedAt - a.updatedAt,
+        )
         .slice(0, MAX_ACTIONS_PER_SCOPE),
     );
   }
