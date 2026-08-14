@@ -14,6 +14,12 @@ describe("adaptive resource budget", () => {
   beforeEach(() => {
     clearLocalAdaptiveEngine();
     resetAdaptiveResourceState();
+    // jsdom reports the host's real core count, so the tier the runtime picks
+    // would otherwise depend on the machine (CI runners have 4 cores).
+    Object.defineProperty(navigator, "hardwareConcurrency", {
+      value: 8,
+      configurable: true,
+    });
   });
 
   it("uses hard environmental constraints before optional work", () => {
