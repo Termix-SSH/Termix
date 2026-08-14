@@ -62,7 +62,16 @@ describe("local adaptive preferences", () => {
       version: 1,
       scopes: {
         "host-action:42": {
-          actions: { terminal: { weight: 1, updatedAt: 10 } },
+          actions: {
+            terminal: {
+              weight: 1,
+              updatedAt: 10,
+              observations: 0,
+              successes: 0,
+              cancellations: 0,
+              fallbacks: 0,
+            },
+          },
           updatedAt: 10,
         },
       },
