@@ -91,6 +91,10 @@ import {
 import { SnippetVariablesDialog } from "@/components/SnippetVariablesDialog";
 import type { CustomKeybinding } from "@/types/keybindings";
 import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
+import {
+  TerminalLocalEcho,
+  resolveLocalEchoMode,
+} from "@/lib/terminal-local-echo";
 export type { TerminalHandle, TerminalHostConfig } from "./terminal-types.ts";
 
 type HostKeyVerificationData = Omit<
@@ -200,6 +204,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const fitAddonRef = useRef<FitAddon | null>(null);
     const webSocketRef = useRef<WebSocket | null>(null);
     const terminalInputDisposableRef = useRef<{ dispose(): void } | null>(null);
+    const localEchoRef = useRef<TerminalLocalEcho | null>(null);
     const customKeybindingsRef = useRef<CustomKeybinding[]>([]);
     const cachedSnippetsRef = useRef<{ id: number; content: string }[] | null>(
       null,
@@ -1336,6 +1341,12 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           );
         }
         terminalInputDisposableRef.current?.dispose();
+        localEchoRef.current = new TerminalLocalEcho(
+          resolveLocalEchoMode(
+            hostConfig.terminalConfig?.localEcho,
+            localStorage.getItem("terminalLocalEchoMode"),
+          ),
+        );
         terminalInputDisposableRef.current = terminal.onData((data) => {
           if (ws.readyState !== WebSocket.OPEN) return;
           if (data === "\r" || data === "\n") {
@@ -1357,6 +1368,8 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             }
           }
           trackInput(data);
+          const predicted = localEchoRef.current?.handleInput(data);
+          if (predicted) terminal.write(predicted);
           ws.send(JSON.stringify({ type: "input", data }));
         });
 
@@ -1395,7 +1408,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
                 currentAutocompleteCommand.current = "";
               }
 
-              terminal.write(formatTerminalOutput(msg.data));
+              const output =
+                localEchoRef.current?.handleOutput(msg.data) ?? msg.data;
+              terminal.write(formatTerminalOutput(output));
               // Strip ANSI escape codes before testing — newer sudo versions (Ubuntu 26.04+)
               // emit colored prompts with embedded escape sequences that break the regex.
               const strippedData = msg.data.replace(
@@ -1405,7 +1420,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               maybeOfferPasswordFill(strippedData);
             } else {
               const stringData = String(msg.data);
-              terminal.write(formatTerminalOutput(stringData));
+              const output =
+                localEchoRef.current?.handleOutput(stringData) ?? stringData;
+              terminal.write(formatTerminalOutput(output));
             }
           } else if (msg.type === "error") {
             const errorMessage = msg.message || t("terminal.unknownError");

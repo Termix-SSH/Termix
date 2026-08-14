@@ -1833,6 +1833,29 @@ export function UserProfilePanel({
                 }}
               />
             </SettingRow>
+            <div className="flex flex-col gap-1.5 py-3 border-b border-border">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium leading-snug">
+                  {t("newUi.sidebar.userProfile.localEcho")}
+                </span>
+                <span className="text-xs text-muted-foreground leading-snug">
+                  {t("newUi.sidebar.userProfile.localEchoDesc")}
+                </span>
+              </div>
+              <select
+                defaultValue={
+                  localStorage.getItem("terminalLocalEchoMode") ?? "auto"
+                }
+                onChange={(e) =>
+                  localStorage.setItem("terminalLocalEchoMode", e.target.value)
+                }
+                className="h-7 border border-border bg-background px-2 text-xs outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="off">{t("hosts.localEchoOff")}</option>
+                <option value="auto">{t("hosts.localEchoAuto")}</option>
+                <option value="on">{t("hosts.localEchoOn")}</option>
+              </select>
+            </div>
             <SettingRow
               label={t("newUi.sidebar.userProfile.keyboardShortcuts")}
               description={t(

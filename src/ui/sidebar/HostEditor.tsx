@@ -1853,6 +1853,31 @@ export function HostEditor({
                   </SettingRow>
                   <div className="flex flex-col gap-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {t("hosts.localEchoLabel")}
+                    </label>
+                    <select
+                      value={form.localEcho}
+                      onChange={(e) =>
+                        setField(
+                          "localEcho",
+                          e.target.value as "default" | "off" | "auto" | "on",
+                        )
+                      }
+                      className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      <option value="default">
+                        {t("hosts.localEchoDefault")}
+                      </option>
+                      <option value="off">{t("hosts.localEchoOff")}</option>
+                      <option value="auto">{t("hosts.localEchoAuto")}</option>
+                      <option value="on">{t("hosts.localEchoOn")}</option>
+                    </select>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("hosts.localEchoDesc")}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                       {t("hosts.linkClickBehaviorLabel")}
                     </label>
                     <select
