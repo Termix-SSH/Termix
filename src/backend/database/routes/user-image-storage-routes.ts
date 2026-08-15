@@ -244,8 +244,12 @@ export function registerUserImageStorageRoutes(
 
       try {
         const settings = createCurrentSettingsRepository();
-        for (const write of writes) {
-          await settings.set(write.key, write.value);
+        if (typeof settings.setMany === "function") {
+          await settings.setMany(writes);
+        } else {
+          for (const write of writes) {
+            await settings.set(write.key, write.value);
+          }
         }
         const resolved = await resolveTerminalImageStorageSettings(settings);
         res.json(toPublicSettings(resolved));

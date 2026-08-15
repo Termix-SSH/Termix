@@ -345,6 +345,28 @@ describe("terminal image upload route", () => {
       expect(response.body).toMatchObject({ storage: "local" });
     });
 
+    it("returns 503 when local storage inspection fails", async () => {
+      const blocked = path.join(dir, "blocked-file");
+      await fs.writeFile(blocked, "not a directory");
+      state.settings["terminal_image_storage_mode"] = "local";
+      state.settings["terminal_image_local_dir"] = blocked;
+      state.settings["terminal_image_host_path"] = "/host-view/images";
+
+      const response = await invoke({
+        file: {
+          buffer: pngBuffer,
+          mimetype: "image/png",
+          size: pngBuffer.length,
+        },
+      });
+
+      expect(response.statusCode).toBe(503);
+      expect(response.body).toEqual({
+        error: "Unable to inspect local image storage",
+        code: "IMAGE_LOCAL_INSPECTION_FAILED",
+      });
+      expect(JSON.stringify(response.body)).not.toContain(blocked);
+    });
     it("rejects auto mode when no verified storage capability is available", async () => {
       process.env.DATA_DIR = dir;
 
