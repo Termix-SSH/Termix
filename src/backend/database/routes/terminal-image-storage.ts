@@ -317,7 +317,7 @@ function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
         resolve();
         return;
       }
-      const inspect = sftp.lstat ?? sftp.stat;
+      const inspect = (sftp.lstat ?? sftp.stat)?.bind(sftp);
       if (!inspect) {
         reject(err);
         return;
@@ -376,7 +376,7 @@ function waitForRemoteImageLock(
           return;
         }
 
-        const inspect = sftp.lstat ?? sftp.stat;
+        const inspect = (sftp.lstat ?? sftp.stat)?.bind(sftp);
         if (!inspect) {
           reject(
             new TerminalImageStorageError(

@@ -397,6 +397,24 @@ describe("storeImageViaSftp", () => {
     );
   });
 
+  it("preserves SFTP client context for directory inspection", async () => {
+    const base = fakeSftp({ mkdirError: new Error("already exists") });
+    const sftp = base.sftp;
+    sftp.lstat = function (
+      this: ImageSftpClient,
+      _dir: string,
+      callback: (error: Error | undefined, attrs?: { mode?: number }) => void,
+    ) {
+      if (this !== sftp) {
+        callback(new Error("SFTP context lost"));
+        return;
+      }
+      callback(undefined, { mode: 0o40700 });
+    };
+    const result = await storeImageViaSftp(sftp, PNG_BYTES);
+    expect(result.storage).toBe("remote-sftp");
+  });
+
   it("tolerates mkdir failures for an already-existing directory", async () => {
     const { sftp } = fakeSftp({
       mkdirError: new Error("Failure: file already exists"),
