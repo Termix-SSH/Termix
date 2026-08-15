@@ -17,7 +17,7 @@ export interface TerminalHostConfig {
   keyType?: string;
   authType?: string;
   credentialId?: number;
-  terminalConfig?: TerminalConfig;
+  terminalConfig?: Partial<TerminalConfig>;
   [key: string]: unknown;
 }
 

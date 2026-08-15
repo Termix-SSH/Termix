@@ -505,3 +505,57 @@ describe("RDP/VNC/Telnet password persistence indicator", () => {
     expect(payload.telnetPassword).toBeNull();
   });
 });
+
+describe("user connection defaults", () => {
+  const defaults = {
+    terminal: { fontSize: 18, cursorBlink: false },
+    rdp: { colorDepth: 24, disableCopy: true },
+  };
+
+  it("shows inherited values without persisting them as host overrides", () => {
+    const host = {
+      enableSsh: true,
+      enableRdp: true,
+      terminalConfig: { autoTmux: true },
+      guacamoleConfig: { enableAudioInput: true },
+    } as Host;
+    const form = createHostEditorForm(host, undefined, defaults);
+
+    expect(form).toMatchObject({
+      fontSize: 18,
+      cursorBlink: false,
+      inheritTerminalAppearance: true,
+      inheritRemoteDesktopDefaults: true,
+      guacamoleConfig: {
+        colorDepth: 24,
+        disableCopy: true,
+        enableAudioInput: true,
+      },
+    });
+
+    const payload = buildHostEditorPayload(form, {
+      ...sshOnly,
+      enableRdp: true,
+    });
+    expect(payload.terminalConfig).toMatchObject({ autoTmux: true });
+    expect(payload.terminalConfig).not.toHaveProperty("fontSize");
+    expect(payload.guacamoleConfig).toEqual({ enableAudioInput: true });
+  });
+
+  it("keeps explicit host overrides above user defaults", () => {
+    const host = {
+      enableSsh: true,
+      enableRdp: true,
+      terminalConfig: { fontSize: 12 },
+      guacamoleConfig: { colorDepth: 32 },
+    } as Host;
+    const form = createHostEditorForm(host, undefined, defaults);
+
+    expect(form).toMatchObject({
+      fontSize: 12,
+      inheritTerminalAppearance: false,
+      inheritRemoteDesktopDefaults: false,
+      guacamoleConfig: { colorDepth: 32, disableCopy: true },
+    });
+  });
+});

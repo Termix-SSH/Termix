@@ -43,6 +43,8 @@ import {
 import { useConnectionRetry } from "@/lib/useConnectionRetry.ts";
 import { ShareSessionModal } from "@/features/session-sharing/ShareSessionModal.tsx";
 import type { SSHHost } from "@/types";
+import { useConnectionDefaults } from "@/contexts/ConnectionDefaultsContext";
+import { resolveConnectionDefaults } from "@/lib/connection-defaults";
 
 interface GuacamoleAppProps {
   hostId?: string;
@@ -61,10 +63,12 @@ export interface GuacamoleAppHandle {
 const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
   function GuacamoleApp({ hostId, tabId, protocol, isVisible = true }, ref) {
     const { t } = useTranslation();
+    const defaults = useConnectionDefaults();
     const [hostConfig, setHostConfig] = useState<SSHHost | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+      if (!defaults.ready) return;
       if (!hostId) {
         setLoading(false);
         return;
@@ -72,11 +76,23 @@ const GuacamoleApp = React.forwardRef<GuacamoleAppHandle, GuacamoleAppProps>(
       getSSHHosts()
         .then((hosts) => {
           const host = hosts.find((h) => h.id === parseInt(hostId, 10));
-          setHostConfig(host ?? null);
+          if (!host) {
+            setHostConfig(null);
+            return;
+          }
+          const connectionType = protocol ?? host.connectionType;
+          const protocolDefaults = connectionType === "rdp" ? defaults.rdp : {};
+          setHostConfig({
+            ...host,
+            guacamoleConfig: resolveConnectionDefaults(
+              protocolDefaults,
+              parseGuacamoleConfig(host.guacamoleConfig),
+            ),
+          });
         })
         .catch(() => setHostConfig(null))
         .finally(() => setLoading(false));
-    }, [hostId]);
+    }, [hostId, protocol, defaults.ready, defaults.rdp]);
 
     if (loading) {
       return (

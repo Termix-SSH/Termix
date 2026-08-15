@@ -85,6 +85,7 @@ import type { FontSizeId, ThemeId } from "@/types/ui-types";
 import { toast } from "sonner";
 import { changeAppLanguage, normalizeLanguageCode } from "@/i18n/i18n";
 import { clearLocalAdaptivePreferences } from "@/lib/local-adaptive-preferences";
+import { ConnectionDefaultsSettings } from "./ConnectionDefaultsSettings";
 
 type UserProfileSection =
   | "account"
@@ -1815,6 +1816,7 @@ export function UserProfilePanel({
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">
               {t("newUi.sidebar.userProfile.settingsTerminal")}
             </span>
+            <ConnectionDefaultsSettings />
             <SettingRow
               label={t("newUi.sidebar.userProfile.commandAutocomplete")}
               description={t(
