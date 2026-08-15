@@ -672,6 +672,7 @@ export interface TermixAlert {
 // ============================================================================
 
 export interface TerminalConfig {
+  localEcho?: "default" | "off" | "auto" | "on";
   cursorBlink: boolean;
   cursorStyle: "block" | "underline" | "bar";
   fontSize: number;

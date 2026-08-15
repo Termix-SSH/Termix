@@ -202,6 +202,7 @@ export function createHostEditorForm(
       remoteDesktopDefaultKeys.every(
         (key) => !hasOwn(host.guacamoleConfig, key),
       ),
+    localEcho: host?.terminalConfig?.localEcho ?? "default",
     fontSize: terminalConfig.fontSize ?? d?.fontSize ?? 14,
     fontFamily:
       terminalConfig.fontFamily ??
@@ -406,6 +407,7 @@ export function buildHostEditorPayload(
     allowLegacyAlgorithms: form.allowLegacyAlgorithms,
     linkClickBehavior:
       form.linkClickBehavior !== "default" ? form.linkClickBehavior : undefined,
+    localEcho: form.localEcho !== "default" ? form.localEcho : undefined,
     agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
   };
   const terminalOverrides = form.inheritTerminalAppearance
