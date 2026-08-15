@@ -26,6 +26,40 @@ export function exceedsNormalizedImageSize(
   return byteLength > maxBytes;
 }
 
+export function createConcurrencyLimiter(limit: number): {
+  acquire: () => Promise<() => void>;
+  readonly active: number;
+} {
+  const max = Math.max(1, Math.floor(limit));
+  let active = 0;
+  const waiters: Array<() => void> = [];
+
+  const startNext = () => {
+    if (active >= max || waiters.length === 0) return;
+    active += 1;
+    waiters.shift()!();
+  };
+
+  return {
+    acquire: () =>
+      new Promise<() => void>((resolve) => {
+        waiters.push(() => {
+          let released = false;
+          resolve(() => {
+            if (released) return;
+            released = true;
+            active -= 1;
+            startNext();
+          });
+        });
+        startNext();
+      }),
+    get active() {
+      return active;
+    },
+  };
+}
+
 export const IMAGE_FILENAME_PATTERN = /^[0-9a-f-]{36}\.[a-z0-9]+$/i;
 
 export function isImageFilename(filename: string): boolean {

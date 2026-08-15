@@ -8,6 +8,7 @@ import express, {
 import multer from "multer";
 import sharp from "sharp";
 import {
+  createConcurrencyLimiter,
   exceedsNormalizedImageSize,
   imageExtensionForFormat,
 } from "./terminal-image-utils.js";
@@ -45,6 +46,7 @@ const imageUpload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 const imageUploadMiddleware = imageUpload.single("image");
+const imageProcessingLimiter = createConcurrencyLimiter(4);
 
 function handleImageUploadMiddleware(
   req: Request,
@@ -159,6 +161,8 @@ router.post(
     }
 
     let normalizedImage: Buffer;
+    const releaseImageProcessingSlot =
+      await imageProcessingLimiter.acquire();
     try {
       const source = sharp(req.file.buffer, {
         failOn: "error",
@@ -189,6 +193,8 @@ router.post(
         error: "Invalid image data",
         code: "IMAGE_DECODE_FAILED",
       });
+    } finally {
+      releaseImageProcessingSlot();
     }
 
     let remoteSftp: ImageSftpClient | undefined;

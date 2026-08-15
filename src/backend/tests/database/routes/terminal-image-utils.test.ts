@@ -3,6 +3,7 @@ import {
   exceedsImageStorageLimit,
   exceedsNormalizedImageSize,
   imageExtensionForFormat,
+  createConcurrencyLimiter,
   isExpiredImage,
   isImageFilename,
 } from "../../../database/routes/terminal-image-utils.js";
@@ -41,5 +42,24 @@ describe("terminal image utilities", () => {
     expect(exceedsImageStorageLimit(100, 10, 1, 100, 1000)).toBe(true);
     expect(exceedsImageStorageLimit(1, 900, 101, 100, 1000)).toBe(true);
     expect(exceedsImageStorageLimit(1, 900, 100, 100, 1000)).toBe(false);
+  });
+
+  it("bounds concurrent work", async () => {
+    const limiter = createConcurrencyLimiter(1);
+    let active = 0;
+    let peak = 0;
+    const task = async () => {
+      const release = await limiter.acquire();
+      active += 1;
+      peak = Math.max(peak, active);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      active -= 1;
+      release();
+    };
+
+    await Promise.all([task(), task(), task()]);
+
+    expect(peak).toBe(1);
+    expect(limiter.active).toBe(0);
   });
 });
