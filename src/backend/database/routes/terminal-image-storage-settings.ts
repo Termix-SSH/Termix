@@ -202,6 +202,9 @@ export async function resolveTerminalImageStorageSettings(
       : "auto";
   }
 
+  const legacyLocalDir = parseImageLocalDir(
+    env[TERMINAL_IMAGE_STORAGE_ENV.localDir],
+  );
   const [localDir, hostPath, ttlMs, maxCount, maxBytes] = await Promise.all([
     pick(
       TERMINAL_IMAGE_STORAGE_KEYS.localDir,
@@ -213,7 +216,7 @@ export async function resolveTerminalImageStorageSettings(
       TERMINAL_IMAGE_STORAGE_KEYS.hostPath,
       TERMINAL_IMAGE_STORAGE_ENV.hostPath,
       parseImageHostPath,
-      DEFAULT_IMAGE_HOST_PATH,
+      legacyLocalDir ?? DEFAULT_IMAGE_HOST_PATH,
     ),
     pick(
       TERMINAL_IMAGE_STORAGE_KEYS.ttlMs,
@@ -242,9 +245,11 @@ export async function resolveTerminalImageStorageSettings(
     TERMINAL_IMAGE_STORAGE_KEYS.hostPath,
   );
   const localMappingConfigured =
-    (persistedLocalDir !== null && persistedHostPath !== null) ||
-    (env[TERMINAL_IMAGE_STORAGE_ENV.localDir] !== undefined &&
-      env[TERMINAL_IMAGE_STORAGE_ENV.hostPath] !== undefined);
+    (persistedLocalDir !== null && parseImageLocalDir(persistedLocalDir) !== null ||
+      parseImageLocalDir(env[TERMINAL_IMAGE_STORAGE_ENV.localDir]) !== null) &&
+    (persistedHostPath !== null && parseImageHostPath(persistedHostPath) !== null ||
+      parseImageHostPath(env[TERMINAL_IMAGE_STORAGE_ENV.hostPath]) !== null ||
+      legacyLocalDir !== null);
 
   return {
     mode,

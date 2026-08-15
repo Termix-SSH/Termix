@@ -17,6 +17,7 @@ export type TerminalImageStorageErrorCode =
   | "IMAGE_STORAGE_LIMIT_REACHED"
   | "IMAGE_LOCAL_WRITE_FAILED"
   | "IMAGE_LOCAL_INSPECTION_FAILED"
+  | "IMAGE_REMOTE_QUOTA_UNAVAILABLE"
   | "IMAGE_REMOTE_WRITE_FAILED";
 
 export class TerminalImageStorageError extends Error {
@@ -193,6 +194,15 @@ export interface ImageSftpClient {
     remotePath: string,
     options?: { mode?: number },
   ): NodeJS.WritableStream;
+  stat?: (
+    dir: string,
+    callback: (error: Error | undefined, attrs?: { mode?: number }) => void,
+  ) => void;
+  lstat?: (
+    dir: string,
+    callback: (error: Error | undefined, attrs?: { mode?: number }) => void,
+  ) => void;
+  chmod?: (dir: string, mode: number, callback: (error?: Error) => void) => void;
   readdir?: (
     dir: string,
     callback: (error: Error | undefined, entries: ImageSftpEntry[]) => void,
@@ -203,7 +213,7 @@ export interface ImageSftpClient {
 
 interface ImageSftpEntry {
   filename: string;
-  attrs?: { mtime?: number };
+  attrs?: { mtime?: number; size?: number };
 }
 
 export interface ImageSshExecClient {
@@ -279,10 +289,37 @@ export async function probeLocalImageVisibility(
 function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
   return new Promise((resolve, reject) => {
     sftp.mkdir(dir, { mode: 0o700 }, (err) => {
-      // EEXIST (or a bare "Failure" from some SFTP servers when the
-      // directory already exists) is not a real failure here.
-      if (err && !/exist/i.test(err.message)) return reject(err);
-      resolve();
+      if (!err) {
+        resolve();
+        return;
+      }
+      if (/exist/i.test(err.message)) {
+        resolve();
+        return;
+      }
+      const inspect = sftp.lstat ?? sftp.stat;
+      if (!inspect) {
+        reject(err);
+        return;
+      }
+      inspect(dir, (inspectError, attrs) => {
+        if (inspectError || !attrs) {
+          reject(inspectError ?? err);
+          return;
+        }
+        if (attrs.mode !== undefined && (attrs.mode & 0o170000) !== 0o040000) {
+          reject(new Error("Remote image path is not a directory"));
+          return;
+        }
+        if (!sftp.chmod) {
+          reject(new Error("Remote image directory permissions cannot be verified"));
+          return;
+        }
+        sftp.chmod(dir, 0o700, (chmodError) => {
+          if (chmodError) reject(chmodError);
+          else resolve();
+        });
+      });
     });
   });
 }
@@ -350,15 +387,62 @@ async function cleanupExpiredRemoteImages(
   );
 }
 
-/**
- * Remote SFTP adapter. Any failure is reported as `IMAGE_REMOTE_WRITE_FAILED`
- * (HTTP 502 at the route); the underlying SFTP error is only logged, never
- * exposed to the caller.
- */
+const REMOTE_UUID_PNG_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/i;
+
+async function enforceRemoteImageLimits(
+  sftp: ImageSftpClient,
+  imageBytes: number,
+  maxCount: number,
+  maxBytes: number,
+): Promise<void> {
+  if (!sftp.readdir) {
+    throw new TerminalImageStorageError(
+      "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+      "Remote image storage limits cannot be verified",
+    );
+  }
+  let entries: ImageSftpEntry[];
+  try {
+    entries = await new Promise<ImageSftpEntry[]>((resolve, reject) => {
+      sftp.readdir!(REMOTE_IMAGE_DIR, (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      });
+    });
+  } catch (error) {
+    throw new TerminalImageStorageError(
+      "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+      "Remote image storage limits cannot be verified",
+      error,
+    );
+  }
+  const images = entries.filter((entry) => REMOTE_UUID_PNG_PATTERN.test(entry.filename));
+  const totalBytes = images.reduce((sum, entry) => {
+    if (typeof entry.attrs?.size !== "number") {
+      throw new TerminalImageStorageError(
+        "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+        "Remote image storage limits cannot be verified",
+      );
+    }
+    return sum + entry.attrs.size;
+  }, 0);
+  if (images.length >= maxCount || totalBytes + imageBytes > maxBytes) {
+    throw new TerminalImageStorageError(
+      "IMAGE_STORAGE_LIMIT_REACHED",
+      "Image storage limit reached",
+    );
+  }
+}
 export async function storeImageViaSftp(
   sftp: ImageSftpClient,
   image: Buffer,
-  options: { writeTimeoutMs?: number; ttlMs?: number; nowMs?: number } = {},
+  options: {
+    writeTimeoutMs?: number;
+    ttlMs?: number;
+    maxCount?: number;
+    maxBytes?: number;
+    nowMs?: number;
+  } = {},
 ): Promise<StoredTerminalImage> {
   const id = randomUUID();
   const filename = `${id}.png`;
@@ -367,6 +451,14 @@ export async function storeImageViaSftp(
   try {
     await cleanupExpiredRemoteImages(sftp, options.ttlMs, options.nowMs);
     await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
+    if (options.maxCount !== undefined || options.maxBytes !== undefined) {
+      await enforceRemoteImageLimits(
+        sftp,
+        image.length,
+        options.maxCount ?? 100,
+        options.maxBytes ?? 5_368_709_120,
+      );
+    }
     await sftpWriteFile(
       sftp,
       remotePath,
@@ -374,6 +466,7 @@ export async function storeImageViaSftp(
       options.writeTimeoutMs,
     );
   } catch (error) {
+    if (error instanceof TerminalImageStorageError) throw error;
     throw new TerminalImageStorageError(
       "IMAGE_REMOTE_WRITE_FAILED",
       "Failed to write image to the remote host",

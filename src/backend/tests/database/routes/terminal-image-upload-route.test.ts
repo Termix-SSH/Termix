@@ -109,6 +109,10 @@ function fakeSftp(behavior: { writeError?: Error } = {}): {
       };
       return stream;
     },
+    readdir: (
+      _dir: string,
+      callback: (error: Error | undefined, entries: Array<{ filename: string; attrs?: { size?: number; mtime?: number } }>) => void,
+    ) => callback(undefined, []),
     end,
   } as unknown as ImageSftpClient & { end: ReturnType<typeof vi.fn> };
   return { sftp, written, end };

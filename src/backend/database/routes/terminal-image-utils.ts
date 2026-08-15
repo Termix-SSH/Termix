@@ -26,11 +26,16 @@ export function exceedsNormalizedImageSize(
   return byteLength > maxBytes;
 }
 
-export function createConcurrencyLimiter(limit: number): {
+export function createConcurrencyLimiter(
+  limit: number,
+  maxQueued = Number.POSITIVE_INFINITY,
+): {
   acquire: () => Promise<() => void>;
   readonly active: number;
+  readonly queued: number;
 } {
   const max = Math.max(1, Math.floor(limit));
+  const queueLimit = Math.max(0, Math.floor(maxQueued));
   let active = 0;
   const waiters: Array<() => void> = [];
 
@@ -42,7 +47,11 @@ export function createConcurrencyLimiter(limit: number): {
 
   return {
     acquire: () =>
-      new Promise<() => void>((resolve) => {
+      new Promise<() => void>((resolve, reject) => {
+        if (active >= max && waiters.length >= queueLimit) {
+          reject(new Error("Concurrency admission queue is full"));
+          return;
+        }
         waiters.push(() => {
           let released = false;
           resolve(() => {
@@ -56,6 +65,9 @@ export function createConcurrencyLimiter(limit: number): {
       }),
     get active() {
       return active;
+    },
+    get queued() {
+      return waiters.length;
     },
   };
 }
@@ -71,6 +83,7 @@ export function isExpiredImage(
   nowMs: number,
   ttlMs: number,
 ): boolean {
+  if (ttlMs <= 0) return false;
   return nowMs - modifiedAtMs > ttlMs;
 }
 

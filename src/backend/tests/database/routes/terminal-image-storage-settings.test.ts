@@ -132,6 +132,8 @@ describe("terminal image storage settings", () => {
         { TERMIX_IMAGE_DIR: "/host-tmp/images" },
       );
       expect(resolved.mode).toBe("local");
+      expect(resolved.hostPath).toBe("/host-tmp/images");
+      expect(resolved.localMappingConfigured).toBe(true);
     });
 
     it("lets a persisted DB mode override the legacy local mapping", async () => {

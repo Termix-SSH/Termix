@@ -38,6 +38,17 @@ describe("terminal image utilities", () => {
     expect(isExpiredImage(2_500, 3_000, 1_000)).toBe(false);
   });
 
+  it("treats a zero TTL as retention disabled", () => {
+    expect(isExpiredImage(1_000, 999_999, 0)).toBe(false);
+  });
+
+  it("bounds the admission queue", async () => {
+    const limiter = createConcurrencyLimiter(1, 0);
+    const release = await limiter.acquire();
+    await expect(limiter.acquire()).rejects.toThrow("queue is full");
+    release();
+  });
+
   it("rejects uploads that exceed the count or byte limit", () => {
     expect(exceedsImageStorageLimit(100, 10, 1, 100, 1000)).toBe(true);
     expect(exceedsImageStorageLimit(1, 900, 101, 100, 1000)).toBe(true);

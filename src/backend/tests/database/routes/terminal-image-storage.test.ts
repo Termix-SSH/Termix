@@ -178,7 +178,7 @@ describe("storeImageViaSftp", () => {
     mkdirError?: Error;
     writeError?: Error;
     stallWrite?: boolean;
-    readdirEntries?: Array<{ filename: string; mtime?: number }>;
+    readdirEntries?: Array<{ filename: string; mtime?: number; size?: number }>;
     readdirError?: Error;
   }): {
     sftp: ImageSftpClient;
@@ -214,6 +214,10 @@ describe("storeImageViaSftp", () => {
         });
         callback(behavior.mkdirError);
       },
+      readdir: (
+        _dir: string,
+        callback: (error: Error | undefined, entries: Array<{ filename: string; attrs?: { mtime?: number; size?: number } }>) => void,
+      ) => callback(behavior.readdirError, behavior.readdirEntries?.map((entry) => ({ filename: entry.filename, attrs: entry })) ?? []),
       createWriteStream: (
         remotePath: string,
         options?: { mode?: number },
@@ -295,6 +299,32 @@ describe("storeImageViaSftp", () => {
 
     expect(unlinked).toEqual([`${REMOTE_IMAGE_DIR}/${expiredName}`]);
   });
+  it("fails closed when remote quota inspection fails", async () => {
+    const { sftp } = fakeSftp({ readdirError: new Error("remote listing failed") });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES, {
+      maxCount: 10,
+      maxBytes: 1024,
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+    );
+  });
+
+  it("rejects remote writes at the configured count limit", async () => {
+    const { sftp } = fakeSftp({
+      readdirEntries: [{ filename: `${randomUUID()}.png`, size: 12 }],
+    });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES, {
+      maxCount: 1,
+      maxBytes: 1024,
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_STORAGE_LIMIT_REACHED",
+    );
+  });
+
   it("destroys a stalled SFTP write after its timeout", async () => {
     const { sftp, streams } = fakeSftp({ stallWrite: true });
     const error = await storeImageViaSftp(sftp, PNG_BYTES, {

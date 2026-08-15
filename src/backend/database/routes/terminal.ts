@@ -47,39 +47,55 @@ const imageUpload = multer({
 });
 const imageUploadMiddleware = imageUpload.single("image");
 const imageProcessingLimiter = createConcurrencyLimiter(4);
+const imageMultipartAdmissionLimiter = createConcurrencyLimiter(4, 4);
 
-function handleImageUploadMiddleware(
+async function handleImageUploadMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
+  let releaseAdmission: (() => void) | undefined;
+  try {
+    releaseAdmission = await imageMultipartAdmissionLimiter.acquire();
+  } catch {
+    res.status(503).json({
+      error: "Image upload capacity is temporarily unavailable",
+      code: "IMAGE_UPLOAD_CAPACITY_EXCEEDED",
+    });
+    return;
+  }
+
   imageUploadMiddleware(req, res, (error: unknown) => {
-    if (!error) {
-      next();
-      return;
-    }
-    if (error instanceof multer.MulterError) {
-      databaseLogger.warn("Image upload multipart request rejected", {
-        operation: "terminal_image_upload_multipart_rejected",
-        code: error.code,
-        field: error.field,
+    try {
+      if (!error) {
+        next();
+        return;
+      }
+      if (error instanceof multer.MulterError) {
+        databaseLogger.warn("Image upload multipart request rejected", {
+          operation: "terminal_image_upload_multipart_rejected",
+          code: error.code,
+          field: error.field,
+          contentType: req.headers["content-type"]?.split(";", 1)[0],
+        });
+        res.status(400).json({
+          error: "Image upload request rejected",
+          code: error.code,
+          field: error.field,
+        });
+        return;
+      }
+      databaseLogger.warn("Image upload multipart request malformed", {
+        operation: "terminal_image_upload_multipart_invalid",
         contentType: req.headers["content-type"]?.split(";", 1)[0],
       });
       res.status(400).json({
-        error: "Image upload request rejected",
-        code: error.code,
-        field: error.field,
+        error: "Malformed image upload request",
+        code: "IMAGE_MULTIPART_INVALID",
       });
-      return;
+    } finally {
+      releaseAdmission?.();
     }
-    databaseLogger.warn("Image upload multipart request malformed", {
-      operation: "terminal_image_upload_multipart_invalid",
-      contentType: req.headers["content-type"]?.split(";", 1)[0],
-    });
-    res.status(400).json({
-      error: "Malformed image upload request",
-      code: "IMAGE_MULTIPART_INVALID",
-    });
   });
 }
 function findTerminalSession(userId: string, instanceId: string) {
@@ -210,6 +226,8 @@ router.post(
               });
               return storeImageViaSftp(remoteSftp, normalizedImage, {
                 ttlMs: storageSettings.ttlMs,
+                maxCount: storageSettings.maxCount,
+                maxBytes: storageSettings.maxBytes,
               });
             })()
           : await storeImageLocally(normalizedImage, storageSettings);
@@ -222,9 +240,11 @@ router.post(
             ? 507
             : error.code === "IMAGE_REMOTE_WRITE_FAILED"
               ? 502
-              : error.code === "IMAGE_LOCAL_INSPECTION_FAILED"
+              : error.code === "IMAGE_REMOTE_QUOTA_UNAVAILABLE"
                 ? 503
-                : 500;
+                : error.code === "IMAGE_LOCAL_INSPECTION_FAILED"
+                  ? 503
+                  : 500;
         databaseLogger.warn("Image upload storage write failed", {
           operation:
             error.code === "IMAGE_REMOTE_WRITE_FAILED"
