@@ -52,20 +52,22 @@ export class SettingsRepository {
   }
 
   async setMany(entries: Array<{ key: string; value: string }>): Promise<void> {
-    await this.context.drizzle.transaction(async (tx) => {
+    this.context.drizzle.transaction((tx) => {
       for (const { key, value } of entries) {
-        const existing = await tx
+        const existing = tx
           .select({ value: settings.value })
           .from(settings)
           .where(eq(settings.key, key))
-          .limit(1);
+          .limit(1)
+          .all();
         if (existing[0] === undefined) {
-          await tx.insert(settings).values({ key, value });
+          tx.insert(settings).values({ key, value }).run();
         } else {
-          await tx
+          tx
             .update(settings)
             .set({ value })
-            .where(eq(settings.key, key));
+            .where(eq(settings.key, key))
+            .run();
         }
       }
     });
