@@ -508,6 +508,17 @@ describe("storeImageViaSftp", () => {
     );
   }, 7_000);
 
+  it("fails closed when remote expiry cleanup stalls", async () => {
+    const { sftp } = fakeSftp({ stallReaddir: true });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES, {
+      ttlMs: 1_000,
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+  }, 7_000);
+
   it("fails closed when remote lock release stalls", async () => {
     const { sftp } = fakeSftp({ stallRmdir: true });
     const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(
