@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   exceedsImageStorageLimit,
+  exceedsNormalizedImageSize,
   imageExtensionForFormat,
   isExpiredImage,
   isImageFilename,
@@ -27,6 +28,10 @@ describe("terminal image utilities", () => {
     expect(imageExtensionForFormat(undefined)).toBeUndefined();
   });
 
+  it("rejects normalized output beyond the byte ceiling", () => {
+    expect(exceedsNormalizedImageSize(10_000_001, 10_000_000)).toBe(true);
+    expect(exceedsNormalizedImageSize(10_000_000, 10_000_000)).toBe(false);
+  });
   it("expires files older than the configured TTL", () => {
     expect(isExpiredImage(1_000, 3_000, 1_000)).toBe(true);
     expect(isExpiredImage(2_500, 3_000, 1_000)).toBe(false);

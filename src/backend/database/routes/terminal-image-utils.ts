@@ -17,6 +17,15 @@ export function imageExtensionForFormat(
   return format ? IMAGE_FORMAT_EXTENSIONS[format] : undefined;
 }
 
+export const MAX_NORMALIZED_IMAGE_BYTES = 10 * 1024 * 1024;
+
+export function exceedsNormalizedImageSize(
+  byteLength: number,
+  maxBytes = MAX_NORMALIZED_IMAGE_BYTES,
+): boolean {
+  return byteLength > maxBytes;
+}
+
 export const IMAGE_FILENAME_PATTERN = /^[0-9a-f-]{36}\.[a-z0-9]+$/i;
 
 export function isImageFilename(filename: string): boolean {

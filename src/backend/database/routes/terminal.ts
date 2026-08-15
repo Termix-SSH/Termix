@@ -7,7 +7,10 @@ import express, {
 } from "express";
 import multer from "multer";
 import sharp from "sharp";
-import { imageExtensionForFormat } from "./terminal-image-utils.js";
+import {
+  exceedsNormalizedImageSize,
+  imageExtensionForFormat,
+} from "./terminal-image-utils.js";
 import { resolveTerminalImageStorageSettings } from "./terminal-image-storage-settings.js";
 import {
   selectImageStorageMode,
@@ -169,6 +172,12 @@ router.post(
         });
       }
       normalizedImage = await source.rotate().png().toBuffer();
+      if (exceedsNormalizedImageSize(normalizedImage.length)) {
+        return res.status(413).json({
+          error: "Normalized image is too large",
+          code: "IMAGE_NORMALIZED_SIZE_LIMIT",
+        });
+      }
     } catch (error) {
       databaseLogger.warn("Image upload failed image decoding", {
         operation: "terminal_image_upload_decode",
