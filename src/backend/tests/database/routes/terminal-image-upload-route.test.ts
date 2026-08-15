@@ -15,6 +15,7 @@ import { randomUUID } from "crypto";
 import sharp from "sharp";
 import type { Request, RequestHandler, Response } from "express";
 import type { ImageSftpClient } from "../../../database/routes/terminal-image-storage.js";
+import { databaseLogger } from "../../../utils/logger.js";
 
 const state = vi.hoisted(() => ({
   userId: "user-1",
@@ -134,10 +135,17 @@ function connectedSession(instanceId: string, sftp: ImageSftpClient) {
 async function invoke(options: {
   file?: { buffer: Buffer; mimetype: string; size: number };
   instanceId?: string;
+  metadata?: { source?: string; clientUploadTimestamp?: string };
 }) {
+  const body: Record<string, string> = {};
+  if (options.instanceId) body.instanceId = options.instanceId;
+  if (options.metadata?.source !== undefined)
+    body.source = options.metadata.source;
+  if (options.metadata?.clientUploadTimestamp !== undefined)
+    body.clientUploadTimestamp = options.metadata.clientUploadTimestamp;
   const req = {
     userId: state.userId,
-    body: options.instanceId ? { instanceId: options.instanceId } : {},
+    body,
     file: options.file,
     headers: {},
   } as unknown as Request;
@@ -387,6 +395,120 @@ describe("terminal image upload route", () => {
 
       expect(response.statusCode).toBe(503);
       expect(response.body).toMatchObject({ code: "IMAGE_STORAGE_UNAVAILABLE" });
+    });
+  });
+
+  describe("diagnostic metadata", () => {
+    interface UploadLogMeta {
+      operation?: string;
+      requestId?: string;
+      sequence?: number;
+      source?: string;
+      clientUploadTimestamp?: string;
+      serverReceivedAt?: string;
+      bytes?: number;
+    }
+
+    function uploadLogEntries(): UploadLogMeta[] {
+      return vi
+        .mocked(databaseLogger.info)
+        .mock.calls.filter(
+          (call) =>
+            (call[1] as UploadLogMeta | undefined)?.operation ===
+            "terminal_image_upload_received",
+        )
+        .map((call) => call[1] as UploadLogMeta);
+    }
+
+    beforeEach(() => {
+      vi.mocked(databaseLogger.info).mockClear();
+    });
+
+    it("logs correlation id, receipt time, and propagated source metadata", async () => {
+      const { sftp } = fakeSftp();
+      state.sessions = [connectedSession("tab-1", sftp)];
+
+      const response = await invoke({
+        file: {
+          buffer: pngBuffer,
+          mimetype: "image/png",
+          size: pngBuffer.length,
+        },
+        instanceId: "tab-1",
+        metadata: {
+          source: "clipboard",
+          clientUploadTimestamp: "2026-08-15T12:00:00.000Z",
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const entries = uploadLogEntries();
+      expect(entries).toHaveLength(1);
+      const meta = entries[0]!;
+      expect(meta.requestId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
+      expect(typeof meta.sequence).toBe("number");
+      expect(meta.source).toBe("clipboard");
+      expect(meta.clientUploadTimestamp).toBe("2026-08-15T12:00:00.000Z");
+      expect(
+        Number.isNaN(Date.parse(meta.serverReceivedAt ?? "")),
+      ).toBe(false);
+      expect(meta.bytes).toBe(pngBuffer.length);
+    });
+
+    it("logs a monotonically increasing upload sequence", async () => {
+      const { sftp } = fakeSftp();
+      state.sessions = [connectedSession("tab-1", sftp)];
+
+      await invoke({
+        file: {
+          buffer: pngBuffer,
+          mimetype: "image/png",
+          size: pngBuffer.length,
+        },
+        instanceId: "tab-1",
+        metadata: { source: "file" },
+      });
+      await invoke({
+        file: {
+          buffer: pngBuffer,
+          mimetype: "image/png",
+          size: pngBuffer.length,
+        },
+        instanceId: "tab-1",
+        metadata: { source: "clipboard" },
+      });
+
+      const sequences = uploadLogEntries().map((entry) => entry.sequence!);
+      expect(sequences).toHaveLength(2);
+      expect(sequences[1]).toBe(sequences[0]! + 1);
+    });
+
+    it("accepts missing metadata and keeps raw paths out of the log", async () => {
+      const dir = await fs.mkdtemp(path.join(os.tmpdir(), "termix-meta-test-"));
+      try {
+        state.settings["terminal_image_storage_mode"] = "local";
+        state.settings["terminal_image_local_dir"] = dir;
+        state.settings["terminal_image_host_path"] = "/host-view/images";
+
+        const response = await invoke({
+          file: {
+            buffer: pngBuffer,
+            mimetype: "image/png",
+            size: pngBuffer.length,
+          },
+        });
+
+        expect(response.statusCode).toBe(200);
+        const entries = uploadLogEntries();
+        expect(entries).toHaveLength(1);
+        expect(entries[0]!.source).toBeUndefined();
+        expect(entries[0]!.clientUploadTimestamp).toBeUndefined();
+        expect(JSON.stringify(entries[0])).not.toContain(dir);
+      } finally {
+        await fs.rm(dir, { recursive: true, force: true });
+      }
     });
   });
 });

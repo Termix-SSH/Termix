@@ -55,6 +55,10 @@ import {
 } from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
+import {
+  buildImageUploadFormData,
+  type TerminalImageUploadSource,
+} from "@/features/terminal/terminal-image-upload.ts";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -3237,16 +3241,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
     }
 
-    async function handleImageUpload(file: File) {
+    async function handleImageUpload(
+      file: File,
+      source: TerminalImageUploadSource,
+    ) {
       if (file.type && !file.type.startsWith("image/")) {
         toast.error("Choose an image file");
         return;
       }
       setIsImageUploading(true);
       try {
-        const form = new FormData();
-        form.append("image", file);
-        form.append("instanceId", hostConfig.instanceId ?? "");
+        const form = buildImageUploadFormData(
+          file,
+          hostConfig.instanceId ?? "",
+          source,
+        );
         const response = await authApi.post("/terminal/image-upload", form, {
           headers: { "Content-Type": undefined },
         });
@@ -3327,7 +3336,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               // Fall back to the original clipboard blob.
             }
           }
-          await handleImageUpload(clipboardFile);
+          await handleImageUpload(clipboardFile, "clipboard");
           return;
         }
         toast.error("No image found in the clipboard");
@@ -3390,7 +3399,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }}
             isImageUploading={isImageUploading}
-            onUploadImage={(file) => void handleImageUpload(file)}
+            onUploadImage={(file) => void handleImageUpload(file, "file")}
             onPasteImage={() => void handleClipboardImage()}
             onOpenTab={onOpenTab}
             onOpenFiles={() => {

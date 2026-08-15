@@ -5,6 +5,7 @@ import express, {
   type Request,
   type Response,
 } from "express";
+import { randomUUID } from "crypto";
 import multer from "multer";
 import sharp from "sharp";
 import {
@@ -55,6 +56,7 @@ const imageUpload = multer({
 const imageUploadMiddleware = imageUpload.single("image");
 const imageProcessingLimiter = createConcurrencyLimiter(4, 4);
 const imageMultipartAdmissionLimiter = createConcurrencyLimiter(4, 4);
+let imageUploadSequence = 0;
 
 async function handleImageUploadMiddleware(
   req: Request,
@@ -135,6 +137,28 @@ router.post(
         code: "IMAGE_SESSION_MISSING",
       });
     }
+
+    const requestId = randomUUID();
+    const sequence = ++imageUploadSequence;
+    const source =
+      req.body?.source === "file" || req.body?.source === "clipboard"
+        ? req.body.source
+        : undefined;
+    const clientUploadTimestamp =
+      typeof req.body?.clientUploadTimestamp === "string" &&
+      !Number.isNaN(Date.parse(req.body.clientUploadTimestamp))
+        ? req.body.clientUploadTimestamp
+        : undefined;
+    const serverReceivedAt = new Date().toISOString();
+    databaseLogger.info("Terminal image upload received", {
+      operation: "terminal_image_upload_received",
+      requestId,
+      sequence,
+      source,
+      clientUploadTimestamp,
+      serverReceivedAt,
+      bytes: req.file.size,
+    });
 
     const storageSettings = await resolveTerminalImageStorageSettings(
       createCurrentSettingsRepository(),
