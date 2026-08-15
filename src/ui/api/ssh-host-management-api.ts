@@ -12,6 +12,7 @@ import {
   getCachedSSHHosts,
   invalidateHostsAndStatusCaches,
 } from "@/lib/hosts-request-cache";
+import { requestRemoteSync } from "@/lib/remote-sync-trigger";
 
 // SSH HOST MANAGEMENT
 // ============================================================================
@@ -68,10 +69,12 @@ export async function createSSHHost(hostData: SSHHostData): Promise<SSHHost> {
         headers: { "Content-Type": "multipart/form-data" },
       });
       invalidateHostsAndStatusCaches();
+      void requestRemoteSync();
       return response.data;
     }
     const response = await sshHostApi.post("/db/host", hostData);
     invalidateHostsAndStatusCaches();
+    void requestRemoteSync();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "create SSH host");
@@ -92,10 +95,12 @@ export async function updateSSHHost(
         headers: { "Content-Type": "multipart/form-data" },
       });
       invalidateHostsAndStatusCaches();
+      void requestRemoteSync();
       return response.data;
     }
     const response = await sshHostApi.put(`/db/host/${hostId}`, hostData);
     invalidateHostsAndStatusCaches();
+    void requestRemoteSync();
     return response.data;
   } catch (error) {
     throw handleApiError(error, "update SSH host");
@@ -277,6 +282,7 @@ export async function deleteSSHHost(
   try {
     const response = await sshHostApi.delete(`/db/host/${hostId}`);
     invalidateHostsAndStatusCaches();
+    void requestRemoteSync();
     return response.data;
   } catch (error) {
     handleApiError(error, "delete SSH host");
