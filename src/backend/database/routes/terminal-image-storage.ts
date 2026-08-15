@@ -208,6 +208,7 @@ export interface ImageSftpClient {
     callback: (error: Error | undefined, entries: ImageSftpEntry[]) => void,
   ) => void;
   unlink?: (remotePath: string, callback: (error?: Error) => void) => void;
+  rmdir?: (dir: string, callback: (error?: Error) => void) => void;
   end?: () => void;
 }
 
@@ -317,6 +318,42 @@ function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
         });
       });
     });
+  });
+}
+
+const REMOTE_IMAGE_LOCK_DIR = `${REMOTE_IMAGE_DIR}/.termix-write-lock`;
+
+function waitForRemoteImageLock(
+  sftp: ImageSftpClient,
+  attempts = 60,
+): Promise<() => Promise<void>> {
+  if (!sftp.rmdir) {
+    return Promise.resolve(async () => undefined);
+  }
+
+  return new Promise((resolve, reject) => {
+    let remaining = attempts;
+    const tryAcquire = () => {
+      sftp.mkdir(REMOTE_IMAGE_LOCK_DIR, { mode: 0o700 }, (error) => {
+        if (!error) {
+          resolve(
+            () =>
+              new Promise<void>((releaseResolve, releaseReject) => {
+                sftp.rmdir!(REMOTE_IMAGE_LOCK_DIR, (releaseError) =>
+                  releaseError ? releaseReject(releaseError) : releaseResolve(),
+                );
+              }),
+          );
+          return;
+        }
+        if (--remaining <= 0) {
+          reject(new Error("Remote image storage lock unavailable"));
+          return;
+        }
+        setTimeout(tryAcquire, 50);
+      });
+    };
+    tryAcquire();
   });
 }
 
@@ -444,9 +481,11 @@ async function storeImageViaSftpUnlocked(
   const filename = `${id}.png`;
   const remotePath = `${REMOTE_IMAGE_DIR}/${filename}`;
 
+  let releaseRemoteLock: (() => Promise<void>) | undefined;
   try {
-    await cleanupExpiredRemoteImages(sftp, options.ttlMs, options.nowMs);
     await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
+    releaseRemoteLock = await waitForRemoteImageLock(sftp);
+    await cleanupExpiredRemoteImages(sftp, options.ttlMs, options.nowMs);
     if (options.maxCount !== undefined || options.maxBytes !== undefined) {
       await enforceRemoteImageLimits(
         sftp,
@@ -468,6 +507,8 @@ async function storeImageViaSftpUnlocked(
       "Failed to write image to the remote host",
       error,
     );
+  } finally {
+    await releaseRemoteLock?.();
   }
 
   return { id, filename, shellPath: remotePath, storage: "remote-sftp" };
