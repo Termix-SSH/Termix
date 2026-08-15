@@ -222,7 +222,9 @@ router.post(
             ? 507
             : error.code === "IMAGE_REMOTE_WRITE_FAILED"
               ? 502
-              : 500;
+              : error.code === "IMAGE_LOCAL_INSPECTION_FAILED"
+                ? 503
+                : 500;
         databaseLogger.warn("Image upload storage write failed", {
           operation:
             error.code === "IMAGE_REMOTE_WRITE_FAILED"

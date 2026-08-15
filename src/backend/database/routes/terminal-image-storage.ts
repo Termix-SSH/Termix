@@ -16,6 +16,7 @@ import type { TerminalImageStorageSettings } from "./terminal-image-storage-sett
 export type TerminalImageStorageErrorCode =
   | "IMAGE_STORAGE_LIMIT_REACHED"
   | "IMAGE_LOCAL_WRITE_FAILED"
+  | "IMAGE_LOCAL_INSPECTION_FAILED"
   | "IMAGE_REMOTE_WRITE_FAILED";
 
 export class TerminalImageStorageError extends Error {
@@ -72,16 +73,14 @@ async function cleanupExpiredImages(
   localDir: string,
   ttlMs: number,
 ): Promise<void> {
-  const entries = await fs
-    .readdir(localDir, { withFileTypes: true })
-    .catch(() => []);
+  const entries = await fs.readdir(localDir, { withFileTypes: true });
   const now = Date.now();
   await Promise.all(
     entries
       .filter((entry) => entry.isFile() && isImageFilename(entry.name))
       .map(async (entry) => {
         const filePath = path.join(localDir, entry.name);
-        const stat = await fs.stat(filePath).catch(() => null);
+        const stat = await fs.stat(filePath);
         if (stat && isExpiredImage(stat.mtimeMs, now, ttlMs)) {
           await fs.unlink(filePath).catch(() => undefined);
         }
@@ -93,18 +92,14 @@ async function getActiveImageStorageUsage(
   localDir: string,
   ttlMs: number,
 ): Promise<{ fileCount: number; totalBytes: number }> {
-  const entries = await fs
-    .readdir(localDir, { withFileTypes: true })
-    .catch(() => []);
+  const entries = await fs.readdir(localDir, { withFileTypes: true });
   const now = Date.now();
   const stats = await Promise.all(
     entries
       .filter((entry) => entry.isFile() && isImageFilename(entry.name))
       .map(async (entry) => {
-        const stat = await fs
-          .stat(path.join(localDir, entry.name))
-          .catch(() => null);
-        return stat && !isExpiredImage(stat.mtimeMs, now, ttlMs) ? stat : null;
+        const stat = await fs.stat(path.join(localDir, entry.name));
+        return !isExpiredImage(stat.mtimeMs, now, ttlMs) ? stat : null;
       }),
   );
 
@@ -131,11 +126,20 @@ export async function storeImageLocally(
   settings: TerminalImageStorageSettings,
 ): Promise<StoredTerminalImage> {
   return withImageStorageLock(async () => {
-    await cleanupExpiredImages(settings.localDir, settings.ttlMs);
-    const usage = await getActiveImageStorageUsage(
-      settings.localDir,
-      settings.ttlMs,
-    );
+    let usage: { fileCount: number; totalBytes: number };
+    try {
+      await cleanupExpiredImages(settings.localDir, settings.ttlMs);
+      usage = await getActiveImageStorageUsage(
+        settings.localDir,
+        settings.ttlMs,
+      );
+    } catch (error) {
+      throw new TerminalImageStorageError(
+        "IMAGE_LOCAL_INSPECTION_FAILED",
+        "Unable to inspect local image storage",
+        error,
+      );
+    }
     if (
       exceedsImageStorageLimit(
         usage.fileCount,

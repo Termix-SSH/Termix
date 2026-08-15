@@ -143,7 +143,21 @@ describe("storeImageLocally", () => {
     expect(remaining).toEqual([stored.filename]);
   });
 
-  it("wraps filesystem failures as IMAGE_LOCAL_WRITE_FAILED", async () => {
+  it("fails closed when local storage inspection is unavailable", async () => {
+    const blocked = path.join(dir, "blocked-file");
+    await fs.writeFile(blocked, "not a directory");
+
+    const error = await storeImageLocally(
+      PNG_BYTES,
+      settings({ localDir: blocked }),
+    ).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_LOCAL_INSPECTION_FAILED",
+    );
+  });
+  it("reports inspection failures before attempting a write", async () => {
     const blocked = path.join(dir, "blocked");
     await fs.writeFile(blocked, "not a directory");
 
@@ -154,7 +168,7 @@ describe("storeImageLocally", () => {
 
     expect(error).toBeInstanceOf(TerminalImageStorageError);
     expect((error as TerminalImageStorageError).code).toBe(
-      "IMAGE_LOCAL_WRITE_FAILED",
+      "IMAGE_LOCAL_INSPECTION_FAILED",
     );
   });
 });
