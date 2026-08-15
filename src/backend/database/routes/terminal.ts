@@ -43,7 +43,14 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 // Browser image handoff for local terminal-agent workflows.
 const imageUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+    fields: 4,
+    fieldSize: 64 * 1024,
+    files: 1,
+    parts: 5,
+    headerPairs: 200,
+  },
 });
 const imageUploadMiddleware = imageUpload.single("image");
 const imageProcessingLimiter = createConcurrencyLimiter(4, 4);

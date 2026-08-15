@@ -162,6 +162,9 @@ export async function storeImageLocally(
     try {
       await fs.writeFile(path.join(settings.localDir, filename), image);
     } catch (error) {
+      await fs.rm(path.join(settings.localDir, filename), { force: true }).catch(
+        () => undefined,
+      );
       throw new TerminalImageStorageError(
         "IMAGE_LOCAL_WRITE_FAILED",
         "Failed to write image to local storage",
@@ -329,7 +332,12 @@ function waitForRemoteImageLock(
   attempts = 60,
 ): Promise<() => Promise<void>> {
   if (!sftp.rmdir) {
-    return Promise.resolve(async () => undefined);
+    return Promise.reject(
+      new TerminalImageStorageError(
+        "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+        "Remote image storage lock cannot be verified",
+      ),
+    );
   }
 
   return new Promise((resolve, reject) => {
@@ -567,6 +575,11 @@ async function storeImageViaSftpUnlocked(
       await releaseRemoteLock();
     } catch (releaseError) {
       if (!operationError) {
+        if (sftp.unlink) {
+          await new Promise<void>((resolve) => {
+            sftp.unlink!(remotePath, () => resolve());
+          });
+        }
         operationError = new TerminalImageStorageError(
           "IMAGE_REMOTE_WRITE_FAILED",
           "Failed to release remote image storage lock",

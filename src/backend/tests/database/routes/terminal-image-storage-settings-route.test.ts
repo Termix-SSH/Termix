@@ -32,6 +32,9 @@ vi.mock("../../../database/repositories/factory.js", () => ({
     set: async (key: string, value: string) => {
       state.settings[key] = value;
     },
+    setMany: async (writes: Array<{ key: string; value: string }>) => {
+      for (const write of writes) state.settings[write.key] = write.value;
+    },
   }),
 }));
 

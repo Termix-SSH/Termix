@@ -213,7 +213,7 @@ describe("storeImageViaSftp", () => {
               ? undefined
               : attrsOrCallback.mode,
         });
-        callback(behavior.mkdirError);
+        callback(dir === REMOTE_IMAGE_DIR ? behavior.mkdirError : undefined);
       },
       stat: (
         _dir: string,
@@ -256,6 +256,14 @@ describe("storeImageViaSftp", () => {
         };
         return stream;
       },
+      unlink: (
+        _remotePath: string,
+        callback: (error?: Error) => void,
+      ) => callback(),
+      rmdir: (
+        _dir: string,
+        callback: (error?: Error) => void,
+      ) => callback(),
     } as unknown as ImageSftpClient;
     return { sftp, written, calls, streams };
   }
@@ -276,7 +284,10 @@ describe("storeImageViaSftp", () => {
     const stored = await storeImageViaSftp(sftp, PNG_BYTES);
 
     expect(stored.storage).toBe("remote-sftp");
-    expect(calls.mkdir).toEqual([{ dir: REMOTE_IMAGE_DIR, mode: 0o700 }]);
+    expect(calls.mkdir).toEqual([
+      { dir: REMOTE_IMAGE_DIR, mode: 0o700 },
+      { dir: `${REMOTE_IMAGE_DIR}/.termix-write-lock`, mode: 0o700 },
+    ]);
     expect(calls.createWriteStream).toEqual([
       { path: stored.shellPath, mode: 0o600 },
     ]);
