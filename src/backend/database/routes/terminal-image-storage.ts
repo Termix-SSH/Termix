@@ -365,7 +365,23 @@ function waitForRemoteImageLock(
             typeof attrs?.mtime === "number" &&
             Date.now() - attrs.mtime * 1000 > REMOTE_IMAGE_LOCK_LEASE_MS;
           if (stale) {
-            sftp.rmdir!(REMOTE_IMAGE_LOCK_DIR, () => tryAcquire());
+            sftp.rmdir!(REMOTE_IMAGE_LOCK_DIR, (removeError) => {
+              if (removeError) {
+                if (--remaining <= 0) {
+                  reject(
+                    new TerminalImageStorageError(
+                      "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+                      "Stale remote image storage lock cannot be removed",
+                      removeError,
+                    ),
+                  );
+                  return;
+                }
+                setTimeout(tryAcquire, 50);
+                return;
+              }
+              tryAcquire();
+            });
             return;
           }
         if (--remaining <= 0) {
