@@ -39,6 +39,7 @@ const pickPreferences = (row?: UserPreferenceRecord | null) => ({
   customKeybindings: row?.customKeybindings ?? null,
   terminalDefaults: row?.terminalDefaults ?? null,
   rdpDefaults: row?.rdpDefaults ?? null,
+  terminalMacros: row?.terminalMacros ?? null,
 });
 
 const connectionDefaultFields = ["terminalDefaults", "rdpDefaults"] as const;
@@ -226,6 +227,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     customKeybindings,
     terminalDefaults,
     rdpDefaults,
+    terminalMacros,
   } = req.body as {
     reopenTabsOnLogin?: boolean;
     theme?: string | null;
@@ -247,6 +249,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     customKeybindings?: string | null;
     terminalDefaults?: string | null;
     rdpDefaults?: string | null;
+    terminalMacros?: string | null;
   };
   // showHostTags, hostTrayOnClick, compactHostView, statusColorScheme,
   // foldersCollapsed are no longer writable here -- they moved to
@@ -278,6 +281,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     customKeybindings,
     terminalDefaults,
     rdpDefaults,
+    terminalMacros,
   })) {
     if (value !== undefined && value !== null && typeof value !== "string") {
       return res.status(400).json({ error: `${key} must be a string` });
@@ -347,6 +351,34 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
     }
   }
 
+  if (terminalMacros !== undefined && terminalMacros !== null) {
+    let parsedMacros: unknown;
+    try {
+      parsedMacros = JSON.parse(terminalMacros);
+    } catch {
+      return res
+        .status(400)
+        .json({ error: "terminalMacros must be a JSON-encoded array" });
+    }
+    if (
+      terminalMacros.length > 512 * 1024 ||
+      !Array.isArray(parsedMacros) ||
+      parsedMacros.length > 100 ||
+      !parsedMacros.every(
+        (macro) =>
+          !!macro &&
+          typeof macro === "object" &&
+          typeof (macro as { id?: unknown }).id === "string" &&
+          typeof (macro as { name?: unknown }).name === "string" &&
+          Array.isArray((macro as { steps?: unknown }).steps),
+      )
+    ) {
+      return res.status(400).json({
+        error: "terminalMacros must contain at most 100 valid macros",
+      });
+    }
+  }
+
   const boolFields: Record<string, boolean | null | undefined> = {
     commandAutocomplete,
     commandPaletteEnabled,
@@ -392,6 +424,7 @@ router.put("/", authenticateJWT, async (req: Request, res: Response) => {
   if (terminalDefaults !== undefined)
     updates.terminalDefaults = terminalDefaults;
   if (rdpDefaults !== undefined) updates.rdpDefaults = rdpDefaults;
+  if (terminalMacros !== undefined) updates.terminalMacros = terminalMacros;
 
   if (Object.keys(updates).length === 1) {
     return res.status(400).json({ error: "No preferences provided" });

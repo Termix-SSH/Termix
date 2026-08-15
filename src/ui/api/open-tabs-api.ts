@@ -120,6 +120,7 @@ export interface UserPreferences {
   customKeybindings?: string | null;
   terminalDefaults?: string | null;
   rdpDefaults?: string | null;
+  terminalMacros?: string | null;
 }
 
 export function parseCustomThemes(raw?: string | null): SavedCustomTheme[] {

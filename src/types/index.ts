@@ -776,6 +776,7 @@ export interface TerminalRefHandle {
   isConnected?: () => boolean;
   fit?: () => void;
   sendInput?: (data: string) => void;
+  subscribeOutput?: (listener: (data: string) => void) => () => void;
   notifyResize?: () => void;
   refresh?: () => void;
   openFileManager?: () => void;

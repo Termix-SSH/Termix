@@ -866,6 +866,7 @@ const migrateSchema = () => {
   addColumnIfNotExists("user_preferences", "custom_keybindings", "TEXT");
   addColumnIfNotExists("user_preferences", "terminal_defaults", "TEXT");
   addColumnIfNotExists("user_preferences", "rdp_defaults", "TEXT");
+  addColumnIfNotExists("user_preferences", "terminal_macros", "TEXT");
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS dashboard_service_links (

@@ -262,6 +262,7 @@ export type TabType =
   | "alerts"
   | "session-logs"
   | "snippets"
+  | "macros"
   | "history"
   | "ssh-tools"
   | "automations"
@@ -302,6 +303,7 @@ export type Tab = {
     disconnect?: () => void;
     isConnected?: () => boolean;
     sendInput?: (data: string) => void;
+    subscribeOutput?: (listener: (data: string) => void) => () => void;
     paste?: (text: string) => void;
     reconnect?: () => void;
     fit?: () => void;
@@ -355,7 +357,8 @@ export type ThemeId =
   | "gruvbox";
 export type FontSizeId = "xs" | "sm" | "md" | "lg" | "xl";
 
-export type ToolsTab = "ssh-tools" | "snippets" | "history" | "split-screen";
+export type ToolsTab =
+  "ssh-tools" | "snippets" | "macros" | "history" | "split-screen";
 export type SplitMode =
   | "none"
   | "2-way"

@@ -75,6 +75,9 @@ const SshToolsPanel = lazy(() =>
 const SnippetsPanel = lazy(() =>
   import("@/sidebar/SnippetsPanel").then((m) => ({ default: m.SnippetsPanel })),
 );
+const MacrosPanel = lazy(() =>
+  import("@/sidebar/MacrosPanel").then((m) => ({ default: m.MacrosPanel })),
+);
 const FleetsPanel = lazy(() =>
   import("@/sidebar/FleetsPanel").then((m) => ({ default: m.FleetsPanel })),
 );
@@ -2294,6 +2297,18 @@ export function AppShell({
         {railView === "snippets" && (
           <div className="flex-1 min-h-0 overflow-y-auto">
             <SnippetsPanel
+              terminalTabs={terminalTabs}
+              activeTabId={targetTerminalTabId}
+              storageMode={
+                userPrefs.storageMode === "cloud" ? "cloud" : "local"
+              }
+            />
+          </div>
+        )}
+
+        {railView === "macros" && (
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <MacrosPanel
               terminalTabs={terminalTabs}
               activeTabId={targetTerminalTabId}
               storageMode={

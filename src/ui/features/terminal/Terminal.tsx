@@ -170,6 +170,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
     const { theme: appTheme } = useTheme();
     const { addLog } = useConnectionLog();
     const { terminal: terminalDefaults } = useConnectionDefaults();
+    const outputListenersRef = useRef(new Set<(data: string) => void>());
 
     const savedTheme = localStorage.getItem(
       `terminal_theme_host_${hostConfig.id}`,
@@ -1043,6 +1044,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
             webSocketRef.current.send(JSON.stringify({ type: "input", data }));
           }
         },
+        subscribeOutput: (listener: (data: string) => void) => {
+          outputListenersRef.current.add(listener);
+          return () => outputListenersRef.current.delete(listener);
+        },
         paste: (text: string) => {
           terminal?.paste(text);
         },
@@ -1380,6 +1385,9 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           }
           if (msg.type === "data") {
             if (typeof msg.data === "string") {
+              outputListenersRef.current.forEach((listener) =>
+                listener(msg.data),
+              );
               if (showAutocompleteRef.current) {
                 showAutocompleteRef.current = false;
                 setShowAutocomplete(false);
