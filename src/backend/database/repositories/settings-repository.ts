@@ -52,25 +52,45 @@ export class SettingsRepository {
   }
 
   async setMany(entries: Array<{ key: string; value: string }>): Promise<void> {
-    this.context.drizzle.transaction((tx) => {
-      for (const { key, value } of entries) {
-        const existing = tx
-          .select({ value: settings.value })
-          .from(settings)
-          .where(eq(settings.key, key))
-          .limit(1)
-          .all();
-        if (existing[0] === undefined) {
-          tx.insert(settings).values({ key, value }).run();
-        } else {
-          tx
-            .update(settings)
-            .set({ value })
+    if (this.context.dialect !== "sqlite") {
+      await this.context.drizzle.transaction(async (tx) => {
+        for (const { key, value } of entries) {
+          const existing = await tx
+            .select({ value: settings.value })
+            .from(settings)
             .where(eq(settings.key, key))
-            .run();
+            .limit(1);
+          if (existing[0] === undefined) {
+            await tx.insert(settings).values({ key, value });
+          } else {
+            await tx
+              .update(settings)
+              .set({ value })
+              .where(eq(settings.key, key));
+          }
         }
-      }
-    });
+      });
+    } else {
+      this.context.drizzle.transaction((tx) => {
+        for (const { key, value } of entries) {
+          const existing = tx
+            .select({ value: settings.value })
+            .from(settings)
+            .where(eq(settings.key, key))
+            .limit(1)
+            .all();
+          if (existing[0] === undefined) {
+            tx.insert(settings).values({ key, value }).run();
+          } else {
+            tx
+              .update(settings)
+              .set({ value })
+              .where(eq(settings.key, key))
+              .run();
+          }
+        }
+      });
+    }
     for (const { key, value } of entries) updateCachedSetting(key, value);
     await this.afterWrite();
   }
