@@ -178,6 +178,9 @@ describe("storeImageViaSftp", () => {
     mkdirError?: Error;
     writeError?: Error;
     stallWrite?: boolean;
+    stallLock?: boolean;
+    stallReaddir?: boolean;
+    stallRmdir?: boolean;
     readdirEntries?: Array<{ filename: string; mtime?: number; size?: number }>;
     readdirError?: Error;
     statMode?: number;
@@ -213,6 +216,12 @@ describe("storeImageViaSftp", () => {
               ? undefined
               : attrsOrCallback.mode,
         });
+        if (
+          behavior.stallLock &&
+          dir === `${REMOTE_IMAGE_DIR}/.termix-write-lock`
+        ) {
+          return;
+        }
         callback(dir === REMOTE_IMAGE_DIR ? behavior.mkdirError : undefined);
       },
       stat: (
@@ -227,7 +236,16 @@ describe("storeImageViaSftp", () => {
       readdir: (
         _dir: string,
         callback: (error: Error | undefined, entries: Array<{ filename: string; attrs?: { mtime?: number; size?: number } }>) => void,
-      ) => callback(behavior.readdirError, behavior.readdirEntries?.map((entry) => ({ filename: entry.filename, attrs: entry })) ?? []),
+            ) => {
+        if (behavior.stallReaddir) return;
+        callback(
+          behavior.readdirError,
+          behavior.readdirEntries?.map((entry) => ({
+            filename: entry.filename,
+            attrs: entry,
+          })) ?? [],
+        );
+      },
       createWriteStream: (
         remotePath: string,
         options?: { mode?: number },
@@ -263,7 +281,10 @@ describe("storeImageViaSftp", () => {
       rmdir: (
         _dir: string,
         callback: (error?: Error) => void,
-      ) => callback(),
+      ) => {
+        if (behavior.stallRmdir) return;
+        callback();
+      },
     } as unknown as ImageSftpClient;
     return { sftp, written, calls, streams };
   }
@@ -445,6 +466,40 @@ describe("storeImageViaSftp", () => {
       "IMAGE_REMOTE_WRITE_FAILED",
     );
   });
+
+  it("fails closed when remote lock acquisition stalls", async () => {
+    const { sftp } = fakeSftp({ stallLock: true });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+  }, 12_000);
+
+  it("fails closed when remote quota inspection stalls", async () => {
+    const { sftp } = fakeSftp({ stallReaddir: true });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES, {
+      maxCount: 10,
+      maxBytes: 1024,
+    }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+  }, 7_000);
+
+  it("fails closed when remote lock release stalls", async () => {
+    const { sftp } = fakeSftp({ stallRmdir: true });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+  }, 5_000);
 
   it("maps SFTP failures to IMAGE_REMOTE_WRITE_FAILED", async () => {
     const { sftp } = fakeSftp({ writeError: new Error("Permission denied") });

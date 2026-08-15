@@ -269,6 +269,26 @@ function execBounded(
   });
 }
 
+function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    operation.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 /** Verify a configured local mapping from the currently connected SSH session. */
 export async function probeLocalImageVisibility(
   sshConn: ImageSshExecClient,
@@ -325,7 +345,7 @@ function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
 }
 
 const REMOTE_IMAGE_LOCK_DIR = `${REMOTE_IMAGE_DIR}/.termix-write-lock`;
-const REMOTE_IMAGE_LOCK_LEASE_MS = 30_000;
+const REMOTE_IMAGE_LOCK_LEASE_MS = 60_000;
 
 function waitForRemoteImageLock(
   sftp: ImageSftpClient,
@@ -537,15 +557,31 @@ async function storeImageViaSftpUnlocked(
   let releaseRemoteLock: (() => Promise<void>) | undefined;
   let operationError: TerminalImageStorageError | undefined;
   try {
-    await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
-    releaseRemoteLock = await waitForRemoteImageLock(sftp);
-    await cleanupExpiredRemoteImages(sftp, options.ttlMs, options.nowMs);
+    await withTimeout(
+      sftpMkdir(sftp, REMOTE_IMAGE_DIR),
+      3_000,
+      "SFTP directory operation timed out",
+    );
+    releaseRemoteLock = await withTimeout(
+      waitForRemoteImageLock(sftp),
+      10_000,
+      "SFTP lock operation timed out",
+    );
+    await withTimeout(
+      cleanupExpiredRemoteImages(sftp, options.ttlMs, options.nowMs),
+      5_000,
+      "SFTP cleanup operation timed out",
+    );
     if (options.maxCount !== undefined || options.maxBytes !== undefined) {
-      await enforceRemoteImageLimits(
-        sftp,
-        image.length,
-        options.maxCount ?? 100,
-        options.maxBytes ?? 5_368_709_120,
+      await withTimeout(
+        enforceRemoteImageLimits(
+          sftp,
+          image.length,
+          options.maxCount ?? 100,
+          options.maxBytes ?? 5_368_709_120,
+        ),
+        5_000,
+        "SFTP quota operation timed out",
       );
     }
     await sftpWriteFile(
@@ -572,7 +608,11 @@ async function storeImageViaSftpUnlocked(
 
   if (releaseRemoteLock) {
     try {
-      await releaseRemoteLock();
+      await withTimeout(
+        releaseRemoteLock(),
+        3_000,
+        "SFTP lock release timed out",
+      );
     } catch (releaseError) {
       if (!operationError) {
         if (sftp.unlink) {
@@ -600,6 +640,10 @@ export function storeImageViaSftp(
   options: Parameters<typeof storeImageViaSftpUnlocked>[2] = {},
 ): Promise<StoredTerminalImage> {
   return withImageStorageLock(() =>
-    storeImageViaSftpUnlocked(sftp, image, options),
+    withTimeout(
+      storeImageViaSftpUnlocked(sftp, image, options),
+      20_000,
+      "SFTP image operation timed out",
+    ),
   );
 }
