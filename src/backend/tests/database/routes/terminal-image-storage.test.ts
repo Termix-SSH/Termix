@@ -180,6 +180,7 @@ describe("storeImageViaSftp", () => {
     stallWrite?: boolean;
     readdirEntries?: Array<{ filename: string; mtime?: number; size?: number }>;
     readdirError?: Error;
+    statMode?: number;
   }): {
     sftp: ImageSftpClient;
     written: Map<string, Buffer>;
@@ -214,6 +215,15 @@ describe("storeImageViaSftp", () => {
         });
         callback(behavior.mkdirError);
       },
+      stat: (
+        _dir: string,
+        callback: (error: Error | undefined, attrs?: { mode?: number }) => void,
+      ) => callback(undefined, { mode: behavior.statMode ?? 0o40700 }),
+      chmod: (
+        _dir: string,
+        _mode: number,
+        callback: (error?: Error) => void,
+      ) => callback(),
       readdir: (
         _dir: string,
         callback: (error: Error | undefined, entries: Array<{ filename: string; attrs?: { mtime?: number; size?: number } }>) => void,
@@ -337,6 +347,20 @@ describe("storeImageViaSftp", () => {
     );
     expect(streams[0]!.destroyed).toBe(true);
   });
+  it("rejects an existing remote path that is not a directory", async () => {
+    const { sftp } = fakeSftp({
+      mkdirError: new Error("Failure: file already exists"),
+      statMode: 0o100644,
+    });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+  });
+
   it("tolerates mkdir failures for an already-existing directory", async () => {
     const { sftp } = fakeSftp({
       mkdirError: new Error("Failure: file already exists"),

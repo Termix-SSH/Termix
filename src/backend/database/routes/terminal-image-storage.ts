@@ -129,6 +129,7 @@ export async function storeImageLocally(
   return withImageStorageLock(async () => {
     let usage: { fileCount: number; totalBytes: number };
     try {
+      await fs.mkdir(settings.localDir, { recursive: true });
       await cleanupExpiredImages(settings.localDir, settings.ttlMs);
       usage = await getActiveImageStorageUsage(
         settings.localDir,
@@ -159,7 +160,6 @@ export async function storeImageLocally(
     const id = randomUUID();
     const filename = `${id}.png`;
     try {
-      await fs.mkdir(settings.localDir, { recursive: true });
       await fs.writeFile(path.join(settings.localDir, filename), image);
     } catch (error) {
       throw new TerminalImageStorageError(
@@ -290,10 +290,6 @@ function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
   return new Promise((resolve, reject) => {
     sftp.mkdir(dir, { mode: 0o700 }, (err) => {
       if (!err) {
-        resolve();
-        return;
-      }
-      if (/exist/i.test(err.message)) {
         resolve();
         return;
       }
@@ -433,7 +429,7 @@ async function enforceRemoteImageLimits(
     );
   }
 }
-export async function storeImageViaSftp(
+async function storeImageViaSftpUnlocked(
   sftp: ImageSftpClient,
   image: Buffer,
   options: {
@@ -475,4 +471,14 @@ export async function storeImageViaSftp(
   }
 
   return { id, filename, shellPath: remotePath, storage: "remote-sftp" };
+}
+
+export function storeImageViaSftp(
+  sftp: ImageSftpClient,
+  image: Buffer,
+  options: Parameters<typeof storeImageViaSftpUnlocked>[2] = {},
+): Promise<StoredTerminalImage> {
+  return withImageStorageLock(() =>
+    storeImageViaSftpUnlocked(sftp, image, options),
+  );
 }
