@@ -483,12 +483,16 @@ async function cleanupExpiredRemoteImages(
       )
       .map(
         (entry) =>
-          new Promise<void>((resolve) => {
-            sftp.unlink!(
-              `${REMOTE_IMAGE_DIR}/${entry.filename}`,
-              () => resolve(),
-            );
-          }),
+          withTimeout(
+            new Promise<void>((resolve) => {
+              sftp.unlink!(
+                `${REMOTE_IMAGE_DIR}/${entry.filename}`,
+                () => resolve(),
+              );
+            }),
+            3_000,
+            "SFTP cleanup operation timed out",
+          ).catch(() => undefined),
       ),
   );
 }
@@ -592,9 +596,13 @@ async function storeImageViaSftpUnlocked(
     );
   } catch (error) {
     if (sftp.unlink) {
-      await new Promise<void>((resolve) => {
-        sftp.unlink!(remotePath, () => resolve());
-      });
+      await withTimeout(
+        new Promise<void>((resolve) => {
+          sftp.unlink!(remotePath, () => resolve());
+        }),
+        3_000,
+        "SFTP cleanup operation timed out",
+      ).catch(() => undefined);
     }
     operationError =
       error instanceof TerminalImageStorageError
@@ -616,9 +624,13 @@ async function storeImageViaSftpUnlocked(
     } catch (releaseError) {
       if (!operationError) {
         if (sftp.unlink) {
-          await new Promise<void>((resolve) => {
-            sftp.unlink!(remotePath, () => resolve());
-          });
+          await withTimeout(
+            new Promise<void>((resolve) => {
+              sftp.unlink!(remotePath, () => resolve());
+            }),
+            3_000,
+            "SFTP cleanup operation timed out",
+          ).catch(() => undefined);
         }
         operationError = new TerminalImageStorageError(
           "IMAGE_REMOTE_WRITE_FAILED",

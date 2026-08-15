@@ -181,6 +181,7 @@ describe("storeImageViaSftp", () => {
     stallLock?: boolean;
     stallReaddir?: boolean;
     stallRmdir?: boolean;
+    stallUnlink?: boolean;
     readdirEntries?: Array<{ filename: string; mtime?: number; size?: number }>;
     readdirError?: Error;
     statMode?: number;
@@ -277,7 +278,10 @@ describe("storeImageViaSftp", () => {
       unlink: (
         _remotePath: string,
         callback: (error?: Error) => void,
-      ) => callback(),
+      ) => {
+        if (behavior.stallUnlink) return;
+        callback();
+      },
       rmdir: (
         _dir: string,
         callback: (error?: Error) => void,
@@ -418,6 +422,20 @@ describe("storeImageViaSftp", () => {
     expect(unlinked).toHaveLength(1);
     expect(unlinked[0]).toMatch(new RegExp(`${REMOTE_IMAGE_DIR}/[0-9a-f-]+\\.png`));
   });
+
+  it("preserves the write error when partial-file cleanup stalls", async () => {
+    const { sftp } = fakeSftp({
+      writeError: new Error("write failed"),
+      stallUnlink: true,
+    });
+    const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+  }, 5_000);
 
   it("recovers a stale remote lock before writing", async () => {
     const base = fakeSftp({});

@@ -232,12 +232,20 @@ router.post(
       const stored =
         storageMode === "remote-sftp"
           ? await (async () => {
-              remoteSftp = await new Promise<ImageSftpClient>((resolve, reject) => {
-                session!.sshConn!.sftp((err, sftp) => {
-                  if (err) return reject(err);
-                  resolve(sftp);
-                });
-              });
+              remoteSftp = await Promise.race([
+                new Promise<ImageSftpClient>((resolve, reject) => {
+                  session!.sshConn!.sftp((err, sftp) => {
+                    if (err) return reject(err);
+                    resolve(sftp);
+                  });
+                }),
+                new Promise<never>((_, reject) =>
+                  setTimeout(
+                    () => reject(new Error("SFTP channel acquisition timed out")),
+                    3_000,
+                  ),
+                ),
+              ]);
               return storeImageViaSftp(remoteSftp, normalizedImage, {
                 ttlMs: storageSettings.ttlMs,
                 maxCount: storageSettings.maxCount,
