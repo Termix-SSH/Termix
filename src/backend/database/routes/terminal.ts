@@ -46,7 +46,7 @@ const imageUpload = multer({
   limits: { fileSize: 50 * 1024 * 1024 },
 });
 const imageUploadMiddleware = imageUpload.single("image");
-const imageProcessingLimiter = createConcurrencyLimiter(4);
+const imageProcessingLimiter = createConcurrencyLimiter(4, 4);
 const imageMultipartAdmissionLimiter = createConcurrencyLimiter(4, 4);
 
 async function handleImageUploadMiddleware(
@@ -177,8 +177,15 @@ router.post(
     }
 
     let normalizedImage: Buffer;
-    const releaseImageProcessingSlot =
-      await imageProcessingLimiter.acquire();
+    let releaseImageProcessingSlot: (() => void) | undefined;
+    try {
+      releaseImageProcessingSlot = await imageProcessingLimiter.acquire();
+    } catch {
+      return res.status(503).json({
+        error: "Image upload capacity is temporarily exhausted",
+        code: "IMAGE_UPLOAD_CAPACITY_EXCEEDED",
+      });
+    }
     try {
       const source = sharp(req.file.buffer, {
         failOn: "error",
@@ -210,7 +217,7 @@ router.post(
         code: "IMAGE_DECODE_FAILED",
       });
     } finally {
-      releaseImageProcessingSlot();
+      releaseImageProcessingSlot?.();
     }
 
     let remoteSftp: ImageSftpClient | undefined;
