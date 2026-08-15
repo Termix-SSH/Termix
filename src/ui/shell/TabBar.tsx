@@ -27,7 +27,13 @@ import { isElectron } from "@/lib/electron";
 import type { Tab, TabType, SplitMode } from "@/types/ui-types";
 import { SPLIT_MODES, PANE_COUNTS } from "@/lib/theme";
 
-const CONNECTION_TAB_TYPES: TabType[] = ["terminal", "rdp", "vnc", "telnet"];
+const CONNECTION_TAB_TYPES: TabType[] = [
+  "terminal",
+  "local-terminal",
+  "rdp",
+  "vnc",
+  "telnet",
+];
 
 export function TabBar({
   tabs,

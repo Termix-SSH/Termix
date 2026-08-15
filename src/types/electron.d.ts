@@ -167,6 +167,27 @@ export interface ElectronAPI {
     success: boolean;
     error?: string;
   }>;
+
+  startLocalTerminal(dimensions: {
+    cols: number;
+    rows: number;
+  }): Promise<{ sessionId: string; shell: string }>;
+  readyLocalTerminal(sessionId: string): Promise<boolean>;
+  writeLocalTerminal(sessionId: string, data: string): Promise<boolean>;
+  resizeLocalTerminal(
+    sessionId: string,
+    cols: number,
+    rows: number,
+  ): Promise<boolean>;
+  closeLocalTerminal(sessionId: string): Promise<boolean>;
+  onLocalTerminalData(
+    sessionId: string,
+    callback: (data: string) => void,
+  ): () => void;
+  onLocalTerminalExit(
+    sessionId: string,
+    callback: (exitCode: number) => void,
+  ): () => void;
 }
 
 declare global {

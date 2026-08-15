@@ -56,6 +56,11 @@ const loadTerminalFeature = () =>
     default: m.Terminal,
   }));
 const TerminalFeature = lazy(loadTerminalFeature);
+const LocalTerminal = lazy(() =>
+  import("@/features/local-terminal/LocalTerminal").then((m) => ({
+    default: m.LocalTerminal,
+  })),
+);
 const MobileTerminalKeyboard = lazy(() =>
   import("@/features/terminal/MobileTerminalKeyboard").then((m) => ({
     default: m.MobileTerminalKeyboard,
@@ -274,6 +279,8 @@ export function tabIcon(type: TabType) {
       return <LayoutDashboard className="size-3.5" />;
     case "terminal":
       return <Terminal className="size-3.5" />;
+    case "local-terminal":
+      return <TerminalSquare className="size-3.5" />;
     case "rdp":
       return <Monitor className="size-3.5" />;
     case "vnc":
@@ -471,6 +478,11 @@ export function renderTabContent(
             onSaveQuickConnect ? () => onSaveQuickConnect(tab, host) : undefined
           }
         />
+      );
+
+    case "local-terminal":
+      return withTabSuspense(
+        <LocalTerminal instanceId={tab.instanceId} isVisible={isVisible} />,
       );
 
     case "files":

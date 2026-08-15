@@ -1653,6 +1653,32 @@ export function AppShell({
     });
   }
 
+  function openLocalTerminalTab(): string {
+    const instanceId =
+      typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    const id = `local-terminal-${instanceId}`;
+    setTabs((current) => {
+      const count = current.filter(
+        (tab) => tab.type === "local-terminal",
+      ).length;
+      return [
+        ...current,
+        {
+          id,
+          instanceId,
+          type: "local-terminal",
+          label:
+            count === 0 ? "Local Terminal" : `Local Terminal (${count + 1})`,
+          openedAt: Date.now(),
+        },
+      ];
+    });
+    setActiveTabId(id);
+    return id;
+  }
+
   const openSingletonTab = useCallback(
     // --- tmux-monitor --- (added optional `host` so tmux_monitor can open
     // with a preselected host; existing callers are unaffected)
@@ -2140,7 +2166,8 @@ export function AppShell({
     }
 
     for (const tab of tabs) {
-      const isTerminal = tab.type === "terminal";
+      const isTerminal =
+        tab.type === "terminal" || tab.type === "local-terminal";
       const node = getTabNode(tab.id, isTerminal);
       const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
       const inPane = paneIdx !== -1;
@@ -2754,7 +2781,10 @@ export function AppShell({
                   }}
                 >
                   {tabs.map((tab) => {
-                    const tabNode = getTabNode(tab.id, tab.type === "terminal");
+                    const tabNode = getTabNode(
+                      tab.id,
+                      tab.type === "terminal" || tab.type === "local-terminal",
+                    );
                     const paneIdx = isSplit ? paneTabIds.indexOf(tab.id) : -1;
                     const inPane = paneIdx !== -1;
                     const activeInline = !inPane && tab.id === activeTabId;
@@ -2880,6 +2910,8 @@ export function AppShell({
                 ].includes(type)
               ) {
                 openSingletonTab(type, pendingEvent);
+              } else if (type === "local-terminal") {
+                openLocalTerminalTab();
               } else if (type === "tmux_monitor") {
                 // --- tmux-monitor --- singleton tab, optionally preselecting a host
                 openSingletonTab(

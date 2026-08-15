@@ -254,6 +254,31 @@ export function CommandPalette({
               heading={t("commandPalette.quickActions")}
               className="px-2"
             >
+              {window.electronAPI?.isElectron && (
+                <CommandItem
+                  value="quick-action-local-terminal"
+                  onSelect={() =>
+                    handleAction(() => onOpenTab("local-terminal"))
+                  }
+                  className="group flex items-center gap-3 px-3 py-2.5 rounded-none hover:bg-accent-brand/10 cursor-pointer"
+                >
+                  <div className="size-8 rounded-none bg-muted flex items-center justify-center group-hover:bg-accent-brand/20 transition-colors">
+                    <Terminal className="size-4 text-accent-brand" />
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="text-sm font-semibold">
+                      {t("commandPalette.localTerminal", {
+                        defaultValue: "Local Terminal",
+                      })}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {t("commandPalette.localTerminalDesc", {
+                        defaultValue: "Open a shell on this computer",
+                      })}
+                    </span>
+                  </div>
+                </CommandItem>
+              )}
               <CommandItem
                 value="quick-action-add-host"
                 onSelect={() =>

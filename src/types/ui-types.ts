@@ -240,6 +240,7 @@ export type HostFolder = {
 export type TabType =
   | "dashboard"
   | "terminal"
+  | "local-terminal"
   | "rdp"
   | "vnc"
   | "telnet"
