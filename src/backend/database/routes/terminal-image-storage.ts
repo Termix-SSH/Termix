@@ -511,7 +511,7 @@ async function storeImageViaSftpUnlocked(
   const remotePath = `${REMOTE_IMAGE_DIR}/${filename}`;
 
   let releaseRemoteLock: (() => Promise<void>) | undefined;
-  let primaryError: unknown;
+  let operationError: TerminalImageStorageError | undefined;
   try {
     await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
     releaseRemoteLock = await waitForRemoteImageLock(sftp);
@@ -531,24 +531,27 @@ async function storeImageViaSftpUnlocked(
       options.writeTimeoutMs,
     );
   } catch (error) {
-    primaryError = error;
     if (sftp.unlink) {
       await new Promise<void>((resolve) => {
         sftp.unlink!(remotePath, () => resolve());
       });
     }
-    if (error instanceof TerminalImageStorageError) throw error;
-    throw new TerminalImageStorageError(
-      "IMAGE_REMOTE_WRITE_FAILED",
-      "Failed to write image to the remote host",
-      error,
-    );
-  } finally {
+    operationError =
+      error instanceof TerminalImageStorageError
+        ? error
+        : new TerminalImageStorageError(
+            "IMAGE_REMOTE_WRITE_FAILED",
+            "Failed to write image to the remote host",
+            error,
+          );
+  }
+
+  if (releaseRemoteLock) {
     try {
-      await releaseRemoteLock?.();
+      await releaseRemoteLock();
     } catch (releaseError) {
-      if (!primaryError) {
-        throw new TerminalImageStorageError(
+      if (!operationError) {
+        operationError = new TerminalImageStorageError(
           "IMAGE_REMOTE_WRITE_FAILED",
           "Failed to release remote image storage lock",
           releaseError,
@@ -556,6 +559,8 @@ async function storeImageViaSftpUnlocked(
       }
     }
   }
+
+  if (operationError) throw operationError;
 
   return { id, filename, shellPath: remotePath, storage: "remote-sftp" };
 }
