@@ -370,6 +370,71 @@ describe("storeImageViaSftp", () => {
     });
   });
 
+  it("cleans up a partially created remote file after a write failure", async () => {
+    const { sftp } = fakeSftp({ writeError: new Error("write failed") });
+    const unlinked: string[] = [];
+    (sftp as ImageSftpClient).unlink = (remotePath, callback) => {
+      unlinked.push(remotePath);
+      callback();
+    };
+
+    const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect(unlinked).toHaveLength(1);
+    expect(unlinked[0]).toMatch(new RegExp(`${REMOTE_IMAGE_DIR}/[0-9a-f-]+\\.png`));
+  });
+
+  it("recovers a stale remote lock before writing", async () => {
+    const base = fakeSftp({});
+    const sftp = base.sftp as ImageSftpClient;
+    const lockPath = `${REMOTE_IMAGE_DIR}/.termix-write-lock`;
+    let lockAttempt = 0;
+    const removed: string[] = [];
+    const originalMkdir = sftp.mkdir.bind(sftp);
+    sftp.mkdir = (dir, attrs, callback) => {
+      if (dir === lockPath && lockAttempt++ === 0) {
+        (typeof attrs === "function" ? attrs : callback!)(new Error("exists"));
+        return;
+      }
+      originalMkdir(dir, attrs, callback);
+    };
+    sftp.lstat = (_dir, callback) =>
+      callback(undefined, { mode: 0o40700, mtime: (Date.now() - 60_000) / 1000 });
+    sftp.rmdir = (dir, callback) => {
+      removed.push(dir);
+      callback();
+    };
+
+    await expect(storeImageViaSftp(sftp, PNG_BYTES)).resolves.toMatchObject({
+      storage: "remote-sftp",
+    });
+    expect(removed).toContain(lockPath);
+  });
+
+  it("does not replace a successful write with an unlock failure", async () => {
+    const base = fakeSftp({});
+    const sftp = base.sftp as ImageSftpClient;
+    const lockPath = `${REMOTE_IMAGE_DIR}/.termix-write-lock`;
+    const originalMkdir = sftp.mkdir.bind(sftp);
+    sftp.mkdir = (dir, attrs, callback) =>
+      originalMkdir(dir, attrs, callback);
+    sftp.rmdir = (dir, callback) => {
+      if (dir === lockPath) callback(new Error("unlock failed"));
+      else callback();
+    };
+
+    const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(
+      (caught: unknown) => caught,
+    );
+    expect(error).toBeInstanceOf(TerminalImageStorageError);
+    expect((error as TerminalImageStorageError).code).toBe(
+      "IMAGE_REMOTE_WRITE_FAILED",
+    );
+  });
+
   it("maps SFTP failures to IMAGE_REMOTE_WRITE_FAILED", async () => {
     const { sftp } = fakeSftp({ writeError: new Error("Permission denied") });
     const error = await storeImageViaSftp(sftp, PNG_BYTES).catch(

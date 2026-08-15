@@ -196,11 +196,11 @@ export interface ImageSftpClient {
   ): NodeJS.WritableStream;
   stat?: (
     dir: string,
-    callback: (error: Error | undefined, attrs?: { mode?: number }) => void,
+    callback: (error: Error | undefined, attrs?: { mode?: number; mtime?: number }) => void,
   ) => void;
   lstat?: (
     dir: string,
-    callback: (error: Error | undefined, attrs?: { mode?: number }) => void,
+    callback: (error: Error | undefined, attrs?: { mode?: number; mtime?: number }) => void,
   ) => void;
   chmod?: (dir: string, mode: number, callback: (error?: Error) => void) => void;
   readdir?: (
@@ -322,6 +322,7 @@ function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
 }
 
 const REMOTE_IMAGE_LOCK_DIR = `${REMOTE_IMAGE_DIR}/.termix-write-lock`;
+const REMOTE_IMAGE_LOCK_LEASE_MS = 30_000;
 
 function waitForRemoteImageLock(
   sftp: ImageSftpClient,
@@ -346,11 +347,39 @@ function waitForRemoteImageLock(
           );
           return;
         }
+
+        const inspect = sftp.lstat ?? sftp.stat;
+        if (!inspect) {
+          reject(
+            new TerminalImageStorageError(
+              "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+              "Remote image storage lock cannot be verified",
+              error,
+            ),
+          );
+          return;
+        }
+        inspect(REMOTE_IMAGE_LOCK_DIR, (inspectError, attrs) => {
+          const stale =
+            !inspectError &&
+            typeof attrs?.mtime === "number" &&
+            Date.now() - attrs.mtime * 1000 > REMOTE_IMAGE_LOCK_LEASE_MS;
+          if (stale) {
+            sftp.rmdir!(REMOTE_IMAGE_LOCK_DIR, () => tryAcquire());
+            return;
+          }
         if (--remaining <= 0) {
-          reject(new Error("Remote image storage lock unavailable"));
+          reject(
+            new TerminalImageStorageError(
+              "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+              "Remote image storage lock is unavailable",
+              error,
+            ),
+          );
           return;
         }
         setTimeout(tryAcquire, 50);
+        });
       });
     };
     tryAcquire();
@@ -482,6 +511,7 @@ async function storeImageViaSftpUnlocked(
   const remotePath = `${REMOTE_IMAGE_DIR}/${filename}`;
 
   let releaseRemoteLock: (() => Promise<void>) | undefined;
+  let primaryError: unknown;
   try {
     await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
     releaseRemoteLock = await waitForRemoteImageLock(sftp);
@@ -501,6 +531,12 @@ async function storeImageViaSftpUnlocked(
       options.writeTimeoutMs,
     );
   } catch (error) {
+    primaryError = error;
+    if (sftp.unlink) {
+      await new Promise<void>((resolve) => {
+        sftp.unlink!(remotePath, () => resolve());
+      });
+    }
     if (error instanceof TerminalImageStorageError) throw error;
     throw new TerminalImageStorageError(
       "IMAGE_REMOTE_WRITE_FAILED",
@@ -508,7 +544,17 @@ async function storeImageViaSftpUnlocked(
       error,
     );
   } finally {
-    await releaseRemoteLock?.();
+    try {
+      await releaseRemoteLock?.();
+    } catch (releaseError) {
+      if (!primaryError) {
+        throw new TerminalImageStorageError(
+          "IMAGE_REMOTE_WRITE_FAILED",
+          "Failed to release remote image storage lock",
+          releaseError,
+        );
+      }
+    }
   }
 
   return { id, filename, shellPath: remotePath, storage: "remote-sftp" };
