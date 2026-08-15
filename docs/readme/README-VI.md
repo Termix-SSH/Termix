@@ -159,7 +159,7 @@ Trang chu co the tuy chinh hoan toan voi luoi widget keo va tha. Them widget cho
 <td width="50%" valign="top">
 
 **Ma Hoa Co So Du Lieu:**
-Backend duoc luu tru duoi dang tep co so du lieu SQLite duoc ma hoa. Xem [tai lieu](https://docs.termix.site/security) de biet them.
+Backend duoc luu tru duoi dang tep co so du lieu SQLite duoc ma hoa. Xem [tai lieu](https://docs.termix.site) de biet them.
 
 </td>
 </tr>

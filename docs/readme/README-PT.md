@@ -159,7 +159,7 @@ Uma pagina inicial totalmente personalizavel com uma grade de widgets de arrasta
 <td width="50%" valign="top">
 
 **Criptografia de Banco de Dados:**
-Backend armazenado como arquivos de banco de dados SQLite criptografados. Consulte a [documentacao](https://docs.termix.site/security) para mais informacoes.
+Backend armazenado como arquivos de banco de dados SQLite criptografados. Consulte a [documentacao](https://docs.termix.site) para mais informacoes.
 
 </td>
 </tr>

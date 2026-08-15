@@ -159,7 +159,7 @@ A fully customizable homepage with a drag-and-drop widget grid. Add widgets for 
 <td width="50%" valign="top">
 
 **Database Encryption:**
-Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site/security) for more.
+Backend stored as encrypted SQLite database files. View [docs](https://docs.termix.site) for more.
 
 </td>
 </tr>

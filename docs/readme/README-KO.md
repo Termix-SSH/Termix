@@ -159,7 +159,7 @@ Tailscale 네트워크의 기기를 나열하여 호스트로 빠르게 추가�
 <td width="50%" valign="top">
 
 **데이터베이스 암호화:**
-백엔드가 암호화된 SQLite 데이터베이스 파일로 저장됨. 자세한 내용은 [문서](https://docs.termix.site/security)를 참조하세요.
+백엔드가 암호화된 SQLite 데이터베이스 파일로 저장됨. 자세한 내용은 [문서](https://docs.termix.site)를 참조하세요.
 
 </td>
 </tr>
