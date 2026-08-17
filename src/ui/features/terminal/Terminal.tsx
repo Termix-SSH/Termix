@@ -3310,7 +3310,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           // through canvas, producing an all-black/transparent re-encode.
           // Only rasterize formats that need conversion; Sharp validates the
           // resulting image server-side.
-          if (imageType !== "image/png" && typeof createImageBitmap === "function") {
+          if (
+            imageType !== "image/png" &&
+            typeof createImageBitmap === "function"
+          ) {
             try {
               const bitmap = await createImageBitmap(blob);
               try {

@@ -67,10 +67,7 @@ function invalidField(res: Response, field: string): void {
   });
 }
 
-function parseIntegerField(
-  value: unknown,
-  min: number,
-): number | null {
+function parseIntegerField(value: unknown, min: number): number | null {
   if (typeof value !== "number" || !Number.isInteger(value)) return null;
   if (value < min) return null;
   return value;

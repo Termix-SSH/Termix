@@ -34,16 +34,14 @@ function settings(
 describe("selectImageStorageMode", () => {
   it("keeps explicit modes deterministic regardless of capability", () => {
     expect(
-      selectImageStorageMode(
-        settings({ mode: "local" }),
-        { remoteSftpAvailable: true },
-      ),
+      selectImageStorageMode(settings({ mode: "local" }), {
+        remoteSftpAvailable: true,
+      }),
     ).toBe("local");
     expect(
-      selectImageStorageMode(
-        settings({ mode: "remote-sftp" }),
-        { remoteSftpAvailable: false },
-      ),
+      selectImageStorageMode(settings({ mode: "remote-sftp" }), {
+        remoteSftpAvailable: false,
+      }),
     ).toBe("remote-sftp");
   });
 
@@ -101,9 +99,9 @@ describe("storeImageLocally", () => {
       path.posix.join("/host-view/images", stored.filename),
     );
     expect(stored.shellPath).not.toContain(dir);
-    await expect(
-      fs.readFile(path.join(dir, stored.filename)),
-    ).resolves.toEqual(PNG_BYTES);
+    await expect(fs.readFile(path.join(dir, stored.filename))).resolves.toEqual(
+      PNG_BYTES,
+    );
   });
 
   it("rejects with IMAGE_STORAGE_LIMIT_REACHED when the count cap is full", async () => {
@@ -192,10 +190,14 @@ describe("storeImageViaSftp", () => {
       mkdir: Array<{ dir: string; mode?: number }>;
       createWriteStream: Array<{ path: string; mode?: number }>;
     };
-    streams: Array<NodeJS.WritableStream & { destroy: () => void; destroyed: boolean }>;
+    streams: Array<
+      NodeJS.WritableStream & { destroy: () => void; destroyed: boolean }
+    >;
   } {
     const written = new Map<string, Buffer>();
-    const streams: Array<NodeJS.WritableStream & { destroy: () => void; destroyed: boolean }> = [];
+    const streams: Array<
+      NodeJS.WritableStream & { destroy: () => void; destroyed: boolean }
+    > = [];
     const calls = { mkdir: [], createWriteStream: [] } as {
       mkdir: Array<{ dir: string; mode?: number }>;
       createWriteStream: Array<{ path: string; mode?: number }>;
@@ -229,15 +231,18 @@ describe("storeImageViaSftp", () => {
         _dir: string,
         callback: (error: Error | undefined, attrs?: { mode?: number }) => void,
       ) => callback(undefined, { mode: behavior.statMode ?? 0o40700 }),
-      chmod: (
-        _dir: string,
-        _mode: number,
-        callback: (error?: Error) => void,
-      ) => callback(),
+      chmod: (_dir: string, _mode: number, callback: (error?: Error) => void) =>
+        callback(),
       readdir: (
         _dir: string,
-        callback: (error: Error | undefined, entries: Array<{ filename: string; attrs?: { mtime?: number; size?: number } }>) => void,
-            ) => {
+        callback: (
+          error: Error | undefined,
+          entries: Array<{
+            filename: string;
+            attrs?: { mtime?: number; size?: number };
+          }>,
+        ) => void,
+      ) => {
         if (behavior.stallReaddir) return;
         callback(
           behavior.readdirError,
@@ -247,10 +252,7 @@ describe("storeImageViaSftp", () => {
           })) ?? [],
         );
       },
-      createWriteStream: (
-        remotePath: string,
-        options?: { mode?: number },
-      ) => {
+      createWriteStream: (remotePath: string, options?: { mode?: number }) => {
         calls.createWriteStream.push({ path: remotePath, mode: options?.mode });
         const stream = new EventEmitter() as NodeJS.WritableStream & {
           end: (data: Buffer) => void;
@@ -275,17 +277,11 @@ describe("storeImageViaSftp", () => {
         };
         return stream;
       },
-      unlink: (
-        _remotePath: string,
-        callback: (error?: Error) => void,
-      ) => {
+      unlink: (_remotePath: string, callback: (error?: Error) => void) => {
         if (behavior.stallUnlink) return;
         callback();
       },
-      rmdir: (
-        _dir: string,
-        callback: (error?: Error) => void,
-      ) => {
+      rmdir: (_dir: string, callback: (error?: Error) => void) => {
         if (behavior.stallRmdir) return;
         callback();
       },
@@ -298,9 +294,7 @@ describe("storeImageViaSftp", () => {
     const stored = await storeImageViaSftp(sftp, PNG_BYTES);
 
     expect(stored.storage).toBe("remote-sftp");
-    expect(stored.shellPath).toBe(
-      `${REMOTE_IMAGE_DIR}/${stored.id}.png`,
-    );
+    expect(stored.shellPath).toBe(`${REMOTE_IMAGE_DIR}/${stored.id}.png`);
     expect(written.get(stored.shellPath)).toEqual(PNG_BYTES);
   });
 
@@ -324,7 +318,13 @@ describe("storeImageViaSftp", () => {
     const unlinked: string[] = [];
     const base = fakeSftp({});
     const sftp = base.sftp as ImageSftpClient & {
-      readdir: (dir: string, callback: (err: Error | undefined, entries: Array<{ filename: string; attrs?: { mtime?: number } }>) => void) => void;
+      readdir: (
+        dir: string,
+        callback: (
+          err: Error | undefined,
+          entries: Array<{ filename: string; attrs?: { mtime?: number } }>,
+        ) => void,
+      ) => void;
       unlink: (remotePath: string, callback: (err?: Error) => void) => void;
     };
     sftp.readdir = (_dir, callback) =>
@@ -346,7 +346,9 @@ describe("storeImageViaSftp", () => {
     expect(unlinked).toEqual([`${REMOTE_IMAGE_DIR}/${expiredName}`]);
   });
   it("fails closed when remote quota inspection fails", async () => {
-    const { sftp } = fakeSftp({ readdirError: new Error("remote listing failed") });
+    const { sftp } = fakeSftp({
+      readdirError: new Error("remote listing failed"),
+    });
     const error = await storeImageViaSftp(sftp, PNG_BYTES, {
       maxCount: 10,
       maxBytes: 1024,
@@ -438,7 +440,9 @@ describe("storeImageViaSftp", () => {
 
     expect(error).toBeInstanceOf(TerminalImageStorageError);
     expect(unlinked).toHaveLength(1);
-    expect(unlinked[0]).toMatch(new RegExp(`${REMOTE_IMAGE_DIR}/[0-9a-f-]+\\.png`));
+    expect(unlinked[0]).toMatch(
+      new RegExp(`${REMOTE_IMAGE_DIR}/[0-9a-f-]+\\.png`),
+    );
   });
 
   it("preserves the write error when partial-file cleanup stalls", async () => {
@@ -470,7 +474,10 @@ describe("storeImageViaSftp", () => {
       originalMkdir(dir, attrs, callback);
     };
     sftp.lstat = (_dir, callback) =>
-      callback(undefined, { mode: 0o40700, mtime: (Date.now() - 60_000) / 1000 });
+      callback(undefined, {
+        mode: 0o40700,
+        mtime: (Date.now() - 60_000) / 1000,
+      });
     sftp.rmdir = (dir, callback) => {
       removed.push(dir);
       callback();
@@ -487,8 +494,7 @@ describe("storeImageViaSftp", () => {
     const sftp = base.sftp as ImageSftpClient;
     const lockPath = `${REMOTE_IMAGE_DIR}/.termix-write-lock`;
     const originalMkdir = sftp.mkdir.bind(sftp);
-    sftp.mkdir = (dir, attrs, callback) =>
-      originalMkdir(dir, attrs, callback);
+    sftp.mkdir = (dir, attrs, callback) => originalMkdir(dir, attrs, callback);
     sftp.rmdir = (dir, callback) => {
       if (dir === lockPath) callback(new Error("unlock failed"));
       else callback();

@@ -153,9 +153,13 @@ export class Logger {
       if (sanitizedContext.sequence !== undefined)
         contextParts.push(`seq:${sanitizedContext.sequence}`);
       if (sanitizedContext.clientUploadTimestamp)
-        contextParts.push(`clientUpload:${sanitizedContext.clientUploadTimestamp}`);
+        contextParts.push(
+          `clientUpload:${sanitizedContext.clientUploadTimestamp}`,
+        );
       if (sanitizedContext.serverReceivedAt)
-        contextParts.push(`serverReceived:${sanitizedContext.serverReceivedAt}`);
+        contextParts.push(
+          `serverReceived:${sanitizedContext.serverReceivedAt}`,
+        );
       if (sanitizedContext.bytes !== undefined)
         contextParts.push(`bytes:${sanitizedContext.bytes}`);
       if (sanitizedContext.duration)

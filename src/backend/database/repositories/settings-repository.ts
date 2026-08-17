@@ -82,8 +82,7 @@ export class SettingsRepository {
           if (existing[0] === undefined) {
             tx.insert(settings).values({ key, value }).run();
           } else {
-            tx
-              .update(settings)
+            tx.update(settings)
               .set({ value })
               .where(eq(settings.key, key))
               .run();

@@ -46,7 +46,10 @@ export interface StoredTerminalImage {
  * with SFTP), never on configuration.
  */
 export function selectImageStorageMode(
-  settings: Pick<TerminalImageStorageSettings, "mode" | "localMappingConfigured">,
+  settings: Pick<
+    TerminalImageStorageSettings,
+    "mode" | "localMappingConfigured"
+  >,
   capability: { remoteSftpAvailable: boolean; localHostVisible?: boolean },
 ): "local" | "remote-sftp" | "unavailable" {
   if (settings.mode === "local") return "local";
@@ -162,9 +165,9 @@ export async function storeImageLocally(
     try {
       await fs.writeFile(path.join(settings.localDir, filename), image);
     } catch (error) {
-      await fs.rm(path.join(settings.localDir, filename), { force: true }).catch(
-        () => undefined,
-      );
+      await fs
+        .rm(path.join(settings.localDir, filename), { force: true })
+        .catch(() => undefined);
       throw new TerminalImageStorageError(
         "IMAGE_LOCAL_WRITE_FAILED",
         "Failed to write image to local storage",
@@ -199,13 +202,23 @@ export interface ImageSftpClient {
   ): NodeJS.WritableStream;
   stat?: (
     dir: string,
-    callback: (error: Error | undefined, attrs?: { mode?: number; mtime?: number }) => void,
+    callback: (
+      error: Error | undefined,
+      attrs?: { mode?: number; mtime?: number },
+    ) => void,
   ) => void;
   lstat?: (
     dir: string,
-    callback: (error: Error | undefined, attrs?: { mode?: number; mtime?: number }) => void,
+    callback: (
+      error: Error | undefined,
+      attrs?: { mode?: number; mtime?: number },
+    ) => void,
   ) => void;
-  chmod?: (dir: string, mode: number, callback: (error?: Error) => void) => void;
+  chmod?: (
+    dir: string,
+    mode: number,
+    callback: (error?: Error) => void,
+  ) => void;
   readdir?: (
     dir: string,
     callback: (error: Error | undefined, entries: ImageSftpEntry[]) => void,
@@ -332,7 +345,9 @@ function sftpMkdir(sftp: ImageSftpClient, dir: string): Promise<void> {
           return;
         }
         if (!sftp.chmod) {
-          reject(new Error("Remote image directory permissions cannot be verified"));
+          reject(
+            new Error("Remote image directory permissions cannot be verified"),
+          );
           return;
         }
         sftp.chmod(dir, 0o700, (chmodError) => {
@@ -412,17 +427,17 @@ function waitForRemoteImageLock(
             });
             return;
           }
-        if (--remaining <= 0) {
-          reject(
-            new TerminalImageStorageError(
-              "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
-              "Remote image storage lock is unavailable",
-              error,
-            ),
-          );
-          return;
-        }
-        setTimeout(tryAcquire, 50);
+          if (--remaining <= 0) {
+            reject(
+              new TerminalImageStorageError(
+                "IMAGE_REMOTE_QUOTA_UNAVAILABLE",
+                "Remote image storage lock is unavailable",
+                error,
+              ),
+            );
+            return;
+          }
+          setTimeout(tryAcquire, 50);
         });
       });
     };
@@ -437,7 +452,9 @@ function sftpWriteFile(
   timeoutMs = 10_000,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const stream = sftp.createWriteStream(remotePath, { mode: 0o600 }) as NodeJS.WritableStream & {
+    const stream = sftp.createWriteStream(remotePath, {
+      mode: 0o600,
+    }) as NodeJS.WritableStream & {
       destroy?: () => void;
     };
     let settled = false;
@@ -472,7 +489,8 @@ async function cleanupExpiredRemoteImages(
     });
   });
   const cutoffSeconds = (nowMs - ttlMs) / 1000;
-  const uuidPng = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/i;
+  const uuidPng =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/i;
   await Promise.all(
     entries
       .filter(
@@ -481,23 +499,22 @@ async function cleanupExpiredRemoteImages(
           typeof entry.attrs?.mtime === "number" &&
           entry.attrs.mtime < cutoffSeconds,
       )
-      .map(
-        (entry) =>
-          withTimeout(
-            new Promise<void>((resolve) => {
-              sftp.unlink!(
-                `${REMOTE_IMAGE_DIR}/${entry.filename}`,
-                () => resolve(),
-              );
-            }),
-            3_000,
-            "SFTP cleanup operation timed out",
-          ).catch(() => undefined),
+      .map((entry) =>
+        withTimeout(
+          new Promise<void>((resolve) => {
+            sftp.unlink!(`${REMOTE_IMAGE_DIR}/${entry.filename}`, () =>
+              resolve(),
+            );
+          }),
+          3_000,
+          "SFTP cleanup operation timed out",
+        ).catch(() => undefined),
       ),
   );
 }
 
-const REMOTE_UUID_PNG_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/i;
+const REMOTE_UUID_PNG_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.png$/i;
 
 async function enforceRemoteImageLimits(
   sftp: ImageSftpClient,
@@ -526,7 +543,9 @@ async function enforceRemoteImageLimits(
       error,
     );
   }
-  const images = entries.filter((entry) => REMOTE_UUID_PNG_PATTERN.test(entry.filename));
+  const images = entries.filter((entry) =>
+    REMOTE_UUID_PNG_PATTERN.test(entry.filename),
+  );
   const totalBytes = images.reduce((sum, entry) => {
     if (typeof entry.attrs?.size !== "number") {
       throw new TerminalImageStorageError(
@@ -588,12 +607,7 @@ async function storeImageViaSftpUnlocked(
         "SFTP quota operation timed out",
       );
     }
-    await sftpWriteFile(
-      sftp,
-      remotePath,
-      image,
-      options.writeTimeoutMs,
-    );
+    await sftpWriteFile(sftp, remotePath, image, options.writeTimeoutMs);
   } catch (error) {
     if (sftp.unlink) {
       await withTimeout(

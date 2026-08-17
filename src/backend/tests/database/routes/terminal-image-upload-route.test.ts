@@ -31,13 +31,12 @@ vi.mock("../../../utils/logger.js", () => ({
 vi.mock("../../../utils/auth-manager.js", () => ({
   AuthManager: {
     getInstance: () => ({
-      createAuthMiddleware: () => (_req: unknown, _res: unknown, next: () => void) =>
-        next(),
-      createDataAccessMiddleware: () => (
-        _req: unknown,
-        _res: unknown,
-        next: () => void,
-      ) => next(),
+      createAuthMiddleware:
+        () => (_req: unknown, _res: unknown, next: () => void) =>
+          next(),
+      createDataAccessMiddleware:
+        () => (_req: unknown, _res: unknown, next: () => void) =>
+          next(),
     }),
   },
 }));
@@ -56,9 +55,8 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   createCurrentCommandHistoryRepository: () => ({}),
 }));
 
-const { default: router } = await import(
-  "../../../database/routes/terminal.js"
-);
+const { default: router } =
+  await import("../../../database/routes/terminal.js");
 
 interface RouteLayer {
   route?: {
@@ -68,7 +66,9 @@ interface RouteLayer {
   };
 }
 
-const imageUploadLayer = (router as unknown as { stack: RouteLayer[] }).stack.find(
+const imageUploadLayer = (
+  router as unknown as { stack: RouteLayer[] }
+).stack.find(
   (layer) => layer.route?.path === "/image-upload" && layer.route.methods.post,
 );
 const imageUploadHandler =
@@ -112,7 +112,13 @@ function fakeSftp(behavior: { writeError?: Error } = {}): {
     },
     readdir: (
       _dir: string,
-      callback: (error: Error | undefined, entries: Array<{ filename: string; attrs?: { size?: number; mtime?: number } }>) => void,
+      callback: (
+        error: Error | undefined,
+        entries: Array<{
+          filename: string;
+          attrs?: { size?: number; mtime?: number };
+        }>,
+      ) => void,
     ) => callback(undefined, []),
     unlink: (_path: string, callback: (error?: Error) => void) => callback(),
     rmdir: (_dir: string, callback: (error?: Error) => void) => callback(),
@@ -126,8 +132,9 @@ function connectedSession(instanceId: string, sftp: ImageSftpClient) {
     tabInstanceId: instanceId,
     isConnected: true,
     sshConn: {
-      sftp: (callback: (err: Error | undefined, sftp: ImageSftpClient) => void) =>
-        callback(undefined, sftp),
+      sftp: (
+        callback: (err: Error | undefined, sftp: ImageSftpClient) => void,
+      ) => callback(undefined, sftp),
     },
   };
 }
@@ -211,7 +218,11 @@ describe("terminal image upload route", () => {
   it("requires a connected terminal in explicit remote-sftp mode", async () => {
     state.settings["terminal_image_storage_mode"] = "remote-sftp";
     const response = await invoke({
-      file: { buffer: pngBuffer, mimetype: "image/png", size: pngBuffer.length },
+      file: {
+        buffer: pngBuffer,
+        mimetype: "image/png",
+        size: pngBuffer.length,
+      },
       instanceId: "tab-1",
     });
     expect(response.statusCode).toBe(409);
@@ -225,7 +236,11 @@ describe("terminal image upload route", () => {
     state.sessions = [connectedSession("tab-1", sftp)];
 
     const response = await invoke({
-      file: { buffer: pngBuffer, mimetype: "image/png", size: pngBuffer.length },
+      file: {
+        buffer: pngBuffer,
+        mimetype: "image/png",
+        size: pngBuffer.length,
+      },
       instanceId: "tab-1",
     });
 
@@ -246,11 +261,17 @@ describe("terminal image upload route", () => {
   });
 
   it("maps SFTP failures to 502 without leaking the raw remote error", async () => {
-    const { sftp, end } = fakeSftp({ writeError: new Error("Permission denied") });
+    const { sftp, end } = fakeSftp({
+      writeError: new Error("Permission denied"),
+    });
     state.sessions = [connectedSession("tab-1", sftp)];
 
     const response = await invoke({
-      file: { buffer: pngBuffer, mimetype: "image/png", size: pngBuffer.length },
+      file: {
+        buffer: pngBuffer,
+        mimetype: "image/png",
+        size: pngBuffer.length,
+      },
       instanceId: "tab-1",
     });
 
@@ -394,7 +415,9 @@ describe("terminal image upload route", () => {
       });
 
       expect(response.statusCode).toBe(503);
-      expect(response.body).toMatchObject({ code: "IMAGE_STORAGE_UNAVAILABLE" });
+      expect(response.body).toMatchObject({
+        code: "IMAGE_STORAGE_UNAVAILABLE",
+      });
     });
   });
 
@@ -451,9 +474,7 @@ describe("terminal image upload route", () => {
       expect(typeof meta.sequence).toBe("number");
       expect(meta.source).toBe("clipboard");
       expect(meta.clientUploadTimestamp).toBe("2026-08-15T12:00:00.000Z");
-      expect(
-        Number.isNaN(Date.parse(meta.serverReceivedAt ?? "")),
-      ).toBe(false);
+      expect(Number.isNaN(Date.parse(meta.serverReceivedAt ?? ""))).toBe(false);
       expect(meta.bytes).toBe(pngBuffer.length);
     });
 

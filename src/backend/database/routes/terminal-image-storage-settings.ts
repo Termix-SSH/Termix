@@ -78,7 +78,9 @@ export function parseTerminalImageStorageMode(
 ): TerminalImageStorageMode | null {
   if (typeof value !== "string") return null;
   const normalized = value.trim().toLowerCase();
-  return (TERMINAL_IMAGE_STORAGE_MODES as readonly string[]).includes(normalized)
+  return (TERMINAL_IMAGE_STORAGE_MODES as readonly string[]).includes(
+    normalized,
+  )
     ? (normalized as TerminalImageStorageMode)
     : null;
 }
@@ -110,10 +112,7 @@ export function parseImageHostPath(value: unknown): string | null {
  * next source); parseable but out-of-range values are clamped, matching the
  * original env-only behavior.
  */
-function parseClampedInt(
-  value: unknown,
-  min: number,
-): number | null {
+function parseClampedInt(value: unknown, min: number): number | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const parsed =
     typeof value === "number" ? value : Number.parseInt(value.trim(), 10);
@@ -183,7 +182,8 @@ export async function resolveTerminalImageStorageSettings(
   let mode: TerminalImageStorageMode | null = null;
   if (dbModeRaw !== null) {
     mode = parseTerminalImageStorageMode(dbModeRaw);
-    if (mode === null) warnInvalid(TERMINAL_IMAGE_STORAGE_KEYS.mode, "database");
+    if (mode === null)
+      warnInvalid(TERMINAL_IMAGE_STORAGE_KEYS.mode, "database");
   }
   if (mode === null) {
     const envModeRaw = env[TERMINAL_IMAGE_STORAGE_ENV.mode];
@@ -197,9 +197,8 @@ export async function resolveTerminalImageStorageSettings(
     // Legacy deployments configured local storage purely through
     // TERMIX_IMAGE_DIR; keep them on local mode unless a database value says
     // otherwise.
-    mode = env[TERMINAL_IMAGE_STORAGE_ENV.localDir] !== undefined
-      ? "local"
-      : "auto";
+    mode =
+      env[TERMINAL_IMAGE_STORAGE_ENV.localDir] !== undefined ? "local" : "auto";
   }
 
   const legacyLocalDir = parseImageLocalDir(
@@ -245,9 +244,11 @@ export async function resolveTerminalImageStorageSettings(
     TERMINAL_IMAGE_STORAGE_KEYS.hostPath,
   );
   const localMappingConfigured =
-    (persistedLocalDir !== null && parseImageLocalDir(persistedLocalDir) !== null ||
+    ((persistedLocalDir !== null &&
+      parseImageLocalDir(persistedLocalDir) !== null) ||
       parseImageLocalDir(env[TERMINAL_IMAGE_STORAGE_ENV.localDir]) !== null) &&
-    (persistedHostPath !== null && parseImageHostPath(persistedHostPath) !== null ||
+    ((persistedHostPath !== null &&
+      parseImageHostPath(persistedHostPath) !== null) ||
       parseImageHostPath(env[TERMINAL_IMAGE_STORAGE_ENV.hostPath]) !== null ||
       legacyLocalDir !== null);
 

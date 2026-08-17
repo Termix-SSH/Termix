@@ -231,7 +231,9 @@ export interface TerminalImageStorageTestResult {
 
 export async function getTerminalImageStorageSettings(): Promise<TerminalImageStorageSettings> {
   try {
-    const response = await authApi.get("/users/terminal-image-storage-settings");
+    const response = await authApi.get(
+      "/users/terminal-image-storage-settings",
+    );
     return response.data;
   } catch (error) {
     handleApiError(error, "fetch terminal image storage settings");

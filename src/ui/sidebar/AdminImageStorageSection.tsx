@@ -74,19 +74,19 @@ export function AdminImageStorageSection({
             description={t("admin.imageStorageModeDesc")}
           >
             <div className="flex gap-1">
-              {(
-                Object.keys(MODE_LABEL_KEYS) as TerminalImageStorageMode[]
-              ).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-pressed={settings.mode === mode}
-                  onClick={() => setSettings({ ...settings, mode })}
-                  className={`px-2 py-1 text-[10px] font-semibold border transition-colors ${settings.mode === mode ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
-                >
-                  {t(MODE_LABEL_KEYS[mode])}
-                </button>
-              ))}
+              {(Object.keys(MODE_LABEL_KEYS) as TerminalImageStorageMode[]).map(
+                (mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={settings.mode === mode}
+                    onClick={() => setSettings({ ...settings, mode })}
+                    className={`px-2 py-1 text-[10px] font-semibold border transition-colors ${settings.mode === mode ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand" : "border-border text-muted-foreground hover:text-foreground"}`}
+                  >
+                    {t(MODE_LABEL_KEYS[mode])}
+                  </button>
+                ),
+              )}
             </div>
           </SettingRow>
 

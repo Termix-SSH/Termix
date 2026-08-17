@@ -38,9 +38,8 @@ vi.mock("../../../database/repositories/factory.js", () => ({
   }),
 }));
 
-const { registerUserImageStorageRoutes } = await import(
-  "../../../database/routes/user-image-storage-routes.js"
-);
+const { registerUserImageStorageRoutes } =
+  await import("../../../database/routes/user-image-storage-routes.js");
 
 const requireAdmin: RequestHandler = (_req, _res, next) => next();
 const router = express.Router();
@@ -269,8 +268,9 @@ describe("POST /users/terminal-image-storage-settings/test", () => {
       localMappingConfigured: true,
     });
     // The bounded probe cleans up after itself.
-    expect((await fs.readdir(localDir)).filter((f) => f.includes("probe")))
-      .toEqual([]);
+    expect(
+      (await fs.readdir(localDir)).filter((f) => f.includes("probe")),
+    ).toEqual([]);
   });
 
   it("does not probe sessions owned by other instance IDs", async () => {

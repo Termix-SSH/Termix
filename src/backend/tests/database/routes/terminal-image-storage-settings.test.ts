@@ -171,10 +171,9 @@ describe("terminal image storage settings", () => {
           "/persisted/images",
         );
 
-        const resolved = await resolveTerminalImageStorageSettings(
-          repository,
-          { TERMIX_IMAGE_DIR: "/host-tmp/images" },
-        );
+        const resolved = await resolveTerminalImageStorageSettings(repository, {
+          TERMIX_IMAGE_DIR: "/host-tmp/images",
+        });
         expect(resolved.mode).toBe("local");
         expect(resolved.localDir).toBe("/persisted/images");
       } finally {
