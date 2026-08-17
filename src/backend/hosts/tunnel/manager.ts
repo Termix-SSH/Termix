@@ -43,6 +43,7 @@ import {
 } from "./utils.js";
 
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { handleSocks5Connect } from "./socks5-relay.js";
 
 export const activeTunnels = new Map<string, Client>();
@@ -65,7 +66,9 @@ export const lastTunnelErrorTypes = new Map<
 export const tunnelConfigs = new Map<string, TunnelConfig>();
 export const activeTunnelProcesses = new Map<string, ChildProcess>();
 export const pendingTunnelOperations = new Map<string, Promise<void>>();
-export const tunnelStatusClients = new Set<Response>();
+// SSE clients mapped to the user they belong to, so snapshots can be
+// filtered to tunnels that user can actually reach.
+export const tunnelStatusClients = new Map<Response, string>();
 
 export const INTERNAL_HOST_API_BASE_URL = "http://localhost:30001/host/db/host";
 export const AUTOSTART_FETCH_RETRIES = 6;
@@ -214,18 +217,63 @@ export function getAllTunnelStatus(): Record<string, TunnelStatus> {
   return tunnelStatus;
 }
 
+// Tunnel names embed host labels and destination endpoints, and error text
+// can leak internal hostnames -- so visibility is scoped to tunnels whose
+// source host the requesting user can access (owner, share grant, admin),
+// mirroring the ownership model of the connect/disconnect routes.
+export async function getTunnelStatusForUser(
+  userId: string,
+): Promise<Record<string, TunnelStatus>> {
+  const permissionManager = PermissionManager.getInstance();
+  const accessibleHostIds = await permissionManager.filterAccessibleHostIds(
+    userId,
+    [...tunnelConfigs.values()]
+      .map((config) => config.sourceHostId)
+      .filter((id) => Number.isInteger(id)),
+  );
+
+  const tunnelStatus: Record<string, TunnelStatus> = {};
+  connectionStatus.forEach((status, name) => {
+    const sourceHostId = tunnelConfigs.get(name)?.sourceHostId;
+    if (sourceHostId !== undefined && accessibleHostIds.has(sourceHostId)) {
+      tunnelStatus[name] = status;
+    }
+  });
+  return tunnelStatus;
+}
+
+export async function canAccessTunnel(
+  userId: string,
+  tunnelName: string,
+): Promise<boolean> {
+  const sourceHostId = tunnelConfigs.get(tunnelName)?.sourceHostId;
+  if (sourceHostId === undefined) return false;
+  const permissionManager = PermissionManager.getInstance();
+  const access = await permissionManager.canAccessHost(
+    userId,
+    sourceHostId,
+    "connect",
+  );
+  return access.hasAccess;
+}
+
 export function sendTunnelStatusSnapshot(res: Response): void {
-  try {
-    res.write(
-      `event: statuses\ndata: ${JSON.stringify(getAllTunnelStatus())}\n\n`,
-    );
-  } catch {
+  const userId = tunnelStatusClients.get(res);
+  if (userId === undefined) {
     tunnelStatusClients.delete(res);
+    return;
   }
+  void getTunnelStatusForUser(userId)
+    .then((statuses) => {
+      res.write(`event: statuses\ndata: ${JSON.stringify(statuses)}\n\n`);
+    })
+    .catch(() => {
+      tunnelStatusClients.delete(res);
+    });
 }
 
 export function broadcastTunnelStatusSnapshot(): void {
-  for (const client of tunnelStatusClients) {
+  for (const client of tunnelStatusClients.keys()) {
     sendTunnelStatusSnapshot(client);
   }
 }
