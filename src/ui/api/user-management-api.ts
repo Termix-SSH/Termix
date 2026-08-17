@@ -1,4 +1,5 @@
 import { authApi, handleApiError, type UserInfo } from "@/main-axios";
+import { getConnectedRemoteApi } from "@/lib/remote-server-api";
 
 // USER MANAGEMENT
 // ============================================================================
@@ -15,7 +16,8 @@ export async function getUserList(
   options: UserListOptions = {},
 ): Promise<{ users: UserInfo[]; total?: number }> {
   try {
-    const response = await authApi.get("/users/list", {
+    const api = (await getConnectedRemoteApi()) ?? authApi;
+    const response = await api.get("/users/list", {
       params: {
         ...(options.search ? { search: options.search } : {}),
         ...(options.limit ? { limit: options.limit } : {}),

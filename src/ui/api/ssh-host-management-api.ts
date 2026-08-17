@@ -13,6 +13,10 @@ import {
   invalidateHostsAndStatusCaches,
 } from "@/lib/hosts-request-cache";
 import { requestRemoteSync } from "@/lib/remote-sync-trigger";
+import {
+  getConnectedRemoteApi,
+  markRemoteSharedHosts,
+} from "@/lib/remote-server-api";
 
 // SSH HOST MANAGEMENT
 // ============================================================================
@@ -24,7 +28,22 @@ export type GetSSHHostsOptions = {
 
 async function loadSSHHostsFromApi(): Promise<SSHHost[]> {
   const hostsResponse = await sshHostApi.get("/db/host");
-  return Array.isArray(hostsResponse.data) ? hostsResponse.data : [];
+  const localHosts = Array.isArray(hostsResponse.data)
+    ? hostsResponse.data
+    : [];
+  const remoteApi = await getConnectedRemoteApi();
+  if (!remoteApi) return localHosts;
+
+  try {
+    const remoteResponse = await remoteApi.get("/host/db/host");
+    const remoteSharedHosts = Array.isArray(remoteResponse.data)
+      ? markRemoteSharedHosts(remoteResponse.data)
+      : [];
+    return [...localHosts, ...remoteSharedHosts];
+  } catch {
+    // Keep the last locally synced host set usable while the server is offline.
+    return localHosts;
+  }
 }
 
 export async function getSSHHosts(
