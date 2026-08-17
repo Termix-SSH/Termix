@@ -77,6 +77,43 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "npm"
 
+      - name: Install Spectre-mitigated MSVC libraries
+        shell: pwsh
+        run: |
+          # node-pty's binding.gyp sets SpectreMitigation, so MSBuild refuses to
+          # build without these. They are not on the runner image by default.
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $installPath = & $vswhere -latest -products * -property installationPath
+          if (-not $installPath) { throw "Visual Studio installation not found" }
+
+          # Derive the toolset version from the installed MSVC so the component
+          # id keeps matching when the runner image bumps the compiler.
+          $toolsetDir = Get-ChildItem -Path "$installPath\VC\Tools\MSVC" -Directory |
+            Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $toolsetDir) { throw "No MSVC toolset found under $installPath" }
+          $parts = $toolsetDir.Name.Split(".")
+          $shortVer = "$($parts[0]).$($parts[1].Substring(0,2))"
+          Write-Host "MSVC toolset $($toolsetDir.Name) -> component version $shortVer"
+
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $components = @(
+            "Microsoft.VisualStudio.Component.VC.$shortVer.17.14.x86.x64.Spectre",
+            "Microsoft.VisualStudio.Component.VC.Runtimes.x86.x64.Spectre"
+          )
+          $args = @("modify", "--installPath", "`"$installPath`"", "--quiet", "--norestart", "--nocache")
+          foreach ($c in $components) { $args += @("--add", $c) }
+
+          Write-Host "Installing: $($components -join ', ')"
+          $proc = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru -NoNewWindow
+          if ($proc.ExitCode -ne 0 -and $proc.ExitCode -ne 3010) {
+            Write-Host "vs_installer exited with $($proc.ExitCode); verifying libraries anyway"
+          }
+
+          $found = Get-ChildItem -Path "$installPath\VC\Tools\MSVC" -Recurse -Filter "*.lib" -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\spectre\\" } | Select-Object -First 1
+          if (-not $found) { throw "Spectre-mitigated libraries still missing after install" }
+          Write-Host "Spectre libs present: $($found.FullName)"
+
       - name: Install dependencies
         run: npm ci
 

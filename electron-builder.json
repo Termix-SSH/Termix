@@ -123,7 +123,7 @@
     "minimumSystemVersion": "10.15",
     "mergeASARs": false,
     "singleArchFiles": "**/*.{node,bare,dylib}",
-    "x64ArchFiles": "**/*.{node,bare,dylib}"
+    "x64ArchFiles": "**/{*.{node,bare,dylib},node-pty/prebuilds/*/spawn-helper}"
   },
   "dmg": {
     "artifactName": "termix_macos_${arch}_dmg.${ext}",
