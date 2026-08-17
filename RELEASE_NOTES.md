@@ -12,7 +12,11 @@ https://youtu.be/g0QjNdV3YYY
 
 <!-- UPDATE_LOG -->
 
-- Added Termix AI, an assistant that can work with your hosts and terminals
+- Added completely optional and disabled/removed by default Termix AI, an assistant that can work with your hosts and terminals
+  - This feature was added based off a 60% (yes) to 40% (no) Discord vote.
+  - The assistant cannot change anything on its own. It can only read a limited set of your Termix data and propose actions, and every change or command runs only after you approve it, using your own account and permissions.
+  - It has no access to credentials, SSH keys, vaults, users, roles, sessions, SSO, certificates, audit logs, or instance settings. Secrets are also stripped from anything sent to a model provider.
+  - Both an admin and each user must turn it on before it does anything, and it stays off after upgrading.
 - Added automations with events, channels, and steps
 - Added a fleet system with snippets, packages, files, and inventory
 - Added workspaces to save and restore your tab layout
