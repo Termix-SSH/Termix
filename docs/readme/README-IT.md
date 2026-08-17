@@ -159,7 +159,7 @@ Una homepage completamente personalizzabile con una griglia di widget drag-and-d
 <td width="50%" valign="top">
 
 **Crittografia Database:**
-Il backend è archiviato come file di database SQLite crittografati. Consulta la [documentazione](https://docs.termix.site/security) per maggiori informazioni.
+Il backend è archiviato come file di database SQLite crittografati. Consulta la [documentazione](https://docs.termix.site) per maggiori informazioni.
 
 </td>
 </tr>

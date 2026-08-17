@@ -159,7 +159,7 @@ Termix 是一个开源、永久免费、自托管的一体化服务器管理平�
 <td width="50%" valign="top">
 
 **数据库加密:**
-后端存储为加密的 SQLite 数据库文件。查看[文档](https://docs.termix.site/security)了解更多。
+后端存储为加密的 SQLite 数据库文件。查看[文档](https://docs.termix.site)了解更多。
 
 </td>
 </tr>

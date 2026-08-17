@@ -159,7 +159,7 @@ Une page d'accueil entierement personnalisable avec une grille de widgets glisse
 <td width="50%" valign="top">
 
 **Chiffrement de la base de donnees:**
-Le backend est stocke sous forme de fichiers de base de donnees SQLite chiffres. Consultez la [documentation](https://docs.termix.site/security) pour plus de details.
+Le backend est stocke sous forme de fichiers de base de donnees SQLite chiffres. Consultez la [documentation](https://docs.termix.site) pour plus de details.
 
 </td>
 </tr>

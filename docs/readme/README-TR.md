@@ -159,7 +159,7 @@ Surukleme ve birakma widget izgarasina sahip tamamen ozellestirilebilir bir ana 
 <td width="50%" valign="top">
 
 **Veritabani Sifreleme:**
-Arka uc, sifrelenmis SQLite veritabani dosyalari olarak depolanir. Daha fazla bilgi icin [belgelere](https://docs.termix.site/security) bakin.
+Arka uc, sifrelenmis SQLite veritabani dosyalari olarak depolanir. Daha fazla bilgi icin [belgelere](https://docs.termix.site) bakin.
 
 </td>
 </tr>

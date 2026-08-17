@@ -159,7 +159,7 @@ Una pagina de inicio completamente personalizable con una cuadricula de widgets 
 <td width="50%" valign="top">
 
 **Cifrado de Base de Datos:**
-Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentacion](https://docs.termix.site/security) para mas informacion.
+Backend almacenado como archivos de base de datos SQLite cifrados. Consulte la [documentacion](https://docs.termix.site) para mas informacion.
 
 </td>
 </tr>

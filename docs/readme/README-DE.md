@@ -159,7 +159,7 @@ Eine vollstandig anpassbare Startseite mit einem Drag-and-Drop-Widget-Raster. Fu
 <td width="50%" valign="top">
 
 **Datenbankverschlusselung:**
-Backend gespeichert als verschlusselte SQLite-Datenbankdateien. Weitere Informationen in der [Dokumentation](https://docs.termix.site/security).
+Backend gespeichert als verschlusselte SQLite-Datenbankdateien. Weitere Informationen in der [Dokumentation](https://docs.termix.site).
 
 </td>
 </tr>

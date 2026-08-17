@@ -159,7 +159,7 @@ Tailnetのデバイスをリストしてホストとしてすばやく追加し�
 <td width="50%" valign="top">
 
 **データベース暗号化:**
-バックエンドは暗号化されたSQLiteデータベースファイルとして保存されます。詳細は[ドキュメント](https://docs.termix.site/security)をご覧ください。
+バックエンドは暗号化されたSQLiteデータベースファイルとして保存されます。詳細は[ドキュメント](https://docs.termix.site)をご覧ください。
 
 </td>
 </tr>
