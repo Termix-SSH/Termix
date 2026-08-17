@@ -55,6 +55,10 @@ import {
 } from "@/lib/terminal-syntax-highlighter.ts";
 import { useCommandHistory } from "@/features/terminal/command-history/CommandHistoryContext.tsx";
 import { getAndroidHardwareKeySequence } from "@/features/terminal/android-hardware-keyboard.ts";
+import {
+  buildImageUploadFormData,
+  type TerminalImageUploadSource,
+} from "@/features/terminal/terminal-image-upload.ts";
 import { CommandAutocomplete } from "./command-history/CommandAutocomplete.tsx";
 import { TerminalSearchBar } from "./search/TerminalSearchBar.tsx";
 import { useConfirmation } from "@/hooks/use-confirmation.ts";
@@ -79,6 +83,7 @@ import {
 import { isTabKeyEvent } from "./terminal-key-event.ts";
 import { installTouchWheelCoordinator } from "./touch-wheel-coordinator.ts";
 import { loadTouchInputSettings } from "./touch-input-settings-store.ts";
+import { quoteTerminalImagePath } from "./terminal-image-path.ts";
 import {
   getUserPreferences,
   parseCustomKeybindings,
@@ -3236,16 +3241,21 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
       );
     }
 
-    async function handleImageUpload(file: File) {
+    async function handleImageUpload(
+      file: File,
+      source: TerminalImageUploadSource,
+    ) {
       if (file.type && !file.type.startsWith("image/")) {
         toast.error("Choose an image file");
         return;
       }
       setIsImageUploading(true);
       try {
-        const form = new FormData();
-        form.append("image", file);
-        form.append("instanceId", hostConfig.instanceId ?? "");
+        const form = buildImageUploadFormData(
+          file,
+          hostConfig.instanceId ?? "",
+          source,
+        );
         const response = await authApi.post("/terminal/image-upload", form, {
           headers: { "Content-Type": undefined },
         });
@@ -3256,7 +3266,10 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           webSocketRef.current?.readyState === WebSocket.OPEN;
         if (pathInserted) {
           webSocketRef.current?.send(
-            JSON.stringify({ type: "input", data: shellPath }),
+            JSON.stringify({
+              type: "input",
+              data: quoteTerminalImagePath(shellPath),
+            }),
           );
           toast.success(`Image uploaded: ${shellPath}`);
         } else {
@@ -3292,9 +3305,15 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
           let clipboardFile = new File([blob], "clipboard-image.png", {
             type: imageType,
           });
-          // Rasterize browser-specific clipboard formats to PNG when
-          // possible; Sharp remains the server-side validator.
-          if (typeof createImageBitmap === "function") {
+          // Preserve native PNG clipboard bytes. Some browser/platform
+          // clipboard implementations decode transparent PNGs incorrectly
+          // through canvas, producing an all-black/transparent re-encode.
+          // Only rasterize formats that need conversion; Sharp validates the
+          // resulting image server-side.
+          if (
+            imageType !== "image/png" &&
+            typeof createImageBitmap === "function"
+          ) {
             try {
               const bitmap = await createImageBitmap(blob);
               try {
@@ -3320,7 +3339,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               // Fall back to the original clipboard blob.
             }
           }
-          await handleImageUpload(clipboardFile);
+          await handleImageUpload(clipboardFile, "clipboard");
           return;
         }
         toast.error("No image found in the clipboard");
@@ -3383,7 +3402,7 @@ const TerminalInner = forwardRef<TerminalHandle, SSHTerminalProps>(
               }
             }}
             isImageUploading={isImageUploading}
-            onUploadImage={(file) => void handleImageUpload(file)}
+            onUploadImage={(file) => void handleImageUpload(file, "file")}
             onPasteImage={() => void handleClipboardImage()}
             onOpenTab={onOpenTab}
             onOpenFiles={() => {

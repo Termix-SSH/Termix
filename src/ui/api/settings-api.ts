@@ -196,6 +196,79 @@ export async function updateAnalyticsEnabled(
 }
 
 // ============================================================================
+// TERMINAL IMAGE STORAGE SETTINGS
+// ============================================================================
+
+export type TerminalImageStorageMode = "auto" | "local" | "remote-sftp";
+
+/** Public settings shape: the backend-internal localDir is never returned. */
+export interface TerminalImageStorageSettings {
+  mode: TerminalImageStorageMode;
+  hostPath: string;
+  ttlMs: number;
+  maxCount: number;
+  maxBytes: number;
+  localMappingConfigured: boolean;
+}
+
+export interface TerminalImageStorageSettingsUpdate {
+  mode?: TerminalImageStorageMode;
+  localDir?: string;
+  hostPath?: string;
+  ttlMs?: number;
+  maxCount?: number;
+  maxBytes?: number;
+}
+
+export interface TerminalImageStorageTestResult {
+  mode: TerminalImageStorageMode;
+  connected: boolean;
+  remoteSftpAvailable: boolean;
+  localHostVisible: boolean | null;
+  selectedMode: "local" | "remote-sftp" | "unavailable";
+  localMappingConfigured: boolean;
+}
+
+export async function getTerminalImageStorageSettings(): Promise<TerminalImageStorageSettings> {
+  try {
+    const response = await authApi.get(
+      "/users/terminal-image-storage-settings",
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch terminal image storage settings");
+  }
+}
+
+export async function updateTerminalImageStorageSettings(
+  settings: TerminalImageStorageSettingsUpdate,
+): Promise<TerminalImageStorageSettings> {
+  try {
+    const response = await authApi.patch(
+      "/users/terminal-image-storage-settings",
+      settings,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update terminal image storage settings");
+  }
+}
+
+export async function testTerminalImageStorage(
+  instanceId: string,
+): Promise<TerminalImageStorageTestResult> {
+  try {
+    const response = await authApi.post(
+      "/users/terminal-image-storage-settings/test",
+      { instanceId },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "test terminal image storage");
+  }
+}
+
+// ============================================================================
 // HOST DEFAULTS SETTINGS
 // ============================================================================
 

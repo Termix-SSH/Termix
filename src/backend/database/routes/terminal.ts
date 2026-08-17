@@ -5,10 +5,23 @@ import express, {
   type Request,
   type Response,
 } from "express";
-import multer from "multer";
 import { randomUUID } from "crypto";
+import multer from "multer";
 import sharp from "sharp";
-import { imageExtensionForFormat } from "./terminal-image-utils.js";
+import {
+  createConcurrencyLimiter,
+  exceedsNormalizedImageSize,
+  imageExtensionForFormat,
+} from "./terminal-image-utils.js";
+import { resolveTerminalImageStorageSettings } from "./terminal-image-storage-settings.js";
+import {
+  selectImageStorageMode,
+  probeLocalImageVisibility,
+  storeImageLocally,
+  storeImageViaSftp,
+  TerminalImageStorageError,
+  type ImageSftpClient,
+} from "./terminal-image-storage.js";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { sessionManager } from "../../hosts/terminal/session-manager.js";
@@ -31,49 +44,69 @@ const requireDataAccess = authManager.createDataAccessMiddleware();
 // Browser image handoff for local terminal-agent workflows.
 const imageUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+    fields: 4,
+    fieldSize: 64 * 1024,
+    files: 1,
+    parts: 5,
+    headerPairs: 200,
+  },
 });
 const imageUploadMiddleware = imageUpload.single("image");
+const imageProcessingLimiter = createConcurrencyLimiter(4, 4);
+const imageMultipartAdmissionLimiter = createConcurrencyLimiter(4, 4);
+let imageUploadSequence = 0;
 
-function handleImageUploadMiddleware(
+async function handleImageUploadMiddleware(
   req: Request,
   res: Response,
   next: NextFunction,
-): void {
+): Promise<void> {
+  let releaseAdmission: (() => void) | undefined;
+  try {
+    releaseAdmission = await imageMultipartAdmissionLimiter.acquire();
+  } catch {
+    res.status(503).json({
+      error: "Image upload capacity is temporarily unavailable",
+      code: "IMAGE_UPLOAD_CAPACITY_EXCEEDED",
+    });
+    return;
+  }
+
   imageUploadMiddleware(req, res, (error: unknown) => {
-    if (!error) {
-      next();
-      return;
-    }
-    if (error instanceof multer.MulterError) {
-      databaseLogger.warn("Image upload multipart request rejected", {
-        operation: "terminal_image_upload_multipart_rejected",
-        code: error.code,
-        field: error.field,
+    try {
+      if (!error) {
+        next();
+        return;
+      }
+      if (error instanceof multer.MulterError) {
+        databaseLogger.warn("Image upload multipart request rejected", {
+          operation: "terminal_image_upload_multipart_rejected",
+          code: error.code,
+          field: error.field,
+          contentType: req.headers["content-type"]?.split(";", 1)[0],
+        });
+        res.status(400).json({
+          error: "Image upload request rejected",
+          code: error.code,
+          field: error.field,
+        });
+        return;
+      }
+      databaseLogger.warn("Image upload multipart request malformed", {
+        operation: "terminal_image_upload_multipart_invalid",
         contentType: req.headers["content-type"]?.split(";", 1)[0],
       });
       res.status(400).json({
-        error: "Image upload request rejected",
-        code: error.code,
-        field: error.field,
+        error: "Malformed image upload request",
+        code: "IMAGE_MULTIPART_INVALID",
       });
-      return;
+    } finally {
+      releaseAdmission?.();
     }
-    databaseLogger.warn("Image upload multipart request malformed", {
-      operation: "terminal_image_upload_multipart_invalid",
-      contentType: req.headers["content-type"]?.split(";", 1)[0],
-    });
-    res.status(400).json({
-      error: "Malformed image upload request",
-      code: "IMAGE_MULTIPART_INVALID",
-    });
   });
 }
-// Remote directory (on the SSH host the terminal is connected to) that
-// uploaded/pasted images are written into. Always POSIX-style: this is a
-// path on the remote shell, not on the Termix backend's own filesystem.
-const REMOTE_IMAGE_DIR = "/tmp/termix-images";
-
 function findTerminalSession(userId: string, instanceId: string) {
   return sessionManager
     .getUserSessions(userId)
@@ -82,33 +115,6 @@ function findTerminalSession(userId: string, instanceId: string) {
         (session.attachedTabInstanceId ?? session.tabInstanceId) ===
           instanceId && session.isConnected,
     );
-}
-
-function sftpMkdir(
-  sftp: import("ssh2").SFTPWrapper,
-  dir: string,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    sftp.mkdir(dir, (err) => {
-      // EEXIST (or a bare "Failure" from some SFTP servers when the
-      // directory already exists) is not a real failure here.
-      if (err && !/exist/i.test(err.message)) return reject(err);
-      resolve();
-    });
-  });
-}
-
-function sftpWriteFile(
-  sftp: import("ssh2").SFTPWrapper,
-  remotePath: string,
-  data: Buffer,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const stream = sftp.createWriteStream(remotePath);
-    stream.on("error", reject);
-    stream.on("close", resolve);
-    stream.end(data);
-  });
 }
 
 router.post(
@@ -125,21 +131,92 @@ router.post(
         code: "IMAGE_FILE_MISSING",
       });
     }
-    if (!isNonEmptyString(userId) || !isNonEmptyString(instanceId)) {
+    if (!isNonEmptyString(userId)) {
       return res.status(400).json({
         error: "Missing terminal session",
         code: "IMAGE_SESSION_MISSING",
       });
     }
-    const session = findTerminalSession(userId, instanceId);
-    if (!session || !session.sshConn) {
-      return res.status(409).json({
-        error: "Terminal is not connected",
-        code: "IMAGE_TERMINAL_NOT_CONNECTED",
+
+    const requestId = randomUUID();
+    const sequence = ++imageUploadSequence;
+    const source =
+      req.body?.source === "file" || req.body?.source === "clipboard"
+        ? req.body.source
+        : undefined;
+    const clientUploadTimestamp =
+      typeof req.body?.clientUploadTimestamp === "string" &&
+      !Number.isNaN(Date.parse(req.body.clientUploadTimestamp))
+        ? req.body.clientUploadTimestamp
+        : undefined;
+    const serverReceivedAt = new Date().toISOString();
+    databaseLogger.info("Terminal image upload received", {
+      operation: "terminal_image_upload_received",
+      requestId,
+      sequence,
+      source,
+      clientUploadTimestamp,
+      serverReceivedAt,
+      bytes: req.file.size,
+    });
+
+    const storageSettings = await resolveTerminalImageStorageSettings(
+      createCurrentSettingsRepository(),
+    );
+    const session = isNonEmptyString(instanceId)
+      ? findTerminalSession(userId, instanceId)
+      : undefined;
+    let localHostVisible = false;
+    if (storageSettings.localMappingConfigured && session?.sshConn) {
+      localHostVisible = await probeLocalImageVisibility(
+        session.sshConn,
+        storageSettings,
+      ).catch(() => false);
+    }
+    const storageMode = selectImageStorageMode(storageSettings, {
+      remoteSftpAvailable: !!session?.sshConn,
+      localHostVisible,
+    });
+
+    if (storageMode === "unavailable") {
+      return res.status(503).json({
+        error: "Image storage is unavailable",
+        code: "IMAGE_STORAGE_UNAVAILABLE",
       });
     }
 
+    if (storageMode === "local" && !storageSettings.localMappingConfigured) {
+      return res.status(503).json({
+        error: "Local image storage is not configured",
+        code: "IMAGE_LOCAL_STORAGE_NOT_CONFIGURED",
+      });
+    }
+
+    if (storageMode === "remote-sftp") {
+      if (!isNonEmptyString(instanceId)) {
+        return res.status(400).json({
+          error: "Missing terminal session",
+          code: "IMAGE_SESSION_MISSING",
+        });
+      }
+      if (!session || !session.sshConn) {
+        return res.status(409).json({
+          error: "Terminal is not connected",
+          code: "IMAGE_TERMINAL_NOT_CONNECTED",
+        });
+      }
+    }
+
     let normalizedImage: Buffer;
+    let releaseImageProcessingSlot: (() => void) | undefined;
+    try {
+      releaseImageProcessingSlot = await imageProcessingLimiter.acquire();
+    } catch {
+      return res.status(503).json({
+        error: "Image upload capacity is temporarily exhausted",
+        code: "IMAGE_UPLOAD_CAPACITY_EXCEEDED",
+      });
+    }
     try {
       const source = sharp(req.file.buffer, {
         failOn: "error",
@@ -153,6 +230,12 @@ router.post(
         });
       }
       normalizedImage = await source.rotate().png().toBuffer();
+      if (exceedsNormalizedImageSize(normalizedImage.length)) {
+        return res.status(413).json({
+          error: "Normalized image is too large",
+          code: "IMAGE_NORMALIZED_SIZE_LIMIT",
+        });
+      }
     } catch (error) {
       databaseLogger.warn("Image upload failed image decoding", {
         operation: "terminal_image_upload_decode",
@@ -164,26 +247,73 @@ router.post(
         error: "Invalid image data",
         code: "IMAGE_DECODE_FAILED",
       });
+    } finally {
+      releaseImageProcessingSlot?.();
     }
 
-    const id = randomUUID();
-    const filename = `${id}.png`;
-    const remotePath = `${REMOTE_IMAGE_DIR}/${filename}`;
-
+    let remoteSftp: ImageSftpClient | undefined;
     try {
-      const sftp = await new Promise<import("ssh2").SFTPWrapper>(
-        (resolve, reject) => {
-          session.sshConn!.sftp((err, sftp) => {
-            if (err) return reject(err);
-            resolve(sftp);
-          });
-        },
-      );
-      await sftpMkdir(sftp, REMOTE_IMAGE_DIR);
-      await sftpWriteFile(sftp, remotePath, normalizedImage);
+      const stored =
+        storageMode === "remote-sftp"
+          ? await (async () => {
+              remoteSftp = await new Promise<ImageSftpClient>(
+                (resolve, reject) => {
+                  let settled = false;
+                  const timer = setTimeout(() => {
+                    settled = true;
+                    reject(new Error("SFTP channel acquisition timed out"));
+                  }, 3_000);
+                  session!.sshConn!.sftp((err, sftp) => {
+                    if (settled) {
+                      sftp?.end?.();
+                      return;
+                    }
+                    settled = true;
+                    clearTimeout(timer);
+                    if (err) return reject(err);
+                    resolve(sftp);
+                  });
+                },
+              );
+              return storeImageViaSftp(remoteSftp, normalizedImage, {
+                ttlMs: storageSettings.ttlMs,
+                maxCount: storageSettings.maxCount,
+                maxBytes: storageSettings.maxBytes,
+              });
+            })()
+          : await storeImageLocally(normalizedImage, storageSettings);
+
+      res.json(stored);
     } catch (error) {
-      databaseLogger.warn("Image upload failed to write to remote host", {
+      if (error instanceof TerminalImageStorageError) {
+        const status =
+          error.code === "IMAGE_STORAGE_LIMIT_REACHED"
+            ? 507
+            : error.code === "IMAGE_REMOTE_WRITE_FAILED"
+              ? 502
+              : error.code === "IMAGE_REMOTE_QUOTA_UNAVAILABLE"
+                ? 503
+                : error.code === "IMAGE_LOCAL_INSPECTION_FAILED"
+                  ? 503
+                  : 500;
+        databaseLogger.warn("Image upload storage write failed", {
+          operation:
+            error.code === "IMAGE_REMOTE_WRITE_FAILED"
+              ? "terminal_image_upload_sftp_failed"
+              : "terminal_image_upload_local_failed",
+          code: error.code,
+          userId,
+          instanceId,
+          reason: getErrorMessage(error.cause ?? error, "unknown"),
+        });
+        return res.status(status).json({
+          error: error.message,
+          code: error.code,
+        });
+      }
+      databaseLogger.warn("Image upload failed to acquire remote channel", {
         operation: "terminal_image_upload_sftp_failed",
+        code: "IMAGE_REMOTE_WRITE_FAILED",
         userId,
         instanceId,
         reason: getErrorMessage(error, "unknown"),
@@ -192,9 +322,9 @@ router.post(
         error: "Failed to write image to the remote host",
         code: "IMAGE_REMOTE_WRITE_FAILED",
       });
+    } finally {
+      remoteSftp?.end?.();
     }
-
-    res.json({ id, filename, shellPath: remotePath });
   },
 );
 

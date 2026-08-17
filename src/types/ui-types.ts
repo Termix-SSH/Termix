@@ -339,6 +339,7 @@ export type AdminSection =
   | "sessions"
   | "roles"
   | "host-defaults"
+  | "image-storage"
   | "database"
   | "api-keys"
   | "audit-log"
