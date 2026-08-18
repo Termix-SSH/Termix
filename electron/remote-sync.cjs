@@ -96,7 +96,15 @@ function getSafeStorageAvailable() {
 
 function saveRemoteSyncJwt(token) {
   if (!getSafeStorageAvailable()) {
-    return { success: false, error: "Encryption unavailable on this system" };
+    // Carries a stable reason alongside the message: the renderer has a
+    // translated explanation for this one, because "no OS keyring" is a
+    // machine-level problem the user has to go and fix, not something signing
+    // in again can resolve.
+    return {
+      success: false,
+      reason: "encryption_unavailable",
+      error: "Encryption unavailable on this system",
+    };
   }
   writeJson(getRemoteSyncCredentialPath(), {
     encrypted: true,

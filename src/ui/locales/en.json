@@ -2799,6 +2799,7 @@
     "resetCodeRateLimited": "Rate limited: Too many verification attempts. Please try again later.",
     "resetCodeRateLimitedWithTime": "Rate limited: Too many verification attempts. Please wait {{time}} seconds before trying again.",
     "authTokenSaveFailed": "Failed to save authentication token",
+    "keyringUnavailable": "Signed in, but the session could not be stored: this system has no keyring available to encrypt it with. Start a Secret Service (such as gnome-keyring or KWallet) and sign in again.",
     "failedToLoadServer": "Failed to load server",
     "remoteServerRequired": "Remote server required. Connect a remote server in Settings to use this connection type."
   },

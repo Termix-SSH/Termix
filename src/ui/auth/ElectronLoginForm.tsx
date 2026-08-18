@@ -16,6 +16,12 @@ interface ElectronLoginFormProps {
   targetPurpose?: "local" | "remoteSync";
 }
 
+interface SaveRemoteSyncJwtResult {
+  success: boolean;
+  reason?: string;
+  error?: string;
+}
+
 const AUTH_MESSAGE_SOURCES = new Set([
   "auth_component",
   "totp_auth_component",
@@ -52,14 +58,33 @@ export function ElectronLoginForm({
       try {
         if (token) {
           if (targetPurpose === "remoteSync") {
-            await window.electronAPI?.invoke?.("save-remote-sync-jwt", token);
+            // The main process refuses to persist the JWT when it has no OS
+            // keyring to encrypt it with, and reports that by resolving with
+            // success: false. Dropping the result signs the user in against a
+            // store that kept nothing, so the next sync tick calls a session
+            // that was never saved expired.
+            const result = (await window.electronAPI?.invoke?.(
+              "save-remote-sync-jwt",
+              token,
+            )) as SaveRemoteSyncJwtResult | undefined;
+            if (!result?.success) {
+              throw new Error(
+                result?.reason === "encryption_unavailable"
+                  ? t("errors.keyringUnavailable")
+                  : result?.error || t("errors.authTokenSaveFailed"),
+              );
+            }
           } else {
             localStorage.setItem("jwt", token);
           }
         }
         await onAuthSuccessRef.current(token);
-      } catch {
-        setError(t("errors.authTokenSaveFailed"));
+      } catch (err) {
+        setError(
+          err instanceof Error && err.message
+            ? err.message
+            : t("errors.authTokenSaveFailed"),
+        );
         isAuthenticatingRef.current = false;
         setIsAuthenticating(false);
         hasAuthenticatedRef.current = false;
