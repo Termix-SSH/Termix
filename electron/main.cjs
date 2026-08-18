@@ -29,6 +29,7 @@ const remoteSync = require("./remote-sync.cjs");
 const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
+const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
 
 const localTerminalSessions = new Map();
 
@@ -597,6 +598,13 @@ if (process.platform === "linux") {
   // Chromium's hit-testing uses unscaled coords while the compositor scales visually,
   // so forcing scale factor 1 keeps them in sync. See: https://github.com/brave/brave-browser/issues/50028
   app.commandLine.appendSwitch("--force-device-scale-factor", "1");
+
+  const passwordStore = selectLinuxPasswordStore(app.commandLine, process.env);
+  if (passwordStore) {
+    logToFile(
+      `[safeStorage] Selected the ${passwordStore} password store for this desktop.`,
+    );
+  }
 }
 
 if (process.platform === "win32") {
