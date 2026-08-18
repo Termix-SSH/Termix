@@ -13,6 +13,21 @@ import {
 
 const temporaryDirectories: string[] = [];
 
+// Windows only allows symlink creation with elevation or Developer Mode, so the
+// symlink safety test is skipped where the OS refuses to create one at all.
+const canCreateSymlinks = (() => {
+  const probe = fs.mkdtempSync(path.join(os.tmpdir(), "termix-symlink-probe-"));
+  try {
+    fs.mkdirSync(path.join(probe, "target"));
+    fs.symlinkSync(path.join(probe, "target"), path.join(probe, "link"), "dir");
+    return true;
+  } catch {
+    return false;
+  } finally {
+    fs.rmSync(probe, { recursive: true, force: true });
+  }
+})();
+
 function localSftp(home: string): SFTPWrapper {
   const callback = <T>(
     promise: Promise<T>,
@@ -155,21 +170,24 @@ describe("file manager trash safety", () => {
     expect(await listTrash(sftp, 7)).toEqual([]);
   });
 
-  it("does not follow directory symlinks during permanent deletion", async () => {
-    const { home, sftp } = await fixture();
-    const target = path.join(home, "target");
-    const link = path.join(home, "link");
-    await fs.promises.mkdir(target);
-    await fs.promises.writeFile(path.join(target, "keep.txt"), "keep");
-    await fs.promises.symlink(target, link, "dir");
+  it.skipIf(!canCreateSymlinks)(
+    "does not follow directory symlinks during permanent deletion",
+    async () => {
+      const { home, sftp } = await fixture();
+      const target = path.join(home, "target");
+      const link = path.join(home, "link");
+      await fs.promises.mkdir(target);
+      await fs.promises.writeFile(path.join(target, "keep.txt"), "keep");
+      await fs.promises.symlink(target, link, "dir");
 
-    const trashed = await moveToTrash(sftp, link);
-    await permanentlyDeleteTrashItem(sftp, trashed.id);
+      const trashed = await moveToTrash(sftp, link);
+      await permanentlyDeleteTrashItem(sftp, trashed.id);
 
-    expect(
-      await fs.promises.readFile(path.join(target, "keep.txt"), "utf8"),
-    ).toBe("keep");
-  });
+      expect(
+        await fs.promises.readFile(path.join(target, "keep.txt"), "utf8"),
+      ).toBe("keep");
+    },
+  );
 
   it("refuses tampered metadata instead of deleting an arbitrary path", async () => {
     const { home, sftp } = await fixture();

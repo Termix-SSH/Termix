@@ -305,7 +305,11 @@ describe("terminal image upload route", () => {
     let dir: string;
 
     beforeEach(async () => {
-      dir = await fs.mkdtemp(path.join(os.tmpdir(), "termix-route-test-"));
+      // The settings validator rejects backslashes, so store the temp dir in
+      // POSIX form. Windows still resolves it for the real file checks.
+      dir = (
+        await fs.mkdtemp(path.join(os.tmpdir(), "termix-route-test-"))
+      ).replace(/\\/g, "/");
     });
 
     afterEach(async () => {
@@ -381,7 +385,7 @@ describe("terminal image upload route", () => {
     });
 
     it("returns 503 when local storage inspection fails", async () => {
-      const blocked = path.join(dir, "blocked-file");
+      const blocked = `${dir}/blocked-file`;
       await fs.writeFile(blocked, "not a directory");
       state.settings["terminal_image_storage_mode"] = "local";
       state.settings["terminal_image_local_dir"] = blocked;
@@ -507,7 +511,9 @@ describe("terminal image upload route", () => {
     });
 
     it("accepts missing metadata and keeps raw paths out of the log", async () => {
-      const dir = await fs.mkdtemp(path.join(os.tmpdir(), "termix-meta-test-"));
+      const dir = (
+        await fs.mkdtemp(path.join(os.tmpdir(), "termix-meta-test-"))
+      ).replace(/\\/g, "/");
       try {
         state.settings["terminal_image_storage_mode"] = "local";
         state.settings["terminal_image_local_dir"] = dir;

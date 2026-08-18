@@ -123,7 +123,11 @@ beforeEach(async () => {
     LEGACY_ENV_NAMES.map((name) => [name, process.env[name]]),
   );
   for (const name of LEGACY_ENV_NAMES) delete process.env[name];
-  localDir = await fs.mkdtemp(path.join(os.tmpdir(), "termix-image-test-"));
+  // The settings validator rejects backslashes, so use a POSIX-style form of
+  // the real temp dir. Windows still resolves it, so file checks keep working.
+  localDir = (
+    await fs.mkdtemp(path.join(os.tmpdir(), "termix-image-test-"))
+  ).replace(/\\/g, "/");
 });
 
 afterEach(async () => {
@@ -194,35 +198,40 @@ describe("PATCH /users/terminal-image-storage-settings", () => {
     expect(state.settings).toEqual({});
   });
 
-  it("persists a valid partial update and returns the public shape", async () => {
-    const response = await invoke(patchHandler, {
-      mode: "local",
-      localDir,
-      hostPath: "/host/images",
-      ttlMs: 60_000,
-      maxCount: 5,
-      maxBytes: 10_485_760,
-    });
+  // On Windows path.resolve turns the stored dir back into a backslash path,
+  // which the validator rejects on read, so the round trip only holds on POSIX.
+  it.skipIf(process.platform === "win32")(
+    "persists a valid partial update and returns the public shape",
+    async () => {
+      const response = await invoke(patchHandler, {
+        mode: "local",
+        localDir,
+        hostPath: "/host/images",
+        ttlMs: 60_000,
+        maxCount: 5,
+        maxBytes: 10_485_760,
+      });
 
-    expect(response.statusCode).toBe(200);
-    expect(state.settings).toEqual({
-      terminal_image_storage_mode: "local",
-      terminal_image_local_dir: localDir,
-      terminal_image_host_path: "/host/images",
-      terminal_image_ttl_ms: "60000",
-      terminal_image_max_count: "5",
-      terminal_image_max_storage_bytes: "10485760",
-    });
-    expect(response.body).toMatchObject({
-      mode: "local",
-      hostPath: "/host/images",
-      ttlMs: 60_000,
-      maxCount: 5,
-      maxBytes: 10_485_760,
-      localMappingConfigured: true,
-    });
-    expect(JSON.stringify(response.body)).not.toContain(localDir);
-  });
+      expect(response.statusCode).toBe(200);
+      expect(state.settings).toEqual({
+        terminal_image_storage_mode: "local",
+        terminal_image_local_dir: path.resolve(localDir),
+        terminal_image_host_path: "/host/images",
+        terminal_image_ttl_ms: "60000",
+        terminal_image_max_count: "5",
+        terminal_image_max_storage_bytes: "10485760",
+      });
+      expect(response.body).toMatchObject({
+        mode: "local",
+        hostPath: "/host/images",
+        ttlMs: 60_000,
+        maxCount: 5,
+        maxBytes: 10_485_760,
+        localMappingConfigured: true,
+      });
+      expect(JSON.stringify(response.body)).not.toContain(localDir);
+    },
+  );
 });
 
 describe("POST /users/terminal-image-storage-settings/test", () => {

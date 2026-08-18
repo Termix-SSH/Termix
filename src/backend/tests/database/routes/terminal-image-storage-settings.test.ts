@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_IMAGE_HOST_PATH,
@@ -13,6 +14,12 @@ import {
 } from "../../../database/routes/terminal-image-storage-settings.js";
 import { SettingsRepository } from "../../../database/repositories/settings-repository.js";
 import { TestSqliteDatabase } from "../repositories/test-support.js";
+
+// parseImageLocalDir resolves against the host platform, so a POSIX literal
+// becomes a drive-rooted path on Windows. Compare against the same resolution.
+function localDir(posixPath: string): string {
+  return path.resolve(posixPath);
+}
 
 function stubSettings(values: Record<string, string> = {}) {
   return {
@@ -42,7 +49,7 @@ describe("terminal image storage settings", () => {
   describe("path validation", () => {
     it("accepts absolute local directories and normalizes them", () => {
       expect(parseImageLocalDir("/var/lib/termix/images")).toBe(
-        "/var/lib/termix/images",
+        localDir("/var/lib/termix/images"),
       );
       expect(parseImageLocalDir("/var/lib/termix/../termix/images")).toBeNull();
     });
@@ -89,7 +96,7 @@ describe("terminal image storage settings", () => {
           TERMIX_MAX_IMAGE_STORAGE_BYTES: "10485760",
         },
       );
-      expect(resolved.localDir).toBe("/host-tmp/images");
+      expect(resolved.localDir).toBe(localDir("/host-tmp/images"));
       expect(resolved.hostPath).toBe("/tmp/images");
       expect(resolved.ttlMs).toBe(60_000);
       expect(resolved.maxCount).toBe(5);
@@ -109,7 +116,7 @@ describe("terminal image storage settings", () => {
           TERMIX_MAX_IMAGE_COUNT: "5",
         },
       );
-      expect(resolved.localDir).toBe("/db/images");
+      expect(resolved.localDir).toBe(localDir("/db/images"));
       expect(resolved.ttlMs).toBe(1_000);
       expect(resolved.maxCount).toBe(7);
     });
@@ -122,7 +129,7 @@ describe("terminal image storage settings", () => {
         }),
         { TERMIX_IMAGE_DIR: "/host-tmp/images" },
       );
-      expect(resolved.localDir).toBe("/host-tmp/images");
+      expect(resolved.localDir).toBe(localDir("/host-tmp/images"));
       expect(resolved.ttlMs).toBe(DEFAULT_IMAGE_TTL_MS);
     });
 
@@ -132,7 +139,8 @@ describe("terminal image storage settings", () => {
         { TERMIX_IMAGE_DIR: "/host-tmp/images" },
       );
       expect(resolved.mode).toBe("local");
-      expect(resolved.hostPath).toBe("/host-tmp/images");
+      // hostPath falls back to the legacy local dir, which resolves natively.
+      expect(resolved.hostPath).toBe(localDir("/host-tmp/images"));
       expect(resolved.localMappingConfigured).toBe(true);
     });
 
@@ -175,7 +183,7 @@ describe("terminal image storage settings", () => {
           TERMIX_IMAGE_DIR: "/host-tmp/images",
         });
         expect(resolved.mode).toBe("local");
-        expect(resolved.localDir).toBe("/persisted/images");
+        expect(resolved.localDir).toBe(localDir("/persisted/images"));
       } finally {
         await adapter.close();
       }
