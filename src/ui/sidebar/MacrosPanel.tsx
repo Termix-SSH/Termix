@@ -613,17 +613,17 @@ export function MacrosPanel({
           <div className="truncate text-[11px] text-muted-foreground">
             {t("macros.target")}: {targetLabel}
           </div>
+          {!draft && (
+            <a
+              href="https://docs.termix.site/features/terminal/macros"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] text-accent-brand hover:underline"
+            >
+              {t("hosts.docsLink")}
+            </a>
+          )}
         </div>
-        {!draft && (
-          <a
-            href="https://docs.termix.site/features/terminal/macros"
-            target="_blank"
-            rel="noreferrer"
-            className="shrink-0 text-[10px] text-accent-brand hover:underline"
-          >
-            {t("hosts.docsLink")}
-          </a>
-        )}
         {!draft && (
           <Button
             size="icon"

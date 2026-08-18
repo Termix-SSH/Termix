@@ -1015,21 +1015,23 @@ export function FleetsPanel({
     <div className="flex flex-col flex-1 min-h-0">
       <div className="flex items-center gap-2 p-3 border-b border-border shrink-0">
         <Boxes className="size-4 text-muted-foreground" />
-        <span className="text-sm font-semibold">
-          {t("newUi.sidebar.fleets.title")}
-        </span>
-        <a
-          href="https://docs.termix.site/features/fleets/overview"
-          target="_blank"
-          rel="noreferrer"
-          className="ml-auto shrink-0 text-[10px] text-accent-brand hover:underline"
-        >
-          {t("hosts.docsLink")}
-        </a>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-semibold">
+            {t("newUi.sidebar.fleets.title")}
+          </span>
+          <a
+            href="https://docs.termix.site/features/fleets/overview"
+            target="_blank"
+            rel="noreferrer"
+            className="w-fit text-[10px] text-accent-brand hover:underline"
+          >
+            {t("hosts.docsLink")}
+          </a>
+        </div>
         <Button
           variant="outline"
           size="sm"
-          className="border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
+          className="shrink-0 border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10 hover:text-accent-brand"
           onClick={() => {
             setEditingFleet(null);
             setFormOpen(true);
