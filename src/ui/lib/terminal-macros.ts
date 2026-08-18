@@ -5,6 +5,7 @@ export type MacroStep =
       id: string;
       type: "wait";
       pattern: string;
+      isRegex?: boolean;
       flags?: string;
       timeoutMs: number;
       onTimeout: "stop" | "continue";
@@ -13,6 +14,7 @@ export type MacroStep =
       id: string;
       type: "if";
       pattern: string;
+      isRegex?: boolean;
       flags?: string;
       then: MacroStep[];
       else: MacroStep[];
@@ -47,8 +49,23 @@ function bounded(value: number, minimum: number, maximum: number): number {
     : minimum;
 }
 
-function regex(pattern: string, flags = ""): RegExp {
-  return new RegExp(pattern, flags.replace(/[gy]/g, ""));
+function escapeLiteral(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function regex(pattern: string, flags = "", isRegex = true): RegExp {
+  const source = isRegex ? pattern : escapeLiteral(pattern);
+  return new RegExp(source, flags.replace(/[gy]/g, ""));
+}
+
+// Literal text is the default in the editor, so a bad regex should never kill a
+// run. Fall back to matching the pattern literally instead.
+function safeRegex(pattern: string, flags = "", isRegex = true): RegExp {
+  try {
+    return regex(pattern, flags, isRegex);
+  } catch {
+    return new RegExp(escapeLiteral(pattern), flags.replace(/[gy]/g, ""));
+  }
 }
 
 function abortError(): DOMException {
@@ -105,7 +122,11 @@ export async function runTerminalMacro(
       }
       if (step.type === "if") {
         await runSteps(
-          regex(step.pattern, step.flags).test(output) ? step.then : step.else,
+          safeRegex(step.pattern, step.flags, step.isRegex !== false).test(
+            output,
+          )
+            ? step.then
+            : step.else,
         );
         continue;
       }
@@ -117,7 +138,11 @@ export async function runTerminalMacro(
         continue;
       }
 
-      const matcher = regex(step.pattern, step.flags);
+      const matcher = safeRegex(
+        step.pattern,
+        step.flags,
+        step.isRegex !== false,
+      );
       const deadline = Date.now() + bounded(step.timeoutMs, 100, 300_000);
       let match = matcher.exec(output.slice(scanFrom));
       while (!match && Date.now() < deadline) {
@@ -196,6 +221,7 @@ export function parseTerminalMacros(value?: string | null): TerminalMacro[] {
                 typeof step.pattern === "string"
                   ? step.pattern.slice(0, 1000)
                   : "",
+              isRegex: step.isRegex !== false,
               flags:
                 typeof step.flags === "string"
                   ? step.flags.replace(/[^imsu]/g, "")
@@ -214,6 +240,7 @@ export function parseTerminalMacros(value?: string | null): TerminalMacro[] {
                 typeof step.pattern === "string"
                   ? step.pattern.slice(0, 1000)
                   : "",
+              isRegex: step.isRegex !== false,
               flags:
                 typeof step.flags === "string"
                   ? step.flags.replace(/[^imsu]/g, "")

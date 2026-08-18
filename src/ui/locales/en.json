@@ -4537,5 +4537,100 @@
     "modelPlaceholder": "Choose or type a model",
     "attachHint": "Type @ to reference a host, snippet or automation. Changes are proposed for you to approve.",
     "runCommandTitle": "Run command"
+  },
+  "macros": {
+    "title": "Macros",
+    "description": "Run a saved series of commands in a terminal, and react to what the server sends back.",
+    "target": "Target",
+    "noTerminal": "No terminal open",
+    "empty": "No macros yet",
+    "emptyHint": "Create a macro to automate a terminal flow, like logging in, restarting a service, or answering prompts.",
+    "create": "New macro",
+    "back": "Back to macros",
+    "name": "Name",
+    "namePlaceholder": "Restart web server",
+    "nameRequired": "Give the macro a name before saving",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What this macro does (optional)",
+    "unsaved": "Unsaved changes",
+    "save": "Save",
+    "saved": "Macro saved",
+    "saveFailed": "Could not save the macro",
+    "delete": "Delete",
+    "deleteTitle": "Delete this macro?",
+    "deleteBody": "\"{{name}}\" will be permanently deleted. This cannot be undone.",
+    "deleted": "Macro deleted",
+    "cancel": "Cancel",
+    "run": "Run",
+    "stop": "Stop",
+    "running": "Running...",
+    "completed": "Macro finished",
+    "failed": "Macro failed",
+    "loadFailed": "Could not load macros",
+    "needTerminal": "Open and connect a terminal first",
+    "noSteps": "This macro has no steps yet. Add one below.",
+    "addStep": "Add step",
+    "stepNumber": "Step {{number}}",
+    "removeStep": "Remove step",
+    "confirmRunTitle": "Run this macro?",
+    "confirmRunBody": "\"{{name}}\" will send commands to {{host}}.",
+    "confirmRunAction": "Run macro",
+    "stepTypes": {
+      "send": {
+        "label": "Send command",
+        "help": "Types text into the terminal, the same as if you typed it."
+      },
+      "wait": {
+        "label": "Wait for output",
+        "help": "Pauses until the server prints the text you name, like a password prompt."
+      },
+      "delay": {
+        "label": "Pause",
+        "help": "Waits a fixed amount of time before the next step."
+      },
+      "if": {
+        "label": "If output contains",
+        "help": "Checks everything the server has printed so far, then runs one of two branches."
+      },
+      "repeat": {
+        "label": "Repeat",
+        "help": "Runs the steps inside it a set number of times."
+      }
+    },
+    "send": {
+      "text": "Command or text",
+      "textPlaceholder": "systemctl restart nginx",
+      "pressEnter": "Press Enter after sending",
+      "pressEnterHelp": "Turn this off to type text without submitting it."
+    },
+    "wait": {
+      "pattern": "Wait until the output contains",
+      "patternPlaceholder": "password:",
+      "timeout": "Give up after",
+      "onTimeout": "If it never appears",
+      "stop": "Stop the macro",
+      "continue": "Keep going anyway"
+    },
+    "delay": {
+      "duration": "Wait for"
+    },
+    "ifStep": {
+      "pattern": "If the output contains",
+      "patternPlaceholder": "Active: active (running)",
+      "then": "Then do this",
+      "else": "Otherwise do this",
+      "emptyBranch": "No steps"
+    },
+    "repeat": {
+      "count": "Number of times",
+      "times": "times"
+    },
+    "match": {
+      "useRegex": "Match with a regular expression",
+      "useRegexHelp": "Leave this off to match the text exactly as written.",
+      "invalidRegex": "Not a valid regular expression, it will be matched as plain text"
+    },
+    "seconds": "seconds",
+    "secondsShort": "{{count}}s"
   }
 }

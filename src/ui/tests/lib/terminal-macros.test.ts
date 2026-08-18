@@ -102,4 +102,84 @@ describe("terminal macro runner", () => {
       { id: "r", type: "repeat", count: 100, steps: [] },
     ]);
   });
+  it("matches literal text without regex escaping when isRegex is false", async () => {
+    vi.useFakeTimers();
+    const sent: string[] = [];
+    let listener = (_data: string) => {};
+    const run = runTerminalMacro(
+      macro([
+        {
+          id: "wait",
+          type: "wait",
+          pattern: "progress (1/2)",
+          isRegex: false,
+          timeoutMs: 1000,
+          onTimeout: "stop",
+        },
+        { id: "send", type: "send", text: "done", pressEnter: false },
+      ]),
+      {
+        send: (data) => sent.push(data),
+        subscribe: (next) => {
+          listener = next;
+          return () => {};
+        },
+      },
+    );
+    await vi.advanceTimersByTimeAsync(1);
+    listener("progress (1/2)");
+    await run;
+    expect(sent).toEqual(["done"]);
+    vi.useRealTimers();
+  });
+
+  it("falls back to literal matching when a regex is invalid", async () => {
+    vi.useFakeTimers();
+    const sent: string[] = [];
+    let listener = (_data: string) => {};
+    const run = runTerminalMacro(
+      macro([
+        {
+          id: "wait",
+          type: "wait",
+          pattern: "oops(",
+          isRegex: true,
+          timeoutMs: 1000,
+          onTimeout: "stop",
+        },
+        { id: "send", type: "send", text: "ok", pressEnter: false },
+      ]),
+      {
+        send: (data) => sent.push(data),
+        subscribe: (next) => {
+          listener = next;
+          return () => {};
+        },
+      },
+    );
+    await vi.advanceTimersByTimeAsync(1);
+    listener("oops(");
+    await run;
+    expect(sent).toEqual(["ok"]);
+    vi.useRealTimers();
+  });
+
+  it("branches on literal if-step text", async () => {
+    const sent: string[] = [];
+    await runTerminalMacro(
+      macro([
+        {
+          id: "if",
+          type: "if",
+          pattern: "a.b",
+          isRegex: false,
+          then: [{ id: "y", type: "send", text: "yes", pressEnter: false }],
+          else: [{ id: "n", type: "send", text: "no", pressEnter: false }],
+        },
+      ]),
+      { send: (data) => sent.push(data), subscribe: () => () => {} },
+    );
+    // "a.b" as a literal must not match "axb"
+    expect(sent).toEqual(["no"]);
+  });
 });
