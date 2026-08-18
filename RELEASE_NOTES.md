@@ -120,5 +120,6 @@ https://youtu.be/g0QjNdV3YYY
 - ssh_credentials rebuilds not matching the live schema
 - Sidebar reset and fullscreen buttons sharing the same icon
 - Host list icons not matching the tab bar icons
+- Keep Linux credential storage working on unrecognised desktops
 
 <!-- /BUG_FIXES -->
