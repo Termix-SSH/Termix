@@ -168,7 +168,15 @@ export function ConnectionDefaultsSettings() {
               {t("newUi.sidebar.connectionDefaults.title")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              {t("newUi.sidebar.connectionDefaults.dialogDescription")}
+              {t("newUi.sidebar.connectionDefaults.dialogDescription")}{" "}
+              <a
+                href="https://docs.termix.site/features/files-and-hosts/connection-defaults"
+                target="_blank"
+                rel="noreferrer"
+                className="text-accent-brand hover:underline"
+              >
+                {t("hosts.docsLink")}
+              </a>
             </DialogDescription>
           </DialogHeader>
 

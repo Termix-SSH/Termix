@@ -102,7 +102,15 @@ export function FileManagerTrashDialog({
         <DialogHeader>
           <DialogTitle>{t("fileManager.trash")}</DialogTitle>
           <DialogDescription>
-            {t("fileManager.trashDescription", { days: retentionDays })}
+            {t("fileManager.trashDescription", { days: retentionDays })}{" "}
+            <a
+              href="https://docs.termix.site/features/files-and-hosts/trash"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent-brand hover:underline"
+            >
+              {t("hosts.docsLink")}
+            </a>
           </DialogDescription>
         </DialogHeader>
 

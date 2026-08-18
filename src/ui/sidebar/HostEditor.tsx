@@ -1873,7 +1873,15 @@ export function HostEditor({
                       <option value="on">{t("hosts.localEchoOn")}</option>
                     </select>
                     <p className="text-[10px] text-muted-foreground">
-                      {t("hosts.localEchoDesc")}
+                      {t("hosts.localEchoDesc")}{" "}
+                      <a
+                        href="https://docs.termix.site/features/terminal/appearance"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-accent-brand hover:underline"
+                      >
+                        {t("hosts.docsLink")}
+                      </a>
                     </p>
                   </div>
                   <div className="flex flex-col gap-1.5">
