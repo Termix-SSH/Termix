@@ -400,26 +400,25 @@ export function AutomationsPanel({
             key={key}
             variant={tab === key ? "outline" : "ghost"}
             size="sm"
-            className={`rounded-none h-7 text-xs ${
+            className={`min-w-0 flex-shrink rounded-none h-7 px-2 text-xs ${
               tab === key
                 ? "border-accent-brand/40 bg-accent-brand/10 text-accent-brand hover:bg-accent-brand/20 hover:text-accent-brand"
                 : ""
             }`}
             onClick={() => setTab(key)}
           >
-            {t(
-              `${base}.${key === "automations" ? "tabAutomations" : key === "runs" ? "tabRuns" : "tabChannels"}`,
-            )}
+            <span className="truncate">
+              {t(
+                `${base}.${key === "automations" ? "tabAutomations" : key === "runs" ? "tabRuns" : "tabChannels"}`,
+              )}
+            </span>
           </Button>
         ))}
-      </div>
-
-      <div className="flex items-center justify-end border-b border-border px-2 py-1">
         <a
           href="https://docs.termix.site/features/automations/overview"
           target="_blank"
           rel="noreferrer"
-          className="text-[10px] text-accent-brand hover:underline"
+          className="ml-auto shrink-0 text-[10px] text-accent-brand hover:underline"
         >
           {t("hosts.docsLink")}
         </a>
