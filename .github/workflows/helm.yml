@@ -1,0 +1,73 @@
+name: Helm
+
+on:
+  pull_request:
+    paths:
+      - "charts/**"
+      - ".github/workflows/helm.yml"
+      - "deploy/**"
+  push:
+    branches: [main]
+    paths:
+      - "charts/**"
+      - ".github/workflows/helm.yml"
+      - "deploy/**"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish chart to GHCR OCI registry"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: Lint chart
+        run: helm lint charts/termix
+
+      - name: Render default chart
+        run: helm template termix charts/termix --namespace termix
+
+      - name: Render GitOps example
+        run: helm template termix charts/termix --values charts/termix/values-gitops-example.yaml --namespace termix
+
+      - name: Render Traefik example
+        run: helm template termix charts/termix --values charts/termix/values-traefik.yaml --namespace termix
+
+  publish:
+    needs: lint
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.15.4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Package chart
+        run: helm package charts/termix --destination .helm-packages
+
+      - name: Push chart
+        run: |
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          helm push .helm-packages/termix-*.tgz "oci://ghcr.io/$OWNER/charts"

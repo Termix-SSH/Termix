@@ -1,0 +1,23 @@
+{{- if .Values.guacd.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "termix.guacdName" . }}
+  labels:
+    {{- include "termix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: guacd
+  {{- with .Values.guacd.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.guacd.service.port }}
+      targetPort: guacd
+      protocol: TCP
+      name: guacd
+  selector:
+    app.kubernetes.io/name: {{ include "termix.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

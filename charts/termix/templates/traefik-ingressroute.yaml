@@ -1,0 +1,34 @@
+{{- if .Values.traefik.ingressRoute.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "termix.fullname" . }}
+  labels:
+    {{- include "termix.labels" . | nindent 4 }}
+  {{- with .Values.traefik.ingressRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  entryPoints:
+    {{- toYaml .Values.traefik.ingressRoute.entryPoints | nindent 4 }}
+  routes:
+    - match: Host(`{{ .Values.traefik.ingressRoute.host }}`) && PathPrefix(`{{ .Values.traefik.ingressRoute.pathPrefix }}`)
+      kind: Rule
+      services:
+        - name: {{ include "termix.fullname" . }}
+          port: {{ .Values.service.port }}
+      {{- with .Values.traefik.ingressRoute.middlewares }}
+      middlewares:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.traefik.ingressRoute.tls.enabled }}
+  tls:
+    {{- if .Values.traefik.ingressRoute.tls.secretName }}
+    secretName: {{ .Values.traefik.ingressRoute.tls.secretName }}
+    {{- end }}
+    {{- if .Values.traefik.ingressRoute.tls.certResolver }}
+    certResolver: {{ .Values.traefik.ingressRoute.tls.certResolver }}
+    {{- end }}
+  {{- end }}
+{{- end }}

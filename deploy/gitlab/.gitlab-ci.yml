@@ -1,0 +1,70 @@
+stages:
+  - test
+  - build
+  - package
+  - deploy
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  HELM_EXPERIMENTAL_OCI: "1"
+
+helm-lint:
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  stage: test
+  script:
+    - helm lint charts/termix
+    - helm template termix charts/termix --values charts/termix/values-gitops-example.yaml >/tmp/termix.yaml
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+docker-build-push:
+  image: docker:27
+  stage: build
+  services:
+    - docker:27-dind
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  script:
+    - docker build -f docker/Dockerfile -t "$CI_REGISTRY_IMAGE:$IMAGE_TAG" -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG" .
+    - docker push "$CI_REGISTRY_IMAGE:$IMAGE_TAG"
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_SLUG"
+  rules:
+    - if: $CI_COMMIT_BRANCH
+
+helm-package-push:
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  stage: package
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | helm registry login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+  script:
+    - helm dependency update charts/termix
+    - helm package charts/termix --destination .helm-packages
+    - helm push .helm-packages/termix-*.tgz "oci://$CI_REGISTRY_IMAGE/charts"
+  artifacts:
+    paths:
+      - .helm-packages/
+  rules:
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy:
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  stage: deploy
+  environment:
+    name: production
+  before_script:
+    - echo "$KUBE_CONFIG" | base64 -d > kubeconfig
+    - chmod 600 kubeconfig
+  script:
+    - helm upgrade --install termix charts/termix --namespace termix --create-namespace --kubeconfig kubeconfig --set image.repository="$CI_REGISTRY_IMAGE" --set image.tag="$IMAGE_TAG" --values charts/termix/values-gitops-example.yaml --atomic --timeout 10m
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual

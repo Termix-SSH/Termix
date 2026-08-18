@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: termix
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/lukegus/Termix.git
+    targetRevision: main
+    path: charts/termix
+    helm:
+      releaseName: termix
+      valueFiles:
+        - values-gitops-example.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: termix
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true
