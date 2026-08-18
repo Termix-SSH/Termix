@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  fromTriState,
   parseRemoteDesktopDefaults,
   parseTerminalDefaults,
   resolveConnectionDefaults,
+  toTriState,
 } from "../../lib/connection-defaults";
 
 describe("connection defaults", () => {
@@ -18,5 +20,15 @@ describe("connection defaults", () => {
         { fontSize: 18 },
       ),
     ).toEqual({ fontSize: 18, cursorBlink: true });
+  });
+
+  it("keeps unset booleans distinct from false", () => {
+    expect(toTriState(undefined)).toBe("inherit");
+    expect(toTriState(true)).toBe("on");
+    expect(toTriState(false)).toBe("off");
+
+    expect(fromTriState("inherit")).toBeUndefined();
+    expect(fromTriState("on")).toBe(true);
+    expect(fromTriState("off")).toBe(false);
   });
 });

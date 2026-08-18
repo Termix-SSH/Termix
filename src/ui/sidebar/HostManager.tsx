@@ -391,7 +391,14 @@ export function HostManager({
       : makeCredentialTabs(t);
     // Collapsing while on a now-hidden tab would leave nothing selected. The
     // SSH group collapses to its own "ssh" tab, everything else to General.
-    const hostTabVisible = tabs.some((tab) => tab.id === activeHostTab);
+    // The top-level strip only lists general/ssh/rdp/vnc/telnet -- the SSH
+    // sub-tabs live in the secondary strip, so they count as visible whenever
+    // the SSH group is expanded.
+    const hostTabVisible =
+      tabs.some((tab) => tab.id === activeHostTab) ||
+      (!collapseAdvanced &&
+        editingProtocols.enableSsh &&
+        SSH_GROUP_TABS.has(activeHostTab as never));
     const effectiveHostTab = hostTabVisible
       ? activeHostTab
       : collapseAdvanced && SSH_GROUP_TABS.has(activeHostTab as never)

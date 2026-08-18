@@ -4029,6 +4029,22 @@
         "orphanedSnippetWarning": "snippet not found",
         "clipboardPermissionNote": "May prompt for clipboard permission on first use in some browsers."
       },
+      "connectionDefaults": {
+        "title": "Connection Defaults",
+        "description": "Set values that every host inherits unless it overrides them.",
+        "manage": "Manage",
+        "dialogDescription": "These apply to hosts that leave a setting unset. Anything set on a host wins.",
+        "tabTerminal": "Terminal",
+        "tabRemoteDesktop": "Remote Desktop",
+        "inherit": "Inherit",
+        "on": "On",
+        "off": "Off",
+        "resizeDisplayUpdate": "Display Update",
+        "resizeReconnect": "Reconnect",
+        "clearAll": "Clear All",
+        "saved": "Connection defaults saved",
+        "saveFailed": "Failed to save connection defaults"
+      },
       "userProfile": {
         "donateTitle": "Keep Termix alive",
         "donateDescription": "Termix is free, self-hosted, and built by only a few people in their spare time. If it's saved you time or money, a crypto donation helps keep it going.",
