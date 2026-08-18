@@ -98,8 +98,8 @@ export function FileManagerTrashDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85dvh] w-[calc(100vw-2rem)] flex-col sm:max-w-3xl">
+        <DialogHeader className="shrink-0 pr-8">
           <DialogTitle>{t("fileManager.trash")}</DialogTitle>
           <DialogDescription>
             {t("fileManager.trashDescription", { days: retentionDays })}{" "}
@@ -115,7 +115,7 @@ export function FileManagerTrashDialog({
         </DialogHeader>
 
         {canManageRetention && (
-          <div className="flex items-center gap-2 border border-border p-2 text-xs">
+          <div className="flex shrink-0 items-center gap-2 border border-border p-2 text-xs">
             <span className="flex-1">{t("fileManager.trashRetention")}</span>
             <input
               type="number"
@@ -144,7 +144,7 @@ export function FileManagerTrashDialog({
           </div>
         )}
 
-        <div className="max-h-[55vh] overflow-y-auto border border-border">
+        <div className="min-h-0 flex-1 overflow-y-auto border border-border">
           {loading ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               {t("common.loading")}
@@ -157,39 +157,49 @@ export function FileManagerTrashDialog({
             items.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-3 border-b border-border p-3 last:border-b-0"
+                className="flex flex-col gap-2 border-b border-border p-3 last:border-b-0 sm:flex-row sm:items-center sm:gap-3"
               >
                 <Trash2 className="size-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">
+                  <div
+                    className="truncate text-sm font-medium"
+                    title={item.name}
+                  >
                     {item.name}
                   </div>
-                  <div className="truncate text-xs text-muted-foreground">
-                    {item.originalPath} ·{" "}
+                  <div
+                    className="truncate text-xs text-muted-foreground"
+                    title={item.originalPath}
+                  >
+                    {item.originalPath}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
                     {new Date(item.deletedAt).toLocaleString()}
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void restore(item)}
-                >
-                  <RotateCcw className="mr-1 size-3.5" />
-                  {t("fileManager.trashRestore")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => void remove(item)}
-                >
-                  {t("fileManager.trashDeletePermanently")}
-                </Button>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void restore(item)}
+                  >
+                    <RotateCcw className="mr-1 size-3.5" />
+                    {t("fileManager.trashRestore")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => void remove(item)}
+                  >
+                    {t("fileManager.trashDeletePermanently")}
+                  </Button>
+                </div>
               </div>
             ))
           )}
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex shrink-0 justify-end">
           <Button
             variant="destructive"
             disabled={items.length === 0}
