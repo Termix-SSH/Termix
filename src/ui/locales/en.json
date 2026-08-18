@@ -664,6 +664,7 @@
   "nav": {
     "home": "Home",
     "terminal": "Terminal",
+    "localTerminal": "Local Terminal",
     "docker": "Docker",
     "tunnels": "Tunnels",
     "fileManager": "File Manager",
@@ -1757,7 +1758,9 @@
     "links": "Links",
     "navigate": "Navigate",
     "select": "Select",
-    "toggleWith": "Toggle with"
+    "toggleWith": "Toggle with",
+    "localTerminal": "Local Terminal",
+    "localTerminalDesc": "Open a shell on this computer"
   },
   "splitScreen": {
     "paneEmpty": "Pane {{index}} - empty",

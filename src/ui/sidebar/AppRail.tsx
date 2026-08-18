@@ -14,7 +14,7 @@ import type { SplitMode, TabType, ToolsTab } from "@/types/ui-types";
 import { getAlertFirings } from "@/api/alerts-api";
 import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
-import { RAIL_ITEMS } from "./rail-items";
+import { visibleRailItems } from "./rail-items";
 
 export type RailView =
   | "hosts"
@@ -57,7 +57,7 @@ function buildRailButtons(
   hidden: Set<string>,
 ): RailItem[] {
   const all: RailItem[] = [];
-  for (const item of RAIL_ITEMS) {
+  for (const item of visibleRailItems()) {
     const Icon = item.icon;
     if (item.kind === "tab") {
       all.push({

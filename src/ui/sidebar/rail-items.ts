@@ -14,12 +14,14 @@ import {
   Server,
   Settings,
   Sparkles,
+  TerminalSquare,
   Usb,
   User,
   Workflow,
   Zap,
   type LucideIcon,
 } from "lucide-react";
+import { isElectron } from "@/lib/electron";
 
 /**
  * The one list of navigation destinations.
@@ -55,6 +57,8 @@ export interface RailItemDef {
    * the left sidebar, which is the only dock that widens for them.
    */
   rightDockable?: boolean;
+  /** Desktop app only. Hidden in the browser build, including its toggle. */
+  electronOnly?: boolean;
 }
 
 export const RAIL_ITEMS: RailItemDef[] = [
@@ -158,6 +162,14 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
   },
   {
+    id: "local-terminal",
+    icon: TerminalSquare,
+    labelKey: "nav.localTerminal",
+    kind: "tab",
+    separatorAfter: true,
+    electronOnly: true,
+  },
+  {
     id: "network_graph",
     icon: Network,
     labelKey: "nav.networkGraph",
@@ -165,6 +177,16 @@ export const RAIL_ITEMS: RailItemDef[] = [
     separatorAfter: true,
   },
 ];
+
+/**
+ * Rail items available in the current build. Electron-only destinations are
+ * dropped in the browser build so they never reach the rail, the mobile bar,
+ * or the visibility toggles.
+ */
+export function visibleRailItems(): RailItemDef[] {
+  const electron = isElectron();
+  return RAIL_ITEMS.filter((item) => !item.electronOnly || electron);
+}
 
 /**
  * Destinations that live outside the rail's hideable list but still need a

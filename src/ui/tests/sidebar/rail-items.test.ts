@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   HIDEABLE_RAIL_IDS,
   PROMOTABLE_IDS,
@@ -6,6 +6,7 @@ import {
   RAIL_UTILITY_ITEMS,
   RIGHT_DOCKABLE_IDS,
   railItemLabel,
+  visibleRailItems,
 } from "@/sidebar/rail-items";
 import { WORKSPACE_CAPTURABLE_TYPES } from "@/shell/workspaceUtils";
 import type { TabType } from "@/types/ui-types";
@@ -59,6 +60,7 @@ describe("RAIL_ITEMS", () => {
       "session-logs",
       "split-screen",
       "workspaces",
+      "local-terminal",
       "network_graph",
     ]);
   });
@@ -145,5 +147,34 @@ describe("railItemLabel", () => {
 
   it("falls back to the id for anything unknown", () => {
     expect(railItemLabel("not-a-view", (k) => k)).toBe("not-a-view");
+  });
+
+  describe("electron-only items", () => {
+    afterEach(() => {
+      delete (window as { IS_ELECTRON?: boolean }).IS_ELECTRON;
+    });
+
+    it("hides electron-only destinations in the browser build", () => {
+      const ids = visibleRailItems().map((item) => item.id);
+      expect(ids).not.toContain("local-terminal");
+    });
+
+    it("shows electron-only destinations in the desktop app", () => {
+      (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+      const ids = visibleRailItems().map((item) => item.id);
+      expect(ids).toContain("local-terminal");
+    });
+
+    it("keeps every non-electron item in both builds", () => {
+      const browser = visibleRailItems().map((item) => item.id);
+      (window as { IS_ELECTRON?: boolean }).IS_ELECTRON = true;
+      const desktop = visibleRailItems().map((item) => item.id);
+      const electronOnly = RAIL_ITEMS.filter((item) => item.electronOnly).map(
+        (item) => item.id,
+      );
+      expect(desktop.filter((id) => !electronOnly.includes(id))).toEqual(
+        browser,
+      );
+    });
   });
 });

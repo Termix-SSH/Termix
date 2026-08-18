@@ -69,7 +69,7 @@ import {
   X,
 } from "lucide-react";
 import { SettingRow, FakeSwitch } from "@/components/section-card";
-import { RAIL_ITEMS } from "./rail-items";
+import { visibleRailItems } from "./rail-items";
 import { InterfacePresetSettings } from "./InterfacePresetSettings";
 import { useUiPreferencesContext } from "@/contexts/UiPreferencesContext";
 import { KeybindingsDialog } from "./KeybindingsDialog";
@@ -2020,7 +2020,7 @@ export function UserProfilePanel({
             <p className="text-[10px] text-muted-foreground mb-2">
               {t("newUi.sidebar.userProfile.navigationTabsDesc")}
             </p>
-            {RAIL_ITEMS.map((tab) => (
+            {visibleRailItems().map((tab) => (
               <div
                 key={tab.id}
                 className="flex items-center justify-between py-1.5"

@@ -1673,7 +1673,9 @@ export function AppShell({
           instanceId,
           type: "local-terminal",
           label:
-            count === 0 ? "Local Terminal" : `Local Terminal (${count + 1})`,
+            count === 0
+              ? t("nav.localTerminal")
+              : `${t("nav.localTerminal")} (${count + 1})`,
           openedAt: Date.now(),
         },
       ];
@@ -1691,6 +1693,10 @@ export function AppShell({
       host?: Host,
       fleetId?: number,
     ) {
+      // Local terminals are never singletons, each one is its own shell.
+      if (type === "local-terminal") {
+        return openLocalTerminalTab();
+      }
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
           setSidebarOpen(true);

@@ -267,14 +267,10 @@ export function CommandPalette({
                   </div>
                   <div className="flex flex-col flex-1">
                     <span className="text-sm font-semibold">
-                      {t("commandPalette.localTerminal", {
-                        defaultValue: "Local Terminal",
-                      })}
+                      {t("commandPalette.localTerminal")}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {t("commandPalette.localTerminalDesc", {
-                        defaultValue: "Open a shell on this computer",
-                      })}
+                      {t("commandPalette.localTerminalDesc")}
                     </span>
                   </div>
                 </CommandItem>

@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/dropdown-menu";
 import type { RailView } from "@/sidebar/AppRail";
-import { RAIL_ITEMS } from "@/sidebar/rail-items";
+import { visibleRailItems } from "@/sidebar/rail-items";
 import type { SplitMode } from "@/types/ui-types";
 
 function readHiddenRailTabs(): Set<string> {
@@ -48,7 +48,7 @@ export function MobileBottomBar({
 
   const { primaryItems, moreItems } = useMemo(() => {
     // Tab-opening entries (network graph) have no sidebar panel to show here.
-    const visible = RAIL_ITEMS.filter(
+    const visible = visibleRailItems().filter(
       (item) => item.kind !== "tab" && !hidden.has(item.id),
     );
     const preferred = visible.filter((item) => item.mobilePrimary);
