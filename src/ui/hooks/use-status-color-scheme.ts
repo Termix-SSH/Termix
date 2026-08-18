@@ -3,23 +3,44 @@ import type { StatusColorScheme } from "@/types/host-sidebar-preferences";
 
 export type { StatusColorScheme };
 
+const PREFS_KEY = "hostSidebarPreferences";
+const PREFS_EVENT = "hostSidebarPreferencesChanged";
+
+/**
+ * Reads the scheme straight off the sidebar preferences cache that
+ * useHostSidebarPreferences writes, so the toggle in Customize Sidebar takes
+ * effect without a reload. Exported for imperative callers that build markup
+ * outside React (the topology SVG).
+ */
+export function readStatusColorScheme(): StatusColorScheme {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return "accent";
+    const parsed = JSON.parse(raw) as {
+      display?: { statusColorScheme?: string };
+    };
+    return parsed?.display?.statusColorScheme === "status"
+      ? "status"
+      : "accent";
+  } catch {
+    return "accent";
+  }
+}
+
 export function useStatusColorScheme(): StatusColorScheme {
   const [scheme, setScheme] = useState<StatusColorScheme>(
-    () =>
-      (localStorage.getItem("statusColorScheme") as StatusColorScheme) ??
-      "accent",
+    readStatusColorScheme,
   );
 
   useEffect(() => {
-    const handler = () => {
-      setScheme(
-        (localStorage.getItem("statusColorScheme") as StatusColorScheme) ??
-          "accent",
-      );
+    const handler = () => setScheme(readStatusColorScheme());
+    handler();
+    window.addEventListener(PREFS_EVENT, handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener(PREFS_EVENT, handler);
+      window.removeEventListener("storage", handler);
     };
-    window.addEventListener("statusColorSchemeChanged", handler);
-    return () =>
-      window.removeEventListener("statusColorSchemeChanged", handler);
   }, []);
 
   return scheme;

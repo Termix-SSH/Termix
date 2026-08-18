@@ -62,6 +62,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useTabsSafe } from "@/shell/TabContext";
 import { cn } from "@/lib/utils";
+import { readStatusColorScheme } from "@/hooks/use-status-color-scheme";
 
 const AVAILABLE_COLORS = [
   { value: "#ef4444", label: "Red" },
@@ -130,7 +131,7 @@ function buildNodeSvg(
 ): string {
   const isOnline = status === "online";
   const isOffline = status === "offline";
-  const useRealColors = localStorage.getItem("statusColorScheme") === "status";
+  const useRealColors = readStatusColorScheme() === "status";
   let statusColor: string;
   if (isOnline) {
     statusColor = useRealColors
