@@ -6,7 +6,7 @@ Termix AI, automations, fleets, workspaces, subhosts, Proxmox metrics, a context
 
 <!-- YOUTUBE -->
 
-https://youtu.be/g0QjNdV3YYY
+https://youtu.be/lngaePO96tM
 
 <!-- /YOUTUBE -->
 
