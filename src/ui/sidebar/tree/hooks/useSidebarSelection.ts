@@ -7,6 +7,10 @@ export function useSidebarSelection() {
   );
   const [openMenuHostId, setOpenMenuHostId] = useState<string | null>(null);
   const [openTrayHostId, setOpenTrayHostId] = useState<string | null>(null);
+  // Hover-mode tray expansion has to live in state, not just CSS: rows are
+  // absolutely positioned at virtualizer-computed heights, so a row that grows
+  // on hover would overlap the row below unless the height is reserved too.
+  const [hoveredHostId, setHoveredHostId] = useState<string | null>(null);
 
   function toggleSelect(id: string) {
     setSelectedHostIds((prev) => {
@@ -41,6 +45,8 @@ export function useSidebarSelection() {
     setOpenMenuHostId,
     openTrayHostId,
     setOpenTrayHostId,
+    hoveredHostId,
+    setHoveredHostId,
     toggleSelect,
     toggleSelectMany,
   };

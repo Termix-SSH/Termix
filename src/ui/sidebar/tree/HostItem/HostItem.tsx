@@ -214,6 +214,8 @@ export function HostItem({
   onMenuOpenChange,
   isTrayOpen = false,
   onTrayOpenChange,
+  isHovered = false,
+  onHoverChange,
   onDragStart,
   onDragEnd,
   depth = 0,
@@ -249,6 +251,8 @@ export function HostItem({
   onMenuOpenChange?: (open: boolean) => void;
   isTrayOpen?: boolean;
   onTrayOpenChange?: (open: boolean) => void;
+  isHovered?: boolean;
+  onHoverChange?: (hovered: boolean) => void;
   onProxmoxDiscover?: () => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
@@ -800,12 +804,24 @@ export function HostItem({
   );
 
   const trayOpenState = isTrayOpen || isMenuOpen;
+  // Hover mode keeps the tray open from React state rather than group-hover so
+  // the virtualizer can reserve the expanded height for this row.
+  const hoverTrayOpen =
+    !alwaysShowTray &&
+    !actionsOnly &&
+    !shouldUseClickTray &&
+    !selectionMode &&
+    (isHovered || isMenuOpen);
   const trayVisibilityClass =
     alwaysShowTray || actionsOnly
       ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState || alwaysShowTray ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`
       : shouldUseClickTray
         ? `overflow-hidden transition-all duration-150 ease-out ${trayOpenState ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`
-        : `overflow-hidden transition-all duration-150 ease-out max-h-0 opacity-0 ${!selectionMode ? "group-hover:max-h-[130px] group-hover:opacity-100" : ""} ${selectionMode ? "!max-h-0 !opacity-0" : ""} ${isMenuOpen && !selectionMode ? "!max-h-[130px] !opacity-100" : ""}`;
+        : // No transition in hover mode: the row's height is set by the
+          // virtualizer and snaps in a single frame, so animating the tray
+          // against it leaves the open tray overflowing its shortened row for
+          // the length of the animation. Both change together instead.
+          `overflow-hidden ${hoverTrayOpen ? "max-h-[130px] opacity-100" : "max-h-0 opacity-0"}`;
 
   return (
     <div
@@ -866,6 +882,8 @@ export function HostItem({
           preloadTabSurface(preferredAction);
         }
       }}
+      onMouseEnter={() => onHoverChange?.(true)}
+      onMouseLeave={() => onHoverChange?.(false)}
       className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/50 ${
         selected
           ? "bg-accent-brand/[0.07]"
@@ -988,7 +1006,9 @@ export function HostItem({
             !selectionMode &&
             !shouldUseClickTray &&
             !actionsOnly && (
-              <span className="text-[11px] text-muted-foreground/70 truncate leading-none ml-auto shrink-0 group-hover:hidden">
+              <span
+                className={`text-[11px] text-muted-foreground/70 truncate leading-none ml-auto shrink-0 ${hoverTrayOpen ? "hidden" : ""}`}
+              >
                 {host.ip}
               </span>
             )}

@@ -144,6 +144,8 @@ export function SidebarTree({
     setOpenMenuHostId,
     openTrayHostId,
     setOpenTrayHostId,
+    hoveredHostId,
+    setHoveredHostId,
     toggleSelect,
     toggleSelectMany,
   } = useSidebarSelection();
@@ -678,9 +680,17 @@ export function SidebarTree({
       if (!row) return FOLDER_ROW_HEIGHT;
       if (isFolder(row.item)) return FOLDER_ROW_HEIGHT;
       if (alwaysShowActions) return ALWAYS_ROW_HEIGHT;
-      const isOpen =
+      const toggledOpen =
         (openTrayHostId === row.item.id || openMenuHostId === row.item.id) &&
         (clickTrayActive || actionsOnly);
+      // In hover mode the tray expands on pointer-over, so the row needs the
+      // taller height reserved or it overlaps the row below it.
+      const hoverOpen =
+        !clickTrayActive &&
+        !actionsOnly &&
+        !selectionMode &&
+        (hoveredHostId === row.item.id || openMenuHostId === row.item.id);
+      const isOpen = toggledOpen || hoverOpen;
       if (actionsOnly) {
         return isOpen ? ACTIONS_ONLY_OPEN_ROW_HEIGHT : ACTIONS_ONLY_ROW_HEIGHT;
       }
@@ -690,6 +700,8 @@ export function SidebarTree({
       visibleRows,
       openTrayHostId,
       openMenuHostId,
+      hoveredHostId,
+      selectionMode,
       clickTrayActive,
       alwaysShowActions,
       actionsOnly,
@@ -728,6 +740,8 @@ export function SidebarTree({
     closedHostParents,
     openTrayHostId,
     openMenuHostId,
+    hoveredHostId,
+    selectionMode,
     query,
     visibleRows.length,
     density,
@@ -920,6 +934,12 @@ export function SidebarTree({
                       isTrayOpen={openTrayHostId === item.id}
                       onTrayOpenChange={(open) =>
                         setOpenTrayHostId(open ? item.id : null)
+                      }
+                      isHovered={hoveredHostId === item.id}
+                      onHoverChange={(hovered) =>
+                        setHoveredHostId((prev) =>
+                          hovered ? item.id : prev === item.id ? null : prev,
+                        )
                       }
                       onDragStart={() => {
                         if (reorderMode) {
