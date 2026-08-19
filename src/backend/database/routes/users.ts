@@ -54,6 +54,7 @@ import { registerUserDataAccessRoutes } from "./user-data-access-routes.js";
 import { registerSSOProviderRoutes } from "./sso-provider-routes.js";
 import { registerLDAPAuthRoutes } from "./ldap-auth-routes.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
+import { notifyAutomationInternalEvent } from "../../hosts/metrics/automation-bridge.js";
 import {
   createCurrentSettingsRepository,
   getCurrentSettingValue,
@@ -1911,6 +1912,11 @@ router.post("/login", async (req, res) => {
       ipAddress: loginIp,
       userAgent: loginUa,
       success: true,
+    });
+
+    notifyAutomationInternalEvent("user_login", userRecord.id, undefined, {
+      username,
+      ipAddress: loginIp,
     });
 
     const response: Record<string, unknown> = {

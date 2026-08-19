@@ -21,6 +21,39 @@ const TRIGGER_KINDS: TriggerKind[] = [
   "webhook",
 ];
 
+/** Sentinel for "no zone set", which means the server's own time. */
+const SERVER_TIMEZONE = "__server__";
+
+/**
+ * Zones offered for a cron schedule. Uses the runtime's own list where it is
+ * available so the picker is complete, with a small fallback for older
+ * browsers that do not expose supportedValuesOf.
+ */
+const TIMEZONES: string[] = (() => {
+  try {
+    const supported = (
+      Intl as unknown as { supportedValuesOf?: (key: string) => string[] }
+    ).supportedValuesOf?.("timeZone");
+    if (supported?.length) return supported;
+  } catch {
+    // Fall through to the short list.
+  }
+  return [
+    "UTC",
+    "America/New_York",
+    "America/Chicago",
+    "America/Denver",
+    "America/Los_Angeles",
+    "Europe/London",
+    "Europe/Berlin",
+    "Europe/Moscow",
+    "Asia/Kolkata",
+    "Asia/Shanghai",
+    "Asia/Tokyo",
+    "Australia/Sydney",
+  ];
+})();
+
 const METRIC_PATHS = [
   "cpu.percent",
   "memory.percent",
@@ -246,6 +279,39 @@ export function TriggerCard({
               patch({ intervalSeconds: value || undefined, cron: undefined })
             }
           />
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">
+              {t(`${base}.fields.timezone`)}
+            </Label>
+            <Select
+              value={trigger.timezone ?? SERVER_TIMEZONE}
+              onValueChange={(value) =>
+                patch({
+                  timezone: value === SERVER_TIMEZONE ? undefined : value,
+                })
+              }
+            >
+              <SelectTrigger
+                size="sm"
+                className="w-full rounded-none border-border"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SERVER_TIMEZONE}>
+                  {t(`${base}.fields.timezoneServer`)}
+                </SelectItem>
+                {TIMEZONES.map((zone) => (
+                  <SelectItem key={zone} value={zone}>
+                    {zone}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {t(`${base}.fields.timezoneHint`)}
+            </p>
+          </div>
         </div>
       )}
 

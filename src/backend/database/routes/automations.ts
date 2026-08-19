@@ -17,7 +17,11 @@ import {
 import { createCurrentAutomationRepository } from "../repositories/factory.js";
 import type { AutomationRow } from "../repositories/automation-repository.js";
 import { AutomationEngine } from "../../automations/engine.js";
-import { computeNextDueAt, isValidCron } from "../../automations/cron.js";
+import {
+  computeNextDueAt,
+  isValidCron,
+  isValidTimezone,
+} from "../../automations/cron.js";
 
 const router = express.Router();
 
@@ -117,6 +121,12 @@ export function validateDefinition(value: unknown): {
     if (hasInterval && (trigger.intervalSeconds as number) < 60) {
       return { ok: false, error: "Interval must be at least 60 seconds" };
     }
+    if (
+      isNonEmptyString(trigger.timezone) &&
+      !isValidTimezone(trigger.timezone)
+    ) {
+      return { ok: false, error: "Time zone is not valid" };
+    }
   }
 
   const steps = candidate.steps;
@@ -212,6 +222,7 @@ async function syncSchedule(
     nextDueAt: computeNextDueAt({
       cron: trigger.cron,
       intervalSeconds: trigger.intervalSeconds,
+      timezone: trigger.timezone,
     }),
   });
 }

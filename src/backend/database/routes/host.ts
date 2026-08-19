@@ -12,6 +12,7 @@ import {
   pickResolvedPassword,
   pickResolvedUsername,
 } from "../../hosts/credential-username.js";
+import { notifyAutomationInternalEvent } from "../../hosts/metrics/automation-bridge.js";
 import {
   createCurrentCommandHistoryRepository,
   createCurrentCredentialRepository,
@@ -520,6 +521,13 @@ router.post(
         userAgent: chUa,
         success: true,
       });
+
+      notifyAutomationInternalEvent(
+        "host_added",
+        userId,
+        createdHost.id as number,
+        { name: String(name ?? ip) },
+      );
 
       res.json(stripSensitiveFields(resolvedHost));
       notifyStatsHostUpdated(
@@ -2307,6 +2315,10 @@ router.delete(
         ipAddress: dhIp,
         userAgent: dhUa,
         success: true,
+      });
+
+      notifyAutomationInternalEvent("host_deleted", userId, numericHostId, {
+        name: hostToDelete.name ?? hostToDelete.ip,
       });
 
       try {

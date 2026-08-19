@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   computeNextDueAt,
   isValidCron,
+  isValidTimezone,
   nextCronRun,
   parseCron,
 } from "../../automations/cron.js";
@@ -99,5 +100,83 @@ describe("computeNextDueAt", () => {
 
   it("returns null when nothing is scheduled", () => {
     expect(computeNextDueAt({})).toBeNull();
+  });
+
+  it("passes the zone through to the cron evaluation", () => {
+    // 02:00 in Tokyo on 2026-06-02 is 17:00 UTC on 2026-06-01.
+    const from = new Date("2026-06-01T00:00:00.000Z");
+    expect(
+      computeNextDueAt({ cron: "0 2 * * *", timezone: "Asia/Tokyo" }, from),
+    ).toBe("2026-06-01T17:00:00.000Z");
+  });
+
+  it("ignores the zone for interval schedules", () => {
+    const from = new Date("2026-01-01T00:00:00.000Z");
+    expect(
+      computeNextDueAt({ intervalSeconds: 600, timezone: "Asia/Tokyo" }, from),
+    ).toBe("2026-01-01T00:10:00.000Z");
+  });
+});
+
+describe("time zone handling", () => {
+  it("resolves a daily cron against the given zone", () => {
+    const from = new Date("2026-06-01T00:00:00.000Z");
+    // 09:30 New York in June (UTC-4) is 13:30 UTC.
+    const next = nextCronRun("30 9 * * *", from, "America/New_York");
+    expect(next?.toISOString()).toBe("2026-06-01T13:30:00.000Z");
+  });
+
+  it("tracks daylight saving, so the UTC instant shifts by an hour", () => {
+    const summer = nextCronRun(
+      "0 12 * * *",
+      new Date("2026-07-01T00:00:00.000Z"),
+      "America/New_York",
+    );
+    const winter = nextCronRun(
+      "0 12 * * *",
+      new Date("2026-01-01T00:00:00.000Z"),
+      "America/New_York",
+    );
+
+    // Noon local both times, but UTC-4 in July and UTC-5 in January.
+    expect(summer?.toISOString()).toBe("2026-07-01T16:00:00.000Z");
+    expect(winter?.toISOString()).toBe("2026-01-01T17:00:00.000Z");
+  });
+
+  it("matches the day of week in the target zone, not the server's", () => {
+    // 23:00 UTC Sunday is already Monday in Tokyo.
+    const next = nextCronRun(
+      "0 8 * * mon",
+      new Date("2026-06-07T22:00:00.000Z"),
+      "Asia/Tokyo",
+    );
+    expect(next?.toISOString()).toBe("2026-06-07T23:00:00.000Z");
+  });
+
+  it("falls back to server time for an unknown zone instead of throwing", () => {
+    const from = new Date(2026, 0, 1, 10, 0, 0);
+    const next = nextCronRun("30 10 * * *", from, "Not/AZone");
+    expect(next).toEqual(new Date(2026, 0, 1, 10, 30, 0, 0));
+  });
+
+  it("handles midnight, which some hour cycles format as 24", () => {
+    const next = nextCronRun(
+      "0 0 * * *",
+      new Date("2026-06-01T10:00:00.000Z"),
+      "UTC",
+    );
+    expect(next?.toISOString()).toBe("2026-06-02T00:00:00.000Z");
+  });
+});
+
+describe("isValidTimezone", () => {
+  it("accepts real zones", () => {
+    expect(isValidTimezone("UTC")).toBe(true);
+    expect(isValidTimezone("Europe/London")).toBe(true);
+  });
+
+  it("rejects made-up ones", () => {
+    expect(isValidTimezone("Middle/Earth")).toBe(false);
+    expect(isValidTimezone("")).toBe(false);
   });
 });

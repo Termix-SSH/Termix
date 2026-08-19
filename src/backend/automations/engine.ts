@@ -99,6 +99,11 @@ export class AutomationEngine {
 
     // A second trigger while a run is in flight is recorded as skipped rather
     // than dropped silently, so the history explains what happened.
+    //
+    // The slot has to be claimed in the same tick as the check. It used to be
+    // claimed several awaits later, so two triggers arriving together both
+    // passed this test and both ran.
+    let claimed = false;
     if (this.running.has(automation.id)) {
       const policy = automation.concurrencyPolicy;
       if (policy === "skip") {
@@ -122,29 +127,53 @@ export class AutomationEngine {
           return { runId: null, status: "skipped", error: "Queue is full" };
         }
         this.queued.set(automation.id, depthNow + 1);
-        await this.waitUntilFree(automation.id);
-        this.queued.set(
-          automation.id,
-          (this.queued.get(automation.id) ?? 1) - 1,
-        );
+        try {
+          await this.waitUntilFree(automation.id);
+        } finally {
+          this.queued.set(
+            automation.id,
+            (this.queued.get(automation.id) ?? 1) - 1,
+          );
+        }
+        // waitUntilFree gives up on its own deadline, so the slot may still be
+        // taken. Only claim it when it is genuinely free.
+        if (!this.running.has(automation.id)) {
+          this.running.add(automation.id);
+          claimed = true;
+        }
       }
+    } else {
+      this.running.add(automation.id);
+      claimed = true;
     }
 
     const dryRun = request.dryRun ?? automation.dryRun;
     const maxRunSeconds = automation.maxRunSeconds || DEFAULT_MAX_RUN_SECONDS;
     const startedAt = Date.now();
 
-    const run = await repository.createRun({
-      automationId: automation.id,
-      userId: automation.userId,
-      triggerType: request.triggerType,
-      triggerContext: JSON.stringify(request.triggerContext ?? {}),
-      status: "running",
-      dryRun,
-      parentRunId: request.parentRunId ?? null,
-    });
+    let run: { id: number };
+    try {
+      run = await repository.createRun({
+        automationId: automation.id,
+        userId: automation.userId,
+        triggerType: request.triggerType,
+        triggerContext: JSON.stringify(request.triggerContext ?? {}),
+        status: "running",
+        dryRun,
+        parentRunId: request.parentRunId ?? null,
+      });
+    } catch (err) {
+      // The slot is already claimed at this point, so it has to be given back
+      // here; the finally below is only reached once a run row exists.
+      if (claimed) this.running.delete(automation.id);
+      return {
+        runId: null,
+        status: "failed",
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
 
-    this.running.add(automation.id);
+    if (!claimed) this.running.add(automation.id);
 
     const template: TemplateContext = {
       trigger: request.triggerContext ?? {},
@@ -207,6 +236,27 @@ export class AutomationEngine {
         runId: run.id,
         error,
       });
+
+      // An automation_failed handler that itself fails must not re-announce
+      // its own failure, so the event is not emitted for runs that this event
+      // already started.
+      if (request.triggerType !== "internal_event") {
+        import("../hosts/metrics/automation-bridge.js")
+          .then(({ notifyAutomationInternalEvent }) =>
+            notifyAutomationInternalEvent(
+              "automation_failed",
+              automation.userId,
+              undefined,
+              {
+                automationId: automation.id,
+                automationName: automation.name,
+                runId: run.id,
+                error: error ?? null,
+              },
+            ),
+          )
+          .catch(() => undefined);
+      }
     }
 
     return { runId: run.id, status, error };

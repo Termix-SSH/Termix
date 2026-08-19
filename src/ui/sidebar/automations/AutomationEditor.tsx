@@ -7,8 +7,16 @@ import { Input } from "@/components/input";
 import { Label } from "@/components/label";
 import { Switch } from "@/components/switch";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/select";
+import {
   AUTOMATION_DEFINITION_VERSION,
   type AutomationDefinition,
+  type ConcurrencyPolicy,
   type Step,
 } from "@/types/automations";
 import { StepBlock } from "./StepBlock";
@@ -19,6 +27,7 @@ export interface AutomationDraft {
   name: string;
   description: string;
   enabled: boolean;
+  concurrencyPolicy: ConcurrencyPolicy;
   definition: AutomationDefinition;
 }
 
@@ -27,6 +36,7 @@ export function emptyDraft(): AutomationDraft {
     name: "",
     description: "",
     enabled: true,
+    concurrencyPolicy: "skip",
     definition: {
       version: AUTOMATION_DEFINITION_VERSION,
       trigger: defaultTrigger("metric_threshold"),
@@ -134,6 +144,42 @@ export function AutomationEditor({
         />
         {t(`${base}.enabledLabel`)}
       </label>
+
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">
+          {t(`${base}.concurrencyLabel`)}
+        </Label>
+        <Select
+          value={draft.concurrencyPolicy}
+          onValueChange={(value) =>
+            onChange({
+              ...draft,
+              concurrencyPolicy: value as ConcurrencyPolicy,
+            })
+          }
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-full rounded-none border-border"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="skip">
+              {t(`${base}.concurrency.skip`)}
+            </SelectItem>
+            <SelectItem value="queue">
+              {t(`${base}.concurrency.queue`)}
+            </SelectItem>
+            <SelectItem value="allow">
+              {t(`${base}.concurrency.allow`)}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {t(`${base}.concurrencyHint`)}
+        </p>
+      </div>
 
       <div className="flex gap-1">
         <Button

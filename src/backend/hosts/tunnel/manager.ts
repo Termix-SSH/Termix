@@ -45,6 +45,7 @@ import {
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
 import { PermissionManager } from "../../utils/permission-manager.js";
 import { handleSocks5Connect } from "./socks5-relay.js";
+import { notifyAutomationInternalEvent } from "../metrics/automation-bridge.js";
 
 export const activeTunnels = new Map<string, Client>();
 export const retryCounters = new Map<string, number>();
@@ -452,6 +453,18 @@ export async function handleDisconnect(
       manualDisconnect: true,
     });
     return;
+  }
+
+  // Past the manual branch, so this is a drop the user did not ask for.
+  const ownerUserId =
+    tunnelConfig?.sourceUserId ?? tunnelConfig?.requestingUserId;
+  if (ownerUserId) {
+    notifyAutomationInternalEvent(
+      "tunnel_disconnected",
+      ownerUserId,
+      tunnelConfig?.sourceHostId,
+      { tunnelName },
+    );
   }
 
   if (retryExhaustedTunnels.has(tunnelName)) {

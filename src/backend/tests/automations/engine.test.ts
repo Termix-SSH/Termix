@@ -408,6 +408,52 @@ describe("AutomationEngine.run", () => {
       expect(skipped).toBeDefined();
       expect(String(skipped?.error)).toMatch(/still in progress/);
     });
+
+    it("skips the second of two triggers that arrive in the same tick", async () => {
+      defineAutomation([step({ id: "slow", type: "run_command" })], {
+        concurrencyPolicy: "skip",
+      });
+
+      executeStep.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ success: true, output: "done" }), 20),
+          ),
+      );
+
+      // No gap between the two: the in-flight slot used to be claimed several
+      // awaits after it was checked, so both runs got through.
+      const engine = AutomationEngine.getInstance();
+      const [first, second] = await Promise.all([
+        engine.run({ automationId: 1, triggerType: "manual" }),
+        engine.run({ automationId: 1, triggerType: "manual" }),
+      ]);
+
+      expect([first.status, second.status].sort()).toEqual([
+        "skipped",
+        "success",
+      ]);
+      expect(executeStep).toHaveBeenCalledTimes(1);
+    });
+
+    it("releases the in-flight slot when the run row cannot be created", async () => {
+      defineAutomation([step({ id: "a", type: "run_command" })]);
+      repository.createRun.mockRejectedValueOnce(new Error("db down"));
+
+      const engine = AutomationEngine.getInstance();
+      const failed = await engine.run({
+        automationId: 1,
+        triggerType: "manual",
+      });
+      expect(failed.status).toBe("failed");
+
+      // A leaked slot would make every later run skip forever.
+      const after = await engine.run({
+        automationId: 1,
+        triggerType: "manual",
+      });
+      expect(after.status).toBe("success");
+    });
   });
 
   it("propagates the dry-run flag to executors", async () => {

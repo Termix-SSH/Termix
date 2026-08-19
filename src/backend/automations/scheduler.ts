@@ -4,6 +4,7 @@ import { DataCrypto } from "../utils/data-crypto.js";
 import { statsLogger } from "../utils/logger.js";
 import { computeNextDueAt } from "./cron.js";
 import { hasDwelled, isCoolingDown } from "./conditions.js";
+import { pollDockerEvents } from "./docker-watcher.js";
 import { AutomationEngine } from "./engine.js";
 import { reconcileHeadlessViewers } from "./headless-viewer.js";
 
@@ -59,6 +60,7 @@ export async function tick(now: Date = new Date()): Promise<void> {
     await reconcileHeadlessViewers().catch(() => undefined);
     await runDueSchedules(now);
     await recheckOpenBreaches(now);
+    await pollDockerEvents(now.getTime()).catch(() => undefined);
     await pruneIfDue(now);
   } catch (error) {
     statsLogger.warn("Automation scheduler tick failed", {
@@ -88,7 +90,11 @@ async function runDueSchedules(now: Date): Promise<void> {
     }
 
     const nextDueAt = computeNextDueAt(
-      { cron: schedule.cron, intervalSeconds: schedule.intervalSeconds },
+      {
+        cron: schedule.cron,
+        intervalSeconds: schedule.intervalSeconds,
+        timezone: schedule.timezone,
+      },
       now,
     );
     await repository.markScheduleTicked(

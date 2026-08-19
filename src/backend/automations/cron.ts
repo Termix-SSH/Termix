@@ -138,13 +138,101 @@ export function isValidCron(expression: string): boolean {
   }
 }
 
-function matches(fields: CronFields, date: Date): boolean {
-  if (!fields.months.has(date.getMonth() + 1)) return false;
-  if (!fields.minutes.has(date.getMinutes())) return false;
-  if (!fields.hours.has(date.getHours())) return false;
+/** Wall-clock fields for a moment, in a given zone or server local time. */
+interface WallClock {
+  minute: number;
+  hour: number;
+  dayOfMonth: number;
+  month: number;
+  dayOfWeek: number;
+}
 
-  const domMatch = fields.daysOfMonth.has(date.getDate());
-  const dowMatch = fields.daysOfWeek.has(date.getDay());
+const WEEKDAYS: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Whether a zone name is one this runtime actually knows. An unknown zone
+ * falls back to server local time rather than throwing, so a bad value saved
+ * against a schedule cannot stop it from ever running.
+ */
+export function isValidTimezone(timezone: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function formatterFor(timezone: string): Intl.DateTimeFormat | null {
+  const cached = formatterCache.get(timezone);
+  if (cached) return cached;
+
+  try {
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      hour12: false,
+      weekday: "short",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+    });
+    formatterCache.set(timezone, formatter);
+    return formatter;
+  } catch {
+    return null;
+  }
+}
+
+function wallClock(date: Date, timezone?: string | null): WallClock {
+  const formatter = timezone ? formatterFor(timezone) : null;
+  if (!formatter) {
+    return {
+      minute: date.getMinutes(),
+      hour: date.getHours(),
+      dayOfMonth: date.getDate(),
+      month: date.getMonth() + 1,
+      dayOfWeek: date.getDay(),
+    };
+  }
+
+  const parts: Record<string, string> = {};
+  for (const part of formatter.formatToParts(date)) {
+    parts[part.type] = part.value;
+  }
+
+  return {
+    // Midnight formats as 24 in some locales' hour-cycle handling.
+    minute: Number(parts.minute),
+    hour: Number(parts.hour) % 24,
+    dayOfMonth: Number(parts.day),
+    month: Number(parts.month),
+    dayOfWeek: WEEKDAYS[parts.weekday] ?? date.getDay(),
+  };
+}
+
+function matches(
+  fields: CronFields,
+  date: Date,
+  timezone?: string | null,
+): boolean {
+  const clock = wallClock(date, timezone);
+  if (!fields.months.has(clock.month)) return false;
+  if (!fields.minutes.has(clock.minute)) return false;
+  if (!fields.hours.has(clock.hour)) return false;
+
+  const domMatch = fields.daysOfMonth.has(clock.dayOfMonth);
+  const dowMatch = fields.daysOfWeek.has(clock.dayOfWeek);
 
   // Both restricted means either may match, which is how cron behaves.
   if (fields.domRestricted && fields.dowRestricted) return domMatch || dowMatch;
@@ -160,6 +248,7 @@ function matches(fields: CronFields, date: Date): boolean {
 export function nextCronRun(
   expression: string,
   from: Date = new Date(),
+  timezone?: string | null,
 ): Date | null {
   const fields = parseCron(expression);
 
@@ -171,7 +260,7 @@ export function nextCronRun(
   // gives up rather than looping.
   const limit = 366 * 4 * 24 * 60;
   for (let i = 0; i < limit; i++) {
-    if (matches(fields, candidate)) return candidate;
+    if (matches(fields, candidate, timezone)) return candidate;
     candidate.setMinutes(candidate.getMinutes() + 1);
   }
   return null;
@@ -182,7 +271,11 @@ export function nextCronRun(
  * cron when both are set, matching the editor which offers one or the other.
  */
 export function computeNextDueAt(
-  schedule: { cron?: string | null; intervalSeconds?: number | null },
+  schedule: {
+    cron?: string | null;
+    intervalSeconds?: number | null;
+    timezone?: string | null;
+  },
   from: Date = new Date(),
 ): string | null {
   if (schedule.intervalSeconds && schedule.intervalSeconds > 0) {
@@ -191,7 +284,7 @@ export function computeNextDueAt(
     ).toISOString();
   }
   if (schedule.cron) {
-    const next = nextCronRun(schedule.cron, from);
+    const next = nextCronRun(schedule.cron, from, schedule.timezone);
     return next ? next.toISOString() : null;
   }
   return null;

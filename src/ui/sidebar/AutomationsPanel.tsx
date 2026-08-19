@@ -197,6 +197,7 @@ export function AutomationsPanel({
       name: row.name,
       description: row.description ?? "",
       enabled: !!row.enabled,
+      concurrencyPolicy: row.concurrency_policy ?? "skip",
       definition: row.definition ?? emptyDraft().definition,
     });
     setWebhookToken(null);
@@ -216,6 +217,7 @@ export function AutomationsPanel({
           name: draft.name.trim(),
           description: draft.description || null,
           enabled: draft.enabled,
+          concurrencyPolicy: draft.concurrencyPolicy,
           definition: draft.definition,
         });
         toast.success(t(`${base}.created`));
@@ -229,6 +231,7 @@ export function AutomationsPanel({
           name: draft.name.trim(),
           description: draft.description || null,
           enabled: draft.enabled,
+          concurrencyPolicy: draft.concurrencyPolicy,
           definition: draft.definition,
         });
         toast.success(t(`${base}.updated`));

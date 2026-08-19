@@ -3769,6 +3769,13 @@
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optional description",
         "enabledLabel": "Enabled",
+        "concurrencyLabel": "If it is already running",
+        "concurrencyHint": "What to do when this is triggered again before the last run has finished.",
+        "concurrency": {
+          "skip": "Skip the new run",
+          "queue": "Wait and run after",
+          "allow": "Run both at once"
+        },
         "save": "Save",
         "created": "Automation created",
         "updated": "Automation saved",
@@ -3846,6 +3853,9 @@
           "cooldown": "Cooldown (minutes)",
           "cron": "Cron expression",
           "intervalSeconds": "Every (seconds)",
+          "timezone": "Time zone",
+          "timezoneServer": "Server time",
+          "timezoneHint": "Cron times are read in this zone. Does not apply to interval schedules.",
           "container": "Container",
           "command": "Command",
           "url": "URL",
