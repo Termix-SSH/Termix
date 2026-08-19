@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Host, HostFolder } from "@/types/ui-types";
-import { isFolder, collectVisibleRows } from "../../sidebar/tree/visible-rows";
+import {
+  isFolder,
+  collectVisibleRows,
+  buildReorderRows,
+  rowKey,
+  rowKind,
+  ROOT_PARENT,
+} from "../../sidebar/tree/visible-rows";
 
 function host(id: string, name: string): Host {
   return {
@@ -123,5 +130,57 @@ describe("collectVisibleRows with sub-host nesting", () => {
       new Set(["host:1"]),
     );
     expect(rows.map((r) => r.item.name)).toEqual(["Zeus", "vm1"]);
+  });
+});
+
+describe("buildReorderRows", () => {
+  it("keys folders by path and hosts by id", () => {
+    const folder: HostFolder = {
+      name: "Web",
+      path: "Prod / Web",
+      children: [],
+    };
+    expect(rowKey(folder)).toBe("folder:Prod / Web");
+    expect(rowKey(host("7", "box"))).toBe("host:7");
+  });
+
+  it("reads the kind back off a key", () => {
+    expect(rowKind("folder:Prod / Web")).toBe("folder");
+    expect(rowKind("host:7")).toBe("host");
+  });
+
+  it("parents a nested folder to its path prefix", () => {
+    const nested: HostFolder = {
+      name: "Web",
+      path: "Prod / Web",
+      children: [],
+      sortOrder: 500,
+    };
+    expect(buildReorderRows([{ item: nested }])).toEqual([
+      { key: "folder:Prod / Web", parentKey: "folder:Prod", sortOrder: 500 },
+    ]);
+  });
+
+  it("parents a top-level folder to the root sentinel", () => {
+    const top: HostFolder = { name: "Prod", path: "Prod", children: [] };
+    expect(buildReorderRows([{ item: top }])[0].parentKey).toBe(ROOT_PARENT);
+  });
+
+  it("parents a host to its folder", () => {
+    const h = { ...host("3", "db"), folder: "Prod / Web", sortOrder: 2000 };
+    expect(buildReorderRows([{ item: h }])).toEqual([
+      { key: "host:3", parentKey: "folder:Prod / Web", sortOrder: 2000 },
+    ]);
+  });
+
+  it("parents a sub-host to its parent host, not its folder", () => {
+    const child = { ...host("4", "child"), folder: "Prod", parentHostId: "3" };
+    expect(buildReorderRows([{ item: child }])[0].parentKey).toBe("host:3");
+  });
+
+  it("parents a folderless host to the root sentinel", () => {
+    expect(buildReorderRows([{ item: host("5", "loose") }])[0].parentKey).toBe(
+      ROOT_PARENT,
+    );
   });
 });

@@ -25,15 +25,9 @@ export function CredentialFolderItem({
   onRenameFolder,
   onDeleteFolder,
   depth = 0,
-  reorderMode = false,
-  onReorderDrop,
-  onFolderDragStart,
-  onFolderDragEnd,
+  arrangeMode = false,
   draggedCredentialId,
   onDropCredential,
-  isReorderHovered = false,
-  reorderHoverEdge = null,
-  onReorderHoverChange,
 }: {
   folder: CredentialFolder;
   isOpen: boolean;
@@ -47,84 +41,48 @@ export function CredentialFolderItem({
   onRenameFolder: (folder: string, newName: string) => Promise<void>;
   onDeleteFolder?: (folder: string) => void;
   depth?: number;
-  reorderMode?: boolean;
-  onReorderDrop?: (position: "before" | "after") => void;
-  onFolderDragStart?: () => void;
-  onFolderDragEnd?: () => void;
+  /** When true (rearranging unlocked), the header accepts dropped
+   * credentials. Credential folders themselves have no stored order, so
+   * they are never draggable. */
+  arrangeMode?: boolean;
   /** Id of the credential currently being dragged (outside manual sort
    * mode), if any -- drives the drop-target highlight below. */
   draggedCredentialId?: string | null;
   /** Fires when a dragged credential is dropped on this folder header to
    * reassign it, outside manual sort mode. */
   onDropCredential?: (credentialId: string) => void;
-  /** Whether THIS folder header is the current reorder drop target -- see
-   * HostItem's identical prop for why this is lifted rather than local. */
-  isReorderHovered?: boolean;
-  reorderHoverEdge?: "before" | "after" | null;
-  onReorderHoverChange?: (edge: "before" | "after" | null) => void;
 }) {
   const { t } = useTranslation();
-  const reorderEdge = isReorderHovered ? reorderHoverEdge : null;
   const [dragOver, setDragOver] = useState(false);
   const isRenaming = editingFolderName === folder.name;
   const canManage = folder.name !== UNCATEGORIZED;
   const actionButtonClass =
     "flex items-center justify-center size-6 text-muted-foreground/60 hover:text-foreground hover:bg-background/80 transition-colors";
 
+  const acceptsCredentialDrop = arrangeMode && !!draggedCredentialId;
+
   return (
     <div
       className="relative"
       style={depth > 0 ? { paddingLeft: depth * 12 } : undefined}
-      onDragOver={(e) => {
-        if (reorderMode && onReorderDrop) {
-          e.preventDefault();
-          e.stopPropagation();
-          const rect = e.currentTarget.getBoundingClientRect();
-          onReorderHoverChange?.(
-            e.clientY - rect.top < rect.height / 2 ? "before" : "after",
-          );
-          return;
-        }
-        if (!reorderMode && draggedCredentialId) {
+    >
+      <div
+        onDragOver={(e) => {
+          if (!acceptsCredentialDrop) return;
           e.preventDefault();
           e.stopPropagation();
           setDragOver(true);
-        }
-      }}
-      onDragLeave={(e) => {
-        if (e.currentTarget === e.target) {
-          setDragOver(false);
-        }
-      }}
-      onDrop={(e) => {
-        if (reorderMode && onReorderDrop && reorderEdge) {
-          e.preventDefault();
-          e.stopPropagation();
-          onReorderDrop(reorderEdge);
-          onReorderHoverChange?.(null);
-          return;
-        }
-        if (!reorderMode && draggedCredentialId) {
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget === e.target) setDragOver(false);
+        }}
+        onDrop={(e) => {
+          if (!acceptsCredentialDrop || !draggedCredentialId) return;
           e.preventDefault();
           e.stopPropagation();
           setDragOver(false);
           onDropCredential?.(draggedCredentialId);
-        }
-      }}
-    >
-      {reorderMode && reorderEdge && (
-        <div
-          className={`absolute inset-x-0 h-0.5 bg-accent-brand pointer-events-none z-10 ${reorderEdge === "before" ? "top-0" : "bottom-0"}`}
-        />
-      )}
-      <div
-        draggable={reorderMode && canManage}
-        onDragStart={(e) => {
-          if (!reorderMode || !canManage) return;
-          e.dataTransfer.effectAllowed = "move";
-          onFolderDragStart?.();
         }}
-        onDragEnd={() => onFolderDragEnd?.()}
         onClick={() => !query && !isRenaming && onToggleFolder(folder.name)}
         className={`group/folder flex items-center gap-2 w-full pl-2.5 pr-2 py-1.5 transition-colors text-left cursor-pointer ${
           isOpen ? "bg-muted/40" : "hover:bg-muted/30"

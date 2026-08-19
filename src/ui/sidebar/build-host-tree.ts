@@ -22,7 +22,12 @@ export function buildHostTree(
   hosts: SSHHostWithStatus[],
   folderMeta?: Map<
     string,
-    { color?: string; icon?: string; credentialId?: number | null }
+    {
+      color?: string;
+      icon?: string;
+      credentialId?: number | null;
+      sortOrder?: number | null;
+    }
   >,
 ): HostFolder {
   const root: HostFolder = { name: "root", children: [] };
@@ -42,6 +47,7 @@ export function buildHostTree(
           color: meta?.color,
           icon: meta?.icon,
           credentialId: meta?.credentialId ?? null,
+          sortOrder: meta?.sortOrder ?? null,
           children: [],
         };
         folderMap.set(accumulated, folder);

@@ -11,8 +11,10 @@ import {
   SlidersHorizontal,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 import { HostManager } from "@/sidebar/HostManager";
 import { useCredentialSidebarPreferences } from "@/sidebar/credential-tree/hooks/useCredentialSidebarPreferences";
+import { useArrangeLock } from "@/sidebar/use-arrange-lock";
 import { CustomizeCredentialsSidebarPanel } from "@/sidebar/CustomizeCredentialsSidebarPanel";
 import { Button } from "@/components/button";
 import {
@@ -42,6 +44,9 @@ export function CredentialsPanel({
   const [customizePanelOpen, setCustomizePanelOpen] = useState(false);
 
   const sortKey = sidebarPrefs.sort.key;
+  const { arrangeLocked, toggleArrangeLock } = useArrangeLock(
+    "credentialSidebarArrangeLocked",
+  );
   const filterState = sidebarPrefs.filters;
   const filterActive =
     filterState.type.length > 0 || filterState.tags.length > 0;
@@ -51,6 +56,17 @@ export function CredentialsPanel({
       ...prev,
       sort: { ...prev.sort, key },
     }));
+  }
+
+  function handleArrangeLockToggle() {
+    const unlocking = arrangeLocked;
+    toggleArrangeLock();
+    // Same reasoning as the hosts panel: reordering only sticks visually
+    // under manual sort, so unlocking switches to it.
+    if (unlocking && sortKey !== "manual") {
+      handleSortChange("manual");
+      toast.info(t("credentials.arrangeUnlockedSwitchedToManual"));
+    }
   }
 
   function handleFilterToggle<K extends keyof typeof filterState>(
@@ -110,7 +126,7 @@ export function CredentialsPanel({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={`size-7 ${sortKey !== "default" ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`size-7 ${sortKey !== "default" || !arrangeLocked ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
                     title={t("credentials.sortCredentials")}
                   >
                     <ArrowUpDown className="size-3.5" />
@@ -177,6 +193,13 @@ export function CredentialsPanel({
                     )}
                     {t("credentials.sortManual")}
                   </DropdownMenuItem>
+                  <DropdownMenuCheckboxItem
+                    checked={!arrangeLocked}
+                    onCheckedChange={handleArrangeLockToggle}
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    {t("credentials.arrangeUnlocked")}
+                  </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <div className="w-px self-stretch bg-border" />
@@ -289,6 +312,7 @@ export function CredentialsPanel({
           hideListHeader
           externalSearch={managerEditing ? undefined : search}
           externalSort={sortKey}
+          externalArrangeLocked={arrangeLocked}
           externalFilter={filterState}
           density={sidebarPrefs.display.density}
           trayTrigger={sidebarPrefs.display.trayTrigger}

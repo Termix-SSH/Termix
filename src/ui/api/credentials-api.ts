@@ -257,6 +257,7 @@ export async function reorderFolders(
     const response = await authApi.put("/host/folders/reorder", {
       positions,
     });
+    invalidateSSHFoldersCache();
     return response.data;
   } catch (error) {
     handleApiError(error, "reorder folders");

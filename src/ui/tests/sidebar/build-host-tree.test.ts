@@ -103,3 +103,27 @@ describe("buildHostTree", () => {
     expect(isFolder(tree.children[0])).toBe(true);
   });
 });
+
+describe("buildHostTree folder metadata", () => {
+  it("copies sortOrder onto the folder so manual sort can order folders", () => {
+    const tree = buildHostTree(
+      [rawHost({ id: 1, folder: "Prod" }), rawHost({ id: 2, folder: "Dev" })],
+      new Map([
+        ["Prod", { sortOrder: 2000 }],
+        ["Dev", { sortOrder: 1000 }],
+      ]),
+    );
+    const folders = tree.children.filter(isFolder);
+    expect(folders.map((f) => [f.name, f.sortOrder])).toEqual(
+      expect.arrayContaining([
+        ["Prod", 2000],
+        ["Dev", 1000],
+      ]),
+    );
+  });
+
+  it("leaves sortOrder null when the folder has no metadata row", () => {
+    const tree = buildHostTree([rawHost({ id: 1, folder: "Prod" })]);
+    expect(tree.children.filter(isFolder)[0].sortOrder).toBeNull();
+  });
+});

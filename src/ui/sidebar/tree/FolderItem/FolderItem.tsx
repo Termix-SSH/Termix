@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Check } from "lucide-react";
+import { ChevronRight, Check, GripVertical } from "lucide-react";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type {
   HostDensity,
@@ -68,7 +68,8 @@ export function FolderItem({
   trayTrigger = "hover",
   showTags = true,
   openOnDoubleClick = false,
-  reorderMode = false,
+  arrangeMode = false,
+  isDragging = false,
   onReorderDrop,
   onFolderDragStart,
   onFolderDragEnd,
@@ -110,8 +111,12 @@ export function FolderItem({
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
   openOnDoubleClick?: boolean;
-  /** When true (manual sort mode), the top/bottom edges become reorder drop zones instead of folder-assignment. */
-  reorderMode?: boolean;
+  /** When true (rearranging unlocked), the header can be dragged and its
+   * top/bottom edges become reorder drop zones. The middle still accepts
+   * hosts dropped into the folder. */
+  arrangeMode?: boolean;
+  /** True while this folder is the one being dragged. */
+  isDragging?: boolean;
   onReorderDrop?: (targetKey: string, position: "before" | "after") => void;
   onFolderDragStart?: (folderPath: string) => void;
   onFolderDragEnd?: () => void;
@@ -151,123 +156,145 @@ export function FolderItem({
     folderHosts.length > 0 &&
     folderHosts.every((h) => selectedHostIds.has(h.id));
 
+  const canDragFolder = arrangeMode && !isGroup;
+  // Hosts land IN the folder; the header's own top/bottom edges reorder it
+  // among its siblings.
+  const acceptsHostDrop = !!draggedHostIds && !isGroup;
+
   return (
     <div
       className="relative"
       style={depth > 0 ? { paddingLeft: depth * 12 } : undefined}
-      onDragOver={(e) => {
-        if (reorderMode && onReorderDrop && !isGroup) {
-          e.preventDefault();
-          e.stopPropagation();
-          const rect = e.currentTarget.getBoundingClientRect();
-          onReorderHoverChange?.(
-            e.clientY - rect.top < rect.height / 2 ? "before" : "after",
-          );
-          return;
-        }
-        if (draggedHostIds && !isGroup) {
-          e.preventDefault();
-          e.stopPropagation();
-          setDragOver(true);
-        }
-      }}
-      onDragLeave={(e) => {
-        if (e.currentTarget === e.target) {
-          setDragOver(false);
-        }
-      }}
-      onDrop={(e) => {
-        if (reorderMode && onReorderDrop && !isGroup && reorderEdge) {
-          e.preventDefault();
-          e.stopPropagation();
-          onReorderDrop(`folder:${folderPath}`, reorderEdge);
-          onReorderHoverChange?.(null);
-          return;
-        }
-        if (draggedHostIds && !isGroup) {
-          e.preventDefault();
-          e.stopPropagation();
-          setDragOver(false);
-          onMoveHostsToFolder(draggedHostIds, folderPath);
-        }
-      }}
     >
-      {reorderMode && reorderEdge && (
-        <div
-          className={`absolute inset-x-0 h-0.5 bg-accent-brand pointer-events-none z-10 ${reorderEdge === "before" ? "top-0" : "bottom-0"}`}
-        />
-      )}
-      <button
-        draggable={reorderMode && !isGroup}
-        onDragStart={(e) => {
-          if (!reorderMode || isGroup) return;
-          e.dataTransfer.effectAllowed = "move";
-          onFolderDragStart?.(folderPath);
-        }}
-        onDragEnd={() => onFolderDragEnd?.()}
-        onClick={() => !query && onToggleFolder(folderPath)}
-        className={`group/folder flex items-center gap-2 w-full pl-2.5 pr-2 py-1.5 transition-colors text-left cursor-pointer ${
-          isOpen ? "bg-muted/40" : "hover:bg-muted/30"
-        } ${stripeIndex % 2 === 1 && !isOpen ? "bg-muted/[0.08]" : ""} ${dragOver ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10" : ""}`}
-      >
-        <ChevronRight
-          className={`size-3.5 shrink-0 text-muted-foreground/60 transition-transform ${isOpen ? "rotate-90" : ""}`}
-        />
-        {selectionMode && !isGroup && folderHosts.length > 0 && (
-          <div
-            role="checkbox"
-            aria-checked={folderSelected}
-            title={
-              folderSelected
-                ? t("hosts.deselectFolder")
-                : t("hosts.selectFolder")
-            }
-            onClick={(e) => {
+      <div className="relative">
+        <button
+          draggable={canDragFolder}
+          onDragStart={(e) => {
+            if (!canDragFolder) return;
+            e.dataTransfer.effectAllowed = "move";
+            onFolderDragStart?.(folderPath);
+          }}
+          onDragEnd={() => {
+            setDragOver(false);
+            onReorderHoverChange?.(null);
+            onFolderDragEnd?.();
+          }}
+          // The drop zones live on the header, not on the wrapper around the
+          // folder's whole subtree -- measuring the edges against the full
+          // expanded subtree made the before/after split land hundreds of
+          // pixels away from the header the user was actually pointing at.
+          onDragOver={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const offset = e.clientY - rect.top;
+            const band = Math.min(8, rect.height * 0.3);
+            const wantsInto =
+              acceptsHostDrop && offset > band && offset < rect.height - band;
+
+            if (wantsInto) {
+              e.preventDefault();
               e.stopPropagation();
-              onToggleSelectFolder(folder);
-            }}
-            className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${folderSelected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
-          >
-            {folderSelected && <Check className="size-2 text-background" />}
-          </div>
-        )}
-        <FolderIconEl
-          icon={folder.icon ?? "folder"}
-          className={`size-4 shrink-0 ${folder.color ? "" : isOpen ? "text-accent-brand" : "text-muted-foreground/70"}`}
-          style={folder.color ? { color: folder.color } : undefined}
-        />
-        {
-          <>
-            <span className="min-w-0 flex-1 truncate">
-              {breadcrumb && (
-                <span className="text-[10px] text-muted-foreground/40 truncate mr-1">
-                  {breadcrumb} /
+              onReorderHoverChange?.(null);
+              setDragOver(true);
+              return;
+            }
+            if (arrangeMode && onReorderDrop && !isGroup) {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+              onReorderHoverChange?.(
+                offset < rect.height / 2 ? "before" : "after",
+              );
+            }
+          }}
+          onDragLeave={(e) => {
+            if (e.currentTarget === e.target) setDragOver(false);
+          }}
+          onDrop={(e) => {
+            if (dragOver && acceptsHostDrop && draggedHostIds) {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOver(false);
+              onMoveHostsToFolder(draggedHostIds, folderPath);
+              return;
+            }
+            if (arrangeMode && onReorderDrop && !isGroup && reorderEdge) {
+              e.preventDefault();
+              e.stopPropagation();
+              onReorderDrop(`folder:${folderPath}`, reorderEdge);
+              onReorderHoverChange?.(null);
+            }
+          }}
+          onClick={() => !query && onToggleFolder(folderPath)}
+          className={`group/folder flex items-center gap-2 w-full pl-2.5 pr-2 py-1.5 transition-colors text-left ${
+            canDragFolder
+              ? "cursor-grab active:cursor-grabbing"
+              : "cursor-pointer"
+          } ${
+            isOpen ? "bg-muted/40" : "hover:bg-muted/30"
+          } ${stripeIndex % 2 === 1 && !isOpen ? "bg-muted/[0.08]" : ""} ${dragOver ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10" : ""} ${isDragging ? "opacity-40" : ""}`}
+        >
+          {canDragFolder && (
+            <GripVertical className="size-3 shrink-0 text-muted-foreground/35 group-hover/folder:text-muted-foreground/70 transition-colors" />
+          )}
+          <ChevronRight
+            className={`size-3.5 shrink-0 text-muted-foreground/60 transition-transform ${isOpen ? "rotate-90" : ""}`}
+          />
+          {selectionMode && !isGroup && folderHosts.length > 0 && (
+            <div
+              role="checkbox"
+              aria-checked={folderSelected}
+              title={
+                folderSelected
+                  ? t("hosts.deselectFolder")
+                  : t("hosts.selectFolder")
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelectFolder(folder);
+              }}
+              className={`size-3.5 border-2 flex items-center justify-center shrink-0 transition-colors ${folderSelected ? "border-accent-brand bg-accent-brand" : "border-border bg-background"}`}
+            >
+              {folderSelected && <Check className="size-2 text-background" />}
+            </div>
+          )}
+          <FolderIconEl
+            icon={folder.icon ?? "folder"}
+            className={`size-4 shrink-0 ${folder.color ? "" : isOpen ? "text-accent-brand" : "text-muted-foreground/70"}`}
+            style={folder.color ? { color: folder.color } : undefined}
+          />
+          {
+            <>
+              <span className="min-w-0 flex-1 truncate">
+                {breadcrumb && (
+                  <span className="text-[10px] text-muted-foreground/40 truncate mr-1">
+                    {breadcrumb} /
+                  </span>
+                )}
+                <span className="text-[13px] font-bold text-foreground tracking-tight">
+                  {folder.name}
                 </span>
-              )}
-              <span className="text-[13px] font-bold text-foreground tracking-tight">
-                {folder.name}
               </span>
-            </span>
-            <span className="flex items-center gap-1 text-[10px] tabular-nums shrink-0 ml-1 px-1.5 py-[1px] bg-muted/70">
-              {online > 0 && (
-                <span className="text-accent-brand font-semibold">
-                  {online}
-                </span>
+              <span className="flex items-center gap-1 text-[10px] tabular-nums shrink-0 ml-1 px-1.5 py-[1px] bg-muted/70">
+                {online > 0 && (
+                  <span className="text-accent-brand font-semibold">
+                    {online}
+                  </span>
+                )}
+                <span className="text-muted-foreground/50">/{total}</span>
+              </span>
+              {!isGroup && (
+                <FolderActions
+                  folder={folder}
+                  onOpenAllSessions={onOpenAllSessions}
+                  onShareFolder={onShareFolder}
+                  onManageFolder={onManageFolder}
+                  onDeleteFolder={onDeleteFolder}
+                />
               )}
-              <span className="text-muted-foreground/50">/{total}</span>
-            </span>
-            {!isGroup && (
-              <FolderActions
-                folder={folder}
-                onOpenAllSessions={onOpenAllSessions}
-                onShareFolder={onShareFolder}
-                onManageFolder={onManageFolder}
-                onDeleteFolder={onDeleteFolder}
-              />
-            )}
-          </>
-        }
-      </button>
+            </>
+          }
+        </button>
+      </div>
       {!flat && isOpen && (
         <div className="border-l border-border/50 ml-[27px]">
           {folder.children.map((child, i) =>
@@ -306,7 +333,7 @@ export function FolderItem({
                 trayTrigger={trayTrigger}
                 showTags={showTags}
                 openOnDoubleClick={openOnDoubleClick}
-                reorderMode={reorderMode}
+                arrangeMode={arrangeMode}
                 onReorderDrop={onReorderDrop}
                 onFolderDragStart={onFolderDragStart}
                 onFolderDragEnd={onFolderDragEnd}
@@ -342,7 +369,7 @@ export function FolderItem({
                 trayTrigger={trayTrigger}
                 showTags={showTags}
                 openOnDoubleClick={openOnDoubleClick}
-                reorderMode={reorderMode}
+                arrangeMode={arrangeMode}
                 onReorderDrop={
                   onReorderDrop
                     ? (position) => onReorderDrop(`host:${child.id}`, position)

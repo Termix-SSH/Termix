@@ -48,6 +48,7 @@ export function HostManager({
   hideListHeader,
   externalSearch,
   externalSort,
+  externalArrangeLocked = true,
   externalFilter,
   density = "comfortable",
   trayTrigger = "hover",
@@ -61,6 +62,7 @@ export function HostManager({
   hideListHeader?: boolean;
   externalSearch?: string;
   externalSort?: CredentialSortKey;
+  externalArrangeLocked?: boolean;
   externalFilter?: CredentialSidebarFilterState;
   density?: "comfortable" | "compact";
   trayTrigger?: "always" | "hover" | "click" | "actionsOnly";
@@ -647,6 +649,7 @@ export function HostManager({
               query=""
               loading={credentialsLoading}
               sortKey={externalSort ?? "default"}
+              arrangeLocked={externalArrangeLocked}
               density={density}
               trayTrigger={trayTrigger}
               showTags={showTags}

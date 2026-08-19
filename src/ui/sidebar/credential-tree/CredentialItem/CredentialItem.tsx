@@ -1,5 +1,13 @@
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Copy, Pencil, Pin, Trash2, Upload } from "lucide-react";
+import {
+  ChevronRight,
+  Copy,
+  GripVertical,
+  Pencil,
+  Pin,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 import type { Credential } from "@/types/ui-types";
@@ -52,7 +60,8 @@ export function CredentialItem({
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
-  reorderMode = false,
+  arrangeMode = false,
+  isDragging = false,
   onReorderDrop,
   isReorderHovered = false,
   reorderHoverEdge = null,
@@ -77,8 +86,11 @@ export function CredentialItem({
   density?: CredentialDensity;
   trayTrigger?: CredentialTrayTrigger;
   showTags?: boolean;
-  /** When true (manual sort mode), show above/below drop zones for reordering. */
-  reorderMode?: boolean;
+  /** When true (rearranging unlocked), the row can be dragged to reorder or
+   * onto a folder header to move. */
+  arrangeMode?: boolean;
+  /** True while this row is the one being dragged. */
+  isDragging?: boolean;
   onReorderDrop?: (position: "before" | "after") => void;
   /** Whether THIS row is the current reorder drop target -- lifted to the
    * parent tree so only one row can ever show the drop-indicator bar at a
@@ -102,6 +114,7 @@ export function CredentialItem({
   const actionsOnly = trayTrigger === "actionsOnly";
   const shouldUseClickTray =
     !alwaysShowTray && !actionsOnly && (trayTrigger === "click" || isTouchOnly);
+  const canDrag = arrangeMode && !isTouchOnly;
 
   const depthStyle =
     depth > 0 ? ({ paddingLeft: depth * 12 } as const) : undefined;
@@ -177,9 +190,22 @@ export function CredentialItem({
 
   return (
     <div
-      draggable={!isTouchOnly}
+      draggable={canDrag}
       onDragStart={(e) => {
+        if (!canDrag) return;
         e.dataTransfer.effectAllowed = "move";
+        // Drag the name row, not the whole row with its open tray, so the
+        // ghost stays a compact label instead of a tall overlapping block.
+        const label =
+          e.currentTarget.querySelector<HTMLElement>("[data-drag-label]");
+        if (label) {
+          const rect = label.getBoundingClientRect();
+          e.dataTransfer.setDragImage(
+            label,
+            Math.min(e.clientX - rect.left, rect.width),
+            rect.height / 2,
+          );
+        }
         onDragStart?.();
       }}
       onDragEnd={() => {
@@ -187,34 +213,37 @@ export function CredentialItem({
         onDragEnd?.();
       }}
       onDragOver={(e) => {
-        if (!reorderMode || !onReorderDrop) return;
+        if (!arrangeMode || !onReorderDrop) return;
         e.preventDefault();
+        e.stopPropagation();
         const rect = e.currentTarget.getBoundingClientRect();
         onReorderHoverChange?.(
           e.clientY - rect.top < rect.height / 2 ? "before" : "after",
         );
       }}
       onDrop={(e) => {
-        if (!reorderMode || !onReorderDrop || !reorderEdge) return;
+        if (!arrangeMode || !onReorderDrop || !reorderEdge) return;
         e.preventDefault();
         e.stopPropagation();
         onReorderDrop(reorderEdge);
         onReorderHoverChange?.(null);
       }}
       style={depthStyle}
-      className={`group relative flex items-stretch cursor-default select-none transition-colors hover:bg-muted/50 ${stripeIndex % 2 === 1 ? "bg-muted/15" : ""} ${isMenuOpen ? "bg-muted/50" : ""}`}
+      className={`group relative flex items-stretch select-none transition-colors hover:bg-muted/50 ${
+        canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-default"
+      } ${stripeIndex % 2 === 1 ? "bg-muted/15" : ""} ${isMenuOpen ? "bg-muted/50" : ""} ${isDragging ? "opacity-40" : ""}`}
     >
-      {reorderMode && reorderEdge && (
-        <div
-          className={`absolute inset-x-0 h-0.5 bg-accent-brand pointer-events-none z-10 ${reorderEdge === "before" ? "top-0" : "bottom-0"}`}
-        />
+      {canDrag && (
+        <div className="flex items-center justify-center w-4 shrink-0 text-muted-foreground/35 group-hover:text-muted-foreground/70 transition-colors">
+          <GripVertical className="size-3" />
+        </div>
       )}
 
       <div
         className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-1"}`}
       >
         {/* Name row */}
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div data-drag-label className="flex items-center gap-1.5 min-w-0">
           <span
             className={`${tokens.nameTextSize} font-semibold truncate text-foreground leading-none tracking-tight`}
           >

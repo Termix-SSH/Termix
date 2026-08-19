@@ -9,11 +9,9 @@ import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { KeyRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { reorderCredentials, reorderFolders } from "@/main-axios";
-import {
-  computeDropSortOrder,
-  renumberSiblings,
-} from "@/sidebar/reorder-utils";
+import { reorderCredentials } from "@/main-axios";
+import { planReorder, renumberSiblings } from "@/sidebar/reorder-utils";
+import { ReorderIndicator } from "@/sidebar/ReorderIndicator";
 import type { Credential } from "@/types/ui-types";
 import type {
   CredentialDensity,
@@ -39,6 +37,7 @@ export function CredentialSidebarTree({
   query = "",
   loading = false,
   sortKey = "default",
+  arrangeLocked = true,
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
@@ -59,6 +58,8 @@ export function CredentialSidebarTree({
   query?: string;
   loading?: boolean;
   sortKey?: CredentialSortKey;
+  /** When true, drag-to-rearrange is off entirely. Toggled from the panel header. */
+  arrangeLocked?: boolean;
   density?: CredentialDensity;
   trayTrigger?: CredentialTrayTrigger;
   showTags?: boolean;
@@ -68,12 +69,11 @@ export function CredentialSidebarTree({
   onEditingFolderValueChange: (value: string) => void;
   onRenameFolder: (folder: string, newName: string) => Promise<void>;
   onDeleteFolder?: (folder: string) => void;
-  /** Drag a credential onto a folder header (outside manual sort mode) to
-   * reassign it. Distinct from the manual reorder drag interaction. */
+  /** Drop a credential on a folder header to reassign it. */
   onMoveCredentialToFolder?: (
     credentialId: string,
     targetFolder: string,
-  ) => void;
+  ) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -123,7 +123,7 @@ export function CredentialSidebarTree({
   const [reorderHoverEdge, setReorderHoverEdge] = useState<
     "before" | "after" | null
   >(null);
-  const reorderMode = sortKey === "manual";
+  const arrangeMode = !arrangeLocked;
 
   const isTouchOnly =
     typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
@@ -228,6 +228,24 @@ export function CredentialSidebarTree({
     },
   });
 
+  // Single tree-level indicator off the virtualizer's slot geometry -- see
+  // SidebarTree for why rows can't place this themselves.
+  const reorderIndicatorTop = (() => {
+    if (!arrangeMode || !reorderHoverKey || !reorderHoverEdge) return null;
+    const index = visibleRows.findIndex((row) => {
+      const key = isFolder(row.item)
+        ? `folder:${row.item.name}`
+        : `cred:${row.item.id}`;
+      return key === reorderHoverKey;
+    });
+    if (index === -1) return null;
+    const slot = virtualizer
+      .getVirtualItems()
+      .find((vItem) => vItem.index === index);
+    if (!slot) return null;
+    return reorderHoverEdge === "before" ? slot.start : slot.start + slot.size;
+  })();
+
   useLayoutEffect(() => {
     virtualizer.measure();
   }, [
@@ -251,87 +269,80 @@ export function CredentialSidebarTree({
   }
 
   /**
-   * Manual drag-to-reorder, only active in "manual" sort mode -- same
-   * midpoint-then-renumber-on-exhaustion math as SidebarTree.tsx's
-   * handleReorderDrop, reused unchanged via reorder-utils.ts.
+   * Resolves a credential drop into its new position, scoped to the target
+   * credential's own folder, and moves it there when the drop crossed
+   * folders. Credential folders themselves are always alphabetical -- they
+   * have no stored order, so only credentials are draggable.
    */
+  /**
+   * Credential dropped on a folder header: lands at the end of that folder.
+   * It needs an explicit sortOrder for the same reason hosts do -- a null
+   * one sorts last under manual sort and then falls back to alphabetical,
+   * throwing the placement away.
+   */
+  async function handleDropIntoFolder(credentialId: string, folder: string) {
+    const destination = folders
+      .find((f) => f.name === folder)
+      ?.children.filter((c) => c.id !== credentialId);
+    try {
+      await onMoveCredentialToFolder?.(credentialId, folder);
+      if (destination) {
+        const ordered = [
+          ...destination.filter((c) => c.sortOrder != null),
+          ...destination.filter((c) => c.sortOrder == null),
+        ];
+        await reorderCredentials(
+          renumberSiblings([...ordered, { id: credentialId }]).map((r) => ({
+            id: Number(r.id),
+            sortOrder: r.sortOrder,
+          })),
+        );
+      }
+      window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
+    } catch {
+      toast.error(t("credentials.failedToReorder"));
+    }
+  }
+
   async function handleReorderDrop(
     targetKey: string,
     position: "before" | "after",
   ) {
     const draggedKey = draggedReorderKey;
     setDraggedReorderKey(null);
-    if (!draggedKey || draggedKey === targetKey) return;
-    const [draggedType, draggedId] = draggedKey.split(":", 2);
-    const [targetType, targetId] = targetKey.split(":", 2);
-    if (draggedType !== targetType) return;
+    setReorderHoverKey(null);
+    setReorderHoverEdge(null);
+    if (!draggedKey) return;
+    if (!draggedKey.startsWith("cred:") || !targetKey.startsWith("cred:"))
+      return;
 
-    const siblings = visibleRows.filter((row) => {
-      const key = isFolder(row.item)
-        ? `folder:${row.item.name}`
-        : `cred:${row.item.id}`;
-      return key.split(":", 2)[0] === draggedType;
-    });
-    const targetIndex = siblings.findIndex((row) => {
-      const item = row.item;
-      const id = isFolder(item) ? item.name : item.id;
-      return id === targetId;
-    });
-    if (targetIndex === -1) return;
+    // From every folder's children, not visibleRows: a collapsed folder
+    // contributes no visible rows, so planning off the rendered list
+    // compared against a partial sibling group.
+    const rows = folders.flatMap((folder) =>
+      folder.children.map((cred) => ({
+        key: `cred:${cred.id}`,
+        parentKey: `folder:${cred.folder || "Uncategorized"}`,
+        sortOrder: cred.sortOrder,
+      })),
+    );
 
-    const beforeItem =
-      position === "before"
-        ? (siblings[targetIndex - 1]?.item ?? null)
-        : siblings[targetIndex].item;
-    const afterItem =
-      position === "before"
-        ? siblings[targetIndex].item
-        : (siblings[targetIndex + 1]?.item ?? null);
+    const plan = planReorder(rows, draggedKey, targetKey, position);
+    if (!plan) return;
 
-    const before = beforeItem
-      ? { sortOrder: isFolder(beforeItem) ? undefined : beforeItem.sortOrder }
-      : null;
-    const after = afterItem
-      ? { sortOrder: isFolder(afterItem) ? undefined : afterItem.sortOrder }
-      : null;
-
-    const sortOrder = computeDropSortOrder(before, after);
+    const draggedId = draggedKey.slice("cred:".length);
 
     try {
-      if (sortOrder === null) {
-        const orderedIds = siblings.map((row) => ({
-          id: isFolder(row.item) ? row.item.name : row.item.id,
-        }));
-        const withoutDragged = orderedIds.filter((o) => o.id !== draggedId);
-        const targetPos = withoutDragged.findIndex((o) => o.id === targetId);
-        const insertAt = position === "before" ? targetPos : targetPos + 1;
-        withoutDragged.splice(insertAt, 0, { id: draggedId });
-        const renumbered = renumberSiblings(withoutDragged);
-
-        if (draggedType === "cred") {
-          await reorderCredentials(
-            renumbered.map((r) => ({
-              id: Number(r.id),
-              sortOrder: r.sortOrder,
-            })),
-          );
-        } else {
-          await reorderFolders(
-            renumbered.map((r) => ({
-              name: String(r.id),
-              sortOrder: r.sortOrder,
-            })),
-          );
-        }
-        window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
-        return;
+      if (plan.movedTo !== null) {
+        const folder = plan.movedTo.slice("folder:".length);
+        await onMoveCredentialToFolder?.(draggedId, folder);
       }
-
-      if (draggedType === "cred") {
-        await reorderCredentials([{ id: Number(draggedId), sortOrder }]);
-      } else {
-        await reorderFolders([{ name: draggedId, sortOrder }]);
-      }
+      await reorderCredentials(
+        plan.positions.map((pos) => ({
+          id: Number(pos.key.slice("cred:".length)),
+          sortOrder: pos.sortOrder,
+        })),
+      );
       window.dispatchEvent(new CustomEvent("termix:credentials-changed"));
     } catch {
       toast.error(t("credentials.failedToReorder"));
@@ -379,6 +390,9 @@ export function CredentialSidebarTree({
             className="relative w-full"
             style={{ height: virtualizer.getTotalSize() }}
           >
+            {reorderIndicatorTop !== null && (
+              <ReorderIndicator top={reorderIndicatorTop} />
+            )}
             {virtualizer.getVirtualItems().map((vItem) => {
               const row = visibleRows[vItem.index];
               if (!row) return null;
@@ -405,30 +419,11 @@ export function CredentialSidebarTree({
                       onRenameFolder={onRenameFolder}
                       onDeleteFolder={onDeleteFolder}
                       depth={depth}
-                      reorderMode={reorderMode}
-                      onReorderDrop={(position) =>
-                        handleReorderDrop(`folder:${item.name}`, position)
-                      }
-                      onFolderDragStart={() =>
-                        setDraggedReorderKey(`folder:${item.name}`)
-                      }
-                      onFolderDragEnd={() => {
-                        setDraggedReorderKey(null);
-                        setReorderHoverKey(null);
-                        setReorderHoverEdge(null);
-                      }}
+                      arrangeMode={arrangeMode}
                       draggedCredentialId={draggedCredentialId}
                       onDropCredential={(credentialId) => {
                         setDraggedCredentialId(null);
-                        onMoveCredentialToFolder?.(credentialId, item.name);
-                      }}
-                      isReorderHovered={
-                        reorderHoverKey === `folder:${item.name}`
-                      }
-                      reorderHoverEdge={reorderHoverEdge}
-                      onReorderHoverChange={(edge) => {
-                        setReorderHoverKey(edge ? `folder:${item.name}` : null);
-                        setReorderHoverEdge(edge);
+                        void handleDropIntoFolder(credentialId, item.name);
                       }}
                     />
                   ) : (
@@ -447,11 +442,10 @@ export function CredentialSidebarTree({
                         setOpenTrayCredentialId(open ? item.id : null)
                       }
                       onDragStart={() => {
-                        if (reorderMode) {
-                          setDraggedReorderKey(`cred:${item.id}`);
-                        } else {
-                          setDraggedCredentialId(item.id);
-                        }
+                        // Both arm together: the drop target picks whether
+                        // this ends up a reorder or a folder move.
+                        setDraggedReorderKey(`cred:${item.id}`);
+                        setDraggedCredentialId(item.id);
                       }}
                       onDragEnd={() => {
                         setDraggedReorderKey(null);
@@ -463,7 +457,8 @@ export function CredentialSidebarTree({
                       density={density}
                       trayTrigger={trayTrigger}
                       showTags={showTags}
-                      reorderMode={reorderMode}
+                      arrangeMode={arrangeMode}
+                      isDragging={draggedReorderKey === `cred:${item.id}`}
                       onReorderDrop={(position) =>
                         handleReorderDrop(`cred:${item.id}`, position)
                       }

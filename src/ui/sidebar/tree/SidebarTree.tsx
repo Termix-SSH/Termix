@@ -41,10 +41,7 @@ import {
   reorderSSHHosts,
   reorderFolders,
 } from "@/main-axios";
-import {
-  computeDropSortOrder,
-  renumberSiblings,
-} from "@/sidebar/reorder-utils";
+import { planReorder, renumberSiblings } from "@/sidebar/reorder-utils";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type { SSHHostData } from "@/types/index";
 import type { SortKey } from "@/sidebar/host-sort";
@@ -64,7 +61,13 @@ import {
   collectAllHosts,
   collectAllFolderPaths,
   hostExpandKey,
+  buildReorderRows,
+  collectOrderableRows,
+  rowKey,
+  rowKind,
+  ROOT_PARENT,
 } from "./visible-rows";
+import { ReorderIndicator } from "@/sidebar/ReorderIndicator";
 import { useSidebarSelection } from "./hooks/useSidebarSelection";
 import { useSidebarDragState } from "./hooks/useSidebarDragState";
 
@@ -80,6 +83,7 @@ export function SidebarTree({
   loading = false,
   onExportSelected,
   sortKey = "default",
+  arrangeLocked = true,
   density = "comfortable",
   trayTrigger = "hover",
   showTags = true,
@@ -96,6 +100,8 @@ export function SidebarTree({
   loading?: boolean;
   onExportSelected?: (hostIds: string[]) => void;
   sortKey?: SortKey;
+  /** When true, drag-to-rearrange is off entirely. Toggled from the panel header. */
+  arrangeLocked?: boolean;
   density?: HostDensity;
   trayTrigger?: HostTrayTrigger;
   showTags?: boolean;
@@ -184,7 +190,10 @@ export function SidebarTree({
   const [reorderHoverEdge, setReorderHoverEdge] = useState<
     "before" | "after" | null
   >(null);
-  const reorderMode = sortKey === "manual";
+  // Gated on the lock alone. Unlocking also switches the panel to manual
+  // sort, but that write lands separately -- requiring it here meant the
+  // unlock did nothing until the sort state caught up.
+  const arrangeMode = !arrangeLocked;
 
   const hostsById = useMemo(() => {
     const map = new Map<string, Host>();
@@ -298,12 +307,11 @@ export function SidebarTree({
   }
 
   /**
-   * Manual drag-to-reorder. Only active in "manual" sort mode -- in every
-   * other mode, dropping a host on a folder keeps its existing
-   * folder-reassignment behavior instead. Computes a midpoint sortOrder
-   * between the two neighbors the item was dropped between; when that gap is
-   * exhausted, renumbers the whole sibling group with fresh evenly-spaced
-   * values first.
+   * Resolves a drop into position and (when the drop crossed into another
+   * folder) a folder move, then writes both. Siblings are scoped to the drop
+   * target's own folder rather than every row of the same type -- comparing
+   * against unrelated neighbours in other folders produced sort orders that
+   * put the row nowhere near where it was dropped.
    */
   async function handleReorderDrop(
     targetKey: string,
@@ -311,81 +319,110 @@ export function SidebarTree({
   ) {
     const draggedKey = draggedReorderKey;
     setDraggedReorderKey(null);
-    if (!draggedKey || draggedKey === targetKey) return;
-    const [draggedType, draggedId] = draggedKey.split(":", 2);
-    const [targetType, targetId] = targetKey.split(":", 2);
-    if (draggedType !== targetType) return;
+    setReorderHoverKey(null);
+    setReorderHoverEdge(null);
+    if (!draggedKey) return;
 
-    const siblings = visibleRows.filter((row) => {
-      const key = isFolder(row.item)
-        ? `folder:${row.item.path ?? row.item.name}`
-        : `host:${row.item.id}`;
-      const rowType = key.split(":", 2)[0];
-      return rowType === draggedType;
-    });
-    const targetIndex = siblings.findIndex((row) => {
-      const item = row.item;
-      const id = isFolder(item) ? (item.path ?? item.name) : item.id;
-      return id === targetId;
-    });
-    if (targetIndex === -1) return;
+    const [draggedType] = draggedKey.split(":", 2);
+    const [targetType] = targetKey.split(":", 2);
 
-    const beforeItem =
-      position === "before"
-        ? (siblings[targetIndex - 1]?.item ?? null)
-        : siblings[targetIndex].item;
-    const afterItem =
-      position === "before"
-        ? siblings[targetIndex].item
-        : (siblings[targetIndex + 1]?.item ?? null);
+    // A host dropped on a folder header has no neighbour to position
+    // against, so it lands at the end of that folder. It still needs an
+    // explicit sortOrder: a null one sorts last in manual mode and then
+    // falls back to alphabetical, losing the placement entirely.
+    if (draggedType === "host" && targetType === "folder") {
+      const draggedId = draggedKey.slice("host:".length);
+      const folderPath = targetKey.slice("folder:".length);
+      if (folderPath.startsWith("__group__:")) return;
 
-    const before = beforeItem
-      ? { sortOrder: (beforeItem as { sortOrder?: number | null }).sortOrder }
-      : null;
-    const after = afterItem
-      ? { sortOrder: (afterItem as { sortOrder?: number | null }).sortOrder }
-      : null;
-
-    const sortOrder = computeDropSortOrder(before, after);
-
-    try {
-      if (sortOrder === null) {
-        // Gap exhausted: renumber the whole sibling group, then re-derive the
-        // dragged item's new position against the fresh values.
-        const orderedIds = siblings.map((row) => ({
-          id: isFolder(row.item)
-            ? (row.item.path ?? row.item.name)
-            : row.item.id,
-        }));
-        const withoutDragged = orderedIds.filter((o) => o.id !== draggedId);
-        const targetPos = withoutDragged.findIndex((o) => o.id === targetId);
-        const insertAt = position === "before" ? targetPos : targetPos + 1;
-        withoutDragged.splice(insertAt, 0, { id: draggedId });
-        const renumbered = renumberSiblings(withoutDragged);
-
-        if (draggedType === "host") {
-          await reorderSSHHosts(
-            renumbered.map((r) => ({
-              id: Number(r.id),
-              sortOrder: r.sortOrder,
-            })),
-          );
-        } else {
-          await reorderFolders(
-            renumbered.map((r) => ({
-              name: String(r.id),
-              sortOrder: r.sortOrder,
-            })),
-          );
-        }
-        window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      const host = hostsById.get(draggedId);
+      if (host && !canEditHost(host)) {
+        toast.error(t("hosts.failedToMoveHosts"));
         return;
       }
 
+      const destination = collectAllHosts(children).filter(
+        (h) => h.folder === folderPath && h.id !== draggedId,
+      );
+      const ordered = [
+        ...destination.filter((h) => h.sortOrder != null),
+        ...destination.filter((h) => h.sortOrder == null),
+      ];
+
+      try {
+        await bulkUpdateSSHHosts([Number(draggedId)], {
+          folder: folderPath,
+          parentHostId: null,
+        });
+        await reorderSSHHosts(
+          renumberSiblings([...ordered, { id: draggedId }]).map((r) => ({
+            id: Number(r.id),
+            sortOrder: r.sortOrder,
+          })),
+        );
+        window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
+      } catch {
+        toast.error(t("hosts.failedToMoveHosts"));
+      }
+      return;
+    }
+    if (draggedType !== targetType) return;
+
+    // Built from the whole tree, not visibleRows: a collapsed destination
+    // folder contributes no visible rows, so planning off the rendered list
+    // compared against a partial sibling group and only landed correctly on
+    // a second drop.
+    const rows = buildReorderRows(collectOrderableRows(children)).filter(
+      (r) => rowKind(r.key) === draggedType,
+    );
+    const plan = planReorder(rows, draggedKey, targetKey, position);
+    if (!plan) return;
+
+    const draggedId = draggedKey.slice(draggedKey.indexOf(":") + 1);
+
+    try {
       if (draggedType === "host") {
-        await reorderSSHHosts([{ id: Number(draggedId), sortOrder }]);
+        // A cross-folder drop has to move the host as well as position it,
+        // otherwise it snaps back to its old folder on the next refresh.
+        if (plan.movedTo !== null) {
+          const host = hostsById.get(draggedId);
+          if (host && !canEditHost(host)) {
+            toast.error(t("hosts.failedToMoveHosts"));
+            return;
+          }
+          // movedTo is a parent KEY ("folder:Homelab" / "host:11" / the root
+          // sentinel), not a folder path -- writing it raw created folders
+          // literally named "folder:Homelab".
+          if (plan.movedTo === ROOT_PARENT) {
+            await bulkUpdateSSHHosts([Number(draggedId)], {
+              folder: "",
+              parentHostId: null,
+            });
+          } else if (plan.movedTo.startsWith("folder:")) {
+            await bulkUpdateSSHHosts([Number(draggedId)], {
+              folder: plan.movedTo.slice("folder:".length),
+              parentHostId: null,
+            });
+          } else {
+            await bulkUpdateSSHHosts([Number(draggedId)], {
+              folder: "",
+              parentHostId: Number(plan.movedTo.slice("host:".length)),
+            });
+          }
+        }
+        await reorderSSHHosts(
+          plan.positions.map((pos) => ({
+            id: Number(pos.key.slice(pos.key.indexOf(":") + 1)),
+            sortOrder: pos.sortOrder,
+          })),
+        );
       } else {
-        await reorderFolders([{ name: draggedId, sortOrder }]);
+        await reorderFolders(
+          plan.positions.map((pos) => ({
+            name: pos.key.slice(pos.key.indexOf(":") + 1),
+            sortOrder: pos.sortOrder,
+          })),
+        );
       }
       window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
     } catch {
@@ -727,6 +764,23 @@ export function SidebarTree({
     },
   });
 
+  // One indicator for the whole tree, placed off the virtualizer's slot
+  // geometry rather than by the hovered row. Row-drawn bars disagreed about
+  // where the seam was whenever the hovered row's tray expanded it, so two
+  // candidate lines appeared and flickered with the pointer.
+  const reorderIndicatorTop = (() => {
+    if (!arrangeMode || !reorderHoverKey || !reorderHoverEdge) return null;
+    const index = visibleRows.findIndex(
+      (row) => rowKey(row.item) === reorderHoverKey,
+    );
+    if (index === -1) return null;
+    const slot = virtualizer
+      .getVirtualItems()
+      .find((vItem) => vItem.index === index);
+    if (!slot) return null;
+    return reorderHoverEdge === "before" ? slot.start : slot.start + slot.size;
+  })();
+
   // Fixed heights mean estimateSize already IS the real size. Do not attach
   // measureElement here: its index-based ResizeObserver measurements can be
   // reused for a different row after a deletion and override the fixed size.
@@ -780,8 +834,13 @@ export function SidebarTree({
       <div
         ref={parentRef}
         className={`flex-1 min-h-0 overflow-y-auto ${rootDragOver ? "ring-1 ring-inset ring-accent-brand/50" : ""}`}
+        // Only the container's own empty space is a root drop target. Without
+        // the target check this fired for every child row the pointer crossed
+        // (dragover bubbles), and dragleave never cleared it because leaving a
+        // child never satisfies currentTarget === target -- so the ring stuck
+        // around for the rest of the session.
         onDragOver={(e) => {
-          if (draggedHostIds) {
+          if (arrangeMode && draggedHostIds && e.currentTarget === e.target) {
             e.preventDefault();
             setRootDragOver(true);
           }
@@ -789,10 +848,11 @@ export function SidebarTree({
         onDragLeave={(e) => {
           if (e.currentTarget === e.target) setRootDragOver(false);
         }}
+        onDragEnd={() => setRootDragOver(false)}
         onDrop={(e) => {
-          if (draggedHostIds) {
+          setRootDragOver(false);
+          if (arrangeMode && draggedHostIds && e.currentTarget === e.target) {
             e.preventDefault();
-            setRootDragOver(false);
             handleMoveHostsToFolder(draggedHostIds, "");
           }
         }}
@@ -828,6 +888,9 @@ export function SidebarTree({
             className="relative w-full"
             style={{ height: virtualizer.getTotalSize() }}
           >
+            {reorderIndicatorTop !== null && (
+              <ReorderIndicator top={reorderIndicatorTop} />
+            )}
             {virtualizer.getVirtualItems().map((vItem) => {
               const row = visibleRows[vItem.index];
               if (!row) return null;
@@ -886,7 +949,10 @@ export function SidebarTree({
                       trayTrigger={trayTrigger}
                       showTags={showTags}
                       openOnDoubleClick={openOnDoubleClick}
-                      reorderMode={reorderMode}
+                      arrangeMode={arrangeMode}
+                      isDragging={
+                        draggedReorderKey === `folder:${item.path ?? item.name}`
+                      }
                       onReorderDrop={handleReorderDrop}
                       onFolderDragStart={(path) =>
                         setDraggedReorderKey(`folder:${path}`)
@@ -942,14 +1008,14 @@ export function SidebarTree({
                         )
                       }
                       onDragStart={() => {
-                        if (reorderMode) {
-                          setDraggedReorderKey(`host:${item.id}`);
-                          return;
-                        }
+                        // Both paths arm at once: the drop target decides
+                        // whether this becomes a reorder or a move/nest.
+                        setDraggedReorderKey(`host:${item.id}`);
                         handleDragHostStart(item.id);
                       }}
                       onDragEnd={() => {
                         setDraggedHostIds(null);
+                        setDraggedReorderKey(null);
                         setReorderHoverKey(null);
                         setReorderHoverEdge(null);
                       }}
@@ -960,7 +1026,8 @@ export function SidebarTree({
                       showResourceBars={showResourceBars}
                       showStatusStripes={showStatusStripes}
                       rowActions={rowActions}
-                      reorderMode={reorderMode}
+                      arrangeMode={arrangeMode}
+                      isDragging={draggedReorderKey === `host:${item.id}`}
                       onReorderDrop={(position) =>
                         handleReorderDrop(`host:${item.id}`, position)
                       }

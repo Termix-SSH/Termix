@@ -160,7 +160,9 @@
     "keyDeployedSuccess": "Key deployed successfully",
     "failedToDeployKey": "Failed to deploy key",
     "folderRenamedTo": "Folder renamed to \"{{name}}\"",
-    "failedToRenameFolder": "Failed to rename folder"
+    "failedToRenameFolder": "Failed to rename folder",
+    "arrangeUnlockedSwitchedToManual": "Switched to manual sort so your order sticks",
+    "arrangeUnlocked": "Unlock drag to rearrange"
   },
   "homepage": {
     "title": "Homepage",
@@ -1730,7 +1732,10 @@
       "savingBtn": "Saving...",
       "updateHostBtn": "Update Host",
       "addHostBtn": "Add Host"
-    }
+    },
+    "arrangeUnlockedSwitchedToManual": "Switched to manual sort so your order sticks",
+    "dragToRearrange": "Drag to rearrange",
+    "arrangeUnlocked": "Unlock drag to rearrange"
   },
   "commandPalette": {
     "searchPlaceholder": "Search hosts, commands, or settings...",

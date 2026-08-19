@@ -51,6 +51,7 @@ import type { SSHHostWithStatus } from "@/main-axios";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import { sortHostTree, type SortKey } from "@/sidebar/host-sort";
 import { useHostSidebarPreferences } from "@/sidebar/tree/hooks/useHostSidebarPreferences";
+import { useArrangeLock } from "@/sidebar/use-arrange-lock";
 import type {
   HostGroupKey,
   HostSidebarFilterState,
@@ -224,6 +225,9 @@ export function HostsPanel({
     useHostSidebarPreferences();
   const sortKey = sidebarPrefs.sort.key;
   const pinnedFirst = sidebarPrefs.sort.pinnedFirst;
+  const { arrangeLocked, toggleArrangeLock } = useArrangeLock(
+    "hostSidebarArrangeLocked",
+  );
   const groupKey = sidebarPrefs.groupKey;
   const filterState = sidebarPrefs.filters;
   const filterActive = Object.values(filterState).some((arr) => arr.length > 0);
@@ -237,6 +241,17 @@ export function HostsPanel({
       ...prev,
       sort: { ...prev.sort, key },
     }));
+  }
+
+  function handleArrangeLockToggle() {
+    const unlocking = arrangeLocked;
+    toggleArrangeLock();
+    // Reordering under name/IP/status sort is pointless -- the tree would
+    // just re-sort the row away from where it was dropped.
+    if (unlocking && sortKey !== "manual") {
+      handleSortChange("manual");
+      toast.info(t("hosts.arrangeUnlockedSwitchedToManual"));
+    }
   }
 
   function handlePinnedFirstChange(enabled: boolean) {
@@ -602,7 +617,7 @@ export function HostsPanel({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={`size-7 ${sortKey !== "default" || pinnedFirst ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
+                    className={`size-7 ${sortKey !== "default" || pinnedFirst || !arrangeLocked ? "text-accent-brand" : "text-muted-foreground hover:text-foreground"}`}
                     title={t("hosts.sortHosts")}
                   >
                     <ArrowUpDown className="size-3.5" />
@@ -686,6 +701,13 @@ export function HostsPanel({
                     )}
                     {t("hosts.sortManual")}
                   </DropdownMenuItem>
+                  <DropdownMenuCheckboxItem
+                    checked={!arrangeLocked}
+                    onCheckedChange={handleArrangeLockToggle}
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    {t("hosts.arrangeUnlocked")}
+                  </DropdownMenuCheckboxItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuCheckboxItem
                     checked={pinnedFirst}
@@ -1040,6 +1062,7 @@ export function HostsPanel({
             setExportDialogOpen(true);
           }}
           sortKey={sortKey}
+          arrangeLocked={arrangeLocked}
           density={sidebarPrefs.display.density}
           trayTrigger={sidebarPrefs.display.trayTrigger}
           showTags={sidebarPrefs.display.showTags}

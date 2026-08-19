@@ -10,6 +10,7 @@ import {
   CopyPlus,
   Cpu,
   FolderSearch,
+  GripVertical,
   HardDrive,
   Key,
   KeyRound,
@@ -226,7 +227,8 @@ export function HostItem({
   showResourceBars = true,
   showStatusStripes = true,
   rowActions = "full",
-  reorderMode = false,
+  arrangeMode = false,
+  isDragging = false,
   onReorderDrop,
   isReorderHovered = false,
   reorderHoverEdge = null,
@@ -269,8 +271,11 @@ export function HostItem({
   showStatusStripes?: boolean;
   /** "essential" trims the row's management actions to the common few. */
   rowActions?: "essential" | "full";
-  /** When true (manual sort mode), show above/below drop zones for reordering. */
-  reorderMode?: boolean;
+  /** When true (rearranging unlocked), the row can be dragged: its edges
+   * become reorder drop zones and its middle accepts a nest/move drop. */
+  arrangeMode?: boolean;
+  /** True while this row is the one being dragged, for the ghost styling. */
+  isDragging?: boolean;
   onReorderDrop?: (position: "before" | "after") => void;
   /** Whether THIS row is the current reorder drop target -- lifted to a
    * single piece of state in the parent tree so only one row can ever show
@@ -344,8 +349,13 @@ export function HostItem({
   };
   const isCompact = density === "compact";
   const reorderEdge = isReorderHovered ? reorderHoverEdge : null;
+  const canDrag =
+    arrangeMode && !selectionMode && !isTouchOnly && canEditHost(host);
+  // The middle band nests the dragged host under this one; the top/bottom
+  // bands reorder. Both live on the same row, so the pointer's position
+  // inside it picks the intent instead of a modifier key.
   const acceptsChildDrop =
-    !reorderMode &&
+    arrangeMode &&
     !!onDropChildHosts &&
     !!draggedHostIds &&
     !draggedHostIds.includes(host.id);
@@ -825,9 +835,23 @@ export function HostItem({
 
   return (
     <div
-      draggable={!selectionMode && !isTouchOnly && canEditHost(host)}
+      draggable={canDrag}
       onDragStart={(e) => {
+        if (!canDrag) return;
         e.dataTransfer.effectAllowed = "move";
+        // Without an explicit drag image the browser snapshots the whole row
+        // including its open action tray, which drags a tall block around
+        // and reads as the UI overlapping itself. Use the name row instead.
+        const label =
+          e.currentTarget.querySelector<HTMLElement>("[data-drag-label]");
+        if (label) {
+          const rect = label.getBoundingClientRect();
+          e.dataTransfer.setDragImage(
+            label,
+            Math.min(e.clientX - rect.left, rect.width),
+            rect.height / 2,
+          );
+        }
         onDragStart?.();
       }}
       onDragEnd={() => {
@@ -836,38 +860,53 @@ export function HostItem({
         onDragEnd?.();
       }}
       onDragOver={(e) => {
-        if (reorderMode && onReorderDrop) {
-          e.preventDefault();
-          const rect = e.currentTarget.getBoundingClientRect();
-          onReorderHoverChange?.(
-            e.clientY - rect.top < rect.height / 2 ? "before" : "after",
-          );
-          return;
-        }
-        if (acceptsChildDrop) {
+        if (!arrangeMode) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const offset = e.clientY - rect.top;
+        // Reordering is the common intent, so the edge bands get most of the
+        // row: only the middle third nests. A 10px floor keeps the bands
+        // hittable on a compact row, and measuring against the name row's
+        // height (not the row's, which grows with an open tray) keeps the
+        // split where the pointer expects it on a tall row.
+        const NAME_ROW = 34;
+        const effective = Math.min(rect.height, NAME_ROW);
+        const band = Math.max(10, effective / 3);
+        const wantsNest =
+          acceptsChildDrop && offset > band && offset < rect.height - band;
+
+        if (wantsNest) {
           e.preventDefault();
           e.stopPropagation();
+          onReorderHoverChange?.(null);
           setParentDragOver(true);
+          return;
+        }
+        if (onReorderDrop) {
+          e.preventDefault();
+          e.stopPropagation();
+          setParentDragOver(false);
+          onReorderHoverChange?.(offset < rect.height / 2 ? "before" : "after");
         }
       }}
       onDragLeave={(e) => {
-        if (acceptsChildDrop && e.currentTarget === e.target) {
+        if (e.currentTarget === e.target) {
           setParentDragOver(false);
         }
       }}
       onDrop={(e) => {
-        if (reorderMode && onReorderDrop && reorderEdge) {
-          e.preventDefault();
-          e.stopPropagation();
-          onReorderDrop(reorderEdge);
-          onReorderHoverChange?.(null);
-          return;
-        }
-        if (acceptsChildDrop && draggedHostIds) {
+        if (!arrangeMode) return;
+        if (parentDragOver && acceptsChildDrop && draggedHostIds) {
           e.preventDefault();
           e.stopPropagation();
           setParentDragOver(false);
           onDropChildHosts?.(draggedHostIds);
+          return;
+        }
+        if (onReorderDrop && reorderEdge) {
+          e.preventDefault();
+          e.stopPropagation();
+          onReorderDrop(reorderEdge);
+          onReorderHoverChange?.(null);
         }
       }}
       style={depthStyle}
@@ -884,13 +923,15 @@ export function HostItem({
       }}
       onMouseEnter={() => onHoverChange?.(true)}
       onMouseLeave={() => onHoverChange?.(false)}
-      className={`group relative flex items-stretch cursor-pointer select-none transition-colors hover:bg-muted/50 ${
+      className={`group relative flex items-stretch select-none transition-colors hover:bg-muted/50 ${
+        canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+      } ${
         selected
           ? "bg-accent-brand/[0.07]"
           : stripeIndex % 2 === 1
             ? "bg-muted/15"
             : ""
-      } ${isMenuOpen ? "bg-muted/50" : ""} ${parentDragOver ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10" : ""}`}
+      } ${isMenuOpen ? "bg-muted/50" : ""} ${parentDragOver ? "ring-1 ring-inset ring-accent-brand bg-accent-brand/10" : ""} ${isDragging ? "opacity-40" : ""}`}
       onClick={(e) => {
         if (selectionMode) {
           onToggleSelect?.();
@@ -922,11 +963,6 @@ export function HostItem({
         openHostTab(defaultAction);
       }}
     >
-      {reorderMode && reorderEdge && (
-        <div
-          className={`absolute inset-x-0 h-0.5 bg-accent-brand pointer-events-none z-10 ${reorderEdge === "before" ? "top-0" : "bottom-0"}`}
-        />
-      )}
       {/* Status stripe */}
       {showStatusStripes && (
         <div
@@ -934,11 +970,20 @@ export function HostItem({
         />
       )}
 
+      {canDrag && (
+        <div
+          className="flex items-center justify-center w-4 shrink-0 text-muted-foreground/35 group-hover:text-muted-foreground/70 transition-colors"
+          title={t("hosts.dragToRearrange")}
+        >
+          <GripVertical className="size-3" />
+        </div>
+      )}
+
       <div
         className={`flex flex-col flex-1 min-w-0 ${tokens.rowPadding} ${isCompact ? "" : "gap-1"}`}
       >
         {/* Name row */}
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div data-drag-label className="flex items-center gap-1.5 min-w-0">
           {onToggleExpand && (
             <button
               type="button"
