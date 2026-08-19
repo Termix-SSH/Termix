@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { useConnectionLog } from "@/ssh/connection-log/ConnectionLogContext.tsx";
+import { useOptionalConnectionLog } from "@/ssh/connection-log/ConnectionLogContext.tsx";
 import { useTranslation } from "react-i18next";
 import { copyToClipboard } from "@/lib/clipboard.ts";
 import { Button } from "@/components/button.tsx";
@@ -34,20 +34,21 @@ export function ConnectionLogPanel({
   className,
 }: ConnectionLogPanelProps) {
   const { t } = useTranslation();
+  const connectionLog = useOptionalConnectionLog();
   const { logs, clearLogs, isExpanded, toggleExpanded, setIsExpanded } =
-    useConnectionLog();
+    connectionLog ?? {};
   const lastLogRef = useRef<HTMLDivElement>(null);
   const [manuallyCollapsed, setManuallyCollapsed] = useState(false);
 
   useEffect(() => {
-    if (hasConnectionError) {
+    if (hasConnectionError && setIsExpanded) {
       setManuallyCollapsed(false);
       setIsExpanded(true);
     }
   }, [hasConnectionError, setIsExpanded]);
 
   useEffect(() => {
-    if (isConnected && !hasConnectionError && !isConnecting) {
+    if (isConnected && !hasConnectionError && !isConnecting && clearLogs) {
       clearLogs();
       setManuallyCollapsed(false);
     }
@@ -60,7 +61,9 @@ export function ConnectionLogPanel({
   }, [logs]);
 
   const shouldShow =
-    !isConnected && (isConnecting || hasConnectionError || logs.length > 0);
+    !!connectionLog &&
+    !isConnected &&
+    (isConnecting || hasConnectionError || logs.length > 0);
 
   if (!shouldShow) {
     return null;
