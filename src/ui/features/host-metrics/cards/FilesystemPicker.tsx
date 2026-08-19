@@ -37,7 +37,9 @@ export function FilesystemPicker({
         )}
         title={t("hostMetrics.selectFilesystem")}
       >
-        <span className="truncate">{selected?.mount ?? value ?? "-"}</span>
+        <span className="truncate">
+          {selected?.label || selected?.mount || value || "-"}
+        </span>
         <ChevronDown className="size-3 shrink-0" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -57,8 +59,13 @@ export function FilesystemPicker({
               )}
             />
             <span className="min-w-0 flex-1 truncate font-medium">
-              {fs.mount}
+              {fs.label || fs.mount}
             </span>
+            {fs.label && (
+              <span className="max-w-24 truncate font-mono text-[10px] text-muted-foreground">
+                {fs.mount}
+              </span>
+            )}
             <span className="ml-auto shrink-0 whitespace-nowrap text-[10px] tabular-nums text-muted-foreground">
               {fs.usedHuman && fs.totalHuman
                 ? `${fs.usedHuman}/${fs.totalHuman}`

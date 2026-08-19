@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import {
   logAudit,
@@ -5,6 +6,7 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { createCorsMiddleware } from "../../utils/cors-config.js";
+import { createCompressionMiddleware } from "../../utils/compression-config.js";
 import cookieParser from "cookie-parser";
 import axios from "axios";
 import { Client as SSHClient } from "ssh2";
@@ -12,7 +14,11 @@ import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
 import { createCurrentHostResolutionRepository } from "../../database/repositories/factory.js";
 import { fileLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
-import type { AuthenticatedRequest, ProxyNode } from "../../../types/index.js";
+import {
+  type AuthenticatedRequest,
+  type ProxyNode,
+  type SSHHost,
+} from "../../../types/index.js";
 import {
   createSocks5Connection,
   type SOCKS5Config,
@@ -23,7 +29,6 @@ import type {
 } from "../../../types/connection-log.js";
 import { SSHHostKeyVerifier } from "../host-key-verifier.js";
 import { resolveHostById } from "../host-resolver.js";
-import type { SSHHost } from "../../../types/index.js";
 import {
   startHostTransfer,
   getTransferStatus,
@@ -49,12 +54,68 @@ import {
 import { registerFileListingRoutes } from "./list-routes.js";
 import { registerFileOperationRoutes } from "./operation-routes.js";
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import { resolveSshKeepalive } from "../ssh-keepalive.js";
+import {
+  hostAddressMismatch,
+  HostAddressMismatchError,
+  HostNotOnThisServerError,
+} from "../terminal/host-identity.js";
 import { registerFileDownloadRoutes } from "./download-routes.js";
 import { registerFileActionRoutes } from "./action-routes.js";
 import { applyAgentAuth } from "../terminal-auth-helpers.js";
+import { applyCACertIfPresent } from "./ca-cert-auth.js";
+
+/**
+ * The host id came from whichever database the client is displaying. If this
+ * server has a different machine under that id — desktop and sync server
+ * autoincrement sequences drift apart — then the address, the credentials and
+ * the jump hosts resolved from it all belong to that other machine, and the
+ * user would browse, edit and delete its files believing they are on the host
+ * they picked.
+ */
+function assertResolvedHost(
+  clientIp: unknown,
+  hostSyncId: string | null | undefined,
+  resolvedHost: { ip?: string } | null | undefined,
+  hostId: number,
+  userId: string,
+): void {
+  // Named by sync identity: it either exists here or it does not. Falling back
+  // to the numeric id is what picks the wrong machine.
+  if (hostSyncId) {
+    if (resolvedHost) return;
+    fileLogger.error(
+      "Refusing SFTP connection: host is not known to this server",
+      undefined,
+      {
+        operation: "file_manager_host_sync_id_unknown",
+        hostId,
+        userId,
+      },
+    );
+    throw new HostNotOnThisServerError();
+  }
+
+  // Older clients send only the numeric id, which means a different host here.
+  if (!hostAddressMismatch(clientIp, resolvedHost?.ip)) return;
+
+  fileLogger.error(
+    "Refusing SFTP connection: host id resolves to a different address here",
+    undefined,
+    {
+      operation: "file_manager_host_id_mismatch",
+      hostId,
+      userId,
+      clientIp,
+      resolvedIp: resolvedHost?.ip,
+    },
+  );
+  throw new HostAddressMismatchError();
+}
 
 const app = express();
 
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware(["GET", "POST", "PUT", "DELETE", "OPTIONS"]));
 app.use(cookieParser());
 app.use(express.json({ limit: "1gb" }));
@@ -211,6 +272,15 @@ async function buildDedicatedTransferConnectConfig(
       .replace(/\r/g, "\n");
     config.privateKey = Buffer.from(cleanKey, "utf8");
     if (host.keyPassword) config.passphrase = host.keyPassword;
+
+    await applyCACertIfPresent(
+      config,
+      client,
+      config.privateKey as Buffer,
+      host as { certPublicKey?: string | null },
+      username,
+      host.keyPassword,
+    );
   } else if (authType === "password") {
     if (!host.password) {
       throw new Error("Password required for transfer connection");
@@ -368,8 +438,12 @@ async function openDedicatedTransferSession(
     throw new Error("Host not found for transfer connection");
   }
 
-  if (sshSessions[dedicatedSessionId]?.isConnected) {
-    closeDedicatedTransferSession(dedicatedSessionId);
+  const existingSession = sshSessions[dedicatedSessionId];
+  if (
+    existingSession?.isConnected &&
+    verifySessionOwnership(existingSession, userId)
+  ) {
+    return existingSession;
   }
 
   const client = new SSHClient();
@@ -639,6 +713,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   const {
     sessionId,
     hostId,
+    syncId: hostSyncId,
     ip,
     port,
     username,
@@ -734,6 +809,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
     keyPassword,
     authType,
     sudoPassword: undefined as string | undefined,
+    certPublicKey: undefined as string | undefined,
   };
   let hostKeepaliveInterval: number | undefined;
   let hostKeepaliveCountMax: number | undefined;
@@ -751,8 +827,12 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
   let resolvedSocks5ProxyChain = socks5ProxyChain;
   if (hostId && userId && !password && !sshKey) {
     try {
-      const { resolveHostById } = await import("../host-resolver.js");
-      const resolvedHost = await resolveHostById(hostId, userId);
+      const { resolveHostById, resolveHostBySyncId } =
+        await import("../host-resolver.js");
+      const resolvedHost = hostSyncId
+        ? await resolveHostBySyncId(hostSyncId, userId)
+        : await resolveHostById(hostId, userId);
+      assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
       if (resolvedHost) {
         resolvedIp = resolvedHost.ip;
         resolvedPort = resolvedHost.port;
@@ -763,6 +843,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
+          certPublicKey: (resolvedHost as { certPublicKey?: string })
+            .certPublicKey,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
@@ -800,17 +882,26 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         );
       }
     } catch (error) {
+      if (
+        error instanceof HostAddressMismatchError ||
+        error instanceof HostNotOnThisServerError
+      )
+        throw error;
       fileLogger.warn(`Failed to resolve host credentials for ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   } else if (credentialId && hostId && userId) {
     // Legacy: credential resolution from credentialId
     try {
-      const { resolveHostById } = await import("../host-resolver.js");
-      const resolvedHost = await resolveHostById(hostId, userId);
+      const { resolveHostById, resolveHostBySyncId } =
+        await import("../host-resolver.js");
+      const resolvedHost = hostSyncId
+        ? await resolveHostBySyncId(hostSyncId, userId)
+        : await resolveHostById(hostId, userId);
+      assertResolvedHost(ip, hostSyncId, resolvedHost, hostId, userId);
       if (resolvedHost) {
         resolvedIp = resolvedHost.ip;
         resolvedPort = resolvedHost.port;
@@ -821,6 +912,8 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
           keyPassword: resolvedHost.keyPassword,
           authType: resolvedHost.authType,
           sudoPassword: resolvedHost.sudoPassword as string | undefined,
+          certPublicKey: (resolvedHost as { certPublicKey?: string })
+            .certPublicKey,
         };
         resolvedTerminalConfig = resolvedHost.terminalConfig as unknown as
           Record<string, unknown> | undefined;
@@ -858,29 +951,33 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         );
       }
     } catch (error) {
+      if (
+        error instanceof HostAddressMismatchError ||
+        error instanceof HostNotOnThisServerError
+      )
+        throw error;
       fileLogger.warn(`Failed to resolve credentials for host ${hostId}`, {
         operation: "ssh_credentials",
         hostId,
         credentialId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
 
   const preloadedHostData = await SSHHostKeyVerifier.preloadHostData(hostId);
+  const keepalive = resolveSshKeepalive(
+    hostKeepaliveInterval,
+    hostKeepaliveCountMax,
+    60000,
+    5,
+  );
   const config: Record<string, unknown> = {
     host: resolvedIp?.replace(/^\[|\]$/g, "") || resolvedIp,
     port: resolvedPort,
     username: resolvedUsername,
     tryKeyboard: true,
-    keepaliveInterval:
-      typeof hostKeepaliveInterval === "number"
-        ? Math.max(5000, hostKeepaliveInterval * 1000)
-        : 60000,
-    keepaliveCountMax:
-      typeof hostKeepaliveCountMax === "number"
-        ? Math.max(1, hostKeepaliveCountMax)
-        : 5,
+    ...keepalive,
     readyTimeout: 60000,
     tcpKeepAlive: true,
     tcpKeepAliveInitialDelay: 30000,
@@ -954,11 +1051,23 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
 
       if (resolvedCredentials.keyPassword)
         config.passphrase = resolvedCredentials.keyPassword;
+
+      await applyCACertIfPresent(
+        config,
+        client,
+        config.privateKey as Buffer,
+        resolvedCredentials,
+        resolvedUsername,
+        resolvedCredentials.keyPassword,
+      );
+
       connectionLogs.push(
         createConnectionLog(
           "info",
           "sftp_auth",
-          "Using SSH key authentication",
+          resolvedCredentials.certPublicKey?.trim()
+            ? "Using SSH key authentication with CA certificate"
+            : "Using SSH key authentication",
         ),
       );
     } catch (keyError) {
@@ -1038,14 +1147,13 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         operation: "file_connect",
         sessionId,
         hostId,
-        error:
-          opksshError instanceof Error ? opksshError.message : "Unknown error",
+        error: getErrorMessage(opksshError),
       });
       connectionLogs.push(
         createConnectionLog(
           "error",
           "sftp_auth",
-          `OPKSSH authentication failed: ${opksshError instanceof Error ? opksshError.message : "Unknown error"}`,
+          `OPKSSH authentication failed: ${getErrorMessage(opksshError)}`,
         ),
       );
       return res.status(500).json({
@@ -1225,7 +1333,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
             operation: "activity_log_error",
             userId,
             hostId,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           });
         }
       })();
@@ -1720,7 +1828,7 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         createConnectionLog(
           "error",
           "jump",
-          `Jump host error: ${error instanceof Error ? error.message : "Unknown error"}`,
+          `Jump host error: ${getErrorMessage(error)}`,
         ),
       );
       return res.status(500).json({
@@ -1760,13 +1868,11 @@ app.post("/ssh/file_manager/ssh/connect", async (req, res) => {
         createConnectionLog(
           "error",
           "proxy",
-          `Proxy connection failed: ${proxyError instanceof Error ? proxyError.message : "Unknown error"}`,
+          `Proxy connection failed: ${getErrorMessage(proxyError)}`,
         ),
       );
       return res.status(500).json({
-        error:
-          "Proxy connection failed: " +
-          (proxyError instanceof Error ? proxyError.message : "Unknown error"),
+        error: "Proxy connection failed: " + getErrorMessage(proxyError),
         connectionLogs,
       });
     }
@@ -1917,7 +2023,7 @@ app.post("/ssh/file_manager/ssh/connect-totp", async (req, res) => {
               operation: "activity_log_error",
               userId: session.userId,
               hostId: session.hostId,
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             });
           }
         })();
@@ -2115,7 +2221,7 @@ app.post("/ssh/file_manager/ssh/connect-warpgate", async (req, res) => {
               operation: "activity_log_error",
               userId: session.userId,
               hostId: session.hostId,
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             });
           }
         })();
@@ -2829,7 +2935,7 @@ app.post("/ssh/file_manager/ssh/transferMethodPreview", async (req, res) => {
       sourcePaths,
     });
     res.status(500).json({
-      error: err instanceof Error ? err.message : "Failed to preview method",
+      error: getErrorMessage(err, "Failed to preview method"),
     });
   }
 });
@@ -2880,7 +2986,7 @@ app.post("/ssh/file_manager/ssh/transferToHost", async (req, res) => {
     const rawParallel = Number(parallelSegmentCountRaw);
     const parallelSegmentCount = Number.isFinite(rawParallel)
       ? Math.max(1, Math.min(8, Math.floor(rawParallel)))
-      : 2;
+      : undefined;
 
     const { transferId } = startHostTransfer(hostTransferDeps, {
       sourceSessionId,
@@ -2968,8 +3074,7 @@ app.post(
       );
       res.json(result);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to clean up transfer";
+      const message = getErrorMessage(err, "Failed to clean up transfer");
       const status = message === "Transfer not found" ? 404 : 400;
       res.status(status).json({ error: message });
     }

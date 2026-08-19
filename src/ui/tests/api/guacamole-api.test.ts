@@ -64,6 +64,7 @@ describe("guacamole API origin", () => {
     await getGuacamoleTokenFromHost(9, "rdp", {
       username: "admin",
       password: "secret",
+      domain: "EXAMPLE",
     });
 
     expect(remoteApiMock.post).toHaveBeenCalledWith(
@@ -72,7 +73,25 @@ describe("guacamole API origin", () => {
         protocol: "rdp",
         promptedUsername: "admin",
         promptedPassword: "secret",
+        promptedDomain: "EXAMPLE",
       },
     );
+  });
+
+  it("sends an empty prompted domain for local RDP accounts", async () => {
+    isElectronMock.mockReturnValue(false);
+
+    await getGuacamoleTokenFromHost(9, "rdp", {
+      username: "local-admin",
+      password: "secret",
+      domain: "",
+    });
+
+    expect(authApiMock.post).toHaveBeenCalledWith("/guacamole/connect-host/9", {
+      protocol: "rdp",
+      promptedUsername: "local-admin",
+      promptedPassword: "secret",
+      promptedDomain: "",
+    });
   });
 });

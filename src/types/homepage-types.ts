@@ -35,7 +35,9 @@ export type WidgetTypeId =
   | "service_grid"
   | "dashboard_links"
   | "search_links"
-  | "link_tree";
+  | "link_tree"
+  | "docker_activity"
+  | "ssh_quick_connect";
 
 export interface HomepageItemRow {
   id: number;
@@ -188,6 +190,18 @@ export interface RecentActivityConfig {
   maxItems: number;
   filterTypes: ActivityType[];
   showTimestamp: boolean;
+}
+
+export interface DockerActivityConfig {
+  maxItems: number;
+  showHostName: boolean;
+}
+
+export interface SshQuickConnectConfig {
+  hostIds: number[];
+  connectionType: QuickConnectType;
+  showStatus: boolean;
+  layout: "grid" | "list";
 }
 
 export interface TermixUptimeConfig {

@@ -155,8 +155,17 @@ export function AlertsPanel() {
     try {
       await testNotificationChannel(id);
       toast.success(t("alerts.testSent", "Test notification sent"));
-    } catch {
-      toast.error(t("alerts.testFailed", "Test notification failed"));
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : undefined;
+      toast.error(
+        detail
+          ? t(
+              "alerts.testFailedWithReason",
+              "Test notification failed: {{reason}}",
+              { reason: detail },
+            )
+          : t("alerts.testFailed", "Test notification failed"),
+      );
     }
   }
 

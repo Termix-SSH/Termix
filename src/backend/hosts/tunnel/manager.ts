@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import { type Response } from "express";
 import {
   createServer as createTcpServer,
@@ -42,7 +43,9 @@ import {
 } from "./utils.js";
 
 import { resolveSshConnectConfigHost } from "../ssh-dns.js";
+import { PermissionManager } from "../../utils/permission-manager.js";
 import { handleSocks5Connect } from "./socks5-relay.js";
+import { notifyAutomationInternalEvent } from "../metrics/automation-bridge.js";
 
 export const activeTunnels = new Map<string, Client>();
 export const retryCounters = new Map<string, number>();
@@ -64,7 +67,9 @@ export const lastTunnelErrorTypes = new Map<
 export const tunnelConfigs = new Map<string, TunnelConfig>();
 export const activeTunnelProcesses = new Map<string, ChildProcess>();
 export const pendingTunnelOperations = new Map<string, Promise<void>>();
-export const tunnelStatusClients = new Set<Response>();
+// SSE clients mapped to the user they belong to, so snapshots can be
+// filtered to tunnels that user can actually reach.
+export const tunnelStatusClients = new Map<Response, string>();
 
 export const INTERNAL_HOST_API_BASE_URL = "http://localhost:30001/host/db/host";
 export const AUTOSTART_FETCH_RETRIES = 6;
@@ -80,7 +85,7 @@ export function describeAxiosError(error: unknown): string {
       : error.message;
   }
 
-  return error instanceof Error ? error.message : "Unknown error";
+  return getErrorMessage(error);
 }
 
 export async function fetchInternalHosts(
@@ -213,18 +218,63 @@ export function getAllTunnelStatus(): Record<string, TunnelStatus> {
   return tunnelStatus;
 }
 
+// Tunnel names embed host labels and destination endpoints, and error text
+// can leak internal hostnames -- so visibility is scoped to tunnels whose
+// source host the requesting user can access (owner, share grant, admin),
+// mirroring the ownership model of the connect/disconnect routes.
+export async function getTunnelStatusForUser(
+  userId: string,
+): Promise<Record<string, TunnelStatus>> {
+  const permissionManager = PermissionManager.getInstance();
+  const accessibleHostIds = await permissionManager.filterAccessibleHostIds(
+    userId,
+    [...tunnelConfigs.values()]
+      .map((config) => config.sourceHostId)
+      .filter((id) => Number.isInteger(id)),
+  );
+
+  const tunnelStatus: Record<string, TunnelStatus> = {};
+  connectionStatus.forEach((status, name) => {
+    const sourceHostId = tunnelConfigs.get(name)?.sourceHostId;
+    if (sourceHostId !== undefined && accessibleHostIds.has(sourceHostId)) {
+      tunnelStatus[name] = status;
+    }
+  });
+  return tunnelStatus;
+}
+
+export async function canAccessTunnel(
+  userId: string,
+  tunnelName: string,
+): Promise<boolean> {
+  const sourceHostId = tunnelConfigs.get(tunnelName)?.sourceHostId;
+  if (sourceHostId === undefined) return false;
+  const permissionManager = PermissionManager.getInstance();
+  const access = await permissionManager.canAccessHost(
+    userId,
+    sourceHostId,
+    "connect",
+  );
+  return access.hasAccess;
+}
+
 export function sendTunnelStatusSnapshot(res: Response): void {
-  try {
-    res.write(
-      `event: statuses\ndata: ${JSON.stringify(getAllTunnelStatus())}\n\n`,
-    );
-  } catch {
+  const userId = tunnelStatusClients.get(res);
+  if (userId === undefined) {
     tunnelStatusClients.delete(res);
+    return;
   }
+  void getTunnelStatusForUser(userId)
+    .then((statuses) => {
+      res.write(`event: statuses\ndata: ${JSON.stringify(statuses)}\n\n`);
+    })
+    .catch(() => {
+      tunnelStatusClients.delete(res);
+    });
 }
 
 export function broadcastTunnelStatusSnapshot(): void {
-  for (const client of tunnelStatusClients) {
+  for (const client of tunnelStatusClients.keys()) {
     sendTunnelStatusSnapshot(client);
   }
 }
@@ -405,6 +455,18 @@ export async function handleDisconnect(
     return;
   }
 
+  // Past the manual branch, so this is a drop the user did not ask for.
+  const ownerUserId =
+    tunnelConfig?.sourceUserId ?? tunnelConfig?.requestingUserId;
+  if (ownerUserId) {
+    notifyAutomationInternalEvent(
+      "tunnel_disconnected",
+      ownerUserId,
+      tunnelConfig?.sourceHostId,
+      { tunnelName },
+    );
+  }
+
   if (retryExhaustedTunnels.has(tunnelName)) {
     broadcastTunnelStatus(tunnelName, {
       connected: false,
@@ -492,7 +554,7 @@ export async function handleDisconnect(
           activeTunnels.delete(tunnelName);
           connectSSHTunnel(tunnelConfig, retryCount).catch((error) => {
             tunnelLogger.error(
-              `Failed to connect tunnel ${tunnelConfig.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+              `Failed to connect tunnel ${tunnelConfig.name}: ${getErrorMessage(error)}`,
             );
           });
         }
@@ -966,7 +1028,7 @@ export async function connectSSHTunnel(
         operation: "tunnel_connect",
         tunnelName,
         sourceHostId: tunnelConfig.sourceHostId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   } else if (tunnelConfig.sourceCredentialId && effectiveUserId) {
@@ -993,7 +1055,7 @@ export async function connectSSHTunnel(
         operation: "tunnel_connect",
         tunnelName,
         credentialId: tunnelConfig.sourceCredentialId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -1034,7 +1096,7 @@ export async function connectSSHTunnel(
       }
     } catch (error) {
       tunnelLogger.warn(
-        `Failed to resolve endpoint credentials for tunnel ${tunnelName}: ${error instanceof Error ? error.message : "Unknown error"}`,
+        `Failed to resolve endpoint credentials for tunnel ${tunnelName}: ${getErrorMessage(error)}`,
       );
     }
   } else if (tunnelConfig.endpointCredentialId) {
@@ -1263,8 +1325,7 @@ export async function connectSSHTunnel(
       });
       setupPingInterval(tunnelName);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to create tunnel";
+      const message = getErrorMessage(error, "Failed to create tunnel");
       const errorType = classifyTunnelError(message);
       tunnelLogger.error("Failed to create managed tunnel", error, {
         operation: "managed_tunnel_create_failed",
@@ -1362,8 +1423,7 @@ export async function connectSSHTunnel(
         resolvedSourceCredentials.keyPassword,
       );
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Invalid SSH key format";
+      const message = getErrorMessage(error, "Invalid SSH key format");
       tunnelLogger.error(
         `Invalid SSH key format for tunnel '${tunnelName}': ${message}`,
         undefined,
@@ -1458,17 +1518,13 @@ export async function connectSSHTunnel(
         hasProxyAuth: !!(
           tunnelConfig.socks5Username && tunnelConfig.socks5Password
         ),
-        errorMessage:
-          socks5Error instanceof Error ? socks5Error.message : "Unknown error",
+        errorMessage: getErrorMessage(socks5Error),
       });
       broadcastTunnelStatus(tunnelName, {
         connected: false,
         status: CONNECTION_STATES.FAILED,
         reason:
-          "SOCKS5 proxy connection failed: " +
-          (socks5Error instanceof Error
-            ? socks5Error.message
-            : "Unknown error"),
+          "SOCKS5 proxy connection failed: " + getErrorMessage(socks5Error),
       });
       tunnelConnecting.delete(tunnelName);
       return;
@@ -1487,10 +1543,10 @@ export async function connectSSHTunnel(
     broadcastTunnelStatus(tunnelName, {
       connected: false,
       status: CONNECTION_STATES.FAILED,
-      reason:
-        error instanceof Error
-          ? error.message
-          : "Failed to resolve tunnel source hostname",
+      reason: getErrorMessage(
+        error,
+        "Failed to resolve tunnel source hostname",
+      ),
     });
     tunnelConnecting.delete(tunnelName);
     return;
@@ -1546,7 +1602,7 @@ export async function killRemoteTunnelByMarker(
       tunnelLogger.warn("Failed to resolve source credentials for cleanup", {
         tunnelName,
         sourceHostId: tunnelConfig.sourceHostId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
     }
   }
@@ -1673,10 +1729,7 @@ export async function killRemoteTunnelByMarker(
           },
         );
         throw new Error(
-          "SOCKS5 proxy connection failed: " +
-            (socks5Error instanceof Error
-              ? socks5Error.message
-              : "Unknown error"),
+          "SOCKS5 proxy connection failed: " + getErrorMessage(socks5Error),
           { cause: socks5Error },
         );
       }
@@ -1891,7 +1944,7 @@ export async function initializeAutoStartTunnels(): Promise<void> {
       setTimeout(() => {
         connectSSHTunnel(tunnelConfig, 0).catch((error) => {
           tunnelLogger.error(
-            `Failed to connect tunnel ${tunnelConfig.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            `Failed to connect tunnel ${tunnelConfig.name}: ${getErrorMessage(error)}`,
           );
         });
       }, 1000);
@@ -1899,7 +1952,7 @@ export async function initializeAutoStartTunnels(): Promise<void> {
   } catch (error) {
     tunnelLogger.error(
       "Failed to initialize auto-start tunnels:",
-      error instanceof Error ? error.message : "Unknown error",
+      getErrorMessage(error),
     );
   }
 }

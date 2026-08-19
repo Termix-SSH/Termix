@@ -86,6 +86,7 @@ beforeEach(() => {
 
 afterEach(() => {
   state.sqlite.close();
+  delete process.env.DATABASE_DIALECT;
 });
 
 describe("runLegacySharedSshAuthOptInMigration", () => {
@@ -160,5 +161,33 @@ describe("runLegacySharedSshAuthOptInMigration", () => {
         .get(),
     ).toEqual({ share_ssh_auth: 0 });
     expect(state.resyncedHostIds).toEqual([3]);
+  });
+
+  // The behavior being preserved belongs to releases that only ran on SQLite,
+  // and the probes below it are sqlite_master specific. Without the guard this
+  // logged a failure on every boot against a remote engine.
+  it.each(["postgres", "mysql"])("does nothing on %s", async (dialect) => {
+    process.env.DATABASE_DIALECT = dialect;
+
+    await expect(runLegacySharedSshAuthOptInMigration()).resolves.toEqual({
+      enabled: 0,
+      resynced: 0,
+      skipped: 0,
+    });
+
+    expect(
+      state.sqlite
+        .prepare("SELECT id, share_ssh_auth FROM ssh_data ORDER BY id")
+        .all(),
+    ).toEqual([
+      { id: 1, share_ssh_auth: 0 },
+      { id: 2, share_ssh_auth: 0 },
+      { id: 3, share_ssh_auth: 1 },
+      { id: 4, share_ssh_auth: 0 },
+      { id: 5, share_ssh_auth: 0 },
+    ]);
+    expect(state.resyncedHostIds).toEqual([]);
+    expect(state.settings.has("legacy_shared_ssh_auth_opt_in_v1")).toBe(false);
+    expect(state.saves).toEqual([]);
   });
 });

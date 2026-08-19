@@ -127,6 +127,84 @@ export class HostFolderRepository {
     return { folder: created, created: true };
   }
 
+  /**
+   * Sets a distinct manual sortOrder per sibling folder (drag-to-reorder).
+   * Folders with no existing sshFolders row are created first (matching the
+   * empty-folder-persists behavior elsewhere) so the order survives even for
+   * folders that only ever existed implicitly via host paths.
+   */
+  async reorderFolders(
+    userId: string,
+    positions: { name: string; sortOrder: number }[],
+    now = new Date().toISOString(),
+  ): Promise<number> {
+    if (positions.length === 0) return 0;
+
+    let affected: number;
+    if (this.context.dialect === "sqlite") {
+      affected = this.context.drizzle.transaction((tx) => {
+        let count = 0;
+        for (const { name, sortOrder } of positions) {
+          const result = tx
+            .update(sshFolders)
+            .set({ sortOrder, updatedAt: now })
+            .where(
+              and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)),
+            )
+            .run();
+          if (rowsAffected(result) > 0) {
+            count += rowsAffected(result);
+            continue;
+          }
+          tx.insert(sshFolders)
+            .values({
+              syncId: randomUUID(),
+              userId,
+              name,
+              sortOrder,
+              createdAt: now,
+              updatedAt: now,
+            })
+            .run();
+          count += 1;
+        }
+        return count;
+      });
+    } else {
+      affected = await this.context.drizzle.transaction(async (tx) => {
+        let count = 0;
+        for (const { name, sortOrder } of positions) {
+          const result = await tx
+            .update(sshFolders)
+            .set({ sortOrder, updatedAt: now })
+            .where(
+              and(eq(sshFolders.userId, userId), eq(sshFolders.name, name)),
+            );
+          if (rowsAffected(result) > 0) {
+            count += rowsAffected(result);
+            continue;
+          }
+          await tx.insert(sshFolders).values({
+            syncId: randomUUID(),
+            userId,
+            name,
+            sortOrder,
+            createdAt: now,
+            updatedAt: now,
+          });
+          count += 1;
+        }
+        return count;
+      });
+    }
+
+    if (affected > 0) {
+      await this.afterWrite();
+    }
+
+    return affected;
+  }
+
   async listHostsInFolder(
     userId: string,
     folderName: string,

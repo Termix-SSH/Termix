@@ -41,7 +41,7 @@ export function PdfPreview({
               >
                 {t("fileManager.previous")}
               </Button>
-              <span className="text-sm text-foreground px-3 py-1 bg-background rounded border">
+              <span className="text-sm text-foreground px-3 py-1 bg-background border border-border">
                 {t("fileManager.pageXOfY", {
                   current: pageNumber,
                   total: numPages || 0,
@@ -66,7 +66,7 @@ export function PdfPreview({
               >
                 {t("fileManager.zoomOut")}
               </Button>
-              <span className="text-sm text-foreground px-3 py-1 bg-background rounded border min-w-[80px] text-center">
+              <span className="text-sm text-foreground px-3 py-1 bg-background border border-border min-w-[80px] text-center">
                 {Math.round(pdfScale * 100)}%
               </span>
               <Button

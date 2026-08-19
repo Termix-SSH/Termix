@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type {
   AuthenticatedRequest,
   CacheEntry,
@@ -87,7 +88,7 @@ async function fetchAlertsFromGitHub(): Promise<TermixAlert[]> {
   } catch (error) {
     authLogger.error("Failed to fetch alerts from GitHub", {
       operation: "alerts_fetch",
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: getErrorMessage(error),
     });
     return [];
   }

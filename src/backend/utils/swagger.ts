@@ -72,6 +72,10 @@ const swaggerOptions: SwaggerJSDocOptions = {
     ],
     tags: [
       {
+        name: "AI",
+        description: "AI assistant providers, conversations and proposals",
+      },
+      {
         name: "Alerts",
         description: "System alerts and notifications management",
       },
@@ -125,6 +129,7 @@ const swaggerOptions: SwaggerJSDocOptions = {
     path
       .join(__dirname, "..", "database", "routes", "*.js")
       .replace(/\\/g, "/"),
+    path.join(__dirname, "..", "ai", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "..", "services", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "..", "hosts", "*.js").replace(/\\/g, "/"),
     path.join(__dirname, "..", "hosts", "**", "*.js").replace(/\\/g, "/"),

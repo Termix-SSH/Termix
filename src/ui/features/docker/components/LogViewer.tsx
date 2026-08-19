@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../../lib/error-message.js";
 import React from "react";
 import { Button } from "@/components/button.tsx";
 import { Input } from "@/components/input.tsx";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import type { DockerLogOptions } from "@/types";
 import { getContainerLogs, downloadContainerLogs } from "@/main-axios.ts";
+import { useAdaptivePolling } from "@/hooks/use-adaptive-polling.ts";
 
 interface LogViewerProps {
   sessionId: string;
@@ -65,6 +67,8 @@ export function LogViewer({
   const [autoRefresh, setAutoRefresh] = React.useState(false);
   const [logSearch, setLogSearch] = React.useState("");
   const logsEndRef = React.useRef<HTMLDivElement>(null);
+  const rawLogsRef = React.useRef(rawLogs);
+  rawLogsRef.current = rawLogs;
 
   const fetchLogs = React.useCallback(async () => {
     setIsLoading(true);
@@ -74,11 +78,17 @@ export function LogViewer({
         timestamps: showTimestamps,
       };
       const data = await getContainerLogs(sessionId, containerId, options);
-      setRawLogs(data.logs.split("\n").filter(Boolean));
+      const next = data.logs.split("\n").filter(Boolean);
+      const changed =
+        next.length !== rawLogsRef.current.length ||
+        next.some((line, index) => line !== rawLogsRef.current[index]);
+      if (changed) {
+        rawLogsRef.current = next;
+        setRawLogs(next);
+      }
+      return changed;
     } catch (error) {
-      toast.error(
-        `Failed to fetch logs: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      toast.error(`Failed to fetch logs: ${getErrorMessage(error)}`);
     } finally {
       setIsLoading(false);
     }
@@ -88,14 +98,17 @@ export function LogViewer({
     fetchLogs();
   }, [fetchLogs]);
 
-  React.useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      void fetchLogs();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, fetchLogs]);
+  useAdaptivePolling(
+    fetchLogs,
+    {
+      minIntervalMs: 3_000,
+      maxIntervalMs: 18_000,
+      stablePollsPerStep: 2,
+      maxRequestDutyCycle: 0.2,
+    },
+    autoRefresh,
+    { runImmediately: false },
+  );
 
   React.useEffect(() => {
     if (autoRefresh && logsEndRef.current) {
@@ -119,9 +132,7 @@ export function LogViewer({
       document.body.removeChild(a);
       toast.success(t("docker.logsDownloaded"));
     } catch (error) {
-      toast.error(
-        `Failed to download logs: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
+      toast.error(`Failed to download logs: ${getErrorMessage(error)}`);
     } finally {
       setIsDownloading(false);
     }

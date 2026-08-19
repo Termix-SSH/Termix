@@ -98,7 +98,6 @@ i18n
       caches: ["localStorage", "cookie"],
       lookupLocalStorage: "i18nextLng",
       lookupCookie: "i18nextLng",
-      checkWhitelist: true,
     },
 
     resources: {

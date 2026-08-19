@@ -1,3 +1,5 @@
+import { getErrorMessage } from "../../utils/error-message.js";
+import { StringDecoder } from "string_decoder";
 import { WebSocketServer, WebSocket, type RawData } from "ws";
 import ssh2Pkg, {
   type Client as SSHClientType,
@@ -45,13 +47,22 @@ import {
 import { isWindowsSftpPath, sftpPathToLocalPath } from "../transfer-paths.js";
 import { preparePrivateKeyForSSH2 } from "../../utils/ssh-key-utils.js";
 import { triggerLoginAlert } from "../../utils/alert-trigger.js";
+import { getClientIp } from "../../utils/request-origin.js";
 import { isRetriableDnsError, resolveHostForSshConnect } from "../ssh-dns.js";
+import { resolveSshKeepalive } from "../ssh-keepalive.js";
+import {
+  hostAddressMismatch,
+  HOST_ADDRESS_MISMATCH_MESSAGE,
+  HOST_NOT_ON_THIS_SERVER_MESSAGE,
+} from "./host-identity.js";
 
 interface ConnectToHostData {
   cols: number;
   rows: number;
   hostConfig: {
     id: number;
+    /** Names the host across a sync pair; `id` only names it locally. */
+    syncId?: string | null;
     instanceId?: string;
     ip: string;
     port: number;
@@ -326,7 +337,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       error,
       {
         operation: "websocket_connection_auth_error",
-        ip: req.socket.remoteAddress,
+        ip: getClientIp(req),
       },
     );
     ws.close(1008, "Authentication required");
@@ -502,8 +513,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           connectData.hostConfig.userId = userId;
         }
         handleConnectToHost(connectData).catch((error) => {
-          const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
+          const errMsg = getErrorMessage(error);
           if (
             errMsg.includes("Cannot parse privateKey") &&
             errMsg.includes("no passphrase")
@@ -956,8 +966,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         };
 
         handleConnectToHost(reconnectData).catch((error) => {
-          const errMsg =
-            error instanceof Error ? error.message : "Unknown error";
+          const errMsg = getErrorMessage(error);
           if (
             errMsg.includes("Cannot parse privateKey") &&
             errMsg.includes("no passphrase")
@@ -1097,7 +1106,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               type: "error",
               message:
                 "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+                getErrorMessage(error),
             }),
           );
         });
@@ -1143,10 +1152,10 @@ wss.on("connection", async (ws: WebSocket, req) => {
             JSON.stringify({
               type: "vault_error",
               hostId: vaultData.hostId,
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to start Vault authentication",
+              error: getErrorMessage(
+                error,
+                "Failed to start Vault authentication",
+              ),
             }),
           );
         }
@@ -1204,7 +1213,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               type: "error",
               message:
                 "Failed to connect after authentication: " +
-                (error instanceof Error ? error.message : "Unknown error"),
+                getErrorMessage(error),
             }),
           );
         });
@@ -1322,6 +1331,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
     const { hostConfig, initialPath, executeCommand, tmuxAttachSession } = data;
     const {
       id,
+      syncId: hostSyncId,
       ip: rawIp,
       port: clientPort,
       username: clientUsername,
@@ -1471,11 +1481,65 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     if (id && userId) {
       try {
-        const { resolveHostById } = await import("../host-resolver.js");
-        resolvedHostData = (await resolveHostById(
-          id,
-          userId,
-        )) as unknown as typeof resolvedHostData;
+        const { resolveHostById, resolveHostBySyncId } =
+          await import("../host-resolver.js");
+
+        // Prefer the sync identity. A numeric id belongs to whichever database
+        // produced it, so on a sync server it names a different host than the
+        // desktop app meant; syncId is the same string on both sides.
+        resolvedHostData = (hostSyncId
+          ? await resolveHostBySyncId(hostSyncId, userId)
+          : await resolveHostById(id, userId)) as unknown as
+          typeof resolvedHostData | null;
+
+        if (hostSyncId && !resolvedHostData) {
+          sshLogger.error(
+            "Refusing to connect: host is not known to this server",
+            undefined,
+            {
+              operation: "ssh_connect_host_sync_id_unknown",
+              hostId: id,
+              userId,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: HOST_NOT_ON_THIS_SERVER_MESSAGE,
+            }),
+          );
+          cleanupAuthState(connectionTimeout);
+          return;
+        }
+
+        // Older clients send only the numeric id, which cannot be trusted to
+        // mean the same host here. Everything below is taken from the row it
+        // lands on -- the address, the credentials, the jump hosts, the stored
+        // host key -- so compare the address before using any of it.
+        if (
+          !hostSyncId &&
+          hostAddressMismatch(clientIp, resolvedHostData?.ip)
+        ) {
+          sshLogger.error(
+            "Refusing to connect: host id resolves to a different address here",
+            undefined,
+            {
+              operation: "ssh_connect_host_id_mismatch",
+              hostId: id,
+              userId,
+              clientIp,
+              resolvedIp: resolvedHostData?.ip,
+            },
+          );
+          ws.send(
+            JSON.stringify({
+              type: "error",
+              message: HOST_ADDRESS_MISMATCH_MESSAGE,
+            }),
+          );
+          cleanupAuthState(connectionTimeout);
+          return;
+        }
 
         if (resolvedHostData) {
           if (
@@ -1522,7 +1586,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve server-side host data for ${id}`, {
           operation: "ssh_host_data",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1563,7 +1627,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         sshLogger.warn(`Failed to resolve host credentials for ${id}`, {
           operation: "ssh_credentials",
           hostId: id,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     } else if (credentialId && id && userId) {
@@ -1588,7 +1652,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           operation: "ssh_credentials",
           hostId: id,
           credentialId,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
       }
     }
@@ -1633,8 +1697,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           );
         }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Unknown error";
+        const message = getErrorMessage(error);
         sshLogger.error("SSH hostname resolution failed", error, {
           operation: "terminal_dns_resolve",
           hostId: id,
@@ -1988,10 +2051,17 @@ wss.on("connection", async (ws: WebSocket, req) => {
           }
 
           const boundSessionId = currentSessionId;
+          // A single TCP/SSH packet boundary can split a multi-byte UTF-8
+          // character (e.g. the box-drawing glyphs mc/htop use for borders).
+          // Buffer.toString("utf-8") on each chunk independently replaces the
+          // split bytes with U+FFFD, which shows up as corrupted/inserted
+          // characters. StringDecoder carries incomplete trailing bytes over
+          // to the next chunk so multi-byte characters decode correctly.
+          const decoder = new StringDecoder("utf-8");
 
           stream.on("data", (data: Buffer) => {
             try {
-              const utf8String = data.toString("utf-8");
+              const utf8String = decoder.write(data);
 
               if (!utf8String) return;
 
@@ -2184,7 +2254,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
               id,
               hostConfig.userId,
               username,
-              req.socket.remoteAddress ?? "unknown",
+              getClientIp(req),
             ).catch(() => {});
           }
 
@@ -2220,8 +2290,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
                   operation: "activity_log_error",
                   userId: hostConfig.userId,
                   hostId: id,
-                  error:
-                    error instanceof Error ? error.message : "Unknown error",
+                  error: getErrorMessage(error),
                 });
               }
             })();
@@ -2698,6 +2767,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
 
     const hostKeepaliveInterval = hostConfig.terminalConfig?.keepaliveInterval;
     const hostKeepaliveCountMax = hostConfig.terminalConfig?.keepaliveCountMax;
+    const keepalive = resolveSshKeepalive(
+      hostKeepaliveInterval,
+      hostKeepaliveCountMax,
+      30000,
+      5,
+    );
 
     // Pre-fetch the stored host key before connect so the verifier callback
     // runs synchronously during SSH key exchange, avoiding LoginGraceTime
@@ -2709,14 +2784,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
       port,
       username,
       tryKeyboard: resolvedCredentials.authType !== "tailscale",
-      keepaliveInterval:
-        typeof hostKeepaliveInterval === "number"
-          ? Math.max(5000, hostKeepaliveInterval * 1000)
-          : 30000,
-      keepaliveCountMax:
-        typeof hostKeepaliveCountMax === "number"
-          ? Math.max(1, hostKeepaliveCountMax)
-          : 5,
+      ...keepalive,
       readyTimeout:
         resolvedCredentials.authType === "tailscale"
           ? TAILSCALE_CHECK_TIMEOUT_MS
@@ -2828,18 +2896,12 @@ wss.on("connection", async (ws: WebSocket, req) => {
               operation: "ca_cert_auth_setup_failed",
               userId,
               hostId: id,
-              error:
-                certError instanceof Error
-                  ? certError.message
-                  : String(certError),
+              error: getErrorMessage(certError, String(certError)),
             });
           }
         }
       } catch (keyError) {
-        const message =
-          keyError instanceof Error
-            ? keyError.message
-            : "Invalid private key format";
+        const message = getErrorMessage(keyError, "Invalid private key format");
         sshLogger.error("SSH key format error: " + message);
         ws.send(
           JSON.stringify({
@@ -2898,10 +2960,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
           JSON.stringify({
             type: "error",
             message:
-              "OPKSSH authentication failed: " +
-              (opksshError instanceof Error
-                ? opksshError.message
-                : "Unknown error"),
+              "OPKSSH authentication failed: " + getErrorMessage(opksshError),
           }),
         );
         return;
@@ -2953,9 +3012,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             type: "error",
             message:
               "Vault SSH signer authentication failed: " +
-              (vaultError instanceof Error
-                ? vaultError.message
-                : "Unknown error"),
+              getErrorMessage(vaultError),
           }),
         );
         return;
@@ -3104,7 +3161,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
             type: "error",
             message:
               "Cloudflare tunnel connection failed: " +
-              (cfError instanceof Error ? cfError.message : "Unknown error"),
+              getErrorMessage(cfError),
           }),
         );
         cleanupAuthState(connectionTimeout);
@@ -3214,11 +3271,7 @@ wss.on("connection", async (ws: WebSocket, req) => {
         ws.send(
           JSON.stringify({
             type: "error",
-            message:
-              "Proxy connection failed: " +
-              (proxyError instanceof Error
-                ? proxyError.message
-                : "Unknown error"),
+            message: "Proxy connection failed: " + getErrorMessage(proxyError),
           }),
         );
         if (currentSessionId) {

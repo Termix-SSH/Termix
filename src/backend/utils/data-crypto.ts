@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import { FieldCrypto } from "./field-crypto.js";
 import { LazyFieldEncryption } from "./lazy-field-encryption.js";
 import {
@@ -101,7 +102,7 @@ class DataCrypto {
       databaseLogger.error("User sensitive fields migration failed", error, {
         operation: "user_sensitive_migration_failed",
         userId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
 
       return { migrated: false, migratedTables: [], migratedFieldsCount: 0 };
@@ -207,7 +208,7 @@ class DataCrypto {
       databaseLogger.error("User sensitive fields migration failed", error, {
         operation: "user_sensitive_migration_failed",
         userId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
 
       return { migrated: false, migratedTables: [], migratedFieldsCount: 0 };

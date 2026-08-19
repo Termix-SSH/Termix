@@ -352,11 +352,20 @@ async function resyncAutoIncrement(
 ): Promise<void> {
   for (const table of tables) {
     // Only tables whose id is generated. A text primary key, like users.id,
-    // has no sequence and no counter to move.
+    // has no sequence and no counter to move, and a table keyed on something
+    // else entirely — host_sidebar_preferences.user_id — has no id at all.
     if (context.dialect === "postgres") {
+      // pg_get_serial_sequence() raises 42703 rather than returning null when
+      // the column is missing, so let information_schema decide whether there
+      // is an id to ask about: no id column yields no row.
       const [seq] = await runSql<{ name: string | null }>(
         context,
-        sql.raw(`SELECT pg_get_serial_sequence('${table}', 'id') AS name`),
+        sql.raw(
+          `SELECT pg_get_serial_sequence('${table}', 'id') AS name ` +
+            `FROM information_schema.columns ` +
+            `WHERE table_schema = current_schema() AND table_name = '${table}' ` +
+            `AND column_name = 'id'`,
+        ),
       );
       if (!seq?.name) continue;
 
@@ -423,29 +432,39 @@ function migrateOnce(
 let cachedSqliteSchema: string | null = null;
 
 /**
- * The full schema, from the generated SQLite migration rather than hand-written
- * DDL in each test file.
+ * The full schema, from the generated SQLite migrations rather than
+ * hand-written DDL in each test file.
  *
  * Tests used to declare a cut-down version of every table they touched — a
  * `users` with five columns where the real one has thirty. That drifts from the
  * schema silently, and it is the reason the same tests could not be pointed at
  * another engine.
+ *
+ * There can be more than one migration file (a baseline plus later
+ * incremental ones): drizzle-kit numbers them `0000_`, `0001_`, ... in
+ * generation order, so replaying every file in that (lexical) order
+ * reconstructs the current schema exactly like a real migration run would.
  */
 function sqliteSchemaSql(): string {
   if (cachedSqliteSchema) return cachedSqliteSchema;
 
   const dir = path.resolve(process.cwd(), "drizzle", "sqlite");
-  const file = fs
+  const files = fs
     .readdirSync(dir)
     .filter((name) => name.endsWith(".sql"))
-    .sort()
-    .at(-1);
+    .sort();
 
-  if (!file) throw new Error(`No SQLite migration found in ${dir}`);
+  if (files.length === 0) {
+    throw new Error(`No SQLite migration found in ${dir}`);
+  }
 
-  cachedSqliteSchema = fs
-    .readFileSync(path.join(dir, file), "utf8")
-    .split("--> statement-breakpoint")
+  cachedSqliteSchema = files
+    .map((file) =>
+      fs
+        .readFileSync(path.join(dir, file), "utf8")
+        .split("--> statement-breakpoint")
+        .join("\n"),
+    )
     .join("\n");
 
   return cachedSqliteSchema;

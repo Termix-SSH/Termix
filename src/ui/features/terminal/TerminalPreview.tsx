@@ -1,5 +1,8 @@
 import { useTheme } from "@/components/theme-provider";
-import { TERMINAL_THEMES, TERMINAL_FONTS } from "@/lib/terminal-themes";
+import {
+  TERMINAL_THEMES,
+  resolveTerminalFontFamily,
+} from "@/lib/terminal-themes";
 import type { TerminalConfig } from "@/types";
 
 interface TerminalPreviewProps {
@@ -38,9 +41,7 @@ export function TerminalPreview({
     theme === "custom" && customThemeColors
       ? customThemeColors
       : TERMINAL_THEMES[resolvedTheme]?.colors;
-  const fontFallback =
-    TERMINAL_FONTS.find((f) => f.value === fontFamily)?.fallback ||
-    TERMINAL_FONTS[0].fallback;
+  const fontFallback = resolveTerminalFontFamily(fontFamily);
 
   return (
     <div className="border border-input overflow-hidden">

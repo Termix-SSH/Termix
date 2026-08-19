@@ -1,7 +1,11 @@
-import { eq, inArray } from "drizzle-orm";
+import { asc, eq, inArray, like, sql } from "drizzle-orm";
 import { users } from "../db/schema.js";
 import type { DatabaseContext } from "./database-context.js";
-import { rowsAffected, supportsReturning } from "./mutation-result.js";
+import {
+  countValue,
+  rowsAffected,
+  supportsReturning,
+} from "./mutation-result.js";
 import { insertReturning, updateReturning } from "./returning.js";
 
 export type UserRecord = typeof users.$inferSelect;
@@ -17,6 +21,42 @@ export class UserRepository {
 
   async listAll(): Promise<UserRecord[]> {
     return this.context.drizzle.select().from(users);
+  }
+
+  /**
+   * One page of users, optionally filtered by username.
+   *
+   * The admin panel used to render every account at once, which is fine at
+   * home and not fine on a directory-backed install with thousands of them.
+   * Sorted by username so paging is stable between requests.
+   */
+  async listPage(input: {
+    search?: string;
+    limit: number;
+    offset: number;
+  }): Promise<{ users: UserRecord[]; total: number }> {
+    const term = input.search?.trim();
+    const where = term
+      ? like(sql`lower(${users.username})`, `%${term.toLowerCase()}%`)
+      : undefined;
+
+    const [rows, totalResult] = await Promise.all([
+      this.context.drizzle
+        .select()
+        .from(users)
+        .where(where)
+        // Case-insensitive: a plain sort puts every capitalised name ahead of
+        // every lowercase one, which reads as unordered in the admin list.
+        .orderBy(asc(sql`lower(${users.username})`))
+        .limit(input.limit)
+        .offset(input.offset),
+      this.context.drizzle
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(users)
+        .where(where),
+    ]);
+
+    return { users: rows, total: countValue(totalResult[0]?.count) };
   }
 
   async findById(id: string): Promise<UserRecord | null> {

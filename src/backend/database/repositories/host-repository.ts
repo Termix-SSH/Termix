@@ -234,6 +234,52 @@ export class HostRepository {
     return rowsAffected(result);
   }
 
+  /**
+   * Sets a distinct manual sortOrder per host (drag-to-reorder). Unlike
+   * updateManyForUser, each id gets its own value, so this is one UPDATE per
+   * row rather than a single set-for-all-matching-ids statement.
+   */
+  async reorderForUser(
+    userId: string,
+    positions: { id: number; sortOrder: number }[],
+  ): Promise<number> {
+    if (positions.length === 0) return 0;
+
+    let affected: number;
+    if (this.context.dialect === "sqlite") {
+      affected = this.context.drizzle.transaction((tx) => {
+        let count = 0;
+        for (const { id, sortOrder } of positions) {
+          const result = tx
+            .update(hosts)
+            .set({ sortOrder, updatedAt: sql`CURRENT_TIMESTAMP` })
+            .where(and(eq(hosts.id, id), eq(hosts.userId, userId)))
+            .run();
+          count += rowsAffected(result);
+        }
+        return count;
+      });
+    } else {
+      affected = await this.context.drizzle.transaction(async (tx) => {
+        let count = 0;
+        for (const { id, sortOrder } of positions) {
+          const result = await tx
+            .update(hosts)
+            .set({ sortOrder, updatedAt: sql`CURRENT_TIMESTAMP` })
+            .where(and(eq(hosts.id, id), eq(hosts.userId, userId)));
+          count += rowsAffected(result);
+        }
+        return count;
+      });
+    }
+
+    if (affected > 0) {
+      await this.afterWrite();
+    }
+
+    return affected;
+  }
+
   async deleteForUser(
     userId: string,
     hostId: number,

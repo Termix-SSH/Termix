@@ -1,3 +1,4 @@
+import { getErrorMessage } from "./error-message.js";
 import { FieldCrypto } from "./field-crypto.js";
 import { databaseLogger } from "./logger.js";
 import type { UserEncryptionMigrationStore } from "./user-encryption-migration-store.js";
@@ -145,7 +146,7 @@ export class LazyFieldEncryption {
           operation: "lazy_encryption_decrypt_failed",
           recordId,
           fieldName,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
         throw error;
       }
@@ -181,7 +182,7 @@ export class LazyFieldEncryption {
           operation: "lazy_encryption_migrate_failed",
           recordId,
           fieldName,
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: getErrorMessage(error),
         });
         throw error;
       }
@@ -470,7 +471,7 @@ export class LazyFieldEncryption {
       databaseLogger.error("Failed to check user migration needs", error, {
         operation: "lazy_encryption_user_check_failed",
         userId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getErrorMessage(error),
       });
 
       return { needsMigration: false, plaintextFields: [] };

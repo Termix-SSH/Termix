@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../lib/error-message.js";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
@@ -90,9 +91,7 @@ export function VaultProfileManager({
       setForm(null);
       onChanged();
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : t("hosts.vaultProfileSaveFailed"),
-      );
+      toast.error(getErrorMessage(e, t("hosts.vaultProfileSaveFailed")));
     } finally {
       setSaving(false);
     }
@@ -104,9 +103,7 @@ export function VaultProfileManager({
       toast.success(t("hosts.vaultProfileDeleted"));
       onChanged();
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : t("hosts.vaultProfileDeleteFailed"),
-      );
+      toast.error(getErrorMessage(e, t("hosts.vaultProfileDeleteFailed")));
     }
   };
 

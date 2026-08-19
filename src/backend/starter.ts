@@ -1,6 +1,6 @@
+import { getErrorMessage } from "./utils/error-message.js";
 import dotenv from "dotenv";
-import { promises as fs } from "fs";
-import { readFileSync } from "fs";
+import { promises as fs, readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { AutoSSLSetup } from "./utils/auto-ssl-setup.js";
@@ -14,6 +14,23 @@ import {
   versionLogger,
   setGlobalLogLevel,
 } from "./utils/logger.js";
+import { getTrustedProxyAuthConfig } from "./utils/trusted-proxy-auth.js";
+
+/**
+ * host:port from DATABASE_URL for the startup log. Parsed rather than printed
+ * so the password the URL also carries never reaches the logs.
+ */
+function describeDatabaseHost(): string {
+  const raw = process.env.DATABASE_URL?.trim();
+  if (!raw) return "unknown";
+
+  try {
+    const { host } = new URL(raw);
+    return host || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 
 async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
   const { createCurrentUserRepository, createCurrentRoleRepository } =
@@ -136,13 +153,32 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       version: version,
     });
 
+    const trustedProxyAuth = getTrustedProxyAuthConfig();
+
     const systemCrypto = SystemCrypto.getInstance();
     await systemCrypto.initializeJWTSecret();
     await systemCrypto.initializeDatabaseKey();
     await systemCrypto.initializeEncryptionKey();
     await systemCrypto.initializeInternalAuthToken();
 
-    ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
+    const { needsExplicitPersist, resolveDatabaseDialect } =
+      await import("./database/db/dialect.js");
+    const databaseDialect = resolveDatabaseDialect();
+
+    // The pre-upgrade backup copies the SQLite file, so there is nothing for it
+    // to do on a client-server engine. Say so rather than no-op silently:
+    // backups are the operator's own responsibility there.
+    if (needsExplicitPersist(databaseDialect)) {
+      ensureDatabaseLayerPreupgradeBackup({ dataDir, version });
+    } else {
+      systemLogger.info(
+        `Skipping pre-upgrade backup on ${databaseDialect} - back up the database yourself`,
+        {
+          operation: "backend_init_db_backup_skipped",
+          dialect: databaseDialect,
+        },
+      );
+    }
 
     await AutoSSLSetup.initialize();
     systemLogger.success("SSL setup completed", {
@@ -152,9 +188,51 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
 
     const dbModule = await import("./database/db/index.js");
     await dbModule.initializeDatabase();
-    systemLogger.success("Database initialized", {
+    // Naming the engine makes a misconfiguration obvious: without it, a bad
+    // DATABASE_DIALECT silently falls back to SQLite and looks like data loss.
+    systemLogger.success(`Database initialized (${databaseDialect})`, {
       operation: "backend_init_db",
+      dialect: databaseDialect,
+      // Host only, never the credentials the URL also carries.
+      ...(needsExplicitPersist(databaseDialect)
+        ? {}
+        : { host: describeDatabaseHost() }),
     });
+
+    if (trustedProxyAuth.enabled) {
+      const {
+        createCurrentSettingsRepository,
+        createCurrentSsoProviderRepository,
+        createCurrentUserRepository,
+      } = await import("./database/repositories/factory.js");
+      const [legacyOidc, providers, users] = await Promise.all([
+        createCurrentSettingsRepository().get("oidc_config"),
+        createCurrentSsoProviderRepository().listEnabled(),
+        createCurrentUserRepository().listAll(),
+      ]);
+      const conflictingProvider = providers.some((provider) =>
+        ["oidc", "github", "google"].includes(provider.type),
+      );
+      const conflictingUser = users.some(
+        (user) => user.isOidc || user.totpEnabled,
+      );
+      if (
+        legacyOidc ||
+        process.env.OIDC_CLIENT_ID ||
+        conflictingProvider ||
+        conflictingUser
+      ) {
+        throw new Error(
+          "Trusted proxy authentication cannot start while OIDC or TOTP is enabled",
+        );
+      }
+      systemLogger.info("Trusted proxy authentication enabled", {
+        operation: "trusted_proxy_auth_enabled",
+        usernameHeader: trustedProxyAuth.usernameHeader,
+        roleHeader: trustedProxyAuth.roleHeader,
+        trustedProxyCount: trustedProxyAuth.trustedProxies.length,
+      });
+    }
 
     const { UserKeyManager } = await import("./utils/user-keys.js");
     await UserKeyManager.getInstance().initialize();
@@ -183,6 +261,14 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       await import("./utils/crypto-migration/private-shared-ssh-auth-migration.js");
     await runPrivateSharedSshAuthMigration();
 
+    const { runChannelConfigEncryptionMigration } =
+      await import("./utils/crypto-migration/channel-config-encryption.js");
+    await runChannelConfigEncryptionMigration();
+
+    const { runAutomationsMigration } =
+      await import("./utils/crypto-migration/automations-migration.js");
+    await runAutomationsMigration();
+
     if (process.env.ELECTRON_EMBEDDED === "true") {
       await provisionLocalDesktopUserIfNeeded();
     }
@@ -196,7 +282,7 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
             "Failed to initialize OPKSSH binary - OPKSSH authentication will not be available",
             {
               operation: "opkssh_binary_init_failed",
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
               stack: error instanceof Error ? error.stack : undefined,
               platform: process.platform,
               arch: process.arch,
@@ -246,11 +332,16 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
             "Failed to initialize Guacamole server (guacd may not be available)",
             {
               operation: "guac_init_skip",
-              error: error instanceof Error ? error.message : "Unknown error",
+              error: getErrorMessage(error),
             },
           );
         });
     }
+
+    // After metrics, which the automation triggers and headless polling hook into.
+    const { startAutomationScheduler } =
+      await import("./automations/scheduler.js");
+    startAutomationScheduler();
 
     const { startAnalyticsHeartbeat } = await import("./utils/analytics.js");
     startAnalyticsHeartbeat();
@@ -266,15 +357,20 @@ async function provisionLocalDesktopUserIfNeeded(): Promise<void> {
       systemLogger.info(`Received ${signal}, initiating graceful shutdown...`, {
         operation: "shutdown",
       });
-      try {
-        await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
-        systemLogger.info("Database saved to disk before exit", {
-          operation: "shutdown_db_saved",
-        });
-      } catch (error) {
-        systemLogger.error("Failed to save database during shutdown", error, {
-          operation: "shutdown_db_save_failed",
-        });
+      // Only SQLite has anything to flush. On a client-server engine the writes
+      // committed as they happened, so there is no file to save and claiming
+      // otherwise in the log would be untrue.
+      if (needsExplicitPersist(databaseDialect)) {
+        try {
+          await DatabaseSaveTrigger.forceSave("shutdown_explicit_save");
+          systemLogger.info("Database saved to disk before exit", {
+            operation: "shutdown_db_saved",
+          });
+        } catch (error) {
+          systemLogger.error("Failed to save database during shutdown", error, {
+            operation: "shutdown_db_save_failed",
+          });
+        }
       }
       process.exit(0);
     };

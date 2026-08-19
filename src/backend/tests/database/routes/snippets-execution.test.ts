@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createSnippetExecutionResult,
   getSnippetExecutionTimeoutMs,
+  resolveSnippetCommand,
 } from "../../../database/routes/snippets-execution.js";
 
 describe("snippet execution", () => {
@@ -45,4 +46,34 @@ describe("snippet execution", () => {
       expect(getSnippetExecutionTimeoutMs(value)).toBeUndefined();
     },
   );
+});
+
+describe("resolveSnippetCommand", () => {
+  const host = { ip: "10.0.0.5", username: "root", port: 22, name: "web-01" };
+
+  it("substitutes host variables per target host", () => {
+    expect(
+      resolveSnippetCommand("ssh $USER@$HOST -p $PORT # $NAME", host),
+    ).toBe("ssh root@10.0.0.5 -p 22 # web-01");
+  });
+
+  it("supports brace syntax for host variables", () => {
+    expect(resolveSnippetCommand("ping ${HOST}", host)).toBe("ping 10.0.0.5");
+  });
+
+  it("substitutes input placeholders from inputValues", () => {
+    expect(
+      resolveSnippetCommand("nc -zv $HOST ${INPUT_1:Port}", host, {
+        INPUT_1: "8080",
+      }),
+    ).toBe("nc -zv 10.0.0.5 8080");
+  });
+
+  it("leaves host variables literal when no host context is given", () => {
+    expect(resolveSnippetCommand("ping $HOST", null)).toBe("ping $HOST");
+  });
+
+  it("leaves input placeholders literal when no value was supplied", () => {
+    expect(resolveSnippetCommand("echo $INPUT_1", null)).toBe("echo $INPUT_1");
+  });
 });

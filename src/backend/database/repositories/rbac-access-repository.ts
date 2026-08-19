@@ -59,6 +59,7 @@ export interface RbacVisibleSharedSnippet extends RbacSharedSnippet {
   order: number;
   createdAt: string;
   updatedAt: string;
+  isNote: boolean;
 }
 
 export interface RbacAccessibleSnippet extends RbacVisibleSharedSnippet {
@@ -438,6 +439,7 @@ export class RbacAccessRepository {
         order: snippets.order,
         createdAt: snippets.createdAt,
         updatedAt: snippets.updatedAt,
+        isNote: snippets.isNote,
         ownerUsername: users.username,
         permissionLevel: snippetAccess.permissionLevel,
         expiresAt: snippetAccess.expiresAt,
@@ -474,6 +476,7 @@ export class RbacAccessRepository {
         createdAt: snippets.createdAt,
         updatedAt: snippets.updatedAt,
         hostFilter: snippets.hostFilter,
+        isNote: snippets.isNote,
         ownerUsername: users.username,
         permissionLevel: snippetAccess.permissionLevel,
         expiresAt: snippetAccess.expiresAt,

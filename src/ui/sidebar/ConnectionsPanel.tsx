@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/tooltip";
 import { usePageVisibleInterval } from "@/hooks/use-page-visible-interval";
+import { useAdaptivePolling } from "@/hooks/use-adaptive-polling";
 
 const CONNECTION_TAB_TYPES: TabType[] = [
   "terminal",
@@ -314,6 +315,8 @@ export function ConnectionsPanel({
   const { t } = useTranslation();
   const [now, setNow] = useState(Date.now());
   const [activeSessions, setActiveSessions] = useState<ActiveSessionInfo[]>([]);
+  const activeSessionsRef = useRef(activeSessions);
+  activeSessionsRef.current = activeSessions;
   const [search, setSearch] = useState("");
 
   // Drag-to-reorder state
@@ -371,22 +374,21 @@ export function ConnectionsPanel({
   usePageVisibleInterval(() => setNow(Date.now()), 15_000);
 
   const refresh = useCallback(async () => {
-    try {
-      const sessions = await getActiveSessions();
-      setActiveSessions((prev) => {
-        const next = Array.isArray(sessions) ? sessions : [];
-        if (sessionsUnchanged(prev, next)) return prev;
-        return next;
-      });
-    } catch {
-      // silently ignore
+    const sessions = await getActiveSessions();
+    const next = Array.isArray(sessions) ? sessions : [];
+    const changed = !sessionsUnchanged(activeSessionsRef.current, next);
+    if (changed) {
+      activeSessionsRef.current = next;
+      setActiveSessions(next);
     }
+    return changed;
   }, []);
 
-  // Initial fetch + visibility-aware poll (hook fires once on mount).
-  usePageVisibleInterval(() => {
-    void refresh();
-  }, 5_000);
+  useAdaptivePolling(refresh, {
+    minIntervalMs: 5_000,
+    maxIntervalMs: 30_000,
+    stablePollsPerStep: 3,
+  });
 
   // Global pointer listeners for drag reorder
   useEffect(() => {

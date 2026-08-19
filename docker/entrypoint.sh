@@ -22,6 +22,14 @@ if [ "$(id -u)" = "0" ]; then
     fi
 fi
 
+DATA_DIR=${DATA_DIR:-/app/data}
+if [ -f "$DATA_DIR/.env" ]; then
+    echo "Loading persisted SSL settings from $DATA_DIR/.env"
+    set -a
+    . "$DATA_DIR/.env"
+    set +a
+fi
+
 export PORT=${PORT:-8080}
 export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
@@ -60,8 +68,8 @@ fi
 
 OPKSSH_DIR="${DATA_DIR:-/app/data}/opkssh"
 if [ ! -d "$OPKSSH_DIR" ]; then
-    echo "WARNING: OPKSSH binary directory not found at $OPKSSH_DIR"
-    echo "OPKSSH will be downloaded automatically on first use."
+    echo "OPKSSH binary directory not found at $OPKSSH_DIR"
+    echo "OPKSSH will be installed from the bundled copy on first use (falls back to downloading if unavailable)."
 else
     echo "OPKSSH binary directory found at $OPKSSH_DIR"
 fi

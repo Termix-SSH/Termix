@@ -8,6 +8,7 @@ export type ConnectionStage =
   | "error"
   | "proxy"
   | "jump"
+  | "validation"
   | "docker_connecting"
   | "docker_auth"
   | "docker_session"
@@ -24,7 +25,13 @@ export type ConnectionStage =
   | "tunnel_connected"
   | "sftp_connecting"
   | "sftp_auth"
-  | "sftp_connected";
+  | "sftp_connected"
+  | "guac_token"
+  | "guac_guacd"
+  | "guac_connecting"
+  | "guac_handshake"
+  | "guac_ready"
+  | "guac_disconnected";
 
 export type LogEntry = {
   id: string;
@@ -32,7 +39,7 @@ export type LogEntry = {
   type: "info" | "success" | "warning" | "error";
   stage: ConnectionStage;
   message: string;
-  details?: Record<string, unknown>;
+  details?: Record<string, unknown> | string;
 };
 
 export interface ConnectionLogResponse {

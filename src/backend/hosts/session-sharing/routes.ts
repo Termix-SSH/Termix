@@ -1,6 +1,5 @@
 import crypto from "crypto";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import type { AuthenticatedRequest } from "../../../types/index.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { PermissionManager } from "../../utils/permission-manager.js";

@@ -1,7 +1,6 @@
 import type { Express } from "express";
 import { execElevated } from "./exec-elevated.js";
-import { managerHandler } from "./route-helpers.js";
-import { ManagerInputError } from "./route-helpers.js";
+import { managerHandler, ManagerInputError } from "./route-helpers.js";
 import type { ManagerRoutesDeps } from "./types.js";
 import {
   isValidWireGuardInterface,

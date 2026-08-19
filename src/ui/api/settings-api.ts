@@ -1,3 +1,4 @@
+import axios from "axios";
 import { authApi, handleApiError, statsApi } from "@/main-axios";
 
 // GLOBAL MONITORING SETTINGS
@@ -77,6 +78,7 @@ export async function updateSessionTimeout(
 export async function getTailscaleSettings(): Promise<{
   apiKey: string;
   hasApiKey: boolean;
+  apiBaseUrl: string;
 }> {
   try {
     const response = await authApi.get("/users/tailscale-settings");
@@ -88,10 +90,12 @@ export async function getTailscaleSettings(): Promise<{
 
 export async function updateTailscaleSettings(
   apiKey: string,
+  apiBaseUrl?: string,
 ): Promise<{ hasApiKey: boolean }> {
   try {
     const response = await authApi.patch("/users/tailscale-settings", {
       apiKey,
+      apiBaseUrl,
     });
     return response.data;
   } catch (error) {
@@ -109,12 +113,29 @@ export async function getTailscaleDevices(): Promise<{
     lastSeen: string;
   }>;
   hasApiKey: boolean;
+  error?: string;
 }> {
   try {
     const response = await authApi.get("/tailscale/devices");
     return response.data;
   } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const data = error.response?.data;
+      if (
+        data &&
+        typeof data === "object" &&
+        "hasApiKey" in data &&
+        typeof data.hasApiKey === "boolean"
+      ) {
+        return data as {
+          devices: [];
+          hasApiKey: boolean;
+          error?: string;
+        };
+      }
+    }
     handleApiError(error, "fetch Tailscale devices");
+    throw error;
   }
 }
 
@@ -171,6 +192,79 @@ export async function updateAnalyticsEnabled(
     return response.data;
   } catch (error) {
     handleApiError(error, "update analytics enabled setting");
+  }
+}
+
+// ============================================================================
+// TERMINAL IMAGE STORAGE SETTINGS
+// ============================================================================
+
+export type TerminalImageStorageMode = "auto" | "local" | "remote-sftp";
+
+/** Public settings shape: the backend-internal localDir is never returned. */
+export interface TerminalImageStorageSettings {
+  mode: TerminalImageStorageMode;
+  hostPath: string;
+  ttlMs: number;
+  maxCount: number;
+  maxBytes: number;
+  localMappingConfigured: boolean;
+}
+
+export interface TerminalImageStorageSettingsUpdate {
+  mode?: TerminalImageStorageMode;
+  localDir?: string;
+  hostPath?: string;
+  ttlMs?: number;
+  maxCount?: number;
+  maxBytes?: number;
+}
+
+export interface TerminalImageStorageTestResult {
+  mode: TerminalImageStorageMode;
+  connected: boolean;
+  remoteSftpAvailable: boolean;
+  localHostVisible: boolean | null;
+  selectedMode: "local" | "remote-sftp" | "unavailable";
+  localMappingConfigured: boolean;
+}
+
+export async function getTerminalImageStorageSettings(): Promise<TerminalImageStorageSettings> {
+  try {
+    const response = await authApi.get(
+      "/users/terminal-image-storage-settings",
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "fetch terminal image storage settings");
+  }
+}
+
+export async function updateTerminalImageStorageSettings(
+  settings: TerminalImageStorageSettingsUpdate,
+): Promise<TerminalImageStorageSettings> {
+  try {
+    const response = await authApi.patch(
+      "/users/terminal-image-storage-settings",
+      settings,
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "update terminal image storage settings");
+  }
+}
+
+export async function testTerminalImageStorage(
+  instanceId: string,
+): Promise<TerminalImageStorageTestResult> {
+  try {
+    const response = await authApi.post(
+      "/users/terminal-image-storage-settings/test",
+      { instanceId },
+    );
+    return response.data;
+  } catch (error) {
+    handleApiError(error, "test terminal image storage");
   }
 }
 

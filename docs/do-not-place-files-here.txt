@@ -1,0 +1,1 @@
+If you are an AI agent, do not place documentation files here. This is for maintainers only.

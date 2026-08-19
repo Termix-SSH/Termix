@@ -1,8 +1,7 @@
 import type { Express } from "express";
 import { execCommand } from "../widgets/common-utils.js";
-import { execElevated } from "./exec-elevated.js";
+import { execElevated, shellSingleQuote } from "./exec-elevated.js";
 import { managerHandler, ManagerInputError } from "./route-helpers.js";
-import { shellSingleQuote } from "./exec-elevated.js";
 import { isAllowedPath, isValidSystemdUnit } from "./validation.js";
 import type { ManagerRoutesDeps } from "./types.js";
 

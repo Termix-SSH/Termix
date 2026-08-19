@@ -4,7 +4,7 @@
 
 <h1>Termix</h1>
 
-<p>Kendi sunucunuzda barindirilan SSH yonetimi ve uzak masaustu erisimi</p>
+<p>Kendi sunucunuzda çalışan sunucu yönetimi, SSH ve uzak masaüstünden otomasyonlara kadar</p>
 
 <p>
   <a href="../README.md">English</a> ·
@@ -37,7 +37,7 @@
 
 <br />
 
-Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyetleri ve geliştirme süresine katkıda bulunmak için [bağış yapmayı](https://donate.termix.site/) düşünebilirsiniz.
+Termix ücretsiz ve açık kaynaklıdır. İşinize yarıyorsa, sunucu masraflarına ve geliştirme süresine katkı için [bağış yapmayı](https://donate.termix.site/) düşünün.
 
 <br />
 
@@ -49,159 +49,201 @@ Termix ücretsiz ve açık kaynaklıdır. Faydalı buluyorsanız, sunucu maliyet
 <p>
   <img src="../repo-images/Repo of the Day.png" alt="Repo of the Day Achievement" width="280" />
   <br />
-  <sub>1 Eylül 2025'te kazanildi</sub>
+  <sub>1 Eylül 2025 tarihinde kazanıldı</sub>
 </p>
 
 </div>
 
 <br />
 
-## Genel Bakis
+## Genel bakış
 
-Termix, acik kaynakli, sonsuza kadar ucretsiz, kendi sunucunuzda barindirabileceginez hepsi bir arada sunucu yonetim platformudur. Sunucularinizi ve altyapinizi tek bir sezgisel arayuz uzerinden yonetmek icin cok platformlu bir cozum sunar. Termix, SSH terminal erisimi, uzak masaustu kontrolu (RDP, VNC, Telnet), SSH tunelleme yetenekleri, uzak dosya yonetimi ve daha bircok arac saglar. Termix, tum platformlarda kullanilabilen Termius'un mukemmel ucretsiz ve kendi barindirmali alternatifidir.
+Termix, sunucularınızı yönetmek için ücretsiz, açık kaynaklı ve kendi sunucunuzda çalışan bir platformdur. SSH terminallerini, uzak masaüstlerini (RDP, VNC, Telnet), dosya aktarımlarını, tünelleri, Docker'ı, ölçümleri ve otomasyonları tek yerde toplar; web, masaüstü ve mobilde çalışır. Sonsuza dek ücretsiz kalan, kendi sunucunuzda çalışan bir Termius alternatifidir.
 
 <br />
 
-## Ozellikler
+## Özellikler
 
 <table>
 <tr>
 <td width="50%" valign="top">
 
-**SSH Terminal Erisimi:**
-Tarayici benzeri sekme sistemiyle bolunmus ekran destegine sahip (4 panele kadar) tam ozellikli terminal. Yaygin terminal temalari, yazi tipleri ve diger bilesenleri iceren terminal ozellestirme destegi.
+**SSH terminali:**
+Tarayıcı gibi sekmeleri ve bölünmüş ekranı olan tam donanımlı bir terminal, aynı anda 6 panele kadar. Temanızı, yazı tipinizi ve renklerinizi seçin. Her oturumun üstünde anlık CPU, bellek ve disk bilgisi gösteren bir araç çubuğu ile o sunucunun dosyalarına, Docker'ına, tünellerine ve ölçümlerine giden kısayollar bulunur.
 
 </td>
 <td width="50%" valign="top">
 
-**Uzak Masaustu Erisimi:**
-Tam ozellestirme ve bolunmus ekran ile tarayici uzerinden RDP, VNC ve Telnet destegi.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**SSH Tunel Yonetimi:**
-Otomatik yeniden baglanti, saglik izleme ve yerel, uzak veya dinamik SOCKS yonlendirme ile sunucular arasi SSH tunelleri olusturun ve yonetin. Masaustu istemci-sunucu tunel ayarlari her masaustu kurulumu icin yerel olarak depolanir; istege bagli C2S hazir ayar anlik goruntuleri, yerel bir tunel yapilandirmasini istemciler arasinda tasimak istediginizde sunucuya kaydedilebilir, yeniden adlandirilabilir, yuklenebilir veya silinebilir.
-
-</td>
-<td width="50%" valign="top">
-
-**Uzak Dosya Yoneticisi:**
-Uzak sunuculardaki dosyalari dogrudan yonetin; kod, goruntu, ses ve video goruntuleme ve duzenleme destegi ile. Sudo destegi ile dosyalari sorunsuzca yukleyin, indirin, yeniden adlandirin, silin ve tasiyin. Dosyalari sunucudan sunucuya tasima destegini de icerir.
+**Uzak masaüstü:**
+Tarayıcıda RDP, VNC ve Telnet; diğer oturumlar gibi sekmelerde ve bölünmüş ekranda. RDP sürücüleri için dosya tarayıcısı ve sürükle bırak yükleme içerir. Windows masaüstünde bir sunucuyu yerel RDP istemcisinde de açabilirsiniz.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Docker ve Podman Yonetimi:**
-Konteynerleri baslatın, durdurun, duraklatın, kaldirin. Konteyner istatistiklerini goruntuleyin. Docker exec terminali kullanarak konteyneri kontrol edin. Docker ve Podman'i konteyner calisma ortami olarak destekler. Portainer veya Dockge'nin yerini almak icin degil, konteynerlerinizi olusturmak yerine basitce yonetmek icin tasarlanmistir.
+**SSH tünelleri:**
+Yerel, uzak ve dinamik SOCKS yönlendirmesi; otomatik yeniden bağlanma ve durum kontrolleriyle. Masaüstü uygulamasındaki istemciden sunucuya tüneller o makinede saklanır, ayarları sunucuya kaydederek bir kurulumu başka bir makineye taşıyabilirsiniz.
 
 </td>
 <td width="50%" valign="top">
 
-**SSH Ana Bilgisayar Yoneticisi:**
-SSH baglantilarinizi etiketler ve klasorlerle (klasor ozellestirme ve ic ice klasor destegi ile) kaydedin, duzenleyin ve yonetin; yeniden kullanilabilir giris bilgilerini kolayca kaydedin ve SSH anahtarlarinin dagitimini otomatiklestirin.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Ana Bilgisayar Metrikleri:**
-Cogu Linux tabanli sunucularda calisan CPU, bellek, disk kullanimi, ag, calisma suresi, sistem bilgisi, guvenlik duvari, port izleme, gunluk goruntuleyici, kullanicilar/izinler, sertifikalar ve daha fazlasini goruntuleyin. Zaman serisi gecmis grafiklerini ve ntfy ile webhook destekli esik tabanli uyarilari icerir.
-
-</td>
-<td width="50%" valign="top">
-
-**Kullanici Kimlik Dogrulama:**
-Yonetici kontrolleri (diger kullanicilarin bilgilerini duzenleyebilir), OIDC/LDAP/SSO (erisim kontrollu), 2FA (TOTP) ve passkey (WebAuthn) destegi ile guvenli kullanici yonetimi. Tum platformlardaki aktif kullanici oturumlarini goruntuleyin ve izinleri iptal edin. OIDC/Yerel hesaplarinizi birbirine baglayin. Tum kullanicilarin islemlerinin denetim gunlugunu goruntuleyin.
+**Dosya yöneticisi:**
+SFTP üzerinden dosyalara göz atın, düzenleyin, yükleyin, indirin, yeniden adlandırın, taşıyın ve silin; sudo da kullanılabilir. Kod, görsel, ses ve videoyu görüntüleyip düzenleyin. Dosyaları doğrudan bir sunucudan diğerine kopyalayın; en hızlı yol sizin için seçilir ve aktarımların bütünlüğü doğrulanır.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Tailscale Entegrasyonu:**
-Tailscale aginizdaki cihazlari listeleyerek hizlica ana bilgisayar olarak ekleyin ve kimlik dogrulama yontemi olarak Tailscale SSH kullanarak baglanin; bu sayede ag ACL'leriniz kimlik bilgileri depolamadan yetkilendirmeyi yonetir.
+**Docker ve Podman:**
+Kapsayıcıları başlatın, durdurun, duraklatın ve silin, durumlarını izleyin ve içlerinde bir kabuk açın. Hem Docker hem Podman ile çalışır. Portainer ya da Dockge'nin yerini almak için değil, hâlihazırdaki kapsayıcılarınızı yönetmek için tasarlandı.
 
 </td>
 <td width="50%" valign="top">
 
-**RBAC/Paylasim:**
-Roller olusturun ve ana bilgisayarlari kullanicilar/roller arasinda paylasin. Tum kimlik dogrulama turlerini ve tum ana bilgisayar protokollerini destekler.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Seri Baglantilar:**
-Seri cihazlara (router, switch, mikrodenetleyici vb.) dogrudan tarayici veya masaustu uygulamasindan baglanin. Baud hizi, veri bitleri, durdurma bitleri ve parite yapilandirin. Desteklenen tarayicilarda Web Serial API, Electron uygulamasinda yerel arka ucu kullanir.
-
-</td>
-<td width="50%" valign="top">
-
-**Uyarilar:**
-Ana bilgisayar metrikleri (CPU, bellek, disk vb.) icin esik tabanli uyari kurallari belirleyin ve tetiklendiklerinde ntfy veya webhook araciligiyla bildirim alin. Gecmis gunlugunde tetiklenen ve cozulen uyarilari goruntuleyin.
+**Sunucu yöneticisi:**
+Sunucularınızı etiketlerle ve isim ve renk verebileceğiniz iç içe klasörlerle düzenleyin. Kayıtlı kimlik bilgilerini birden çok sunucuda kullanın, SSH anahtarlarını otomatik dağıtın, sunucuları bir üst sunucunun altında toplayın, toplu düzenleyip dışa aktarın ve kaydetmek istemediğiniz tek seferlik bağlantılar için hızlı bağlantıyı kullanın.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Ana Sayfa:**
-Surukleme ve birakma widget izgarasina sahip tamamen ozellestirilebilir bir ana sayfa. Ana bilgisayar durumu, hizmet baglantilari, saatler, notlar, RSS besleme, hava durumu, Docker konteynerleri, ana bilgisayar metrik grafikleri, gomulu terminaller, iframe ve daha fazlasi icin widget ekleyin.
+**Sunucu ölçümleri:**
+Çoğu Linux sunucusunda CPU, bellek, disk, ağ, sıcaklık, çalışma süresi, süreçler, portlar, oturum açmalar ve sistem bilgisi; geçmiş grafikleriyle birlikte. Yönetim kartları sayesinde servisleri, cron görevlerini, paketleri, kullanıcıları, güvenlik duvarı kurallarını, WireGuard'ı, Tailscale'i, SSL sertifikalarını, günlükleri ve sağlık kontrollerini Termix'ten çıkmadan yönetirsiniz.
 
 </td>
 <td width="50%" valign="top">
 
-**Veritabani Sifreleme:**
-Arka uc, sifrelenmis SQLite veritabani dosyalari olarak depolanir. Daha fazla bilgi icin [belgelere](https://docs.termix.site) bakin.
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Ag Grafigi:**
-Kontrol panelinizi, SSH baglantilariniza dayali olarak ev laboratuvarinizi durum destegi ile gorselletirmek icin ozellestirin.
-
-</td>
-<td width="50%" valign="top">
-
-**SSH Araclari:**
-Tek tiklamayla calistirilan yeniden kullanilabilir komut parcaciklari olusturun. Birden fazla acik terminalde ayni anda tek bir komut calistirin.
+**Otomasyonlar:**
+Bir tetikleyici seçin, sonra ne olacağını söyleyin. Tetikleyiciler arasında bir ölçümün eşiği aşması, bir sunucunun düşmesi veya geri gelmesi, sağlık kontrolünün değişmesi, bir zamanlama, bir kapsayıcı olayı ya da gelen bir webhook var. Adımlar komut ve parçacık çalıştırabilir, kapsayıcı ve tünelleri yönetebilir, bir makineyi uyandırabilir, bir adrese istek atabilir, bekleyebilir, koşula göre dallanabilir, başka bir otomasyonu çalıştırabilir ve ntfy, Discord ya da webhook ile size haber verebilir. Deneme çalıştırmaları ile önce güvenle test edersiniz.
 
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 
-**Kalici Sekmeler:**
-Kullanici profilinde etkinlestirilmisse SSH oturumlari ve sekmeler cihazlar/yenilemeler arasinda acik kalir.
+**Filolar:**
+Sunucuları tek tek seçerek ya da etiket kurallarıyla bir filoda toplayın; yeni sunucular kendiliğinden katılsın. Tek bir komutu tüm sunucularda aynı anda çalıştırın, hepsine dosya gönderip hepsinden dosya alın, paket kurun ve işletim sistemi, çekirdek, mimari ve çalışma süresi dökümünü toplayın.
+
+</td>
+<td width="50%" valign="top">
+
+**Yapay zekâ asistanı:**
+İsteğe bağlıdır ve siz açana kadar kapalıdır. OpenAI, Anthropic, Gemini, Ollama ya da OpenAI uyumlu herhangi bir uç noktayı bağlayın ve kurulumunuz hakkında sorular sorun. Sunucuları, filoları, parçacıkları ve uyarıları okuyabilir; değişiklikleri kendisi yapmak yerine onayınıza sunar. Kimlik bilgilerine, kullanıcılara ve ayarlara asla erişemez. Yöneticiler tüm kurulum için kapalı bırakabilir, siz de kurulum sırasında gizleyebilirsiniz.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Giriş ve kullanıcılar:**
+Yerel hesapların yanında OIDC, LDAP, GitHub ve Google ile giriş; iki adımlı doğrulama (TOTP), geçiş anahtarları (WebAuthn) ve güvenilir cihazlar. Yöneticiler kullanıcıları yönetebilir, OIDC gruplarını rollerle eşleştirebilir, tüm platformlardaki etkin oturumları görüp sonlandırabilir. Yerel ve OIDC hesaplarınızı birbirine bağlayın ve herkesin ne yaptığını denetim günlüğünden okuyun.
+
+</td>
+<td width="50%" valign="top">
+
+**Roller ve paylaşım:**
+Roller oluşturun ve sunucuları kullanıcılar veya rollerle dört düzeyde paylaşın: bağlanma, görüntüleme, düzenleme ve yönetme. Tüm kimlik doğrulama türleri ve tüm protokollerle çalışır, paylaşılan bir sunucuda kullanılan kimlik bilgilerini değiştirebilirsiniz.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Uyarılar:**
+CPU, bellek ve disk gibi sunucu ölçümlerine kurallar koyun ve tetiklendiklerinde ntfy, Discord veya webhook ile haberdar olun. Devam eden ve çözülen uyarıları geçmişte görün, ilgilenmediklerinizi kapatın.
+
+</td>
+<td width="50%" valign="top">
+
+**Ana sayfa:**
+Kendi kurduğunuz, sürükle bırak çalışan bir bileşen ızgarası. Sunucu durumu, ping, servis bağlantıları, yer imleri, arama, saatler, takvimler, geri sayımlar, notlar, RSS, hava durumu, görseller, gömülü sayfalar, Docker, tüneller, ölçüm grafikleri, kendi API'leriniz ve hatta canlı bir terminal için bileşenler var.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Parçacıklar ve araçlar:**
+Sık kullandığınız komutları kaydedin ve tek tıkla çalıştırın; sunucu için ve kendi girdileriniz için değişkenler kullanabilirsiniz. Aynı komutu açık olan tüm terminallerde çalıştırın, komut geçmişinizde tamamlamayla arama yapın.
+
+</td>
+<td width="50%" valign="top">
+
+**Oturum paylaşımı:**
+Canlı bir terminal, RDP, VNC veya Telnet oturumunu paylaşın. Hesap gerekmeden katılınabilen bir bağlantı gönderin ya da belirli bir Termix kullanıcısıyla, salt okunur veya yazma yetkili olarak paylaşın. Paylaşımlar kendiliğinden sona erebilir veya istediğiniz an iptal edilebilir; tümüyle ya da sunucu bazında kapatılabilir.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Oturum kaydı ve günlükler:**
+Terminal, RDP ve VNC oturumlarını kaydedin ve sonra izleyin. Bir oturumun düz metin günlüğünü indirin, bağlantı günlüğüne bakarak bağlantı sırasında tam olarak ne olduğunu görün.
+
+</td>
+<td width="50%" valign="top">
+
+**Seri bağlantılar:**
+Yönlendirici, anahtar ve mikrodenetleyici gibi seri cihazlarla tarayıcıdan veya masaüstü uygulamasından konuşun. Baud hızını, veri bitlerini, dur bitlerini ve pariteyi ayarlayın. Destekleyen tarayıcılarda Web Serial API'yi, masaüstü uygulamasında yerel bir arka ucu kullanır.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Tailscale:**
+Tailnet'inizdeki cihazları çekip birkaç tıkla sunucu olarak ekleyin ve Tailscale SSH ile bağlanın; erişimi tailnet kurallarınız yönetsin, kimlik bilgisi saklamanız gerekmesin. Headscale ve özel uç noktalar da çalışır.
+
+</td>
+<td width="50%" valign="top">
+
+**Proxmox:**
+Sunucuları doğrudan bir Proxmox kurulumundan içe aktarın; düğüm ve misafir makinelerin CPU, bellek ve depolama dahil durumlarını kendi sekmesinde izleyin.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Çalışma alanları ve sekmeler:**
+Bir sekme grubunu bölünmüş düzeniyle birlikte kaydedin ve hepsini tek tıkla yeniden açın. Termix son oturumunuzu da hatırlar, böylece sayfayı yenileseniz de başka cihaza geçseniz de sekmeleriniz geri gelir.
+
+</td>
+<td width="50%" valign="top">
+
+**Rehberli kurulum:**
+Kısa bir kurulum, arayüz ön ayarını, temanızı, istediğiniz özellikleri ve ilk sunucunuzu seçmenizde size yol gösterir. Basit kip kullanmadığınız şeyleri gizler; kurulumu istediğiniz zaman yeniden çalıştırabilir veya ön ayarı değiştirebilirsiniz.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Bağımsız masaüstü ve eşitleme:**
+Masaüstü uygulaması kendi arka ucu ve veritabanıyla tek başına, sunucusuz çalışır. İsterseniz bir Termix sunucusuna bağlayıp sunucuları, kimlik bilgilerini, parçacıkları ve fazlasını iki yönlü eşitleyebilir, bağlantıların kendi makinenizden mi yoksa sunucu üzerinden mi kurulacağını seçebilirsiniz.
+
+</td>
+<td width="50%" valign="top">
+
+**Komut satırı:**
+Kabuğunuz ve betikleriniz için bir `termix` CLI'ı. Terminal açın, tek bir sunucuda veya tüm filoda komut çalıştırın, SFTP ile dosya taşıyın ve sunucuları, parçacıkları ve kimlik bilgilerini yönetin. `npm install -g @termix-cli/cli` ile kurun ya da bağımsız bir çalıştırılabilir dosya edinin. [CLI belgelerine](https://docs.termix.site/cli) bakın.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+**Güvenlik:**
+Parolalar, anahtarlar ve diğer gizli bilgiler kullanıcı bazında şifrelenir, veritabanı dosyalarının kendisi de diskte şifrelenebilir. Nasıl çalıştığı için [belgelere](https://docs.termix.site/security) bakın.
 
 </td>
 <td width="50%" valign="top">
 
 **Diller:**
-Yaklasik 30 dil icin yerlesik destek ([Crowdin](https://docs.termix.site/translations) tarafindan yonetilir).
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-**Oturum Paylasimi:**
-Canli bir terminal, RDP, VNC veya Telnet oturumunu baskalariyla gercek zamanli olarak paylasin. Bir baglanti uzerinden (anonim olarak katilir, hesap gerekmez) veya belirli bir Termix kullanicisiyla paylasin ve salt okunur veya okuma/yazma erisimi secin. Paylasimlar otomatik olarak sona erebilir veya istediginiz zaman iptal edilebilir; oturum paylasimi genel olarak veya sunucu bazinda acilip kapatilabilir.
-
-</td>
-<td width="50%" valign="top">
-
-**Bagimsiz Masaustu + Cift Yonlu Senkronizasyon:**
-Electron masaustu uygulamasi, kendi yerel arka ucu ve veritabaniyla tamamen bagimsiz calisir, sunucu gerekmez. Istege bagli olarak sunucular, kimlik bilgileri, kod parcaciklari ve daha fazlasinin otomatik cift yonlu senkronizasyonu icin uzak bir Termix sunucusuna baglayin ve SSH baglantilarinin yerel olarak mi yoksa uzak sunucu uzerinden mi baslatilacagini secin.
+Yaklaşık 30 dil yerleşik olarak gelir, [Crowdin](https://docs.termix.site/translations) üzerinden yönetilir.
 
 </td>
 </tr>
@@ -210,43 +252,46 @@ Electron masaustu uygulamasi, kendi yerel arka ucu ve veritabaniyla tamamen bagi
 <br />
 
 <details>
-<summary><b>Daha fazla ozellik</b></summary>
+<summary><b>Daha fazla özellik</b></summary>
 <br />
 
-- **Kontrol Paneli** - Kontrol panelinizde sunucu bilgilerini bir bakista goruntuleyin
-- **API Anahtarlari** - Otomasyon/CI icin kullanilmak uzere son kullanma tarihleriyle kullanici kapsamli API anahtarlari olusturun
-- **Veri Disa/Ice Aktarma** - SSH ana bilgisayarlarini, kimlik bilgilerini ve dosya yoneticisi verilerini disa ve ice aktarin
-- **Otomatik SSL Kurulumu** - HTTPS yonlendirmeleriyle yerlesik SSL sertifika olusturma ve yonetimi
-- **Modern Arayuz** - React, Tailwind CSS ve Shadcn ile olusturulmus temiz masaustu/mobil uyumlu arayuz. Isik, karanlik, Dracula vb. dahil olmak uzere bircok farkli UI temasi arasından secim yapin. Herhangi bir baglantıyı tam ekranda acmak icin URL yollarini kullanin.
-- **Komut Gecmisi** - Daha once calistirilan SSH komutlarini otomatik tamamlayin ve goruntuleyin
-- **Hizli Baglanti** - Baglanti verilerini kaydetmeden bir sunucuya baglanin
-- **Komut Paleti** - Sol shift tusuna iki kez basarak SSH baglantilariniza klavyenizle hizlica erisin
-- **Proxmox Entegrasyonu** - Proxmox ornekinizden Termix'e otomatik olarak ana bilgisayar ekleyin
-- **SSH Zengin Ozellikler** - Atlama ana bilgisayarlari, Warpgate, TOTP tabanli baglantilar, SOCKS5, ana bilgisayar anahtar dogrulama, otomatik sifre doldurma, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal gunlukleme, SSH agent forwarding, Bitwarden SSH agent, HashiCorp Vault SSH imzalama ve dahasini destekler.
-- **Termix ID** - Termix'e entegre edilmis bir sshid.io esdegeri. Bir kullanici adi edinin, genel SSH anahtarlarinizi bir cozumleyici URL'sinde yayinlayin ve SSH sertifikalari vermek icin yerlesik bir CA kullanin.
+- **Kontrol paneli** - Kendi dizdiğiniz kartlarla sunucularınıza tek bakışta göz atın
+- **Ağ grafiği** - Ev laboratuvarınız sunucularınızdan çizilir, durum anlık gösterilir
+- **Tmux izleyici** - tmux oturumlarına, pencerelerine ve panellerine önizleme ve aramayla göz atın
+- **API anahtarları** - Betikler ve CI için, son kullanma tarihli kullanıcıya özel anahtarlar
+- **Dışa ve içe aktarma** - Sunucuları, kimlik bilgilerini ve dosya yöneticisi verilerini taşıyın
+- **Otomatik SSL** - Sertifikalar sizin için oluşturulur ve yenilenir, HTTPS yönlendirmesiyle birlikte; ya da kendi sertifikanızı kullanın
+- **Veritabanları** - Varsayılan SQLite, ayrıca PostgreSQL ve MySQL desteklenir
+- **Modern arayüz** - Masaüstü ve mobilde çalışan sade bir React arayüzü; açık, koyu ve Dracula gibi temalarla. Her bağlantı bir adresten tam ekran açılabilir
+- **Komut paleti** - Sol Shift'e iki kez basarak klavyeden bir sunucuya atlayın
+- **Klavye kısayolları** - Sekmeler arasında geçiş, sekme kapatma ve dahası, hepsi yeniden atanabilir
+- **Wake-on-LAN** - Bir makineyi Termix'ten ya da bir otomasyon adımından uyandırın
+- **Güvenilir vekil doğrulaması** - Girişi ters vekil sunucu halletsin ve kullanıcıyı aktarsın
+- **Zengin SSH desteği** - Atlama sunucuları, Warpgate, TOTP istekleri, SOCKS5, sunucu anahtarı doğrulama, parola otomatik doldurma, [OPKSSH](https://github.com/openpubkey/opkssh), tmux, port knocking, terminal günlüğü, aracı yönlendirme, Bitwarden SSH aracısı, HashiCorp Vault ile SSH imzalama ve dahası
+- **Termix ID** - sshid.io'nun yerleşik hali. Bir kullanıcı adı alın, açık anahtarlarınızı bir çözümleyici adresinde yayımlayın ve yerleşik CA ile SSH sertifikaları çıkarın
 
 </details>
 
 <br />
 
-## Platform Destegi
+## Platform desteği
 
 <table align="center">
 <tr>
 <th align="center">Platform</th>
-<th align="center">Dagitim</th>
+<th align="center">Dağıtım</th>
 </tr>
 <tr>
 <td align="center"><b>Web</b></td>
-<td>Herhangi bir modern tarayici (Chrome, Safari, Firefox) · PWA destegi</td>
+<td>Güncel her tarayıcı (Chrome, Safari, Firefox) · PWA desteği</td>
 </tr>
 <tr>
 <td align="center"><b>Windows</b> <sub>x64/ia32</sub></td>
-<td>Tasınabilir · MSI Yukleyici · Chocolatey</td>
+<td>Taşınabilir · MSI kurulumu · Chocolatey</td>
 </tr>
 <tr>
 <td align="center"><b>Linux</b> <sub>x64/ia32</sub></td>
-<td>Tasınabilir · AUR · AppImage · Deb · Flatpak</td>
+<td>Taşınabilir · AUR · AppImage · Deb · Flatpak</td>
 </tr>
 <tr>
 <td align="center"><b>macOS</b> <sub>x64/ia32, v12.0+</sub></td>
@@ -266,9 +311,9 @@ Electron masaustu uygulamasi, kendi yerel arka ucu ve veritabaniyla tamamen bagi
 
 ## Kurulum
 
-Termix'i tum platformlara nasil kuracaginiz hakkinda daha fazla bilgi icin Termix [Belgelerine](https://docs.termix.site/install) bakin.
+Tüm platformlar için ayrıntılı kurulum yönergelerini [Termix belgelerinde](https://docs.termix.site/install) bulabilirsiniz.
 
-Ornek bir Docker Compose dosyasi (uzak masaustu ozelliklerini kullanmayi planlamiyorsaniz `guacd` ve agi cikarabilirsiniz):
+Örnek Docker Compose dosyası (uzak masaüstünü kullanmayacaksanız `guacd` ve ağ kısmını çıkarabilirsiniz):
 
 ```yaml
 services:
@@ -305,19 +350,45 @@ networks:
     driver: bridge
 ```
 
+### Komut satırı
+
+Termix'in bir CLI'ı da var; sunucularınızı terminalden yönetebilir ve Termix'i kendi betiklerinizde kullanabilirsiniz.
+
+```bash
+npm install -g @termix-cli/cli
+termix login --url https://termix.example.com
+termix ssh 1
+```
+
+Terminal açabilir, tek bir sunucuda veya tüm filoda komut çalıştırabilir, SFTP ile dosya taşıyabilir ve sunucuları, parçacıkları ve kimlik bilgilerini yönetebilir. Belgelerin tamamı [docs.termix.site/cli](https://docs.termix.site/cli) adresinde.
+
+### Bulutta barındırma
+
+Termix sunucusunu kendi ağınız yerine bir VPS üzerinde de çalıştırabilirsiniz. Termix yönettiği ağın içinde çalışıyorsa, bir kesinti onu da beraberinde götürür; hem de tam onu tamir için kullanmanız gereken anda. Dışarıda çalıştırmak erişilebilir kalmasını sağlar, sabit bir IP verir ve VPN ya da port yönlendirme olmadan her yerden girmenize izin verir.
+
+[GINERNET](https://docs.termix.site/install/ginernet) Termix'e sponsor oluyor ve belgelerde onların VPS platformuna kurulum için adım adım bir rehber var.
+
 <br />
 
-## Bağış Yapın
+## Telemetri
 
-Termix ücretsiz ve açık kaynaklıdır, abonelik veya ücretli plan yoktur. Faydalı buluyorsaniz, sunucu maliyetleri, alan adlari ve gelistirme suresine katkida bulunmak icin bagis yapmayi dusunebilirsiniz. Bagislar ayrica SAML, Kubernetes ve Agent destegi gibi ozellikleri gelistirmek icin gereken arastirma ve ogrenme suresini finanse etmeye yardimci olur. Ilerlemeyi takip edin ve asagidan bagis yapin.
+Termix günde bir kez küçük ve anonim bir sinyal gönderir; böylece kaç kurulumun çalıştığını ve hangi özelliklerin kullanıldığını görebiliyorum. İçinde rastgele bir kurulum kimliği, kaç kullanıcı ve sunucunuz olduğu, uygulama sürümü ve son 24 saatte hangi özelliklerin (terminal, dosya yöneticisi, tüneller, docker vb.) kullanıldığı yer alır. İçinde asla kullanıcı adları, sunucu adları, IP adresleri, kimlik bilgileri ya da sizi veya sunucularınızı tanımlayan başka bir şey bulunmaz.
 
-[Bağış Yapın](https://donate.termix.site/)
+Varsayılan olarak açıktır. Yönetici ayarlarında Genel bölümünden kapatabilir ya da Termix'i hiç başlatmadan önce `ENABLE_TELEMETRY=false` tanımlayabilirsiniz.
+
+<br />
+
+## Bağış
+
+Termix ücretsiz ve açık kaynaklıdır; abonelik ya da ücretli plan yoktur. İşinize yarıyorsa, sunucu, alan adı ve geliştirme süresi masraflarına katkı için bağış yapmayı düşünün. Bağışlar ayrıca SAML, Kubernetes ve aracı desteği gibi özellikler için gereken araştırma ve öğrenme süresini karşılar. İlerlemeyi aşağıdan izleyip bağış yapabilirsiniz.
+
+[Bağış yap](https://donate.termix.site/)
 
 <br />
 
 ## Sponsorlar
 
-Gelistirmeyi desteklemek icin ucretli bir yerlesim ile ilgileniyor musunuz? [mail@termix.site](mailto:mail@termix.site) adresine e-posta gonderin.
+Geliştirmeyi desteklemek için ücretli bir yerleşim ilginizi çeker mi? [mail@termix.site](mailto:mail@termix.site) adresine yazın.
 
 <div align="center">
 
@@ -339,10 +410,6 @@ Gelistirmeyi desteklemek icin ucretli bir yerlesim ile ilgileniyor musunuz? [mai
   <img src="https://sirv.sirv.com/website/screenshots/cloudflare/cloudflare-logo.png?w=300" height="40" alt="Cloudflare" />
 </a>
 &nbsp;&nbsp;&nbsp;
-<a href="https://tailscale.com/">
-  <img src="https://drive.google.com/uc?export=view&id=1lIxkJuX6M23bW-2FElhT0rQieTrzaVSL" height="40" alt="Tailscale" />
-</a>
-&nbsp;&nbsp;&nbsp;
 <a href="https://akamai.com/">
   <img src="https://upload.wikimedia.org/wikipedia/commons/8/8b/Akamai_logo.svg" height="40" alt="Akamai" />
 </a>
@@ -354,18 +421,21 @@ Gelistirmeyi desteklemek icin ucretli bir yerlesim ile ilgileniyor musunuz? [mai
 <a href="https://rackgenius.com/">
   <img src="https://rackgenius.com/rackgenius-logo.png" height="40" alt="Rack Genius" />
 </a>
-
+&nbsp;&nbsp;&nbsp;
+<a href="https://ginernet.com/">
+  <img src="https://ginernet.com/img/logo-web.png" height="40" alt="Ginernet" />
+</a>
 </div>
 
 <br />
 
 ## Destek
 
-Termix ile ilgili yardima ihtiyaciniz varsa veya bir ozellik talep etmek istiyorsaniz, [Sorunlar](https://github.com/Termix-SSH/Support/issues) sayfasini ziyaret edin, giris yapin ve `New Issue` butonuna basin. Lutfen sorununuzu mumkun oldugunca ayrintili yazin, tercihen Ingilizce olarak. Ayrica [Discord](https://discord.gg/jVQGdvHDrf) sunucusuna katilabilir ve destek kanalini ziyaret edebilirsiniz, ancak yanit sureleri daha uzun olabilir.
+Yardıma mı ihtiyacınız var ya da bir özellik mi istiyorsunuz? [Yeni bir konu](https://github.com/Termix-SSH/Support/issues) açın ve olabildiğince ayrıntı ekleyin, mümkünse İngilizce yazın. [Discord](https://discord.gg/jVQGdvHDrf) üzerindeki destek kanalında da sorabilirsiniz, ancak oradaki yanıtlar daha uzun sürebilir.
 
 <br />
 
-## Ekran Goruntuleri
+## Ekran görüntüleri
 
 <div align="center">
 
@@ -373,7 +443,7 @@ Termix ile ilgili yardima ihtiyaciniz varsa veya bir ozellik talep etmek istiyor
 
 [![YouTube](../repo-images/YouTube.png)](https://www.youtube.com/@TermixSSH/videos)
 
-<sub>YouTube'da guncelleme ozetlerini izleyin</sub>
+<sub>Güncelleme tanıtımlarını YouTube'da izleyin</sub>
 
 <br />
 <br />
@@ -413,18 +483,18 @@ Termix ile ilgili yardima ihtiyaciniz varsa veya bir ozellik talep etmek istiyor
 </tr>
 </table>
 
-<sub>Bazi videolar ve gorseller guncel olmayabilir veya ozellikleri tam olarak yansitmayabilir.</sub>
+<sub>Bazı videolar ve görseller güncelliğini yitirmiş ya da özellikleri tam olarak göstermiyor olabilir.</sub>
 
 </div>
 
 <br />
 
-## Planlanan Ozellikler
+## Planlanan özellikler
 
-Tum planlanan ozellikler icin [Projeler](https://github.com/orgs/Termix-SSH/projects/5) sayfasina bakin. Katkida bulunmak istiyorsaniz, [Katkida Bulunma](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) sayfasina bakin.
+Planlanan tüm özellikler [Projects](https://github.com/orgs/Termix-SSH/projects/5) sayfasında. Katkıda bulunmak isterseniz [Contributing](https://github.com/Termix-SSH/Termix/blob/main/CONTRIBUTING.md) dosyasına bakın.
 
 <br />
 
 ## Lisans
 
-Apache Lisansi Surumu 2.0 altinda dagitilmaktadir. Daha fazla bilgi icin `LICENSE` dosyasina bakin.
+Apache Lisansı Sürüm 2.0 ile dağıtılır. Ayrıntılar için `LICENSE` dosyasına bakın.

@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { Request, RequestHandler, Router } from "express";
 import type {
   AuthenticationResponseJSON,
@@ -18,6 +19,7 @@ import { AuthManager } from "../../utils/auth-manager.js";
 import { authLogger } from "../../utils/logger.js";
 import {
   generateDeviceFingerprint,
+  getDeviceId,
   parseUserAgent,
 } from "../../utils/user-agent-parser.js";
 import {
@@ -321,7 +323,7 @@ export function registerUserWebAuthnRoutes(
         authLogger.warn("WebAuthn registration failed", {
           operation: "webauthn_register_verify",
           userId,
-          error: error instanceof Error ? error.message : "Unknown",
+          error: getErrorMessage(error, "Unknown"),
         });
         res.status(400).json({ error: "Passkey registration failed" });
       }
@@ -487,11 +489,13 @@ export function registerUserWebAuthnRoutes(
       );
 
       if (userRecord.totpEnabled) {
-        const deviceFingerprint = generateDeviceFingerprint(deviceInfo);
-        const isTrusted = await authManager.isTrustedDevice(
-          userRecord.id,
-          deviceFingerprint,
+        const deviceFingerprint = generateDeviceFingerprint(
+          deviceInfo,
+          getDeviceId(req),
         );
+        const isTrusted = deviceFingerprint
+          ? await authManager.isTrustedDevice(userRecord.id, deviceFingerprint)
+          : false;
 
         if (!isTrusted) {
           const tempToken = await authManager.generateJWTToken(userRecord.id, {
@@ -536,7 +540,7 @@ export function registerUserWebAuthnRoutes(
         operation: "webauthn_auth_verify",
         credentialId: credential.id,
         userId: credential.userId,
-        error: error instanceof Error ? error.message : "Unknown",
+        error: getErrorMessage(error, "Unknown"),
       });
       res.status(401).json({ error: "Passkey authentication failed" });
     }

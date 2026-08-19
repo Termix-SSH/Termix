@@ -8,26 +8,31 @@ import React, {
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/button";
-import { ArrowLeft, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, Search, X } from "lucide-react";
+import { useUiPreference } from "@/contexts/UiPreferencesContext";
 import { toast } from "sonner";
 import {
   getSSHHosts,
   getCredentials,
+  getCredentialDetails,
   deleteCredential,
+  updateCredential,
   deployCredentialToHost,
   renameCredentialFolder,
   getLinkedCredentialIds,
 } from "@/main-axios";
 
 import type { Host, Credential } from "@/types/ui-types";
+import type { SSHHostWithStatus } from "@/main-axios";
+import type {
+  CredentialSidebarFilterState,
+  CredentialSortKey,
+} from "@/types/credential-sidebar-preferences";
 import { CredentialEditorView } from "./CredentialEditorView";
 import { HostEditor } from "./HostEditor";
 import { mapCredentials, sshHostToHost } from "./HostManagerData";
-import { HostCredentialList } from "./HostCredentialList";
-import type {
-  CredentialFilterState,
-  CredentialSortKey,
-} from "./CredentialsPanel";
+import { CredentialSidebarTree } from "./credential-tree";
+import { sortCredentials, credentialPassesFilters } from "./credential-sort";
 import {
   makeCredentialTabs,
   makeHostTabs,
@@ -36,43 +41,6 @@ import {
   TabStrip,
 } from "./HostManagerTabs";
 
-function sortCredentials(
-  creds: Credential[],
-  key: CredentialSortKey,
-): Credential[] {
-  if (key === "default") return creds;
-  const sorted = [...creds];
-  switch (key) {
-    case "name-asc":
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
-      break;
-    case "name-desc":
-      sorted.sort((a, b) => b.name.localeCompare(a.name));
-      break;
-    case "username-asc":
-      sorted.sort((a, b) => a.username.localeCompare(b.username));
-      break;
-    case "username-desc":
-      sorted.sort((a, b) => b.username.localeCompare(a.username));
-      break;
-  }
-  return sorted;
-}
-
-function credentialPassesFilters(
-  cred: Credential,
-  filters: CredentialFilterState,
-): boolean {
-  if (filters.type.length > 0 && !filters.type.includes(cred.type))
-    return false;
-  if (
-    filters.tags.length > 0 &&
-    !filters.tags.some((tag) => cred.tags?.includes(tag))
-  )
-    return false;
-  return true;
-}
-
 export function HostManager({
   pendingEditId,
   pendingAction,
@@ -80,7 +48,11 @@ export function HostManager({
   hideListHeader,
   externalSearch,
   externalSort,
+  externalArrangeLocked = true,
   externalFilter,
+  density = "comfortable",
+  trayTrigger = "hover",
+  showTags = true,
   onTagsChange,
   active = true,
 }: {
@@ -90,7 +62,11 @@ export function HostManager({
   hideListHeader?: boolean;
   externalSearch?: string;
   externalSort?: CredentialSortKey;
-  externalFilter?: CredentialFilterState;
+  externalArrangeLocked?: boolean;
+  externalFilter?: CredentialSidebarFilterState;
+  density?: "comfortable" | "compact";
+  trayTrigger?: "always" | "hover" | "click" | "actionsOnly";
+  showTags?: boolean;
   onTagsChange?: (tags: string[]) => void;
   active?: boolean;
 } = {}) {
@@ -115,12 +91,18 @@ export function HostManager({
     message: string;
     onConfirm: () => void;
   } | null>(null);
+  const [hostEditorDirty, setHostEditorDirty] = useState(false);
+  const [showUnsavedHostDialog, setShowUnsavedHostDialog] = useState(false);
   const [editingProtocols, setEditingProtocols] = useState({
     enableSsh: true,
     enableRdp: false,
     enableVnc: false,
     enableTelnet: false,
   });
+  const simpleEditor = useUiPreference("hostEditor", "mode") === "simple";
+  // Expanding advanced is a per-session choice; fixing one host's SSH options
+  // shouldn't quietly move the whole app off the Simple preset.
+  const [showAdvancedEditor, setShowAdvancedEditor] = useState(false);
   const hostsRef = useRef<Host[]>([]);
   useEffect(() => {
     hostsRef.current = hosts;
@@ -280,9 +262,22 @@ export function HostManager({
     externalSort ?? "default",
   );
 
-  const credentialFolders = Array.from(
+  const credentialFolderNames = Array.from(
     new Set(filteredCredentials.map((c) => c.folder || "Uncategorized")),
   ).sort();
+  const credentialFolderTree = credentialFolderNames.map((name) => ({
+    name,
+    children: filteredCredentials.filter(
+      (c) => (c.folder || "Uncategorized") === name,
+    ),
+  }));
+  const usedByCounts = new Map<string, number>();
+  for (const cred of filteredCredentials) {
+    usedByCounts.set(
+      cred.id,
+      allHosts.filter((h) => h.credentialId === cred.id).length,
+    );
+  }
 
   const handleRenameCredentialFolder = async (
     folder: string,
@@ -292,9 +287,28 @@ export function HostManager({
       await renameCredentialFolder(folder, newName);
       const res = await getCredentials();
       setCredentials(mapCredentials(res));
-      toast.success(t("hosts.folderRenamedTo", { name: newName }));
+      toast.success(t("credentials.folderRenamedTo", { name: newName }));
     } catch {
-      toast.error(t("hosts.failedToRenameFolder"));
+      toast.error(t("credentials.failedToRenameFolder"));
+    }
+  };
+
+  const handleMoveCredentialToFolder = async (
+    credentialId: string,
+    targetFolder: string,
+  ) => {
+    const cred = credentials.find((c) => c.id === credentialId);
+    if (!cred || (cred.folder || "Uncategorized") === targetFolder) return;
+    const folderValue = targetFolder === "Uncategorized" ? "" : targetFolder;
+    try {
+      await updateCredential(Number(credentialId), { folder: folderValue });
+      setCredentials((prev) =>
+        prev.map((c) =>
+          c.id === credentialId ? { ...c, folder: folderValue } : c,
+        ),
+      );
+    } catch {
+      toast.error(t("credentials.failedToMoveCredential"));
     }
   };
 
@@ -303,23 +317,100 @@ export function HostManager({
     setCredentials((prev) => prev.filter((c) => c.id !== cred.id));
   };
 
+  function handleConfirmDeleteCredential(cred: Credential) {
+    setConfirmDialog({
+      message: t("credentials.deleteCredentialConfirm", { name: cred.name }),
+      onConfirm: async () => {
+        try {
+          await handleDeleteCredential(cred);
+          toast.success(
+            t("credentials.deletedCredential", { name: cred.name }),
+          );
+        } catch {
+          toast.error(t("credentials.failedToDeleteCredential"));
+        }
+      },
+    });
+  }
+
+  async function handleEditCredential(cred: Credential) {
+    try {
+      const full = (await getCredentialDetails(Number(cred.id))) as {
+        hasKey?: boolean;
+        hasKeyPassword?: boolean;
+        password?: string;
+        certPublicKey?: string;
+      };
+      setEditingCredential({
+        ...cred,
+        value: full.hasKey ? "existing_key" : (full.password ?? ""),
+        password: full.password ?? "",
+        passphrase: full.hasKeyPassword ? "existing_key_password" : "",
+        publicKey: full.certPublicKey ?? cred.publicKey,
+      });
+      setActiveCredentialTab("general");
+    } catch {
+      setEditingCredential(cred);
+      setActiveCredentialTab("general");
+    }
+  }
+
   // Editor view: full-width with top tab bar instead of side nav
+  const closeHostEditor = () => {
+    setHostEditorDirty(false);
+    setShowUnsavedHostDialog(false);
+    setEditingHost(null);
+    setActiveHostTab("general");
+  };
+
+  const requestCloseHostEditor = () => {
+    if (hostEditorDirty) {
+      setShowUnsavedHostDialog(true);
+      return;
+    }
+    closeHostEditor();
+  };
+
   const renderEditorView = () => {
     const isHost = !!editingHost;
+    // Simple mode keeps General and SSH -- between them they hold everything
+    // needed to reach a host (name, address, username, auth) -- and hides the
+    // other protocol tabs plus the seven SSH sub-tabs. Nothing is lost:
+    // createHostEditorForm still materializes every field with its default and
+    // buildHostEditorPayload still serializes all of them, so hiding a tab
+    // hides its inputs, not its values.
+    const collapseAdvanced = isHost && simpleEditor && !showAdvancedEditor;
     const tabs = isHost
       ? makeHostTabs(t).filter((tab) => {
           if (tab.id === "general") return true;
           if (tab.id === "ssh") return editingProtocols.enableSsh;
+          if (collapseAdvanced) return false;
           if (tab.id === "rdp") return editingProtocols.enableRdp;
           if (tab.id === "vnc") return editingProtocols.enableVnc;
           if (tab.id === "telnet") return editingProtocols.enableTelnet;
           return false;
         })
       : makeCredentialTabs(t);
-    const activeTab = isHost ? activeHostTab : activeCredentialTab;
+    // Collapsing while on a now-hidden tab would leave nothing selected. The
+    // SSH group collapses to its own "ssh" tab, everything else to General.
+    // The top-level strip only lists general/ssh/rdp/vnc/telnet -- the SSH
+    // sub-tabs live in the secondary strip, so they count as visible whenever
+    // the SSH group is expanded.
+    const hostTabVisible =
+      tabs.some((tab) => tab.id === activeHostTab) ||
+      (!collapseAdvanced &&
+        editingProtocols.enableSsh &&
+        SSH_GROUP_TABS.has(activeHostTab as never));
+    const effectiveHostTab = hostTabVisible
+      ? activeHostTab
+      : collapseAdvanced && SSH_GROUP_TABS.has(activeHostTab as never)
+        ? "ssh"
+        : "general";
+    const activeTab = isHost ? effectiveHostTab : activeCredentialTab;
     const setActiveTab = isHost ? setActiveHostTab : setActiveCredentialTab;
     const showSshSubTabs =
       isHost &&
+      !collapseAdvanced &&
       editingProtocols.enableSsh &&
       SSH_GROUP_TABS.has(activeHostTab as never);
     const sshSubTabs = makeHostSshSubTabs(t);
@@ -331,8 +422,7 @@ export function HostManager({
           <button
             onClick={() => {
               if (isHost) {
-                setEditingHost(null);
-                setActiveHostTab("general");
+                requestCloseHostEditor();
               } else {
                 setEditingCredential(null);
                 setActiveCredentialTab("general");
@@ -342,7 +432,9 @@ export function HostManager({
           >
             <ArrowLeft className="size-3.5 shrink-0" />
             <span>
-              {isHost ? t("hosts.backToHosts") : t("hosts.backToCredentials")}
+              {isHost
+                ? t("hosts.backToHosts")
+                : t("credentials.backToCredentials")}
             </span>
             {isHost && editingHost !== "new" && (
               <span
@@ -382,6 +474,22 @@ export function HostManager({
               variant="secondary"
             />
           )}
+          {isHost && simpleEditor && (
+            <button
+              onClick={() => {
+                if (showAdvancedEditor) setActiveHostTab("general");
+                setShowAdvancedEditor(!showAdvancedEditor);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors border-t border-border/50"
+            >
+              <ChevronDown
+                className={`size-3 transition-transform ${showAdvancedEditor ? "rotate-180" : ""}`}
+              />
+              {showAdvancedEditor
+                ? t("hosts.hideAdvancedSettings")
+                : t("hosts.showAdvancedSettings")}
+            </button>
+          )}
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 flex flex-col gap-3">
           {isHost ? (
@@ -390,13 +498,13 @@ export function HostManager({
                 editingHost === "new" ? "new-host" : (editingHost as Host).id
               }
               host={editingHost === "new" ? null : (editingHost as Host)}
-              activeTab={activeHostTab}
-              onBack={() => {
-                setEditingHost(null);
-                setActiveHostTab("general");
-              }}
+              activeTab={effectiveHostTab}
+              simpleMode={collapseAdvanced}
+              onBack={requestCloseHostEditor}
               onSave={(saved) => {
-                const updated = sshHostToHost(saved);
+                const updated = sshHostToHost(
+                  saved as unknown as SSHHostWithStatus,
+                );
                 setHosts((prev) => {
                   const idx = prev.findIndex((h) => h.id === updated.id);
                   if (idx >= 0) {
@@ -407,13 +515,13 @@ export function HostManager({
                   return [...prev, updated];
                 });
                 window.dispatchEvent(new CustomEvent("termix:hosts-changed"));
-                setEditingHost(null);
-                setActiveHostTab("general");
+                closeHostEditor();
               }}
               protocols={editingProtocols}
               onProtocolChange={(p) =>
                 setEditingProtocols((prev) => ({ ...prev, ...p }))
               }
+              onDirtyChange={setHostEditorDirty}
               onTabChange={setActiveHostTab}
               hosts={hosts}
               credentials={credentials}
@@ -443,20 +551,26 @@ export function HostManager({
                 setActiveCredentialTab("general");
               }}
               onSave={(saved) => {
+                // The save endpoints are typed as an untyped record; these are
+                // the fields this view reads back off the response.
+                const result = saved as Partial<Credential> & {
+                  id: number | string;
+                  authType?: string;
+                };
                 setCredentials((prev) => {
-                  const idx = prev.findIndex((c) => c.id === String(saved.id));
+                  const idx = prev.findIndex((c) => c.id === String(result.id));
                   const updated: Credential = {
-                    id: String(saved.id),
-                    name: saved.name,
-                    username: saved.username ?? "",
-                    type: saved.authType === "key" ? "key" : "password",
-                    value: saved.value,
-                    password: saved.password,
-                    publicKey: saved.publicKey,
-                    passphrase: saved.passphrase,
-                    description: saved.description,
-                    folder: saved.folder ?? "",
-                    tags: saved.tags ?? [],
+                    id: String(result.id),
+                    name: result.name ?? "",
+                    username: result.username ?? "",
+                    type: result.authType === "key" ? "key" : "password",
+                    value: result.value,
+                    password: result.password,
+                    publicKey: result.publicKey,
+                    passphrase: result.passphrase,
+                    description: result.description,
+                    folder: result.folder ?? "",
+                    tags: result.tags ?? [],
                   };
                   if (idx >= 0) {
                     const next = [...prev];
@@ -495,7 +609,7 @@ export function HostManager({
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t("hosts.searchCredentialsPlaceholder")}
+                  placeholder={t("credentials.searchCredentialsPlaceholder")}
                   className="flex-1 text-xs bg-transparent outline-none placeholder:text-muted-foreground/50 text-foreground min-w-0"
                 />
                 {searchQuery && (
@@ -510,29 +624,47 @@ export function HostManager({
             </div>
           )}
 
-          <HostCredentialList
-            credentialFolders={credentialFolders}
-            filteredCredentials={filteredCredentials}
-            credentialsLoading={credentialsLoading}
-            allHosts={allHosts}
-            editingFolderName={editingCredFolderName}
-            editingFolderValue={editingCredFolderValue}
-            termixIdLinkedIds={termixIdLinkedIds}
-            onEditingFolderNameChange={setEditingCredFolderName}
-            onEditingFolderValueChange={setEditingCredFolderValue}
-            onRenameFolder={handleRenameCredentialFolder}
-            onDeployCredential={(cred) => setDeployDialog({ cred, hostId: "" })}
-            onEditCredential={(cred) => {
-              setEditingCredential(cred);
-              setActiveCredentialTab("general");
-            }}
-            onDeleteCredential={handleDeleteCredential}
-            onAddCredential={() => {
-              setEditingCredential("new");
-              setActiveCredentialTab("general");
-            }}
-            onConfirmDialogChange={setConfirmDialog}
-          />
+          {!credentialsLoading && filteredCredentials.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <span className="text-sm font-semibold text-muted-foreground/60">
+                {t("credentials.noCredentialsFound")}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3 h-7 text-xs border-accent-brand/40 text-accent-brand hover:bg-accent-brand/10"
+                onClick={() => {
+                  setEditingCredential("new");
+                  setActiveCredentialTab("general");
+                }}
+              >
+                {t("credentials.addCredentialBtn")}
+              </Button>
+            </div>
+          ) : (
+            <CredentialSidebarTree
+              folders={credentialFolderTree}
+              usedByCounts={usedByCounts}
+              termixIdLinkedIds={termixIdLinkedIds}
+              query=""
+              loading={credentialsLoading}
+              arrangeLocked={externalArrangeLocked}
+              density={density}
+              trayTrigger={trayTrigger}
+              showTags={showTags}
+              editingFolderName={editingCredFolderName}
+              editingFolderValue={editingCredFolderValue}
+              onEditingFolderNameChange={setEditingCredFolderName}
+              onEditingFolderValueChange={setEditingCredFolderValue}
+              onRenameFolder={handleRenameCredentialFolder}
+              onMoveCredentialToFolder={handleMoveCredentialToFolder}
+              onDeployCredential={(cred) =>
+                setDeployDialog({ cred, hostId: "" })
+              }
+              onEditCredential={handleEditCredential}
+              onDeleteCredential={handleConfirmDeleteCredential}
+            />
+          )}
         </div>
       )}
 
@@ -562,13 +694,42 @@ export function HostManager({
         </div>
       )}
 
+      {showUnsavedHostDialog && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-popover border border-border shadow-xl w-full max-w-xs flex flex-col gap-4 p-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-semibold text-foreground">
+                {t("common.unsavedChanges")}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("hosts.unsavedChangesDescription")}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowUnsavedHostDialog(false)}
+                className="px-3 py-1.5 text-xs border border-border text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors"
+              >
+                {t("hosts.keepEditing")}
+              </button>
+              <button
+                onClick={closeHostEditor}
+                className="px-3 py-1.5 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded transition-colors"
+              >
+                {t("hosts.discardChanges")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Deploy credential dialog */}
       {deployDialog && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="bg-popover border border-border shadow-xl w-full max-w-sm flex flex-col gap-4 p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold">
-                {t("hosts.deploySSHKeyTitle")}
+                {t("credentials.deployDialogTitle")}
               </span>
               <button
                 onClick={() => setDeployDialog(null)}
@@ -578,11 +739,13 @@ export function HostManager({
               </button>
             </div>
             <div className="text-xs text-muted-foreground">
-              {t("hosts.deployDialogDesc", { name: deployDialog.cred.name })}
+              {t("credentials.deployDialogDesc", {
+                name: deployDialog.cred.name,
+              })}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                {t("hosts.targetHostLabel")}
+                {t("credentials.targetHostLabel")}
               </label>
               <select
                 className="flex h-9 w-full border border-border bg-background px-3 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
@@ -591,7 +754,7 @@ export function HostManager({
                   setDeployDialog({ ...deployDialog, hostId: e.target.value })
                 }
               >
-                <option value="">{t("hosts.selectHostOption")}</option>
+                <option value="">{t("credentials.selectHostOption")}</option>
                 {allHosts
                   .filter(
                     (h) =>
@@ -626,16 +789,18 @@ export function HostManager({
                       Number(deployDialog.cred.id),
                       Number(deployDialog.hostId),
                     );
-                    toast.success(t("hosts.keyDeployedSuccess"));
+                    toast.success(t("credentials.keyDeployedSuccess"));
                     setDeployDialog(null);
                   } catch {
-                    toast.error(t("hosts.failedToDeployKey2"));
+                    toast.error(t("credentials.failedToDeployKey"));
                   } finally {
                     setDeploying(false);
                   }
                 }}
               >
-                {deploying ? t("hosts.deployingBtn") : t("hosts.deployBtn")}
+                {deploying
+                  ? t("credentials.deployingBtn")
+                  : t("credentials.deployBtn")}
               </Button>
             </div>
           </div>

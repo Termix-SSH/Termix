@@ -1,5 +1,4 @@
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import {
   createCurrentVaultProfileRepository,
   createCurrentUserRepository,
@@ -93,11 +92,19 @@ router.get("/oidc/callback", async (req: Request, res: Response) => {
   const code = String(req.query.code || "");
   const oidcError = req.query.error ? String(req.query.error) : "";
 
+  const esc = (value: string): string =>
+    value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
   const html = (title: string, message: string) =>
-    `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+    `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
 <style>body{font-family:system-ui,sans-serif;background:#0b0b0c;color:#e5e5e5;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
 .card{max-width:420px;text-align:center;padding:24px;border:1px solid #2a2a2e;border-radius:8px}</style></head>
-<body><div class="card"><h2>${title}</h2><p>${message}</p>
+<body><div class="card"><h2>${esc(title)}</h2><p>${esc(message)}</p>
 <script>setTimeout(function(){window.close()},1500)</script></div></body></html>`;
 
   if (oidcError) {

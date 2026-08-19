@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express from "express";
 import { GuacamoleTokenService } from "./token-service.js";
 import { withRecordingSettings } from "./recording-settings.js";
@@ -21,6 +22,7 @@ import {
   getRequestMeta,
 } from "../../utils/audit-logger.js";
 import { resolveJumpTunnelEndpoint } from "./jump-tunnel-endpoint.js";
+import { buildRdpSettings, resolveRdpDomain } from "./rdp-settings.js";
 
 const router = express.Router();
 const tokenService = GuacamoleTokenService.getInstance();
@@ -284,7 +286,7 @@ router.post(
           guacLogger.warn("Failed to parse guacamole config", {
             operation: "guac_config_parse_error",
             hostId,
-            error: error instanceof Error ? error.message : "Unknown error",
+            error: getErrorMessage(error),
           });
         }
       }
@@ -355,7 +357,7 @@ router.post(
             operation: "guac_shared_secret_resolve",
             hostId,
             protocol: connectionType,
-            error: e instanceof Error ? e.message : "Unknown",
+            error: getErrorMessage(e, "Unknown"),
           });
         }
       } else {
@@ -385,7 +387,7 @@ router.post(
             guacLogger.warn("Failed to resolve RDP credential", {
               operation: "guac_rdp_credential_resolve",
               hostId,
-              error: e instanceof Error ? e.message : "Unknown",
+              error: getErrorMessage(e, "Unknown"),
             });
           }
         }
@@ -404,7 +406,7 @@ router.post(
             guacLogger.warn("Failed to resolve VNC credential", {
               operation: "guac_vnc_credential_resolve",
               hostId,
-              error: e instanceof Error ? e.message : "Unknown",
+              error: getErrorMessage(e, "Unknown"),
             });
           }
         }
@@ -426,7 +428,7 @@ router.post(
             guacLogger.warn("Failed to resolve Telnet credential", {
               operation: "guac_telnet_credential_resolve",
               hostId,
-              error: e instanceof Error ? e.message : "Unknown",
+              error: getErrorMessage(e, "Unknown"),
             });
           }
         }
@@ -472,8 +474,13 @@ router.post(
           username = "";
           password = "";
       }
-      const domain =
+      const storedDomain =
         (host.rdpDomain as string) || (host.domain as string) || "";
+      const domain = resolveRdpDomain(
+        rdpAuthTypeForConnect,
+        req.body?.promptedDomain,
+        storedDomain,
+      );
 
       // Establish SSH tunnel if jump hosts are configured
       let jumpHosts: Array<{ hostId: number }> = [];
@@ -618,22 +625,22 @@ router.post(
             hostname,
             username,
             password,
-            {
+            buildRdpSettings({
               port,
               domain,
               security:
                 (host.rdpSecurity as string) ||
                 (host.security as string) ||
                 undefined,
-              "ignore-cert":
+              ignoreCert:
                 host.rdpIgnoreCert !== undefined
                   ? !!host.rdpIgnoreCert
                   : host.ignoreCert !== undefined
                     ? !!host.ignoreCert
                     : true,
-              ...guacConfig,
-              ...guacdOverrides,
-            },
+              guacConfig,
+              guacdOverrides,
+            }),
             recordingMetadata,
             termixMeta,
           );

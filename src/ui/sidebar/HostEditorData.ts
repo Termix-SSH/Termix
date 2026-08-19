@@ -2,6 +2,10 @@ import { TERMINAL_THEMES } from "@/lib/terminal-themes";
 import type { Host } from "@/types/ui-types";
 import type { SSHHostData } from "@/types";
 import type { HostDefaults } from "@/api/settings-api";
+import type {
+  RemoteDesktopDefaults,
+  TerminalDefaults,
+} from "@/lib/connection-defaults";
 
 type HostSocks5ProxyNode = NonNullable<Host["socks5ProxyChain"]>[number];
 
@@ -23,6 +27,54 @@ export type HostBackspaceMode = NonNullable<
 export type HostFastScrollModifier = NonNullable<
   Host["terminalConfig"]
 >["fastScrollModifier"];
+
+export const terminalAppearanceKeys = [
+  "theme",
+  "cursorBlink",
+  "cursorStyle",
+  "fontSize",
+  "fontFamily",
+  "scrollback",
+  "letterSpacing",
+  "lineHeight",
+  "bellStyle",
+  "minimumContrastRatio",
+  "backgroundImage",
+  "backgroundImageOpacity",
+  "customThemeColors",
+] as const satisfies readonly (keyof TerminalDefaults)[];
+
+export const remoteDesktopDefaultKeys = [
+  "colorDepth",
+  "resizeMethod",
+  "forceLossless",
+  "disableAudio",
+  "enableWallpaper",
+  "enableFontSmoothing",
+  "enableDesktopComposition",
+  "enablePrinting",
+  "enableDrive",
+  "disableCopy",
+  "disablePaste",
+] as const satisfies readonly (keyof RemoteDesktopDefaults)[];
+
+export interface UserConnectionDefaults {
+  terminal: TerminalDefaults;
+  rdp: RemoteDesktopDefaults;
+}
+
+function hasOwn(value: object | undefined, key: PropertyKey): boolean {
+  return !!value && Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function stripKeys<T extends Record<string, unknown>>(
+  value: T,
+  keys: readonly string[],
+): Partial<T> {
+  const result = { ...value };
+  for (const key of keys) delete result[key];
+  return result;
+}
 
 type SnippetListItem = {
   id: number;
@@ -46,9 +98,19 @@ export function mapSnippetResponse(
 export function createHostEditorForm(
   host: Host | null,
   defaults?: HostDefaults,
+  connectionDefaults?: UserConnectionDefaults,
 ) {
   const d = host ? undefined : defaults;
-  const rawTheme = host?.terminalConfig?.theme ?? d?.theme;
+  const terminalConfig = {
+    ...(connectionDefaults?.terminal ?? {}),
+    ...(host?.terminalConfig ?? {}),
+  };
+  const remoteDefaults = host?.enableRdp ? connectionDefaults?.rdp : undefined;
+  const guacamoleConfig = {
+    ...(remoteDefaults ?? {}),
+    ...(host?.guacamoleConfig ?? {}),
+  };
+  const rawTheme = terminalConfig.theme ?? d?.theme;
   const normalizedTheme =
     !rawTheme ||
     ["Termix Dark", "Termix Light", "termixDark", "termixLight"].includes(
@@ -70,7 +132,7 @@ export function createHostEditorForm(
     authType: host?.authType ?? "password",
     useWarpgate: host?.useWarpgate ?? false,
     shareSshAuth: host?.shareSshAuth ?? false,
-    password: host?.password ?? "",
+    password: host?.hasPassword ? "existing_password" : (host?.password ?? ""),
     key: host?.key ?? (host?.hasKey ? "existing_key" : ""),
     keyPassword: host?.hasKeyPassword
       ? "existing_key_password"
@@ -83,6 +145,7 @@ export function createHostEditorForm(
     vaultProfileId: host?.vaultProfileId ?? "",
     overrideCredentialUsername: host?.overrideCredentialUsername ?? false,
     folder: host?.folder ?? "",
+    parentHostId: host?.parentHostId ?? "",
     tags: host?.tags ?? ([] as string[]),
     tagInput: "",
     notes: host?.notes ?? "",
@@ -110,6 +173,7 @@ export function createHostEditorForm(
     enableDocker: host?.enableDocker ?? false,
     dockerConfig: host?.dockerConfig ?? { runtime: "docker" as const },
     enableTmuxMonitor: host?.enableTmuxMonitor ?? false,
+    enableTerminalToolbar: host?.enableTerminalToolbar ?? true,
     allowSessionSharing: host?.allowSessionSharing ?? true,
     enableProxmox: host?.enableProxmox ?? false,
     proxmoxConfig: host?.proxmoxConfig ?? {
@@ -122,29 +186,43 @@ export function createHostEditorForm(
       syncIntervalMinutes: 15,
       markMissingGuests: true,
     },
+    enableProxmoxStats: host?.enableProxmoxStats ?? false,
+    proxmoxStatsConfig: host?.proxmoxStatsConfig ?? {
+      pollInterval: 60,
+      nodeName: null as string | null,
+    },
     enableTunnel: host?.enableTunnel ?? false,
     defaultPath: host?.defaultPath ?? "/",
     forceKeyboardInteractive: host?.forceKeyboardInteractive ?? false,
-    fontSize: host?.terminalConfig?.fontSize ?? d?.fontSize ?? 14,
+    inheritTerminalAppearance:
+      !host ||
+      terminalAppearanceKeys.every((key) => !hasOwn(host.terminalConfig, key)),
+    inheritRemoteDesktopDefaults:
+      !host ||
+      remoteDesktopDefaultKeys.every(
+        (key) => !hasOwn(host.guacamoleConfig, key),
+      ),
+    localEcho: host?.terminalConfig?.localEcho ?? "default",
+    fontSize: terminalConfig.fontSize ?? d?.fontSize ?? 14,
     fontFamily:
-      host?.terminalConfig?.fontFamily ??
+      terminalConfig.fontFamily ??
       d?.fontFamily ??
       "Caskaydia Cove Nerd Font Mono",
     theme: normalizedTheme,
-    cursorStyle: (host?.terminalConfig?.cursorStyle ??
-      d?.cursorStyle ??
-      "bar") as "block" | "underline" | "bar",
-    cursorBlink: host?.terminalConfig?.cursorBlink ?? d?.cursorBlink ?? true,
-    scrollback: host?.terminalConfig?.scrollback ?? 10000,
-    letterSpacing: host?.terminalConfig?.letterSpacing ?? 0,
-    lineHeight: host?.terminalConfig?.lineHeight ?? 1.0,
-    bellStyle: (host?.terminalConfig?.bellStyle ?? "none") as
+    cursorStyle: (terminalConfig.cursorStyle ?? d?.cursorStyle ?? "bar") as
+      "block" | "underline" | "bar",
+    cursorBlink: terminalConfig.cursorBlink ?? d?.cursorBlink ?? true,
+    scrollback: terminalConfig.scrollback ?? 10000,
+    letterSpacing: terminalConfig.letterSpacing ?? 0,
+    lineHeight: terminalConfig.lineHeight ?? 1.0,
+    bellStyle: (terminalConfig.bellStyle ?? "none") as
       "none" | "sound" | "visual" | "both",
     rightClickSelectsWord: host?.terminalConfig?.rightClickSelectsWord ?? false,
+    macOptionIsMeta: host?.terminalConfig?.macOptionIsMeta ?? true,
     fastScrollModifier: (host?.terminalConfig?.fastScrollModifier ?? "alt") as
       "alt" | "ctrl" | "shift",
     fastScrollSensitivity: host?.terminalConfig?.fastScrollSensitivity ?? 5,
-    minimumContrastRatio: host?.terminalConfig?.minimumContrastRatio ?? 1,
+    minimumContrastRatio: terminalConfig.minimumContrastRatio ?? 1,
     backspaceMode: (host?.terminalConfig?.backspaceMode ?? "normal") as
       "normal" | "control-h",
     startupSnippetId: host?.terminalConfig?.startupSnippetId ?? null,
@@ -153,13 +231,14 @@ export function createHostEditorForm(
     autoMosh: host?.terminalConfig?.autoMosh ?? false,
     autoTmux: host?.terminalConfig?.autoTmux ?? false,
     sudoPasswordAutoFill: host?.terminalConfig?.sudoPasswordAutoFill ?? false,
-    sudoPassword: host?.terminalConfig?.sudoPassword ?? "",
+    sudoPassword: host?.hasSudoPassword
+      ? "existing_sudo_password"
+      : (host?.terminalConfig?.sudoPassword ?? ""),
     keepaliveInterval: host?.terminalConfig?.keepaliveInterval ?? 60,
     keepaliveCountMax: host?.terminalConfig?.keepaliveCountMax ?? 5,
-    backgroundImage: host?.terminalConfig?.backgroundImage ?? "",
-    backgroundImageOpacity:
-      host?.terminalConfig?.backgroundImageOpacity ?? 0.15,
-    customThemeColors: host?.terminalConfig?.customThemeColors ?? null,
+    backgroundImage: terminalConfig.backgroundImage ?? "",
+    backgroundImageOpacity: terminalConfig.backgroundImageOpacity ?? 0.15,
+    customThemeColors: terminalConfig.customThemeColors ?? null,
     allowLegacyAlgorithms: host?.terminalConfig?.allowLegacyAlgorithms ?? true,
     linkClickBehavior: (host?.terminalConfig?.linkClickBehavior ??
       "default") as "default" | "confirm" | "direct",
@@ -215,7 +294,7 @@ export function createHostEditorForm(
     telnetAuthType: (host?.telnetAuthType ??
       (host?.telnetCredentialId ? "credential" : "direct")) as
       "direct" | "credential",
-    guacamoleConfig: host?.guacamoleConfig ?? {},
+    guacamoleConfig,
     statsConfig: host?.statsConfig ?? {
       statusCheckEnabled: d?.statusCheckEnabled ?? true,
       statusCheckInterval: 60,
@@ -236,6 +315,8 @@ export function createHostEditorForm(
         "firewall",
         "temperature",
       ],
+      excludedMounts: [] as string[],
+      monitoredMounts: [] as Array<{ path: string; label?: string }>,
     },
   };
 }
@@ -284,6 +365,54 @@ export function buildHostEditorPayload(
   const usesKey = form.authType === "key";
   const usesPassword = form.authType === "password";
   const usesAgent = form.authType === "agent";
+  const usesVault = form.authType === "vault";
+  const guacamoleConfig = form.inheritRemoteDesktopDefaults
+    ? stripKeys(form.guacamoleConfig, remoteDesktopDefaultKeys)
+    : form.guacamoleConfig;
+  const terminalConfig = {
+    theme: form.theme,
+    cursorBlink: form.cursorBlink,
+    cursorStyle: form.cursorStyle,
+    fontSize: Number(form.fontSize),
+    fontFamily: form.fontFamily,
+    scrollback: Number(form.scrollback),
+    letterSpacing: Number(form.letterSpacing),
+    lineHeight: Number(form.lineHeight),
+    bellStyle: form.bellStyle,
+    rightClickSelectsWord: form.rightClickSelectsWord,
+    macOptionIsMeta: form.macOptionIsMeta,
+    fastScrollModifier: form.fastScrollModifier,
+    fastScrollSensitivity: Number(form.fastScrollSensitivity),
+    minimumContrastRatio: Number(form.minimumContrastRatio),
+    backspaceMode: form.backspaceMode,
+    startupSnippetId: form.startupSnippetId ?? null,
+    moshCommand: form.moshCommand || null,
+    agentForwarding: form.agentForwarding,
+    autoMosh: form.autoMosh,
+    autoTmux: form.autoTmux,
+    sudoPasswordAutoFill: form.sudoPasswordAutoFill,
+    sudoPassword:
+      form.sudoPassword === "existing_sudo_password"
+        ? undefined
+        : form.sudoPassword || null,
+    keepaliveInterval: Number(form.keepaliveInterval),
+    keepaliveCountMax: Number(form.keepaliveCountMax),
+    environmentVariables: form.environmentVariables,
+    useSSHTitle: form.useSSHTitle,
+    syntaxHighlighting: form.syntaxHighlighting,
+    syntaxHighlightingOptions: form.syntaxHighlightingOptions,
+    backgroundImage: form.backgroundImage || null,
+    backgroundImageOpacity: Number(form.backgroundImageOpacity),
+    customThemeColors: form.theme === "custom" ? form.customThemeColors : null,
+    allowLegacyAlgorithms: form.allowLegacyAlgorithms,
+    linkClickBehavior:
+      form.linkClickBehavior !== "default" ? form.linkClickBehavior : undefined,
+    localEcho: form.localEcho !== "default" ? form.localEcho : undefined,
+    agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
+  };
+  const terminalOverrides = form.inheritTerminalAppearance
+    ? stripKeys(terminalConfig, terminalAppearanceKeys)
+    : terminalConfig;
 
   return {
     connectionType: protocols.enableSsh
@@ -304,13 +433,18 @@ export function buildHostEditorPayload(
           : Number(form.telnetPort),
     username: form.username,
     folder: form.folder,
+    parentHostId: form.parentHostId ? Number(form.parentHostId) : null,
     tags: form.tags,
     pin: form.pin,
     authType: form.authType,
     useWarpgate: form.useWarpgate,
     shareSshAuth: form.shareSshAuth,
     password:
-      usesPassword || usesKey || usesCredential ? form.password || null : null,
+      usesPassword || usesKey || usesCredential
+        ? form.password === "existing_password"
+          ? undefined
+          : form.password || null
+        : null,
     key: usesKey
       ? form.key === "existing_key"
         ? undefined
@@ -324,7 +458,8 @@ export function buildHostEditorPayload(
     keyType: usesKey && form.keyType !== "auto" ? form.keyType : null,
     credentialId:
       usesCredential && form.credentialId ? Number(form.credentialId) : null,
-    vaultProfileId: form.vaultProfileId ? Number(form.vaultProfileId) : null,
+    vaultProfileId:
+      usesVault && form.vaultProfileId ? Number(form.vaultProfileId) : null,
     overrideCredentialUsername: form.overrideCredentialUsername,
     notes: form.notes,
     macAddress: form.macAddress || null,
@@ -338,9 +473,17 @@ export function buildHostEditorPayload(
     enableDocker: form.enableDocker,
     dockerConfig: form.enableDocker ? form.dockerConfig : null,
     enableTmuxMonitor: form.enableTmuxMonitor,
+    enableTerminalToolbar: form.enableTerminalToolbar,
     allowSessionSharing: form.allowSessionSharing,
     enableProxmox: form.enableProxmox,
-    proxmoxConfig: form.enableProxmox ? form.proxmoxConfig : null,
+    proxmoxConfig:
+      form.enableProxmox || form.proxmoxConfig?.source
+        ? form.proxmoxConfig
+        : null,
+    enableProxmoxStats: form.enableProxmoxStats,
+    proxmoxStatsConfig: form.enableProxmoxStats
+      ? form.proxmoxStatsConfig
+      : null,
     defaultPath: form.defaultPath || "/",
     useSocks5: form.useSocks5,
     socks5Host:
@@ -417,7 +560,9 @@ export function buildHostEditorPayload(
       form.telnetPassword !== "existing_telnet_password"
         ? form.telnetPassword || null
         : null,
-    jumpHosts: form.jumpHosts,
+    // The editor keeps ids as strings; the API and every backend lookup take
+    // a number, and a string id does not compare equal on Postgres/MySQL.
+    jumpHosts: form.jumpHosts.map((j) => ({ hostId: Number(j.hostId) })),
     portKnockSequence: form.portKnockSequence,
     tunnelConnections: form.serverTunnels,
     quickActions: form.quickActions.map((a) => ({
@@ -427,49 +572,9 @@ export function buildHostEditorPayload(
     statsConfig: form.statsConfig,
     guacamoleConfig:
       (protocols.enableRdp || protocols.enableVnc || protocols.enableTelnet) &&
-      Object.keys(form.guacamoleConfig).length > 0
-        ? form.guacamoleConfig
+      Object.keys(guacamoleConfig).length > 0
+        ? guacamoleConfig
         : null,
-    terminalConfig: protocols.enableSsh
-      ? {
-          theme: form.theme,
-          cursorBlink: form.cursorBlink,
-          cursorStyle: form.cursorStyle,
-          fontSize: Number(form.fontSize),
-          fontFamily: form.fontFamily,
-          scrollback: Number(form.scrollback),
-          letterSpacing: Number(form.letterSpacing),
-          lineHeight: Number(form.lineHeight),
-          bellStyle: form.bellStyle,
-          rightClickSelectsWord: form.rightClickSelectsWord,
-          fastScrollModifier: form.fastScrollModifier,
-          fastScrollSensitivity: Number(form.fastScrollSensitivity),
-          minimumContrastRatio: Number(form.minimumContrastRatio),
-          backspaceMode: form.backspaceMode,
-          startupSnippetId: form.startupSnippetId ?? null,
-          moshCommand: form.moshCommand || null,
-          agentForwarding: form.agentForwarding,
-          autoMosh: form.autoMosh,
-          autoTmux: form.autoTmux,
-          sudoPasswordAutoFill: form.sudoPasswordAutoFill,
-          sudoPassword: form.sudoPassword || null,
-          keepaliveInterval: Number(form.keepaliveInterval),
-          keepaliveCountMax: Number(form.keepaliveCountMax),
-          environmentVariables: form.environmentVariables,
-          useSSHTitle: form.useSSHTitle,
-          syntaxHighlighting: form.syntaxHighlighting,
-          syntaxHighlightingOptions: form.syntaxHighlightingOptions,
-          backgroundImage: form.backgroundImage || null,
-          backgroundImageOpacity: Number(form.backgroundImageOpacity),
-          customThemeColors:
-            form.theme === "custom" ? form.customThemeColors : null,
-          allowLegacyAlgorithms: form.allowLegacyAlgorithms,
-          linkClickBehavior:
-            form.linkClickBehavior !== "default"
-              ? form.linkClickBehavior
-              : undefined,
-          agentSocketPath: usesAgent ? form.agentSocketPath || null : null,
-        }
-      : null,
+    terminalConfig: protocols.enableSsh ? terminalOverrides : null,
   };
 }

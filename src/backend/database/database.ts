@@ -1,5 +1,7 @@
+import { getErrorMessage } from "../utils/error-message.js";
 import express from "express";
 import http from "http";
+import https from "https";
 import bodyParser from "body-parser";
 import multer from "multer";
 import cookieParser from "cookie-parser";
@@ -8,6 +10,8 @@ import hostRoutes from "./routes/host.js";
 import alertRoutes from "./routes/alerts.js";
 import credentialsRoutes from "./routes/credentials.js";
 import snippetsRoutes from "./routes/snippets.js";
+import fleetRoutes from "./routes/fleet-routes.js";
+import workspaceRoutes from "./routes/workspaces.js";
 import c2sTunnelPresetRoutes from "./routes/c2s-tunnel-presets.js";
 import terminalRoutes from "./routes/terminal.js";
 import sessionLogRoutes from "./routes/session-log-routes.js";
@@ -17,14 +21,20 @@ import networkTopologyRoutes from "./routes/network-topology.js";
 import rbacRoutes from "./routes/rbac.js";
 import openTabsRoutes from "./routes/open-tabs.js";
 import userPreferencesRoutes from "./routes/user-preferences.js";
+import hostSidebarPreferencesRoutes from "./routes/host-sidebar-preferences.js";
+import credentialSidebarPreferencesRoutes from "./routes/credential-sidebar-preferences.js";
+import uiPreferencesRoutes from "./routes/ui-preferences.js";
 import proxmoxRoutes from "./routes/proxmox.js";
 import termixIdRoutes from "./routes/termix-id.js";
 import { registerAuditLogRoutes } from "./routes/audit-log-routes.js";
 import { registerTailscaleRoutes } from "./routes/tailscale-routes.js";
 import vaultRoutes from "./routes/vault.js";
 import alertRulesRoutes from "./routes/alert-rules-routes.js";
+import aiRoutes from "../ai/index.js";
+import automationsRoutes from "./routes/automations.js";
 import syncRoutes from "./routes/sync.js";
 import { createCorsMiddleware } from "../utils/cors-config.js";
+import { createCompressionMiddleware } from "../utils/compression-config.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -68,6 +78,7 @@ app.set("trust proxy", true);
 const authManager = AuthManager.getInstance();
 const authenticateJWT = authManager.createAuthMiddleware();
 const requireAdmin = authManager.createAdminMiddleware();
+app.use(createCompressionMiddleware());
 app.use(createCorsMiddleware());
 
 type SettingData = {
@@ -482,7 +493,7 @@ app.get("/releases/rss", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to generate RSS format",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1137,7 +1148,7 @@ app.post("/database/export", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to export user data",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1603,7 +1614,7 @@ app.post(
       });
       res.status(500).json({
         error: "Failed to import SQLite data",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: getErrorMessage(error),
       });
     }
   },
@@ -1664,7 +1675,7 @@ app.post("/database/export/preview", authenticateJWT, async (req, res) => {
     });
     res.status(500).json({
       error: "Failed to generate export preview",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1725,7 +1736,7 @@ app.post("/database/restore", requireAdmin, async (req, res) => {
     });
     res.status(500).json({
       error: "Database restore failed",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: getErrorMessage(error),
     });
   }
 });
@@ -1735,6 +1746,8 @@ app.use("/host", hostRoutes);
 app.use("/alerts", alertRoutes);
 app.use("/credentials", credentialsRoutes);
 app.use("/snippets", snippetsRoutes);
+app.use("/fleets", fleetRoutes);
+app.use("/workspaces", workspaceRoutes);
 app.use("/c2s-tunnel-presets", c2sTunnelPresetRoutes);
 app.use("/terminal", terminalRoutes);
 app.use("/session_logs", sessionLogRoutes);
@@ -1744,11 +1757,18 @@ app.use("/network-topology", networkTopologyRoutes);
 app.use("/rbac", rbacRoutes);
 app.use("/open-tabs", openTabsRoutes);
 app.use("/user-preferences", userPreferencesRoutes);
+app.use("/host-sidebar/preferences", hostSidebarPreferencesRoutes);
+app.use("/credential-sidebar/preferences", credentialSidebarPreferencesRoutes);
+app.use("/ui-preferences", uiPreferencesRoutes);
 app.use("/proxmox", proxmoxRoutes);
 app.use("/termix-id", termixIdRoutes);
 registerAuditLogRoutes(app, authenticateJWT);
 registerTailscaleRoutes(app, authenticateJWT);
 app.use("/vault", vaultRoutes);
+// Before the alert routes, which are mounted at the root and would otherwise
+// have first claim on the path.
+app.use("/automations", automationsRoutes);
+app.use("/ai", aiRoutes);
 app.use("/", alertRulesRoutes);
 app.use("/sync", syncRoutes);
 
@@ -1913,7 +1933,7 @@ app.get(
       });
       res.status(500).json({
         error: "Failed to get migration status",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: getErrorMessage(error),
       });
     }
   },
@@ -1991,7 +2011,7 @@ app.get(
       });
       res.status(500).json({
         error: "Failed to get migration history",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: getErrorMessage(error),
       });
     }
   },
@@ -2029,7 +2049,54 @@ const sslConfig = AutoSSLSetup.getSSLConfig();
 if (sslConfig.enabled) {
   databaseLogger.info(`SSL is enabled`, {
     operation: "ssl_info",
-    nginx_https_port: sslConfig.port,
+    ssl_port: sslConfig.port,
     backend_http_port: HTTP_PORT,
   });
+
+  try {
+    const httpsServer = https.createServer(
+      {
+        cert: fs.readFileSync(sslConfig.certPath),
+        key: fs.readFileSync(sslConfig.keyPath),
+      },
+      app,
+    );
+
+    httpsServer.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
+        databaseLogger.error(
+          `SSL port ${sslConfig.port} is already in use. Kill the existing process and retry.`,
+          err,
+          {
+            operation: "https_server_port_conflict",
+            port: sslConfig.port,
+          },
+        );
+        return;
+      }
+      databaseLogger.error("HTTPS server error", err, {
+        operation: "https_server_error",
+      });
+    });
+
+    httpsServer.listen(sslConfig.port, () => {
+      databaseLogger.success(
+        `Backend is now also listening for HTTPS directly`,
+        {
+          operation: "https_server_started",
+          port: sslConfig.port,
+        },
+      );
+    });
+  } catch (error) {
+    databaseLogger.error(
+      "Failed to start HTTPS server with configured SSL certificate",
+      error,
+      {
+        operation: "https_server_start_failed",
+        cert_path: sslConfig.certPath,
+        key_path: sslConfig.keyPath,
+      },
+    );
+  }
 }

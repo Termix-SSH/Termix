@@ -6,7 +6,7 @@ import { rowsAffected } from "./mutation-result.js";
 export type OpenTabRecord = typeof userOpenTabs.$inferSelect;
 export type NewOpenTabRecord = typeof userOpenTabs.$inferInsert;
 export type OpenTabUpdate = Partial<
-  Pick<NewOpenTabRecord, "label" | "tabOrder" | "backendSessionId">
+  Pick<NewOpenTabRecord, "hostId" | "label" | "tabOrder" | "backendSessionId">
 >;
 
 export type OpenTabUpsertInput = Pick<

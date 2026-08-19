@@ -93,6 +93,7 @@ function HostStatusWidget({
   const { hostId } = config;
   const [hostName, setHostName] = useState<string | null>(null);
   const [online, setOnline] = useState<boolean | null>(null);
+  const [reachable, setReachable] = useState(false);
   const [metrics, setMetrics] = useState<ServerMetrics | null>(null);
 
   const needsMetrics = shownMetrics.length > 0;
@@ -114,9 +115,15 @@ function HostStatusWidget({
     const poll = async () => {
       try {
         const s = await getServerStatusById(hostId);
-        if (!cancelled) setOnline(s.status === "online");
+        if (!cancelled) {
+          setOnline(s.status === "online");
+          setReachable(s.status === "reachable");
+        }
       } catch {
-        if (!cancelled) setOnline(false);
+        if (!cancelled) {
+          setOnline(false);
+          setReachable(false);
+        }
       }
 
       if (needsMetrics) {
@@ -173,13 +180,21 @@ function HostStatusWidget({
   }
 
   const onlineColor =
-    online === null ? "#6b7280" : online ? getAccentColor() : "#ef4444";
+    online === null
+      ? "#6b7280"
+      : online
+        ? getAccentColor()
+        : reachable
+          ? "#fbbf24"
+          : "#ef4444";
   const onlineLabel =
     online === null
       ? t("common.unknown")
       : online
         ? t("common.online")
-        : t("common.offline");
+        : reachable
+          ? t("common.reachable", { defaultValue: "Reachable" })
+          : t("common.offline");
 
   const networkIfaces = metrics?.network?.interfaces ?? [];
   const totalRx = networkIfaces.reduce((sum, iface) => {

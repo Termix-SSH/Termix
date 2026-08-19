@@ -1,57 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Host, HostFolder } from "@/types/ui-types";
-
-// Mirror of SidebarTree collectVisibleRows for unit coverage without exporting
-// the full React module graph.
-function isFolder(item: Host | HostFolder): item is HostFolder {
-  return "children" in item;
-}
-
-function hostMatchesQuery(host: Host, query: string): boolean {
-  const q = query.toLowerCase();
-  return (
-    host.name.toLowerCase().includes(q) ||
-    host.ip.toLowerCase().includes(q) ||
-    host.username.toLowerCase().includes(q)
-  );
-}
-
-function folderHasMatch(folder: HostFolder, query: string): boolean {
-  if (folder.name.toLowerCase().includes(query.toLowerCase())) return true;
-  for (const child of folder.children) {
-    if (isFolder(child)) {
-      if (folderHasMatch(child, query)) return true;
-    } else if (hostMatchesQuery(child, query)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-type VirtualRow = { item: Host | HostFolder; depth: number };
-
-function collectVisibleRows(
-  children: (Host | HostFolder)[],
-  query: string,
-  openSet: Set<string>,
-  out: VirtualRow[] = [],
-  depth = 0,
-): VirtualRow[] {
-  for (const child of children) {
-    if (isFolder(child)) {
-      const visible = query ? folderHasMatch(child, query) : true;
-      if (!visible) continue;
-      out.push({ item: child, depth });
-      const childOpen = query ? true : openSet.has(child.path ?? child.name);
-      if (childOpen)
-        collectVisibleRows(child.children, query, openSet, out, depth + 1);
-    } else {
-      if (!query || hostMatchesQuery(child, query))
-        out.push({ item: child, depth });
-    }
-  }
-  return out;
-}
+import {
+  isFolder,
+  collectVisibleRows,
+  buildReorderRows,
+  rowKey,
+  rowKind,
+  ROOT_PARENT,
+} from "../../sidebar/tree/visible-rows";
 
 function host(id: string, name: string): Host {
   return {
@@ -125,5 +81,106 @@ describe("collectVisibleRows", () => {
     expect(
       rows.map((r) => (isFolder(r.item) ? r.item.name : r.item.name)),
     ).toEqual(["prod", "db", "postgres"]);
+  });
+});
+
+describe("collectVisibleRows with sub-host nesting", () => {
+  function hostWithChildren(
+    id: string,
+    name: string,
+    childHosts?: Host[],
+  ): Host {
+    return { ...host(id, name), childHosts } as Host;
+  }
+
+  it("shows a parent host's children by default, unlike folders", () => {
+    const tree: (Host | HostFolder)[] = [
+      hostWithChildren("1", "Zeus", [host("2", "vm1")]),
+    ];
+    const rows = collectVisibleRows(tree, "", new Set());
+    expect(rows.map((r) => r.item.name)).toEqual(["Zeus", "vm1"]);
+    expect(rows[1].depth).toBe(1);
+  });
+
+  it("hides children once the parent is explicitly collapsed", () => {
+    const tree: (Host | HostFolder)[] = [
+      hostWithChildren("1", "Zeus", [host("2", "vm1")]),
+    ];
+    const rows = collectVisibleRows(
+      tree,
+      "",
+      new Set(),
+      [],
+      0,
+      new Set(["host:1"]),
+    );
+    expect(rows.map((r) => r.item.name)).toEqual(["Zeus"]);
+  });
+
+  it("always shows children while searching, regardless of collapsed state", () => {
+    const tree: (Host | HostFolder)[] = [
+      hostWithChildren("1", "Zeus", [host("2", "vm1")]),
+    ];
+    const rows = collectVisibleRows(
+      tree,
+      "vm1",
+      new Set(),
+      [],
+      0,
+      new Set(["host:1"]),
+    );
+    expect(rows.map((r) => r.item.name)).toEqual(["Zeus", "vm1"]);
+  });
+});
+
+describe("buildReorderRows", () => {
+  it("keys folders by path and hosts by id", () => {
+    const folder: HostFolder = {
+      name: "Web",
+      path: "Prod / Web",
+      children: [],
+    };
+    expect(rowKey(folder)).toBe("folder:Prod / Web");
+    expect(rowKey(host("7", "box"))).toBe("host:7");
+  });
+
+  it("reads the kind back off a key", () => {
+    expect(rowKind("folder:Prod / Web")).toBe("folder");
+    expect(rowKind("host:7")).toBe("host");
+  });
+
+  it("parents a nested folder to its path prefix", () => {
+    const nested: HostFolder = {
+      name: "Web",
+      path: "Prod / Web",
+      children: [],
+      sortOrder: 500,
+    };
+    expect(buildReorderRows([{ item: nested }])).toEqual([
+      { key: "folder:Prod / Web", parentKey: "folder:Prod", sortOrder: 500 },
+    ]);
+  });
+
+  it("parents a top-level folder to the root sentinel", () => {
+    const top: HostFolder = { name: "Prod", path: "Prod", children: [] };
+    expect(buildReorderRows([{ item: top }])[0].parentKey).toBe(ROOT_PARENT);
+  });
+
+  it("parents a host to its folder", () => {
+    const h = { ...host("3", "db"), folder: "Prod / Web", sortOrder: 2000 };
+    expect(buildReorderRows([{ item: h }])).toEqual([
+      { key: "host:3", parentKey: "folder:Prod / Web", sortOrder: 2000 },
+    ]);
+  });
+
+  it("parents a sub-host to its parent host, not its folder", () => {
+    const child = { ...host("4", "child"), folder: "Prod", parentHostId: "3" };
+    expect(buildReorderRows([{ item: child }])[0].parentKey).toBe("host:3");
+  });
+
+  it("parents a folderless host to the root sentinel", () => {
+    expect(buildReorderRows([{ item: host("5", "loose") }])[0].parentKey).toBe(
+      ROOT_PARENT,
+    );
   });
 });

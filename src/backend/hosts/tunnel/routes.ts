@@ -1,3 +1,4 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import express, { type Response } from "express";
 
 import axios from "axios";
@@ -35,7 +36,8 @@ import {
   handleDisconnect,
   sendTunnelStatusSnapshot,
   isSingleHostTunnel,
-  getAllTunnelStatus,
+  getTunnelStatusForUser,
+  canAccessTunnel,
   findHostByTunnelEndpoint,
   connectSSHTunnel,
 } from "./manager.js";
@@ -49,12 +51,12 @@ export function registerTunnelRoutes(app: express.Express): void {
   app.get(
     "/ssh/tunnel/status",
     authenticateJWT,
-    (req: AuthenticatedRequest, res: Response) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       if (!req.userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
 
-      res.json(getAllTunnelStatus());
+      res.json(await getTunnelStatusForUser(req.userId));
     },
   );
 
@@ -74,7 +76,7 @@ export function registerTunnelRoutes(app: express.Express): void {
       });
       res.flushHeaders?.();
 
-      tunnelStatusClients.add(res);
+      tunnelStatusClients.set(res, req.userId);
       sendTunnelStatusSnapshot(res);
 
       const heartbeat = setInterval(() => {
@@ -117,7 +119,7 @@ export function registerTunnelRoutes(app: express.Express): void {
   app.get(
     "/ssh/tunnel/status/:tunnelName",
     authenticateJWT,
-    (req: AuthenticatedRequest, res: Response) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       if (!req.userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
@@ -126,6 +128,13 @@ export function registerTunnelRoutes(app: express.Express): void {
       const tunnelName = Array.isArray(tunnelNameParam)
         ? tunnelNameParam[0]
         : tunnelNameParam;
+
+      // 404 rather than 403 for foreign tunnels: the name itself carries
+      // host metadata, so confirming its existence would leak it.
+      if (!(await canAccessTunnel(req.userId, tunnelName))) {
+        return res.status(404).json({ error: "Tunnel not found" });
+      }
+
       const status = connectionStatus.get(tunnelName);
 
       if (!status) {
@@ -336,10 +345,7 @@ export function registerTunnelRoutes(app: express.Express): void {
                       {
                         operation: "tunnel_endpoint_credential_resolve",
                         endpointHostId: endpointHost.id,
-                        error:
-                          credError instanceof Error
-                            ? credError.message
-                            : "Unknown",
+                        error: getErrorMessage(credError, "Unknown"),
                       },
                     );
                   }
@@ -356,7 +362,7 @@ export function registerTunnelRoutes(app: express.Express): void {
                 },
               );
               throw new Error(
-                `Failed to resolve endpoint host: ${resolveError instanceof Error ? resolveError.message : "Unknown error"}`,
+                `Failed to resolve endpoint host: ${getErrorMessage(resolveError)}`,
                 { cause: resolveError },
               );
             }
@@ -399,7 +405,7 @@ export function registerTunnelRoutes(app: express.Express): void {
             broadcastTunnelStatus(tunnelName, {
               connected: false,
               status: CONNECTION_STATES.FAILED,
-              reason: err instanceof Error ? err.message : "Unknown error",
+              reason: getErrorMessage(err),
             });
             tunnelConnecting.delete(tunnelName);
           })

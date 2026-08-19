@@ -1,6 +1,6 @@
+import { getErrorMessage } from "../../utils/error-message.js";
 import type { AuthenticatedRequest } from "../../../types/index.js";
-import express from "express";
-import type { Request, Response } from "express";
+import express, { type Request, type Response } from "express";
 import { authLogger, databaseLogger } from "../../utils/logger.js";
 import { AuthManager } from "../../utils/auth-manager.js";
 import { SSH_ALGORITHMS } from "../../utils/ssh-algorithms.js";
@@ -8,6 +8,7 @@ import { extractSnippetReorderUpdates } from "./snippets-reorder.js";
 import {
   createSnippetExecutionResult,
   getSnippetExecutionTimeoutMs,
+  resolveSnippetCommand,
 } from "./snippets-execution.js";
 import { logAudit, getRequestMeta } from "../../utils/audit-logger.js";
 import {
@@ -181,10 +182,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to create snippet folder", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to create snippet folder",
+        error: getErrorMessage(err, "Failed to create snippet folder"),
       });
     }
   },
@@ -268,10 +266,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to update snippet folder metadata", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to update snippet folder metadata",
+        error: getErrorMessage(err, "Failed to update snippet folder metadata"),
       });
     }
   },
@@ -356,10 +351,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to rename snippet folder", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to rename snippet folder",
+        error: getErrorMessage(err, "Failed to rename snippet folder"),
       });
     }
   },
@@ -430,10 +422,7 @@ router.delete(
     } catch (err) {
       authLogger.error("Failed to delete snippet folder", err);
       res.status(500).json({
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to delete snippet folder",
+        error: getErrorMessage(err, "Failed to delete snippet folder"),
       });
     }
   },
@@ -513,8 +502,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to reorder snippets", err);
       res.status(500).json({
-        error:
-          err instanceof Error ? err.message : "Failed to reorder snippets",
+        error: getErrorMessage(err, "Failed to reorder snippets"),
       });
     }
   },
@@ -539,6 +527,15 @@ router.put(
  *                 type: integer
  *               hostId:
  *                 type: integer
+ *               inputValues:
+ *                 type: object
+ *                 description: >
+ *                   Optional resolved values for $INPUT_n placeholders in the
+ *                   snippet content, keyed by "INPUT_n". Host variables
+ *                   ($HOST, $USER, $PORT, $NAME) are resolved server-side per
+ *                   target host and do not need to be passed here.
+ *                 additionalProperties:
+ *                   type: string
  *     responses:
  *       200:
  *         description: Snippet executed successfully.
@@ -555,7 +552,7 @@ router.post(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { snippetId, hostId } = req.body;
+    const { snippetId, hostId, inputValues } = req.body;
 
     if (!isNonEmptyString(userId) || !snippetId || !hostId) {
       authLogger.warn("Invalid snippet execution request", {
@@ -573,6 +570,12 @@ router.post(
 
       if (!snippet) {
         return res.status(404).json({ error: "Snippet not found" });
+      }
+
+      if (snippet.isNote) {
+        return res
+          .status(400)
+          .json({ error: "Notes cannot be executed on a host" });
       }
 
       const { Client } = await import("ssh2");
@@ -607,6 +610,17 @@ router.post(
       let output = "";
       let errorOutput = "";
 
+      const resolvedCommand = resolveSnippetCommand(
+        snippet.content,
+        {
+          ip: host.ip,
+          username: host.username,
+          port: host.port,
+          name: host.name,
+        },
+        inputValues && typeof inputValues === "object" ? inputValues : {},
+      );
+
       const executePromise = new Promise<{
         success: boolean;
         output: string;
@@ -616,7 +630,7 @@ router.post(
         let timeout: NodeJS.Timeout | undefined;
 
         conn.on("ready", () => {
-          conn.exec(snippet.content, (err, stream) => {
+          conn.exec(resolvedCommand, (err, stream) => {
             if (err) {
               clearTimeout(timeout);
               conn.end();
@@ -757,7 +771,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to execute snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to execute snippet",
+        error: getErrorMessage(err, "Failed to execute snippet"),
       });
     }
   },
@@ -1014,7 +1028,7 @@ router.get(
     } catch (err) {
       authLogger.error("Failed to fetch snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to fetch snippet",
+        error: getErrorMessage(err, "Failed to fetch snippet"),
       });
     }
   },
@@ -1045,6 +1059,9 @@ router.get(
  *                 type: string
  *               order:
  *                 type: integer
+ *               isNote:
+ *                 type: boolean
+ *                 description: When true, the snippet is a note (copy/paste only, not directly executable on a host).
  *     responses:
  *       201:
  *         description: Snippet created successfully.
@@ -1059,7 +1076,8 @@ router.post(
   requireDataAccess,
   async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).userId;
-    const { name, content, description, folder, order, hostFilter } = req.body;
+    const { name, content, description, folder, order, hostFilter, isNote } =
+      req.body;
 
     if (
       !isNonEmptyString(userId) ||
@@ -1085,6 +1103,7 @@ router.post(
           folder,
           order,
           hostFilter,
+          isNote,
         },
       );
       databaseLogger.info("Command snippet created", {
@@ -1111,7 +1130,7 @@ router.post(
     } catch (err) {
       authLogger.error("Failed to create snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to create snippet",
+        error: getErrorMessage(err, "Failed to create snippet"),
       });
     }
   },
@@ -1148,6 +1167,9 @@ router.post(
  *                 type: string
  *               order:
  *                 type: integer
+ *               isNote:
+ *                 type: boolean
+ *                 description: When true, the snippet is a note (copy/paste only, not directly executable on a host).
  *     responses:
  *       200:
  *         description: The updated snippet.
@@ -1206,7 +1228,7 @@ router.put(
     } catch (err) {
       authLogger.error("Failed to update snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to update snippet",
+        error: getErrorMessage(err, "Failed to update snippet"),
       });
     }
   },
@@ -1291,7 +1313,7 @@ router.delete(
     } catch (err) {
       authLogger.error("Failed to delete snippet", err);
       res.status(500).json({
-        error: err instanceof Error ? err.message : "Failed to delete snippet",
+        error: getErrorMessage(err, "Failed to delete snippet"),
       });
     }
   },
