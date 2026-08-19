@@ -44,7 +44,6 @@ import {
 import { planReorder, renumberSiblings } from "@/sidebar/reorder-utils";
 import type { Host, HostFolder, TabType } from "@/types/ui-types";
 import type { SSHHostData } from "@/types/index";
-import type { SortKey } from "@/sidebar/host-sort";
 import type {
   HostDensity,
   HostTrayTrigger,
@@ -82,7 +81,6 @@ export function SidebarTree({
   onToggleSelectionMode,
   loading = false,
   onExportSelected,
-  sortKey = "default",
   arrangeLocked = true,
   density = "comfortable",
   trayTrigger = "hover",
@@ -99,7 +97,6 @@ export function SidebarTree({
   onToggleSelectionMode: () => void;
   loading?: boolean;
   onExportSelected?: (hostIds: string[]) => void;
-  sortKey?: SortKey;
   /** When true, drag-to-rearrange is off entirely. Toggled from the panel header. */
   arrangeLocked?: boolean;
   density?: HostDensity;

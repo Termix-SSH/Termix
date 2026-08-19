@@ -648,7 +648,6 @@ export function HostManager({
               termixIdLinkedIds={termixIdLinkedIds}
               query=""
               loading={credentialsLoading}
-              sortKey={externalSort ?? "default"}
               arrangeLocked={externalArrangeLocked}
               density={density}
               trayTrigger={trayTrigger}

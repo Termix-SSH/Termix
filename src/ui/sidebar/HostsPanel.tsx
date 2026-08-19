@@ -1061,7 +1061,6 @@ export function HostsPanel({
             setExportPreselection(new Set(ids));
             setExportDialogOpen(true);
           }}
-          sortKey={sortKey}
           arrangeLocked={arrangeLocked}
           density={sidebarPrefs.display.density}
           trayTrigger={sidebarPrefs.display.trayTrigger}

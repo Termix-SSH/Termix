@@ -15,7 +15,6 @@ import { ReorderIndicator } from "@/sidebar/ReorderIndicator";
 import type { Credential } from "@/types/ui-types";
 import type {
   CredentialDensity,
-  CredentialSortKey,
   CredentialTrayTrigger,
 } from "@/types/credential-sidebar-preferences";
 import { CredentialItem } from "./CredentialItem/CredentialItem";
@@ -36,7 +35,6 @@ export function CredentialSidebarTree({
   termixIdLinkedIds,
   query = "",
   loading = false,
-  sortKey = "default",
   arrangeLocked = true,
   density = "comfortable",
   trayTrigger = "hover",
@@ -57,7 +55,6 @@ export function CredentialSidebarTree({
   termixIdLinkedIds?: Set<number>;
   query?: string;
   loading?: boolean;
-  sortKey?: CredentialSortKey;
   /** When true, drag-to-rearrange is off entirely. Toggled from the panel header. */
   arrangeLocked?: boolean;
   density?: CredentialDensity;
