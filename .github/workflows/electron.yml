@@ -1154,6 +1154,18 @@ jobs:
           BUILD_VERSION="${{ steps.build_number.outputs.build_version || github.run_number }}"
           npm run build && npx electron-builder --mac mas --universal --config.buildVersion="$BUILD_VERSION"
 
+      - name: Generate App Store release notes
+        id: asc_notes
+        if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
+        run: |
+          META_DIR="$RUNNER_TEMP/asc_metadata"
+          rm -rf "$META_DIR"
+          node scripts/generate-appstore-notes.cjs \
+            --notes RELEASE_NOTES.md \
+            --out-dir "$META_DIR" \
+            --locales "en-US"
+          echo "metadata_path=$META_DIR" >> "$GITHUB_OUTPUT"
+
       - name: Upload and submit to Mac App Store
         if: steps.check_certs.outputs.has_certs == 'true' && steps.check_asc_creds.outputs.has_credentials == 'true'
         run: |
@@ -1170,8 +1182,12 @@ jobs:
             --pkg "$PKG_FILE" \
             --api_key_path "$API_KEY_JSON" \
             --app_version "$VERSION" \
-            --skip_metadata true \
+            --platform osx \
+            --app_identifier "com.karmaa.termix" \
+            --skip_metadata false \
+            --metadata_path "${{ steps.asc_notes.outputs.metadata_path }}" \
             --skip_screenshots true \
+            --skip_app_version_update false \
             --submit_for_review true \
             --automatic_release true \
             --precheck_include_in_app_purchases false \
