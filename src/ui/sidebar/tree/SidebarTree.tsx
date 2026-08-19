@@ -688,12 +688,25 @@ export function SidebarTree({
   // (the tray wrapper's own pt-1.5 plus the management row's separate
   // pt-1 mt-0.5 compounded into a much larger gap there than between any
   // other pair of rows in the card).
-  const HOST_ROW_HEIGHT = isCompactDensity ? 27.5 : 45;
+  // Click mode adds a size-5 expand-actions chevron to the name row, which is
+  // taller than anything hover mode puts there -- the base heights were
+  // measured in hover mode, so a click-mode row renders past its slot and its
+  // status stripe runs into the row below. Most visible down an indented
+  // sub-host group, where rows stack with no folder header between them.
+  // Measured off the rendered row (49.5 in a 45 slot). actionsOnly renders the
+  // same chevron but its own constants were measured with it, so it is not
+  // included here.
+  const CLICK_CHEVRON_EXTRA = clickTrayActive ? 4.5 : 0;
+  const HOST_ROW_HEIGHT = (isCompactDensity ? 27.5 : 45) + CLICK_CHEVRON_EXTRA;
   const FOLDER_ROW_HEIGHT = 31.5;
   // "always" mode permanently renders the connection-buttons row (plus the
   // management row/resource bars for online hosts) -- measured directly
   // rather than derived, since it has its own fixed shape.
-  const ALWAYS_ROW_HEIGHT = isCompactDensity ? 73.75 : 100.25;
+  // Carries the click-mode chevron so the open row lands at its measured
+  // 104.75 rather than always mode's 100.25. The term cancels out of
+  // OPEN_TRAY_EXTRA below, leaving HOST_ROW_HEIGHT to supply it once.
+  const ALWAYS_ROW_HEIGHT =
+    (isCompactDensity ? 73.75 : 100.25) + CLICK_CHEVRON_EXTRA;
   const OPEN_TRAY_EXTRA = ALWAYS_ROW_HEIGHT - HOST_ROW_HEIGHT;
   // "actionsOnly" permanently renders just the connection-buttons row above
   // the tray; the management row/resource bars stay collapsed until toggled.
@@ -740,6 +753,7 @@ export function SidebarTree({
       alwaysShowActions,
       actionsOnly,
       HOST_ROW_HEIGHT,
+      CLICK_CHEVRON_EXTRA,
       OPEN_TRAY_EXTRA,
       ALWAYS_ROW_HEIGHT,
       ACTIONS_ONLY_ROW_HEIGHT,
