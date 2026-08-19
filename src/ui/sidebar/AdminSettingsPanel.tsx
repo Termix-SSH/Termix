@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { notifyAiStatusChanged } from "@/hooks/use-ai-availability";
 import {
   getAiGloballyEnabled,
   getAiPrivateEndpoints,
@@ -568,6 +569,9 @@ export function AdminSettingsPanel({
     setAiGloballyEnabled(newVal);
     try {
       await setAiGloballyEnabledApi(newVal);
+      // Every AI surface listens for this, so the admin sees the entry appear
+      // or disappear right away instead of after a reload.
+      notifyAiStatusChanged();
     } catch {
       setAiGloballyEnabled(!newVal);
       toast.error(t("admin.updateAiEnabledFailed"));

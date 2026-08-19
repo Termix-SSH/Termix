@@ -44,6 +44,7 @@ import {
 import type { Host, TabType, Tab, Snippet } from "@/types/ui-types";
 import { canEditHost } from "@/sidebar/host-permissions";
 import { RAIL_ITEMS, RAIL_UTILITY_ITEMS } from "@/sidebar/rail-items";
+import { useAiAvailability } from "@/hooks/use-ai-availability";
 import { useSnippetRunner } from "@/hooks/use-snippet-runner.tsx";
 
 interface CommandPaletteProps {
@@ -132,6 +133,7 @@ export function CommandPalette({
   onOpenPanel,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
+  const { globallyEnabled: aiGloballyEnabled } = useAiAvailability();
   const inputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>(
@@ -373,6 +375,7 @@ export function CommandPalette({
                 >
                   {[...RAIL_ITEMS, ...RAIL_UTILITY_ITEMS]
                     .filter((item) => item.kind !== "tab")
+                    .filter((item) => item.id !== "ai" || aiGloballyEnabled)
                     .map((item) => {
                       const Icon = item.icon;
                       return (

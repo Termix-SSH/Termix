@@ -2020,33 +2020,35 @@ export function UserProfilePanel({
             <p className="text-[10px] text-muted-foreground mb-2">
               {t("newUi.sidebar.userProfile.navigationTabsDesc")}
             </p>
-            {visibleRailItems().map((tab) => (
-              <div
-                key={tab.id}
-                className="flex items-center justify-between py-1.5"
-              >
-                <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
-                  <span className="text-muted-foreground">
-                    <tab.icon size={12} />
+            {visibleRailItems()
+              .filter((tab) => tab.id !== "ai" || aiGloballyEnabled)
+              .map((tab) => (
+                <div
+                  key={tab.id}
+                  className="flex items-center justify-between py-1.5"
+                >
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                    <span className="text-muted-foreground">
+                      <tab.icon size={12} />
+                    </span>
+                    {t(tab.labelKey)}
                   </span>
-                  {t(tab.labelKey)}
-                </span>
-                <FakeSwitch
-                  checked={!hiddenRailTabs.has(tab.id)}
-                  onChange={(visible) => {
-                    const next = new Set(hiddenRailTabs);
-                    if (visible) next.delete(tab.id);
-                    else next.add(tab.id);
-                    setHiddenRailTabs(next);
-                    const serialized = JSON.stringify([...next]);
-                    localStorage.setItem("hiddenRailTabs", serialized);
-                    window.dispatchEvent(new Event("hiddenRailTabsChanged"));
-                    if (storageMode === "cloud")
-                      saveToCloud({ hiddenRailTabs: serialized });
-                  }}
-                />
-              </div>
-            ))}
+                  <FakeSwitch
+                    checked={!hiddenRailTabs.has(tab.id)}
+                    onChange={(visible) => {
+                      const next = new Set(hiddenRailTabs);
+                      if (visible) next.delete(tab.id);
+                      else next.add(tab.id);
+                      setHiddenRailTabs(next);
+                      const serialized = JSON.stringify([...next]);
+                      localStorage.setItem("hiddenRailTabs", serialized);
+                      window.dispatchEvent(new Event("hiddenRailTabsChanged"));
+                      if (storageMode === "cloud")
+                        saveToCloud({ hiddenRailTabs: serialized });
+                    }}
+                  />
+                </div>
+              ))}
           </div>
 
           <div className="flex flex-col gap-1 border-t border-border pt-3">

@@ -15,6 +15,7 @@ import { getAlertFirings } from "@/api/alerts-api";
 import { isElectron } from "@/lib/electron";
 import { readRailPreference, setRailPreference } from "./rail-preferences";
 import { visibleRailItems } from "./rail-items";
+import { useAiAvailability } from "@/hooks/use-ai-availability";
 
 export type RailView =
   | "hosts"
@@ -222,30 +223,7 @@ export function AppRail({
     };
   }, [menuPos]);
 
-  const [aiEnabled, setAiEnabled] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const refresh = () => {
-      import("@/api/ai-api")
-        .then(({ getAiStatus }) => getAiStatus())
-        .then((status) => {
-          if (!cancelled)
-            setAiEnabled(status.globallyEnabled && status.enabled);
-        })
-        .catch(() => {
-          if (!cancelled) setAiEnabled(false);
-        });
-    };
-    refresh();
-    // The profile toggle and the onboarding step both fire this, so the entry
-    // appears or disappears without a reload.
-    window.addEventListener("hiddenRailTabsChanged", refresh);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("hiddenRailTabsChanged", refresh);
-    };
-  }, []);
+  const { userEnabled: aiEnabled } = useAiAvailability();
 
   useEffect(() => {
     const handler = () => {

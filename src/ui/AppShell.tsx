@@ -25,6 +25,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAiAvailability } from "@/hooks/use-ai-availability";
 import { MobileBottomBar } from "@/shell/MobileBottomBar";
 import { AppRail, type RailView } from "@/sidebar/AppRail";
 import {
@@ -214,6 +215,8 @@ export function AppShell({
 }) {
   const { t, i18n } = useTranslation();
   const { setTheme } = useTheme();
+  const { globallyEnabled: aiGloballyEnabled, loaded: aiStatusLoaded } =
+    useAiAvailability();
   const [tabs, setTabs] = useState<Tab[]>([
     {
       id: "dashboard",
@@ -992,13 +995,19 @@ export function AppShell({
       setAllHosts(converted);
       const folderMeta = new Map<
         string,
-        { color?: string; icon?: string; credentialId?: number | null }
+        {
+          color?: string;
+          icon?: string;
+          credentialId?: number | null;
+          sortOrder?: number | null;
+        }
       >();
       for (const f of folders) {
         folderMeta.set(f.name, {
           color: f.color ?? undefined,
           icon: f.icon ?? undefined,
           credentialId: f.credentialId ?? null,
+          sortOrder: f.sortOrder ?? null,
         });
       }
       setRealHostTree(buildHostTree(raw, folderMeta));
@@ -1697,6 +1706,9 @@ export function AppShell({
       if (type === "local-terminal") {
         return openLocalTerminalTab();
       }
+      // The admin kill switch removes the assistant for everyone, so it can
+      // never be promoted into the tab bar while it is off.
+      if (type === "ai" && !aiGloballyEnabled) return;
       if (type === "host-manager") {
         if (pendingEvent === "host-manager:add-credential") {
           setSidebarOpen(true);
@@ -1780,7 +1792,7 @@ export function AppShell({
         }).catch(() => {});
       }
     },
-    [t],
+    [t, aiGloballyEnabled],
   );
 
   const SESSION_TAB_TYPES: TabType[] = [
@@ -1935,6 +1947,16 @@ export function AppShell({
 
     doCloseTab(id);
   }
+
+  // An admin can turn the assistant off while tabs are already open, and a
+  // saved workspace or restored session can bring one back. Either way the
+  // leftover tab and panel go away as soon as the status says it is off.
+  useEffect(() => {
+    if (!aiStatusLoaded || aiGloballyEnabled) return;
+    if (tabs.some((tab) => tab.type === "ai")) doCloseTab("ai");
+    setRailView((prev) => (prev === "ai" ? "hosts" : prev));
+    setRightRailView((prev) => (prev === "ai" ? null : prev));
+  }, [aiStatusLoaded, aiGloballyEnabled, tabs]);
 
   closeActiveTabRef.current = () => {
     const id = activeTabIdRef.current;
