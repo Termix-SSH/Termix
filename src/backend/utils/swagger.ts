@@ -123,6 +123,106 @@ const swaggerOptions: SwaggerJSDocOptions = {
         name: "File Manager",
         description: "SSH file management operations",
       },
+      {
+        name: "SSH",
+        description: "SSH host management and configuration",
+      },
+      {
+        name: "Host Enrollment",
+        description: "Host enrollment and onboarding",
+      },
+      {
+        name: "Fleets",
+        description: "Fleet grouping, membership, and inventory",
+      },
+      {
+        name: "Workspaces",
+        description: "Saved tab and split layouts",
+      },
+      {
+        name: "Open Tabs",
+        description: "Per-user open tab state",
+      },
+      {
+        name: "Automations",
+        description: "Scheduled and triggered automations",
+      },
+      {
+        name: "Guacamole",
+        description: "RDP, VNC, and Telnet remote desktop sessions",
+      },
+      {
+        name: "Proxmox",
+        description: "Proxmox host integration",
+      },
+      {
+        name: "Proxmox Stats",
+        description: "Proxmox node and VM statistics",
+      },
+      {
+        name: "Session Sharing",
+        description: "Live terminal session collaboration",
+      },
+      {
+        name: "Session Logs",
+        description: "Session recording and playback",
+      },
+      {
+        name: "Homepage",
+        description: "Homepage service links and layout",
+      },
+      {
+        name: "Audit",
+        description: "Audit log querying and export",
+      },
+      {
+        name: "API Keys",
+        description: "API key management",
+      },
+      {
+        name: "SSO",
+        description: "Single sign-on provider configuration",
+      },
+      {
+        name: "WebAuthn",
+        description: "Passkey registration and authentication",
+      },
+      {
+        name: "Vault",
+        description: "HashiCorp Vault SSH signing profiles",
+      },
+      {
+        name: "Termix ID",
+        description: "Built-in SSH certificate authority",
+      },
+      {
+        name: "Tailscale",
+        description: "Tailscale network integration",
+      },
+      {
+        name: "Sync",
+        description: "Remote sync between desktop and server",
+      },
+      {
+        name: "Tunnel Presets",
+        description: "Saved tunnel configurations",
+      },
+      {
+        name: "User Preferences",
+        description: "Per-user application preferences",
+      },
+      {
+        name: "UI Preferences",
+        description: "Interface layout and display preferences",
+      },
+      {
+        name: "Host Sidebar",
+        description: "Host sidebar display preferences",
+      },
+      {
+        name: "Credential Sidebar",
+        description: "Credential sidebar display preferences",
+      },
     ],
   },
   apis: [

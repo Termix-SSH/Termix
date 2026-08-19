@@ -450,6 +450,7 @@ jobs:
         run: |
           cp ../termix/openapi.json static/openapi.json
           npm ci
+          npm run docusaurus clean-api-docs termix
           npm run docusaurus gen-api-docs termix
 
       - name: Commit and push docs branch
