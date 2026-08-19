@@ -5,21 +5,16 @@ import { AppearanceStep } from "./steps/AppearanceStep";
 import { FeaturesStep } from "./steps/FeaturesStep";
 import { WorkflowStep } from "./steps/WorkflowStep";
 import { SecurityStep } from "./steps/SecurityStep";
-import { FirstHostStep } from "./steps/FirstHostStep";
 import { AiAssistantStep } from "./steps/AiAssistantStep";
 import { DoneStep } from "./steps/DoneStep";
 
 export interface OnboardingContext {
-  /** Whether the account already has hosts (imported, synced or shared). */
-  hasHosts: boolean;
   /** Whether an admin has enabled the AI assistant for this instance. */
   aiGloballyEnabled: boolean;
 }
 
 export interface OnboardingStepProps {
   context: OnboardingContext;
-  /** Closes onboarding and jumps straight to adding a host. */
-  onAddHost: () => void;
 }
 
 export interface OnboardingStep {
@@ -45,13 +40,6 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     id: "appearance",
     titleKey: "onboarding.appearanceTitle",
     Component: AppearanceStep,
-  },
-  {
-    id: "first-host",
-    titleKey: "onboarding.firstHostTitle",
-    Component: FirstHostStep,
-    // Nothing to offer someone who already has hosts.
-    isRelevant: (context) => !context.hasHosts,
   },
   {
     id: "features",

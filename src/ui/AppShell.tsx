@@ -271,7 +271,6 @@ export function AppShell({
   const [userId, setUserId] = useState<string | null>(null);
   const [showDonationModal, setShowDonationModal] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [onboardingHasHosts, setOnboardingHasHosts] = useState(false);
   const [onboardingAiEnabled, setOnboardingAiEnabled] = useState(false);
   const [backgroundTabRecords, setBackgroundTabRecords] = useState<
     OpenTabRecord[]
@@ -285,22 +284,18 @@ export function AppShell({
     uiPrefs.preferences.onboarding.completedVersion < UI_ONBOARDING_VERSION;
 
   /**
-   * Both onboarding entry points resolve the same context first: whether the
-   * account has hosts, and whether an admin has enabled the AI assistant. The
-   * AI step is skipped entirely when it is off, so the answer has to be in
-   * before the dialog opens.
+   * Both onboarding entry points resolve the same context first: whether an
+   * admin has enabled the AI assistant. The AI step is skipped entirely when
+   * it is off, so the answer has to be in before the dialog opens.
    */
   const loadOnboardingContext = useCallback(async () => {
-    const [hosts, aiStatus] = await Promise.allSettled([
-      getSSHHosts(),
-      import("@/api/ai-api").then(({ getAiStatus }) => getAiStatus()),
-    ]);
-    if (hosts.status === "fulfilled") {
-      setOnboardingHasHosts((hosts.value?.length ?? 0) > 0);
+    try {
+      const { getAiStatus } = await import("@/api/ai-api");
+      const aiStatus = await getAiStatus();
+      setOnboardingAiEnabled(aiStatus.globallyEnabled);
+    } catch {
+      setOnboardingAiEnabled(false);
     }
-    setOnboardingAiEnabled(
-      aiStatus.status === "fulfilled" ? aiStatus.value.globallyEnabled : false,
-    );
   }, []);
 
   useEffect(() => {
@@ -2976,17 +2971,8 @@ export function AppShell({
       </Suspense>
       <OnboardingDialog
         open={showOnboarding}
-        context={{
-          hasHosts: onboardingHasHosts,
-          aiGloballyEnabled: onboardingAiEnabled,
-        }}
+        context={{ aiGloballyEnabled: onboardingAiEnabled }}
         onClose={() => setShowOnboarding(false)}
-        onAddHost={() => {
-          setShowOnboarding(false);
-          setRailView("hosts");
-          setSidebarOpen(true);
-          window.dispatchEvent(new CustomEvent("host-manager:add-host"));
-        }}
       />
       <DonationReminderModal
         open={showDonationModal && !showOnboarding}

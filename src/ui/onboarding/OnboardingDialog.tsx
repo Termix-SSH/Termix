@@ -16,12 +16,10 @@ export function OnboardingDialog({
   open,
   context,
   onClose,
-  onAddHost,
 }: {
   open: boolean;
   context: OnboardingContext;
   onClose: (skipped: boolean) => void;
-  onAddHost: () => void;
 }) {
   const { t } = useTranslation();
   const ctx = useUiPreferencesContext();
@@ -76,7 +74,7 @@ export function OnboardingDialog({
         </div>
 
         <div className="mt-1">
-          <StepComponent context={context} onAddHost={onAddHost} />
+          <StepComponent context={context} />
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
