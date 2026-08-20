@@ -30,24 +30,9 @@ const { launchNativeRdp } = require("./native-rdp.cjs");
 const { isCloseActiveTabInput } = require("./keyboard-shortcuts.cjs");
 const { quitApp } = require("./app-quit.cjs");
 const { selectLinuxPasswordStore } = require("./linux-password-store.cjs");
+const { resolveLocalShell } = require("./local-shell.cjs");
 
 const localTerminalSessions = new Map();
-
-function localShell() {
-  if (process.platform === "win32") {
-    return {
-      file: process.env.TERMIX_LOCAL_SHELL || "powershell.exe",
-      args: ["-NoLogo"],
-    };
-  }
-  return {
-    file:
-      process.env.TERMIX_LOCAL_SHELL ||
-      process.env.SHELL ||
-      (process.platform === "darwin" ? "/bin/zsh" : "/bin/bash"),
-    args: ["-l"],
-  };
-}
 
 function ownedLocalTerminal(event, sessionId) {
   if (typeof sessionId !== "string" || !/^[a-f0-9-]{36}$/.test(sessionId)) {
@@ -2932,7 +2917,7 @@ ipcMain.handle("local-terminal-start", (event, dimensions = {}) => {
   const cols = Math.min(500, Math.max(2, Number(dimensions.cols) || 80));
   const rows = Math.min(300, Math.max(1, Number(dimensions.rows) || 24));
   const sessionId = crypto.randomUUID();
-  const shellConfig = localShell();
+  const shellConfig = resolveLocalShell(process.platform, dimensions.shell);
   const child = pty.spawn(shellConfig.file, shellConfig.args, {
     name: "xterm-256color",
     cols,
