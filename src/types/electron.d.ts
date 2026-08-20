@@ -31,6 +31,7 @@ export interface LocalFileEntry {
   path: string;
   type: "file" | "directory" | "link" | "other";
   size: number;
+  created?: string;
   modified: string;
   permissions?: string;
   owner?: string;
@@ -50,6 +51,7 @@ export interface LocalCollectedFile {
   name: string;
   relativePath: string;
   size: number;
+  created?: string;
   modified: string;
 }
 

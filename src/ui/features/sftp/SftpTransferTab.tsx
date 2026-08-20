@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+} from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
@@ -39,12 +45,14 @@ import {
   deleteSSHItem,
   ensureSSHSessionForHost,
   getSSHHosts,
+  getTransferProgressPercent,
   listSSHFiles,
   readSSHFile,
   renameSSHItem,
   transferToHost,
   uploadSSHFile,
   type HostConnectionState,
+  type TransferProgressResponse,
 } from "@/main-axios";
 import type { SSHHost } from "@/types";
 import type { LocalCollectedFile, LocalFileEntry } from "@/types/electron";
@@ -76,10 +84,23 @@ interface BrowserEntry {
   path: string;
   type: EntryType;
   size?: number;
+  created?: string;
   modified?: string;
+  createdTimestamp?: number;
+  modifiedTimestamp?: number;
   permissions?: string;
   owner?: string;
   group?: string;
+}
+
+interface SftpTransferProgress {
+  label: string;
+  detail?: string;
+  currentItem?: number;
+  totalItems?: number;
+  bytesTransferred?: number;
+  totalBytes?: number;
+  percent?: number;
 }
 
 interface LocalPaneState {
@@ -149,6 +170,56 @@ function formatSize(size?: number): string {
     index++;
   }
   return `${value < 10 && index > 0 ? value.toFixed(1) : Math.round(value)} ${units[index]}`;
+}
+
+function formatDateTime(value?: string | number): string {
+  if (value === undefined || value === null || value === "") return "-";
+  const date =
+    typeof value === "number" ? new Date(value * 1000) : new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function formatProgressDetail(progress: SftpTransferProgress): string {
+  const parts: string[] = [];
+  if (progress.currentItem !== undefined && progress.totalItems !== undefined) {
+    parts.push(`${progress.currentItem}/${progress.totalItems} items`);
+  }
+  if (
+    progress.bytesTransferred !== undefined &&
+    progress.totalBytes !== undefined &&
+    progress.totalBytes > 0
+  ) {
+    parts.push(
+      `${formatSize(progress.bytesTransferred)} / ${formatSize(progress.totalBytes)}`,
+    );
+  }
+  if (progress.detail) parts.push(progress.detail);
+  return parts.join(" - ");
+}
+
+function progressFromTransferStatus(
+  status: TransferProgressResponse,
+  fallbackLabel: string,
+): SftpTransferProgress {
+  const percent = getTransferProgressPercent(status);
+  const label =
+    status.phase === "compressing"
+      ? "Compressing source files..."
+      : status.phase === "extracting"
+        ? "Extracting at destination..."
+        : status.phase === "reconnecting"
+          ? "Reconnecting transfer..."
+          : fallbackLabel;
+  return {
+    label,
+    currentItem: status.itemsCompleted,
+    totalItems: status.totalItems,
+    bytesTransferred: status.bytesTransferred,
+    totalBytes: status.totalBytes,
+    percent,
+  };
 }
 
 function parentRemotePath(remotePath: string): string {
@@ -221,7 +292,7 @@ function FileRow({
   const canDrop = entry.type === "directory" && !!onDropPayload && acceptsDrop;
   return (
     <div
-      className={`grid grid-cols-[minmax(0,1fr)_5rem] items-center border-b border-border/70 text-xs ${
+      className={`grid grid-cols-[minmax(0,1fr)_8.5rem_5rem] items-center border-b border-border/70 text-xs ${
         selected ? "bg-accent-brand/10 text-accent-brand" : "hover:bg-muted/50"
       }`}
       draggable={draggable}
@@ -262,6 +333,12 @@ function FileRow({
           {entry.name}
         </span>
       </button>
+      <div
+        className="px-3 py-2 text-[10px] tabular-nums text-muted-foreground"
+        title={entry.created || undefined}
+      >
+        {formatDateTime(entry.created ?? entry.createdTimestamp)}
+      </div>
       <div className="flex items-center justify-end gap-2 px-3 py-2 text-[10px] text-muted-foreground">
         {entry.type === "directory" && onOpen ? (
           <button
@@ -359,7 +436,9 @@ function LocalPane({
             variant="ghost"
             size="icon"
             className="size-7 rounded-none"
-            disabled={!electronReady || !pane.parent || pane.parent === pane.path}
+            disabled={
+              !electronReady || !pane.parent || pane.parent === pane.path
+            }
             onClick={() => void loadPath(pane.parent)}
           >
             <FolderOpen className="size-3.5" />
@@ -393,32 +472,39 @@ function LocalPane({
       {pane.error ? (
         <div className="p-3 text-xs text-red-400">{pane.error}</div>
       ) : (
-        <div
-          className="min-h-0 flex-1 overflow-y-auto"
-          onContextMenu={onPaneContextMenu}
-        >
-          {pane.entries.length === 0 && !pane.loading ? (
-            <div className="p-3 text-xs text-muted-foreground">No files</div>
-          ) : (
-            pane.entries.map((entry) => (
-              <FileRow
-                key={entry.path}
-                entry={entry}
-                selected={selectedPaths.has(entry.path)}
-                onToggle={() => toggle(entry.path)}
-                draggable
-                onDragStart={() => onDragStart(getDragPaths(entry.path))}
-                onDragEnd={onDragEnd}
-                onOpen={
-                  entry.type === "directory"
-                    ? () => void loadPath(entry.path)
-                    : undefined
-                }
-                onContextMenu={onEntryContextMenu}
-              />
-            ))
-          )}
-        </div>
+        <>
+          <div className="grid grid-cols-[minmax(0,1fr)_8.5rem_5rem] border-b border-border/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <span>Name</span>
+            <span>Created</span>
+            <span className="text-right">Size</span>
+          </div>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto"
+            onContextMenu={onPaneContextMenu}
+          >
+            {pane.entries.length === 0 && !pane.loading ? (
+              <div className="p-3 text-xs text-muted-foreground">No files</div>
+            ) : (
+              pane.entries.map((entry) => (
+                <FileRow
+                  key={entry.path}
+                  entry={entry}
+                  selected={selectedPaths.has(entry.path)}
+                  onToggle={() => toggle(entry.path)}
+                  draggable
+                  onDragStart={() => onDragStart(getDragPaths(entry.path))}
+                  onDragEnd={onDragEnd}
+                  onOpen={
+                    entry.type === "directory"
+                      ? () => void loadPath(entry.path)
+                      : undefined
+                  }
+                  onContextMenu={onEntryContextMenu}
+                />
+              ))
+            )}
+          </div>
+        </>
       )}
     </section>
   );
@@ -473,7 +559,10 @@ function RemotePane({
               type: entry.type,
               path: joinRemotePath(base, entry.name),
               size: entry.size,
+              created: entry.created,
+              createdTimestamp: entry.createdTimestamp,
               modified: entry.modified,
+              modifiedTimestamp: entry.modifiedTimestamp,
             }))
             .sort((a, b) => {
               if (a.type === "directory" && b.type !== "directory") return -1;
@@ -659,6 +748,11 @@ function RemotePane({
         className="min-h-0 flex-1 overflow-y-auto"
         onContextMenu={onPaneContextMenu}
       >
+        <div className="grid grid-cols-[minmax(0,1fr)_8.5rem_5rem] border-b border-border/70 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <span>Name</span>
+          <span>Created</span>
+          <span className="text-right">Size</span>
+        </div>
         {pane.entries.length === 0 && !pane.loading ? (
           <div className="p-3 text-xs text-muted-foreground">No files</div>
         ) : (
@@ -707,6 +801,8 @@ export function SftpTransferTab() {
   const [destPane, setDestPaneState] = useState(defaultRemotePane);
   const [serverMove, setServerMove] = useState(false);
   const [transferLabel, setTransferLabel] = useState<string | null>(null);
+  const [transferProgress, setTransferProgress] =
+    useState<SftpTransferProgress | null>(null);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [nameDialog, setNameDialog] = useState<NameDialogState | null>(null);
@@ -805,7 +901,9 @@ export function SftpTransferTab() {
       void loadLocalPath("");
       return;
     }
-    void electronApi.getLocalHomeDirectory().then((home) => loadLocalPath(home));
+    void electronApi
+      .getLocalHomeDirectory()
+      .then((home) => loadLocalPath(home));
   }, [loadLocalPath]);
 
   useEffect(() => {
@@ -874,6 +972,10 @@ export function SftpTransferTab() {
           .map((entry) => ({
             ...entry,
             type: entry.type,
+            created: entry.created,
+            createdTimestamp: entry.createdTimestamp,
+            modified: entry.modified,
+            modifiedTimestamp: entry.modifiedTimestamp,
             path: joinRemotePath(refreshed.path || pane.path, entry.name),
           })),
         selectedPaths: new Set(),
@@ -947,17 +1049,40 @@ export function SftpTransferTab() {
       collected.files as LocalCollectedFile[],
       destinationPath,
     );
+    const totalBytes = targets.reduce(
+      (sum, target) => sum + (target.size || 0),
+      0,
+    );
+    let completedBytes = 0;
 
     try {
+      setTransferProgress({
+        label: "Preparing local upload...",
+        currentItem: 0,
+        totalItems: targets.length,
+        bytesTransferred: 0,
+        totalBytes,
+        percent: targets.length === 0 ? 100 : 0,
+      });
       for (const dir of getRequiredRemoteDirectories(targets)) {
         await createSSHFolder(destPane.sessionId, "/", dir.replace(/^\/+/, ""));
       }
 
       for (let index = 0; index < targets.length; index++) {
         const target = targets[index];
-        setTransferLabel(
-          `Uploading ${index + 1} of ${targets.length}: ${target.relativePath}`,
-        );
+        const label = `Uploading ${index + 1} of ${targets.length}: ${target.relativePath}`;
+        setTransferLabel(label);
+        setTransferProgress({
+          label,
+          currentItem: index + 1,
+          totalItems: targets.length,
+          bytesTransferred: completedBytes,
+          totalBytes,
+          percent:
+            totalBytes > 0
+              ? Math.round((completedBytes / totalBytes) * 100)
+              : undefined,
+        });
         const read = await window.electronAPI.readLocalFile(target.path);
         if (!read.success || !read.data) {
           throw new Error(read.error || `Failed to read ${target.path}`);
@@ -967,7 +1092,24 @@ export function SftpTransferTab() {
           target.remoteDir,
           target.fileName,
           base64ToFile(read.data, target.fileName),
+          undefined,
+          undefined,
+          ({ bytesSent }) => {
+            const nextBytes = completedBytes + bytesSent;
+            setTransferProgress({
+              label,
+              currentItem: index + 1,
+              totalItems: targets.length,
+              bytesTransferred: nextBytes,
+              totalBytes,
+              percent:
+                totalBytes > 0
+                  ? Math.min(100, Math.round((nextBytes / totalBytes) * 100))
+                  : undefined,
+            });
+          },
         );
+        completedBytes += target.size || 0;
       }
 
       toast.success(
@@ -984,6 +1126,10 @@ export function SftpTransferTab() {
             entries: refreshed.files.map((entry) => ({
               ...entry,
               type: entry.type,
+              created: entry.created,
+              createdTimestamp: entry.createdTimestamp,
+              modified: entry.modified,
+              modifiedTimestamp: entry.modifiedTimestamp,
               path: joinRemotePath(refreshed.path, entry.name),
             })),
           }));
@@ -993,6 +1139,7 @@ export function SftpTransferTab() {
       toast.error(error instanceof Error ? error.message : "Upload failed");
     } finally {
       setTransferLabel(null);
+      setTransferProgress(null);
     }
   };
 
@@ -1026,7 +1173,17 @@ export function SftpTransferTab() {
       return;
     }
 
-    setTransferLabel("Starting server transfer...");
+    const startingLabel = "Starting server transfer...";
+    const runningLabel = move
+      ? "Moving server files..."
+      : "Copying server files...";
+    setTransferLabel(startingLabel);
+    setTransferProgress({
+      label: startingLabel,
+      currentItem: 0,
+      totalItems: paths.length,
+      percent: 0,
+    });
     try {
       const result = await transferToHost(
         sourceSessionId,
@@ -1038,8 +1195,20 @@ export function SftpTransferTab() {
         2,
       );
       beginTransferProgressMonitoring(result.transferId, t, {
+        initialStatus: {
+          totalItems: paths.length,
+          sourcePaths: paths,
+          destPath: normalizeRemoteDir(destinationPath),
+          moveRequested: move,
+        },
+        onProgress: (status) => {
+          const nextProgress = progressFromTransferStatus(status, runningLabel);
+          setTransferProgress(nextProgress);
+          setTransferLabel(nextProgress.label);
+        },
         onComplete: () => {
           setTransferLabel(null);
+          setTransferProgress(null);
           toast.success(move ? "Move completed" : "Copy completed");
           if (refreshTarget) void refreshRemotePane(refreshTarget);
         },
@@ -1047,6 +1216,7 @@ export function SftpTransferTab() {
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Transfer failed");
       setTransferLabel(null);
+      setTransferProgress(null);
     }
   };
 
@@ -1117,10 +1287,32 @@ export function SftpTransferTab() {
     if (files.length === 0) return;
 
     setTransferLabel("Copying remote file to local folder...");
+    const totalBytes = files.reduce((sum, file) => sum + (file.size || 0), 0);
+    let completedBytes = 0;
+    setTransferProgress({
+      label: "Copying remote file to local folder...",
+      currentItem: 0,
+      totalItems: files.length,
+      bytesTransferred: 0,
+      totalBytes,
+      percent: 0,
+    });
     try {
       for (let index = 0; index < files.length; index++) {
         const file = files[index];
-        setTransferLabel(`Copying ${index + 1} of ${files.length}: ${file.name}`);
+        const label = `Copying ${index + 1} of ${files.length}: ${file.name}`;
+        setTransferLabel(label);
+        setTransferProgress({
+          label,
+          currentItem: index + 1,
+          totalItems: files.length,
+          bytesTransferred: completedBytes,
+          totalBytes,
+          percent:
+            totalBytes > 0
+              ? Math.round((completedBytes / totalBytes) * 100)
+              : undefined,
+        });
         const read = await readSSHFile(pane.sessionId, file.path);
         const data =
           read.encoding === "base64"
@@ -1134,6 +1326,18 @@ export function SftpTransferTab() {
         if (!result.success) {
           throw new Error(result.error || `Failed to write ${file.name}`);
         }
+        completedBytes += file.size || 0;
+        setTransferProgress({
+          label,
+          currentItem: index + 1,
+          totalItems: files.length,
+          bytesTransferred: completedBytes,
+          totalBytes,
+          percent:
+            totalBytes > 0
+              ? Math.min(100, Math.round((completedBytes / totalBytes) * 100))
+              : undefined,
+        });
       }
       toast.success(
         `Copied ${files.length} file${files.length === 1 ? "" : "s"} to local`,
@@ -1143,6 +1347,7 @@ export function SftpTransferTab() {
       toast.error(error instanceof Error ? error.message : "Copy failed");
     } finally {
       setTransferLabel(null);
+      setTransferProgress(null);
     }
   };
 
@@ -1254,7 +1459,9 @@ export function SftpTransferTab() {
     try {
       if (paneId === "local") {
         if (!window.electronAPI?.trashLocalPath) {
-          throw new Error("Local delete is available in the Electron app only.");
+          throw new Error(
+            "Local delete is available in the Electron app only.",
+          );
         }
         for (const entry of entries) {
           const result = await window.electronAPI.trashLocalPath(entry.path);
@@ -1275,7 +1482,9 @@ export function SftpTransferTab() {
         }
         await refreshRemotePane(paneId);
       }
-      toast.success(`Deleted ${entries.length} item${entries.length === 1 ? "" : "s"}`);
+      toast.success(
+        `Deleted ${entries.length} item${entries.length === 1 ? "" : "s"}`,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Delete failed");
     }
@@ -1430,15 +1639,43 @@ export function SftpTransferTab() {
         </div>
       </header>
 
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-2 text-xs text-muted-foreground">
         <span>
           {mode === "local-server"
             ? `${localSelectionCount} local item${localSelectionCount === 1 ? "" : "s"} selected`
             : `${sourceSelectionCount} source item${sourceSelectionCount === 1 ? "" : "s"} selected`}
         </span>
-        <span>
-          {hostsLoading ? "Loading hosts..." : transferLabel || "Ready"}
-        </span>
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+          {transferProgress ? (
+            <>
+              <div className="min-w-0 flex-1 text-right">
+                <div className="truncate font-medium text-foreground">
+                  {transferProgress.label}
+                </div>
+                <div className="truncate text-[10px]">
+                  {formatProgressDetail(transferProgress)}
+                </div>
+              </div>
+              <div className="h-1.5 w-32 overflow-hidden bg-muted">
+                <div
+                  className="h-full bg-accent-brand transition-[width]"
+                  style={{
+                    width: `${Math.min(100, Math.max(0, transferProgress.percent ?? 0))}%`,
+                  }}
+                />
+              </div>
+              {transferProgress.percent !== undefined && (
+                <span className="w-9 text-right tabular-nums">
+                  {transferProgress.percent}%
+                </span>
+              )}
+            </>
+          ) : (
+            <span>
+              {hostsLoading ? "Loading hosts..." : transferLabel || "Ready"}
+            </span>
+          )}
+        </div>
       </div>
 
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 p-3 lg:grid-cols-2">
@@ -1542,7 +1779,10 @@ export function SftpTransferTab() {
           ) : (
             <>
               <ContextMenuButton
-                disabled={contextMenu.paneId !== "local" && !contextRemotePane?.sessionId}
+                disabled={
+                  contextMenu.paneId !== "local" &&
+                  !contextRemotePane?.sessionId
+                }
                 onClick={() => void handleRefreshPane(contextMenu.paneId)}
               >
                 Refresh
@@ -1570,7 +1810,10 @@ export function SftpTransferTab() {
         </div>
       )}
 
-      <Dialog open={!!nameDialog} onOpenChange={(open) => !open && setNameDialog(null)}>
+      <Dialog
+        open={!!nameDialog}
+        onOpenChange={(open) => !open && setNameDialog(null)}
+      >
         <DialogContent className="rounded-none border-border bg-card sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-xs font-bold uppercase tracking-widest">

@@ -2209,6 +2209,17 @@ function getC2SRelayUrl() {
   return relayHttpUrl.replace(/^http:/, "ws:").replace(/^https:/, "wss:");
 }
 
+function getC2SRemoteBaseUrl() {
+  const config = remoteSync.getRemoteSyncConfig();
+  const serverUrl = config?.serverUrl;
+  if (!serverUrl) {
+    throw new Error(
+      "No remote Termix server connected -- enable Remote Sync first",
+    );
+  }
+  return serverUrl.replace(/\/$/, "");
+}
+
 const C2S_REMOTE_SESSION_EXPIRED_ERROR =
   "Remote Termix session expired. Reconnect Remote Sync and try again.";
 
@@ -2242,6 +2253,56 @@ function createC2SFailure(message, fallback) {
     ...(error === C2S_REMOTE_SESSION_EXPIRED_ERROR
       ? { code: "REMOTE_SESSION_EXPIRED" }
       : {}),
+  };
+}
+
+async function fetchC2SRemoteJson(pathname) {
+  const remoteSyncJwt = remoteSync.getRemoteSyncJwt();
+  if (!remoteSyncJwt || remoteSync.isJwtExpiredOrExpiringSoon(remoteSyncJwt)) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+
+  const url = `${getC2SRemoteBaseUrl()}${pathname}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${remoteSyncJwt}`,
+      "X-Electron-App": "true",
+    },
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw new Error(C2S_REMOTE_SESSION_EXPIRED_ERROR);
+  }
+  if (!response.ok) {
+    throw new Error(`Request failed (${response.status}): ${url}`);
+  }
+  return response.json();
+}
+
+async function resolveC2SRemoteSourceHost(tunnel) {
+  const normalized = normalizeC2STunnelAddresses(tunnel);
+  const sourceHostSyncId =
+    typeof normalized.sourceHostSyncId === "string"
+      ? normalized.sourceHostSyncId.trim()
+      : "";
+  if (!sourceHostSyncId) return normalized;
+
+  const data = await fetchC2SRemoteJson("/sync/hosts");
+  const remoteHost = (Array.isArray(data?.rows) ? data.rows : []).find(
+    (row) => row?.syncId === sourceHostSyncId,
+  );
+  const remoteHostId = Number(remoteHost?.id);
+  if (!Number.isInteger(remoteHostId) || remoteHostId < 1) {
+    throw new Error(
+      "Intermediate Host is not available on the remote Termix server yet. Run Remote Sync for hosts, then try again.",
+    );
+  }
+
+  return {
+    ...normalized,
+    sourceHostId: remoteHostId,
+    sourceHostSyncId,
+    sourceHostName: remoteHost.name || normalized.sourceHostName,
+    endpointHost: normalized.endpointHost || remoteHost.name,
   };
 }
 
@@ -2548,18 +2609,19 @@ async function testC2SRelay(tunnel, targetHost, targetPort, authToken) {
 }
 
 async function testC2STunnel(tunnel, index = 0, authToken) {
-  const mode = tunnel.mode || tunnel.tunnelType || "local";
+  const resolvedTunnel = await resolveC2SRemoteSourceHost(tunnel);
+  const mode = resolvedTunnel.mode || resolvedTunnel.tunnelType || "local";
   const testTunnel = {
-    ...normalizeC2STunnelAddresses(tunnel),
-    name: `${getC2STunnelName(tunnel, index)}::test`,
+    ...normalizeC2STunnelAddresses(resolvedTunnel),
+    name: `${getC2STunnelName(resolvedTunnel, index)}::test`,
     mode,
   };
   const localAddress = getC2SLocalAddress(testTunnel);
   const remoteAddress = getC2SRemoteAddress(testTunnel);
-  const sourcePort = Number(tunnel.sourcePort);
-  const endpointPort = Number(tunnel.endpointPort);
+  const sourcePort = Number(resolvedTunnel.sourcePort);
+  const endpointPort = Number(resolvedTunnel.endpointPort);
 
-  if (!tunnel.sourceHostId) {
+  if (!resolvedTunnel.sourceHostId) {
     return { success: false, error: "Endpoint SSH host is required" };
   }
 
@@ -2579,7 +2641,9 @@ async function testC2STunnel(tunnel, index = 0, authToken) {
     return { success: false, error: "Invalid local port" };
   }
 
-  const runtime = c2sTunnelRuntimes.get(getC2STunnelName(tunnel, index));
+  const runtime = c2sTunnelRuntimes.get(
+    getC2STunnelName(resolvedTunnel, index),
+  );
   if (!runtime) {
     const availability = await checkLocalPortAvailable(
       localAddress,
@@ -2975,24 +3039,26 @@ async function startC2SRemoteTunnel(tunnel, index = 0, authToken) {
 }
 
 async function startC2STunnel(tunnel, index = 0, authToken) {
-  const mode = tunnel.mode || tunnel.tunnelType || "local";
-  const tunnelName = getC2STunnelName(tunnel, index);
-  const tunnelConfig = normalizeC2STunnelAddresses(tunnel);
+  const resolvedTunnel = await resolveC2SRemoteSourceHost(tunnel);
+  const mode = resolvedTunnel.mode || resolvedTunnel.tunnelType || "local";
+  const tunnelName = getC2STunnelName(resolvedTunnel, index);
+  const tunnelConfig = normalizeC2STunnelAddresses(resolvedTunnel);
   const bindHost = getC2SLocalAddress(tunnelConfig);
-  const sourcePort = Number(tunnel.sourcePort);
+  const sourcePort = Number(resolvedTunnel.sourcePort);
   logToFile(`[c2s] starting tunnel ${tunnelName}`, {
     mode,
     bindHost,
     remoteAddress: getC2SRemoteAddress(tunnelConfig),
     sourcePort,
-    sourceHostId: tunnel.sourceHostId,
-    endpointPort: tunnel.endpointPort,
+    sourceHostId: resolvedTunnel.sourceHostId,
+    sourceHostSyncId: resolvedTunnel.sourceHostSyncId,
+    endpointPort: resolvedTunnel.endpointPort,
   });
 
   if (mode === "remote") {
-    return startC2SRemoteTunnel(tunnel, index, authToken);
+    return startC2SRemoteTunnel(resolvedTunnel, index, authToken);
   }
-  if (!tunnel.sourceHostId) {
+  if (!resolvedTunnel.sourceHostId) {
     return { success: false, error: "Endpoint SSH host is required" };
   }
   if (!Number.isInteger(sourcePort) || sourcePort < 1 || sourcePort > 65535) {
@@ -3593,6 +3659,7 @@ function getLocalEntry(entryPath, name = path.basename(entryPath)) {
     path: entryPath,
     type: toLocalFileType(stat),
     size: stat.isFile() ? stat.size : 0,
+    created: stat.birthtime.toISOString(),
     modified: stat.mtime.toISOString(),
     permissions: (stat.mode & 0o777).toString(8).padStart(3, "0"),
     owner: String(stat.uid),
@@ -3642,6 +3709,7 @@ function collectLocalFilesFromPath(rootPath, rootName, files, limit) {
       name: path.basename(rootPath),
       relativePath: normalizeRelativeLocalPath(rootName),
       size: stat.size,
+      created: stat.birthtime.toISOString(),
       modified: stat.mtime.toISOString(),
     });
     return;

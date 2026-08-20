@@ -58,6 +58,7 @@ function installElectronApi() {
           path: "/Users/test/local.txt",
           type: "file",
           size: 12,
+          created: "2026-07-19T23:00:00",
           modified: "2026-07-20T00:00:00.000Z",
           permissions: "644",
         },
@@ -76,6 +77,7 @@ function installElectronApi() {
           name: "local.txt",
           relativePath: "local.txt",
           size: 12,
+          created: "2026-07-19T23:00:00",
           modified: "2026-07-20T00:00:00.000Z",
         },
       ],
@@ -112,14 +114,52 @@ beforeEach(() => {
   });
   api.listSSHFiles.mockResolvedValue({
     path: "/srv",
-    files: [{ name: "remote.txt", type: "file", size: 24 }],
+    files: [
+      {
+        name: "remote.txt",
+        type: "file",
+        size: 24,
+        created: "2026-07-18T10:30:00",
+      },
+    ],
   });
   api.browseSSHDirectory.mockResolvedValue({
     status: "ok",
     path: "/srv",
-    files: [{ name: "remote.txt", type: "file", size: 24 }],
+    files: [
+      {
+        name: "remote.txt",
+        type: "file",
+        size: 24,
+        created: "2026-07-18T10:30:00",
+      },
+    ],
   });
   api.transferToHost.mockResolvedValue({ transferId: "transfer-1" });
+  api.uploadSSHFile.mockImplementation(
+    async (
+      _sessionId: string,
+      _path: string,
+      _fileName: string,
+      file: File,
+      _hostId?: number,
+      _userId?: string,
+      onProgress?: (progress: {
+        chunkIndex: number;
+        totalChunks: number;
+        bytesSent: number;
+        totalBytes: number;
+      }) => void,
+    ) => {
+      onProgress?.({
+        chunkIndex: 0,
+        totalChunks: 1,
+        bytesSent: file.size,
+        totalBytes: file.size,
+      });
+      return {};
+    },
+  );
   installElectronApi();
 });
 
@@ -166,5 +206,32 @@ describe("SftpTransferTab context menus", () => {
         2,
       );
     });
+  });
+
+  it("shows created timestamps for local and remote file rows", async () => {
+    render(<SftpTransferTab />);
+
+    expect(await screen.findByText("2026-07-19 23:00")).toBeTruthy();
+
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+
+    expect(await screen.findByText("2026-07-18 10:30")).toBeTruthy();
+  });
+
+  it("reports local upload progress through the SFTP status bar", async () => {
+    render(<SftpTransferTab />);
+
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    await screen.findByText("remote.txt");
+
+    await userEvent.click(await screen.findByText("local.txt"));
+    await userEvent.click(screen.getByRole("button", { name: /upload/i }));
+
+    await waitFor(() => {
+      expect(api.uploadSSHFile).toHaveBeenCalled();
+    });
+    expect(api.uploadSSHFile.mock.calls[0][6]).toEqual(expect.any(Function));
   });
 });
