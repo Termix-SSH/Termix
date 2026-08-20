@@ -177,8 +177,8 @@ export function buildPaneMetrics(
     const treePids: number[] = [];
     const queue = [pane.pid];
     const seen = new Set<number>();
-    while (queue.length > 0) {
-      const pid = queue.shift()!;
+    for (let cursor = 0; cursor < queue.length; cursor++) {
+      const pid = queue[cursor];
       if (seen.has(pid)) continue;
       seen.add(pid);
       if (byPid.has(pid)) treePids.push(pid);
@@ -225,9 +225,19 @@ export function attachPanesToWindows(
   windows: Map<string, TmuxWindow[]>,
   panes: RawPane[],
 ): void {
+  const windowsBySessionAndIndex = new Map<string, Map<number, TmuxWindow>>();
+  for (const [sessionName, sessionWindows] of windows) {
+    const byIndex = new Map<number, TmuxWindow>();
+    for (const window of sessionWindows) {
+      if (!byIndex.has(window.index)) byIndex.set(window.index, window);
+    }
+    windowsBySessionAndIndex.set(sessionName, byIndex);
+  }
+
   for (const pane of panes) {
-    const sessionWindows = windows.get(pane.sessionName) || [];
-    const window = sessionWindows.find((w) => w.index === pane.windowIndex);
+    const window = windowsBySessionAndIndex
+      .get(pane.sessionName)
+      ?.get(pane.windowIndex);
     if (window) {
       const { sessionName: _s, windowIndex: _w, ...paneFields } = pane;
       window.panes.push(paneFields);
