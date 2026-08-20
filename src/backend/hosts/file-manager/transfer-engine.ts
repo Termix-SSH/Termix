@@ -38,6 +38,19 @@ import {
   promisifySftpUnlink,
 } from "./sftp-promisify.js";
 import {
+  buildTransferHopTimings,
+  computeTransferMbPerSec,
+  createEmptyXferStats,
+  createHopWallClock,
+  elapsedMs,
+  hopSpanMs,
+  mergeXferStats,
+  noteHopEnd,
+  noteHopStart,
+  type PipelinedXferStats,
+  type TransferTimings,
+} from "./transfer-stats.js";
+import {
   buildDirectProbeCommand,
   buildDirectRsyncCommand,
   quoteShell,
@@ -118,31 +131,11 @@ export type TransferStatus =
   "running" | "success" | "partial" | "error" | "cancelled";
 export type TransferMethod = "stream" | "tar" | "item_sftp" | "direct_rsync";
 
-export type TransferHopId =
-  "source_read" | "dest_sftp_write" | "dest_local_write";
-
-export interface TransferHopMetrics {
-  id: TransferHopId;
-  bytes: number;
-  /** Wall-clock span from first I/O on this hop to last I/O complete. */
-  spanMs: number;
-  mbPerSec: number;
-}
-
-export interface TransferTimings {
-  prepareDestMs?: number;
-  compressMs?: number;
-  transferMs?: number;
-  extractMs?: number;
-  verifyMs?: number;
-  directBenchmarkMs?: number;
-  relayBenchmarkMs?: number;
-  sourceDeleteMs?: number;
-  totalMs?: number;
-  transferBytes?: number;
-  endToEndMbPerSec?: number;
-  hops?: TransferHopMetrics[];
-}
+export type {
+  TransferHopId,
+  TransferHopMetrics,
+  TransferTimings,
+} from "./transfer-stats.js";
 
 export interface TransferProgress {
   transferId: string;
@@ -1097,10 +1090,6 @@ function finalizeTransfer(
   return result;
 }
 
-function elapsedMs(start: number): number {
-  return Date.now() - start;
-}
-
 async function verifyTransferredFile(
   deps: HostTransferDeps,
   transferId: string,
@@ -1148,102 +1137,6 @@ async function verifyTransferredFile(
   });
 }
 
-export function computeTransferMbPerSec(
-  bytes: number,
-  ms: number,
-): number | undefined {
-  if (ms <= 0 || bytes <= 0) return undefined;
-  return ((bytes / ms) * 1000) / (1024 * 1024);
-}
-
-interface HopWallClock {
-  firstAt: number | null;
-  lastAt: number | null;
-}
-
-function createHopWallClock(): HopWallClock {
-  return { firstAt: null, lastAt: null };
-}
-
-function noteHopStart(
-  clock: HopWallClock,
-  t: number = performance.now(),
-): void {
-  if (clock.firstAt === null) clock.firstAt = t;
-}
-
-function noteHopEnd(clock: HopWallClock, t: number = performance.now()): void {
-  clock.lastAt = t;
-}
-
-function hopSpanMs(clock: HopWallClock): number {
-  if (clock.firstAt === null || clock.lastAt === null) return 0;
-  return Math.max(0, clock.lastAt - clock.firstAt);
-}
-
-interface PipelinedXferStats {
-  bytes: number;
-  sourceReadSpanMs: number;
-  destWriteSpanMs: number;
-  destWriteKind: "sftp" | "local";
-}
-
-function createEmptyXferStats(): PipelinedXferStats {
-  return {
-    bytes: 0,
-    sourceReadSpanMs: 0,
-    destWriteSpanMs: 0,
-    destWriteKind: "sftp",
-  };
-}
-
-function mergeXferStats(
-  target: PipelinedXferStats,
-  source: PipelinedXferStats,
-): void {
-  target.bytes += source.bytes;
-  target.sourceReadSpanMs += source.sourceReadSpanMs;
-  target.destWriteSpanMs += source.destWriteSpanMs;
-  target.destWriteKind = source.destWriteKind;
-}
-
-function buildTransferHopTimings(
-  stats: PipelinedXferStats,
-  transferMs: number,
-): Pick<TransferTimings, "transferBytes" | "endToEndMbPerSec" | "hops"> {
-  const hops: TransferHopMetrics[] = [];
-
-  const sourceRate = computeTransferMbPerSec(
-    stats.bytes,
-    stats.sourceReadSpanMs,
-  );
-  if (sourceRate !== undefined) {
-    hops.push({
-      id: "source_read",
-      bytes: stats.bytes,
-      spanMs: stats.sourceReadSpanMs,
-      mbPerSec: sourceRate,
-    });
-  }
-
-  const destHopId: TransferHopId =
-    stats.destWriteKind === "local" ? "dest_local_write" : "dest_sftp_write";
-  const destRate = computeTransferMbPerSec(stats.bytes, stats.destWriteSpanMs);
-  if (destRate !== undefined) {
-    hops.push({
-      id: destHopId,
-      bytes: stats.bytes,
-      spanMs: stats.destWriteSpanMs,
-      mbPerSec: destRate,
-    });
-  }
-
-  return {
-    transferBytes: stats.bytes,
-    endToEndMbPerSec: computeTransferMbPerSec(stats.bytes, transferMs),
-    hops,
-  };
-}
 
 async function deleteSourcePathsAfterSuccess(
   deps: HostTransferDeps,
