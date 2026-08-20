@@ -92,8 +92,7 @@ async function sendWebhook(
         notification.context?.host?.name ??
         notification.context?.trigger?.hostName,
       hostId:
-        notification.context?.host?.id ??
-        notification.context?.trigger?.hostId,
+        notification.context?.host?.id ?? notification.context?.trigger?.hostId,
       ruleName: notification.title,
       ruleId: notification.context?.run?.automationId,
       triggerType: notification.context?.trigger?.type,

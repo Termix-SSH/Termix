@@ -6,9 +6,8 @@ vi.mock("../../automations/http.js", () => ({
   automationFetch: (...args: unknown[]) => automationFetch(...args),
 }));
 
-const { sendAutomationNotification } = await import(
-  "../../automations/notify.js"
-);
+const { sendAutomationNotification } =
+  await import("../../automations/notify.js");
 
 beforeEach(() => {
   automationFetch.mockReset();
