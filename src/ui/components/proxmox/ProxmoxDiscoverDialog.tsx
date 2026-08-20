@@ -154,7 +154,10 @@ export function ProxmoxDiscoverDialog({
         // the real IP. Re-sync keeps the manual value (guest.ip || existing.ip).
         ip: g.ip || "0.0.0.0",
         port: g.connectionType === "rdp" ? 3389 : 22,
-        username: defaultUsername ?? "root",
+        username:
+          importAuth.authType === "credential"
+            ? ""
+            : (defaultUsername ?? "root"),
         folder: importFolder,
         // Inherit the jump-host chain from the scanned Proxmox host so the
         // imported guests are reachable the same way; user can override.
