@@ -61,6 +61,13 @@ import {
   ensureDirectoryTreeSftp,
 } from "./transfer-sftp-dir.js";
 import {
+  DEFAULT_PARALLEL_SEGMENT_COUNT,
+  SFTP_XFER_SEGMENT_SIZE,
+  buildSegmentCopyJobs,
+  clampParallelSegmentCount,
+  type SegmentCopyJob,
+} from "./transfer-segment-copy.js";
+import {
   buildDirectProbeCommand,
   buildDirectRsyncCommand,
   quoteShell,
@@ -301,8 +308,6 @@ const SMALL_FILE_SYNC_THRESHOLD = 10 * 1024 * 1024;
 const SFTP_XFER_CHUNK_SIZE = 256 * 1024;
 /** Pipelined in-flight READ requests per leg (ssh2 fastGet/fastPut default is 64). */
 const SFTP_XFER_CONCURRENCY = 32;
-/** Reset pipelined scheduler every segment to avoid long-run deadlocks at GiB boundaries. */
-const SFTP_XFER_SEGMENT_SIZE = 256 * 1024 * 1024;
 /** Files above this size use segmented copy; smaller files use a single scheduler run. */
 const SFTP_XFER_SEGMENT_THRESHOLD = 32 * 1024 * 1024;
 /** Per-segment attempts before giving up (sequential and parallel). */
@@ -314,8 +319,6 @@ const SFTP_SEQUENTIAL_COPY_MAX_ATTEMPTS = 2;
 const SFTP_PARALLEL_COPY_MAX_ATTEMPTS = 2;
 /** Short backoff before opening fresh dedicated SSH sessions. */
 const TRANSFER_SESSION_RESET_DELAYS_MS = [1000, 2000, 3000];
-const DEFAULT_PARALLEL_SEGMENT_COUNT = 2;
-const MAX_PARALLEL_SEGMENT_COUNT = 8;
 const TRANSFER_HANDLE_CLOSE_TIMEOUT_MS = 2500;
 const HUNG_TRANSFER_MS = 90_000;
 const HUNG_RECONNECTING_MS = 180_000;
@@ -1141,43 +1144,6 @@ interface PipelinedXferOptions {
   segmentIndex?: number;
   reconnect?: TransferReconnectContext;
   onResumeOffset?: (offset: number) => void;
-}
-
-interface SegmentCopyJob {
-  offset: number;
-  length: number;
-  segmentIndex: number;
-}
-
-function clampParallelSegmentCount(value?: number): number {
-  const n = value ?? DEFAULT_PARALLEL_SEGMENT_COUNT;
-  return Math.max(1, Math.min(MAX_PARALLEL_SEGMENT_COUNT, Math.floor(n)));
-}
-
-function buildSegmentCopyJobs(
-  fileSize: number,
-  initialOffset: number,
-  destResumeSize: number,
-): SegmentCopyJob[] {
-  const jobs: SegmentCopyJob[] = [];
-  for (
-    let offset = initialOffset;
-    offset < fileSize;
-    offset += SFTP_XFER_SEGMENT_SIZE
-  ) {
-    const length = Math.min(SFTP_XFER_SEGMENT_SIZE, fileSize - offset);
-    const segmentIndex = Math.floor(offset / SFTP_XFER_SEGMENT_SIZE);
-    if (destResumeSize >= offset + length) {
-      continue;
-    }
-    const start = destResumeSize > offset ? destResumeSize : offset;
-    jobs.push({
-      offset: start,
-      length: offset + length - start,
-      segmentIndex,
-    });
-  }
-  return jobs;
 }
 
 function closeAllTransferSessions(
