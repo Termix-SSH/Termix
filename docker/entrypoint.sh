@@ -68,6 +68,11 @@ fi
 mkdir -p /tmp/nginx
 envsubst '${PORT} ${SSL_PORT} ${SSL_CERT_PATH} ${SSL_KEY_PATH}' < $NGINX_CONF_SOURCE > /tmp/nginx/nginx.conf
 
+if [ "$ENABLE_SSL" = "true" ] && [ "$PORT" = "$SSL_PORT" ]; then
+    echo "HTTP and HTTPS use port $SSL_PORT; disabling the HTTP redirect listener"
+    sed -i '/# BEGIN HTTP_REDIRECT_SERVER/,/# END HTTP_REDIRECT_SERVER/d' /tmp/nginx/nginx.conf
+fi
+
 mkdir -p /app/data /app/uploads /app/data/.opk /app/data/acme-webroot/.well-known/acme-challenge
 chmod 755 /app/data /app/uploads /app/data/.opk 2>/dev/null || true
 
