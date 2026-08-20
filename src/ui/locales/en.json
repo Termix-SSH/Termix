@@ -1867,6 +1867,7 @@
       "uploaded": "Uploaded {{name}}",
       "uploadFailed": "Failed to upload {{name}}",
       "uploadDisabled": "Uploads are disabled for this connection",
+      "driveUnavailable": "Enable RDP drive redirection before uploading files",
       "dropToUpload": "Drop files to upload"
     },
     "toolbar": {

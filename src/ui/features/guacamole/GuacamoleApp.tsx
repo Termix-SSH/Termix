@@ -7,6 +7,7 @@ import React, {
   useImperativeHandle,
 } from "react";
 import type Guacamole from "guacamole-common-js";
+import { toast } from "sonner";
 import {
   GuacamoleDisplay,
   type GuacamoleDisplayHandle,
@@ -179,6 +180,16 @@ const GuacamoleAppInner = React.forwardRef<
     setPendingUploads(files);
     setFileBrowserOpen(true);
   }, []);
+
+  const handleDropUnavailable = useCallback(() => {
+    toast.error(
+      t(
+        allowUpload
+          ? "guacamole.files.driveUnavailable"
+          : "guacamole.files.uploadDisabled",
+      ),
+    );
+  }, [allowUpload, t]);
 
   const resolvedProtocolForConnect = (protocol ??
     hostConfig.connectionType ??
@@ -461,6 +472,7 @@ const GuacamoleAppInner = React.forwardRef<
         }
         onFilesystem={setFilesystem}
         onDropFiles={handleDropFiles}
+        onDropUnavailable={handleDropUnavailable}
       />
       {filesystem && fileBrowserOpen && (
         <GuacamoleFileBrowser
