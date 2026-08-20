@@ -1,5 +1,9 @@
 type SFTPWrapper = import("ssh2").SFTPWrapper;
 
+export const SFTP_OPEN_READ = 0x00000001;
+export const SFTP_OPEN_WRITE = 0x00000002 | 0x00000008 | 0x00000010;
+export const SFTP_OPEN_WRITE_RESUME = 0x00000001 | 0x00000002 | 0x00000008;
+
 export function promisifySftpStat(
   sftp: SFTPWrapper,
   path: string,
