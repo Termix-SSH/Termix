@@ -5,7 +5,6 @@ import type { ClientChannel } from "ssh2";
 import { fileLogger } from "../../utils/logger.js";
 import {
   basename,
-  buildPathFromSegments,
   dirname,
   getWorkingDir,
   inferPlatformFromPath,
@@ -13,7 +12,6 @@ import {
   normalizeSftpPath,
   pathsOverlap,
   sftpPathToLocalPath,
-  splitPathSegments,
   type TransferPlatform,
 } from "../transfer-paths.js";
 import {
@@ -29,10 +27,8 @@ import {
   promisifySftpChmod,
   promisifySftpClose,
   promisifySftpFstat,
-  promisifySftpMkdir,
   promisifySftpOpen,
   promisifySftpReaddir,
-  promisifySftpRmdir,
   promisifySftpStat,
   promisifySftpUnlink,
 } from "./sftp-promisify.js";
@@ -60,6 +56,10 @@ import {
   isPermissionError,
   isRootOnlyPath,
 } from "./transfer-host-utils.js";
+import {
+  deletePathSftp,
+  ensureDirectoryTreeSftp,
+} from "./transfer-sftp-dir.js";
 import {
   buildDirectProbeCommand,
   buildDirectRsyncCommand,
@@ -600,61 +600,6 @@ async function detectTransferPlatform(
 
   session.transferPlatform = "unix";
   return "unix";
-}
-
-async function ensureDirectoryTreeSftp(
-  sftp: SFTPWrapper,
-  dirPath: string,
-  created: Set<string> = new Set(),
-): Promise<void> {
-  const normalized = normalizeSftpPath(dirPath);
-  if (!normalized || isRootOnlyPath(normalized)) return;
-
-  const { root, segments } = splitPathSegments(normalized);
-  if (segments.length === 0) return;
-
-  for (let i = 0; i < segments.length; i++) {
-    const current = buildPathFromSegments(root, segments, i + 1);
-    if (created.has(current)) continue;
-
-    try {
-      await promisifySftpMkdir(sftp, current, 0o755);
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "EEXIST") {
-        try {
-          const stats = await promisifySftpStat(sftp, current);
-          if (!stats.isDirectory()) throw err;
-        } catch {
-          throw err;
-        }
-      }
-    }
-    created.add(current);
-  }
-}
-
-async function deletePathSftp(sftp: SFTPWrapper, path: string): Promise<void> {
-  let stats: import("ssh2").Stats;
-  try {
-    stats = await promisifySftpStat(sftp, path);
-  } catch {
-    return;
-  }
-
-  if (stats.isDirectory()) {
-    const entries = await promisifySftpReaddir(sftp, path);
-    for (const entry of entries) {
-      if (entry.filename === "." || entry.filename === "..") continue;
-      await deletePathSftp(sftp, joinPath(path, entry.filename));
-    }
-    await promisifySftpRmdir(sftp, path);
-    return;
-  }
-
-  if (stats.isFile()) {
-    await promisifySftpUnlink(sftp, path);
-  }
 }
 
 function execCommand(
