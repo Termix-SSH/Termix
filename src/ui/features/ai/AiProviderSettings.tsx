@@ -2,7 +2,7 @@ import { getErrorMessage } from "../../lib/error-message.js";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Loader2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { Label } from "@/components/label";
@@ -16,7 +16,9 @@ import {
 import {
   createAiProvider,
   deleteAiProvider,
+  getAiProviderModels,
   probeAiModels,
+  updateAiProvider,
   type AiProvider,
   type AiProviderType,
 } from "@/api/ai-api";
@@ -68,6 +70,159 @@ interface AiProviderSettingsProps {
   onAdded?: () => void;
 }
 
+function AiProviderEditForm({
+  provider,
+  onSaved,
+  onCancel,
+}: {
+  provider: AiProvider;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation();
+  const [label, setLabel] = useState(provider.label);
+  const [defaultModel, setDefaultModel] = useState(provider.defaultModel ?? "");
+  const [models, setModels] = useState<string[]>([]);
+  const [customModel, setCustomModel] = useState(false);
+  const [detecting, setDetecting] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const detectModels = useCallback(async () => {
+    setDetecting(true);
+    try {
+      const detected = await getAiProviderModels(provider.id);
+      setModels(detected);
+      setCustomModel(!!defaultModel && !detected.includes(defaultModel));
+    } catch {
+      setModels([]);
+      setCustomModel(true);
+    } finally {
+      setDetecting(false);
+    }
+  }, [provider.id, defaultModel]);
+
+  useEffect(() => {
+    void detectModels();
+    // The initial model value belongs to this provider. Subsequent edits must
+    // not trigger a provider model-list request on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provider.id]);
+
+  async function handleSave() {
+    if (!label.trim()) {
+      toast.error(t("ai.labelRequired"));
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateAiProvider(provider.id, {
+        label: label.trim(),
+        defaultModel: defaultModel.trim() || null,
+      });
+      toast.success(t("ai.providerUpdated"));
+      onSaved();
+    } catch (error) {
+      toast.error(getErrorMessage(error, t("ai.providerSaveFailed")));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded-none border border-border p-3">
+      <div className="space-y-1.5">
+        <Label htmlFor={`ai-provider-label-${provider.id}`}>
+          {t("ai.providerLabel")}
+        </Label>
+        <Input
+          id={`ai-provider-label-${provider.id}`}
+          className="rounded-none"
+          value={label}
+          onChange={(event) => setLabel(event.target.value)}
+          autoFocus
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2">
+          <Label
+            htmlFor={`ai-provider-model-${provider.id}`}
+            className="min-w-0 flex-1"
+          >
+            {t("ai.defaultModel")}
+          </Label>
+          <button
+            type="button"
+            className="flex shrink-0 items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-50"
+            onClick={() => void detectModels()}
+            disabled={detecting}
+          >
+            {detecting ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <RefreshCw size={11} />
+            )}
+            {t("ai.modelRefresh")}
+          </button>
+        </div>
+
+        {models.length > 0 && !customModel ? (
+          <Select
+            value={defaultModel || undefined}
+            onValueChange={(value) => {
+              if (value === "__custom__") {
+                setCustomModel(true);
+                setDefaultModel("");
+                return;
+              }
+              setDefaultModel(value);
+            }}
+          >
+            <SelectTrigger
+              id={`ai-provider-model-${provider.id}`}
+              className="rounded-none"
+            >
+              <SelectValue placeholder={t("ai.modelPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {models.map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
+                </SelectItem>
+              ))}
+              <SelectItem value="__custom__">{t("ai.modelCustom")}</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input
+            id={`ai-provider-model-${provider.id}`}
+            className="rounded-none"
+            value={defaultModel}
+            onChange={(event) => setDefaultModel(event.target.value)}
+            placeholder={t("ai.defaultModelPlaceholder")}
+          />
+        )}
+      </div>
+
+      <div className="flex gap-2">
+        <Button size="sm" disabled={saving} onClick={() => void handleSave()}>
+          {saving && <Loader2 size={14} className="animate-spin" />}
+          {t("ai.save")}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={saving}
+          onClick={onCancel}
+        >
+          {t("ai.cancel")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function AiProviderSettings({
   providers,
   onChanged,
@@ -75,6 +230,7 @@ export function AiProviderSettings({
 }: AiProviderSettingsProps) {
   const { t } = useTranslation();
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [providerType, setProviderType] = useState<AiProviderType>("ollama");
   const [label, setLabel] = useState("");
@@ -173,32 +329,67 @@ export function AiProviderSettings({
 
   return (
     <div className="space-y-3">
-      {providers.map((provider) => (
-        <div
-          key={provider.id}
-          className="flex items-center justify-between gap-2 rounded-none border border-border bg-muted px-3 py-2"
-        >
-          <div className="min-w-0">
-            <div className="truncate text-sm font-medium">{provider.label}</div>
-            <div className="truncate text-xs text-muted-foreground">
-              {provider.providerType}
-              {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
-              {provider.apiKeyPrefix ? ` · ${provider.apiKeyPrefix}…` : ""}
+      {providers.map((provider) =>
+        editingId === provider.id ? (
+          <AiProviderEditForm
+            key={provider.id}
+            provider={provider}
+            onSaved={() => {
+              setEditingId(null);
+              onChanged(provider.id);
+            }}
+            onCancel={() => setEditingId(null)}
+          />
+        ) : (
+          <div
+            key={provider.id}
+            className="flex items-center justify-between gap-2 rounded-none border border-border bg-muted px-3 py-2"
+          >
+            <div className="min-w-0">
+              <div className="truncate text-sm font-medium">
+                {provider.label}
+              </div>
+              <div className="truncate text-xs text-muted-foreground">
+                {provider.providerType}
+                {provider.defaultModel ? ` · ${provider.defaultModel}` : ""}
+                {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
+                {provider.apiKeyPrefix ? ` · ${provider.apiKeyPrefix}…` : ""}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setAdding(false);
+                  setEditingId(provider.id);
+                }}
+                aria-label={t("ai.editProvider")}
+              >
+                <Pencil size={14} />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleDelete(provider.id)}
+                aria-label={t("ai.removeProvider")}
+              >
+                <Trash2 size={14} />
+              </Button>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleDelete(provider.id)}
-            aria-label={t("ai.removeProvider")}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
-      ))}
+        ),
+      )}
 
       {!adding && (
-        <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setEditingId(null);
+            setAdding(true);
+          }}
+        >
           <Plus size={14} />
           {t("ai.addProvider")}
         </Button>
