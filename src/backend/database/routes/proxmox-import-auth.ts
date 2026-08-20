@@ -32,7 +32,7 @@ export function resolveProxmoxImportAuth(
     return {
       authType: "credential",
       credentialId,
-      overrideCredentialUsername: 1,
+      overrideCredentialUsername: 0,
     };
   }
 

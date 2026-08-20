@@ -9,7 +9,7 @@ describe("resolveProxmoxImportAuth", () => {
     expect(resolveProxmoxImportAuth("password", 42)).toEqual({
       authType: "credential",
       credentialId: 42,
-      overrideCredentialUsername: true,
+      overrideCredentialUsername: false,
     });
   });
 
@@ -17,7 +17,7 @@ describe("resolveProxmoxImportAuth", () => {
     expect(resolveProxmoxImportAuth("credential", 7)).toEqual({
       authType: "credential",
       credentialId: 7,
-      overrideCredentialUsername: true,
+      overrideCredentialUsername: false,
     });
   });
 
@@ -25,7 +25,7 @@ describe("resolveProxmoxImportAuth", () => {
     expect(resolveProxmoxImportAuth(undefined, 5)).toEqual({
       authType: "credential",
       credentialId: 5,
-      overrideCredentialUsername: true,
+      overrideCredentialUsername: false,
     });
   });
 

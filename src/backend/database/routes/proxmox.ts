@@ -689,6 +689,12 @@ async function syncProxmoxHost(
           ? existing.connectionType
           : null;
       const connectionType = existingConnectionType ?? guest.connectionType;
+      const usesImportCredential =
+        connectionType === "ssh" && importAuth.authType === "credential";
+      const existingUsesImportCredential =
+        usesImportCredential &&
+        existing?.authType === "credential" &&
+        existing?.credentialId === importAuth.credentialId;
       const port =
         typeof existing?.port === "number"
           ? existing.port
@@ -696,11 +702,13 @@ async function syncProxmoxHost(
             ? 3389
             : 22;
       const username =
-        typeof existing?.username === "string" && existing.username
-          ? existing.username
-          : connectionType === "rdp"
-            ? ""
-            : "root";
+        usesImportCredential && (!existing || existingUsesImportCredential)
+          ? ""
+          : typeof existing?.username === "string" && existing.username
+            ? existing.username
+            : connectionType === "rdp"
+              ? ""
+              : "root";
       const update: Record<string, unknown> = {
         name: guest.name,
         ip: guest.ip || existing?.ip || "0.0.0.0",
@@ -714,6 +722,10 @@ async function syncProxmoxHost(
       };
 
       if (existing) {
+        if (existingUsesImportCredential) {
+          update.credentialId = importAuth.credentialId;
+          update.overrideCredentialUsername = false;
+        }
         await createCurrentHostRepository().updateEncryptedForUser(
           userId,
           existing.id as number,
