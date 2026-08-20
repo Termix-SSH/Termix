@@ -102,13 +102,15 @@ describe("isPrivateKeyPassphraseError", () => {
   it("recognizes missing and incorrect passphrase errors", () => {
     expect(
       isPrivateKeyPassphraseError(
-        new Error("Encrypted OpenSSH private key detected, but no passphrase given"),
+        new Error(
+          "Encrypted OpenSSH private key detected, but no passphrase given",
+        ),
       ),
     ).toBe(true);
     expect(isPrivateKeyPassphraseError(new Error("Bad passphrase"))).toBe(true);
-    expect(isPrivateKeyPassphraseError(new Error("Unsupported key format"))).toBe(
-      false,
-    );
+    expect(
+      isPrivateKeyPassphraseError(new Error("Unsupported key format")),
+    ).toBe(false);
   });
 });
 
