@@ -40,7 +40,10 @@ export interface ElectronAPI {
 
   getServerConfig: () => Promise<ServerConfig>;
   saveServerConfig: (config: ServerConfig) => Promise<{ success: boolean }>;
-  testServerConnection: (serverUrl: string) => Promise<ConnectionTestResult>;
+  testServerConnection: (
+    serverUrl: string,
+    allowInvalidCertificate?: boolean,
+  ) => Promise<ConnectionTestResult>;
   getC2STunnelConfig: () => Promise<unknown[]>;
   saveC2STunnelConfig: (
     config: unknown[],

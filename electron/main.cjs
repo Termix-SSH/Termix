@@ -537,7 +537,11 @@ function httpFetch(url, options = {}) {
       method: options.method || "GET",
       headers: options.headers || {},
       timeout: options.timeout || 10000,
-      ...(isHttps ? getTlsVerificationOptions(url) : {}),
+      ...(isHttps
+        ? options.allowInvalidCertificate
+          ? { rejectUnauthorized: false }
+          : getTlsVerificationOptions(url)
+        : {}),
     };
 
     const req = client.request(url, requestOptions, (res) => {
@@ -3134,7 +3138,11 @@ ipcMain.handle("close-external-editor", (_event, editId) => {
   }
 });
 
-ipcMain.handle("test-server-connection", async (event, serverUrl) => {
+async function testServerConnection(
+  _event,
+  serverUrl,
+  allowInvalidCertificate = false,
+) {
   try {
     const normalizedServerUrl = serverUrl.replace(/\/$/, "");
     const healthUrl = `${normalizedServerUrl}/health`;
@@ -3154,6 +3162,7 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
       const response = await httpFetch(healthUrl, {
         method: "GET",
         timeout: 10000,
+        allowInvalidCertificate,
       });
 
       const data = await response.text();
@@ -3207,7 +3216,9 @@ ipcMain.handle("test-server-connection", async (event, serverUrl) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
-});
+}
+
+ipcMain.handle("test-server-connection", testServerConnection);
 
 function createMenu() {
   if (process.platform === "darwin") {
