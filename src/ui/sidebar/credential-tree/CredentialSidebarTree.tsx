@@ -18,6 +18,7 @@ import type {
   CredentialTrayTrigger,
 } from "@/types/credential-sidebar-preferences";
 import { CredentialItem } from "./CredentialItem/CredentialItem";
+import { getCredentialRowHeight } from "./credential-row-height";
 import { CredentialFolderItem } from "./FolderItem/CredentialFolderItem";
 import {
   isFolder,
@@ -130,8 +131,6 @@ export function CredentialSidebarTree({
     !alwaysShowActions &&
     !actionsOnly &&
     (trayTrigger === "click" || isTouchOnly);
-  const isCompactDensity = density === "compact";
-
   const visibleRows = collectVisibleRows(folders, query, openFolders);
 
   // Fixed, exactly-computed row heights rather than estimate-then-measure,
@@ -146,53 +145,25 @@ export function CredentialSidebarTree({
   // buttons at all, so a password row is shorter than a key row whenever
   // that row is showing (actionsOnly closed, or always mode).
   const FOLDER_ROW_HEIGHT = 31.5;
-  // Base closed height with no persistent extras (hover/click modes,
-  // collapsed) -- identical for both credential types since neither the
-  // connection row nor the management row is rendered. Re-measured live
-  // after fixing the comfortable-density row's top/bottom padding asymmetry
-  // (was pt-2.5 pb-2, now the symmetric py-2, 2px shorter).
-  const BASE_ROW_HEIGHT = isCompactDensity ? 23 : 45;
-  // Fully opened (management row revealed, plus connection row for key
-  // creds) -- differs by type since only key creds have a connection row;
-  // measured identical for click-mode-open and actionsOnly-mode-open.
-  const OPEN_KEY_ROW_HEIGHT = isCompactDensity ? 79.25 : 104.75;
-  const OPEN_PASSWORD_ROW_HEIGHT = isCompactDensity ? 56.5 : 78.5;
-  // actionsOnly closed (connection row shown permanently, management row
-  // still collapsed) -- differs by type since only key creds have a
-  // connection row to show.
-  const ACTIONS_ONLY_KEY_ROW_HEIGHT = isCompactDensity ? 50.25 : 75.75;
-  const ACTIONS_ONLY_PASSWORD_ROW_HEIGHT = isCompactDensity ? 27.5 : 49.5;
-  // always mode (both rows permanently shown) -- measured slightly shorter
-  // than a click-opened row since the chevron toggle button isn't rendered.
-  const ALWAYS_KEY_ROW_HEIGHT = isCompactDensity ? 74.75 : 100.25;
-  const ALWAYS_PASSWORD_ROW_HEIGHT = isCompactDensity ? 52 : 74;
-
   const rowHeight = useCallback(
     (index: number) => {
       const row = visibleRows[index];
       if (!row) return FOLDER_ROW_HEIGHT;
       if (isFolder(row.item)) return FOLDER_ROW_HEIGHT;
       const isKey = row.item.type === "key";
-
-      if (alwaysShowActions) {
-        return isKey ? ALWAYS_KEY_ROW_HEIGHT : ALWAYS_PASSWORD_ROW_HEIGHT;
-      }
-
       const isOpen =
         (openTrayCredentialId === row.item.id ||
           openMenuCredentialId === row.item.id) &&
         (clickTrayActive || actionsOnly);
-
-      if (actionsOnly) {
-        if (isOpen)
-          return isKey ? OPEN_KEY_ROW_HEIGHT : OPEN_PASSWORD_ROW_HEIGHT;
-        return isKey
-          ? ACTIONS_ONLY_KEY_ROW_HEIGHT
-          : ACTIONS_ONLY_PASSWORD_ROW_HEIGHT;
-      }
-
-      if (isOpen) return isKey ? OPEN_KEY_ROW_HEIGHT : OPEN_PASSWORD_ROW_HEIGHT;
-      return BASE_ROW_HEIGHT;
+      return getCredentialRowHeight({
+        density,
+        isKey,
+        alwaysShowActions,
+        actionsOnly,
+        isOpen,
+        showTags,
+        tagCount: row.item.tags?.length ?? 0,
+      });
     },
     [
       visibleRows,
@@ -201,13 +172,8 @@ export function CredentialSidebarTree({
       clickTrayActive,
       alwaysShowActions,
       actionsOnly,
-      BASE_ROW_HEIGHT,
-      OPEN_KEY_ROW_HEIGHT,
-      OPEN_PASSWORD_ROW_HEIGHT,
-      ACTIONS_ONLY_KEY_ROW_HEIGHT,
-      ACTIONS_ONLY_PASSWORD_ROW_HEIGHT,
-      ALWAYS_KEY_ROW_HEIGHT,
-      ALWAYS_PASSWORD_ROW_HEIGHT,
+      density,
+      showTags,
     ],
   );
 
@@ -254,6 +220,7 @@ export function CredentialSidebarTree({
     visibleRows.length,
     density,
     trayTrigger,
+    showTags,
   ]);
 
   function toggleFolder(name: string) {
