@@ -1,6 +1,5 @@
 import { getErrorMessage } from "../../utils/error-message.js";
 import { randomUUID } from "crypto";
-import { networkInterfaces } from "os";
 import { performance } from "node:perf_hooks";
 import type { ClientChannel } from "ssh2";
 import { fileLogger } from "../../utils/logger.js";
@@ -55,6 +54,12 @@ import {
   TransferStalledError,
   isRecoverableTransferError,
 } from "./transfer-errors.js";
+import {
+  escapeShell,
+  isLocalSshEndpoint,
+  isPermissionError,
+  isRootOnlyPath,
+} from "./transfer-host-utils.js";
 import {
   buildDirectProbeCommand,
   buildDirectRsyncCommand,
@@ -516,41 +521,6 @@ async function resetDedicatedTransferSessions(
   return { sourceSession, destSession, sourceSftp, destSftp };
 }
 
-let cachedLocalAddresses: Set<string> | null = null;
-
-function normalizeHostAddress(host: string): string {
-  const trimmed = host.trim().toLowerCase();
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed.split(":")[0] ?? trimmed;
-}
-
-function getLocalAddresses(): Set<string> {
-  if (cachedLocalAddresses) return cachedLocalAddresses;
-
-  const addresses = new Set(["127.0.0.1", "::1", "localhost"]);
-  for (const ifaces of Object.values(networkInterfaces())) {
-    if (!ifaces) continue;
-    for (const iface of ifaces) {
-      if (!iface.internal && iface.family === "IPv4") {
-        addresses.add(iface.address.toLowerCase());
-      }
-    }
-  }
-  cachedLocalAddresses = addresses;
-  return addresses;
-}
-
-export function isLocalSshEndpoint(ip?: string): boolean {
-  if (!ip) return false;
-  const bare = normalizeHostAddress(ip);
-  if (bare === "localhost" || bare === "127.0.0.1" || bare === "::1") {
-    return true;
-  }
-  return getLocalAddresses().has(bare);
-}
-
 function createThrottledProgress(onProgress?: (bytes: number) => void) {
   let pending = 0;
   let lastFlush = 0;
@@ -573,10 +543,6 @@ function createThrottledProgress(onProgress?: (bytes: number) => void) {
     },
     flush,
   };
-}
-
-function escapeShell(s: string): string {
-  return s.replace(/'/g, "'\"'\"'");
 }
 
 async function detectTransferPlatform(
@@ -634,24 +600,6 @@ async function detectTransferPlatform(
 
   session.transferPlatform = "unix";
   return "unix";
-}
-
-function isRootOnlyPath(path: string): boolean {
-  const normalized = normalizeSftpPath(path);
-  return (
-    normalized === "/" ||
-    /^\/[A-Za-z]:$/.test(normalized) ||
-    /^[A-Za-z]:$/.test(normalized)
-  );
-}
-
-function isPermissionError(err: Error): boolean {
-  const msg = err.message.toLowerCase();
-  return (
-    msg.includes("permission denied") ||
-    msg.includes("eacces") ||
-    msg.includes("access denied")
-  );
 }
 
 async function ensureDirectoryTreeSftp(
