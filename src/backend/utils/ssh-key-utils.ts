@@ -256,6 +256,10 @@ export function preparePrivateKeyForSSH2(
   return Buffer.from(cleanKey, "utf8");
 }
 
+export function isPrivateKeyPassphraseError(error: unknown): boolean {
+  return /passphrase/i.test(getErrorMessage(error, ""));
+}
+
 export function parseSSHKey(
   privateKeyData: string,
   passphrase?: string,

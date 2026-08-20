@@ -4,6 +4,7 @@ import {
   parseSSHKey,
   parsePublicKey,
   preparePrivateKeyForSSH2,
+  isPrivateKeyPassphraseError,
   getFriendlyKeyTypeName,
   validateKeyPair,
 } from "../../utils/ssh-key-utils.js";
@@ -94,6 +95,20 @@ describe("parseSSHKey", () => {
     );
     expect(info.success).toBe(false);
     expect(info.error).toMatch(/Unsupported PuTTY PPK v3/);
+  });
+});
+
+describe("isPrivateKeyPassphraseError", () => {
+  it("recognizes missing and incorrect passphrase errors", () => {
+    expect(
+      isPrivateKeyPassphraseError(
+        new Error("Encrypted OpenSSH private key detected, but no passphrase given"),
+      ),
+    ).toBe(true);
+    expect(isPrivateKeyPassphraseError(new Error("Bad passphrase"))).toBe(true);
+    expect(isPrivateKeyPassphraseError(new Error("Unsupported key format"))).toBe(
+      false,
+    );
   });
 });
 
