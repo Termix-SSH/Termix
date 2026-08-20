@@ -22,12 +22,15 @@ describe("MemoryAgent", () => {
     expect(parsed).not.toBeInstanceOf(Error);
 
     const agent = new MemoryAgent(parsed as ParsedKey);
-    const stream = await new Promise<NodeJS.ReadWriteStream>((resolve, reject) => {
-      agent.getStream((error, result) => {
-        if (error || !result) reject(error ?? new Error("Missing agent stream"));
-        else resolve(result);
-      });
-    });
+    const stream = await new Promise<NodeJS.ReadWriteStream>(
+      (resolve, reject) => {
+        agent.getStream((error, result) => {
+          if (error || !result)
+            reject(error ?? new Error("Missing agent stream"));
+          else resolve(result);
+        });
+      },
+    );
     const client = new ssh2Pkg.AgentProtocol(true);
     client.pipe(stream).pipe(client);
 
