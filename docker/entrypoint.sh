@@ -35,6 +35,7 @@ export ENABLE_SSL=${ENABLE_SSL:-false}
 export SSL_PORT=${SSL_PORT:-8443}
 export SSL_CERT_PATH=${SSL_CERT_PATH:-/app/data/ssl/termix.crt}
 export SSL_KEY_PATH=${SSL_KEY_PATH:-/app/data/ssl/termix.key}
+export TERMIX_SSL_TERMINATED_BY_NGINX=true
 
 echo "Configuring web UI to run on port: $PORT"
 

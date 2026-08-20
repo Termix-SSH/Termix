@@ -2052,7 +2052,12 @@ if (sslConfig.enabled) {
     ssl_port: sslConfig.port,
     backend_http_port: HTTP_PORT,
   });
+}
 
+if (
+  sslConfig.enabled &&
+  process.env.TERMIX_SSL_TERMINATED_BY_NGINX !== "true"
+) {
   try {
     const httpsServer = https.createServer(
       {
