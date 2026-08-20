@@ -36,6 +36,7 @@ import {
   computeTransferMbPerSec,
   createEmptyXferStats,
   createHopWallClock,
+  createThrottledProgress,
   elapsedMs,
   hopSpanMs,
   mergeXferStats,
@@ -330,7 +331,6 @@ const TRANSFER_SESSION_RESET_DELAYS_MS = [1000, 2000, 3000];
 const TRANSFER_HANDLE_CLOSE_TIMEOUT_MS = 2500;
 const HUNG_TRANSFER_MS = 90_000;
 const HUNG_RECONNECTING_MS = 180_000;
-const TRANSFER_PROGRESS_INTERVAL_MS = 200;
 
 interface TransferReconnectContext {
   deps: HostTransferDeps;
@@ -525,30 +525,6 @@ async function resetDedicatedTransferSessions(
   }
 
   return { sourceSession, destSession, sourceSftp, destSftp };
-}
-
-function createThrottledProgress(onProgress?: (bytes: number) => void) {
-  let pending = 0;
-  let lastFlush = 0;
-
-  const flush = () => {
-    if (pending > 0) {
-      onProgress?.(pending);
-      pending = 0;
-      lastFlush = Date.now();
-    }
-  };
-
-  return {
-    add(bytes: number) {
-      pending += bytes;
-      const now = Date.now();
-      if (now - lastFlush >= TRANSFER_PROGRESS_INTERVAL_MS) {
-        flush();
-      }
-    },
-    flush,
-  };
 }
 
 async function detectTransferPlatform(

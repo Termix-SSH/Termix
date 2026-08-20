@@ -1,5 +1,7 @@
 import { performance } from "node:perf_hooks";
 
+const TRANSFER_PROGRESS_INTERVAL_MS = 200;
+
 export type TransferHopId =
   "source_read" | "dest_sftp_write" | "dest_local_write";
 
@@ -61,6 +63,32 @@ export function noteHopEnd(clock: HopWallClock, t: number = performance.now()): 
 export function hopSpanMs(clock: HopWallClock): number {
   if (clock.firstAt === null || clock.lastAt === null) return 0;
   return Math.max(0, clock.lastAt - clock.firstAt);
+}
+
+export function createThrottledProgress(
+  onProgress?: (bytes: number) => void,
+) {
+  let pending = 0;
+  let lastFlush = 0;
+
+  const flush = () => {
+    if (pending > 0) {
+      onProgress?.(pending);
+      pending = 0;
+      lastFlush = Date.now();
+    }
+  };
+
+  return {
+    add(bytes: number) {
+      pending += bytes;
+      const now = Date.now();
+      if (now - lastFlush >= TRANSFER_PROGRESS_INTERVAL_MS) {
+        flush();
+      }
+    },
+    flush,
+  };
 }
 
 export interface PipelinedXferStats {
