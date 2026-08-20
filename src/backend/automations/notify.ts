@@ -88,6 +88,17 @@ async function sendWebhook(
     headers,
     body: JSON.stringify({
       title: notification.title,
+      hostName:
+        notification.context?.host?.name ??
+        notification.context?.trigger?.hostName,
+      hostId:
+        notification.context?.host?.id ??
+        notification.context?.trigger?.hostId,
+      ruleName: notification.title,
+      ruleId: notification.context?.run?.automationId,
+      triggerType: notification.context?.trigger?.type,
+      value: notification.context?.trigger?.value,
+      threshold: notification.context?.trigger?.threshold,
       message: notification.body,
       severity: notification.severity,
       timestamp: new Date().toISOString(),
